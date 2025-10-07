@@ -2,13 +2,13 @@ import PortalLayout from "@/components/PortalLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import { cn } from "@/lib/utils";
+import { useTheme, type Theme } from "@/contexts/ThemeProvider";
 
 const themes = [
-  { id: 'default', name: 'Default', description: 'The standard light theme for your workspace.', preview: (
+  { id: 'light', name: 'Default', description: 'The standard light theme for your workspace.', preview: (
     <div className="w-8 h-8 rounded-md border bg-background flex items-center justify-center p-1">
       <div className="w-full space-y-1">
         <div className="h-1 w-3/4 rounded-full bg-muted-foreground/30"></div>
@@ -16,7 +16,15 @@ const themes = [
       </div>
     </div>
   )},
-  { id: 'claude-modern', name: 'Claude Theme', description: 'A sleek, dark theme inspired by modern AI interfaces.', preview: (
+  { id: 'dark', name: 'Dark', description: 'A dark theme for your workspace.', preview: (
+    <div className="w-8 h-8 rounded-md border bg-slate-900 flex items-center justify-center p-1">
+      <div className="w-full space-y-1">
+        <div className="h-1 w-3/4 rounded-full bg-slate-700"></div>
+        <div className="h-1 w-1/2 rounded-full bg-slate-500"></div>
+      </div>
+    </div>
+  )},
+  { id: 'claude', name: 'Claude Theme', description: 'A sleek, dark theme inspired by modern AI interfaces.', preview: (
     <div className="w-8 h-8 rounded-md bg-[#1A1A1A] border border-gray-700 flex items-center justify-center p-1">
       <div className="w-full space-y-1">
         <div className="h-1 w-3/4 rounded-full bg-gray-600"></div>
@@ -24,26 +32,10 @@ const themes = [
       </div>
     </div>
   )},
-  { id: 'minimal', name: 'Minimal', description: 'A clean and simple light theme for a focused experience.', preview: (
-    <div className="w-8 h-8 rounded-md border bg-white flex items-center justify-center p-1">
-      <div className="w-full space-y-1">
-        <div className="h-1 w-3/4 rounded-full bg-gray-300"></div>
-        <div className="h-1 w-1/2 rounded-full bg-gray-200"></div>
-      </div>
-    </div>
-  )},
-  { id: 'tangerine', name: 'Tangerine', description: 'A vibrant and energetic theme with a splash of color.', preview: (
-    <div className="w-8 h-8 rounded-md bg-[#F97316] flex items-center justify-center p-1">
-       <div className="w-full space-y-1">
-        <div className="h-1 w-3/4 rounded-full bg-orange-300"></div>
-        <div className="h-1 w-1/2 rounded-full bg-orange-200"></div>
-      </div>
-    </div>
-  )},
 ];
 
 const ThemeSettingsPage = () => {
-  const [currentTheme, setCurrentTheme] = useState('default'); 
+  const { theme: currentTheme, setTheme } = useTheme();
 
   return (
     <PortalLayout>
@@ -73,7 +65,7 @@ const ThemeSettingsPage = () => {
             <CardDescription>Select a theme for your workspace. This will only affect your view.</CardDescription>
           </CardHeader>
           <CardContent>
-            <RadioGroup value={currentTheme} onValueChange={setCurrentTheme} className="space-y-2">
+            <RadioGroup value={currentTheme} onValueChange={(value) => setTheme(value as Theme)} className="space-y-2">
               {themes.map((theme) => (
                 <Label 
                   key={theme.id} 
