@@ -14,9 +14,9 @@ type NewProjectData = {
 };
 
 const createProject = async (projectData: NewProjectData) => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error("Pengguna tidak diautentikasi");
-
+    // We don't need to explicitly get the user ID and send it.
+    // The 'created_by' column in the 'projects' table has a default value of auth.uid(),
+    // which is more secure and reliable. RLS will enforce that a user is authenticated.
     const dataToInsert = {
         name: projectData.name,
         description: projectData.description,
@@ -26,7 +26,6 @@ const createProject = async (projectData: NewProjectData) => {
         budget: projectData.budget,
         origin_event_id: projectData.origin_event_id,
         venue: projectData.venue,
-        created_by: user.id,
     };
 
     const { data, error } = await supabase.from('projects').insert(dataToInsert).select().single();
