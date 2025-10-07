@@ -20,6 +20,10 @@ serve(async (req) => {
   }
 
   try {
+    console.log("API_KEY:", Deno.env.get("EMAILIT_API_KEY"));
+    console.log("SENDER:", Deno.env.get("EMAILIT_SENDER"));
+    console.log("FROM_NAME:", Deno.env.get("EMAILIT_FROM_NAME"));
+
     const { to, subject, html } = await req.json();
 
     if (!to || !subject || !html) {
