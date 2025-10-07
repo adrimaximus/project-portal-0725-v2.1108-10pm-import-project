@@ -25,7 +25,7 @@ interface EditInvoiceDialogProps {
   onSave: (updatedProjectData: Partial<Project> & { id: string }) => void;
 }
 
-const paymentStatuses: PaymentStatus[] = ['Paid', 'Unpaid', 'Pending', 'Overdue', 'Cancelled', 'In Process'];
+const paymentStatuses: PaymentStatus[] = ['Paid', 'Unpaid', 'Pending', 'Overdue', 'Cancelled', 'In Process', 'Proposed'];
 const channelOptions = ['Email', 'Gojek', 'Grab', 'JNE', 'Lalamove', 'Portal', 'Rex', 'TIKI'].sort();
 
 export const EditInvoiceDialog = ({ isOpen, onClose, invoice, project, onSave }: EditInvoiceDialogProps) => {
@@ -90,34 +90,31 @@ export const EditInvoiceDialog = ({ isOpen, onClose, invoice, project, onSave }:
     setIsProcessing(true);
 
     try {
-      onSave({
-        id: project.id,
-        invoice_number: invoiceNumber,
-        po_number: poNumber || null,
-        budget: amount,
-        payment_status: status,
-        paid_date: status === 'Paid' && paidDate ? paidDate.toISOString() : null,
-        email_sending_date: emailSendingDate ? emailSendingDate.toISOString() : null,
-        hardcopy_sending_date: hardcopySendingDate ? hardcopySendingDate.toISOString() : null,
-        channel: channel || null,
-      });
+      let finalAttachmentUrl = project.invoice_attachment_url;
+      let finalAttachmentName = project.invoice_attachment_name;
 
-      let attachmentUrl = project.invoice_attachment_url;
-      let attachmentName = project.invoice_attachment_name;
-      let attachmentUpdated = false;
-
+      // Handle attachment removal
       if (removeAttachment && project.invoice_attachment_url) {
         const urlParts = project.invoice_attachment_url.split('/billing/');
         if (urlParts.length > 1) {
           const oldFilePath = urlParts[1];
           await supabase.storage.from('billing').remove([oldFilePath]);
         }
-        attachmentUrl = null;
-        attachmentName = null;
-        attachmentUpdated = true;
+        finalAttachmentUrl = null;
+        finalAttachmentName = null;
       }
 
+      // Handle new attachment upload
       if (newAttachment) {
+        // If there was an old attachment, remove it first
+        if (project.invoice_attachment_url) {
+            const oldUrlParts = project.invoice_attachment_url.split('/billing/');
+            if (oldUrlParts.length > 1) {
+                const oldFilePath = oldUrlParts[1];
+                await supabase.storage.from('billing').remove([oldFilePath]);
+            }
+        }
+
         toast.info('Uploading attachment...');
         const sanitizedFileName = newAttachment.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
         const filePath = `invoice-attachments/${project.id}/${Date.now()}-${sanitizedFileName}`;
@@ -129,21 +126,24 @@ export const EditInvoiceDialog = ({ isOpen, onClose, invoice, project, onSave }:
         if (uploadError) throw new Error(`Failed to upload attachment: ${uploadError.message}`);
 
         const { data: urlData } = supabase.storage.from('billing').getPublicUrl(filePath);
-        attachmentUrl = urlData.publicUrl;
-        attachmentName = newAttachment.name;
-        attachmentUpdated = true;
+        finalAttachmentUrl = urlData.publicUrl;
+        finalAttachmentName = newAttachment.name;
       }
 
-      if (attachmentUpdated) {
-        const { error } = await supabase
-          .from('projects')
-          .update({
-            invoice_attachment_url: attachmentUrl,
-            invoice_attachment_name: attachmentName,
-          })
-          .eq('id', project.id);
-        if (error) throw new Error(`Failed to save attachment details: ${error.message}`);
-      }
+      // Call onSave with all the data, including attachment info
+      onSave({
+        id: project.id,
+        invoice_number: invoiceNumber,
+        po_number: poNumber || null,
+        budget: amount,
+        payment_status: status,
+        paid_date: status === 'Paid' && paidDate ? paidDate.toISOString() : null,
+        email_sending_date: emailSendingDate ? emailSendingDate.toISOString() : null,
+        hardcopy_sending_date: hardcopySendingDate ? hardcopySendingDate.toISOString() : null,
+        channel: channel || null,
+        invoice_attachment_url: finalAttachmentUrl,
+        invoice_attachment_name: finalAttachmentName,
+      });
 
       onClose();
     } catch (error: any) {
