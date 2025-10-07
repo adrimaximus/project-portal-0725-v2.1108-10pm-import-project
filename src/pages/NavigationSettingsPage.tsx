@@ -35,7 +35,7 @@ export interface NavItem {
   folder_id: string | null;
   is_deletable?: boolean;
   is_editable?: boolean;
-  type: 'url_embed' | 'multi_embed';
+  type: 'url_embed' | 'multi_embed' | 'googlesheet_embed';
   slug?: string;
 }
 
@@ -55,6 +55,7 @@ const SortableNavItemRow = ({ item, onDelete, isDeleting, onToggle, onEdit, canM
 
     const displayUrl = useMemo(() => {
       if (item.type === 'multi_embed') return `/multipage/${item.slug}`;
+      if (item.type === 'googlesheet_embed') return `/gsheet/${item.slug}`;
       if (item.url.startsWith('/')) return item.url;
       return `/custom/${item.slug}`;
     }, [item]);
@@ -120,7 +121,7 @@ const NavigationSettingsPage = () => {
   const [newItemName, setNewItemName] = useState("");
   const [newItemContent, setNewItemContent] = useState("");
   const [newItemIcon, setNewItemIcon] = useState<string | undefined>(undefined);
-  const [newItemType, setNewItemType] = useState<'url_embed' | 'multi_embed'>('url_embed');
+  const [newItemType, setNewItemType] = useState<'url_embed' | 'multi_embed' | 'googlesheet_embed'>('url_embed');
   const [newItemFolderId, setNewItemFolderId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [editingItem, setEditingItem] = useState<NavItem | null>(null);
@@ -171,7 +172,7 @@ const NavigationSettingsPage = () => {
   const { mutate: deleteItem, isPending: isDeletingItem } = useMutation({ mutationFn: async (id: string) => { setDeletingId(id); const { error } = await supabase.from('user_navigation_items').delete().eq('id', id); if (error) throw error; }, onSuccess: () => { toast.success("Page removed"); queryClient.invalidateQueries({ queryKey: itemsQueryKey }); }, onError: (e: any) => toast.error(e.message), onSettled: () => setDeletingId(null) });
   const { mutate: deleteFolder } = useMutation({ mutationFn: async (id: string) => { const { error } = await supabase.from('navigation_folders').delete().eq('id', id); if (error) throw error; }, onSuccess: () => { toast.success("Folder removed"); queryClient.invalidateQueries({ queryKey: foldersQueryKey }); queryClient.invalidateQueries({ queryKey: itemsQueryKey }); } });
   const addItemMutation = useMutation({
-    mutationFn: async ({ name, url, icon, type, folder_id }: { name: string, url: string, icon?: string, type: 'url_embed' | 'multi_embed', folder_id: string | null }) => {
+    mutationFn: async ({ name, url, icon, type, folder_id }: { name: string, url: string, icon?: string, type: 'url_embed' | 'multi_embed' | 'googlesheet_embed', folder_id: string | null }) => {
       if (!user) throw new Error("User not authenticated");
       const newPosition = navItemsState.length > 0 ? Math.max(...navItemsState.map(i => i.position)) + 1 : 0;
       const itemToInsert = { name, url: (type === 'multi_embed' ? '/multipage/placeholder' : url) || '', user_id: user.id, position: newPosition, is_enabled: true, icon, is_deletable: true, is_editable: true, type, folder_id, };
@@ -188,7 +189,7 @@ const NavigationSettingsPage = () => {
 
   useEffect(() => { if (user && !isLoadingItems && !backfillAttempted.current) { const hasDefaultItems = navItemsData?.some(item => item.is_deletable === false); if (!hasDefaultItems) { backfillAttempted.current = true; backfillNavItems(); } else { backfillAttempted.current = true; } } }, [user, navItemsData, isLoadingItems, backfillNavItems]);
 
-  const handleAddItem = async () => { if (!user) return; const finalName = newItemName.trim() || 'Untitled Page'; const isUrlEmbedValid = newItemType === 'url_embed' && newItemContent.trim(); const isMultiEmbedValid = newItemType === 'multi_embed'; if (isUrlEmbedValid || isMultiEmbedValid) { addItemMutation.mutate({ name: finalName, url: newItemContent.trim(), icon: newItemIcon, type: newItemType, folder_id: newItemFolderId, }); } else { toast.error("Please provide a URL or embed code for this page type."); } };
+  const handleAddItem = async () => { if (!user) return; const finalName = newItemName.trim() || 'Untitled Page'; const isContentBased = newItemType === 'url_embed' || newItemType === 'googlesheet_embed'; const isContentValid = isContentBased && newItemContent.trim(); const isMultiEmbedValid = newItemType === 'multi_embed'; if (isContentValid || isMultiEmbedValid) { addItemMutation.mutate({ name: finalName, url: newItemContent.trim(), icon: newItemIcon, type: newItemType, folder_id: newItemFolderId, }); } else { toast.error("Please provide a URL or embed code for this page type."); } };
   const handleSaveEdit = (id: string, name: string, url: string, icon?: string) => {
     const item = navItemsState.find(i => i.id === id);
     if (!item) return;
@@ -322,15 +323,44 @@ const NavigationSettingsPage = () => {
           <Card>
             <CardHeader><CardTitle>Add New Custom Page</CardTitle></CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid gap-2"><Label htmlFor="type">Page Type</Label><Select value={newItemType} onValueChange={(value: 'url_embed' | 'multi_embed') => setNewItemType(value)}><SelectTrigger><SelectValue placeholder="Select page type" /></SelectTrigger><SelectContent><SelectItem value="url_embed">URL / Embed Code</SelectItem><SelectItem value="multi_embed">Multi Embed Collection</SelectItem></SelectContent></Select><p className="text-xs text-muted-foreground">{newItemType === 'url_embed' ? 'Single URL or embed code that will be displayed in an iframe' : 'A collection page where you can add multiple embed items'}</p></div>
+              <div className="grid gap-2">
+                <Label htmlFor="type">Page Type</Label>
+                <Select value={newItemType} onValueChange={(value: 'url_embed' | 'multi_embed' | 'googlesheet_embed') => setNewItemType(value)}>
+                  <SelectTrigger><SelectValue placeholder="Select page type" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="url_embed">URL / Embed Code</SelectItem>
+                    <SelectItem value="multi_embed">Multi Embed Collection</SelectItem>
+                    <SelectItem value="googlesheet_embed">Google Sheet</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  {newItemType === 'url_embed' ? 'Single URL or embed code that will be displayed in an iframe' : 
+                   newItemType === 'multi_embed' ? 'A collection page where you can add multiple embed items' :
+                   'Embed a public Google Sheet as an interactive table.'}
+                </p>
+              </div>
               <div className="grid gap-2"><Label htmlFor="icon">Icon</Label><IconPicker value={newItemIcon} onChange={setNewItemIcon} /></div>
               <div className="grid gap-2"><Label htmlFor="name">Name</Label><Input id="name" value={newItemName} onChange={(e) => setNewItemName(e.target.value)} placeholder="e.g. Analytics Dashboard" /></div>
-              {newItemType === 'url_embed' && (<div className="grid gap-2"><Label htmlFor="url">URL or Embed Code</Label><Textarea id="url" value={newItemContent} onChange={(e) => setNewItemContent(e.target.value)} placeholder="https://example.com or <iframe ...></iframe>" /></div>)}
+              {(newItemType === 'url_embed' || newItemType === 'googlesheet_embed') && (
+                <div className="grid gap-2">
+                  <Label htmlFor="url">{newItemType === 'googlesheet_embed' ? 'Public Google Sheet URL' : 'URL or Embed Code'}</Label>
+                  <Textarea 
+                    id="url" 
+                    value={newItemContent} 
+                    onChange={(e) => setNewItemContent(e.target.value)} 
+                    placeholder={
+                      newItemType === 'googlesheet_embed' 
+                      ? 'https://docs.google.com/spreadsheets/d/...' 
+                      : 'https://example.com or <iframe ...></iframe>'
+                    } 
+                  />
+                </div>
+              )}
               {newItemType === 'multi_embed' && (<div className="p-3 bg-muted/50 rounded-md"><p className="text-sm text-muted-foreground">This will create a collection page where you can add multiple embed items. The URL will be automatically generated based on the page name.</p></div>)}
               <div className="grid gap-2"><Label htmlFor="folder">Folder</Label><Select value={newItemFolderId || 'uncategorized'} onValueChange={(value) => setNewItemFolderId(value === 'uncategorized' ? null : value)}><SelectTrigger id="folder"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="uncategorized">Uncategorized</SelectItem>{foldersState.map(folder => (<SelectItem key={folder.id} value={folder.id}>{folder.name}</SelectItem>))}</SelectContent></Select></div>
             </CardContent>
             <CardFooter className="flex justify-between">
-              <Button onClick={handleAddItem} disabled={(newItemType === 'url_embed' && !newItemContent.trim()) || addItemMutation.isPending}>{addItemMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />} Add Page</Button>
+              <Button onClick={handleAddItem} disabled={((newItemType === 'url_embed' || newItemType === 'googlesheet_embed') && !newItemContent.trim()) || addItemMutation.isPending}>{addItemMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />} Add Page</Button>
               <Button variant="outline" onClick={() => { setEditingFolder(null); setIsFolderFormOpen(true); }}><FolderPlus className="mr-2 h-4 w-4" /> Add Folder</Button>
             </CardFooter>
           </Card>
