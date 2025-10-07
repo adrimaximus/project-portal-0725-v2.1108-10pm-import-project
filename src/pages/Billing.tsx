@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useProjects } from "@/hooks/useProjects";
 import { PaymentStatus, Project } from "@/types";
-import { cn, getPaymentStatusStyles } from "@/lib/utils";
+import { cn, getPaymentStatusStyles, getAvatarUrl } from "@/lib/utils";
 import { format, addDays, isPast } from "date-fns";
 import { DollarSign, Clock, AlertTriangle, Download, Loader2, MoreVertical, Edit, ArrowUp, ArrowDown, Search, Kanban, Table as TableIcon, Users } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -343,7 +343,7 @@ const Billing = () => {
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Avatar className="h-8 w-8">
-                              <AvatarImage src={admin.avatar_url} alt={admin.name} />
+                              <AvatarImage src={getAvatarUrl(admin.avatar_url, admin.id)} alt={admin.name} />
                               <AvatarFallback>{admin.initials}</AvatarFallback>
                             </Avatar>
                           </TooltipTrigger>
@@ -466,7 +466,7 @@ const Billing = () => {
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <Avatar className="h-8 w-8">
-                                    <AvatarImage src={invoice.projectOwner.avatar_url} alt={invoice.projectOwner.name} />
+                                    <AvatarImage src={getAvatarUrl(invoice.projectOwner.avatar_url, invoice.projectOwner.id)} alt={invoice.projectOwner.name} />
                                     <AvatarFallback>{invoice.projectOwner.initials}</AvatarFallback>
                                   </Avatar>
                                 </TooltipTrigger>
@@ -486,7 +486,7 @@ const Billing = () => {
                                   <Tooltip>
                                     <TooltipTrigger asChild>
                                       <Avatar className="h-8 w-8 border-2 border-background">
-                                        <AvatarImage src={admin.avatar_url} alt={admin.name} />
+                                        <AvatarImage src={getAvatarUrl(admin.avatar_url, admin.id)} alt={admin.name} />
                                         <AvatarFallback>{admin.initials}</AvatarFallback>
                                       </Avatar>
                                     </TooltipTrigger>
