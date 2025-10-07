@@ -1,10 +1,12 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { useJsApiLoader } from "@react-google-maps/api";
-import { MapPin } from "lucide-react";
+import { Globe, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { Command, CommandGroup, CommandItem, CommandList } from "@/components/ui/command";
 import { Skeleton } from "./ui/skeleton";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 
 const libraries: ("places")[] = ["places"];
 
@@ -29,6 +31,7 @@ const AddressAutocompleteInput: React.FC<Props> = ({ value = "", onChange, disab
   const [predictions, setPredictions] = useState<google.maps.places.AutocompletePrediction[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [showPredictions, setShowPredictions] = useState(false);
+  const [isGlobalSearch, setIsGlobalSearch] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -54,8 +57,13 @@ const AddressAutocompleteInput: React.FC<Props> = ({ value = "", onChange, disab
 
   const fetchPredictions = (query: string) => {
     if (service && query.length > 2) {
+      const request: google.maps.places.AutocompletionRequest = { input: query };
+      if (!isGlobalSearch) {
+        request.componentRestrictions = { country: "id" };
+      }
+
       service.getPlacePredictions(
-        { input: query, componentRestrictions: { country: "id" } },
+        request,
         (res, status) => {
           if (status === google.maps.places.PlacesServiceStatus.OK && res) {
             setPredictions(res);
@@ -135,6 +143,23 @@ const AddressAutocompleteInput: React.FC<Props> = ({ value = "", onChange, disab
 
   return (
     <div ref={containerRef} className="relative w-full">
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Globe
+              className={cn(
+                "absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground cursor-pointer transition-colors hover:text-foreground",
+                isGlobalSearch && "text-primary"
+              )}
+              onClick={() => setIsGlobalSearch(!isGlobalSearch)}
+            />
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>{isGlobalSearch ? "Searching worldwide" : "Searching in Indonesia only. Click to search worldwide."}</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+
       <Input
         type="text"
         value={inputValue}
@@ -142,7 +167,7 @@ const AddressAutocompleteInput: React.FC<Props> = ({ value = "", onChange, disab
         onFocus={handleFocus}
         disabled={disabled}
         placeholder="Search address..."
-        className={`pr-10 ${className}`}
+        className={`pl-10 pr-10 ${className}`}
         autoComplete="off"
       />
 
