@@ -81,11 +81,12 @@ const Billing = () => {
 
   const invoices: Invoice[] = (projects as ExtendedProject[])
     .map(project => {
-      if (!project.payment_status || !project.budget || !project.due_date) {
+      const eventDate = project.due_date || project.start_date;
+      if (!project.payment_status || !project.budget || !eventDate) {
         return null;
       }
       
-      const dueDate = addDays(new Date(project.due_date), 30);
+      const dueDate = addDays(new Date(eventDate), 30);
 
       let finalStatus = project.payment_status;
       if (['Unpaid', 'Pending', 'In Process'].includes(finalStatus) && isPast(dueDate)) {
