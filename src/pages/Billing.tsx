@@ -1,203 +1,198 @@
-import { useState, useMemo, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Download, Search } from "lucide-react";
-import { EditInvoiceDialog } from '@/components/billing/EditInvoiceDialog';
-import BillingTable from '@/components/billing/BillingTable';
-import { Invoice, Project, ExtendedProject } from '@/types';
-import { Skeleton } from '@/components/ui/skeleton';
+import { useMemo, useState } from "react";
+import PortalLayout from "@/components/PortalLayout";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useProjects } from "@/hooks/useProjects";
+import { PaymentStatus, Project, Invoice, ExtendedProject, Member, Owner } from "@/types";
+import { addDays, isPast } from "date-fns";
+import { Loader2 } from "lucide-react";
+import { EditInvoiceDialog } from "@/components/billing/EditInvoiceDialog";
+import { useProjectMutations } from "@/hooks/useProjectMutations";
+import BillingStats from "@/components/billing/BillingStats";
+import BillingToolbar from "@/components/billing/BillingToolbar";
+import BillingTable from "@/components/billing/BillingTable";
+import BillingKanbanView from "@/components/billing/BillingKanbanView";
+import { DateRange } from "react-day-picker";
 
-const fetchProjectsForBilling = async (): Promise<ExtendedProject[]> => {
-  const { data, error } = await supabase
-    .rpc('get_dashboard_projects', { p_limit: 1000, p_offset: 0 });
-
-  if (error) {
-    console.error('Error fetching projects:', error);
-    throw new Error(error.message);
-  }
-  return data || [];
-};
-
-const BillingPage = () => {
-  const queryClient = useQueryClient();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+const Billing = () => {
+  const { data: projects = [], isLoading } = useProjects();
+  const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
-  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [sortColumn, setSortColumn] = useState<keyof Invoice>('dueDate');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+  const [viewMode, setViewMode] = useState<'table' | 'kanban'>('table');
+  
+  const { updateProject } = useProjectMutations(selectedInvoice?.projectId || '');
 
-  const { data: projects = [], isLoading, error } = useQuery<ExtendedProject[]>({
-    queryKey: ['projectsForBilling'],
-    queryFn: fetchProjectsForBilling,
-  });
-
-  const updateProjectMutation = useMutation({
-    mutationFn: async (updatedProjectData: Partial<Project> & { id: string }) => {
-      const { error } = await supabase
-        .from('projects')
-        .update(updatedProjectData)
-        .eq('id', updatedProjectData.id);
-
-      if (error) {
-        throw new Error(error.message);
+  const invoices: Invoice[] = useMemo(() => (projects as ExtendedProject[])
+    .map(project => {
+      const eventDate = project.due_date || project.start_date;
+      if (!project.payment_status || !project.budget || !eventDate) {
+        return null;
       }
-    },
-    onSuccess: () => {
-      toast.success('Invoice updated successfully!');
-      queryClient.invalidateQueries({ queryKey: ['projectsForBilling'] });
-    },
-    onError: (error) => {
-      toast.error('Failed to update invoice', {
-        description: error.message,
-      });
-    },
-  });
+      
+      const dueDate = addDays(new Date(eventDate), 30);
 
-  const invoices: Invoice[] = useMemo(() => {
-    if (!projects) return [];
-    return projects
-      .filter(p => p.payment_status !== 'Proposed')
-      .map(p => ({
-        id: p.invoice_number || p.id,
-        rawProjectId: p.id,
-        projectId: p.slug,
-        projectName: p.name,
-        amount: p.budget || 0,
-        dueDate: new Date(p.payment_due_date || p.due_date || Date.now()),
-        status: p.payment_status,
-        projectStartDate: p.start_date ? new Date(p.start_date) : null,
-        projectEndDate: p.due_date ? new Date(p.due_date) : null,
-        poNumber: p.po_number || null,
-        paidDate: p.paid_date ? new Date(p.paid_date) : null,
-        emailSendingDate: p.email_sending_date ? new Date(p.email_sending_date) : null,
-        hardcopySendingDate: p.hardcopy_sending_date ? new Date(p.hardcopy_sending_date) : null,
-        channel: p.channel || null,
-        clientName: p.client_name || null,
-        clientLogo: p.client_company_logo_url || null,
-        clientCompanyName: p.client_company_name || null,
-        projectOwner: p.created_by,
-        assignedMembers: p.assignedTo,
-        invoiceAttachmentUrl: p.invoice_attachment_url,
-        invoiceAttachmentName: p.invoice_attachment_name,
-      }));
-  }, [projects]);
+      let finalStatus = project.payment_status;
+      if (['Unpaid', 'Pending', 'In Process'].includes(finalStatus) && isPast(dueDate)) {
+        finalStatus = 'Overdue';
+      }
 
-  const handleEdit = (invoice: Invoice) => {
-    const projectForInvoice = projects.find(p => p.id === invoice.rawProjectId);
-    if (projectForInvoice) {
-      setSelectedInvoice(invoice);
-      setSelectedProject(projectForInvoice);
-      setIsEditDialogOpen(true);
-    } else {
-      toast.error("Could not find the associated project for this invoice.");
-    }
-  };
+      return {
+        id: project.invoice_number || `INV-${project.id.substring(0, 8).toUpperCase()}`,
+        projectId: project.slug,
+        projectName: project.name,
+        amount: project.budget,
+        dueDate: dueDate,
+        status: finalStatus as PaymentStatus,
+        rawProjectId: project.id,
+        projectStartDate: project.start_date ? new Date(project.start_date) : null,
+        projectEndDate: project.due_date ? new Date(project.due_date) : null,
+        poNumber: project.po_number || null,
+        paidDate: project.paid_date ? new Date(project.paid_date) : null,
+        emailSendingDate: project.email_sending_date ? new Date(project.email_sending_date) : null,
+        hardcopySendingDate: project.hardcopy_sending_date ? new Date(project.hardcopy_sending_date) : null,
+        channel: project.channel || null,
+        clientName: project.client_name || null,
+        clientLogo: project.client_company_logo_url || null,
+        clientCompanyName: project.client_company_name || null,
+        projectOwner: project.created_by as Owner | null,
+        assignedMembers: (project.assignedTo as Member[]) || [],
+      };
+    })
+    .filter((invoice): invoice is Invoice => invoice !== null), [projects]);
 
-  const handleSave = (updatedProjectData: Partial<Project> & { id: string }) => {
-    updateProjectMutation.mutate(updatedProjectData);
-  };
+  const filteredInvoices = useMemo(() => {
+    return invoices.filter(invoice => {
+      const searchTermLower = searchTerm.toLowerCase();
+      const matchesSearch =
+        invoice.id.toLowerCase().includes(searchTermLower) ||
+        invoice.projectName.toLowerCase().includes(searchTermLower) ||
+        (invoice.clientName && invoice.clientName.toLowerCase().includes(searchTermLower)) ||
+        (invoice.poNumber && invoice.poNumber.toLowerCase().includes(searchTermLower)) ||
+        (invoice.channel && invoice.channel.toLowerCase().includes(searchTermLower));
+
+      const matchesDate = (() => {
+        if (!dateRange || !dateRange.from) {
+          return true;
+        }
+        if (!invoice.projectStartDate) {
+          return false;
+        }
+        const filterStart = dateRange.from;
+        const filterEnd = dateRange.to || dateRange.from;
+        const projectStart = invoice.projectStartDate;
+        const projectEnd = invoice.projectEndDate || projectStart;
+        return projectStart <= filterEnd && projectEnd >= filterStart;
+      })();
+
+      return matchesSearch && matchesDate;
+    });
+  }, [invoices, searchTerm, dateRange]);
 
   const handleSort = (column: keyof Invoice) => {
     if (sortColumn === column) {
-      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
     } else {
       setSortColumn(column);
       setSortDirection('asc');
     }
   };
 
-  const filteredAndSortedInvoices = useMemo(() => {
-    let filtered = invoices.filter(invoice =>
-      invoice.projectName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (invoice.clientName && invoice.clientName.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      invoice.id.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-
-    return filtered.sort((a, b) => {
-      const aValue = a[sortColumn];
-      const bValue = b[sortColumn];
-
+  const sortedInvoices = useMemo(() => {
+    if (!sortColumn) return filteredInvoices;
+    return [...filteredInvoices].sort((a, b) => {
+      let aValue: any = a[sortColumn];
+      let bValue: any = b[sortColumn];
+      if (sortColumn === 'projectOwner') {
+        aValue = a.projectOwner?.name;
+        bValue = b.projectOwner?.name;
+      } else if (sortColumn === 'assignedMembers') {
+        aValue = a.assignedMembers?.find(m => m.role === 'admin')?.name;
+        bValue = b.assignedMembers?.find(m => m.role === 'admin')?.name;
+      }
       if (aValue === null || aValue === undefined) return 1;
       if (bValue === null || bValue === undefined) return -1;
-
-      let comparison = 0;
       if (typeof aValue === 'string' && typeof bValue === 'string') {
-        comparison = aValue.localeCompare(bValue);
-      } else if (aValue instanceof Date && bValue instanceof Date) {
-        comparison = aValue.getTime() - bValue.getTime();
-      } else if (typeof aValue === 'number' && typeof bValue === 'number') {
-        comparison = aValue - bValue;
-      } else if (typeof aValue === 'object' && aValue !== null && 'name' in aValue &&
-                 typeof bValue === 'object' && bValue !== null && 'name' in bValue) {
-        comparison = (aValue as {name:string}).name.localeCompare((bValue as {name:string}).name);
+        return sortDirection === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
       }
-
-      return sortDirection === 'asc' ? comparison : -comparison;
+      return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
     });
-  }, [invoices, searchTerm, sortColumn, sortDirection]);
+  }, [filteredInvoices, sortColumn, sortDirection]);
 
-  if (error) {
-    return <div className="p-4 text-red-500">Error loading billing data: {error.message}</div>;
+  const handleEdit = (invoice: Invoice) => {
+    setSelectedInvoice(invoice);
+    setIsFormOpen(true);
+  };
+
+  const handleSave = (updatedProjectData: Partial<Project> & { id: string }) => {
+    const originalProject = projects.find(p => p.id === updatedProjectData.id);
+    if (originalProject) {
+      const projectToUpdate = { ...originalProject, ...updatedProjectData };
+      updateProject.mutate(projectToUpdate);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <PortalLayout>
+        <div className="flex items-center justify-center h-full">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </PortalLayout>
+    );
   }
 
   return (
-    <div className="container mx-auto p-4 md:p-6 lg:p-8">
-      <header className="mb-6">
-        <h1 className="text-3xl font-bold tracking-tight">Billing</h1>
-        <p className="text-muted-foreground">Manage and track all your project invoices.</p>
-      </header>
-
-      <div className="flex items-center justify-between mb-4">
-        <div className="relative w-full max-w-sm">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Search invoices, projects, clients..."
-            className="pl-8"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+    <PortalLayout>
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Billing</h1>
+          <p className="text-muted-foreground">
+            View your invoices and manage your payment details, derived from your projects.
+          </p>
         </div>
-        <Button variant="outline">
-          <Download className="mr-2 h-4 w-4" />
-          Export
-        </Button>
-      </div>
 
-      <div className="rounded-lg border overflow-hidden">
-        {isLoading ? (
-          <div className="p-4">
-            <Skeleton className="h-12 w-full mb-2" />
-            {[...Array(5)].map((_, i) => (
-              <Skeleton key={i} className="h-10 w-full mb-1" />
-            ))}
-          </div>
-        ) : (
-          <BillingTable
-            invoices={filteredAndSortedInvoices}
-            onEdit={handleEdit}
-            sortColumn={sortColumn}
-            sortDirection={sortDirection}
-            handleSort={handleSort}
-          />
-        )}
-      </div>
-
-      {isEditDialogOpen && selectedInvoice && selectedProject && (
-        <EditInvoiceDialog
-          isOpen={isEditDialogOpen}
-          onClose={() => setIsEditDialogOpen(false)}
-          invoice={selectedInvoice}
-          project={selectedProject}
-          onSave={handleSave}
+        <BillingToolbar
+          searchTerm={searchTerm}
+          onSearchTermChange={setSearchTerm}
+          dateRange={dateRange}
+          onDateRangeChange={setDateRange}
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
         />
-      )}
-    </div>
+
+        <BillingStats invoices={filteredInvoices} />
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Invoice History</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            {viewMode === 'table' ? (
+              <BillingTable
+                invoices={sortedInvoices}
+                onEdit={handleEdit}
+                sortColumn={sortColumn}
+                sortDirection={sortDirection}
+                handleSort={handleSort}
+              />
+            ) : (
+              <BillingKanbanView invoices={sortedInvoices} onEditInvoice={handleEdit} />
+            )}
+          </CardContent>
+        </Card>
+      </div>
+      <EditInvoiceDialog
+        isOpen={isFormOpen}
+        onClose={() => setIsFormOpen(false)}
+        invoice={selectedInvoice}
+        project={projects.find(p => p.id === selectedInvoice?.rawProjectId) || null}
+        onSave={handleSave}
+      />
+    </PortalLayout>
   );
 };
 
-export default BillingPage;
+export default Billing;
