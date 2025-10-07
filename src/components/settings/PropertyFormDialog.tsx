@@ -144,13 +144,13 @@ const PropertyFormDialog = ({ open, onOpenChange, onSave, property, isSaving, pr
                         <X className="h-4 w-4" />
                       </Button>
                     </div>
-                    {errors.options?.[index]?.value && (
-                      <p className="text-sm text-destructive mt-1">{(errors.options as any)[index].value.message}</p>
+                    {form.formState.errors.options?.[index]?.value && (
+                      <p className="text-sm text-destructive mt-1">{(form.formState.errors.options as any)[index].value.message}</p>
                     )}
                   </div>
                 ))}
                 <Button type="button" variant="outline" size="sm" onClick={() => append({ value: '' })}>Add Option</Button>
-                {errors.options && !Array.isArray(errors.options) && <p className="text-sm text-destructive mt-1">{errors.options.message}</p>}
+                {form.formState.errors.options && !Array.isArray(form.formState.errors.options) && <p className="text-sm text-destructive mt-1">{form.formState.errors.options.message}</p>}
               </div>
             )}
             <DialogFooter className="pt-4">

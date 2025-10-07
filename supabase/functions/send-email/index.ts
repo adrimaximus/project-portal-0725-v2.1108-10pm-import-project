@@ -1,44 +1,66 @@
 // @ts-nocheck
-import { serve } from 'https://deno.land/std@0.224.0/http/server.ts'
+import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
-}
+};
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    return new Response('ok', { headers: corsHeaders });
   }
 
   try {
-    const { to, subject, html, text } = await req.json();
-    if (!to || !subject || (!html && !text)) {
-        throw new Error("Missing required fields: to, subject, and html or text.");
+    // 1. Autentikasi pengguna untuk memastikan hanya pengguna yang login yang dapat mengirim email
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
+    );
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("Pengguna tidak terautentikasi.");
+
+    // 2. Ambil data dari body request
+    const { to, subject, html } = await req.json();
+    if (!to || !subject || !html) {
+      throw new Error("Kolom yang diperlukan tidak ada: to, subject, dan html wajib diisi.");
     }
 
-    const emailitApiKey = Deno.env.get("EMAILIT_API_KEY");
-    if (!emailitApiKey) {
-        throw new Error("Emailit API key is not configured on the server.");
+    // 3. Ambil kredensial dari environment variables
+    const apiKey = Deno.env.get("EMAILIT_API_KEY");
+    const senderEmail = Deno.env.get("EMAILIT_SENDER");
+    const fromName = Deno.env.get("EMAILIT_FROM_NAME");
+
+    if (!apiKey || !senderEmail || !fromName) {
+        throw new Error("Layanan email tidak dikonfigurasi di server.");
     }
 
-    const response = await fetch("https://api.emailit.com/v1/emails", {
+    // 4. Panggil API EmailIt
+    const res = await fetch("https://api.emailit.io/v1/send", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${emailitApiKey}`,
         "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        from: Deno.env.get("EMAIL_FROM") ?? "Betterworks <no-reply@mail.betterworks.id>",
-        to, subject, html, text,
+        from: {
+          email: senderEmail,
+          name: fromName,
+        },
+        to: [{ email: to }],
+        subject,
+        html,
       }),
     });
 
-    const data = await response.json().catch(() => ({}));
+    const data = await res.json().catch(() => ({}));
     
-    return new Response(JSON.stringify({ ok: response.ok, data }), { 
-      status: response.status, 
+    // 5. Kembalikan respons
+    return new Response(JSON.stringify({ ok: res.ok, data }), { 
+      status: res.status, 
       headers: { ...corsHeaders, "Content-Type": "application/json" } 
     });
 
