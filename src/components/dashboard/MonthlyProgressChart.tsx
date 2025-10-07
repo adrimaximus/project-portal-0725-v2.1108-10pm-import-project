@@ -197,10 +197,12 @@ const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
           </Select>
         </div>
       </CardHeader>
-      <CardContent className="h-[350px]">
-        <ResponsiveContainer width="100%" height="100%">
-          {renderChart()}
-        </ResponsiveContainer>
+      <CardContent>
+        <div className="h-[350px]">
+          <ResponsiveContainer width="100%" height="100%">
+            {renderChart()}
+          </ResponsiveContainer>
+        </div>
       </CardContent>
     </Card>
   );
