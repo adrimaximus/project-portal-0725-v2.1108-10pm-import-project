@@ -43,6 +43,7 @@ import MultiEmbedItemPage from "./pages/MultiEmbedItemPage";
 import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
 import TermsOfServicePage from "./pages/TermsOfServicePage";
 import NotFound from "./pages/NotFound";
+import ThemeSettingsPage from "./pages/ThemeSettingsPage";
 
 function App() {
   useEffect(() => {
@@ -115,6 +116,7 @@ function App() {
         <Route path="/settings/integrations/wbiztool" element={<WbiztoolPage />} />
         <Route path="/settings/navigation" element={<NavigationSettingsPage />} />
         <Route path="/settings/tags" element={<TagsSettingsPage />} />
+        <Route path="/settings/theme" element={<ThemeSettingsPage />} />
         <Route path="/settings/storage" element={<StorageSettingsPage />} />
         <Route path="/custom/:slug" element={<CustomPage />} />
         <Route path="/multipage/:slug" element={<MultiEmbedPage />} />
