@@ -58,7 +58,20 @@ const EmailitPage = () => {
       setSenderEmail("");
       setFromName("");
     } catch (error: any) {
-      toast.error("Failed to connect", { description: error.message });
+      let description = "An unknown error occurred.";
+      if (error.context && typeof error.context.json === 'function') {
+        try {
+          const errorBody = await error.context.json();
+          if (errorBody.error) {
+            description = errorBody.error;
+          }
+        } catch (e) {
+          description = "Failed to parse error response.";
+        }
+      } else {
+        description = error.message;
+      }
+      toast.error("Failed to connect", { description });
     } finally {
       setIsLoading(false);
     }
@@ -74,7 +87,20 @@ const EmailitPage = () => {
       toast.info("Disconnected from EmailIt.");
       setIsConnected(false);
     } catch (error: any) {
-      toast.error("Failed to disconnect", { description: error.message });
+      let description = "An unknown error occurred.";
+      if (error.context && typeof error.context.json === 'function') {
+        try {
+          const errorBody = await error.context.json();
+          if (errorBody.error) {
+            description = errorBody.error;
+          }
+        } catch (e) {
+          description = "Failed to parse error response.";
+        }
+      } else {
+        description = error.message;
+      }
+      toast.error("Failed to disconnect", { description });
     } finally {
       setIsLoading(false);
     }
@@ -97,7 +123,20 @@ const EmailitPage = () => {
       setTestSubject("");
       setTestMessage("");
     } catch (error: any) {
-      toast.error("Failed to send test email", { description: error.message });
+      let description = "An unknown error occurred.";
+      if (error.context && typeof error.context.json === 'function') {
+        try {
+          const errorBody = await error.context.json();
+          if (errorBody.error) {
+            description = errorBody.error;
+          }
+        } catch (e) {
+          description = "Failed to parse error response.";
+        }
+      } else {
+        description = error.message;
+      }
+      toast.error("Failed to send test email", { description });
     } finally {
       setIsSendingTest(false);
     }
