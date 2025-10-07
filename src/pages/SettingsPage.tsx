@@ -8,6 +8,7 @@ import { useNavigate } from "react-router-dom";
 import { ChevronRight } from "lucide-react";
 import { useFeatures } from "@/contexts/FeaturesContext";
 import TagsCard from "@/components/settings/TagsCard";
+import ThemeCard from "@/components/settings/ThemeCard";
 
 const WorkspaceSettingsCard = () => {
   const navigate = useNavigate();
@@ -45,6 +46,7 @@ const SettingsPage = () => {
           {/* Available to all members */}
           <NavigationCard />
           <TagsCard />
+          <ThemeCard />
           
           {/* Conditionally available */}
           {isFeatureEnabled('integrations') && hasPermission('settings:manage_integrations') && <IntegrationCard />}
