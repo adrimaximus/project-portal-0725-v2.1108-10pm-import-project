@@ -1,8 +1,8 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react"
 
-export type Theme = "dark" | "light" | "system" | "claude";
+export type Theme = "dark" | "light" | "system" | "claude" | "claude-light";
 
-const themeClasses = ["light", "dark", "theme-claude"];
+const themeClasses = ["light", "dark", "theme-claude", "theme-claude-light"];
 
 interface ThemeProviderState {
   theme: Theme
@@ -43,6 +43,8 @@ export function ThemeProvider({
 
     if (effectiveTheme === 'claude') {
       root.classList.add('dark', 'theme-claude');
+    } else if (effectiveTheme === 'claude-light') {
+      root.classList.add('light', 'theme-claude-light');
     } else if (effectiveTheme === 'dark') {
       root.classList.add('dark');
     } else { // light

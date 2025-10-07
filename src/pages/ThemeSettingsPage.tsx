@@ -24,11 +24,19 @@ const themes = [
       </div>
     </div>
   )},
-  { id: 'claude', name: 'Claude Theme', description: 'A sleek, dark theme inspired by modern AI interfaces.', preview: (
+  { id: 'claude', name: 'Claude Dark', description: 'A sleek, dark theme inspired by modern AI interfaces.', preview: (
     <div className="w-8 h-8 rounded-md bg-[#1A1A1A] border border-gray-700 flex items-center justify-center p-1">
       <div className="w-full space-y-1">
         <div className="h-1 w-3/4 rounded-full bg-gray-600"></div>
         <div className="h-1 w-1/2 rounded-full bg-gray-500"></div>
+      </div>
+    </div>
+  )},
+  { id: 'claude-light', name: 'Claude Light', description: 'A soft, elegant light theme inspired by modern AI interfaces.', preview: (
+    <div className="w-8 h-8 rounded-md bg-[#F6F7F4] border border-[#EAEBE7] flex items-center justify-center p-1">
+      <div className="w-full space-y-1">
+        <div className="h-1 w-3/4 rounded-full bg-[#353633]/30"></div>
+        <div className="h-1 w-1/2 rounded-full bg-[#353633]/50"></div>
       </div>
     </div>
   )},
