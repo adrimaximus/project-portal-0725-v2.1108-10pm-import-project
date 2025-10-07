@@ -7,6 +7,9 @@ import { Project, PaymentStatus } from '@/types';
 import { DatePicker } from '../ui/date-picker';
 import { NumericInput } from '../ui/NumericInput';
 import { Input } from '../ui/input';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import { Paperclip, X, Loader2 } from 'lucide-react';
 
 type Invoice = {
   id: string;
@@ -34,6 +37,12 @@ export const EditInvoiceDialog = ({ isOpen, onClose, invoice, project, onSave }:
   const [emailSendingDate, setEmailSendingDate] = useState<Date | undefined>();
   const [hardcopySendingDate, setHardcopySendingDate] = useState<Date | undefined>();
   const [channel, setChannel] = useState('');
+  
+  const [newAttachment, setNewAttachment] = useState<File | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [currentAttachmentUrl, setCurrentAttachmentUrl] = useState<string | null>(null);
+  const [currentAttachmentName, setCurrentAttachmentName] = useState<string | null>(null);
+  const [removeAttachment, setRemoveAttachment] = useState(false);
 
   useEffect(() => {
     if (invoice && project) {
@@ -45,11 +54,42 @@ export const EditInvoiceDialog = ({ isOpen, onClose, invoice, project, onSave }:
       setEmailSendingDate(project.email_sending_date ? new Date(project.email_sending_date) : undefined);
       setHardcopySendingDate(project.hardcopy_sending_date ? new Date(project.hardcopy_sending_date) : undefined);
       setChannel(project.channel || '');
+      
+      setCurrentAttachmentUrl(project.invoice_attachment_url || null);
+      setCurrentAttachmentName(project.invoice_attachment_name || null);
+      setNewAttachment(null);
+      setRemoveAttachment(false);
     }
   }, [invoice, project, isOpen]);
 
-  const handleSave = () => {
-    if (project) {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setNewAttachment(e.target.files[0]);
+      setRemoveAttachment(false);
+      setCurrentAttachmentUrl(null);
+      setCurrentAttachmentName(null);
+    }
+  };
+
+  const handleRemoveCurrentAttachment = () => {
+    setRemoveAttachment(true);
+    setCurrentAttachmentUrl(null);
+    setCurrentAttachmentName(null);
+  };
+
+  const handleRemoveNewAttachment = () => {
+    setNewAttachment(null);
+    if (project?.invoice_attachment_url) {
+      setCurrentAttachmentUrl(project.invoice_attachment_url);
+      setCurrentAttachmentName(project.invoice_attachment_name);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!project) return;
+    setIsProcessing(true);
+
+    try {
       onSave({
         id: project.id,
         invoice_number: invoiceNumber,
@@ -61,7 +101,54 @@ export const EditInvoiceDialog = ({ isOpen, onClose, invoice, project, onSave }:
         hardcopy_sending_date: hardcopySendingDate ? hardcopySendingDate.toISOString() : null,
         channel: channel || null,
       });
+
+      let attachmentUrl = project.invoice_attachment_url;
+      let attachmentName = project.invoice_attachment_name;
+      let attachmentUpdated = false;
+
+      if (removeAttachment && project.invoice_attachment_url) {
+        const oldFilePath = project.invoice_attachment_url.split('/project-files/')[1];
+        if (oldFilePath) {
+          await supabase.storage.from('project-files').remove([oldFilePath]);
+        }
+        attachmentUrl = null;
+        attachmentName = null;
+        attachmentUpdated = true;
+      }
+
+      if (newAttachment) {
+        toast.info('Uploading attachment...');
+        const sanitizedFileName = newAttachment.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
+        const filePath = `invoice-attachments/${project.id}/${Date.now()}-${sanitizedFileName}`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from('project-files')
+          .upload(filePath, newAttachment);
+
+        if (uploadError) throw new Error(`Failed to upload attachment: ${uploadError.message}`);
+
+        const { data: urlData } = supabase.storage.from('project-files').getPublicUrl(filePath);
+        attachmentUrl = urlData.publicUrl;
+        attachmentName = newAttachment.name;
+        attachmentUpdated = true;
+      }
+
+      if (attachmentUpdated) {
+        const { error } = await supabase
+          .from('projects')
+          .update({
+            invoice_attachment_url: attachmentUrl,
+            invoice_attachment_name: attachmentName,
+          })
+          .eq('id', project.id);
+        if (error) throw new Error(`Failed to save attachment details: ${error.message}`);
+      }
+
       onClose();
+    } catch (error: any) {
+      toast.error('An error occurred', { description: error.message });
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -171,10 +258,44 @@ export const EditInvoiceDialog = ({ isOpen, onClose, invoice, project, onSave }:
               </SelectContent>
             </Select>
           </div>
+          <div className="grid grid-cols-4 items-start gap-4 pt-2">
+            <Label htmlFor="attachment" className="text-right pt-2">
+              Attachment
+            </Label>
+            <div className="col-span-3">
+              {currentAttachmentUrl && !removeAttachment && (
+                <div className="flex items-center justify-between text-sm p-2 border rounded-md bg-muted/50">
+                  <a href={currentAttachmentUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-blue-600 hover:underline truncate">
+                    <Paperclip className="h-4 w-4 flex-shrink-0" />
+                    <span className="truncate" title={currentAttachmentName || ''}>{currentAttachmentName}</span>
+                  </a>
+                  <Button variant="ghost" size="icon" className="h-6 w-6 flex-shrink-0" onClick={handleRemoveCurrentAttachment} disabled={isProcessing}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+              {newAttachment && (
+                <div className="flex items-center justify-between text-sm p-2 border rounded-md bg-muted/50">
+                  <div className="flex items-center gap-2 truncate">
+                    <Paperclip className="h-4 w-4 flex-shrink-0" />
+                    <span className="truncate" title={newAttachment.name}>{newAttachment.name}</span>
+                  </div>
+                  <Button variant="ghost" size="icon" className="h-6 w-6 flex-shrink-0" onClick={handleRemoveNewAttachment} disabled={isProcessing}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+              {!newAttachment && !currentAttachmentUrl && (
+                <Input id="attachment" type="file" onChange={handleFileChange} className="text-sm" disabled={isProcessing} />
+              )}
+            </div>
+          </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button onClick={handleSave}>Save Changes</Button>
+          <Button variant="outline" onClick={onClose} disabled={isProcessing}>Cancel</Button>
+          <Button onClick={handleSave} disabled={isProcessing}>
+            {isProcessing ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : 'Save Changes'}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
