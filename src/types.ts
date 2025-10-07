@@ -1,6 +1,6 @@
 // General
 export type ProjectStatus = 'Requested' | 'In Progress' | 'In Review' | 'On Hold' | 'Completed' | 'Cancelled' | 'On Track' | 'At Risk' | 'Off Track' | 'Archived' | 'Idea' | 'Done';
-export type PaymentStatus = 'Paid' | 'Unpaid' | 'Pending' | 'Overdue' | 'Cancelled' | 'In Process' | 'Due';
+export type PaymentStatus = 'Paid' | 'Unpaid' | 'Pending' | 'Overdue' | 'Cancelled' | 'In Process' | 'Due' | 'Proposed';
 
 export interface User {
   id: string;
