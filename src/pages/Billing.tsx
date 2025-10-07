@@ -59,6 +59,7 @@ const Billing = () => {
         clientCompanyName: project.client_company_name || null,
         projectOwner: project.created_by as Owner | null,
         assignedMembers: (project.assignedTo as Member[]) || [],
+        invoiceAttachments: project.invoice_attachments || [],
       };
     })
     .filter((invoice): invoice is Invoice => invoice !== null), [projects]);
