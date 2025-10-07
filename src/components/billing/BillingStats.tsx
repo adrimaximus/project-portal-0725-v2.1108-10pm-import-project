@@ -27,13 +27,13 @@ const UserStat = ({ user, metric, metricType }: { user: UserStatData | null, met
     );
   }
   return (
-    <div className="flex items-center gap-2 sm:gap-4 pt-2">
-      <Avatar className="h-8 w-8 sm:h-10 sm:w-10">
+    <div className="flex items-center gap-2 pt-2">
+      <Avatar className="h-6 w-6">
         <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} alt={user.name} />
         <AvatarFallback style={generatePastelColor(user.id)}>{user.initials}</AvatarFallback>
       </Avatar>
       <div>
-        <div className="text-base sm:text-lg font-bold leading-tight">{user.name}</div>
+        <div className="text-sm font-bold leading-tight">{user.name}</div>
         <p className="text-xs text-muted-foreground">
           {metricType === 'count'
             ? `${metric} project${metric === 1 ? '' : 's'}`
