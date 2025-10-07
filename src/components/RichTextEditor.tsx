@@ -19,10 +19,14 @@ interface RichTextEditorProps {
 const RichTextEditor = React.forwardRef<ReactQuill, RichTextEditorProps>(({ value, onChange, placeholder, onGenerate, isGenerating, prompt }, ref) => {
   const modules = {
     toolbar: [
-      [{ 'header': [1, 2, false] }],
+      [{ 'font': [] }, { 'size': [] }],
       ['bold', 'italic', 'underline', 'strike'],
-      [{'list': 'ordered'}, {'list': 'bullet'}],
-      ['link'],
+      [{ 'color': [] }, { 'background': [] }],
+      [{ 'script': 'sub'}, { 'script': 'super' }],
+      [{ 'header': '1' }, { 'header': '2' }, 'blockquote', 'code-block'],
+      [{ 'list': 'ordered'}, { 'list': 'bullet' }, { 'indent': '-1'}, { 'indent': '+1' }],
+      [{ 'direction': 'rtl' }, { 'align': [] }],
+      ['link', 'image', 'video', 'formula'],
       ['clean']
     ],
   };
