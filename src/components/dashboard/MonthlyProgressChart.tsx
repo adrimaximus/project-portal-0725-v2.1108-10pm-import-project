@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { Project, PROJECT_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
 import { format, getMonth } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -11,6 +11,21 @@ type ChartType = 'quantity' | 'value' | 'project_status' | 'payment_status' | 'c
 interface MonthlyProgressChartProps {
   projects: Project[];
 }
+
+const SHARP_COLOR_PALETTE = [
+  '#2563eb', // blue
+  '#16a34a', // green
+  '#f97316', // orange
+  '#dc2626', // red
+  '#6d28d9', // purple
+  '#db2777', // pink
+  '#ca8a04', // yellow
+  '#4b5563', // gray
+  '#0d9488', // teal
+  '#65a30d', // lime
+  '#c026d3', // fuchsia
+  '#be123c', // rose
+];
 
 const CustomTooltip = ({ active, payload, label, chartType }: any) => {
   if (active && payload && payload.length) {
@@ -174,7 +189,11 @@ const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
               }
             />
             <Tooltip content={<CustomTooltip chartType={valueType} />} cursor={{ fill: 'hsl(var(--muted))' }} />
-            <Bar dataKey={valueType} fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+            <Bar dataKey={valueType} radius={[4, 4, 0, 0]}>
+              {chartData.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={SHARP_COLOR_PALETTE[index % SHARP_COLOR_PALETTE.length]} />
+              ))}
+            </Bar>
           </BarChart>
         );
       }
