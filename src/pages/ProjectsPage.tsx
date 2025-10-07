@@ -307,7 +307,7 @@ const ProjectsPage = () => {
   const isTaskView = view === 'tasks' || view === 'tasks-kanban';
 
   return (
-    <PortalLayout>
+    <PortalLayout disableMainScroll noPadding>
       <div className="flex flex-col h-full">
         <AlertDialog open={!!projectToDelete} onOpenChange={(open) => !open && setProjectToDelete(null)}>
           <AlertDialogContent>
@@ -338,61 +338,63 @@ const ProjectsPage = () => {
           isImporting={importEventsMutation.isPending}
         />
 
-        <Card className="h-full flex flex-col">
-          <div className="sticky top-0 bg-background z-10 sm:relative border-b">
-            <CardHeader className="p-4 space-y-4">
-              <div className="flex items-center justify-between">
-                <CardTitle>All Projects</CardTitle>
-              </div>
+        <Card className="h-full flex flex-col rounded-none border-0 sm:border sm:rounded-lg">
+          <div className="flex-grow min-h-0 overflow-y-auto">
+            <div className="sticky top-0 bg-background z-10 border-b">
+              <div className="p-4 space-y-4">
+                <div className="flex items-center justify-between">
+                  <CardTitle>All Projects</CardTitle>
+                </div>
 
-              <div className="flex items-center gap-2">
-                <div className="flex-1">
-                  <DatePickerWithRange date={dateRange} onDateChange={setDateRange} />
-                </div>
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder={isTaskView ? "Search tasks..." : "Search projects..."}
-                    value={isTaskView ? taskSearchTerm : searchTerm}
-                    onChange={(e) => isTaskView ? setTaskSearchTerm(e.target.value) : setSearchTerm(e.target.value)}
-                    className="pl-9 w-full"
-                  />
+                <div className="flex items-center gap-2">
+                  <div className="flex-1">
+                    <DatePickerWithRange date={dateRange} onDateChange={setDateRange} />
+                  </div>
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder={isTaskView ? "Search tasks..." : "Search projects..."}
+                      value={isTaskView ? taskSearchTerm : searchTerm}
+                      onChange={(e) => isTaskView ? setTaskSearchTerm(e.target.value) : setSearchTerm(e.target.value)}
+                      className="pl-9 w-full"
+                    />
+                  </div>
                 </div>
               </div>
-            </CardHeader>
-            <ProjectsToolbar
-              view={view} onViewChange={handleViewChange}
-              kanbanGroupBy={kanbanGroupBy} onKanbanGroupByChange={setKanbanGroupBy}
-              hideCompletedTasks={hideCompletedTasks}
-              onToggleHideCompleted={toggleHideCompleted}
-              onNewProjectClick={() => navigate('/request')}
-              onNewTaskClick={handleCreateTask}
-              isTaskView={isTaskView}
-              isGCalConnected={isGCalConnected}
-              onImportClick={() => setIsImportDialogOpen(true)}
-              onRefreshClick={handleRefresh}
-            />
+              <ProjectsToolbar
+                view={view} onViewChange={handleViewChange}
+                kanbanGroupBy={kanbanGroupBy} onKanbanGroupByChange={setKanbanGroupBy}
+                hideCompletedTasks={hideCompletedTasks}
+                onToggleHideCompleted={toggleHideCompleted}
+                onNewProjectClick={() => navigate('/request')}
+                onNewTaskClick={handleCreateTask}
+                isTaskView={isTaskView}
+                isGCalConnected={isGCalConnected}
+                onImportClick={() => setIsImportDialogOpen(true)}
+                onRefreshClick={handleRefresh}
+              />
+            </div>
+            <div className="p-0 data-[view=kanban]:p-4 data-[view=kanban]:md:p-6 data-[view=tasks-kanban]:p-0" data-view={view}>
+              <ProjectViewContainer
+                view={view}
+                projects={sortedProjects}
+                tasks={filteredTasks}
+                isLoading={isLoading}
+                isTasksLoading={tasksLoading}
+                onDeleteProject={handleDeleteProject}
+                sortConfig={sortConfig}
+                requestSort={requestSort}
+                rowRefs={rowRefs}
+                kanbanGroupBy={kanbanGroupBy}
+                onEditTask={handleEditTask}
+                onDeleteTask={handleDeleteTask}
+                onToggleTaskCompletion={handleToggleTaskCompletion}
+                taskSortConfig={taskSortConfig}
+                requestTaskSort={requestTaskSort}
+                onTaskStatusChange={handleTaskStatusChange}
+              />
+            </div>
           </div>
-          <CardContent className="flex-grow min-h-0 overflow-y-auto p-0 data-[view=kanban]:p-4 data-[view=kanban]:md:p-6 data-[view=tasks-kanban]:p-0" data-view={view}>
-            <ProjectViewContainer
-              view={view}
-              projects={sortedProjects}
-              tasks={filteredTasks}
-              isLoading={isLoading}
-              isTasksLoading={tasksLoading}
-              onDeleteProject={handleDeleteProject}
-              sortConfig={sortConfig}
-              requestSort={requestSort}
-              rowRefs={rowRefs}
-              kanbanGroupBy={kanbanGroupBy}
-              onEditTask={handleEditTask}
-              onDeleteTask={handleDeleteTask}
-              onToggleTaskCompletion={handleToggleTaskCompletion}
-              taskSortConfig={taskSortConfig}
-              requestTaskSort={requestTaskSort}
-              onTaskStatusChange={handleTaskStatusChange}
-            />
-          </CardContent>
         </Card>
       </div>
     </PortalLayout>
