@@ -14,8 +14,9 @@ type NewProjectData = {
 };
 
 const createProject = async (projectData: NewProjectData) => {
-    // The 'created_by' field will be set by the database default/trigger,
-    // which is more secure and resolves the RLS issue.
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("Pengguna tidak diautentikasi");
+
     const dataToInsert = {
         name: projectData.name,
         description: projectData.description,
@@ -25,6 +26,7 @@ const createProject = async (projectData: NewProjectData) => {
         budget: projectData.budget,
         origin_event_id: projectData.origin_event_id,
         venue: projectData.venue,
+        created_by: user.id,
     };
 
     const { data, error } = await supabase.from('projects').insert(dataToInsert).select().single();
