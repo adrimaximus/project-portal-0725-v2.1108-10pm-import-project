@@ -34,6 +34,7 @@ import GoogleCalendarIntegrationPage from "./pages/GoogleCalendarIntegrationPage
 import GoogleDrivePage from "./pages/integrations/GoogleDrivePage";
 import OpenAiIntegrationPage from "./pages/integrations/OpenAiIntegrationPage";
 import WbiztoolPage from "./pages/integrations/WbiztoolPage";
+import EmailitPage from "./pages/integrations/EmailitPage";
 import NavigationSettingsPage from "./pages/NavigationSettingsPage";
 import TagsSettingsPage from "./pages/TagsSettingsPage";
 import StorageSettingsPage from "./pages/StorageSettingsPage";
@@ -114,6 +115,7 @@ function App() {
         <Route path="/settings/integrations/google-drive" element={<GoogleDrivePage />} />
         <Route path="/settings/integrations/openai" element={<OpenAiIntegrationPage />} />
         <Route path="/settings/integrations/wbiztool" element={<WbiztoolPage />} />
+        <Route path="/settings/integrations/emailit" element={<EmailitPage />} />
         <Route path="/settings/navigation" element={<NavigationSettingsPage />} />
         <Route path="/settings/tags" element={<TagsSettingsPage />} />
         <Route path="/settings/theme" element={<ThemeSettingsPage />} />
