@@ -1,35 +1,44 @@
-import { useState } from 'react';
-import PortalLayout from "@/components/PortalLayout";
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
-import { Link } from "react-router-dom";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { PlusCircle, Edit, MoreHorizontal, Trash2 } from "lucide-react";
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
 import { ContactProperty } from '@/types';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { PlusCircle, Edit, Trash2, GripVertical, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 import PropertyFormDialog from '@/components/settings/PropertyFormDialog';
+import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
+import { Badge } from '@/components/ui/badge';
+import ConfirmationDialog from '@/components/ConfirmationDialog';
 
 const ContactPropertiesPage = () => {
-  const queryClient = useQueryClient();
+  const [properties, setProperties] = useState<ContactProperty[]>([]);
+  const [loading, setLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [propertyToEdit, setPropertyToEdit] = useState<ContactProperty | null>(null);
   const [propertyToDelete, setPropertyToDelete] = useState<ContactProperty | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
+  const [isConfirmDeleteDialogOpen, setIsConfirmDeleteDialogOpen] = useState(false);
 
-  const { data: properties = [], isLoading } = useQuery({
-    queryKey: ['contact_properties'],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('contact_properties').select('*').order('label');
+  const fetchProperties = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('contact_properties')
+        .select('*')
+        .order('label', { ascending: true });
+
       if (error) throw error;
-      return data as ContactProperty[];
+      setProperties(data || []);
+    } catch (error: any) {
+      toast.error(`Failed to fetch properties: ${error.message}`);
+    } finally {
+      setLoading(false);
     }
-  });
+  }, []);
+
+  useEffect(() => {
+    fetchProperties();
+  }, [fetchProperties]);
 
   const handleAddNew = () => {
     setPropertyToEdit(null);
@@ -41,103 +50,144 @@ const ContactPropertiesPage = () => {
     setIsFormOpen(true);
   };
 
-  const handleSave = async (propertyData: Omit<ContactProperty, 'id' | 'is_default' | 'company_logo_url'>) => {
-    setIsSaving(true);
-    const { id, is_default, ...dataToSave } = propertyToEdit || {};
-    const upsertData = { ...dataToSave, ...propertyData };
+  const handleDelete = (property: ContactProperty) => {
+    setPropertyToDelete(property);
+    setIsConfirmDeleteDialogOpen(true);
+  };
 
-    const promise = propertyToEdit?.id
-      ? supabase.from('contact_properties').update(upsertData).eq('id', propertyToEdit.id)
-      : supabase.from('contact_properties').insert(upsertData);
+  const confirmDelete = async () => {
+    if (!propertyToDelete) return;
 
-    const { error } = await promise;
-    setIsSaving(false);
+    try {
+      const { error } = await supabase
+        .from('contact_properties')
+        .delete()
+        .eq('id', propertyToDelete.id);
 
-    if (error) {
-      toast.error(`Failed to save property: ${error.message}`);
-    } else {
-      toast.success(`Property "${propertyData.label}" saved.`);
-      queryClient.invalidateQueries({ queryKey: ['contact_properties'] });
-      setIsFormOpen(false);
+      if (error) throw error;
+
+      toast.success(`Property "${propertyToDelete.label}" deleted successfully.`);
+      setProperties(properties.filter(p => p.id !== propertyToDelete.id));
+    } catch (error: any) {
+      toast.error(`Error deleting property: ${error.message}`);
+    } finally {
+      setIsConfirmDeleteDialogOpen(false);
+      setPropertyToDelete(null);
     }
   };
 
-  const handleDelete = async () => {
-    if (!propertyToDelete) return;
-    const { error } = await supabase.from('contact_properties').delete().eq('id', propertyToDelete.id);
-    if (error) {
-      toast.error(`Failed to delete property: ${error.message}`);
-    } else {
-      toast.success(`Property "${propertyToDelete.label}" deleted.`);
-      queryClient.invalidateQueries({ queryKey: ['contact_properties'] });
+  const handleSave = async (propertyData: Omit<ContactProperty, 'id' | 'is_default' | 'company_logo_url' | 'options'> & { options?: string[] | null }) => {
+    setIsSaving(true);
+    try {
+      const propertyToSave = {
+        ...propertyData,
+        options: propertyData.options
+          ? propertyData.options.map(opt => ({
+              value: opt.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, ''),
+              label: opt
+            }))
+          : null,
+      };
+
+      const { data, error } = await supabase
+        .from('contact_properties')
+        .upsert({
+          ...(propertyToEdit ? { id: propertyToEdit.id } : {}),
+          ...propertyToSave,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      toast.success(`Property ${propertyToEdit ? 'updated' : 'created'} successfully.`);
+      setIsFormOpen(false);
+      setPropertyToEdit(null);
+      fetchProperties();
+    } catch (error: any) {
+      toast.error(`Error saving property: ${error.message}`);
+    } finally {
+      setIsSaving(false);
     }
-    setPropertyToDelete(null);
+  };
+
+  const onDragEnd = (result: DropResult) => {
+    if (!result.destination) return;
+    const items = Array.from(properties);
+    const [reorderedItem] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, reorderedItem);
+    setProperties(items);
+    toast.info("Drag-and-drop reordering is a visual placeholder. Order is not saved yet.");
   };
 
   return (
-    <PortalLayout>
-      <div className="space-y-6">
-        <Breadcrumb>
-          <BreadcrumbList>
-            <BreadcrumbItem><BreadcrumbLink asChild><Link to="/people">People</Link></BreadcrumbLink></BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem><BreadcrumbPage>Contact Properties</BreadcrumbPage></BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
-        
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">Contact Properties</h1>
-            <p className="text-muted-foreground">Modify and create contact properties.</p>
+    <div className="container mx-auto p-4 md:p-6 lg:p-8">
+      <Card>
+        <CardHeader>
+          <div className="flex justify-between items-center">
+            <div>
+              <CardTitle>Contact Properties</CardTitle>
+              <CardDescription>Manage the fields used for your contacts.</CardDescription>
+            </div>
+            <Button onClick={handleAddNew}>
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Create Property
+            </Button>
           </div>
-          <Button onClick={handleAddNew}>
-            <PlusCircle className="mr-2 h-4 w-4" /> New Property
-          </Button>
-        </div>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Active Properties</CardTitle>
-            <CardDescription>These are the fields available for your contacts.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Label</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoading ? (
-                  <TableRow><TableCell colSpan={3} className="text-center">Loading properties...</TableCell></TableRow>
-                ) : properties.length === 0 ? (
-                  <TableRow><TableCell colSpan={3} className="text-center h-24">No custom properties found.</TableCell></TableRow>
-                ) : properties.map(prop => (
-                  <TableRow key={prop.id}>
-                    <TableCell className="font-medium">{prop.label}</TableCell>
-                    <TableCell><Badge variant="outline" className="capitalize">{prop.type}</Badge></TableCell>
-                    <TableCell className="text-right">
-                      {!prop.is_default && (
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onSelect={() => handleEdit(prop)}><Edit className="mr-2 h-4 w-4" /> Edit</DropdownMenuItem>
-                            <DropdownMenuItem onSelect={() => setPropertyToDelete(prop)} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Delete</DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      </div>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="flex justify-center items-center h-40">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
+            <DragDropContext onDragEnd={onDragEnd}>
+              <Droppable droppableId="properties">
+                {(provided) => (
+                  <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-2">
+                    {properties.map((prop, index) => (
+                      <Draggable key={prop.id} draggableId={prop.id} index={index} isDragDisabled={prop.is_default}>
+                        {(provided, snapshot) => (
+                          <div
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                            className={`flex items-center p-3 rounded-md border transition-shadow ${
+                              snapshot.isDragging ? 'shadow-lg bg-muted' : 'bg-card'
+                            }`}
+                          >
+                            <div {...provided.dragHandleProps} className={`mr-3 ${prop.is_default ? 'cursor-not-allowed text-muted-foreground' : 'cursor-grab'}`}>
+                              <GripVertical className="h-5 w-5" />
+                            </div>
+                            <div className="flex-grow">
+                              <span className="font-medium">{prop.label}</span>
+                              <Badge variant="outline" className="ml-2">{prop.type}</Badge>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              {prop.is_default ? (
+                                <Badge variant="secondary">Default</Badge>
+                              ) : (
+                                <>
+                                  <Button variant="ghost" size="icon" onClick={() => handleEdit(prop)}>
+                                    <Edit className="h-4 w-4" />
+                                  </Button>
+                                  <Button variant="ghost" size="icon" onClick={() => handleDelete(prop)}>
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </Draggable>
+                    ))}
+                    {provided.placeholder}
+                  </div>
+                )}
+              </Droppable>
+            </DragDropContext>
+          )}
+        </CardContent>
+      </Card>
 
       <PropertyFormDialog
         open={isFormOpen}
@@ -147,21 +197,14 @@ const ContactPropertiesPage = () => {
         isSaving={isSaving}
       />
 
-      <AlertDialog open={!!propertyToDelete} onOpenChange={(open) => !open && setPropertyToDelete(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete the "{propertyToDelete?.label}" property. This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </PortalLayout>
+      <ConfirmationDialog
+        open={isConfirmDeleteDialogOpen}
+        onOpenChange={setIsConfirmDeleteDialogOpen}
+        onConfirm={confirmDelete}
+        title="Delete Property"
+        description={`Are you sure you want to delete the property "${propertyToDelete?.label}"? This action cannot be undone.`}
+      />
+    </div>
   );
 };
 
