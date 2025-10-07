@@ -173,7 +173,7 @@ const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
     <Card>
       <CardHeader>
         <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-          <CardTitle>Overview</CardTitle>
+          <CardTitle>Project Overview</CardTitle>
           <Select value={chartType} onValueChange={(value) => setChartType(value as ChartType)}>
             <SelectTrigger className="w-full sm:w-[240px]">
               <SelectValue placeholder="Select view" />
@@ -197,12 +197,10 @@ const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
           </Select>
         </div>
       </CardHeader>
-      <CardContent>
-        <div className="h-[350px]">
-          <ResponsiveContainer width="100%" height="100%">
-            {renderChart()}
-          </ResponsiveContainer>
-        </div>
+      <CardContent className="h-[350px] pt-6">
+        <ResponsiveContainer width="100%" height="100%">
+          {renderChart()}
+        </ResponsiveContainer>
       </CardContent>
     </Card>
   );
