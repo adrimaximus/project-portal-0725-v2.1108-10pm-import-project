@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { Project, PROJECT_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { format, getMonth } from 'date-fns';
 import { getStatusStyles, getPaymentStatusStyles } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
@@ -107,18 +107,16 @@ const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
 
         return (
           <ChartContainer config={chartConfig} className="h-full w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="name" tickLine={false} axisLine={false} fontSize={10} interval={0} />
-                <YAxis tickLine={false} axisLine={false} fontSize={10} tickFormatter={(value) => metric === 'value' ? `Rp${new Intl.NumberFormat('id-ID', { notation: 'compact' }).format(value)}` : value} />
-                <ChartTooltip
-                  content={<ChartTooltipContent formatter={(value) => metric === 'value' ? `Rp ${new Intl.NumberFormat('id-ID').format(value as number)}` : String(value)} />}
-                  cursor={{ fill: 'hsl(var(--muted))' }}
-                />
-                <Bar dataKey={metric} fill={`var(--color-${metric})`} radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            <BarChart data={chartData}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} />
+              <XAxis dataKey="name" tickLine={false} axisLine={false} fontSize={10} interval={0} />
+              <YAxis tickLine={false} axisLine={false} fontSize={10} tickFormatter={(value) => metric === 'value' ? `Rp${new Intl.NumberFormat('id-ID', { notation: 'compact' }).format(value)}` : value} />
+              <ChartTooltip
+                content={<ChartTooltipContent formatter={(value) => metric === 'value' ? `Rp ${new Intl.NumberFormat('id-ID').format(value as number)}` : String(value)} />}
+                cursor={{ fill: 'hsl(var(--muted))' }}
+              />
+              <Bar dataKey={metric} fill={`var(--color-${metric})`} radius={[4, 4, 0, 0]} />
+            </BarChart>
           </ChartContainer>
         );
       }
@@ -138,32 +136,30 @@ const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
 
         return (
           <ChartContainer config={chartConfig} className="h-full w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart accessibilityLayer data={chartData}>
-                <CartesianGrid vertical={false} />
-                <XAxis
-                  dataKey="name"
-                  tickLine={false}
-                  tickMargin={10}
-                  axisLine={false}
-                  fontSize={10}
-                  interval={0}
+            <BarChart accessibilityLayer data={chartData}>
+              <CartesianGrid vertical={false} />
+              <XAxis
+                dataKey="name"
+                tickLine={false}
+                tickMargin={10}
+                axisLine={false}
+                fontSize={10}
+                interval={0}
+              />
+              <YAxis tickLine={false} axisLine={false} fontSize={10} />
+              <ChartTooltip content={<ChartTooltipContent hideIndicator />} />
+              <ChartLegend content={<ChartLegendContent />} />
+              {options.map(status => (
+                <Bar
+                  key={status.value}
+                  dataKey={status.value}
+                  stackId="a"
+                  fill={`var(--color-${sanitizeKeyForCss(status.value)})`}
+                  name={status.label}
+                  radius={[4, 4, 0, 0]}
                 />
-                <YAxis tickLine={false} axisLine={false} fontSize={10} />
-                <ChartTooltip content={<ChartTooltipContent hideIndicator />} />
-                <ChartLegend content={<ChartLegendContent />} />
-                {options.map(status => (
-                  <Bar
-                    key={status.value}
-                    dataKey={status.value}
-                    stackId="a"
-                    fill={`var(--color-${sanitizeKeyForCss(status.value)})`}
-                    name={status.label}
-                    radius={[4, 4, 0, 0]}
-                  />
-                ))}
-              </BarChart>
-            </ResponsiveContainer>
+              ))}
+            </BarChart>
           </ChartContainer>
         );
       }
