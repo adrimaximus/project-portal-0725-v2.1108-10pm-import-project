@@ -48,9 +48,9 @@ const PortalHeader = ({ summary }: PortalHeaderProps) => {
   };
 
   const toggleTheme = () => {
-    if (theme === "dark") {
+    if (theme === "dark" || theme === "claude") {
       setTheme("light");
-    } else if (theme === "light") {
+    } else if (theme === "light" || theme === "claude-light") {
       setTheme("system");
     } else {
       setTheme("dark");
@@ -133,8 +133,8 @@ const PortalHeader = ({ summary }: PortalHeaderProps) => {
           </DropdownMenu>
         )}
         <Button variant="outline" size="icon" onClick={toggleTheme} className="h-9 w-9 rounded-full">
-          {theme === 'light' && <Sun className="h-[1.2rem] w-[1.2rem]" />}
-          {theme === 'dark' && <Moon className="h-[1.2rem] w-[1.2rem]" />}
+          {(theme === 'light' || theme === 'claude-light') && <Sun className="h-[1.2rem] w-[1.2rem]" />}
+          {(theme === 'dark' || theme === 'claude') && <Moon className="h-[1.2rem] w-[1.2rem]" />}
           {theme === 'system' && <Laptop className="h-[1.2rem] w-[1.2rem]" />}
           <span className="sr-only">Toggle theme</span>
         </Button>
