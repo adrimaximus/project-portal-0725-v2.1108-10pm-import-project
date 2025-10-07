@@ -153,20 +153,29 @@ const BillingTable = ({ invoices, onEdit, sortColumn, sortDirection, handleSort 
               <TableCell>{format(invoice.dueDate, 'MMM dd, yyyy')}</TableCell>
               <TableCell>
                 {invoice.invoiceAttachments && invoice.invoiceAttachments.length > 0 ? (
-                  <div className="flex flex-col gap-1">
-                    {invoice.invoiceAttachments.map(att => (
-                      <a
-                        key={att.id}
-                        href={att.file_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-1 text-sm text-primary hover:underline truncate"
-                      >
-                        <Paperclip className="h-3 w-3 flex-shrink-0" />
-                        <span className="truncate" title={att.file_name}>{att.file_name}</span>
-                      </a>
-                    ))}
-                  </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm" className="flex items-center gap-1 text-muted-foreground">
+                        <Paperclip className="h-4 w-4" />
+                        {invoice.invoiceAttachments.length} attachment{invoice.invoiceAttachments.length > 1 ? 's' : ''}
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      {invoice.invoiceAttachments.map(att => (
+                        <DropdownMenuItem key={att.id} asChild>
+                          <a
+                            href={att.file_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-2 cursor-pointer"
+                          >
+                            <Download className="h-4 w-4" />
+                            <span className="truncate" title={att.file_name}>{att.file_name}</span>
+                          </a>
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 ) : (
                   'N/A'
                 )}
