@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Project, PaymentStatus } from '@/types';
+import { Project, PaymentStatus, InvoiceAttachment } from '@/types';
 import { DatePicker } from '../ui/date-picker';
 import { NumericInput } from '../ui/NumericInput';
 import { Input } from '../ui/input';
@@ -38,11 +38,10 @@ export const EditInvoiceDialog = ({ isOpen, onClose, invoice, project, onSave }:
   const [hardcopySendingDate, setHardcopySendingDate] = useState<Date | undefined>();
   const [channel, setChannel] = useState('');
   
-  const [newAttachment, setNewAttachment] = useState<File | null>(null);
+  const [currentAttachments, setCurrentAttachments] = useState<InvoiceAttachment[]>([]);
+  const [newAttachments, setNewAttachments] = useState<File[]>([]);
+  const [attachmentsToRemove, setAttachmentsToRemove] = useState<string[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [currentAttachmentUrl, setCurrentAttachmentUrl] = useState<string | null>(null);
-  const [currentAttachmentName, setCurrentAttachmentName] = useState<string | null>(null);
-  const [removeAttachment, setRemoveAttachment] = useState(false);
 
   useEffect(() => {
     if (invoice && project) {
@@ -55,34 +54,25 @@ export const EditInvoiceDialog = ({ isOpen, onClose, invoice, project, onSave }:
       setHardcopySendingDate(project.hardcopy_sending_date ? new Date(project.hardcopy_sending_date) : undefined);
       setChannel(project.channel || '');
       
-      setCurrentAttachmentUrl(project.invoice_attachment_url || null);
-      setCurrentAttachmentName(project.invoice_attachment_name || null);
-      setNewAttachment(null);
-      setRemoveAttachment(false);
+      setCurrentAttachments(project.invoice_attachments || []);
+      setNewAttachments([]);
+      setAttachmentsToRemove([]);
     }
   }, [invoice, project, isOpen]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setNewAttachment(e.target.files[0]);
-      setRemoveAttachment(false);
-      setCurrentAttachmentUrl(null);
-      setCurrentAttachmentName(null);
+    if (e.target.files) {
+      setNewAttachments(prev => [...prev, ...Array.from(e.target.files!)]);
     }
   };
 
-  const handleRemoveCurrentAttachment = () => {
-    setRemoveAttachment(true);
-    setCurrentAttachmentUrl(null);
-    setCurrentAttachmentName(null);
+  const handleRemoveCurrentAttachment = (attachmentId: string) => {
+    setAttachmentsToRemove(prev => [...prev, attachmentId]);
+    setCurrentAttachments(prev => prev.filter(att => att.id !== attachmentId));
   };
 
-  const handleRemoveNewAttachment = () => {
-    setNewAttachment(null);
-    if (project?.invoice_attachment_url) {
-      setCurrentAttachmentUrl(project.invoice_attachment_url);
-      setCurrentAttachmentName(project.invoice_attachment_name);
-    }
+  const handleRemoveNewAttachment = (fileToRemove: File) => {
+    setNewAttachments(prev => prev.filter(file => file !== fileToRemove));
   };
 
   const handleSave = async () => {
@@ -90,47 +80,7 @@ export const EditInvoiceDialog = ({ isOpen, onClose, invoice, project, onSave }:
     setIsProcessing(true);
 
     try {
-      let finalAttachmentUrl = project.invoice_attachment_url;
-      let finalAttachmentName = project.invoice_attachment_name;
-
-      // Handle attachment removal
-      if (removeAttachment && project.invoice_attachment_url) {
-        const urlParts = project.invoice_attachment_url.split('/billing/');
-        if (urlParts.length > 1) {
-          const oldFilePath = urlParts[1];
-          await supabase.storage.from('billing').remove([oldFilePath]);
-        }
-        finalAttachmentUrl = null;
-        finalAttachmentName = null;
-      }
-
-      // Handle new attachment upload
-      if (newAttachment) {
-        // If there was an old attachment, remove it first
-        if (project.invoice_attachment_url) {
-            const oldUrlParts = project.invoice_attachment_url.split('/billing/');
-            if (oldUrlParts.length > 1) {
-                const oldFilePath = oldUrlParts[1];
-                await supabase.storage.from('billing').remove([oldFilePath]);
-            }
-        }
-
-        toast.info('Uploading attachment...');
-        const sanitizedFileName = newAttachment.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
-        const filePath = `invoice-attachments/${project.id}/${Date.now()}-${sanitizedFileName}`;
-        
-        const { error: uploadError } = await supabase.storage
-          .from('billing')
-          .upload(filePath, newAttachment);
-
-        if (uploadError) throw new Error(`Failed to upload attachment: ${uploadError.message}`);
-
-        const { data: urlData } = supabase.storage.from('billing').getPublicUrl(filePath);
-        finalAttachmentUrl = urlData.publicUrl;
-        finalAttachmentName = newAttachment.name;
-      }
-
-      // Call onSave with all the data, including attachment info
+      // 1. Update project details (non-attachment fields)
       onSave({
         id: project.id,
         invoice_number: invoiceNumber,
@@ -141,10 +91,50 @@ export const EditInvoiceDialog = ({ isOpen, onClose, invoice, project, onSave }:
         email_sending_date: emailSendingDate ? emailSendingDate.toISOString() : null,
         hardcopy_sending_date: hardcopySendingDate ? hardcopySendingDate.toISOString() : null,
         channel: channel || null,
-        invoice_attachment_url: finalAttachmentUrl,
-        invoice_attachment_name: finalAttachmentName,
       });
 
+      // 2. Handle attachment removals
+      if (attachmentsToRemove.length > 0) {
+        const attachmentsToDelete = project.invoice_attachments?.filter(att => attachmentsToRemove.includes(att.id));
+        if (attachmentsToDelete && attachmentsToDelete.length > 0) {
+          const storagePaths = attachmentsToDelete.map(att => att.storage_path);
+          await supabase.storage.from('billing').remove(storagePaths);
+          const { error: deleteError } = await supabase.from('invoice_attachments').delete().in('id', attachmentsToRemove);
+          if (deleteError) throw deleteError;
+        }
+      }
+
+      // 3. Handle new attachment uploads
+      if (newAttachments.length > 0) {
+        toast.info(`Uploading ${newAttachments.length} attachment(s)...`);
+        const uploadPromises = newAttachments.map(file => {
+          const sanitizedFileName = file.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
+          const filePath = `invoice-attachments/${project.id}/${Date.now()}-${sanitizedFileName}`;
+          return supabase.storage.from('billing').upload(filePath, file).then(result => {
+            if (result.error) throw result.error;
+            return { ...result, filePath, originalFile: file };
+          });
+        });
+
+        const uploadResults = await Promise.all(uploadPromises);
+
+        const newAttachmentRecords = uploadResults.map(result => {
+          const { data: urlData } = supabase.storage.from('billing').getPublicUrl(result.filePath);
+          return {
+            project_id: project.id,
+            file_name: result.originalFile.name,
+            file_url: urlData.publicUrl,
+            storage_path: result.data.path,
+            file_type: result.originalFile.type,
+            file_size: result.originalFile.size,
+          };
+        });
+
+        const { error: insertError } = await supabase.from('invoice_attachments').insert(newAttachmentRecords);
+        if (insertError) throw insertError;
+      }
+
+      toast.success('Invoice updated successfully!');
       onClose();
     } catch (error: any) {
       toast.error('An error occurred', { description: error.message });
@@ -165,6 +155,7 @@ export const EditInvoiceDialog = ({ isOpen, onClose, invoice, project, onSave }:
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
+          {/* Other form fields remain the same */}
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="invoiceNumber" className="text-right">
               Invoice #
@@ -261,34 +252,34 @@ export const EditInvoiceDialog = ({ isOpen, onClose, invoice, project, onSave }:
           </div>
           <div className="grid grid-cols-4 items-start gap-4 pt-2">
             <Label htmlFor="attachment" className="text-right pt-2">
-              Attachment
+              Attachments
             </Label>
-            <div className="col-span-3">
-              {currentAttachmentUrl && !removeAttachment && (
-                <div className="flex items-center justify-between text-sm p-2 border rounded-md bg-muted/50">
-                  <a href={currentAttachmentUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-blue-600 hover:underline truncate">
+            <div className="col-span-3 space-y-2">
+              {currentAttachments.map(att => (
+                <div key={att.id} className="flex items-center justify-between text-sm p-2 border rounded-md bg-muted/50">
+                  <a href={att.file_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-blue-600 hover:underline truncate">
                     <Paperclip className="h-4 w-4 flex-shrink-0" />
-                    <span className="truncate" title={currentAttachmentName || ''}>{currentAttachmentName}</span>
+                    <span className="truncate" title={att.file_name}>{att.file_name}</span>
                   </a>
-                  <Button variant="ghost" size="icon" className="h-6 w-6 flex-shrink-0" onClick={handleRemoveCurrentAttachment} disabled={isProcessing}>
+                  <Button variant="ghost" size="icon" className="h-6 w-6 flex-shrink-0" onClick={() => handleRemoveCurrentAttachment(att.id)} disabled={isProcessing}>
                     <X className="h-4 w-4" />
                   </Button>
                 </div>
-              )}
-              {newAttachment && (
-                <div className="flex items-center justify-between text-sm p-2 border rounded-md bg-muted/50">
+              ))}
+              {newAttachments.map((file, index) => (
+                <div key={index} className="flex items-center justify-between text-sm p-2 border rounded-md bg-muted/50">
                   <div className="flex items-center gap-2 truncate">
                     <Paperclip className="h-4 w-4 flex-shrink-0" />
-                    <span className="truncate" title={newAttachment.name}>{newAttachment.name}</span>
+                    <span className="truncate" title={file.name}>{file.name}</span>
                   </div>
-                  <Button variant="ghost" size="icon" className="h-6 w-6 flex-shrink-0" onClick={handleRemoveNewAttachment} disabled={isProcessing}>
+                  <Button variant="ghost" size="icon" className="h-6 w-6 flex-shrink-0" onClick={() => handleRemoveNewAttachment(file)} disabled={isProcessing}>
                     <X className="h-4 w-4" />
                   </Button>
                 </div>
-              )}
-              {!newAttachment && !currentAttachmentUrl && (
-                <Input id="attachment" type="file" onChange={handleFileChange} className="text-sm" disabled={isProcessing} />
-              )}
+              ))}
+              <div>
+                <Input id="attachment" type="file" multiple onChange={handleFileChange} className="text-sm" disabled={isProcessing} />
+              </div>
             </div>
           </div>
         </div>

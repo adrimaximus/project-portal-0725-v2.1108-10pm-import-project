@@ -152,17 +152,24 @@ const BillingTable = ({ invoices, onEdit, sortColumn, sortDirection, handleSort 
               <TableCell>{'Rp ' + invoice.amount.toLocaleString('id-ID')}</TableCell>
               <TableCell>{format(invoice.dueDate, 'MMM dd, yyyy')}</TableCell>
               <TableCell>
-                {invoice.invoiceAttachmentUrl ? (
-                  <a
-                    href={invoice.invoiceAttachmentUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-1 text-primary hover:underline"
-                    title={invoice.invoiceAttachmentName || 'View Attachment'}
-                  >
-                    <Paperclip className="h-4 w-4" />
-                    <span>View</span>
-                  </a>
+                {invoice.invoiceAttachments && invoice.invoiceAttachments.length > 0 ? (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm" className="flex items-center gap-1 px-2">
+                        <Paperclip className="h-4 w-4" />
+                        <span>View ({invoice.invoiceAttachments.length})</span>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      {invoice.invoiceAttachments.map(att => (
+                        <DropdownMenuItem key={att.id} asChild>
+                          <a href={att.file_url} target="_blank" rel="noopener noreferrer" className="truncate cursor-pointer">
+                            {att.file_name}
+                          </a>
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 ) : (
                   'N/A'
                 )}

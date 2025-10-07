@@ -77,6 +77,18 @@ export interface Activity {
   user: User;
 }
 
+export interface InvoiceAttachment {
+  id: string;
+  project_id: string;
+  uploaded_by: string;
+  file_name: string;
+  file_url: string;
+  storage_path: string;
+  file_type?: string;
+  file_size?: number;
+  created_at: string;
+}
+
 export interface Project {
   id: string;
   created_at?: string;
@@ -107,6 +119,7 @@ export interface Project {
   channel?: string | null;
   invoice_attachment_url?: string | null;
   invoice_attachment_name?: string | null;
+  invoice_attachments?: InvoiceAttachment[];
   
   assignedTo: AssignedUser[];
   tags: Tag[];
@@ -410,8 +423,7 @@ export type Invoice = {
   clientCompanyName: string | null;
   projectOwner: Owner | null;
   assignedMembers: Member[];
-  invoiceAttachmentUrl?: string | null;
-  invoiceAttachmentName?: string | null;
+  invoiceAttachments: InvoiceAttachment[];
 };
 
 export interface ExtendedProject extends Project {
