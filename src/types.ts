@@ -379,7 +379,7 @@ export type Member = {
   avatar_url: string;
   initials: string;
   email: string;
-  role: string;
+  role?: string;
 };
 
 export type Owner = {
