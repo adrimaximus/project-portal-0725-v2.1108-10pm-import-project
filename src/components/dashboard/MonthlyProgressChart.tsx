@@ -4,7 +4,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { format, getMonth } from 'date-fns';
-import { getStatusStyles, getPaymentStatusStyles } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 
 type ChartType = 'quantity' | 'value' | 'project_status' | 'payment_status' | 'company_quantity' | 'company_value';
@@ -69,6 +68,27 @@ const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
       setChartType('quantity');
     }
   }, [canViewValue, chartType]);
+
+  const getSharpProjectStatusStyles = (status: string) => {
+    const colors: { [key: string]: string } = {
+      'On Track': '#16a34a',
+      'At Risk': '#f97316',
+      'Off Track': '#dc2626',
+      'On Hold': '#4b5563',
+      'Completed': '#2563eb',
+    };
+    return { hex: colors[status] || '#64748b' };
+  };
+
+  const getSharpPaymentStatusStyles = (status: string) => {
+    const colors: { [key: string]: string } = {
+      'Paid': '#16a34a',
+      'Unpaid': '#dc2626',
+      'Partially Paid': '#f97316',
+      'Overdue': '#991b1b',
+    };
+    return { hex: colors[status] || '#64748b' };
+  };
 
   const chartData = useMemo(() => {
     if (chartType === 'company_quantity' || chartType === 'company_value') {
@@ -167,7 +187,7 @@ const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
             <Tooltip content={<CustomTooltip chartType={chartType} />} cursor={{ fill: 'hsl(var(--muted))' }} />
             <Legend content={<CustomLegend />} />
             {PROJECT_STATUS_OPTIONS.map(status => (
-              <Bar key={status.value} dataKey={status.value} stackId="a" fill={getStatusStyles(status.value).hex} name={status.label} radius={[4, 4, 0, 0]} />
+              <Bar key={status.value} dataKey={status.value} stackId="a" fill={getSharpProjectStatusStyles(status.value).hex} name={status.label} radius={[4, 4, 0, 0]} />
             ))}
           </BarChart>
         );
@@ -180,7 +200,7 @@ const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
             <Tooltip content={<CustomTooltip chartType={chartType} />} cursor={{ fill: 'hsl(var(--muted))' }} />
             <Legend content={<CustomLegend />} />
             {PAYMENT_STATUS_OPTIONS.map(status => (
-              <Bar key={status.value} dataKey={status.value} stackId="a" fill={getPaymentStatusStyles(status.value).hex} name={status.label} radius={[4, 4, 0, 0]} />
+              <Bar key={status.value} dataKey={status.value} stackId="a" fill={getSharpPaymentStatusStyles(status.value).hex} name={status.label} radius={[4, 4, 0, 0]} />
             ))}
           </BarChart>
         );
