@@ -10,7 +10,7 @@ const corsHeaders = {
 
 const validateCredentials = async (apiKey, senderEmail, fromName) => {
   if (!apiKey || !senderEmail || !fromName) {
-    throw new Error("Invalid credentials format.");
+    throw new Error("Invalid credentials format: API Key, Sender Email, and From Name are required.");
   }
   
   try {
@@ -22,32 +22,34 @@ const validateCredentials = async (apiKey, senderEmail, fromName) => {
       },
       body: JSON.stringify({
         from: { email: senderEmail, name: fromName },
-        to: [{ email: 'test@example.com' }], // Dummy email for validation
-        subject: 'Validation',
-        text: 'Validation',
+        to: [{ email: 'test-validation@example.com' }],
+        subject: 'API Key Validation',
+        text: 'This is a test to validate API credentials.',
       }),
     });
 
-    const responseData = await response.json().catch(() => ({}));
+    const responseBodyText = await response.text();
+    let responseData = {};
+    try {
+      responseData = JSON.parse(responseBodyText);
+    } catch (e) {
+      responseData.message = responseBodyText.trim();
+    }
 
-    // EmailIt returns 401 for bad API key. It might return other errors for bad sender, etc.
-    // A 400 for "to.0.email" is invalid means the API key is likely correct.
     if (response.status === 401) {
       throw new Error(responseData.message || "The provided EmailIt API key is invalid.");
     }
 
     if (response.ok || response.status === 400) {
-        return true;
+      return true;
     }
 
-    throw new Error(`EmailIt API returned an unexpected status: ${response.status}. ${responseData.message || ''}`);
+    const errorMessage = responseData.message || `EmailIt API returned status ${response.status}`;
+    throw new Error(`Validation failed: ${errorMessage}`);
 
   } catch (error) {
     console.error("EmailIt API validation failed:", error.message);
-    if (error.message.includes("invalid")) {
-        throw error;
-    }
-    throw new Error("Could not connect to EmailIt to validate credentials.");
+    throw error;
   }
 };
 
