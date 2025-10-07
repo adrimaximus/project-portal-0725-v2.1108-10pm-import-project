@@ -8,7 +8,7 @@ import { toast } from 'sonner';
 import PropertyFormDialog from '@/components/settings/PropertyFormDialog';
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
 import { Badge } from '@/components/ui/badge';
-import ConfirmationDialog from '@/components/ConfirmationDialog';
+import ConfirmationDialog from '@/components/settings/ConfirmationDialog';
 
 const ContactPropertiesPage = () => {
   const [properties, setProperties] = useState<ContactProperty[]>([]);
