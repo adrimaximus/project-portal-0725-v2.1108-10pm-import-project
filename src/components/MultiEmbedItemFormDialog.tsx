@@ -129,25 +129,27 @@ const MultiEmbedItemFormDialog: React.FC<MultiEmbedItemFormDialogProps> = ({ ope
             <DialogTitle>{item ? 'Edit Item' : 'Add New Item'}</DialogTitle>
             <DialogDescription>Fill in the details for your embed item.</DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-3">
             <div className="space-y-2">
               <Label>Image</Label>
               <Input type="file" accept="image/*" onChange={handleFileChange} ref={fileInputRef} className="hidden" />
               <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}><Upload className="mr-2 h-4 w-4" /> Upload Image</Button>
               {(imageUrl || imageFile) && (
-                <div className="mt-2 rounded-md border overflow-hidden">
+                <div className="mt-2 rounded-md border overflow-hidden max-h-32">
                   <img 
                     src={imageFile ? URL.createObjectURL(imageFile) : imageUrl} 
                     alt="Preview" 
-                    className="block w-full h-auto" 
+                    className="block w-full h-auto object-cover" 
                   />
                 </div>
               )}
             </div>
-            <div className="space-y-2"><Label htmlFor="title">Title</Label><Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} required /></div>
-            <div className="space-y-2"><Label htmlFor="description">Description</Label><Textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} /></div>
-            <div className="space-y-2"><Label htmlFor="tags">Tags (comma-separated)</Label><Input id="tags" value={tags} onChange={(e) => setTags(e.target.value)} /></div>
-            <div className="space-y-2"><Label htmlFor="embed">URL / Embed Code</Label><Textarea id="embed" value={embedContent} onChange={(e) => setEmbedContent(e.target.value)} required /></div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2"><Label htmlFor="title">Title</Label><Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} required /></div>
+              <div className="space-y-2"><Label htmlFor="tags">Tags (comma-separated)</Label><Input id="tags" value={tags} onChange={(e) => setTags(e.target.value)} /></div>
+            </div>
+            <div className="space-y-2"><Label htmlFor="description">Description</Label><Textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} rows={2} /></div>
+            <div className="space-y-2"><Label htmlFor="embed">URL / Embed Code</Label><Textarea id="embed" value={embedContent} onChange={(e) => setEmbedContent(e.target.value)} required rows={3} /></div>
             <DialogFooter>
               <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
               <Button type="submit" disabled={isPending}>{isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Save</Button>
