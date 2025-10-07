@@ -8,6 +8,14 @@ import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbP
 import { cn } from "@/lib/utils";
 
 const themes = [
+  { id: 'default', name: 'Default', description: 'The standard light theme for your workspace.', preview: (
+    <div className="w-8 h-8 rounded-md border bg-background flex items-center justify-center p-1">
+      <div className="w-full space-y-1">
+        <div className="h-1 w-3/4 rounded-full bg-muted-foreground/30"></div>
+        <div className="h-1 w-1/2 rounded-full bg-primary/30"></div>
+      </div>
+    </div>
+  )},
   { id: 'claude-modern', name: 'Claude Modern', description: 'A sleek, dark theme inspired by modern AI interfaces.', preview: (
     <div className="w-8 h-8 rounded-md bg-[#1A1A1A] border border-gray-700 flex items-center justify-center p-1">
       <div className="w-full space-y-1">
@@ -35,7 +43,7 @@ const themes = [
 ];
 
 const ThemeSettingsPage = () => {
-  const [currentTheme, setCurrentTheme] = useState('claude-modern'); 
+  const [currentTheme, setCurrentTheme] = useState('default'); 
 
   return (
     <PortalLayout>
