@@ -195,6 +195,7 @@ const ContactPropertiesPage = () => {
         onSave={handleSave}
         property={propertyToEdit}
         isSaving={isSaving}
+        properties={properties}
       />
 
       <ConfirmationDialog
