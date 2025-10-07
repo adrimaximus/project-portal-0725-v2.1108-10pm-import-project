@@ -1,7 +1,7 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { useAiChat } from "@/hooks/useAiChat";
 import ChatHeader from "./ChatHeader";
-import ChatConversation from "./ChatConversation";
+import { ChatConversation } from "./ChatConversation";
 import { ChatInput } from "./ChatInput";
 import { forwardRef, useMemo, useState } from "react";
 import { Conversation, Message } from "@/types";
@@ -79,6 +79,7 @@ const AiChatView = forwardRef<HTMLTextAreaElement, AiChatViewProps>(({ onBack },
       <ChatConversation
         messages={conversation}
         members={[currentUser, aiUser]}
+        isLoading={isLoading}
         onReply={setReplyTo}
       />
       <ChatInput 

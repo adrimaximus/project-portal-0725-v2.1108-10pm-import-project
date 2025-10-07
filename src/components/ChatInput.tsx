@@ -6,10 +6,10 @@ import { Button } from "./ui/button";
 import { Paperclip, Send, Smile, X } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { forwardRef, useImperativeHandle, useRef, useState } from "react";
-import { Message } from "@/types";
+import { Message } from "@/types/chat";
 
 interface ChatInputProps {
-    onSendMessage: (text: string, attachmentFile: File | null, replyToMessageId?: string | null) => void;
+    onSendMessage: (text: string, attachmentFile: File | null) => void;
     onTyping?: () => void;
     isSending: boolean;
     conversationId: string;
@@ -33,7 +33,7 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
 
     const handleSend = () => {
         if (text.trim() || file) {
-            onSendMessage(text, file, replyTo?.id);
+            onSendMessage(text, file);
             setText("");
             setFile(null);
         }
@@ -65,7 +65,7 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
             {replyTo && (
                 <div className="p-2 mb-2 bg-muted rounded-md text-sm relative">
                     <div className="font-bold text-primary">Replying to {replyTo.sender?.name}</div>
-                    <p className="text-muted-foreground truncate">{replyTo.text}</p>
+                    <p className="text-muted-foreground truncate">{replyTo.content}</p>
                     <Button variant="ghost" size="icon" className="absolute top-1 right-1 h-6 w-6" onClick={onCancelReply}>
                         <X className="h-4 w-4" />
                     </Button>
