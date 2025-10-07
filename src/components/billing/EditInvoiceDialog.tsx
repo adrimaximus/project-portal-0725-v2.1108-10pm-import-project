@@ -107,9 +107,10 @@ export const EditInvoiceDialog = ({ isOpen, onClose, invoice, project, onSave }:
       let attachmentUpdated = false;
 
       if (removeAttachment && project.invoice_attachment_url) {
-        const oldFilePath = project.invoice_attachment_url.split('/project-files/')[1];
-        if (oldFilePath) {
-          await supabase.storage.from('project-files').remove([oldFilePath]);
+        const urlParts = project.invoice_attachment_url.split('/billing/');
+        if (urlParts.length > 1) {
+          const oldFilePath = urlParts[1];
+          await supabase.storage.from('billing').remove([oldFilePath]);
         }
         attachmentUrl = null;
         attachmentName = null;
@@ -122,12 +123,12 @@ export const EditInvoiceDialog = ({ isOpen, onClose, invoice, project, onSave }:
         const filePath = `invoice-attachments/${project.id}/${Date.now()}-${sanitizedFileName}`;
         
         const { error: uploadError } = await supabase.storage
-          .from('project-files')
+          .from('billing')
           .upload(filePath, newAttachment);
 
         if (uploadError) throw new Error(`Failed to upload attachment: ${uploadError.message}`);
 
-        const { data: urlData } = supabase.storage.from('project-files').getPublicUrl(filePath);
+        const { data: urlData } = supabase.storage.from('billing').getPublicUrl(filePath);
         attachmentUrl = urlData.publicUrl;
         attachmentName = newAttachment.name;
         attachmentUpdated = true;
