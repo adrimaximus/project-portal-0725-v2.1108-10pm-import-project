@@ -2,7 +2,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { MoreVertical, Edit, Download, ArrowUp, ArrowDown } from "lucide-react";
+import { MoreVertical, Edit, Download, ArrowUp, ArrowDown, Paperclip } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -73,13 +73,14 @@ const BillingTable = ({ invoices, onEdit, sortColumn, sortDirection, handleSort 
               Due Date {renderSortIcon('dueDate')}
             </Button>
           </TableHead>
+          <TableHead>Attachment</TableHead>
           <TableHead className="text-right">Actions</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {invoices.length === 0 ? (
           <TableRow>
-            <TableCell colSpan={10} className="h-24 text-center">
+            <TableCell colSpan={11} className="h-24 text-center">
               No invoices found.
             </TableCell>
           </TableRow>
@@ -150,6 +151,22 @@ const BillingTable = ({ invoices, onEdit, sortColumn, sortDirection, handleSort 
               <TableCell>{invoice.poNumber || 'N/A'}</TableCell>
               <TableCell>{'Rp ' + invoice.amount.toLocaleString('id-ID')}</TableCell>
               <TableCell>{format(invoice.dueDate, 'MMM dd, yyyy')}</TableCell>
+              <TableCell>
+                {invoice.invoiceAttachmentUrl ? (
+                  <a
+                    href={invoice.invoiceAttachmentUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-primary hover:underline"
+                    title={invoice.invoiceAttachmentName || 'View Attachment'}
+                  >
+                    <Paperclip className="h-4 w-4" />
+                    <span>View</span>
+                  </a>
+                ) : (
+                  'N/A'
+                )}
+              </TableCell>
               <TableCell className="text-right">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>

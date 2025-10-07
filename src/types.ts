@@ -410,6 +410,8 @@ export type Invoice = {
   clientCompanyName: string | null;
   projectOwner: Owner | null;
   assignedMembers: Member[];
+  invoiceAttachmentUrl?: string | null;
+  invoiceAttachmentName?: string | null;
 };
 
 export interface ExtendedProject extends Project {
