@@ -11,7 +11,7 @@ const StatusBadge = ({ status }: StatusBadgeProps) => {
   }
   const styles = getStatusStyles(status);
   return (
-    <Badge variant="outline" className={cn("border-transparent", styles.tw)}>
+    <Badge className={cn(styles.tw)}>
       {status}
     </Badge>
   );
