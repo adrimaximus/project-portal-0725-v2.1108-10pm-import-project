@@ -121,7 +121,7 @@ const ContactPropertiesPage = () => {
   };
 
   return (
-    <div className="container mx-auto p-4 md:p-6 lg:p-8">
+    <div>
       <Card>
         <CardHeader>
           <div className="flex justify-between items-center">
