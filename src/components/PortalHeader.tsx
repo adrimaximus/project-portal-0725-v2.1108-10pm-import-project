@@ -48,12 +48,19 @@ const PortalHeader = ({ summary }: PortalHeaderProps) => {
   };
 
   const toggleTheme = () => {
-    if (theme === "dark" || theme === "claude") {
-      setTheme("light");
-    } else if (theme === "light" || theme === "claude-light") {
-      setTheme("system");
-    } else {
-      setTheme("dark");
+    // If current theme is in the Claude family, toggle within it
+    if (theme === 'claude' || theme === 'claude-light') {
+      setTheme(theme === 'claude' ? 'claude-light' : 'claude');
+    } 
+    // Otherwise, cycle through the default themes (dark -> light -> system)
+    else {
+      if (theme === 'dark') {
+        setTheme('light');
+      } else if (theme === 'light') {
+        setTheme('system');
+      } else { // theme is 'system'
+        setTheme('dark');
+      }
     }
   };
 
