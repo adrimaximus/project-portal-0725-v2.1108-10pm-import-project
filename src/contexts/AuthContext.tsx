@@ -14,6 +14,7 @@ type UserProfileData = {
   permissions: string[];
   people_kanban_settings: any;
   notification_preferences: any;
+  theme: string | null;
 };
 
 // This is the user object we'll use throughout the app, with derived properties

@@ -48,7 +48,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <FeaturesProvider>
-            <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
+            <ThemeProvider defaultTheme="system">
               <ConfigProvider
                 theme={{
                   token: {
