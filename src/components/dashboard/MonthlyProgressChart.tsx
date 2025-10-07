@@ -6,6 +6,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 import { format, getMonth } from 'date-fns';
 import { getStatusStyles, getPaymentStatusStyles } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
+import { ChartConfig, ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 
 type ChartMetric = 'quantity' | 'value' | 'project_status' | 'payment_status';
 type OverviewType = 'monthly' | 'company';
@@ -125,6 +126,8 @@ const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
   const renderChart = () => {
     const [overviewType, metric] = chartType.split('_') as [OverviewType, ChartMetric];
 
+    const sanitizeKeyForCss = (key: string) => key.replace(/\s+/g, '-').toLowerCase();
+
     switch (metric) {
       case 'quantity':
       case 'value':
@@ -146,17 +149,34 @@ const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
         const options = isProjectStatus ? PROJECT_STATUS_OPTIONS : PAYMENT_STATUS_OPTIONS;
         const getStyles = isProjectStatus ? getStatusStyles : getPaymentStatusStyles;
 
+        const chartConfig = options.reduce((acc, status) => {
+          acc[sanitizeKeyForCss(status.value)] = {
+            label: status.label,
+            color: getStyles(status.value).hex,
+          };
+          return acc;
+        }, {} as ChartConfig);
+
         return (
-          <BarChart data={chartData}>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} />
-            <XAxis dataKey="name" tickLine={false} axisLine={false} fontSize={10} interval={0} />
-            <YAxis tickLine={false} axisLine={false} fontSize={10} />
-            <Tooltip content={<CustomTooltip chartType={metric} />} cursor={{ fill: 'hsl(var(--muted))' }} />
-            <Legend wrapperStyle={{ fontSize: '10px' }} verticalAlign="top" />
-            {options.map(status => (
-              <Bar key={status.value} dataKey={status.value} stackId="a" fill={getStyles(status.value).hex} name={status.label} />
-            ))}
-          </BarChart>
+          <ChartContainer config={chartConfig} className="h-full w-full">
+            <BarChart accessibilityLayer data={chartData}>
+              <CartesianGrid vertical={false} />
+              <XAxis dataKey="name" tickLine={false} axisLine={false} fontSize={10} interval={0} />
+              <YAxis tickLine={false} axisLine={false} fontSize={10} />
+              <ChartTooltip content={<ChartTooltipContent hideIndicator />} />
+              <ChartLegend content={<ChartLegendContent />} />
+              {options.map(status => (
+                <Bar
+                  key={status.value}
+                  dataKey={status.value}
+                  stackId="a"
+                  fill={`var(--color-${sanitizeKeyForCss(status.value)})`}
+                  name={status.label}
+                  radius={[4, 4, 0, 0]}
+                />
+              ))}
+            </BarChart>
+          </ChartContainer>
         );
       }
       default:
