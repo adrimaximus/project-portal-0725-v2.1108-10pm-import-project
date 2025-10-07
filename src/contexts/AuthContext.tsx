@@ -105,6 +105,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, [fetchUserProfile, isImpersonating]);
 
   useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        // This will trigger onAuthStateChange if the session has changed in another tab
+        supabase.auth.getSession();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
+
+  useEffect(() => {
     // This listener reacts to any change in the roles table.
     const channel = supabase
       .channel('public:roles')
