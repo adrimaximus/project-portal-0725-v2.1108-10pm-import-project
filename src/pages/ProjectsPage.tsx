@@ -308,7 +308,7 @@ const ProjectsPage = () => {
 
   return (
     <PortalLayout disableMainScroll noPadding>
-      <div className="flex flex-col flex-1">
+      <div className="flex flex-col h-full">
         <AlertDialog open={!!projectToDelete} onOpenChange={(open) => !open && setProjectToDelete(null)}>
           <AlertDialogContent>
             <AlertDialogHeader><AlertDialogTitle>Are you sure?</AlertDialogTitle><AlertDialogDescription>This action cannot be undone. This will permanently delete the project "{projectToDelete?.name}".</AlertDialogDescription></AlertDialogHeader>
@@ -338,7 +338,7 @@ const ProjectsPage = () => {
           isImporting={importEventsMutation.isPending}
         />
 
-        <Card className="h-full flex flex-col rounded-none border-0 sm:border sm:rounded-lg">
+        <Card className="flex-1 flex flex-col min-h-0 rounded-none border-0 sm:border sm:rounded-lg">
           <div className="flex-grow min-h-0 overflow-y-auto">
             <div className="sticky top-0 bg-background z-10 border-b">
               <div className="p-4 space-y-4">
