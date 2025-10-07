@@ -1,323 +1,172 @@
-import { useState, useEffect, useMemo } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import { useAuth } from "@/contexts/AuthContext";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
-import PortalLayout from "@/components/PortalLayout";
-import { supabase } from "@/integrations/supabase/client";
-import { Eye, EyeOff, Loader2, Camera } from "lucide-react";
+import { Loader2, Upload } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { generatePastelColor, getAvatarUrl, getInitials } from "@/lib/utils";
 import NotificationPreferencesCard from "@/components/settings/NotificationPreferencesCard";
-import { useQueryClient } from "@tanstack/react-query";
-import AvatarCropper from "@/components/settings/AvatarCropper";
 
-const Profile = () => {
-  const { user, session, refreshUser, logout } = useAuth();
+const ProfilePage = () => {
+  const { user, setUser } = useAuth();
   const queryClient = useQueryClient();
-  
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isPasswordUpdating, setIsPasswordUpdating] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
+  const [firstName, setFirstName] = useState(user?.first_name || "");
+  const [lastName, setLastName] = useState(user?.last_name || "");
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [imageToCrop, setImageToCrop] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (user) {
-      setFirstName(user.first_name || "");
-      setLastName(user.last_name || "");
+  const { data: profile, isLoading: isLoadingProfile } = useQuery({
+    queryKey: ['profile', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id,
+    onSuccess: (data) => {
+      if (data) {
+        setFirstName(data.first_name || "");
+        setLastName(data.last_name || "");
+      }
     }
-  }, [user]);
+  });
 
-  const canChangePassword = useMemo(() => {
-    if (!session?.user) return false;
-    // Check the main provider and also check identities array for email provider
-    return session.user.app_metadata?.provider === 'email' || 
-           session.user.identities?.some(i => i.provider === 'email');
-  }, [session]);
+  const { mutate: updateProfile, isPending: isUpdatingProfile } = useMutation({
+    mutationFn: async ({ firstName, lastName, avatarUrl }: { firstName: string; lastName: string; avatarUrl?: string }) => {
+      if (!user?.id) throw new Error("User not found");
+      const updates: { first_name: string; last_name: string; avatar_url?: string } = {
+        first_name: firstName,
+        last_name: lastName,
+      };
+      if (avatarUrl) {
+        updates.avatar_url = avatarUrl;
+      }
+      const { data, error } = await supabase
+        .from('profiles')
+        .update(updates)
+        .eq('id', user.id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      toast.success("Profile updated successfully!");
+      if (user) {
+        const updatedUser = { ...user, ...data };
+        setUser(updatedUser);
+      }
+      queryClient.invalidateQueries({ queryKey: ['profile', user?.id] });
+    },
+    onError: (error) => {
+      toast.error(`Failed to update profile: ${error.message}`);
+    },
+  });
 
-  if (!user) {
-    return <PortalLayout><div>Loading...</div></PortalLayout>;
-  }
-
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    if (file.size > 2 * 1024 * 1024) { // 2MB limit
-        toast.error("Ukuran file terlalu besar. Maksimal 2MB.");
-        return;
-    }
-
-    const reader = new FileReader();
-    reader.addEventListener('load', () => {
-        setImageToCrop(reader.result as string);
-    });
-    reader.readAsDataURL(file);
-    
-    // Reset file input value to allow re-selecting the same file
-    event.target.value = '';
-  };
-
-  const handleAvatarUpload = async (imageBlob: Blob) => {
-    setImageToCrop(null);
-    if (!imageBlob) return;
-
+  const handleAvatarUpload = async () => {
+    if (!avatarFile || !user?.id) return;
     setIsUploading(true);
     try {
-        const fileExt = 'png';
-        const filePath = `${user.id}/${Date.now()}.${fileExt}`;
+      const fileExt = avatarFile.name.split('.').pop();
+      const fileName = `${user.id}-${Date.now()}.${fileExt}`;
+      const filePath = `avatars/${fileName}`;
 
-        if (user.avatar_url && !user.avatar_url.includes('dicebear.com')) {
-            try {
-                const oldAvatarPath = new URL(user.avatar_url).pathname.split('/avatars/')[1];
-                if (oldAvatarPath) {
-                    await supabase.storage.from('avatars').remove([oldAvatarPath]);
-                }
-            } catch (e) {
-                console.warn("Could not remove old avatar.", e);
-            }
-        }
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, avatarFile);
 
-        const { error: uploadError } = await supabase.storage
-            .from('avatars')
-            .upload(filePath, imageBlob, { contentType: 'image/png', upsert: true });
+      if (uploadError) throw uploadError;
 
-        if (uploadError) throw uploadError;
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
 
-        const { data: publicUrlData } = supabase.storage
-            .from('avatars')
-            .getPublicUrl(filePath);
-
-        if (!publicUrlData.publicUrl) {
-            throw new Error("Could not get public URL for avatar.");
-        }
-
-        const { error: updateError } = await supabase
-            .from('profiles')
-            .update({ avatar_url: publicUrlData.publicUrl, updated_at: new Date().toISOString() })
-            .eq('id', user.id);
-
-        if (updateError) throw updateError;
-
-        toast.success("Avatar berhasil diperbarui.");
-        await refreshUser();
-        queryClient.invalidateQueries({ queryKey: ['user', user.id] });
-
+      await updateProfile({ firstName, lastName, avatarUrl: publicUrl });
+      setAvatarFile(null);
     } catch (error: any) {
-        toast.error("Gagal mengunggah avatar.", { description: error.message });
-        console.error(error);
+      toast.error(`Failed to upload avatar: ${error.message}`);
     } finally {
-        setIsUploading(false);
+      setIsUploading(false);
     }
   };
 
-  const handleSaveChanges = async () => {
-    setIsSaving(true);
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ 
-          first_name: firstName, 
-          last_name: lastName,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', user.id);
-
-      if (error) throw error;
-
-      toast.success("Profil berhasil diperbarui.");
-      await refreshUser();
-    } catch (error: any) {
-      toast.error("Gagal memperbarui profil.", { description: error.message });
-      console.error(error);
-    } finally {
-      setIsSaving(false);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (avatarFile) {
+      await handleAvatarUpload();
+    } else {
+      updateProfile({ firstName, lastName });
     }
   };
 
-  const handlePasswordChange = async () => {
-    if (newPassword.length < 8) {
-      toast.error("Password minimal 8 karakter.");
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      toast.error("Konfirmasi password tidak cocok.");
-      return;
-    }
-
-    setIsPasswordUpdating(true);
-    try {
-      const { error } = await supabase.auth.updateUser({ password: newPassword });
-      if (error) {
-        throw error;
-      }
-      toast.success("Password berhasil diperbarui.");
-      setNewPassword("");
-      setConfirmPassword("");
-    } catch (error: any) {
-      if (error.message.includes('New password should be different from the old password')) {
-        toast.info("Password baru sama dengan password lama. Tidak ada perubahan yang dilakukan.");
-      } else {
-        toast.error("Gagal memperbarui password.", { description: error.message });
-      }
-    } finally {
-      setIsPasswordUpdating(false);
-    }
-  };
-
-  const handleLogout = async () => {
-    await logout();
-  };
+  if (isLoadingProfile || !user) {
+    return <div className="flex justify-center items-center h-64"><Loader2 className="animate-spin" /></div>;
+  }
 
   return (
-    <PortalLayout>
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Profile & Settings</h1>
-          <p className="text-muted-foreground">
-            Manage your account settings and profile information.
-          </p>
-        </div>
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Personal Information</CardTitle>
-                <CardDescription>Update your personal details here.</CardDescription>
-              </div>
-              {user.role && (
-                <Badge variant="outline" className="capitalize text-sm">
-                  {user.role}
-                </Badge>
-              )}
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center space-x-4">
-              <div className="relative group">
-                <Avatar className="h-20 w-20">
-                  <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} alt={user.first_name || ''} />
-                  <AvatarFallback style={generatePastelColor(user.id)}>{getInitials(user.first_name, user.email)}</AvatarFallback>
-                </Avatar>
-                <label 
-                    htmlFor="avatar-upload" 
-                    className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 rounded-full cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"
-                >
-                    {isUploading ? (
-                        <Loader2 className="h-6 w-6 text-white animate-spin" />
-                    ) : (
-                        <Camera className="h-6 w-6 text-white" />
-                    )}
-                    <input 
-                        id="avatar-upload" 
-                        type="file" 
-                        className="hidden" 
-                        accept="image/png, image/jpeg, image/gif"
-                        onChange={handleFileSelect}
-                        disabled={isUploading}
-                    />
-                </label>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="first-name">First Name</Label>
-                <Input id="first-name" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="last-name">Last Name</Label>
-                <Input id="last-name" value={lastName} onChange={(e) => setLastName(e.target.value)} />
-              </div>
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" value={user.email || ''} disabled />
-              </div>
-            </div>
-            <Button onClick={handleSaveChanges} disabled={isSaving}>
-              {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save Changes
-            </Button>
-          </CardContent>
-        </Card>
-
-        {canChangePassword ? (
+    <div className="container mx-auto py-8 max-w-4xl">
+      <h1 className="text-3xl font-bold mb-6">My Profile</h1>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="md:col-span-2">
           <Card>
             <CardHeader>
-              <CardTitle>Security</CardTitle>
-              <CardDescription>Update your password. It's recommended to use a strong, unique password.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="new-password">New Password</Label>
-                <div className="relative">
-                  <Input id="new-password" type={showNewPassword ? "text" : "password"} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
-                  <Button type="button" variant="ghost" size="icon" className="absolute inset-y-0 right-0 h-full px-3" onClick={() => setShowNewPassword(!showNewPassword)}>
-                    {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </Button>
-                </div>
-              </div>
-               <div className="space-y-2">
-                <Label htmlFor="confirm-password">Confirm New Password</Label>
-                <div className="relative">
-                  <Input id="confirm-password" type={showConfirmPassword ? "text" : "password"} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
-                  <Button type="button" variant="ghost" size="icon" className="absolute inset-y-0 right-0 h-full px-3" onClick={() => setShowConfirmPassword(!showConfirmPassword)}>
-                    {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </Button>
-                </div>
-              </div>
-              <Button onClick={handlePasswordChange} disabled={isPasswordUpdating}>
-                {isPasswordUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Change Password
-              </Button>
-            </CardContent>
-          </Card>
-        ) : (
-          <Card>
-            <CardHeader>
-              <CardTitle>Security</CardTitle>
+              <CardTitle>Personal Information</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground">
-                You are signed in with a social provider (e.g., Google). You can manage your password through your provider's settings.
-              </p>
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="flex items-center gap-6">
+                  <div className="relative">
+                    <Avatar className="h-20 w-20">
+                      <AvatarImage src={avatarFile ? URL.createObjectURL(avatarFile) : getAvatarUrl(user)} alt={user.first_name || ''} />
+                      <AvatarFallback style={generatePastelColor(user.id)}>{getInitials(user.first_name)}</AvatarFallback>
+                    </Avatar>
+                    <Label htmlFor="avatar-upload" className="absolute -bottom-2 -right-2 bg-primary text-primary-foreground rounded-full p-1.5 cursor-pointer hover:bg-primary/90">
+                      <Upload className="h-4 w-4" />
+                    </Label>
+                    <Input id="avatar-upload" type="file" className="hidden" onChange={(e) => e.target.files && setAvatarFile(e.target.files[0])} accept="image/*" />
+                  </div>
+                  <div className="flex-grow">
+                    <h2 className="text-xl font-semibold">{user.first_name} {user.last_name}</h2>
+                    <p className="text-muted-foreground">{user.email}</p>
+                    {profile?.role && <Badge className="mt-1">{profile.role}</Badge>}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="firstName">First Name</Label>
+                    <Input id="firstName" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="lastName">Last Name</Label>
+                    <Input id="lastName" value={lastName} onChange={(e) => setLastName(e.target.value)} />
+                  </div>
+                </div>
+                <Button type="submit" disabled={isUpdatingProfile || isUploading}>
+                  {(isUpdatingProfile || isUploading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Save Changes
+                </Button>
+              </form>
             </CardContent>
           </Card>
-        )}
-
-        <NotificationPreferencesCard />
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Danger Zone</CardTitle>
-            <CardDescription>
-              These actions can have permanent consequences.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button variant="destructive" onClick={handleLogout}>
-              Logout
-            </Button>
-          </CardContent>
-        </Card>
+        </div>
+        <div>
+          <NotificationPreferencesCard />
+        </div>
       </div>
-      {imageToCrop && (
-        <AvatarCropper
-          imageSrc={imageToCrop}
-          onCropComplete={handleAvatarUpload}
-          onClose={() => setImageToCrop(null)}
-        />
-      )}
-    </PortalLayout>
+    </div>
   );
 };
 
-export default Profile;
+export default ProfilePage;

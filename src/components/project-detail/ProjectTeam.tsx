@@ -1,30 +1,42 @@
-import { AssignedUser } from '@/types';
+import { Project } from '@/types';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { getAvatarUrl, generatePastelColor } from '@/lib/utils';
+import { Crown } from 'lucide-react';
 
 interface ProjectTeamProps {
-  team: AssignedUser[];
+  project: Project;
 }
 
-const ProjectTeam = ({ team }: ProjectTeamProps) => {
+const ProjectTeam = ({ project }: ProjectTeamProps) => {
   return (
-    <div>
-      <h3 className="text-lg font-semibold mb-2">Team</h3>
-      <div className="space-y-2">
-        {team.map(member => (
-          <div key={member.id} className="flex items-center">
-            <Avatar>
-              <AvatarImage src={getAvatarUrl(member.avatar_url, member.id)} />
-              <AvatarFallback style={generatePastelColor(member.id)}>{member.initials}</AvatarFallback>
-            </Avatar>
-            <div className="ml-2">
-              <p>{member.name}</p>
-              {member.role && <p className="text-sm text-muted-foreground">{member.role}</p>}
+    <Card>
+      <CardHeader>
+        <CardTitle>Team</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {project.assignedTo?.map(member => (
+          <div key={member.id} className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Avatar>
+                <AvatarImage src={getAvatarUrl(member)} />
+                <AvatarFallback style={generatePastelColor(member.id)}>{member.initials}</AvatarFallback>
+              </Avatar>
+              <div>
+                <p className="font-medium">{member.name}</p>
+                <p className="text-xs text-muted-foreground">{member.email}</p>
+              </div>
             </div>
+            {member.id === project.created_by.id && (
+              <div className="flex items-center gap-1 text-xs text-yellow-500">
+                <Crown className="h-4 w-4" />
+                Owner
+              </div>
+            )}
           </div>
         ))}
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 };
 

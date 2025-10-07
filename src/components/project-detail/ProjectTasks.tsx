@@ -1,287 +1,163 @@
-import { useState } from "react";
-import { Project, Task, User } from "@/types";
+import { useState, useMemo } from "react";
+import { Task, Project, User } from "@/types";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Plus, Flag, Calendar, User as UserIcon } from "lucide-react";
+import TaskFormDialog from "./TaskFormDialog";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { format } from "date-fns";
+import { cn, getPriorityStyles, isOverdue } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Plus, MoreHorizontal, Trash2, UserPlus, Sparkles, RefreshCw } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import { MultiSelect } from "@/components/ui/multi-select";
 import { generatePastelColor, getInitials } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
 
 interface ProjectTasksProps {
   project: Project;
-  onTaskAdd: (title: string) => void;
-  onTaskAssignUsers: (taskId: string, userIds: string[]) => void;
-  onTaskStatusChange: (taskId: string, completed: boolean) => void;
-  onTaskDelete: (taskId: string) => void;
+  teamMembers: User[];
 }
 
-const ProjectTasks = ({
-  project,
-  onTaskAdd,
-  onTaskAssignUsers,
-  onTaskStatusChange,
-  onTaskDelete,
-}: ProjectTasksProps) => {
-  const [newTaskTitle, setNewTaskTitle] = useState("");
-  const [isAddingTask, setIsAddingTask] = useState(false);
-  const [isGenerating, setIsGenerating] = useState(false);
+const ProjectTasks = ({ project, teamMembers }: ProjectTasksProps) => {
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [showCompleted, setShowCompleted] = useState(false);
+  const queryClient = useQueryClient();
 
-  const handleAddTask = () => {
-    if (newTaskTitle.trim() === "") return;
-    onTaskAdd(newTaskTitle.trim());
-    setNewTaskTitle("");
-    setIsAddingTask(false);
-  };
-
-  const handleGenerateTasks = async (isInitial: boolean) => {
-    setIsGenerating(true);
-    const toastId = toast.loading(isInitial ? "Generating initial tasks..." : "Generating more tasks...");
-    try {
-      const existingTaskTitles = project.tasks?.map(t => t.title) || [];
-      const { data, error } = await supabase.functions.invoke('generate-tasks', {
-        body: {
-          projectName: project.name,
-          venue: project.venue,
-          services: project.services,
-          description: project.description,
-          existingTasks: existingTaskTitles,
-        },
-      });
-
+  const { mutate: updateTaskCompletion } = useMutation({
+    mutationFn: async ({ taskId, completed }: { taskId: string; completed: boolean }) => {
+      const { error } = await supabase.from('tasks').update({ completed }).eq('id', taskId);
       if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Task updated");
+      queryClient.invalidateQueries({ queryKey: ['project', project.slug] });
+    },
+    onError: (error) => {
+      toast.error(`Error: ${error.message}`);
+    },
+  });
 
-      if (Array.isArray(data) && data.every(item => typeof item === 'string')) {
-        for (const title of data) {
-          onTaskAdd(title);
-        }
-        toast.success(`${data.length} new tasks generated!`, { id: toastId });
-      } else {
-        throw new Error("AI did not return a valid list of task titles.");
-      }
-    } catch (error: any) {
-      console.error("Failed to generate tasks:", error);
-      toast.error("Failed to generate tasks.", {
-        id: toastId,
-        description: error.message,
-      });
-    } finally {
-      setIsGenerating(false);
-    }
+  const handleEditTask = (task: Task) => {
+    setEditingTask(task);
+    setIsFormOpen(true);
   };
 
-  const userOptions = project.assignedTo.map((user) => ({
-    value: user.id,
-    label: user.name,
-  }));
+  const handleAddNewTask = () => {
+    setEditingTask(null);
+    setIsFormOpen(true);
+  };
 
-  const tasks = project.tasks || [];
+  const sortedTasks = useMemo(() => {
+    return [...(project.tasks || [])].sort((a, b) => {
+      if (a.completed && !b.completed) return 1;
+      if (!a.completed && b.completed) return -1;
+      if (a.due_date && b.due_date) return new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
+      if (a.due_date) return -1;
+      if (b.due_date) return 1;
+      return 0;
+    });
+  }, [project.tasks]);
+
+  const visibleTasks = showCompleted ? sortedTasks : sortedTasks.filter(t => !t.completed);
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">Tasks</h3>
-        {tasks.length > 0 && (
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button onClick={() => handleGenerateTasks(false)} disabled={isGenerating} size="icon" variant="outline">
-                  {isGenerating ? (
-                    <RefreshCw className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Sparkles className="h-4 w-4" />
-                  )}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Generate more tasks with AI</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        )}
-      </div>
-      
-      {tasks.length === 0 && !isAddingTask && (
-        <div className="text-center py-4 border-2 border-dashed rounded-lg">
-          <p className="text-sm text-muted-foreground mb-4">No tasks yet. Get started by adding one or let AI help.</p>
-          <Button onClick={() => handleGenerateTasks(true)} disabled={isGenerating}>
-            {isGenerating ? (
-              <>
-                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                Generating...
-              </>
-            ) : (
-              <>
-                <Sparkles className="mr-2 h-4 w-4" />
-                Generate Initial Tasks with AI
-              </>
-            )}
+    <Card>
+      <CardHeader>
+        <div className="flex justify-between items-center">
+          <CardTitle>Tasks</CardTitle>
+          <Button onClick={handleAddNewTask} size="sm">
+            <Plus className="h-4 w-4 mr-2" />
+            Add Task
           </Button>
         </div>
-      )}
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-2">
+          {visibleTasks.map(task => {
+            const priorityStyles = getPriorityStyles(task.priority);
+            const overdue = isOverdue(task.due_date);
+            const createdByFullName = task.created_by ? [task.created_by.first_name, task.created_by.last_name].filter(Boolean).join(' ') : '';
 
-      <div className="space-y-2">
-        {tasks.map((task) => {
-          const assignees = (task.assignees || (task as any).assignedTo || []) as (User & { first_name?: string; last_name?: string; avatar_url?: string; email?: string })[];
-
-          return (
-            <div
-              key={task.id}
-              className={`flex items-center space-x-3 p-2 rounded-md hover:bg-muted ${
-                (task.priority as string) === 'high' ? 'bg-red-100 border-l-4 border-red-500' : ''
-              }`}
-            >
-              <Checkbox
-                id={`task-${task.id}`}
-                checked={task.completed}
-                onCheckedChange={(checked) =>
-                  onTaskStatusChange(task.id, !!checked)
-                }
-              />
-              <label
-                htmlFor={`task-${task.id}`}
-                className={`flex-1 text-sm ${
-                  task.completed ? "text-muted-foreground line-through" : ""
-                }`}
-              >
-                {task.title}
-              </label>
-              <div className="flex items-center -space-x-2">
-                {(assignees && assignees.length > 0)
-                  ? assignees.map((user) => {
-                    const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email || user.name;
-                    return (
-                      <TooltipProvider key={user.id}>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Avatar className="h-6 w-6 border-2 border-background">
-                              <AvatarImage src={user.avatar_url} />
-                              <AvatarFallback style={generatePastelColor(user.id)}>{getInitials(fullName, user.email)}</AvatarFallback>
-                            </Avatar>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>{fullName}</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    )
-                  })
-                  : task.created_by ? (() => {
-                    const createdByFullName = `${task.created_by.first_name || ''} ${task.created_by.last_name || ''}`.trim() || task.created_by.email;
-                    return (
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Avatar key={task.created_by.id} className="h-6 w-6 border-2 border-background opacity-50">
-                              <AvatarImage src={task.created_by.avatar_url} />
-                              <AvatarFallback style={generatePastelColor(task.created_by.id)}>{getInitials(createdByFullName, task.created_by.email)}</AvatarFallback>
-                            </Avatar>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Created by {createdByFullName}</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    )
-                  })() : (
+            return (
+              <div key={task.id} className="flex items-start gap-3 p-2 rounded-md hover:bg-muted/50">
+                <Checkbox
+                  className="mt-1"
+                  checked={task.completed}
+                  onCheckedChange={(checked) => updateTaskCompletion({ taskId: task.id, completed: !!checked })}
+                />
+                <div className="flex-1 cursor-pointer" onClick={() => handleEditTask(task)}>
+                  <p className={cn("font-medium", { "line-through text-muted-foreground": task.completed })}>
+                    {task.title}
+                  </p>
+                  <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
+                    {task.due_date && (
+                      <div className={cn("flex items-center gap-1", { "text-red-500": overdue && !task.completed })}>
+                        <Calendar className="h-3 w-3" />
+                        {format(new Date(task.due_date), "MMM d")}
+                      </div>
+                    )}
+                    {task.priority && (
+                      <div className="flex items-center gap-1">
+                        <Flag className="h-3 w-3" style={{ color: priorityStyles.hex }} />
+                        {task.priority}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="flex -space-x-2">
+                    {task.assignees?.map(user => {
+                      const fullName = [user.first_name, user.last_name].filter(Boolean).join(' ');
+                      return (
+                        <TooltipProvider key={user.id}>
+                          <Tooltip>
+                            <TooltipTrigger>
+                              <Avatar className="h-6 w-6 border-2 border-background">
+                                <AvatarImage src={user.avatar_url} />
+                                <AvatarFallback style={generatePastelColor(user.id)}>{getInitials(fullName)}</AvatarFallback>
+                              </Avatar>
+                            </TooltipTrigger>
+                            <TooltipContent>{fullName}</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )
+                    })}
+                  </div>
+                  {task.created_by && (
                     <TooltipProvider>
                       <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div className="h-6 w-6 rounded-full border-2 border-dashed border-muted-foreground flex items-center justify-center">
-                            <UserPlus className="h-3 w-3 text-muted-foreground" />
-                          </div>
+                        <TooltipTrigger>
+                          <Avatar className="h-6 w-6 border-2 border-background">
+                            <AvatarImage src={task.created_by.avatar_url} />
+                            <AvatarFallback style={generatePastelColor(task.created_by.id)}>{getInitials(createdByFullName)}</AvatarFallback>
+                          </Avatar>
                         </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Not assigned</p>
-                        </TooltipContent>
+                        <TooltipContent>Created by {createdByFullName}</TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
-                  )
-                }
+                  )}
+                </div>
               </div>
-              <Dialog>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DialogTrigger asChild>
-                      <DropdownMenuItem>
-                        <UserPlus className="mr-2 h-4 w-4" />
-                        Assign
-                      </DropdownMenuItem>
-                    </DialogTrigger>
-                    <DropdownMenuItem
-                      className="text-red-500"
-                      onClick={() => onTaskDelete(task.id)}
-                    >
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Delete
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Assign to: {task.title}</DialogTitle>
-                  </DialogHeader>
-                  <MultiSelect
-                    options={userOptions}
-                    value={assignees.map(u => u.id)}
-                    onChange={(selectedIds) => {
-                      onTaskAssignUsers(task.id, selectedIds);
-                    }}
-                    placeholder="Select team members..."
-                  />
-                </DialogContent>
-              </Dialog>
-            </div>
-          )
-        })}
-      </div>
-      {isAddingTask ? (
-        <div className="flex items-center space-x-2">
-          <Checkbox disabled />
-          <Input
-            value={newTaskTitle}
-            onChange={(e) => setNewTaskTitle(e.target.value)}
-            placeholder="What needs to be done?"
-            onKeyDown={(e) => e.key === "Enter" && handleAddTask()}
-            autoFocus
-          />
-          <Button onClick={handleAddTask}>Add</Button>
-          <Button variant="ghost" onClick={() => setIsAddingTask(false)}>
-            Cancel
-          </Button>
+            )
+          })}
         </div>
-      ) : (
-        <Button
-          variant="ghost"
-          className="w-full justify-start"
-          onClick={() => setIsAddingTask(true)}
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          Add task
-        </Button>
-      )}
-    </div>
+        {sortedTasks.some(t => t.completed) && (
+          <Button variant="link" size="sm" className="mt-2" onClick={() => setShowCompleted(!showCompleted)}>
+            {showCompleted ? "Hide completed" : `Show ${sortedTasks.filter(t => t.completed).length} completed`}
+          </Button>
+        )}
+      </CardContent>
+      <TaskFormDialog
+        isOpen={isFormOpen}
+        onOpenChange={setIsFormOpen}
+        project={project}
+        teamMembers={teamMembers}
+        task={editingTask}
+      />
+    </Card>
   );
 };
 

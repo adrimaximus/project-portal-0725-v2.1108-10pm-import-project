@@ -1,145 +1,162 @@
-import { useSearchParams, Link } from 'react-router-dom';
-import PortalLayout from '@/components/PortalLayout';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { dummyProjects } from '@/data/projects';
-import { Project, User } from '@/types';
-import { supabase } from '@/integrations/supabase/client';
-import { Building, User as UserIcon } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { Search, Briefcase, ListChecks, Users } from 'lucide-react';
 import HighlightMatch from '@/components/HighlightMatch';
 import { getInitials } from '@/lib/utils';
 
+const useSearch = (query: string) => {
+  return useQuery({
+    queryKey: ['search', query],
+    queryFn: async () => {
+      if (!query) return { projects: [], tasks: [], people: [] };
+
+      const [
+        { data: projects, error: projectsError },
+        { data: tasks, error: tasksError },
+        { data: people, error: peopleError }
+      ] = await Promise.all([
+        supabase.rpc('search_projects', { p_search_term: query }),
+        supabase.rpc('search_tasks', { p_search_term: query }),
+        supabase.from('profiles').select('*').ilike('first_name', `%${query}%`),
+      ]);
+
+      if (projectsError) throw projectsError;
+      if (tasksError) throw tasksError;
+      if (peopleError) throw peopleError;
+
+      const peopleData = people.map(profile => {
+        const fullName = [profile.first_name, profile.last_name].filter(Boolean).join(' ');
+        return {
+          id: profile.id,
+          name: fullName || profile.email || 'No name',
+          avatar_url: profile.avatar_url,
+          email: profile.email,
+          initials: getInitials(fullName) || 'NN',
+          first_name: profile.first_name,
+          last_name: profile.last_name,
+          role: profile.role,
+        };
+      });
+
+      return { projects, tasks, people: peopleData };
+    },
+    enabled: !!query,
+  });
+};
+
 const SearchPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [query, setQuery] = useState(searchParams.get('q') || '');
-  const [searchTerm, setSearchTerm] = useState(searchParams.get('q') || '');
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
+  const query = searchParams.get('q') || '';
+  const [inputValue, setInputValue] = useState(query);
+
+  const { data, isLoading, error } = useSearch(query);
 
   useEffect(() => {
-    const term = searchParams.get('q') || '';
-    setSearchTerm(term);
+    setInputValue(query);
+  }, [query]);
 
-    const performSearch = async () => {
-      if (!term) {
-        setProjects([]);
-        setUsers([]);
-        return;
-      }
-
-      // Search projects (using dummy data for now)
-      setProjects(dummyProjects.filter(p => p.name.toLowerCase().includes(term.toLowerCase())));
-
-      // Search users from Supabase
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .or(`first_name.ilike.%${term}%,last_name.ilike.%${term}%,email.ilike.%${term}%`);
-      
-      if (data) {
-        const foundUsers = data.map(profile => {
-          const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
-          return {
-            id: profile.id,
-            name: fullName || profile.email || 'No name',
-            avatar_url: profile.avatar_url,
-            email: profile.email,
-            initials: getInitials(fullName, profile.email) || 'NN',
-            first_name: profile.first_name,
-            last_name: profile.last_name,
-          }
-        });
-        setUsers(foundUsers);
-      }
-    };
-
-    performSearch();
-  }, [searchParams]);
-
-  const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    setSearchParams({ q: query });
+    setSearchParams({ q: inputValue });
   };
 
   return (
-    <PortalLayout>
-      <div className="space-y-6">
-        <form onSubmit={handleSearch}>
-          <Input
-            type="search"
-            placeholder="Search anything..."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            className="w-full text-lg p-6"
-            autoFocus
-          />
-        </form>
+    <div className="container mx-auto py-8">
+      <form onSubmit={handleSearch} className="flex items-center gap-2 mb-8">
+        <Search className="h-5 w-5 text-muted-foreground" />
+        <Input
+          value={inputValue}
+          onChange={(e) => setInputValue(e.target.value)}
+          placeholder="Search for projects, tasks, people..."
+          className="text-lg"
+        />
+      </form>
 
-        {searchTerm && (
-          <div>
-            <h2 className="text-2xl font-semibold mb-4">
-              Results for "<span className="text-primary">{searchTerm}</span>"
-            </h2>
+      {isLoading && <p>Searching...</p>}
+      {error && <p className="text-red-500">Error: {error.message}</p>}
 
-            <div className="space-y-6">
-              {projects.length > 0 && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Building className="h-5 w-5" />
-                      Projects ({projects.length})
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-1 divide-y">
-                    {projects.map(project => (
-                      <Link to={`/projects/${project.slug}`} key={project.id} className="block p-3 rounded-md hover:bg-muted -mx-3">
-                        <p className="font-medium">
-                          <HighlightMatch text={project.name} query={searchTerm} />
-                        </p>
-                        <p className="text-sm text-muted-foreground truncate">{project.description}</p>
-                      </Link>
-                    ))}
-                  </CardContent>
-                </Card>
-              )}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card>
+          <CardHeader className="flex flex-row items-center gap-2">
+            <Briefcase className="h-5 w-5" />
+            <CardTitle>Projects</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {data?.projects && data.projects.length > 0 ? (
+              <ul className="space-y-2">
+                {data.projects.map(p => (
+                  <li key={p.id}>
+                    <Link to={`/projects/${p.slug}`} className="hover:underline">
+                      <HighlightMatch text={p.name} query={query} />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-muted-foreground">No projects found.</p>
+            )}
+          </CardContent>
+        </Card>
 
-              {users.length > 0 && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <UserIcon className="h-5 w-5" />
-                      Users ({users.length})
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-1 divide-y">
-                    {users.map(user => (
-                      <div key={user.id} className="flex items-center gap-3 p-3 -mx-3">
-                        <Avatar>
-                          <AvatarImage src={user.avatar_url} />
-                          <AvatarFallback>{user.initials}</AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <p className="font-medium">
-                            <HighlightMatch text={user.name} query={searchTerm} />
-                          </p>
-                          <p className="text-sm text-muted-foreground">{user.email}</p>
-                        </div>
+        <Card>
+          <CardHeader className="flex flex-row items-center gap-2">
+            <ListChecks className="h-5 w-5" />
+            <CardTitle>Tasks</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {data?.tasks && data.tasks.length > 0 ? (
+              <ul className="space-y-2">
+                {data.tasks.map(t => (
+                  <li key={t.id}>
+                    <Link to={`/projects/${t.project_slug}`} className="hover:underline">
+                      <HighlightMatch text={t.title} query={query} />
+                      <span className="text-xs text-muted-foreground ml-2">in {t.project_name}</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-muted-foreground">No tasks found.</p>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center gap-2">
+            <Users className="h-5 w-5" />
+            <CardTitle>People</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {data?.people && data.people.length > 0 ? (
+              <ul className="space-y-3">
+                {data.people.map(p => (
+                  <li key={p.id}>
+                    <Link to={`/profile/${p.id}`} className="flex items-center gap-3 hover:bg-muted/50 p-1 rounded-md">
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src={p.avatar_url} />
+                        <AvatarFallback>{p.initials}</AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="font-medium"><HighlightMatch text={p.name} query={query} /></p>
+                        <p className="text-xs text-muted-foreground">{p.role}</p>
                       </div>
-                    ))}
-                  </CardContent>
-                </Card>
-              )}
-
-              {projects.length === 0 && users.length === 0 && (
-                <p className="text-muted-foreground text-center py-10">No results found.</p>
-              )}
-            </div>
-          </div>
-        )}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-muted-foreground">No people found.</p>
+            )}
+          </CardContent>
+        </Card>
       </div>
-    </PortalLayout>
+    </div>
   );
 };
 

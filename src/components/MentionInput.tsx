@@ -1,195 +1,144 @@
-import React, { useState, useRef } from 'react';
-import { Popover, PopoverContent, PopoverAnchor } from '@/components/ui/popover';
-import { Command, CommandInput, CommandList, CommandEmpty, CommandItem, CommandGroup } from '@/components/ui/command';
-import { Textarea } from '@/components/ui/textarea';
+import { useState, useRef, useEffect, useMemo } from 'react';
+import { Mention, MentionsInput, SuggestionDataItem } from 'react-mentions';
+import { useProfiles } from '@/hooks/useProfiles';
+import { User } from '@/types';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { generatePastelColor, getAvatarUrl } from '@/lib/utils';
 import { Briefcase } from 'lucide-react';
 
-export interface UserSuggestion {
-  id: string;
-  display: string;
-  avatar_url?: string;
-  initials: string;
-}
-
-export interface ProjectSuggestion {
-  id: string;
-  display: string;
-  slug: string;
-}
-
-type Suggestion = UserSuggestion | ProjectSuggestion;
-
 interface MentionInputProps {
   value: string;
   onChange: (value: string) => void;
-  onKeyDown?: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
-  userSuggestions: UserSuggestion[];
-  projectSuggestions: ProjectSuggestion[];
-  onSearchTermChange?: (trigger: '@' | '/' | null, term: string) => void;
   placeholder?: string;
-  disabled?: boolean;
-  className?: string;
+  onSend?: () => void;
 }
 
-const MentionInput = React.forwardRef<HTMLTextAreaElement, MentionInputProps>(
-  ({ value, onChange, onKeyDown, userSuggestions, projectSuggestions, onSearchTermChange, placeholder, disabled, className }, ref) => {
-    const [open, setOpen] = useState(false);
-    const [searchTerm, setSearchTerm] = useState('');
-    const [activeIndex, setActiveIndex] = useState(0);
-    const [activeTrigger, setActiveTrigger] = useState<'@' | '/' | null>(null);
-    const textareaRef = useRef<HTMLTextAreaElement>(null);
+interface UserSuggestion extends SuggestionDataItem {
+  name: string;
+  avatar_url: string;
+  initials: string;
+  role: string;
+}
 
-    const suggestions = activeTrigger === '@' ? userSuggestions : projectSuggestions;
-    const filteredSuggestions = (suggestions || []).filter(s =>
-      s.display.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+const MentionInput = ({ value, onChange, placeholder, onSend }: MentionInputProps) => {
+  const { data: profiles = [], isLoading } = useProfiles();
+  const [isFocused, setIsFocused] = useState(false);
+  const mentionsInputRef = useRef<any>(null);
 
-    const handleLocalKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      if (open && filteredSuggestions.length > 0) {
-        if (e.key === 'ArrowDown') {
-          e.preventDefault();
-          setActiveIndex((prev) => (prev + 1) % filteredSuggestions.length);
-        } else if (e.key === 'ArrowUp') {
-          e.preventDefault();
-          setActiveIndex((prev) => (prev - 1 + filteredSuggestions.length) % filteredSuggestions.length);
-        } else if (e.key === 'Enter' || e.key === 'Tab') {
-          e.preventDefault();
-          handleSelect(filteredSuggestions[activeIndex]);
-          return;
-        } else if (e.key === 'Escape') {
-          e.preventDefault();
-          setOpen(false);
-        }
+  const userSuggestions: UserSuggestion[] = useMemo(() => {
+    return profiles.map(p => ({
+      id: p.id,
+      display: p.name,
+      name: p.name,
+      avatar_url: p.avatar_url,
+      initials: p.initials,
+      role: p.role || 'Member',
+    }));
+  }, [profiles]);
+
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key === 'Enter' && !event.shiftKey && onSend) {
+      event.preventDefault();
+      onSend();
+    }
+  };
+
+  useEffect(() => {
+    if (mentionsInputRef.current) {
+      const textarea = mentionsInputRef.current.inputEl as HTMLTextAreaElement;
+      if (textarea) {
+        textarea.style.height = 'auto';
+        textarea.style.height = `${textarea.scrollHeight}px`;
       }
-      
-      if (onKeyDown) {
-        onKeyDown(e);
-      }
-    };
+    }
+  }, [value]);
 
-    const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-      const text = e.target.value;
-      onChange(text);
-
-      const cursorPos = e.target.selectionStart;
-      const textBeforeCursor = text.substring(0, cursorPos);
-      const match = textBeforeCursor.match(/([@\/])([\w\s-]*)$/);
-
-      if (match) {
-        const trigger = match[1] as '@' | '/';
-        const term = match[2];
-        setOpen(true);
-        setSearchTerm(term);
-        setActiveTrigger(trigger);
-        setActiveIndex(0);
-        if (onSearchTermChange) {
-          onSearchTermChange(trigger, term);
-        }
-      } else {
-        setOpen(false);
-        setActiveTrigger(null);
-        if (onSearchTermChange) {
-          onSearchTermChange(null, '');
-        }
-      }
-    };
-
-    const handleSelect = (suggestion: Suggestion) => {
-      if (!textareaRef.current) return;
-
-      const text = value;
-      const cursorPos = textareaRef.current.selectionStart;
-      const textBeforeCursor = text.substring(0, cursorPos);
-      
-      const match = textBeforeCursor.match(/([@\/])([\w\s-]*)$/);
-      if (!match) return;
-
-      let mentionText = '';
-      if (activeTrigger === '@') {
-        mentionText = `@${suggestion.display} `;
-      } else if (activeTrigger === '/') {
-        const proj = suggestion as ProjectSuggestion;
-        mentionText = `[${proj.display}](/projects/${proj.slug}) `;
-      }
-      
-      const startIndex = match.index!;
-      
-      const newValue = 
-        text.substring(0, startIndex) + 
-        mentionText + 
-        text.substring(cursorPos);
-
-      onChange(newValue);
-      setOpen(false);
-      setActiveTrigger(null);
-
-      setTimeout(() => {
-        if (textareaRef.current) {
-          textareaRef.current.focus();
-          const newCursorPos = startIndex + mentionText.length;
-          textareaRef.current.selectionStart = newCursorPos;
-          textareaRef.current.selectionEnd = newCursorPos;
-        }
-      }, 0);
-    };
-
-    React.useImperativeHandle(ref, () => textareaRef.current!);
-
+  const renderSuggestion = (
+    suggestion: SuggestionDataItem,
+    search: string,
+    highlightedDisplay: React.ReactNode,
+    index: number,
+    focused: boolean
+  ): React.ReactNode => {
+    const userSuggestion = suggestion as UserSuggestion;
     return (
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverAnchor asChild>
-          <Textarea
-            ref={textareaRef}
-            value={value}
-            onChange={handleChange}
-            onKeyDown={handleLocalKeyDown}
-            placeholder={placeholder}
-            disabled={disabled}
-            className={className}
-          />
-        </PopoverAnchor>
-        <PopoverContent className="w-[300px] p-0" align="start">
-          <Command>
-            <CommandInput 
-              placeholder={activeTrigger === '@' ? "Search user..." : "Search project..."}
-              value={searchTerm}
-              onValueChange={setSearchTerm}
-              className="border-none focus:ring-0"
-            />
-            <CommandList>
-              <CommandEmpty>No results found.</CommandEmpty>
-              <CommandGroup>
-                {filteredSuggestions.map((suggestion, index) => (
-                  <CommandItem
-                    key={suggestion.id}
-                    onSelect={() => handleSelect(suggestion)}
-                    className={index === activeIndex ? 'bg-accent' : ''}
-                  >
-                    {activeTrigger === '@' ? (
-                      <>
-                        <Avatar className="h-8 w-8 mr-2">
-                          <AvatarImage src={getAvatarUrl((suggestion as UserSuggestion).avatar_url, suggestion.id)} />
-                          <AvatarFallback style={generatePastelColor(suggestion.id)}>{(suggestion as UserSuggestion).initials}</AvatarFallback>
-                        </Avatar>
-                        <span>{suggestion.display}</span>
-                      </>
-                    ) : (
-                      <div className="flex items-center">
-                        <Briefcase className="h-4 w-4 mr-2 text-muted-foreground" />
-                        <span>{suggestion.display}</span>
-                      </div>
-                    )}
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            </CommandList>
-          </Command>
-        </PopoverContent>
-      </Popover>
+      <div className={`flex items-center p-2 ${focused ? 'bg-muted' : ''}`}>
+        <Avatar className="h-8 w-8 mr-2">
+          <AvatarImage src={userSuggestion.avatar_url} />
+          <AvatarFallback style={generatePastelColor(userSuggestion.id)}>{userSuggestion.initials}</AvatarFallback>
+        </Avatar>
+        <div>
+          <div className="font-medium">{highlightedDisplay}</div>
+          <div className="text-xs text-muted-foreground flex items-center">
+            <Briefcase className="h-3 w-3 mr-1" />
+            {userSuggestion.role}
+          </div>
+        </div>
+      </div>
     );
-  }
-);
+  };
+
+  return (
+    <div
+      className={`relative transition-all duration-300 ease-in-out border rounded-lg ${isFocused ? 'border-primary' : 'border-input'}`}
+      onClick={() => mentionsInputRef.current?.inputEl?.focus()}
+    >
+      <MentionsInput
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        onFocus={() => setIsFocused(true)}
+        onBlur={() => setIsFocused(false)}
+        onKeyDown={handleKeyDown}
+        inputRef={mentionsInputRef}
+        className="mentions"
+        style={{
+          control: {
+            backgroundColor: 'transparent',
+            fontSize: '14px',
+            fontWeight: 'normal',
+            border: 'none',
+            boxShadow: 'none',
+          },
+          input: {
+            margin: '0px',
+            padding: '10px 12px',
+            overflow: 'auto',
+            height: 'auto',
+            maxHeight: '150px',
+            outline: 'none',
+            resize: 'none',
+          },
+          suggestions: {
+            list: {
+              backgroundColor: 'hsl(var(--background))',
+              border: '1px solid hsl(var(--border))',
+              borderRadius: '0.5rem',
+              fontSize: 14,
+              maxHeight: '250px',
+              overflowY: 'auto',
+              marginTop: '8px',
+              boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
+            },
+            item: {
+              '&focused': {
+                backgroundColor: 'hsl(var(--muted))',
+              },
+            },
+          },
+        }}
+      >
+        <Mention
+          trigger="@"
+          data={userSuggestions}
+          renderSuggestion={renderSuggestion}
+          displayTransform={(id, display) => `@${display}`}
+          markup="@[__display__](__id__)"
+          appendSpaceOnAdd
+        />
+      </MentionsInput>
+    </div>
+  );
+};
 
 export default MentionInput;

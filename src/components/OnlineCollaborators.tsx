@@ -1,129 +1,110 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Users } from "lucide-react";
-import { Collaborator } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { generatePastelColor, getAvatarUrl } from "@/lib/utils";
 
-type OnlineCollaboratorsProps = {
-  isCollapsed: boolean;
+interface Collaborator {
+  id: string;
+  name: string;
+  email: string;
+  avatar_url: string;
+  initials: string;
+}
+
+const useOnlineCollaborators = (projectId?: string) => {
+  const { user } = useAuth();
+
+  return useQuery({
+    queryKey: ['onlineCollaborators', projectId],
+    queryFn: async () => {
+      if (!projectId) return [];
+
+      const { data: members, error } = await supabase
+        .from('project_members')
+        .select('user_id, profiles(id, first_name, last_name, email, avatar_url)')
+        .eq('project_id', projectId);
+
+      if (error) throw error;
+
+      const collaborators: Collaborator[] = members.map((m: any) => {
+        const name = [m.profiles.first_name, m.profiles.last_name].filter(Boolean).join(' ');
+        return {
+          id: m.profiles.id,
+          name: name || m.profiles.email,
+          email: m.profiles.email,
+          avatar_url: m.profiles.avatar_url,
+          initials: (name || m.profiles.email).substring(0, 2).toUpperCase(),
+        };
+      });
+
+      // Mock online status for now
+      const onlineCollaborators = collaborators.filter(c => c.id !== user?.id);
+      return onlineCollaborators;
+    },
+    enabled: !!projectId && !!user,
+    refetchInterval: 30000, // Refetch every 30 seconds
+  });
 };
 
-const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
-  const [isExpanded, setIsExpanded] = useState(false);
-  const navigate = useNavigate();
-  const { onlineCollaborators } = useAuth();
+const OnlineCollaborators = ({ projectId }: { projectId?: string }) => {
+  const { data: collaborators = [], isLoading } = useOnlineCollaborators(projectId);
 
-  const visibleCollaborators = onlineCollaborators.slice(0, 3);
-  const remainingCount = onlineCollaborators.length - visibleCollaborators.length;
+  if (isLoading) {
+    return <div className="h-8 w-24 bg-muted rounded-full animate-pulse" />;
+  }
 
-  const handleCollaboratorClick = (collaborator: Collaborator) => {
-    navigate('/chat', { 
-      state: { 
-        selectedCollaborator: collaborator
-      } 
-    });
-  };
+  if (!collaborators.length) {
+    return null;
+  }
 
-  if (isCollapsed) {
-    return (
-      <div className="p-2 flex justify-center">
-        <TooltipProvider delayDuration={0}>
+  const visibleCollaborators = collaborators.slice(0, 3);
+  const hiddenCount = collaborators.length - visibleCollaborators.length;
+
+  return (
+    <div className="flex items-center">
+      <div className="flex -space-x-2">
+        {visibleCollaborators.map((c) => (
+          <TooltipProvider key={c.id}>
+            <Tooltip>
+              <TooltipTrigger>
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src={getAvatarUrl(c)} alt={c.name} />
+                  <AvatarFallback style={generatePastelColor(c.id)}>{c.initials}</AvatarFallback>
+                </Avatar>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{c.name}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        ))}
+      </div>
+      {hiddenCount > 0 && (
+        <TooltipProvider>
           <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-primary md:h-8 md:w-8 relative cursor-pointer">
-                <Users className="h-5 w-5" />
-                <span className="absolute -top-1 -right-1 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-primary p-0 text-xs text-primary-foreground">
-                  {onlineCollaborators.length}
-                </span>
+            <TooltipTrigger>
+              <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-xs font-medium border-2 border-background -ml-2">
+                +{hiddenCount}
               </div>
             </TooltipTrigger>
-            <TooltipContent side="right">
-              <p className="font-semibold">{onlineCollaborators.length} collaborators online</p>
-              <ul className="mt-1 text-sm text-muted-foreground">
-                {onlineCollaborators.map(c => <li key={c.id}>{c.name}</li>)}
+            <TooltipContent>
+              <ul>
+                {collaborators.slice(3).map(collaborator => (
+                  <li key={collaborator.id} className="flex items-center gap-2 py-1">
+                    <Avatar className="h-9 w-9 border-2 border-background bg-background">
+                      <AvatarImage src={getAvatarUrl(collaborator)} alt={collaborator.name} />
+                      <AvatarFallback style={generatePastelColor(collaborator.id)}>{collaborator.initials}</AvatarFallback>
+                    </Avatar>
+                    <span>{collaborator.name}</span>
+                  </li>
+                ))}
               </ul>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
-      </div>
-    );
-  }
-
-  return (
-    <div className="px-4 lg:px-4 py-4 transition-all duration-300">
-      <h3 
-        className="mb-3 px-3 text-xs font-semibold text-muted-foreground tracking-wider uppercase cursor-pointer flex items-center"
-        onClick={() => setIsExpanded(!isExpanded)}
-      >
-        <span>Online</span>
-      </h3>
-      <div className="px-3">
-        {isExpanded ? (
-          <div className="space-y-1">
-            {onlineCollaborators.map(c => (
-              <div 
-                key={c.id} 
-                className="flex items-center gap-3 p-1.5 rounded-lg hover:bg-muted cursor-pointer transition-colors"
-                onClick={() => handleCollaboratorClick(c)}
-              >
-                <div className="relative">
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src={getAvatarUrl(c.avatar_url, c.id)} alt={c.name} />
-                    <AvatarFallback style={generatePastelColor(c.id)}>{c.initials}</AvatarFallback>
-                  </Avatar>
-                  <span className="absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full bg-green-500 ring-2 ring-background" />
-                </div>
-                <span className="text-sm text-foreground font-medium">{c.name}</span>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <TooltipProvider delayDuration={0}>
-            <div className="flex items-center cursor-pointer -space-x-3" onClick={() => setIsExpanded(true)}>
-              {visibleCollaborators.map((collaborator, index) => (
-                <Tooltip key={collaborator.id}>
-                  <TooltipTrigger asChild>
-                    <div
-                      className="relative transition-all duration-300 hover:z-40 hover:scale-110"
-                      style={{ zIndex: index }}
-                    >
-                      <Avatar className="h-9 w-9 border-2 border-background bg-background">
-                        <AvatarImage src={getAvatarUrl(collaborator.avatar_url, collaborator.id)} alt={collaborator.name} />
-                        <AvatarFallback style={generatePastelColor(collaborator.id)}>{collaborator.initials}</AvatarFallback>
-                      </Avatar>
-                      {index === visibleCollaborators.length - 1 && remainingCount === 0 && (
-                        <span className="absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full bg-green-500 ring-2 ring-background" />
-                      )}
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent side="top" className="bg-primary text-primary-foreground">
-                    <p>{collaborator.name}</p>
-                  </TooltipContent>
-                </Tooltip>
-              ))}
-              {remainingCount > 0 && (
-                 <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div 
-                      className="relative flex h-9 w-9 items-center justify-center rounded-full bg-muted text-muted-foreground border-2 border-background text-xs font-semibold hover:z-40 hover:scale-110 transition-transform"
-                      style={{ zIndex: visibleCollaborators.length }}
-                    >
-                      +{remainingCount}
-                      <span className="absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full bg-green-500 ring-2 ring-background" />
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent side="top" className="bg-primary text-primary-foreground">
-                    <p>{remainingCount} more online</p>
-                  </TooltipContent>
-                </Tooltip>
-              )}
-            </div>
-          </TooltipProvider>
-        )}
-      </div>
+      )}
     </div>
   );
 };
