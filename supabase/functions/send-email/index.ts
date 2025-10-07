@@ -1,6 +1,5 @@
 // @ts-nocheck
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -13,32 +12,31 @@ serve(async (req) => {
     return new Response('ok', { headers: corsHeaders });
   }
 
-  try {
-    // 1. Autentikasi pengguna untuk memastikan hanya pengguna yang login yang dapat mengirim email
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
-    );
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error("Pengguna tidak terautentikasi.");
+  if (req.method !== "POST") {
+    return new Response(JSON.stringify({ error: "Method not allowed" }), { 
+        status: 405,
+        headers: { ...corsHeaders, "Content-Type": "application/json" } 
+    });
+  }
 
-    // 2. Ambil data dari body request
+  try {
     const { to, subject, html } = await req.json();
+
     if (!to || !subject || !html) {
-      throw new Error("Kolom yang diperlukan tidak ada: to, subject, dan html wajib diisi.");
+      return new Response(JSON.stringify({ error: "Missing fields: to, subject, and html are required." }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400,
+      });
     }
 
-    // 3. Ambil kredensial dari environment variables
     const apiKey = Deno.env.get("EMAILIT_API_KEY");
     const senderEmail = Deno.env.get("EMAILIT_SENDER");
     const fromName = Deno.env.get("EMAILIT_FROM_NAME");
 
     if (!apiKey || !senderEmail || !fromName) {
-        throw new Error("Layanan email tidak dikonfigurasi di server.");
+        throw new Error("Email service is not configured on the server.");
     }
 
-    // 4. Panggil API EmailIt
     const res = await fetch("https://api.emailit.io/v1/send", {
       method: "POST",
       headers: {
@@ -57,17 +55,15 @@ serve(async (req) => {
     });
 
     const data = await res.json().catch(() => ({}));
-    
-    // 5. Kembalikan respons
-    return new Response(JSON.stringify({ ok: res.ok, data }), { 
-      status: res.status, 
-      headers: { ...corsHeaders, "Content-Type": "application/json" } 
-    });
 
-  } catch (e) {
-    return new Response(JSON.stringify({ ok: false, error: e.message }), {
-      status: 400,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    return new Response(JSON.stringify({ ok: res.ok, data }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: res.status,
+    });
+  } catch (err) {
+    return new Response(JSON.stringify({ error: err.message }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500,
     });
   }
 });
