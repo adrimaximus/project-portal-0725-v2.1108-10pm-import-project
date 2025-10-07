@@ -31,6 +31,11 @@ const formatPhoneNumberForWhatsApp = (phone: string | undefined) => {
 const PersonCard = ({ person, onViewProfile }: PersonCardProps) => {
   const [imageError, setImageError] = useState(false);
 
+  const avatarUrl = useMemo(
+    () => person.avatar_url || `https://api.dicebear.com/8.x/initials/svg?seed=${person.id}`,
+    [person.avatar_url, person.id]
+  );
+
   const { data: companyProperties = [] } = useQuery({
     queryKey: ['company_properties'],
     queryFn: async () => {
@@ -97,7 +102,7 @@ const PersonCard = ({ person, onViewProfile }: PersonCardProps) => {
 
   useEffect(() => {
     setImageError(false);
-  }, [person.avatar_url]);
+  }, [avatarUrl]);
 
   const handleImageError = () => {
     setImageError(true);
@@ -125,9 +130,9 @@ const PersonCard = ({ person, onViewProfile }: PersonCardProps) => {
     >
       <div className="relative">
         <div className="aspect-[16/9] w-full overflow-hidden rounded-t-2xl">
-          {person.avatar_url && !imageError ? (
+          {!imageError ? (
             <img
-              src={person.avatar_url}
+              src={avatarUrl}
               alt={person.full_name}
               onError={handleImageError}
               className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
