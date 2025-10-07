@@ -308,7 +308,7 @@ const ProjectsPage = () => {
 
   return (
     <PortalLayout disableMainScroll noPadding>
-      <div className="flex flex-col h-full">
+      <div className="flex flex-col flex-1">
         <AlertDialog open={!!projectToDelete} onOpenChange={(open) => !open && setProjectToDelete(null)}>
           <AlertDialogContent>
             <AlertDialogHeader><AlertDialogTitle>Are you sure?</AlertDialogTitle><AlertDialogDescription>This action cannot be undone. This will permanently delete the project "{projectToDelete?.name}".</AlertDialogDescription></AlertDialogHeader>
