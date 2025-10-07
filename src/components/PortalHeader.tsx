@@ -32,7 +32,7 @@ interface PortalHeaderProps {
 const PortalHeader = ({ summary }: PortalHeaderProps) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const { theme, setTheme } = useTheme();
+  const { mode, setMode } = useTheme();
   const { notifications, unreadCount, markAsRead } = useNotifications();
   const { isFeatureEnabled } = useFeatures();
   const [isSupportDialogOpen, setIsSupportDialogOpen] = useState(false);
@@ -47,13 +47,13 @@ const PortalHeader = ({ summary }: PortalHeaderProps) => {
     await logout();
   };
 
-  const toggleTheme = () => {
-    if (theme === "dark") {
-      setTheme("light");
-    } else if (theme === "light") {
-      setTheme("system");
+  const toggleMode = () => {
+    if (mode === "dark") {
+      setMode("light");
+    } else if (mode === "light") {
+      setMode("system");
     } else {
-      setTheme("dark");
+      setMode("dark");
     }
   };
 
@@ -132,10 +132,10 @@ const PortalHeader = ({ summary }: PortalHeaderProps) => {
             </DropdownMenuContent>
           </DropdownMenu>
         )}
-        <Button variant="outline" size="icon" onClick={toggleTheme} className="h-9 w-9 rounded-full">
-          {theme === 'light' && <Sun className="h-[1.2rem] w-[1.2rem]" />}
-          {theme === 'dark' && <Moon className="h-[1.2rem] w-[1.2rem]" />}
-          {theme === 'system' && <Laptop className="h-[1.2rem] w-[1.2rem]" />}
+        <Button variant="outline" size="icon" onClick={toggleMode} className="h-9 w-9 rounded-full">
+          {mode === 'light' && <Sun className="h-[1.2rem] w-[1.2rem]" />}
+          {mode === 'dark' && <Moon className="h-[1.2rem] w-[1.2rem]" />}
+          {mode === 'system' && <Laptop className="h-[1.2rem] w-[1.2rem]" />}
           <span className="sr-only">Toggle theme</span>
         </Button>
         <DropdownMenu>
