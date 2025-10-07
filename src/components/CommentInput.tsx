@@ -1,126 +1,125 @@
-import { useState, useRef, useEffect } from 'react';
-import { useProfiles } from '@/hooks/useProfiles';
-import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-import { Button } from './ui/button';
-import { Send } from 'lucide-react';
+import { useState, useMemo } from "react";
+import { Project } from "@/types";
+import { useAuth } from "@/contexts/AuthContext";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Paperclip, Send, Ticket, X } from "lucide-react";
 import { Mention, MentionsInput } from "react-mentions";
 import { generatePastelColor, getAvatarUrl } from "@/lib/utils";
 
 interface CommentInputProps {
-  onSubmit: (text: string) => void;
-  isSubmitting: boolean;
+  project: Project;
+  onAddCommentOrTicket: (text: string, isTicket: boolean, attachment: File | null) => void;
 }
 
-const CommentInput = ({ onSubmit, isSubmitting }: CommentInputProps) => {
-  const [text, setText] = useState('');
-  const { data: profiles = [] } = useProfiles();
-  const mentionsInputRef = useRef<any>(null);
+const CommentInput = ({ project, onAddCommentOrTicket }: CommentInputProps) => {
+  const { user } = useAuth();
+  const [newComment, setNewComment] = useState("");
+  const [isTicket, setIsTicket] = useState(false);
+  const [attachment, setAttachment] = useState<File | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const userSuggestions = profiles.map(p => ({
-    id: p.id,
-    display: p.name,
-    name: p.name,
-    avatar_url: p.avatar_url,
-    initials: p.initials,
-  }));
+  const mentionableUsers = useMemo(() => {
+    if (!project) return [];
+    const users = [project.created_by, ...project.assignedTo];
+    const uniqueUsers = Array.from(new Map(users.map(u => [u.id, u])).values());
+    return uniqueUsers.map(u => {
+      return {
+        id: u.id,
+        display: u.name,
+        avatar_url: u.avatar_url,
+        initials: u.initials,
+        email: u.email,
+      };
+    });
+  }, [project]);
 
-  const handleSubmit = () => {
-    if (text.trim()) {
-      onSubmit(text.trim());
-      setText('');
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      setAttachment(e.target.files[0]);
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSubmit();
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newComment.trim() || !user) return;
+
+    setIsSubmitting(true);
+    try {
+      await onAddCommentOrTicket(newComment, isTicket, attachment);
+      setNewComment("");
+      setIsTicket(false);
+      setAttachment(null);
+    } finally {
+      setIsSubmitting(false);
     }
   };
-
-  useEffect(() => {
-    if (mentionsInputRef.current) {
-      const textarea = mentionsInputRef.current.inputEl as HTMLTextAreaElement;
-      if (textarea) {
-        textarea.style.height = 'auto';
-        textarea.style.height = `${textarea.scrollHeight}px`;
-      }
-    }
-  }, [text]);
 
   return (
-    <div className="flex items-start gap-3">
-      <div className="flex-grow">
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="relative">
         <MentionsInput
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder="Add a comment... @ to mention"
-          onKeyDown={handleKeyDown}
-          inputRef={mentionsInputRef}
-          className="mentions"
-          style={{
-            control: {
-              backgroundColor: 'hsl(var(--input))',
-              fontSize: '14px',
-              fontWeight: 'normal',
-              border: '1px solid hsl(var(--border))',
-              borderRadius: '0.5rem',
-            },
-            input: {
-              margin: '0px',
-              padding: '10px 12px',
-              overflow: 'auto',
-              height: 'auto',
-              maxHeight: '150px',
-              outline: 'none',
-              resize: 'none',
-            },
+          value={newComment}
+          onChange={(e) => setNewComment(e.target.value)}
+          placeholder={isTicket ? "Describe the task or issue..." : "Add a comment... @ to mention"}
+          a11ySuggestionsListLabel={"Suggested mentions"}
+          classNames={{
+            control: 'relative w-full',
+            input: 'w-full min-h-[100px] p-3 text-sm rounded-lg border bg-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
             suggestions: {
-              list: {
-                backgroundColor: 'hsl(var(--background))',
-                border: '1px solid hsl(var(--border))',
-                borderRadius: '0.5rem',
-                fontSize: 14,
-                maxHeight: '250px',
-                overflowY: 'auto',
-                marginTop: '8px',
-                boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
-              },
-              item: {
-                padding: '5px 15px',
-                borderBottom: '1px solid hsl(var(--border))',
-                '&focused': {
-                  backgroundColor: 'hsl(var(--muted))',
-                },
-              },
+              list: 'bg-popover text-popover-foreground border rounded-lg shadow-lg p-1 mt-2 z-10 max-h-60 overflow-y-auto',
+              item: 'flex items-center gap-3 px-2 py-1.5 text-sm rounded-sm cursor-pointer outline-none',
+              itemFocused: 'bg-accent text-accent-foreground',
             },
+            mention: 'bg-primary/10 text-primary font-semibold rounded-sm px-2 py-1',
           }}
+          disabled={isSubmitting}
         >
           <Mention
             trigger="@"
-            data={userSuggestions}
-            renderSuggestion={(suggestion, search, highlightedDisplay, index, focused) => (
-              <div className={`flex items-center p-2 ${focused ? 'bg-muted' : ''}`}>
-                <Avatar className="h-8 w-8 mr-2">
-                  <AvatarImage src={getAvatarUrl(suggestion)} />
+            data={mentionableUsers}
+            renderSuggestion={(suggestion: any) => (
+              <>
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src={getAvatarUrl(suggestion.avatar_url, suggestion.id)} />
                   <AvatarFallback style={generatePastelColor(suggestion.id)}>{suggestion.initials}</AvatarFallback>
                 </Avatar>
-                <div>
-                  <div className="font-medium">{highlightedDisplay}</div>
-                  <div className="text-xs text-muted-foreground">{suggestion.name}</div>
-                </div>
-              </div>
+                <span className="font-medium text-sm">{suggestion.display}</span>
+              </>
             )}
-            displayTransform={(id, display) => `@${display}`}
-            markup="@[__display__](__id__)"
             appendSpaceOnAdd
           />
         </MentionsInput>
       </div>
-      <Button onClick={handleSubmit} disabled={isSubmitting || !text.trim()} size="icon">
-        <Send className="h-4 w-4" />
-      </Button>
-    </div>
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <Button type="button" variant={isTicket ? "default" : "outline"} size="sm" onClick={() => setIsTicket(!isTicket)} className="flex-1">
+            <Ticket className="mr-2 h-4 w-4" />
+            {isTicket ? "This is a Ticket" : "Make a Ticket"}
+          </Button>
+          <Button type="button" variant="outline" size="sm" asChild className="flex-1">
+            <label htmlFor="file-upload" className="cursor-pointer flex items-center justify-center">
+              <Paperclip className="mr-2 h-4 w-4" />
+              Attach File
+              <input id="file-upload" type="file" className="hidden" onChange={handleFileChange} />
+            </label>
+          </Button>
+        </div>
+        <Button type="submit" disabled={isSubmitting || !newComment.trim()} className="w-full sm:w-auto" size="sm">
+          <Send className="mr-2 h-4 w-4" />
+          {isSubmitting ? "Posting..." : "Post"}
+        </Button>
+      </div>
+      {attachment && (
+        <div className="text-sm text-muted-foreground flex items-center gap-2">
+          <Paperclip className="h-4 w-4" />
+          <span>{attachment.name}</span>
+          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setAttachment(null)}>
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
+    </form>
   );
 };
 

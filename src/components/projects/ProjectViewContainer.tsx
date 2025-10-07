@@ -1,36 +1,62 @@
-import { Project, Task } from '@/types';
+import React from 'react';
+import { Project } from '@/types';
+import { Task } from '@/types';
 import TableView from './TableView';
 import ListView from './ListView';
 import KanbanView from './KanbanView';
 import TasksView from './TasksView';
-import { MutableRefObject } from 'react';
+import TasksKanbanView from './TasksKanbanView';
+
+type ViewMode = 'table' | 'list' | 'kanban' | 'tasks' | 'tasks-kanban';
 
 interface ProjectViewContainerProps {
-  view: 'table' | 'list' | 'kanban' | 'tasks';
+  view: ViewMode;
   projects: Project[];
   tasks: Task[];
   isLoading: boolean;
   isTasksLoading: boolean;
   onDeleteProject: (projectId: string) => void;
+  sortConfig: { key: keyof Project | null; direction: 'ascending' | 'descending' };
+  requestSort: (key: keyof Project) => void;
+  rowRefs: React.MutableRefObject<Map<string, HTMLTableRowElement>>;
+  kanbanGroupBy: 'status' | 'payment_status';
+  onEditTask: (task: Task) => void;
+  onDeleteTask: (taskId: string) => void;
+  onToggleTaskCompletion: (task: Task, completed: boolean) => void;
+  taskSortConfig: { key: string; direction: 'asc' | 'desc' };
+  requestTaskSort: (key: string) => void;
+  onTaskStatusChange: (taskId: string, newStatus: any) => void;
 }
 
 const ProjectViewContainer = ({
-  view,
-  projects,
-  tasks,
-  isLoading,
-  isTasksLoading,
-  onDeleteProject,
+  view, projects, tasks, isLoading, isTasksLoading, onDeleteProject, sortConfig, requestSort, rowRefs,
+  kanbanGroupBy, onEditTask, onDeleteTask, onToggleTaskCompletion,
+  taskSortConfig, requestTaskSort, onTaskStatusChange
 }: ProjectViewContainerProps) => {
   switch (view) {
     case 'table':
-      return <TableView projects={projects} />;
+      return <TableView projects={projects} isLoading={isLoading} onDeleteProject={onDeleteProject} sortConfig={sortConfig} requestSort={requestSort} rowRefs={rowRefs} />;
     case 'list':
-      return <ListView projects={projects} isLoading={isLoading} onDeleteProject={onDeleteProject} />;
+      return <ListView projects={projects} onDeleteProject={onDeleteProject} />;
     case 'kanban':
-      return <KanbanView projects={projects} isLoading={isLoading} />;
+      return <KanbanView projects={projects} groupBy={kanbanGroupBy} />;
     case 'tasks':
-      return <TasksView tasks={tasks} projects={projects} isLoading={isTasksLoading} />;
+      return <TasksView 
+        tasks={tasks} 
+        isLoading={isTasksLoading} 
+        onEdit={onEditTask}
+        onDelete={onDeleteTask}
+        onToggleTaskCompletion={onToggleTaskCompletion}
+        sortConfig={taskSortConfig}
+        requestSort={requestTaskSort}
+      />;
+    case 'tasks-kanban':
+      return <TasksKanbanView 
+        tasks={tasks} 
+        onStatusChange={onTaskStatusChange} 
+        onEdit={onEditTask}
+        onDelete={onDeleteTask}
+      />;
     default:
       return null;
   }

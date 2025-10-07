@@ -1,174 +1,231 @@
+import { useState, useMemo, useRef, useEffect } from "react";
 import { Project } from '@/types';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
-import { Badge } from '@/components/ui/badge';
-import { getStatusStyles, formatInJakarta, generatePastelColor, getAvatarUrl } from '@/lib/utils';
-import { format, isSameDay, subDays } from 'date-fns';
-import {
-  MessageSquare,
-  Paperclip,
-  ListChecks,
-  Calendar,
-  MoreHorizontal,
-  Trash2,
-  Edit,
-} from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Button } from '../ui/button';
-import { Skeleton } from '../ui/skeleton';
+} from "@/components/ui/dropdown-menu";
+import { MoreHorizontal, Clock, Trash2, MapPin, CheckCircle } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { getStatusStyles, formatInJakarta, generatePastelColor, getAvatarUrl } from '@/lib/utils';
+import { format, isSameDay, subDays } from 'date-fns';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
-interface ListViewProps {
-  projects: Project[];
-  isLoading: boolean;
-  onDeleteProject: (projectId: string) => void;
-}
+const ListView = ({ projects, onDeleteProject }: { projects: Project[], onDeleteProject: (projectId: string) => void }) => {
+  const navigate = useNavigate();
+  const [visibleDays, setVisibleDays] = useState(10);
+  const dayRefs = useRef(new Map<string, HTMLDivElement>());
+  const [scrollToDate, setScrollToDate] = useState<string | null>(null);
+  const initialScrollDone = useRef(false);
 
-const ProjectListItem = ({ project, onDeleteProject }: { project: Project; onDeleteProject: (projectId: string) => void; }) => {
-  const statusStyle = getStatusStyles(project.status);
-  const isNew = project.created_at && isSameDay(new Date(project.created_at), new Date());
-  const wasRecent = project.created_at && new Date(project.created_at) > subDays(new Date(), 7);
+  const dayEntries = useMemo(() => {
+    const sortedProjects = projects
+      .filter(p => p.start_date)
+      .sort((a, b) => new Date(a.start_date!).getTime() - new Date(b.start_date!).getTime());
 
-  const taskCount = project.tasks?.length || 0;
-  const completedTaskCount = project.tasks?.filter(t => t.completed).length || 0;
+    const groupedByDay = sortedProjects.reduce((acc, project) => {
+      const dateKey = formatInJakarta(project.start_date!, 'yyyy-MM-dd');
+      if (!acc[dateKey]) {
+        acc[dateKey] = [];
+      }
+      acc[dateKey].push(project);
+      return acc;
+    }, {} as Record<string, Project[]>);
 
-  return (
-    <Card className="hover:shadow-md transition-shadow">
-      <CardContent className="p-4">
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex-grow">
-            <div className="flex justify-between items-start">
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <Link to={`/projects/${project.slug}`}>
-                    <CardTitle className="text-lg hover:underline">{project.name}</CardTitle>
-                  </Link>
-                  {isNew && <Badge variant="secondary">New</Badge>}
-                </div>
-                <p className="text-sm text-muted-foreground">{project.category}</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <Badge variant="outline" className={statusStyle.className}>{project.status}</Badge>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    <DropdownMenuItem>
-                      <Edit className="h-4 w-4 mr-2" /> Edit
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => onDeleteProject(project.id)} className="text-red-500">
-                      <Trash2 className="h-4 w-4 mr-2" /> Delete
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </div>
+    return Object.entries(groupedByDay);
+  }, [projects]);
 
-            {project.description && (
-              <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
-                {project.description}
-              </p>
-            )}
+  useEffect(() => {
+    if (dayEntries.length === 0 || initialScrollDone.current) return;
 
-            <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground mt-4">
-              <div className="flex items-center gap-1">
-                <ListChecks className="h-4 w-4" />
-                <span>{completedTaskCount}/{taskCount} tasks</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <MessageSquare className="h-4 w-4" />
-                <span>{project.comments?.length || 0} comments</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <Paperclip className="h-4 w-4" />
-                <span>{project.briefFiles?.length || 0} files</span>
-              </div>
-              {project.due_date && (
-                <div className="flex items-center gap-1">
-                  <Calendar className="h-4 w-4" />
-                  <span>Due {format(new Date(project.due_date), 'MMM d, yyyy')}</span>
-                </div>
-              )}
-            </div>
-          </div>
+    const todayStr = format(new Date(), 'yyyy-MM-dd');
+    let targetIndex = dayEntries.findIndex(([dateStr]) => dateStr >= todayStr);
 
-          <div className="flex-shrink-0 sm:w-48 flex flex-col justify-between items-end">
-            <div className="flex -space-x-2">
-              {project.assignedTo?.map(user => (
-                <TooltipProvider key={user.id}>
-                  <Tooltip>
-                    <TooltipTrigger>
-                      <Avatar key={user.id} className="h-6 w-6 sm:h-8 sm:w-8 border-2 border-card">
-                        <AvatarImage src={getAvatarUrl(user)} alt={user.name} />
-                        <AvatarFallback style={generatePastelColor(user.id)}>{user.initials}</AvatarFallback>
-                      </Avatar>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{user.name}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              ))}
-            </div>
-            <p className="text-xs text-muted-foreground mt-2 sm:mt-0">
-              {wasRecent && !isNew && `Created ${format(new Date(project.created_at!), 'MMM d')}`}
-              {!wasRecent && !isNew && project.created_at && `Created ${format(new Date(project.created_at), 'MMM d, yyyy')}`}
-            </p>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-};
+    if (targetIndex === -1 && dayEntries.length > 0) {
+      targetIndex = dayEntries.length - 1;
+    }
 
-const ListView = ({ projects, isLoading, onDeleteProject }: ListViewProps) => {
-  if (isLoading) {
+    if (targetIndex !== -1) {
+      const targetDateStr = dayEntries[targetIndex][0];
+      if (targetIndex >= visibleDays) {
+        setVisibleDays(targetIndex + 1);
+      }
+      setScrollToDate(targetDateStr);
+      initialScrollDone.current = true;
+    }
+  }, [dayEntries, visibleDays]);
+
+  useEffect(() => {
+    if (scrollToDate) {
+      const targetElement = dayRefs.current.get(scrollToDate);
+      if (targetElement) {
+        setTimeout(() => {
+          targetElement.scrollIntoView({ behavior: 'auto', block: 'start' });
+          setScrollToDate(null);
+        }, 100);
+      }
+    }
+  }, [scrollToDate, visibleDays]);
+
+  const formatVenue = (venue: string | null): string => {
+    if (!venue) return "";
+    try {
+      const venueObj = JSON.parse(venue);
+      const name = venueObj.name || '';
+      const address = venueObj.address || '';
+      const parts = [name, address].filter(Boolean);
+      return parts.join(', ');
+    } catch (e) {
+      return venue;
+    }
+  };
+
+  const visibleDayEntries = dayEntries.slice(0, visibleDays);
+
+  let lastMonth: string | null = null;
+
+  if (projects.length > 0 && dayEntries.length === 0) {
     return (
-      <div className="space-y-4">
-        {[...Array(3)].map((_, i) => (
-          <Card key={i}>
-            <CardContent className="p-4">
-              <div className="flex gap-4">
-                <div className="flex-grow space-y-3">
-                  <Skeleton className="h-6 w-1/2" />
-                  <Skeleton className="h-4 w-1/4" />
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-3/4" />
-                </div>
-                <div className="w-48 flex flex-col items-end space-y-2">
-                  <div className="flex -space-x-2">
-                    <Skeleton className="h-8 w-8 rounded-full" />
-                    <Skeleton className="h-8 w-8 rounded-full" />
-                  </div>
-                  <Skeleton className="h-4 w-24" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+      <div className="flex items-center justify-center h-40 text-muted-foreground">
+        Tidak ada proyek yang dijadwalkan.
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
-      {projects.map(project => (
-        <ProjectListItem key={project.id} project={project} onDeleteProject={onDeleteProject} />
-      ))}
+      {visibleDayEntries.map(([dateStr, projectsOnDay]) => {
+        const date = new Date(`${dateStr}T00:00:00`);
+        const currentMonth = formatInJakarta(date, 'MMMM yyyy');
+        const showMonthHeader = currentMonth !== lastMonth;
+        lastMonth = currentMonth;
+
+        const dayOfWeek = formatInJakarta(date, 'EEE');
+        const dayOfMonth = formatInJakarta(date, 'dd');
+
+        return (
+          <div 
+            key={dateStr}
+            ref={el => {
+                if (el) dayRefs.current.set(dateStr, el);
+                else dayRefs.current.delete(dateStr);
+            }}
+          >
+            {showMonthHeader && (
+              <h2 className="text-lg font-semibold my-4 pl-2">{currentMonth}</h2>
+            )}
+            <div className="flex items-start space-x-2 sm:space-x-4">
+              <div className="flex flex-col items-center w-10 sm:w-12 text-center flex-shrink-0">
+                <span className="text-xs sm:text-sm text-muted-foreground">{dayOfWeek}</span>
+                <span className="text-lg sm:text-xl font-bold text-primary">{dayOfMonth}</span>
+              </div>
+              <div className="flex-1 space-y-3 pt-1 min-w-0">
+                {projectsOnDay.map(project => {
+                  const startDate = project.start_date ? new Date(project.start_date) : null;
+                  const dueDate = project.due_date ? new Date(project.due_date) : null;
+                  let displayDueDate = dueDate;
+                  let isMultiDay = false;
+
+                  if (startDate && dueDate) {
+                    const isExclusiveEndDate =
+                      dueDate.getUTCHours() === 0 &&
+                      dueDate.getUTCMinutes() === 0 &&
+                      dueDate.getUTCSeconds() === 0 &&
+                      dueDate.getUTCMilliseconds() === 0 &&
+                      !isSameDay(startDate, dueDate);
+
+                    const adjustedDueDate = isExclusiveEndDate ? subDays(dueDate, 1) : dueDate;
+                    
+                    isMultiDay = !isSameDay(startDate, adjustedDueDate);
+                    displayDueDate = adjustedDueDate;
+                  }
+                  
+                  const formattedVenue = formatVenue(project.venue);
+
+                  return (
+                    <div 
+                      key={project.id} 
+                      className="bg-card border border-l-4 rounded-lg p-2 sm:p-3 flex items-center justify-between hover:shadow-md transition-shadow group"
+                      style={{ borderLeftColor: getStatusStyles(project.status).hex }}
+                    >
+                      <div 
+                        className="flex-1 flex items-center space-x-3 cursor-pointer min-w-0"
+                        onClick={() => navigate(`/projects/${project.slug}`)}
+                      >
+                        <div className="w-32 text-sm text-muted-foreground hidden md:block">
+                          <div className="flex items-center gap-2">
+                            <Clock size={14} />
+                            <span>Seharian</span>
+                          </div>
+                          {isMultiDay && displayDueDate && (
+                            <Badge variant="outline" className="mt-1.5 font-normal text-xs">
+                              Hingga {formatInJakarta(displayDueDate, 'd MMM')}
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium truncate flex items-center gap-2" title={project.name}>
+                            {project.status === 'Completed' && <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />}
+                            {project.name}
+                          </p>
+                          {project.venue && (
+                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-1">
+                              <MapPin size={12} />
+                              <span className="truncate" title={formattedVenue}>{formattedVenue}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center space-x-1 sm:space-x-2 flex-shrink-0 pl-2">
+                        <div onClick={(e) => e.stopPropagation()}>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8 p-0">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem className="text-destructive" onSelect={() => onDeleteProject(project.id)}>
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                <span>Delete</span>
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                        <div className="flex flex-shrink-0 -space-x-2">
+                          {project.assignedTo.slice(0, 3).map((user) => (
+                            <Avatar key={user.id} className="h-6 w-6 sm:h-8 sm:w-8 border-2 border-card">
+                              <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} alt={user.name} />
+                              <AvatarFallback style={generatePastelColor(user.id)}>{user.initials}</AvatarFallback>
+                            </Avatar>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        );
+      })}
+      {dayEntries.length > visibleDays && (
+        <div className="text-center mt-6">
+          <Button variant="outline" onClick={() => setVisibleDays(prev => prev + 10)}>
+            Load More
+          </Button>
+        </div>
+      )}
     </div>
   );
 };

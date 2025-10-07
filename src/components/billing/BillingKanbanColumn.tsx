@@ -1,33 +1,37 @@
 import { Invoice } from '@/pages/Billing';
 import { PaymentStatus } from '@/types';
 import BillingKanbanCard from './BillingKanbanCard';
-import { Droppable } from '@hello-pangea/dnd';
+import { Badge } from '@/components/ui/badge';
 
 interface BillingKanbanColumnProps {
-  status: PaymentStatus;
-  invoices: Invoice[];
+    status: { value: PaymentStatus; label: string };
+    invoices: Invoice[];
+    onEditInvoice: (invoice: Invoice) => void;
 }
 
-const BillingKanbanColumn = ({ status, invoices }: BillingKanbanColumnProps) => {
-  return (
-    <div className="w-72 flex-shrink-0 bg-muted/50 rounded-lg p-2">
-      <h3 className="font-semibold text-sm p-2 mb-2">{status.label} ({invoices.length})</h3>
-      <Droppable droppableId={status.value}>
-        {(provided, snapshot) => (
-          <div
-            ref={provided.innerRef}
-            {...provided.droppableProps}
-            className={`min-h-[200px] transition-colors ${snapshot.isDraggingOver ? 'bg-muted' : ''}`}
-          >
-            {invoices.map((invoice, index) => (
-              <BillingKanbanCard key={invoice.id} invoice={invoice} index={index} />
-            ))}
-            {provided.placeholder}
-          </div>
-        )}
-      </Droppable>
-    </div>
-  );
+const BillingKanbanColumn = ({ status, invoices, onEditInvoice }: BillingKanbanColumnProps) => {
+    return (
+        <div className="flex-shrink-0 w-72">
+            <div className="h-full flex flex-col bg-muted/50 rounded-lg">
+                <div className="font-semibold p-3 text-base flex items-center justify-between">
+                    <h3 className="flex items-center gap-2">
+                        <span>{status.label}</span>
+                        <Badge variant="secondary">{invoices.length}</Badge>
+                    </h3>
+                </div>
+                <div className="flex-grow min-h-0 overflow-y-auto p-2 pt-0">
+                    {invoices.map(invoice => (
+                        <BillingKanbanCard key={invoice.id} invoice={invoice} onEdit={onEditInvoice} />
+                    ))}
+                    {invoices.length === 0 && (
+                        <div className="flex items-center justify-center h-20 m-2 border-2 border-dashed border-border rounded-lg">
+                            <p className="text-sm text-muted-foreground">No invoices</p>
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
 };
 
 export default BillingKanbanColumn;

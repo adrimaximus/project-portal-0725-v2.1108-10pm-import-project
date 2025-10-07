@@ -1,35 +1,54 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getAvatarUrl, getInitials } from "@/lib/utils";
-import { User } from "@/types";
-import { Bell } from "lucide-react";
 
 interface TestNotificationToastProps {
-  user: User;
+  user: {
+    id: string;
+    first_name?: string | null;
+    last_name?: string | null;
+    avatar_url?: string | null;
+    email?: string | null;
+  };
+  type: {
+    id: string;
+    label: string;
+    description: string;
+  } | undefined;
 }
 
-const TestNotificationToast = ({ user }: TestNotificationToastProps) => {
+const TestNotificationToast = ({ user, type }: TestNotificationToastProps) => {
+  if (!type || !user) return null;
+
   const name = `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email || "You";
-  const avatarUrl = getAvatarUrl(user);
-  const initials = getInitials(name);
+  const avatarUrl = getAvatarUrl(user.avatar_url, user.id);
+  const initials = getInitials(name, user.email);
+
+  const getSampleMessage = () => {
+    switch (type.id) {
+      case 'project_update':
+        return 'Anda ditambahkan ke proyek "Website Baru".';
+      case 'mention':
+        return '@' + (name.split(' ')[0] || 'Anda') + ' bisa tolong periksa ini?';
+      case 'comment':
+        return 'Hai, hanya ingin menindaklanjuti diskusi terakhir kita.';
+      case 'goal':
+        return 'Goal baru "Selesaikan Laporan Q3" telah dibuat untuk Anda.';
+      case 'system':
+        return 'Pembaruan sistem baru tersedia. Silakan segarkan halaman.';
+      default:
+        return `Ini adalah notifikasi tes untuk ${type.label}.`;
+    }
+  };
 
   return (
-    <div className="flex items-start gap-3">
-      <div className="relative">
-        <Avatar className="h-10 w-10">
-          <AvatarImage src={avatarUrl} alt={name} />
-          <AvatarFallback>{initials}</AvatarFallback>
-        </Avatar>
-        <div className="absolute -bottom-1 -right-1 bg-background p-0.5 rounded-full">
-          <div className="bg-blue-500 text-white rounded-full p-0.5">
-            <Bell className="h-2.5 w-2.5" />
-          </div>
-        </div>
-      </div>
-      <div className="flex-grow">
-        <p className="font-semibold">Test Notification</p>
-        <p className="text-sm text-muted-foreground">
-          This is a test to confirm that notifications are working for {name}.
-        </p>
+    <div className="flex items-center gap-3">
+      <Avatar className="h-8 w-8">
+        <AvatarImage src={avatarUrl} alt={name} />
+        <AvatarFallback>{initials}</AvatarFallback>
+      </Avatar>
+      <div className="flex flex-col">
+        <span className="font-semibold text-sm">{name}</span>
+        <p className="text-sm text-muted-foreground">{getSampleMessage()}</p>
       </div>
     </div>
   );
