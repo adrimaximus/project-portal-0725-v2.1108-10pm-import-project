@@ -41,7 +41,7 @@ const validateCredentials = async (apiKey, senderEmail, fromName) => {
     }
 
     if (response.ok || response.status === 400) {
-      return true;
+        return true;
     }
 
     const errorMessage = responseData.message || `EmailIt API returned status ${response.status}`;
