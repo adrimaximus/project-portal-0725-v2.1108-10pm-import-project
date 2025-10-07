@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { Project, PROJECT_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { format, getMonth } from 'date-fns';
 import { getStatusStyles, getPaymentStatusStyles } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
@@ -15,38 +15,6 @@ type ChartType = `${OverviewType}_${ChartMetric}`;
 interface MonthlyProgressChartProps {
   projects: (Project & { client_company_name?: string | null })[];
 }
-
-const CustomTooltip = ({ active, payload, label, chartType }: any) => {
-  if (active && payload && payload.length) {
-    return (
-      <div className="rounded-lg border bg-background p-2 shadow-sm text-sm">
-        <p className="font-bold mb-2">{label}</p>
-        {chartType === 'quantity' || chartType === 'value' ? (
-          <p className="text-foreground">
-            <span className="font-semibold capitalize" style={{ color: payload[0].fill }}>
-              {chartType}:
-            </span>{' '}
-            {chartType === 'value' ? `Rp\u00A0${new Intl.NumberFormat('id-ID').format(payload[0].value as number)}` : payload[0].value}
-          </p>
-        ) : (
-          <ul className="space-y-1">
-            {payload.slice().reverse().map((entry: any) => (
-              <li key={entry.dataKey} className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <span className="w-2 h-2 rounded-full mr-2" style={{ backgroundColor: entry.fill }}></span>
-                  <span>{entry.name}:</span>
-                </div>
-                <span className="font-bold ml-4">{entry.value}</span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-    );
-  }
-
-  return null;
-};
 
 const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
   const { hasPermission } = useAuth();
@@ -124,24 +92,25 @@ const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
   }, [projects, chartType]);
 
   const renderChart = () => {
-    const [overviewType, metric] = chartType.split('_') as [OverviewType, ChartMetric];
-
+    const [_overviewType, metric] = chartType.split('_') as [OverviewType, ChartMetric];
     const sanitizeKeyForCss = (key: string) => key.replace(/\s+/g, '-').toLowerCase();
 
     switch (metric) {
       case 'quantity':
       case 'value':
         return (
-          <BarChart data={chartData}>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} />
-            <XAxis dataKey="name" tickLine={false} axisLine={false} fontSize={10} interval={0} />
-            <YAxis tickLine={false} axisLine={false} fontSize={10} tickFormatter={(value) => metric === 'value' ? `Rp${new Intl.NumberFormat('id-ID', { notation: 'compact' }).format(value)}` : value} />
-            <Tooltip
-              content={<CustomTooltip chartType={metric} />}
-              cursor={{ fill: 'hsl(var(--muted))' }}
-            />
-            <Bar dataKey={metric} fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-          </BarChart>
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={chartData}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} />
+              <XAxis dataKey="name" tickLine={false} axisLine={false} fontSize={10} interval={0} />
+              <YAxis tickLine={false} axisLine={false} fontSize={10} tickFormatter={(value) => metric === 'value' ? `Rp${new Intl.NumberFormat('id-ID', { notation: 'compact' }).format(value)}` : value} />
+              <Tooltip
+                content={<ChartTooltipContent formatter={(value) => metric === 'value' ? `Rp ${new Intl.NumberFormat('id-ID').format(value as number)}` : String(value)} />}
+                cursor={{ fill: 'hsl(var(--muted))' }}
+              />
+              <Bar dataKey={metric} fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
         );
       case 'project_status':
       case 'payment_status': {
@@ -159,23 +128,32 @@ const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
 
         return (
           <ChartContainer config={chartConfig} className="h-full w-full">
-            <BarChart accessibilityLayer data={chartData}>
-              <CartesianGrid vertical={false} />
-              <XAxis dataKey="name" tickLine={false} axisLine={false} fontSize={10} interval={0} />
-              <YAxis tickLine={false} axisLine={false} fontSize={10} />
-              <ChartTooltip content={<ChartTooltipContent hideIndicator />} />
-              <ChartLegend content={<ChartLegendContent />} />
-              {options.map(status => (
-                <Bar
-                  key={status.value}
-                  dataKey={status.value}
-                  stackId="a"
-                  fill={`var(--color-${sanitizeKeyForCss(status.value)})`}
-                  name={status.label}
-                  radius={[4, 4, 0, 0]}
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart accessibilityLayer data={chartData}>
+                <CartesianGrid vertical={false} />
+                <XAxis
+                  dataKey="name"
+                  tickLine={false}
+                  tickMargin={10}
+                  axisLine={false}
+                  fontSize={10}
+                  interval={0}
                 />
-              ))}
-            </BarChart>
+                <YAxis tickLine={false} axisLine={false} fontSize={10} />
+                <ChartTooltip content={<ChartTooltipContent hideIndicator />} />
+                <ChartLegend content={<ChartLegendContent />} />
+                {options.map(status => (
+                  <Bar
+                    key={status.value}
+                    dataKey={status.value}
+                    stackId="a"
+                    fill={`var(--color-${sanitizeKeyForCss(status.value)})`}
+                    name={status.label}
+                    radius={[4, 4, 0, 0]}
+                  />
+                ))}
+              </BarChart>
+            </ResponsiveContainer>
           </ChartContainer>
         );
       }
@@ -213,9 +191,7 @@ const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
         </div>
       </CardHeader>
       <CardContent className="h-[350px] pt-6">
-        <ResponsiveContainer width="100%" height="100%">
-          {renderChart()}
-        </ResponsiveContainer>
+        {renderChart()}
       </CardContent>
     </Card>
   );
