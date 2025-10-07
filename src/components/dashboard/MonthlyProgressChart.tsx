@@ -45,6 +45,20 @@ const CustomTooltip = ({ active, payload, label, chartType }: any) => {
   return null;
 };
 
+const CustomLegend = ({ payload }: any) => {
+  if (!payload) return null;
+  return (
+    <div className="flex items-center justify-center flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-muted-foreground">
+      {payload.slice().reverse().map((entry: any, index: number) => (
+        <div key={`item-${index}`} className="flex items-center">
+          <span className="w-2 h-2 rounded-full mr-1.5" style={{ backgroundColor: entry.color }} />
+          <span>{entry.value}</span>
+        </div>
+      ))}
+    </div>
+  );
+};
+
 const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
   const { hasPermission } = useAuth();
   const canViewValue = hasPermission('projects:view_value');
@@ -151,7 +165,7 @@ const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
             <XAxis dataKey="name" tickLine={false} axisLine={false} fontSize={10} interval={1} />
             <YAxis tickLine={false} axisLine={false} fontSize={10} />
             <Tooltip content={<CustomTooltip chartType={chartType} />} cursor={{ fill: 'hsl(var(--muted))' }} />
-            <Legend wrapperStyle={{ fontSize: '10px' }} />
+            <Legend content={<CustomLegend />} />
             {PROJECT_STATUS_OPTIONS.map(status => (
               <Bar key={status.value} dataKey={status.value} stackId="a" fill={getStatusStyles(status.value).hex} name={status.label} radius={[4, 4, 0, 0]} />
             ))}
@@ -164,7 +178,7 @@ const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
             <XAxis dataKey="name" tickLine={false} axisLine={false} fontSize={10} interval={1} />
             <YAxis tickLine={false} axisLine={false} fontSize={10} />
             <Tooltip content={<CustomTooltip chartType={chartType} />} cursor={{ fill: 'hsl(var(--muted))' }} />
-            <Legend wrapperStyle={{ fontSize: '10px' }} />
+            <Legend content={<CustomLegend />} />
             {PAYMENT_STATUS_OPTIONS.map(status => (
               <Bar key={status.value} dataKey={status.value} stackId="a" fill={getPaymentStatusStyles(status.value).hex} name={status.label} radius={[4, 4, 0, 0]} />
             ))}
