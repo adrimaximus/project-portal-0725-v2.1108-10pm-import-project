@@ -185,8 +185,8 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
     <form onSubmit={handleSubmit}>
       <Card>
         <CardHeader>
-          <CardTitle>Project Details</CardTitle>
-          <CardDescription>Fill out the form below to create a new project request.</CardDescription>
+          <CardTitle>Create New Project</CardTitle>
+          <CardDescription>Fill out the form below to create a new project.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6 max-h-[60vh] overflow-y-auto">
           <div className="space-y-2">
@@ -289,7 +289,7 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
         <CardFooter className="flex justify-end gap-2">
           <Button type="button" variant="outline" onClick={onBack} disabled={createProjectMutation.isPending}>Back</Button>
           <Button type="submit" disabled={createProjectMutation.isPending}>
-            {createProjectMutation.isPending ? "Submitting..." : "Submit Project Request"}
+            {createProjectMutation.isPending ? "Creating..." : "Create Project"}
           </Button>
         </CardFooter>
       </Card>
