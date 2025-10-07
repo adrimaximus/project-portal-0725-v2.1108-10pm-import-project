@@ -98,7 +98,7 @@ export const EditInvoiceDialog = ({ isOpen, onClose, invoice, project, onSave }:
         const attachmentsToDelete = project.invoice_attachments?.filter(att => attachmentsToRemove.includes(att.id));
         if (attachmentsToDelete && attachmentsToDelete.length > 0) {
           const storagePaths = attachmentsToDelete.map(att => att.storage_path);
-          await supabase.storage.from('billing').remove(storagePaths);
+          await supabase.storage.from('project-files').remove(storagePaths);
           const { error: deleteError } = await supabase.from('invoice_attachments').delete().in('id', attachmentsToRemove);
           if (deleteError) throw deleteError;
         }
@@ -110,7 +110,7 @@ export const EditInvoiceDialog = ({ isOpen, onClose, invoice, project, onSave }:
         const uploadPromises = newAttachments.map(file => {
           const sanitizedFileName = file.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
           const filePath = `invoice-attachments/${project.id}/${Date.now()}-${sanitizedFileName}`;
-          return supabase.storage.from('billing').upload(filePath, file).then(result => {
+          return supabase.storage.from('project-files').upload(filePath, file).then(result => {
             if (result.error) throw result.error;
             return { ...result, filePath, originalFile: file };
           });
@@ -119,7 +119,7 @@ export const EditInvoiceDialog = ({ isOpen, onClose, invoice, project, onSave }:
         const uploadResults = await Promise.all(uploadPromises);
 
         const newAttachmentRecords = uploadResults.map(result => {
-          const { data: urlData } = supabase.storage.from('billing').getPublicUrl(result.filePath);
+          const { data: urlData } = supabase.storage.from('project-files').getPublicUrl(result.filePath);
           return {
             project_id: project.id,
             file_name: result.originalFile.name,
