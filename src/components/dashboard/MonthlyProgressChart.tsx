@@ -7,7 +7,7 @@ import { format, getMonth } from 'date-fns';
 import { getStatusStyles, getPaymentStatusStyles } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 
-type ChartType = 'quantity' | 'value' | 'project_status' | 'payment_status';
+type ChartType = 'quantity' | 'value' | 'project_status' | 'payment_status' | 'company_quantity' | 'company_value';
 
 interface MonthlyProgressChartProps {
   projects: Project[];
@@ -51,12 +51,31 @@ const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
   const [chartType, setChartType] = useState<ChartType>('quantity');
 
   useEffect(() => {
-    if (!canViewValue && chartType === 'value') {
+    if (!canViewValue && (chartType === 'value' || chartType === 'company_value')) {
       setChartType('quantity');
     }
   }, [canViewValue, chartType]);
 
   const chartData = useMemo(() => {
+    if (chartType === 'company_quantity' || chartType === 'company_value') {
+      const companies = new Map<string, { name: string; quantity: number; value: number }>();
+
+      projects.forEach(project => {
+        const p = project as any;
+        const companyName = p.client_company_name || 'No Company';
+        
+        if (!companies.has(companyName)) {
+          companies.set(companyName, { name: companyName, quantity: 0, value: 0 });
+        }
+        
+        const companyData = companies.get(companyName)!;
+        companyData.quantity += 1;
+        companyData.value += p.budget || 0;
+      });
+
+      return Array.from(companies.values());
+    }
+
     const months = Array.from({ length: 12 }, (_, i) => {
       const base = {
         name: format(new Date(0, i), 'MMM'),
@@ -85,24 +104,46 @@ const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
     });
 
     return months;
-  }, [projects]);
+  }, [projects, chartType]);
 
   const renderChart = () => {
     switch (chartType) {
       case 'quantity':
       case 'value':
+      case 'company_quantity':
+      case 'company_value': {
+        const isCompanyChart = chartType.startsWith('company_');
+        const valueType = isCompanyChart ? chartType.substring('company_'.length) : chartType;
+
         return (
           <BarChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} />
-            <XAxis dataKey="name" tickLine={false} axisLine={false} fontSize={10} interval={1} />
-            <YAxis tickLine={false} axisLine={false} fontSize={10} tickFormatter={(value) => chartType === 'value' ? `Rp${new Intl.NumberFormat('id-ID', { notation: 'compact' }).format(value)}` : value} />
-            <Tooltip
-              content={<CustomTooltip chartType={chartType} />}
-              cursor={{ fill: 'hsl(var(--muted))' }}
+            <XAxis
+              dataKey="name"
+              tickLine={false}
+              axisLine={false}
+              fontSize={10}
+              interval={isCompanyChart ? 0 : 1}
+              angle={isCompanyChart ? -45 : 0}
+              textAnchor={isCompanyChart ? 'end' : 'middle'}
+              height={isCompanyChart ? 70 : undefined}
+              dy={isCompanyChart ? 10 : 0}
             />
-            <Bar dataKey={chartType} fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+            <YAxis
+              tickLine={false}
+              axisLine={false}
+              fontSize={10}
+              tickFormatter={(value) =>
+                valueType === 'value'
+                  ? `Rp${new Intl.NumberFormat('id-ID', { notation: 'compact' }).format(value)}`
+                  : value
+              }
+            />
+            <Tooltip content={<CustomTooltip chartType={valueType} />} cursor={{ fill: 'hsl(var(--muted))' }} />
+            <Bar dataKey={valueType} fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
           </BarChart>
         );
+      }
       case 'project_status':
         return (
           <BarChart data={chartData}>
@@ -132,11 +173,13 @@ const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
     }
   };
 
+  const cardTitle = chartType.startsWith('company_') ? 'Company Overview' : 'Monthly Overview';
+
   return (
     <Card>
       <CardHeader>
         <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-          <CardTitle>Monthly Overview</CardTitle>
+          <CardTitle>{cardTitle}</CardTitle>
           <Select value={chartType} onValueChange={(value) => setChartType(value as ChartType)}>
             <SelectTrigger className="w-full sm:w-[200px]">
               <SelectValue placeholder="Select view" />
@@ -146,6 +189,8 @@ const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
               {canViewValue && <SelectItem value="value">Project Value</SelectItem>}
               <SelectItem value="project_status">Project Status</SelectItem>
               <SelectItem value="payment_status">Payment Status</SelectItem>
+              <SelectItem value="company_quantity">Company Project Qty</SelectItem>
+              {canViewValue && <SelectItem value="company_value">Company Project Value</SelectItem>}
             </SelectContent>
           </Select>
         </div>
