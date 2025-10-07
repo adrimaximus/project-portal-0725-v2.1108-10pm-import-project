@@ -261,18 +261,9 @@ const PeoplePage = () => {
                 <Button size="icon" onClick={handleAddNew}>
                   <PlusCircle className="h-4 w-4" />
                 </Button>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="icon">
-                      <Settings className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onSelect={() => navigate('/settings/people-properties')}>
-                      Manage Properties
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <Button variant="outline" size="icon" onClick={() => navigate('/settings/people-properties')}>
+                  <Settings className="h-4 w-4" />
+                </Button>
                 <ToggleGroup type="single" value={viewMode} onValueChange={(value) => { if (value) setViewMode(value as 'grid' | 'table' | 'kanban')}}>
                   <TooltipProvider>
                     <Tooltip><TooltipTrigger asChild><ToggleGroupItem value="grid" aria-label="Grid view"><LayoutGrid className="h-4 w-4" /></ToggleGroupItem></TooltipTrigger><TooltipContent><p>Grid View</p></TooltipContent></Tooltip>
