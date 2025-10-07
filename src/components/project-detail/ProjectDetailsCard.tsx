@@ -6,7 +6,7 @@ import { DateRangePicker } from "../DateRangePicker";
 import { DateRange } from "react-day-picker";
 import { CurrencyInput } from "../ui/currency-input";
 import ProjectServices from "./ProjectServices";
-import { formatInJakarta, cn, getStatusStyles } from "@/lib/utils";
+import { formatInJakarta, cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import StatusBadge from "../StatusBadge";
 import { Badge } from "@/components/ui/badge";
@@ -295,29 +295,18 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetail
                   onValueChange={(value) => onFieldChange('status', value)}
                 >
                   <SelectTrigger>
-                    <div className="flex items-center gap-2">
-                      {project.status && (
-                        <span className={cn("h-2 w-2 rounded-full", getStatusStyles(project.status).tw)} />
-                      )}
-                      <SelectValue placeholder="Select a status" />
-                    </div>
+                    <SelectValue placeholder="Select a status" />
                   </SelectTrigger>
                   <SelectContent>
-                    {PROJECT_STATUS_OPTIONS.map(option => {
-                      const styles = getStatusStyles(option.value);
-                      return (
-                        <SelectItem 
-                          key={option.value} 
-                          value={option.value}
-                          disabled={option.value === 'Completed' && hasOpenTasks}
-                        >
-                          <div className="flex items-center gap-2">
-                            <span className={cn("h-2 w-2 rounded-full", styles.tw)} />
-                            <span>{option.label}</span>
-                          </div>
-                        </SelectItem>
-                      );
-                    })}
+                    {PROJECT_STATUS_OPTIONS.map(option => (
+                      <SelectItem 
+                        key={option.value} 
+                        value={option.value}
+                        disabled={option.value === 'Completed' && hasOpenTasks}
+                      >
+                        <StatusBadge status={option.label} />
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               ) : (

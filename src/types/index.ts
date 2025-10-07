@@ -1,45 +1,54 @@
-export type PaymentStatus = 'Paid' | 'Unpaid' | 'Pending' | 'Overdue' | 'Cancelled' | 'In Process' | 'Due';
+// This is a placeholder for a full types file.
+// In a real scenario, you would have more types here.
 
-export type UserProfile = {
+export interface Task {
+  id: string;
+  title: string;
+  completed: boolean;
+  // other task properties
+}
+
+export interface Person {
+  id: string;
+  full_name: string;
+  email?: string;
+  company?: string | null;
+  company_id?: string | null;
+  // other person properties
+}
+
+export interface Project {
   id: string;
   name: string;
-  email: string;
-  avatar_url: string;
-  initials: string;
-  role?: string;
-};
+  description?: string;
+  status: string;
+  payment_status: string;
+  budget?: number;
+  start_date?: string;
+  due_date?: string;
+  venue?: string;
+  services?: string[];
+  tasks?: Task[];
+  people?: Person[];
+  person_ids?: string[];
+  // other project properties
+}
 
-export type Tag = {
-  id: string;
-  name: string;
-  color: string;
-};
+export const PROJECT_STATUS_OPTIONS = [
+  { value: 'Not Started', label: 'Not Started' },
+  { value: 'Requested', label: 'Requested' },
+  { value: 'In Progress', label: 'In Progress' },
+  { value: 'In Review', label: 'In Review' },
+  { value: 'On Hold', label: 'On Hold' },
+  { value: 'Completed', label: 'Completed' },
+  { value: 'Cancelled', label: 'Cancelled' },
+];
 
-export type Project = {
-  id: string;
-  slug: string;
-  name: string;
-  category: string | null;
-  description: string | null;
-  status: string | null;
-  progress: number | null;
-  budget: number | null;
-  start_date: string | null;
-  due_date: string | null;
-  payment_status: PaymentStatus | null;
-  payment_due_date: string | null;
-  origin_event_id: string | null;
-  venue: string | null;
-  created_by: UserProfile;
-  assignedTo: UserProfile[];
-  services: string[];
-  tags: Tag[];
-  kanban_order: number | null;
-  payment_kanban_order: number | null;
-  invoice_number: string | null;
-  po_number: string | null;
-  paid_date: string | null;
-  email_sending_date: string | null;
-  hardcopy_sending_date: string | null;
-  channel: string | null;
-};
+export const PAYMENT_STATUS_OPTIONS = [
+    { value: 'Paid', label: 'Paid' },
+    { value: 'Pending', label: 'Pending' },
+    { value: 'In Process', label: 'In Process' },
+    { value: 'Overdue', label: 'Overdue' },
+    { value: 'Proposed', label: 'Proposed' },
+    { value: 'Cancelled', label: 'Cancelled' },
+];
