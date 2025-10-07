@@ -2,11 +2,10 @@ import { useState, useMemo, useEffect } from 'react';
 import { Project, PROJECT_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { format, getMonth } from 'date-fns';
 import { getStatusStyles, getPaymentStatusStyles } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
-import { ChartConfig, ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 
 type ChartMetric = 'quantity' | 'value' | 'project_status' | 'payment_status';
 type OverviewType = 'monthly' | 'company';
@@ -15,6 +14,38 @@ type ChartType = `${OverviewType}_${ChartMetric}`;
 interface MonthlyProgressChartProps {
   projects: (Project & { client_company_name?: string | null })[];
 }
+
+const CustomTooltip = ({ active, payload, label, chartType }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="rounded-lg border bg-background p-2 shadow-sm text-sm">
+        <p className="font-bold mb-2">{label}</p>
+        {chartType === 'quantity' || chartType === 'value' ? (
+          <p className="text-foreground">
+            <span className="font-semibold capitalize" style={{ color: payload[0].fill }}>
+              {chartType}:
+            </span>{' '}
+            {chartType === 'value' ? `Rp\u00A0${new Intl.NumberFormat('id-ID').format(payload[0].value as number)}` : payload[0].value}
+          </p>
+        ) : (
+          <ul className="space-y-1">
+            {payload.slice().reverse().map((entry: any) => (
+              <li key={entry.dataKey} className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <span className="w-2 h-2 rounded-full mr-2" style={{ backgroundColor: entry.fill }}></span>
+                  <span>{entry.name}:</span>
+                </div>
+                <span className="font-bold ml-4">{entry.value}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    );
+  }
+
+  return null;
+};
 
 const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
   const { hasPermission } = useAuth();
@@ -85,86 +116,56 @@ const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
       const companyArray = Array.from(companyMap.values());
       const sortBy = chartType.includes('value') ? 'value' : 'quantity';
       companyArray.sort((a, b) => b[sortBy] - a[sortBy]);
-      return companyArray.slice(0, 10);
+      return companyArray.slice(0, 5);
     }
 
     return [];
   }, [projects, chartType]);
 
   const renderChart = () => {
-    const [_overviewType, metric] = chartType.split('_') as [OverviewType, ChartMetric];
-    const sanitizeKeyForCss = (key: string) => key.replace(/\s+/g, '-').toLowerCase();
+    const [overviewType, metric] = chartType.split('_') as [OverviewType, ChartMetric];
 
     switch (metric) {
       case 'quantity':
-      case 'value': {
-        const chartConfig = {
-          [metric]: {
-            label: metric === 'value' ? 'Value' : 'Quantity',
-            color: 'hsl(var(--primary))',
-          },
-        } satisfies ChartConfig;
-
+      case 'value':
         return (
-          <ChartContainer config={chartConfig} className="h-full w-full">
-            <BarChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="name" tickLine={false} axisLine={false} fontSize={10} interval={0} />
-              <YAxis tickLine={false} axisLine={false} fontSize={10} tickFormatter={(value) => metric === 'value' ? `Rp${new Intl.NumberFormat('id-ID', { notation: 'compact' }).format(value)}` : value} />
-              <ChartTooltip
-                content={<ChartTooltipContent formatter={(value) => metric === 'value' ? `Rp ${new Intl.NumberFormat('id-ID').format(value as number)}` : String(value)} />}
-                cursor={{ fill: 'hsl(var(--muted))' }}
-              />
-              <Bar dataKey={metric} fill={`var(--color-${metric})`} radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ChartContainer>
+          <BarChart data={chartData}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} />
+            <XAxis dataKey="name" tickLine={false} axisLine={false} fontSize={10} interval={overviewType === 'monthly' ? 1 : 0} />
+            <YAxis tickLine={false} axisLine={false} fontSize={10} tickFormatter={(value) => metric === 'value' ? `Rp${new Intl.NumberFormat('id-ID', { notation: 'compact' }).format(value)}` : value} />
+            <Tooltip
+              content={<CustomTooltip chartType={metric} />}
+              cursor={{ fill: 'hsl(var(--muted))' }}
+            />
+            <Bar dataKey={metric} fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+          </BarChart>
         );
-      }
       case 'project_status':
-      case 'payment_status': {
-        const isProjectStatus = metric === 'project_status';
-        const options = isProjectStatus ? PROJECT_STATUS_OPTIONS : PAYMENT_STATUS_OPTIONS;
-        const getStyles = isProjectStatus ? getStatusStyles : getPaymentStatusStyles;
-
-        const chartConfig = options.reduce((acc, status) => {
-          acc[sanitizeKeyForCss(status.value)] = {
-            label: status.label,
-            color: getStyles(status.value).hex,
-          };
-          return acc;
-        }, {} as ChartConfig);
-
         return (
-          <ChartContainer config={chartConfig} className="h-full w-full">
-            <BarChart accessibilityLayer data={chartData}>
-              <CartesianGrid vertical={false} />
-              <XAxis
-                dataKey="name"
-                tickLine={false}
-                tickMargin={10}
-                axisLine={false}
-                fontSize={10}
-                interval={0}
-              />
-              <YAxis tickLine={false} axisLine={false} fontSize={10} />
-              <ChartTooltip content={<ChartTooltipContent hideIndicator />} />
-              <ChartLegend content={<ChartLegendContent />} />
-              {options.map(status => (
-                <Bar
-                  key={status.value}
-                  dataKey={status.value}
-                  stackId="a"
-                  fill={`var(--color-${sanitizeKeyForCss(status.value)})`}
-                  name={status.label}
-                  radius={[4, 4, 0, 0]}
-                />
-              ))}
-            </BarChart>
-          </ChartContainer>
+          <BarChart data={chartData}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} />
+            <XAxis dataKey="name" tickLine={false} axisLine={false} fontSize={10} interval={overviewType === 'monthly' ? 1 : 0} />
+            <YAxis tickLine={false} axisLine={false} fontSize={10} />
+            <Tooltip content={<CustomTooltip chartType={metric} />} cursor={{ fill: 'hsl(var(--muted))' }} />
+            <Legend wrapperStyle={{ fontSize: '10px' }} />
+            {PROJECT_STATUS_OPTIONS.map(status => (
+              <Bar key={status.value} dataKey={status.value} stackId="a" fill={getStatusStyles(status.value).hex} name={status.label} radius={[4, 4, 0, 0]} />
+            ))}
+          </BarChart>
         );
-      }
-      default:
-        return null;
+      case 'payment_status':
+        return (
+          <BarChart data={chartData}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} />
+            <XAxis dataKey="name" tickLine={false} axisLine={false} fontSize={10} interval={overviewType === 'monthly' ? 1 : 0} />
+            <YAxis tickLine={false} axisLine={false} fontSize={10} />
+            <Tooltip content={<CustomTooltip chartType={metric} />} cursor={{ fill: 'hsl(var(--muted))' }} />
+            <Legend wrapperStyle={{ fontSize: '10px' }} />
+            {PAYMENT_STATUS_OPTIONS.map(status => (
+              <Bar key={status.value} dataKey={status.value} stackId="a" fill={getPaymentStatusStyles(status.value).hex} name={status.label} radius={[4, 4, 0, 0]} />
+            ))}
+          </BarChart>
+        );
     }
   };
 
@@ -172,7 +173,7 @@ const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
     <Card>
       <CardHeader>
         <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-          <CardTitle>Project Overview</CardTitle>
+          <CardTitle>Overview</CardTitle>
           <Select value={chartType} onValueChange={(value) => setChartType(value as ChartType)}>
             <SelectTrigger className="w-full sm:w-[240px]">
               <SelectValue placeholder="Select view" />
@@ -196,8 +197,10 @@ const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
           </Select>
         </div>
       </CardHeader>
-      <CardContent className="h-[350px] pt-6">
-        {renderChart()}
+      <CardContent className="h-[350px]">
+        <ResponsiveContainer width="100%" height="100%">
+          {renderChart()}
+        </ResponsiveContainer>
       </CardContent>
     </Card>
   );
