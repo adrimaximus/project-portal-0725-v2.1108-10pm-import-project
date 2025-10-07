@@ -308,7 +308,7 @@ const ProjectsPage = () => {
 
   return (
     <PortalLayout disableMainScroll noPadding>
-      <div className="flex flex-col h-full">
+      <div className="flex flex-col flex-1 min-h-0">
         <AlertDialog open={!!projectToDelete} onOpenChange={(open) => !open && setProjectToDelete(null)}>
           <AlertDialogContent>
             <AlertDialogHeader><AlertDialogTitle>Are you sure?</AlertDialogTitle><AlertDialogDescription>This action cannot be undone. This will permanently delete the project "{projectToDelete?.name}".</AlertDialogDescription></AlertDialogHeader>
@@ -339,41 +339,41 @@ const ProjectsPage = () => {
         />
 
         <Card className="flex-1 flex flex-col min-h-0 rounded-none border-0 sm:border sm:rounded-lg">
-          <div className="flex-grow min-h-0 overflow-y-auto">
-            <div className="sticky top-0 bg-background z-10 border-b">
-              <div className="p-4 space-y-4">
-                <div className="flex items-center justify-between">
-                  <CardTitle>All Projects</CardTitle>
-                </div>
+          <div className="flex-shrink-0 bg-background z-10 border-b">
+            <div className="p-4 space-y-4">
+              <div className="flex items-center justify-between">
+                <CardTitle>All Projects</CardTitle>
+              </div>
 
-                <div className="flex items-center gap-2">
-                  <div className="flex-1">
-                    <DatePickerWithRange date={dateRange} onDateChange={setDateRange} />
-                  </div>
-                  <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder={isTaskView ? "Search tasks..." : "Search projects..."}
-                      value={isTaskView ? taskSearchTerm : searchTerm}
-                      onChange={(e) => isTaskView ? setTaskSearchTerm(e.target.value) : setSearchTerm(e.target.value)}
-                      className="pl-9 w-full"
-                    />
-                  </div>
+              <div className="flex items-center gap-2">
+                <div className="flex-1">
+                  <DatePickerWithRange date={dateRange} onDateChange={setDateRange} />
+                </div>
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder={isTaskView ? "Search tasks..." : "Search projects..."}
+                    value={isTaskView ? taskSearchTerm : searchTerm}
+                    onChange={(e) => isTaskView ? setTaskSearchTerm(e.target.value) : setSearchTerm(e.target.value)}
+                    className="pl-9 w-full"
+                  />
                 </div>
               </div>
-              <ProjectsToolbar
-                view={view} onViewChange={handleViewChange}
-                kanbanGroupBy={kanbanGroupBy} onKanbanGroupByChange={setKanbanGroupBy}
-                hideCompletedTasks={hideCompletedTasks}
-                onToggleHideCompleted={toggleHideCompleted}
-                onNewProjectClick={() => navigate('/request')}
-                onNewTaskClick={handleCreateTask}
-                isTaskView={isTaskView}
-                isGCalConnected={isGCalConnected}
-                onImportClick={() => setIsImportDialogOpen(true)}
-                onRefreshClick={handleRefresh}
-              />
             </div>
+            <ProjectsToolbar
+              view={view} onViewChange={handleViewChange}
+              kanbanGroupBy={kanbanGroupBy} onKanbanGroupByChange={setKanbanGroupBy}
+              hideCompletedTasks={hideCompletedTasks}
+              onToggleHideCompleted={toggleHideCompleted}
+              onNewProjectClick={() => navigate('/request')}
+              onNewTaskClick={handleCreateTask}
+              isTaskView={isTaskView}
+              isGCalConnected={isGCalConnected}
+              onImportClick={() => setIsImportDialogOpen(true)}
+              onRefreshClick={handleRefresh}
+            />
+          </div>
+          <div className="flex-grow min-h-0 overflow-y-auto">
             <div className="p-0 data-[view=kanban]:p-4 data-[view=kanban]:md:p-6 data-[view=tasks-kanban]:p-0" data-view={view}>
               <ProjectViewContainer
                 view={view}
