@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { Project, PROJECT_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from 'recharts';
 import { format, getMonth } from 'date-fns';
 import { getStatusStyles, getPaymentStatusStyles } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
@@ -97,21 +97,31 @@ const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
 
     switch (metric) {
       case 'quantity':
-      case 'value':
+      case 'value': {
+        const chartConfig = {
+          [metric]: {
+            label: metric === 'value' ? 'Value' : 'Quantity',
+            color: 'hsl(var(--primary))',
+          },
+        } satisfies ChartConfig;
+
         return (
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="name" tickLine={false} axisLine={false} fontSize={10} interval={0} />
-              <YAxis tickLine={false} axisLine={false} fontSize={10} tickFormatter={(value) => metric === 'value' ? `Rp${new Intl.NumberFormat('id-ID', { notation: 'compact' }).format(value)}` : value} />
-              <Tooltip
-                content={<ChartTooltipContent formatter={(value) => metric === 'value' ? `Rp ${new Intl.NumberFormat('id-ID').format(value as number)}` : String(value)} />}
-                cursor={{ fill: 'hsl(var(--muted))' }}
-              />
-              <Bar dataKey={metric} fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+          <ChartContainer config={chartConfig} className="h-full w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="name" tickLine={false} axisLine={false} fontSize={10} interval={0} />
+                <YAxis tickLine={false} axisLine={false} fontSize={10} tickFormatter={(value) => metric === 'value' ? `Rp${new Intl.NumberFormat('id-ID', { notation: 'compact' }).format(value)}` : value} />
+                <ChartTooltip
+                  content={<ChartTooltipContent formatter={(value) => metric === 'value' ? `Rp ${new Intl.NumberFormat('id-ID').format(value as number)}` : String(value)} />}
+                  cursor={{ fill: 'hsl(var(--muted))' }}
+                />
+                <Bar dataKey={metric} fill={`var(--color-${metric})`} radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </ChartContainer>
         );
+      }
       case 'project_status':
       case 'payment_status': {
         const isProjectStatus = metric === 'project_status';
