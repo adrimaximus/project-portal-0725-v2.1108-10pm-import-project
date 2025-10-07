@@ -1,143 +1,126 @@
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
-import { format } from 'date-fns-tz';
-import { isPast, startOfDay } from 'date-fns';
-import React from "react";
+import { formatDistanceToNowStrict, format as formatDate, isBefore, startOfToday } from 'date-fns';
+import { id } from 'date-fns/locale';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export const formatInJakarta = (date: string | Date, formatString: string) => {
-  if (!date) return '';
-  const timeZone = 'Asia/Jakarta';
-  try {
-    return format(new Date(date), formatString, { timeZone });
-  } catch (error) {
-    console.error("Invalid date provided to formatInJakarta:", date);
-    return "Invalid Date";
-  }
-};
+export function timeAgo(date: string | Date): string {
+  return formatDistanceToNowStrict(new Date(date), { addSuffix: true });
+}
 
 export const getStatusStyles = (status: string) => {
   switch (status) {
-    case 'Not Started':
-      return { tw: 'bg-gray-200 text-gray-800', hex: '#E5E7EB' };
-    case 'Requested':
-      return { tw: 'bg-blue-100 text-blue-800', hex: '#DBEAFE' };
-    case 'In Progress':
-      return { tw: 'bg-yellow-100 text-yellow-800', hex: '#FDE68A' };
-    case 'In Review':
-      return { tw: 'bg-purple-100 text-purple-800', hex: '#DDD6FE' };
-    case 'On Hold':
-      return { tw: 'bg-orange-100 text-orange-800', hex: '#FED7AA' };
-    case 'Completed':
-      return { tw: 'bg-green-100 text-green-800', hex: '#A7F3D0' };
-    case 'Cancelled':
-      return { tw: 'bg-red-100 text-red-800', hex: '#FECACA' };
-    // Fallbacks for any old statuses that might still exist
     case 'On Track':
-      return { tw: 'bg-blue-100 text-blue-800', hex: '#DBEAFE' };
-    case 'At Risk':
-      return { tw: 'bg-yellow-100 text-yellow-800', hex: '#FDE68A' };
+      return { tw: 'bg-teal-100 text-teal-800 dark:bg-teal-900/50 dark:text-teal-300', hex: '#4FD1C5' };
     case 'Off Track':
-      return { tw: 'bg-red-100 text-red-800', hex: '#FECACA' };
+      return { tw: 'bg-pink-100 text-pink-800 dark:bg-pink-900/50 dark:text-pink-300', hex: '#F56565' };
+    case 'At Risk':
+      return { tw: 'bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-300', hex: '#F6AD55' };
+    case 'Completed':
+      return { tw: 'bg-sky-100 text-sky-800 dark:bg-sky-900/50 dark:text-sky-300', hex: '#4299E1' };
+    case 'On Hold':
+      return { tw: 'bg-slate-100 text-slate-800 dark:bg-slate-800/50 dark:text-slate-300', hex: '#CBD5E0' };
     default:
-      return { tw: 'bg-gray-100 text-gray-800', hex: '#F3F4F6' };
+      return { tw: 'bg-slate-100 text-slate-800 dark:bg-slate-800/50 dark:text-slate-300', hex: '#CBD5E0' };
   }
 };
 
 export const getPaymentStatusStyles = (status: string) => {
   switch (status) {
     case 'Paid':
-      return { tw: 'bg-green-100 text-green-800', hex: '#A7F3D0' };
-    case 'Pending':
-      return { tw: 'bg-yellow-100 text-yellow-800', hex: '#FDE68A' };
-    case 'In Process':
-      return { tw: 'bg-purple-100 text-purple-800', hex: '#DDD6FE' };
+      return { tw: 'bg-teal-100 text-teal-800 dark:bg-teal-900/50 dark:text-teal-300', hex: '#4FD1C5' };
+    case 'Unpaid':
+      return { tw: 'bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-300', hex: '#F6AD55' };
+    case 'Partially Paid':
+      return { tw: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300', hex: '#F6E05E' };
     case 'Overdue':
-      return { tw: 'bg-red-100 text-red-800', hex: '#FECACA' };
-    case 'Proposed':
-      return { tw: 'bg-blue-100 text-blue-800', hex: '#DBEAFE' };
+      return { tw: 'bg-pink-100 text-pink-800 dark:bg-pink-900/50 dark:text-pink-300', hex: '#F56565' };
     case 'Cancelled':
-      return { tw: 'bg-gray-200 text-gray-800', hex: '#E5E7EB' };
+      return { tw: 'bg-slate-100 text-slate-800 dark:bg-slate-800/50 dark:text-slate-300', hex: '#CBD5E0' };
     default:
-      return { tw: 'bg-gray-100 text-gray-800', hex: '#F3F4F6' };
+      return { tw: 'bg-slate-100 text-slate-800 dark:bg-slate-800/50 dark:text-slate-300', hex: '#CBD5E0' };
   }
 };
 
-export const generatePastelColor = (str: string): React.CSSProperties => {
-  if (!str) return { backgroundColor: 'hsl(0, 75%, 80%)' };
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    hash = str.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  const h = hash % 360;
-  return { backgroundColor: `hsl(${h}, 75%, 80%)` };
-};
-
-export const getAvatarUrl = (avatarUrl?: string | null, _id?: string): string | undefined => {
-  return avatarUrl || undefined;
-};
-
-export const getInitials = (name?: string | null, email?: string): string => {
-  const targetName = name || email || '';
-  if (!targetName) return '??';
-
-  const names = targetName.trim().split(' ').filter(Boolean);
-  
-  if (names.length > 1 && !targetName.includes('@')) {
-    const first = names[0][0];
-    const last = names[names.length - 1][0];
-    if (first && last) {
-      return `${first}${last}`.toUpperCase();
+export const getInitials = (name?: string | null, email?: string | null): string => {
+  if (name) {
+    const parts = name.split(' ').filter(Boolean);
+    if (parts.length > 1) {
+      return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+    }
+    if (parts.length === 1 && parts[0]) {
+      return parts[0].substring(0, 2).toUpperCase();
     }
   }
-  
-  if (names.length === 1 && names[0].length > 1) {
-    return names[0].substring(0, 2).toUpperCase();
+  if (email) {
+    return email.substring(0, 2).toUpperCase();
   }
-  
-  if (names.length === 1) {
-    return names[0].substring(0, 1).toUpperCase();
-  }
+  return 'NN';
+};
 
-  if (targetName.includes('@')) {
-    return targetName.substring(0, 2).toUpperCase();
+export const generatePastelColor = (seed: string) => {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) {
+    hash = seed.charCodeAt(i) + ((hash << 5) - hash);
   }
+  const h = hash % 360;
+  return { backgroundColor: `hsl(${h}, 70%, 85%)`, color: `hsl(${h}, 70%, 30%)` };
+};
 
-  return '??';
+export const getAvatarUrl = (avatarUrl?: string | null, seed?: string | null): string | undefined => {
+  if (avatarUrl) return avatarUrl;
+  if (seed) return `https://api.dicebear.com/8.x/initials/svg?seed=${seed}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf&fontWeight=600`;
+  return undefined;
+};
+
+export const formatInJakarta = (date: string | Date, formatString: string = 'dd MMM yyyy, HH:mm'): string => {
+  if (!date) return '';
+  try {
+    return formatDate(new Date(date), formatString, { locale: id });
+  } catch (error) {
+    console.error("Invalid date for formatting:", date);
+    return "Invalid date";
+  }
 };
 
 export const getPriorityStyles = (priority: string) => {
-  switch (priority?.toLowerCase()) {
-    case 'high':
-      return { tw: 'text-red-500', iconColor: 'text-red-500', hex: '#EF4444' };
-    case 'medium':
-      return { tw: 'text-yellow-500', iconColor: 'text-yellow-500', hex: '#EAB308' };
+  switch (priority) {
     case 'low':
-      return { tw: 'text-green-500', iconColor: 'text-green-500', hex: '#22C55E' };
+      return { tw: 'bg-gray-100 text-gray-800 dark:bg-gray-900/50 dark:text-gray-300', hex: '#A0AEC0' };
+    case 'medium':
+      return { tw: 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300', hex: '#63B3ED' };
+    case 'high':
+      return { tw: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300', hex: '#F6E05E' };
+    case 'urgent':
+      return { tw: 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300', hex: '#FC8181' };
     default:
-      return { tw: 'text-gray-500', iconColor: 'text-gray-500', hex: '#6B7280' };
+      return { tw: 'bg-gray-100 text-gray-800 dark:bg-gray-900/50 dark:text-gray-300', hex: '#A0AEC0' };
   }
 };
 
 export const getTaskStatusStyles = (status: string) => {
   switch (status) {
     case 'To do':
-      return { tw: 'bg-gray-200 text-gray-800' };
+      return { tw: 'bg-slate-100 text-slate-800 dark:bg-slate-800/50 dark:text-slate-300', hex: '#CBD5E0' };
     case 'In Progress':
-      return { tw: 'bg-blue-200 text-blue-800' };
+      return { tw: 'bg-sky-100 text-sky-800 dark:bg-sky-900/50 dark:text-sky-300', hex: '#4299E1' };
     case 'Done':
-      return { tw: 'bg-green-200 text-green-800' };
+      return { tw: 'bg-teal-100 text-teal-800 dark:bg-teal-900/50 dark:text-teal-300', hex: '#4FD1C5' };
     default:
-      return { tw: 'bg-gray-100 text-gray-800' };
+      return { tw: 'bg-slate-100 text-slate-800 dark:bg-slate-800/50 dark:text-slate-300', hex: '#CBD5E0' };
   }
 };
 
-export const isOverdue = (date?: string | Date | null): boolean => {
+export const isOverdue = (date: string | Date | null): boolean => {
   if (!date) return false;
-  return new Date(date) < startOfDay(new Date());
+  try {
+    return isBefore(new Date(date), startOfToday());
+  } catch (error) {
+    return false;
+  }
 };
 
 export const formatPhoneNumberForApi = (phone: string): string => {
@@ -146,21 +129,18 @@ export const formatPhoneNumberForApi = (phone: string): string => {
   if (cleaned.startsWith('0')) {
     cleaned = '62' + cleaned.substring(1);
   }
-  if (!cleaned.startsWith('62')) {
-     cleaned = '62' + cleaned;
-  }
-  if (!cleaned.startsWith('+')) {
-    cleaned = '+' + cleaned;
-  }
   return cleaned;
 };
 
-export const getColorForTag = (tagName: string): string => {
-  if (!tagName) return 'hsl(0, 90%, 85%)';
+export const getColorForTag = (tag: string): string => {
   let hash = 0;
-  for (let i = 0; i < tagName.length; i++) {
-    hash = tagName.charCodeAt(i) + ((hash << 5) - hash);
+  if (!tag || tag.length === 0) {
+    return `hsl(0, 0%, 85%)`;
+  }
+  for (let i = 0; i < tag.length; i++) {
+    hash = tag.charCodeAt(i) + ((hash << 5) - hash);
+    hash = hash & hash;
   }
   const hue = hash % 360;
-  return `hsl(${hue}, 90%, 85%)`;
+  return `hsl(${hue}, 70%, 80%)`;
 };

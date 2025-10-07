@@ -48,7 +48,7 @@ const CustomTooltip = ({ active, payload, label, chartType }: any) => {
 const CustomLegend = ({ payload }: any) => {
   if (!payload) return null;
   return (
-    <div className="flex items-center justify-center flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-muted-foreground">
+    <div className="flex items-center justify-center flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-foreground">
       {payload.slice().reverse().map((entry: any, index: number) => (
         <div key={`item-${index}`} className="flex items-center">
           <span className="w-2 h-2 rounded-full mr-1.5" style={{ backgroundColor: entry.color }} />
