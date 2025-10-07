@@ -26,6 +26,7 @@ const createProject = async (projectData: NewProjectData) => {
         budget: projectData.budget,
         origin_event_id: projectData.origin_event_id,
         venue: projectData.venue,
+        created_by: user.id,
     };
 
     const { data, error } = await supabase.from('projects').insert(dataToInsert).select().single();
