@@ -9,6 +9,9 @@ import PropertyFormDialog from '@/components/settings/PropertyFormDialog';
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
 import { Badge } from '@/components/ui/badge';
 import ConfirmationDialog from '@/components/settings/ConfirmationDialog';
+import PortalLayout from '@/components/PortalLayout';
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
+import { Link } from 'react-router-dom';
 
 const ContactPropertiesPage = () => {
   const [properties, setProperties] = useState<ContactProperty[]>([]);
@@ -121,73 +124,89 @@ const ContactPropertiesPage = () => {
   };
 
   return (
-    <div>
-      <Card>
-        <CardHeader>
-          <div className="flex justify-between items-center">
-            <div>
-              <CardTitle>Contact Properties</CardTitle>
-              <CardDescription>Manage the fields used for your contacts.</CardDescription>
+    <PortalLayout>
+      <div className="space-y-6">
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink asChild>
+                <Link to="/people">People</Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>Contact Properties</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+
+        <Card>
+          <CardHeader>
+            <div className="flex justify-between items-center">
+              <div>
+                <CardTitle>Contact Properties</CardTitle>
+                <CardDescription>Manage the fields used for your contacts.</CardDescription>
+              </div>
+              <Button onClick={handleAddNew}>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Create Property
+              </Button>
             </div>
-            <Button onClick={handleAddNew}>
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Create Property
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent className="h-[600px] overflow-y-auto">
-          {loading ? (
-            <div className="flex justify-center items-center h-40">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            </div>
-          ) : (
-            <DragDropContext onDragEnd={onDragEnd}>
-              <Droppable droppableId="properties">
-                {(provided) => (
-                  <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-2">
-                    {properties.map((prop, index) => (
-                      <Draggable key={prop.id} draggableId={prop.id} index={index} isDragDisabled={prop.is_default}>
-                        {(provided, snapshot) => (
-                          <div
-                            ref={provided.innerRef}
-                            {...provided.draggableProps}
-                            className={`flex items-center p-3 rounded-md border transition-shadow ${
-                              snapshot.isDragging ? 'shadow-lg bg-muted' : 'bg-card'
-                            }`}
-                          >
-                            <div {...provided.dragHandleProps} className={`mr-3 ${prop.is_default ? 'cursor-not-allowed text-muted-foreground' : 'cursor-grab'}`}>
-                              <GripVertical className="h-5 w-5" />
+          </CardHeader>
+          <CardContent className="h-[600px] overflow-y-auto">
+            {loading ? (
+              <div className="flex justify-center items-center h-40">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : (
+              <DragDropContext onDragEnd={onDragEnd}>
+                <Droppable droppableId="properties">
+                  {(provided) => (
+                    <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-2">
+                      {properties.map((prop, index) => (
+                        <Draggable key={prop.id} draggableId={prop.id} index={index} isDragDisabled={prop.is_default}>
+                          {(provided, snapshot) => (
+                            <div
+                              ref={provided.innerRef}
+                              {...provided.draggableProps}
+                              className={`flex items-center p-3 rounded-md border transition-shadow ${
+                                snapshot.isDragging ? 'shadow-lg bg-muted' : 'bg-card'
+                              }`}
+                            >
+                              <div {...provided.dragHandleProps} className={`mr-3 ${prop.is_default ? 'cursor-not-allowed text-muted-foreground' : 'cursor-grab'}`}>
+                                <GripVertical className="h-5 w-5" />
+                              </div>
+                              <div className="flex-grow">
+                                <span className="font-medium">{prop.label}</span>
+                                <Badge variant="outline" className="ml-2">{prop.type}</Badge>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                {prop.is_default ? (
+                                  <Badge variant="secondary">Default</Badge>
+                                ) : (
+                                  <>
+                                    <Button variant="ghost" size="icon" onClick={() => handleEdit(prop)}>
+                                      <Edit className="h-4 w-4" />
+                                    </Button>
+                                    <Button variant="ghost" size="icon" onClick={() => handleDelete(prop)}>
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </>
+                                )}
+                              </div>
                             </div>
-                            <div className="flex-grow">
-                              <span className="font-medium">{prop.label}</span>
-                              <Badge variant="outline" className="ml-2">{prop.type}</Badge>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              {prop.is_default ? (
-                                <Badge variant="secondary">Default</Badge>
-                              ) : (
-                                <>
-                                  <Button variant="ghost" size="icon" onClick={() => handleEdit(prop)}>
-                                    <Edit className="h-4 w-4" />
-                                  </Button>
-                                  <Button variant="ghost" size="icon" onClick={() => handleDelete(prop)}>
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </>
-                              )}
-                            </div>
-                          </div>
-                        )}
-                      </Draggable>
-                    ))}
-                    {provided.placeholder}
-                  </div>
-                )}
-              </Droppable>
-            </DragDropContext>
-          )}
-        </CardContent>
-      </Card>
+                          )}
+                        </Draggable>
+                      ))}
+                      {provided.placeholder}
+                    </div>
+                  )}
+                </Droppable>
+              </DragDropContext>
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
       <PropertyFormDialog
         open={isFormOpen}
@@ -205,7 +224,7 @@ const ContactPropertiesPage = () => {
         title="Delete Property"
         description={`Are you sure you want to delete the property "${propertyToDelete?.label}"? This action cannot be undone.`}
       />
-    </div>
+    </PortalLayout>
   );
 };
 
