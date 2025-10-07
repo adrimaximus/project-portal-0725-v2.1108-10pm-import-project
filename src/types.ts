@@ -1,4 +1,7 @@
 // General
+export type ProjectStatus = 'Requested' | 'In Progress' | 'In Review' | 'On Hold' | 'Completed' | 'Cancelled' | 'On Track' | 'At Risk' | 'Off Track' | 'Archived' | 'Idea' | 'Done';
+export type PaymentStatus = 'Paid' | 'Unpaid' | 'Pending' | 'Overdue' | 'Cancelled' | 'In Process' | 'Due';
+
 export interface User {
   id: string;
   name: string;
@@ -27,9 +30,6 @@ export interface Tag {
 }
 
 // Projects
-export type ProjectStatus = 'Requested' | 'In Progress' | 'In Review' | 'On Hold' | 'Completed' | 'Cancelled' | 'On Track' | 'At Risk' | 'Off Track' | 'Archived' | 'Idea' | 'Done';
-export type PaymentStatus = 'Paid' | 'Unpaid' | 'Pending' | 'Overdue' | 'Cancelled' | 'In Process' | 'Due' | 'Proposed';
-
 export const PROJECT_STATUS_OPTIONS: { value: string; label: string }[] = [
     { value: 'Requested', label: 'Requested' },
     { value: 'In Progress', label: 'In Progress' },
@@ -105,6 +105,8 @@ export interface Project {
   email_sending_date?: string | null;
   hardcopy_sending_date?: string | null;
   channel?: string | null;
+  invoice_attachment_url?: string | null;
+  invoice_attachment_name?: string | null;
   
   assignedTo: AssignedUser[];
   tags: Tag[];
