@@ -116,7 +116,7 @@ const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
       const companyArray = Array.from(companyMap.values());
       const sortBy = chartType.includes('value') ? 'value' : 'quantity';
       companyArray.sort((a, b) => b[sortBy] - a[sortBy]);
-      return companyArray.slice(0, 5);
+      return companyArray.slice(0, 10);
     }
 
     return [];
@@ -131,7 +131,7 @@ const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
         return (
           <BarChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} />
-            <XAxis dataKey="name" tickLine={false} axisLine={false} fontSize={10} interval={overviewType === 'monthly' ? 1 : 0} />
+            <XAxis dataKey="name" tickLine={false} axisLine={false} fontSize={10} interval={0} />
             <YAxis tickLine={false} axisLine={false} fontSize={10} tickFormatter={(value) => metric === 'value' ? `Rp${new Intl.NumberFormat('id-ID', { notation: 'compact' }).format(value)}` : value} />
             <Tooltip
               content={<CustomTooltip chartType={metric} />}
@@ -141,31 +141,24 @@ const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
           </BarChart>
         );
       case 'project_status':
+      case 'payment_status': {
+        const isProjectStatus = metric === 'project_status';
+        const options = isProjectStatus ? PROJECT_STATUS_OPTIONS : PAYMENT_STATUS_OPTIONS;
+        const getStyles = isProjectStatus ? getStatusStyles : getPaymentStatusStyles;
+
         return (
           <BarChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} />
-            <XAxis dataKey="name" tickLine={false} axisLine={false} fontSize={10} interval={overviewType === 'monthly' ? 1 : 0} />
+            <XAxis dataKey="name" tickLine={false} axisLine={false} fontSize={10} interval={0} />
             <YAxis tickLine={false} axisLine={false} fontSize={10} />
             <Tooltip content={<CustomTooltip chartType={metric} />} cursor={{ fill: 'hsl(var(--muted))' }} />
-            <Legend wrapperStyle={{ fontSize: '10px' }} />
-            {PROJECT_STATUS_OPTIONS.map(status => (
-              <Bar key={status.value} dataKey={status.value} stackId="a" fill={getStatusStyles(status.value).hex} name={status.label} radius={[4, 4, 0, 0]} />
+            <Legend wrapperStyle={{ fontSize: '10px' }} verticalAlign="top" />
+            {options.map(status => (
+              <Bar key={status.value} dataKey={status.value} stackId="a" fill={getStyles(status.value).hex} name={status.label} />
             ))}
           </BarChart>
         );
-      case 'payment_status':
-        return (
-          <BarChart data={chartData}>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} />
-            <XAxis dataKey="name" tickLine={false} axisLine={false} fontSize={10} interval={overviewType === 'monthly' ? 1 : 0} />
-            <YAxis tickLine={false} axisLine={false} fontSize={10} />
-            <Tooltip content={<CustomTooltip chartType={metric} />} cursor={{ fill: 'hsl(var(--muted))' }} />
-            <Legend wrapperStyle={{ fontSize: '10px' }} />
-            {PAYMENT_STATUS_OPTIONS.map(status => (
-              <Bar key={status.value} dataKey={status.value} stackId="a" fill={getPaymentStatusStyles(status.value).hex} name={status.label} radius={[4, 4, 0, 0]} />
-            ))}
-          </BarChart>
-        );
+      }
     }
   };
 
