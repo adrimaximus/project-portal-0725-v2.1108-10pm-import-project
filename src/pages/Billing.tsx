@@ -338,11 +338,20 @@ const Billing = () => {
                 {projectAdmins.length > 0 ? projectAdmins.map(({ admin, invoiceCount, totalValue }) => (
                   <div key={admin.id} className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage src={admin.avatar_url} alt={admin.name} />
-                        <AvatarFallback>{admin.initials}</AvatarFallback>
-                      </Avatar>
-                      <span className="text-sm font-medium truncate">{admin.name}</span>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Avatar className="h-8 w-8">
+                              <AvatarImage src={admin.avatar_url} alt={admin.name} />
+                              <AvatarFallback>{admin.initials}</AvatarFallback>
+                            </Avatar>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>{admin.name}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                      <span className="text-sm font-medium truncate md:hidden">{admin.name}</span>
                     </div>
                     <span className="text-sm text-muted-foreground flex-shrink-0">
                       {adminView === 'count' 
