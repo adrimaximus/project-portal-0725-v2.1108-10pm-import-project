@@ -39,8 +39,9 @@ export const getPaymentStatusStyles = (status: string) => {
     case 'Paid':
       return { tw: 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300', hex: '#22C55E' };
     case 'Unpaid':
-    case 'Pending':
       return { tw: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300', hex: '#FBBF24' };
+    case 'Pending':
+      return { tw: 'bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-300', hex: '#F97316' };
     case 'Overdue':
       return { tw: 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300', hex: '#EF4444' };
     case 'In Process':
