@@ -42,7 +42,7 @@ const ProjectMainContent = ({ project, isEditing, onFieldChange, mutations, defa
   };
 
   return (
-    <div className="p-6">
+    <div className="p-4">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="overview">
@@ -62,7 +62,7 @@ const ProjectMainContent = ({ project, isEditing, onFieldChange, mutations, defa
             Activity
           </TabsTrigger>
         </TabsList>
-        <TabsContent value="overview" className="mt-6">
+        <TabsContent value="overview" className="mt-4">
           <ProjectOverviewTab
             project={project}
             isEditing={isEditing}
@@ -77,7 +77,7 @@ const ProjectMainContent = ({ project, isEditing, onFieldChange, mutations, defa
             onTagsChange={(tags) => onFieldChange('tags', tags)}
           />
         </TabsContent>
-        <TabsContent value="tasks" className="mt-6">
+        <TabsContent value="tasks" className="mt-4">
           <ProjectTasks
             project={project}
             onTaskAdd={handleTaskAdd}
@@ -86,12 +86,12 @@ const ProjectMainContent = ({ project, isEditing, onFieldChange, mutations, defa
             onTaskDelete={handleTaskDelete}
           />
         </TabsContent>
-        <TabsContent value="discussion" className="mt-6">
+        <TabsContent value="discussion" className="mt-4">
           <ProjectComments
             project={project}
           />
         </TabsContent>
-        <TabsContent value="activity" className="mt-6">
+        <TabsContent value="activity" className="mt-4">
           <ProjectActivityFeed activities={project.activities || []} />
         </TabsContent>
       </Tabs>
