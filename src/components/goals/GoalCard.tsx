@@ -1,65 +1,86 @@
 import { Goal } from '@/types';
-import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
-import GoalIcon from './GoalIcon';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { getProgress } from '@/lib/progress';
-import { Link } from 'react-router-dom';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Badge } from '@/components/ui/badge';
 import { generatePastelColor, getAvatarUrl } from '@/lib/utils';
+import { Link } from 'react-router-dom';
+import { Target, TrendingUp, Repeat } from 'lucide-react';
 
-const GoalCard = ({ goal }: { goal: Goal }) => {
-  const { percentage } = getProgress(goal);
+interface GoalCardProps {
+  goal: Goal;
+}
+
+const GoalCard = ({ goal }: GoalCardProps) => {
+  const getProgress = () => {
+    if (goal.type === 'target' && goal.target_value) {
+      const totalValue = goal.completions.reduce((sum, c) => sum + (c.value || 0), 0);
+      return (totalValue / goal.target_value) * 100;
+    }
+    if (goal.type === 'habit' && goal.target_quantity) {
+      const completedCount = goal.completions.length;
+      return (completedCount / goal.target_quantity) * 100;
+    }
+    return 0;
+  };
+
+  const progress = getProgress();
+
+  const getIcon = () => {
+    switch (goal.type) {
+      case 'target': return <TrendingUp className="h-4 w-4" />;
+      case 'habit': return <Repeat className="h-4 w-4" />;
+      default: return <Target className="h-4 w-4" />;
+    }
+  };
 
   return (
-    <Link to={`/goals/${goal.slug}`} className="block group">
-      <Card className="transition-all duration-200 group-hover:shadow-lg group-hover:-translate-y-1 cursor-pointer h-full flex flex-col">
-        <CardHeader className="flex flex-col sm:flex-row items-start gap-3 space-y-0 p-4">
-          <GoalIcon goal={goal} className="w-10 h-10 flex-shrink-0" />
-          <div className="flex-grow overflow-hidden">
-            <h3 className="font-bold truncate">{goal.title}</h3>
-            <p className="text-sm text-muted-foreground mt-1 line-clamp-1">{goal.description}</p>
+    <Link to={`/goals/${goal.slug}`}>
+      <Card className="hover:shadow-md transition-shadow h-full flex flex-col">
+        <CardHeader>
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: goal.color }}>
+                <span className="text-2xl">{goal.icon}</span>
+              </div>
+              <div>
+                <CardTitle className="text-lg">{goal.title}</CardTitle>
+                <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
+                  {getIcon()}
+                  <span className="capitalize">{goal.type}</span>
+                </div>
+              </div>
+            </div>
           </div>
         </CardHeader>
-        <CardContent className="p-4 pt-0 space-y-3 flex-grow">
-          {goal.tags && goal.tags.length > 0 && (
-            <div className="flex flex-wrap gap-1">
-              {goal.tags.slice(0, 3).map(tag => (
-                <Badge
-                  key={tag.id}
-                  variant="outline"
-                  className="text-xs"
-                  style={{
-                    backgroundColor: `${tag.color}20`,
-                    borderColor: tag.color,
-                    color: tag.color,
-                  }}
-                >
-                  {tag.name}
-                </Badge>
-              ))}
-            </div>
-          )}
-          <div>
-            <div className="flex justify-between items-center mb-1">
-              <span className="text-xs font-semibold text-muted-foreground tracking-wider">PROGRESS</span>
-              <span className="text-sm font-bold" style={{ color: goal.color }}>{percentage.toFixed(0)}%</span>
-            </div>
-            <Progress value={percentage} className="h-2" indicatorStyle={{ backgroundColor: goal.color }} />
+        <CardContent className="flex-grow">
+          <p className="text-sm text-muted-foreground mb-4 line-clamp-2">{goal.description}</p>
+          <div className="flex gap-1 flex-wrap">
+            {goal.tags.map(tag => (
+              <Badge key={tag.id} variant="outline" style={{ borderColor: tag.color, color: tag.color }}>{tag.name}</Badge>
+            ))}
           </div>
         </CardContent>
-        {goal.collaborators && goal.collaborators.length > 0 && (
-          <CardFooter className="p-4 pt-0 flex justify-between items-center">
-            <span className="text-xs font-semibold text-muted-foreground tracking-wider">TEAM</span>
-            <div className="flex -space-x-2">
-              <TooltipProvider delayDuration={100}>
-                {goal.collaborators.map(user => (
+        <CardFooter className="flex flex-col items-start gap-4">
+          <div>
+            <Progress value={progress} />
+            <p className="text-xs text-muted-foreground mt-1">{Math.round(progress)}% complete</p>
+          </div>
+          <div className="flex items-center justify-between w-full">
+            <div className="flex items-center -space-x-2">
+              <TooltipProvider>
+                {goal.collaborators.slice(0, 3).map((user) => (
                   <Tooltip key={user.id}>
-                    <TooltipTrigger asChild>
+                    <TooltipTrigger>
                       <Avatar className="h-7 w-7 border-2 border-background">
-                        <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} alt={user.name} />
-                        <AvatarFallback style={generatePastelColor(user.id)}>{user.initials}</AvatarFallback>
+                        <AvatarImage src={getAvatarUrl(user.avatar_url) || undefined} alt={user.name} />
+                        <AvatarFallback style={{ backgroundColor: generatePastelColor(user.id) }}>{user.initials}</AvatarFallback>
                       </Avatar>
                     </TooltipTrigger>
                     <TooltipContent>
@@ -67,10 +88,15 @@ const GoalCard = ({ goal }: { goal: Goal }) => {
                     </TooltipContent>
                   </Tooltip>
                 ))}
+                {goal.collaborators.length > 3 && (
+                  <Avatar className="h-7 w-7 border-2 border-background">
+                    <AvatarFallback>+{goal.collaborators.length - 3}</AvatarFallback>
+                  </Avatar>
+                )}
               </TooltipProvider>
             </div>
-          </CardFooter>
-        )}
+          </div>
+        </CardFooter>
       </Card>
     </Link>
   );

@@ -1,146 +1,145 @@
-import { type ClassValue, clsx } from "clsx"
-import { twMerge } from "tailwind-merge"
-import { formatDistanceToNowStrict, format as formatDate, isBefore, startOfToday } from 'date-fns';
-import { id } from 'date-fns/locale';
+import { type ClassValue, clsx } from "clsx";
+import { twMerge } from "tailwind-merge";
+import { formatInTimeZone } from 'date-fns-tz';
+import { isPast, parseISO } from 'date-fns';
 
 export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs))
-}
-
-export function timeAgo(date: string | Date): string {
-  return formatDistanceToNowStrict(new Date(date), { addSuffix: true });
+  return twMerge(clsx(inputs));
 }
 
 export const getStatusStyles = (status: string) => {
-  switch (status) {
-    case 'On Track':
-      return { tw: 'bg-teal-100 text-teal-800 dark:bg-teal-900/50 dark:text-teal-300', hex: '#4FD1C5' };
-    case 'Off Track':
-      return { tw: 'bg-pink-100 text-pink-800 dark:bg-pink-900/50 dark:text-pink-300', hex: '#F56565' };
-    case 'At Risk':
-      return { tw: 'bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-300', hex: '#F6AD55' };
-    case 'Completed':
-      return { tw: 'bg-sky-100 text-sky-800 dark:bg-sky-900/50 dark:text-sky-300', hex: '#4299E1' };
-    case 'On Hold':
-      return { tw: 'bg-slate-100 text-slate-800 dark:bg-slate-800/50 dark:text-slate-300', hex: '#CBD5E0' };
+  if (!status) return { tw: "bg-gray-400 text-gray-800 hover:bg-gray-400/90", hex: "#9CA3AF" };
+  const normalizedStatus = status.toLowerCase().replace(/\s+/g, "-");
+
+  switch (normalizedStatus) {
+    case "on-track":
+      return { tw: "bg-teal-400 text-teal-900 hover:bg-teal-400/90 border-transparent", hex: "#4fd1c5" };
+    case "at-risk":
+      return { tw: "bg-orange-400 text-orange-900 hover:bg-orange-400/90 border-transparent", hex: "#f6ad55" };
+    case "off-track":
+      return { tw: "bg-pink-400 text-pink-900 hover:bg-pink-400/90 border-transparent", hex: "#f687b3" };
+    case "on-hold":
+      return { tw: "bg-gray-400 text-gray-800 hover:bg-gray-400/90 border-transparent", hex: "#a0aec0" };
+    case "completed":
+      return { tw: "bg-blue-500 text-white hover:bg-blue-500/90 border-transparent", hex: "#3182ce" };
+    case "planning":
+      return { tw: "bg-purple-500 text-white hover:bg-purple-500/90 border-transparent", hex: "#805ad5" };
     default:
-      return { tw: 'bg-slate-100 text-slate-800 dark:bg-slate-800/50 dark:text-slate-300', hex: '#CBD5E0' };
+      return { tw: "bg-gray-400 text-gray-800 hover:bg-gray-400/90 border-transparent", hex: "#9CA3AF" };
   }
 };
 
 export const getPaymentStatusStyles = (status: string) => {
-  switch (status) {
-    case 'Paid':
-      return { tw: 'bg-teal-100 text-teal-800 dark:bg-teal-900/50 dark:text-teal-300', hex: '#4FD1C5' };
-    case 'Unpaid':
-      return { tw: 'bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-300', hex: '#F6AD55' };
-    case 'Partially Paid':
-      return { tw: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300', hex: '#F6E05E' };
-    case 'Overdue':
-      return { tw: 'bg-pink-100 text-pink-800 dark:bg-pink-900/50 dark:text-pink-300', hex: '#F56565' };
-    case 'Cancelled':
-      return { tw: 'bg-slate-100 text-slate-800 dark:bg-slate-800/50 dark:text-slate-300', hex: '#CBD5E0' };
+  if (!status) return { tw: "bg-gray-400 text-gray-800 hover:bg-gray-400/90", hex: "#9CA3AF" };
+  const normalizedStatus = status.toLowerCase().replace(/\s+/g, "-");
+
+  switch (normalizedStatus) {
+    case "paid":
+      return { tw: "bg-teal-400 text-teal-900 hover:bg-teal-400/90 border-transparent", hex: "#4fd1c5" };
+    case "unpaid":
+      return { tw: "bg-yellow-300 text-yellow-900 hover:bg-yellow-300/90 border-transparent", hex: "#faf089" };
+    case "overdue":
+      return { tw: "bg-pink-400 text-pink-900 hover:bg-pink-400/90 border-transparent", hex: "#f687b3" };
     default:
-      return { tw: 'bg-slate-100 text-slate-800 dark:bg-slate-800/50 dark:text-slate-300', hex: '#CBD5E0' };
-  }
-};
-
-export const getInitials = (name?: string | null, email?: string | null): string => {
-  if (name) {
-    const parts = name.split(' ').filter(Boolean);
-    if (parts.length > 1) {
-      return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
-    }
-    if (parts.length === 1 && parts[0]) {
-      return parts[0].substring(0, 2).toUpperCase();
-    }
-  }
-  if (email) {
-    return email.substring(0, 2).toUpperCase();
-  }
-  return 'NN';
-};
-
-export const generatePastelColor = (seed: string) => {
-  let hash = 0;
-  for (let i = 0; i < seed.length; i++) {
-    hash = seed.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  const h = hash % 360;
-  return { backgroundColor: `hsl(${h}, 70%, 85%)`, color: `hsl(${h}, 70%, 30%)` };
-};
-
-export const getAvatarUrl = (avatarUrl?: string | null, seed?: string | null): string | undefined => {
-  if (avatarUrl) return avatarUrl;
-  if (seed) return `https://api.dicebear.com/8.x/initials/svg?seed=${seed}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf&fontWeight=600`;
-  return undefined;
-};
-
-export const formatInJakarta = (date: string | Date, formatString: string = 'dd MMM yyyy, HH:mm'): string => {
-  if (!date) return '';
-  try {
-    return formatDate(new Date(date), formatString, { locale: id });
-  } catch (error) {
-    console.error("Invalid date for formatting:", date);
-    return "Invalid date";
-  }
-};
-
-export const getPriorityStyles = (priority: string) => {
-  switch (priority) {
-    case 'low':
-      return { tw: 'bg-gray-100 text-gray-800 dark:bg-gray-900/50 dark:text-gray-300', hex: '#A0AEC0' };
-    case 'medium':
-      return { tw: 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300', hex: '#63B3ED' };
-    case 'high':
-      return { tw: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300', hex: '#F6E05E' };
-    case 'urgent':
-      return { tw: 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300', hex: '#FC8181' };
-    default:
-      return { tw: 'bg-gray-100 text-gray-800 dark:bg-gray-900/50 dark:text-gray-300', hex: '#A0AEC0' };
+      return { tw: "bg-gray-400 text-gray-800 hover:bg-gray-400/90 border-transparent", hex: "#9CA3AF" };
   }
 };
 
 export const getTaskStatusStyles = (status: string) => {
-  switch (status) {
-    case 'To do':
-      return { tw: 'bg-slate-100 text-slate-800 dark:bg-slate-800/50 dark:text-slate-300', hex: '#CBD5E0' };
-    case 'In Progress':
-      return { tw: 'bg-sky-100 text-sky-800 dark:bg-sky-900/50 dark:text-sky-300', hex: '#4299E1' };
-    case 'Done':
-      return { tw: 'bg-teal-100 text-teal-800 dark:bg-teal-900/50 dark:text-teal-300', hex: '#4FD1C5' };
+  if (!status) return { tw: "bg-gray-200 text-gray-800", hex: "#E2E8F0" };
+  const normalizedStatus = status.toLowerCase().replace(/\s+/g, "-");
+
+  switch (normalizedStatus) {
+    case "to-do":
+      return { tw: "bg-gray-200 text-gray-800", hex: "#E2E8F0" };
+    case "in-progress":
+      return { tw: "bg-blue-200 text-blue-800", hex: "#BEE3F8" };
+    case "done":
+      return { tw: "bg-green-200 text-green-800", hex: "#C6F6D5" };
+    case "backlog":
+      return { tw: "bg-purple-200 text-purple-800", hex: "#E9D8FD" };
     default:
-      return { tw: 'bg-slate-100 text-slate-800 dark:bg-slate-800/50 dark:text-slate-300', hex: '#CBD5E0' };
+      return { tw: "bg-gray-200 text-gray-800", hex: "#E2E8F0" };
   }
 };
 
-export const isOverdue = (date: string | Date | null): boolean => {
-  if (!date) return false;
+export const getPriorityStyles = (priority: string) => {
+  if (!priority) return { tw: "text-gray-500", hex: "#6B7280" };
+  const normalizedPriority = priority.toLowerCase();
+
+  switch (normalizedPriority) {
+    case "low":
+      return { tw: "text-green-500", hex: "#10B981" };
+    case "normal":
+      return { tw: "text-yellow-500", hex: "#F59E0B" };
+    case "high":
+      return { tw: "text-red-500", hex: "#EF4444" };
+    default:
+      return { tw: "text-gray-500", hex: "#6B7280" };
+  }
+};
+
+export const getInitials = (name?: string | null, fallback = "NN") => {
+  if (!name) return fallback;
+  const names = name.trim().split(" ");
+  if (names.length > 1 && names[0] && names[names.length - 1]) {
+    return `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase();
+  }
+  if (name.length > 1) {
+    return name.substring(0, 2).toUpperCase();
+  }
+  return name.toUpperCase();
+};
+
+export const generatePastelColor = (str: string) => {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const h = hash % 360;
+  return `hsl(${h}, 70%, 80%)`;
+};
+
+export const getAvatarUrl = (avatarPath?: string | null) => {
+  if (!avatarPath) return null;
+  if (avatarPath.startsWith('http')) return avatarPath;
+  // This is a fallback for when the Supabase URL isn't available or path is wrong
+  return `https://api.dicebear.com/8.x/initials/svg?seed=${encodeURIComponent(avatarPath)}`;
+};
+
+export const formatInJakarta = (date: string | Date, formatString: string) => {
   try {
-    return isBefore(new Date(date), startOfToday());
+    return formatInTimeZone(date, 'Asia/Jakarta', formatString);
+  } catch (error) {
+    console.error("Error formatting date:", error);
+    return "Invalid Date";
+  }
+};
+
+export const isOverdue = (dueDate: string | null | undefined): boolean => {
+  if (!dueDate) return false;
+  try {
+    const date = parseISO(dueDate);
+    return isPast(date);
   } catch (error) {
     return false;
   }
 };
 
-export const formatPhoneNumberForApi = (phone: string): string => {
+export const formatPhoneNumberForApi = (phone: string) => {
   if (!phone) return '';
-  let cleaned = phone.replace(/\D/g, '');
-  if (cleaned.startsWith('0')) {
-    cleaned = '62' + cleaned.substring(1);
-  }
-  return cleaned;
+  return phone.replace(/\D/g, '');
 };
 
-export const getColorForTag = (tag: string): string => {
+export const getColorForTag = (tagName: string) => {
   let hash = 0;
-  if (!tag || tag.length === 0) {
-    return `hsl(0, 0%, 85%)`;
+  if (!tagName || tagName.length === 0) {
+    return `hsl(0, 0%, 80%)`;
   }
-  for (let i = 0; i < tag.length; i++) {
-    hash = tag.charCodeAt(i) + ((hash << 5) - hash);
-    hash = hash & hash;
+  for (let i = 0; i < tagName.length; i++) {
+    hash = tagName.charCodeAt(i) + ((hash << 5) - hash);
+    hash = hash & hash; 
   }
-  const hue = hash % 360;
-  return `hsl(${hue}, 70%, 80%)`;
+  const hue = Math.abs(hash % 360);
+  return `hsl(${hue}, 70%, 50%)`;
 };

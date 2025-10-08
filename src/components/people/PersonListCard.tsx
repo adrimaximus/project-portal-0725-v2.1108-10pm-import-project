@@ -1,111 +1,78 @@
-import React from 'react';
 import { Person } from '@/types';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, Edit, Trash2, User as UserIcon, Briefcase, MapPin, Mail, Instagram, Twitter, Linkedin } from 'lucide-react';
 import { generatePastelColor, getAvatarUrl, formatPhoneNumberForApi } from '@/lib/utils';
 import { Badge } from '../ui/badge';
+import { Link } from 'react-router-dom';
 import WhatsappIcon from '../icons/WhatsappIcon';
-import { toast } from 'sonner';
 
 interface PersonListCardProps {
   person: Person;
   onEdit: (person: Person) => void;
-  onDelete: (person: Person) => void;
-  onViewProfile: (person: Person) => void;
+  onDelete: (personId: string) => void;
 }
 
-const PersonListCard: React.FC<PersonListCardProps> = ({ person, onEdit, onDelete, onViewProfile }) => {
-  const emailToDisplay = person.contact?.emails?.[0] || person.email;
-  const phoneToDisplay = (person.contact as any)?.phones?.[0] || person.phone;
-
-  const handleCopyEmail = (e: React.MouseEvent, email: string) => {
-    e.stopPropagation();
-    if (email) {
-      navigator.clipboard.writeText(email);
-      toast.success('Email address copied!');
-    }
-  };
+export default function PersonListCard({ person, onEdit, onDelete }: PersonListCardProps) {
+  const primaryEmail = person.contact?.emails?.[0];
+  const primaryPhone = person.contact?.phones?.[0];
 
   return (
-    <Card onClick={() => onViewProfile(person)} className="cursor-pointer">
-      <CardHeader className="flex flex-row items-start justify-between p-4">
-        <div className="flex items-center gap-3">
+    <div className="flex items-center justify-between p-4 border rounded-lg bg-card hover:bg-muted/50">
+      <div className="flex items-center gap-4 flex-1 min-w-0">
+        <Link to={`/people/${person.id}`}>
           <Avatar className="h-10 w-10">
             <AvatarImage src={person.avatar_url} />
-            <AvatarFallback style={generatePastelColor(person.id)}>
+            <AvatarFallback style={{ backgroundColor: generatePastelColor(person.id) }}>
               <UserIcon className="h-5 w-5 text-white" />
             </AvatarFallback>
           </Avatar>
-          <div>
-            <p className="font-medium">{person.full_name}</p>
-            <p className="text-sm text-muted-foreground">{emailToDisplay}</p>
-          </div>
+        </Link>
+        <div className="flex-1 min-w-0">
+          <Link to={`/people/${person.id}`} className="font-semibold truncate hover:underline">{person.full_name}</Link>
+          <p className="text-sm text-muted-foreground truncate">{person.job_title}</p>
         </div>
+      </div>
+      <div className="hidden md:flex items-center gap-2 w-1/4">
+        <Briefcase className="h-4 w-4 text-muted-foreground" />
+        <span className="text-sm truncate">{person.company}</span>
+      </div>
+      <div className="hidden lg:flex items-center gap-2 w-1/4">
+        <MapPin className="h-4 w-4 text-muted-foreground" />
+        <span className="text-sm truncate">{[person.address?.city, person.address?.country].filter(Boolean).join(', ')}</span>
+      </div>
+      <div className="flex items-center gap-2">
+        {primaryEmail && <a href={`mailto:${primaryEmail}`} className="text-muted-foreground hover:text-primary"><Mail className="h-4 w-4" /></a>}
+        {primaryPhone && <a href={`https://wa.me/${formatPhoneNumberForApi(primaryPhone)}`} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary"><WhatsappIcon className="h-4 w-4" /></a>}
+        {person.social_media?.instagram && <a href={`https://instagram.com/${person.social_media.instagram}`} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary"><Instagram className="h-4 w-4" /></a>}
+        {person.social_media?.twitter && <a href={`https://twitter.com/${person.social_media.twitter}`} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary"><Twitter className="h-4 w-4" /></a>}
+        {person.social_media?.linkedin && <a href={person.social_media.linkedin} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary"><Linkedin className="h-4 w-4" /></a>}
+      </div>
+      <div className="ml-4">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" onClick={(e) => e.stopPropagation()}><MoreHorizontal className="h-4 w-4" /></Button>
+            <Button variant="ghost" size="icon">
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onSelect={(e) => { e.stopPropagation(); onEdit(person); }}><Edit className="mr-2 h-4 w-4" /> Edit</DropdownMenuItem>
-            <DropdownMenuItem onSelect={(e) => { e.stopPropagation(); onDelete(person); }} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Delete</DropdownMenuItem>
+          <DropdownMenuContent>
+            <DropdownMenuItem onClick={() => onEdit(person)}>
+              <Edit className="mr-2 h-4 w-4" />
+              Edit
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onDelete(person.id)} className="text-red-500">
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-      </CardHeader>
-      <CardContent className="p-4 pt-0 space-y-3">
-        {(person.job_title || person.company) && (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Briefcase className="h-4 w-4 flex-shrink-0" />
-            <span>{person.job_title}{person.job_title && person.company ? ' at ' : ''}{person.company}</span>
-          </div>
-        )}
-        {person.address?.formatted_address && (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <MapPin className="h-4 w-4 flex-shrink-0" />
-            <span className="truncate">{person.address.formatted_address}</span>
-          </div>
-        )}
-        <div className="flex items-center gap-4 pt-2 border-t">
-          {phoneToDisplay && (
-            <a href={`https://wa.me/${formatPhoneNumberForApi(phoneToDisplay)}`} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-muted-foreground hover:text-primary transition-colors">
-              <WhatsappIcon className="h-5 w-5" />
-            </a>
-          )}
-          {emailToDisplay && (
-            <button onClick={(e) => handleCopyEmail(e, emailToDisplay)} className="text-muted-foreground hover:text-primary transition-colors">
-              <Mail className="h-5 w-5" />
-            </button>
-          )}
-          {person.social_media?.instagram && (
-            <a href={person.social_media.instagram} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-muted-foreground hover:text-primary transition-colors">
-              <Instagram className="h-5 w-5" />
-            </a>
-          )}
-          {person.social_media?.twitter && (
-            <a href={person.social_media.twitter} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-muted-foreground hover:text-primary transition-colors">
-              <Twitter className="h-5 w-5" />
-            </a>
-          )}
-          {person.social_media?.linkedin && (
-            <a href={person.social_media.linkedin} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-muted-foreground hover:text-primary transition-colors">
-              <Linkedin className="h-5 w-5" />
-            </a>
-          )}
-        </div>
-        {(person.tags && person.tags.length > 0) && (
-          <div className="flex flex-wrap gap-1 pt-2 border-t">
-            {person.tags.map(tag => (
-              <Badge key={tag.id} variant="outline" style={{ backgroundColor: `${tag.color}20`, borderColor: tag.color, color: tag.color }}>
-                {tag.name}
-              </Badge>
-            ))}
-          </div>
-        )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
-};
-
-export default PersonListCard;
+}

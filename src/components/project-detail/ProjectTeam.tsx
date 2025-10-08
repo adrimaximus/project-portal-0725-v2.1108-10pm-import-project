@@ -1,29 +1,25 @@
-import { AssignedUser } from '@/types';
+import { Project } from '@/types';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { getAvatarUrl, generatePastelColor } from '@/lib/utils';
 
 interface ProjectTeamProps {
-  team: AssignedUser[];
+  project: Project;
 }
 
-const ProjectTeam = ({ team }: ProjectTeamProps) => {
+const ProjectTeam = ({ project }: ProjectTeamProps) => {
   return (
-    <div>
-      <h3 className="text-lg font-semibold mb-2">Team</h3>
-      <div className="space-y-2">
-        {team.map(member => (
-          <div key={member.id} className="flex items-center">
-            <Avatar>
-              <AvatarImage src={getAvatarUrl(member.avatar_url, member.id)} />
-              <AvatarFallback style={generatePastelColor(member.id)}>{member.initials}</AvatarFallback>
-            </Avatar>
-            <div className="ml-2">
-              <p>{member.name}</p>
-              {member.role && <p className="text-sm text-muted-foreground">{member.role}</p>}
-            </div>
+    <div className="flex items-center -space-x-2">
+      {project.assignedTo?.map(member => (
+        <div key={member.id} className="relative group">
+          <Avatar>
+            <AvatarImage src={getAvatarUrl(member.avatar_url) || undefined} />
+            <AvatarFallback style={{ backgroundColor: generatePastelColor(member.id) }}>{member.initials}</AvatarFallback>
+          </Avatar>
+          <div className="absolute bottom-full mb-2 w-max bg-gray-800 text-white text-xs rounded py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            {member.name}
           </div>
-        ))}
-      </div>
+        </div>
+      ))}
     </div>
   );
 };

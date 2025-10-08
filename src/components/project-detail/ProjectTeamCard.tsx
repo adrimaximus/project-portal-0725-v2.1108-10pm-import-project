@@ -1,191 +1,192 @@
-import { Project, AssignedUser, User } from "@/types";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase";
+import { Project, User, AssignedUser } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Users, RefreshCw } from "lucide-react";
-import ModernTeamSelector from "../request/ModernTeamSelector";
-import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { Users, Plus, Crown, MoreVertical } from "lucide-react";
+import { AddTeamMemberDialog } from "./AddTeamMemberDialog";
+import { ChangeOwnerDialog } from "./ChangeOwnerDialog";
 import { useAuth } from "@/contexts/AuthContext";
-import { Button } from "../ui/button";
-import ChangeOwnerDialog from "./ChangeOwnerDialog";
-import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { getInitials, generatePastelColor, getAvatarUrl } from "@/lib/utils";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { toast } from "sonner";
 
-interface ProjectTeamCardProps {
-  project: Project;
-  isEditing: boolean;
-  onFieldChange: (field: keyof Project, value: any) => void;
-}
-
-const ProjectTeamCard = ({ project, isEditing, onFieldChange }: ProjectTeamCardProps) => {
-  const [allUsers, setAllUsers] = useState<User[]>([]);
+const ProjectTeamCard = ({ project }: { project: Project }) => {
   const { user: currentUser } = useAuth();
-  const [isChangeOwnerDialogOpen, setIsChangeOwnerDialogOpen] = useState(false);
+  const [isAddMemberOpen, setAddMemberOpen] = useState(false);
+  const [isChangeOwnerOpen, setChangeOwnerOpen] = useState(false);
   const queryClient = useQueryClient();
 
-  useEffect(() => {
-    const fetchUsers = async () => {
-      const { data, error } = await supabase.from('profiles').select('*');
-      if (data) {
-        const users = data.map(profile => {
-          const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
-          return {
-            id: profile.id,
-            name: fullName || profile.email || 'No name',
-            avatar_url: getAvatarUrl(profile.avatar_url, profile.id),
-            email: profile.email,
-            initials: getInitials(fullName, profile.email) || 'NN',
-            first_name: profile.first_name,
-            last_name: profile.last_name,
-          }
-        });
-        setAllUsers(users);
-      }
-    };
-    fetchUsers();
-  }, []);
+  const { data: members, isLoading } = useQuery<AssignedUser[]>({
+    queryKey: ["project-team", project.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("project_members")
+        .select("role, profiles(*)")
+        .eq("project_id", project.id);
 
-  const projectAdmins = project.assignedTo.filter(member => member.role === 'admin');
-  const teamMembers = project.assignedTo.filter(member => member.role === 'member');
+      if (error) throw error;
 
-  const handleRoleChange = (userToToggle: User, role: 'admin' | 'member') => {
-    const existingMember = project.assignedTo.find(u => u.id === userToToggle.id);
-    let newTeam: AssignedUser[];
+      return data.map((item: any) => {
+        const profile = item.profiles;
+        const fullName = `${profile.first_name || ""} ${
+          profile.last_name || ""
+        }`.trim();
+        return {
+          id: profile.id,
+          name: fullName || profile.email || "No name",
+          avatar_url: getAvatarUrl(profile.avatar_url),
+          email: profile.email,
+          role: item.role,
+          initials: getInitials(fullName, profile.email),
+        };
+      });
+    },
+  });
 
-    if (existingMember && existingMember.role === role) {
-      // User with same role clicked -> remove them
-      newTeam = project.assignedTo.filter(u => u.id !== userToToggle.id);
-    } else {
-      // Add or change role
-      // Remove user if they exist with a different role
-      const filteredTeam = project.assignedTo.filter(u => u.id !== userToToggle.id);
-      // Add them back with the new role
-      const newUser: AssignedUser = {
-        ...userToToggle,
-        role: role,
-      };
-      newTeam = [...filteredTeam, newUser];
+  const isOwner = currentUser?.id === project.created_by.id;
+
+  const removeMember = async (memberId: string) => {
+    if (memberId === project.created_by.id) {
+      toast.error("Cannot remove the project owner.");
+      return;
     }
-    onFieldChange('assignedTo', newTeam);
-  };
+    if (!window.confirm("Are you sure you want to remove this member?")) return;
 
-  const handleOwnerChange = async (newOwnerId: string) => {
-    const { error } = await supabase.rpc('transfer_project_ownership', {
-      p_project_id: project.id,
-      p_new_owner_id: newOwnerId,
-    });
+    const { error } = await supabase
+      .from("project_members")
+      .delete()
+      .eq("project_id", project.id)
+      .eq("user_id", memberId);
 
     if (error) {
-      toast.error("Failed to transfer ownership.", { description: error.message });
+      toast.error("Failed to remove member: " + error.message);
     } else {
-      toast.success("Project ownership transferred. Reloading project...");
-      setIsChangeOwnerDialogOpen(false);
-      await queryClient.invalidateQueries({ queryKey: ['project', project.slug] });
-      await queryClient.invalidateQueries({ queryKey: ['projects'] });
+      toast.success("Member removed successfully.");
+      queryClient.invalidateQueries({ queryKey: ["project-team", project.id] });
     }
   };
 
-  const assignableUsers = project.created_by
-    ? allUsers.filter(u => u.id !== project.created_by.id)
-    : allUsers;
-    
-  const canChangeOwner = currentUser && (currentUser.id === project.created_by.id || currentUser.role === 'admin' || currentUser.role === 'master admin');
-
-  const renderUserList = (users: AssignedUser[]) => (
-    <div className="space-y-3">
-      {users.map(member => (
-        <div key={member.id} className="flex items-center gap-3">
-          <Avatar className="h-9 w-9">
-            <AvatarImage src={getAvatarUrl(member.avatar_url, member.id)} />
-            <AvatarFallback style={generatePastelColor(member.id)}>{member.initials}</AvatarFallback>
-          </Avatar>
-          <div>
-            <p className="text-sm font-medium">{member.name}</p>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-
   return (
-    <>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Team</CardTitle>
-          <Users className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent className="space-y-4 pt-4">
-          {/* Project Owner */}
-          <div>
-            <div className="flex justify-between items-center">
-              <h4 className="text-xs font-semibold text-muted-foreground mb-2">PROJECT OWNER</h4>
-              {isEditing && canChangeOwner && (
-                <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => setIsChangeOwnerDialogOpen(true)}>
-                  <RefreshCw className="mr-1 h-3 w-3" />
-                  Change
-                </Button>
-              )}
-            </div>
-            <div className="flex items-center gap-3">
-              <Avatar className="h-9 w-9">
-                <AvatarImage src={getAvatarUrl(project.created_by.avatar_url, project.created_by.id)} />
-                <AvatarFallback style={generatePastelColor(project.created_by.id)}>{project.created_by.initials}</AvatarFallback>
-              </Avatar>
-              <div>
-                <p className="text-sm font-medium">{project.created_by.name}</p>
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle className="text-lg flex items-center">
+          <Users className="h-5 w-5 mr-2" />
+          Team
+        </CardTitle>
+        {isOwner && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setAddMemberOpen(true)}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add Member
+          </Button>
+        )}
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {isLoading ? (
+          <p>Loading team...</p>
+        ) : (
+          <>
+            {/* Owner */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Avatar className="h-9 w-9">
+                  <AvatarImage src={getAvatarUrl(project.created_by.avatar_url) || undefined} />
+                  <AvatarFallback style={{ backgroundColor: generatePastelColor(project.created_by.id) }}>{project.created_by.initials}</AvatarFallback>
+                </Avatar>
+                <div>
+                  <p className="font-semibold">{project.created_by.name}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {project.created_by.email}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 text-yellow-500">
+                <Crown className="h-4 w-4" />
+                <span className="text-sm font-medium">Owner</span>
+                {isOwner && (
+                  <Button
+                    variant="link"
+                    size="sm"
+                    onClick={() => setChangeOwnerOpen(true)}
+                    className="text-xs"
+                  >
+                    Change
+                  </Button>
+                )}
               </div>
             </div>
-          </div>
 
-          {/* Project Admins */}
-          {isEditing ? (
-            <div>
-              <h4 className="text-xs font-semibold text-muted-foreground mb-2">PROJECT ADMINS</h4>
-              <ModernTeamSelector
-                users={assignableUsers}
-                selectedUsers={projectAdmins}
-                onSelectionChange={(user) => handleRoleChange(user, 'admin')}
-              />
-            </div>
-          ) : (
-            projectAdmins.length > 0 && (
-              <div>
-                <h4 className="text-xs font-semibold text-muted-foreground mb-2">PROJECT ADMINS</h4>
-                {renderUserList(projectAdmins)}
-              </div>
-            )
-          )}
-
-          {/* Team Members */}
-          {isEditing ? (
-            <div>
-              <h4 className="text-xs font-semibold text-muted-foreground mb-2">TEAM MEMBERS</h4>
-              <ModernTeamSelector
-                users={assignableUsers}
-                selectedUsers={teamMembers}
-                onSelectionChange={(user) => handleRoleChange(user, 'member')}
-              />
-            </div>
-          ) : (
-            teamMembers.length > 0 && (
-              <div>
-                <h4 className="text-xs font-semibold text-muted-foreground mb-2">TEAM MEMBERS</h4>
-                {renderUserList(teamMembers)}
-              </div>
-            )
-          )}
-        </CardContent>
-      </Card>
-      {canChangeOwner && (
-        <ChangeOwnerDialog
-          open={isChangeOwnerDialogOpen}
-          onOpenChange={setIsChangeOwnerDialogOpen}
-          project={project}
-          onOwnerChange={handleOwnerChange}
-        />
-      )}
-    </>
+            {/* Members */}
+            {members
+              ?.filter((m) => m.id !== project.created_by.id)
+              .map((member) => (
+                <div
+                  key={member.id}
+                  className="flex items-center justify-between"
+                >
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-9 w-9">
+                      <AvatarImage src={getAvatarUrl(member.avatar_url) || undefined} />
+                      <AvatarFallback style={{ backgroundColor: generatePastelColor(member.id) }}>{member.initials}</AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="font-semibold">{member.name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {member.email}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm capitalize text-muted-foreground">
+                      {member.role}
+                    </span>
+                    {isOwner && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent>
+                          <DropdownMenuItem
+                            className="text-red-500"
+                            onClick={() => removeMember(member.id)}
+                          >
+                            Remove from project
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
+                  </div>
+                </div>
+              ))}
+          </>
+        )}
+      </CardContent>
+      <AddTeamMemberDialog
+        project={project}
+        isOpen={isAddMemberOpen}
+        onClose={() => setAddMemberOpen(false)}
+        existingMembers={members || []}
+      />
+      <ChangeOwnerDialog
+        project={project}
+        isOpen={isChangeOwnerOpen}
+        onClose={() => setChangeOwnerOpen(false)}
+      />
+    </Card>
   );
 };
 

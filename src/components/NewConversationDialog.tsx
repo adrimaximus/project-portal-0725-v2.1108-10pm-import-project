@@ -1,171 +1,180 @@
-import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Checkbox } from "@/components/ui/checkbox";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
-import { Collaborator } from "@/types";
-import { toast } from "sonner";
+import { useState, useMemo } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase';
+import { User } from '@/types';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from './ui/input';
 import { Label } from "./ui/label";
 import { getInitials, generatePastelColor, getAvatarUrl } from "@/lib/utils";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Check, X } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface NewConversationDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onStartNewChat: (collaborator: Collaborator) => void;
-  onStartNewGroupChat: (collaborators: Collaborator[], groupName: string) => void;
+  isOpen: boolean;
+  onClose: () => void;
+  onConversationCreated: (conversationId: string) => void;
 }
 
-const NewConversationDialog = ({
-  open,
-  onOpenChange,
-  onStartNewChat,
-  onStartNewGroupChat,
-}: NewConversationDialogProps) => {
+export default function NewConversationDialog({ isOpen, onClose, onConversationCreated }: NewConversationDialogProps) {
   const { user: currentUser } = useAuth();
-  const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
-  const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
-  const [selectedCollaborators, setSelectedCollaborators] = useState<Collaborator[]>([]);
-  const [groupName, setGroupName] = useState("");
-  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedUsers, setSelectedUsers] = useState<User[]>([]);
+  const [groupName, setGroupName] = useState('');
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    if (!open || !currentUser) return;
-
-    const fetchCollaborators = async () => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, first_name, last_name, avatar_url, email')
-        .neq('id', currentUser.id);
-
-      if (error) {
-        toast.error("Failed to fetch collaborators.");
-        return;
-      }
-
-      const mappedCollaborators: Collaborator[] = data.map(p => {
-        const fullName = `${p.first_name || ''} ${p.last_name || ''}`.trim();
+  const { data: collaborators = [], isLoading } = useQuery<User[]>({
+    queryKey: ['profiles-for-chat'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('profiles').select('*');
+      if (error) throw error;
+      return data.map(p => {
+        const fullName = [p.first_name, p.last_name].filter(Boolean).join(' ');
         return {
           id: p.id,
           name: fullName || p.email || 'Unnamed User',
-          avatar_url: getAvatarUrl(p.avatar_url, p.id),
+          avatar_url: getAvatarUrl(p.avatar_url),
           initials: getInitials(fullName, p.email) || 'NN',
-          email: p.email || '',
-          online: false,
-        }
-      });
-      setCollaborators(mappedCollaborators);
-    };
+          email: p.email,
+        };
+      }).filter(u => u.id !== currentUser?.id);
+    },
+  });
 
-    fetchCollaborators();
-
-    const channel = supabase.channel('online-users');
-    channel
-      .on('presence', { event: 'sync' }, () => {
-        const presenceState = channel.presenceState<any>();
-        const onlineIds = Object.keys(presenceState);
-        setOnlineUsers(new Set(onlineIds));
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [open, currentUser]);
-
-  const handleSelectCollaborator = (collaborator: Collaborator, isSelected: boolean) => {
-    if (isSelected) {
-      setSelectedCollaborators(prev => [...prev, collaborator]);
-    } else {
-      setSelectedCollaborators(prev => prev.filter(c => c.id !== collaborator.id));
-    }
-  };
-
-  const handleStartConversation = () => {
-    if (selectedCollaborators.length === 0) return;
-
-    if (selectedCollaborators.length === 1) {
-      onStartNewChat(selectedCollaborators[0]);
-    } else {
-      if (!groupName.trim()) {
-        toast.error("Please enter a name for the group chat.");
-        return;
+  const createConversationMutation = useMutation({
+    mutationFn: async () => {
+      if (selectedUsers.length === 0) {
+        throw new Error("Please select at least one user.");
       }
-      onStartNewGroupChat(selectedCollaborators, groupName);
+
+      const isGroup = selectedUsers.length > 1;
+      
+      if (isGroup) {
+        // Create group conversation
+        const { data, error } = await supabase.rpc('create_group_conversation', {
+          p_group_name: groupName || selectedUsers.map(u => u.name).join(', '),
+          p_participant_ids: selectedUsers.map(u => u.id),
+        });
+        if (error) throw error;
+        return data;
+      } else {
+        // Create or get 1-on-1 conversation
+        const { data, error } = await supabase.rpc('create_or_get_conversation', {
+          p_other_user_id: selectedUsers[0].id,
+          p_is_group: false,
+        });
+        if (error) throw error;
+        return data;
+      }
+    },
+    onSuccess: (conversationId) => {
+      toast.success('Conversation created!');
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+      onConversationCreated(conversationId);
+      handleClose();
+    },
+    onError: (error: any) => {
+      toast.error(`Failed to create conversation: ${error.message}`);
+    },
+  });
+
+  const handleSelect = (user: User) => {
+    const isSelected = selectedUsers.some(u => u.id === user.id);
+    if (isSelected) {
+      setSelectedUsers(selectedUsers.filter(u => u.id !== user.id));
+    } else {
+      setSelectedUsers([...selectedUsers, user]);
     }
-    
-    setSelectedCollaborators([]);
-    setGroupName("");
-    setSearchTerm("");
-    onOpenChange(false);
   };
 
-  const filteredCollaborators = collaborators.filter(c =>
-    c.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const handleClose = () => {
+    setSelectedUsers([]);
+    setGroupName('');
+    onClose();
+  };
 
-  const isGroupChat = selectedCollaborators.length > 1;
+  const selectedUserIds = useMemo(() => new Set(selectedUsers.map(u => u.id)), [selectedUsers]);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>New Conversation</DialogTitle>
+          <DialogDescription>Select users to start a chat. Select more than one for a group chat.</DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <Input
-            placeholder="Search people..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-          <ScrollArea className="h-[300px] pr-4">
-            <div className="space-y-2">
-              {filteredCollaborators.map(collaborator => (
-                <div
+        
+        {selectedUsers.length > 1 && (
+          <div className="grid gap-2">
+            <Label htmlFor="group-name">Group Name (optional)</Label>
+            <Input
+              id="group-name"
+              value={groupName}
+              onChange={(e) => setGroupName(e.target.value)}
+              placeholder="e.g., Project Alpha Team"
+            />
+          </div>
+        )}
+
+        <Command>
+          <CommandInput placeholder="Search for users..." />
+          <CommandList>
+            <CommandEmpty>No users found.</CommandEmpty>
+            <CommandGroup>
+              {collaborators.map(collaborator => (
+                <CommandItem
                   key={collaborator.id}
-                  className="flex items-center justify-between p-2 rounded-md hover:bg-muted"
+                  onSelect={() => handleSelect(collaborator)}
+                  className="flex items-center justify-between"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="relative">
-                      <Avatar>
-                        <AvatarImage src={collaborator.avatar_url} />
-                        <AvatarFallback style={generatePastelColor(collaborator.id)}>{collaborator.initials}</AvatarFallback>
-                      </Avatar>
-                      <span className={`absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full ring-2 ring-background ${onlineUsers.has(collaborator.id) ? 'bg-green-500' : 'bg-slate-500'}`} />
+                  <div className="flex items-center">
+                    <Avatar className="h-8 w-8 mr-3">
+                      <AvatarImage src={collaborator.avatar_url} />
+                      <AvatarFallback style={{ backgroundColor: generatePastelColor(collaborator.id) }}>{collaborator.initials}</AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="font-medium">{collaborator.name}</p>
+                      <p className="text-sm text-muted-foreground">{collaborator.email}</p>
                     </div>
-                    <span className="font-medium">{collaborator.name}</span>
                   </div>
-                  <Checkbox
-                    checked={selectedCollaborators.some(c => c.id === collaborator.id)}
-                    onCheckedChange={(checked) => handleSelectCollaborator(collaborator, !!checked)}
+                  <Check
+                    className={cn(
+                      'h-4 w-4',
+                      selectedUserIds.has(collaborator.id) ? 'opacity-100' : 'opacity-0'
+                    )}
                   />
-                </div>
+                </CommandItem>
               ))}
-            </div>
-          </ScrollArea>
-          {isGroupChat && (
-            <div className="grid gap-2">
-              <Label htmlFor="group-name">Group Name</Label>
-              <Input
-                id="group-name"
-                placeholder="Enter group name..."
-                value={groupName}
-                onChange={(e) => setGroupName(e.target.value)}
-              />
-            </div>
-          )}
-        </div>
+            </CommandGroup>
+          </CommandList>
+        </Command>
+
         <DialogFooter>
-          <Button onClick={handleStartConversation} disabled={selectedCollaborators.length === 0 || (isGroupChat && !groupName.trim())}>
-            Start Chat
+          <Button variant="outline" onClick={handleClose}>Cancel</Button>
+          <Button
+            onClick={() => createConversationMutation.mutate()}
+            disabled={selectedUsers.length === 0 || createConversationMutation.isPending}
+          >
+            {createConversationMutation.isPending ? 'Creating...' : 'Start Chat'}
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
-};
-
-export default NewConversationDialog;
+}

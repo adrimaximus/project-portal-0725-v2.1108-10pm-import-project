@@ -1,231 +1,162 @@
-import { useState, useMemo, useRef, useEffect } from "react";
 import { Project } from '@/types';
-import { useNavigate } from 'react-router-dom';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
+import { Link } from 'react-router-dom';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Clock, Trash2, MapPin, CheckCircle } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { getStatusStyles, formatInJakarta, generatePastelColor, getAvatarUrl } from '@/lib/utils';
-import { format, isSameDay, subDays } from 'date-fns';
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { getStatusStyles, formatInJakarta, generatePastelColor, getAvatarUrl } from '@/lib/utils';
+import { format, isSameDay, subDays } from 'date-fns';
+import { id as indonesia } from 'date-fns/locale';
+import {
+  MessageSquare,
+  Paperclip,
+  ListChecks,
+  Calendar,
+  TrendingUp,
+  Clock,
+  AlertCircle,
+  CheckCircle,
+  PauseCircle,
+  PlayCircle,
+  Archive,
+} from 'lucide-react';
 
-const ListView = ({ projects, onDeleteProject }: { projects: Project[], onDeleteProject: (projectId: string) => void }) => {
-  const navigate = useNavigate();
-  const [visibleDays, setVisibleDays] = useState(10);
-  const dayRefs = useRef(new Map<string, HTMLDivElement>());
-  const [scrollToDate, setScrollToDate] = useState<string | null>(null);
-  const initialScrollDone = useRef(false);
+interface ListViewProps {
+  projects: Project[];
+}
 
-  const dayEntries = useMemo(() => {
-    const sortedProjects = projects
-      .filter(p => p.start_date)
-      .sort((a, b) => new Date(a.start_date!).getTime() - new Date(b.start_date!).getTime());
+const statusIcons: { [key: string]: React.ElementType } = {
+  "On Track": TrendingUp,
+  "At Risk": AlertCircle,
+  "Off Track": Clock,
+  "On Hold": PauseCircle,
+  "Completed": CheckCircle,
+  "Planning": PlayCircle,
+  "Archived": Archive,
+};
 
-    const groupedByDay = sortedProjects.reduce((acc, project) => {
-      const dateKey = formatInJakarta(project.start_date!, 'yyyy-MM-dd');
-      if (!acc[dateKey]) {
-        acc[dateKey] = [];
-      }
-      acc[dateKey].push(project);
-      return acc;
-    }, {} as Record<string, Project[]>);
+const ListView = ({ projects }: ListViewProps) => {
+  const today = new Date();
+  const yesterday = subDays(today, 1);
 
-    return Object.entries(groupedByDay);
-  }, [projects]);
-
-  useEffect(() => {
-    if (dayEntries.length === 0 || initialScrollDone.current) return;
-
-    const todayStr = format(new Date(), 'yyyy-MM-dd');
-    let targetIndex = dayEntries.findIndex(([dateStr]) => dateStr >= todayStr);
-
-    if (targetIndex === -1 && dayEntries.length > 0) {
-      targetIndex = dayEntries.length - 1;
-    }
-
-    if (targetIndex !== -1) {
-      const targetDateStr = dayEntries[targetIndex][0];
-      if (targetIndex >= visibleDays) {
-        setVisibleDays(targetIndex + 1);
-      }
-      setScrollToDate(targetDateStr);
-      initialScrollDone.current = true;
-    }
-  }, [dayEntries, visibleDays]);
-
-  useEffect(() => {
-    if (scrollToDate) {
-      const targetElement = dayRefs.current.get(scrollToDate);
-      if (targetElement) {
-        setTimeout(() => {
-          targetElement.scrollIntoView({ behavior: 'auto', block: 'start' });
-          setScrollToDate(null);
-        }, 100);
-      }
-    }
-  }, [scrollToDate, visibleDays]);
-
-  const formatVenue = (venue: string | null): string => {
-    if (!venue) return "";
-    try {
-      const venueObj = JSON.parse(venue);
-      const name = venueObj.name || '';
-      const address = venueObj.address || '';
-      const parts = [name, address].filter(Boolean);
-      return parts.join(', ');
-    } catch (e) {
-      return venue;
-    }
+  const formatDateGroup = (dateStr: string) => {
+    const date = new Date(dateStr);
+    if (isSameDay(date, today)) return "Today";
+    if (isSameDay(date, yesterday)) return "Yesterday";
+    return format(date, "MMMM d, yyyy");
   };
 
-  const visibleDayEntries = dayEntries.slice(0, visibleDays);
-
-  let lastMonth: string | null = null;
-
-  if (projects.length > 0 && dayEntries.length === 0) {
-    return (
-      <div className="flex items-center justify-center h-40 text-muted-foreground">
-        Tidak ada proyek yang dijadwalkan.
-      </div>
-    );
-  }
+  const groupedProjects = projects.reduce((acc, project) => {
+    const dateGroup = formatDateGroup(project.created_at);
+    if (!acc[dateGroup]) {
+      acc[dateGroup] = [];
+    }
+    acc[dateGroup].push(project);
+    return acc;
+  }, {} as { [key: string]: Project[] });
 
   return (
-    <div className="space-y-4">
-      {visibleDayEntries.map(([dateStr, projectsOnDay]) => {
-        const date = new Date(`${dateStr}T00:00:00`);
-        const currentMonth = formatInJakarta(date, 'MMMM yyyy');
-        const showMonthHeader = currentMonth !== lastMonth;
-        lastMonth = currentMonth;
+    <div className="space-y-6">
+      {Object.entries(groupedProjects).map(([dateGroup, projectsInGroup]) => (
+        <div key={dateGroup}>
+          <h3 className="text-lg font-semibold mb-3 px-1">{dateGroup}</h3>
+          <div className="space-y-2">
+            {projectsInGroup.map((project) => {
+              const statusStyle = getStatusStyles(project.status);
+              const Icon = statusIcons[project.status] || TrendingUp;
 
-        const dayOfWeek = formatInJakarta(date, 'EEE');
-        const dayOfMonth = formatInJakarta(date, 'dd');
-
-        return (
-          <div 
-            key={dateStr}
-            ref={el => {
-                if (el) dayRefs.current.set(dateStr, el);
-                else dayRefs.current.delete(dateStr);
-            }}
-          >
-            {showMonthHeader && (
-              <h2 className="text-lg font-semibold my-4 pl-2">{currentMonth}</h2>
-            )}
-            <div className="flex items-start space-x-2 sm:space-x-4">
-              <div className="flex flex-col items-center w-10 sm:w-12 text-center flex-shrink-0">
-                <span className="text-xs sm:text-sm text-muted-foreground">{dayOfWeek}</span>
-                <span className="text-lg sm:text-xl font-bold text-primary">{dayOfMonth}</span>
-              </div>
-              <div className="flex-1 space-y-3 pt-1 min-w-0">
-                {projectsOnDay.map(project => {
-                  const startDate = project.start_date ? new Date(project.start_date) : null;
-                  const dueDate = project.due_date ? new Date(project.due_date) : null;
-                  let displayDueDate = dueDate;
-                  let isMultiDay = false;
-
-                  if (startDate && dueDate) {
-                    const isExclusiveEndDate =
-                      dueDate.getUTCHours() === 0 &&
-                      dueDate.getUTCMinutes() === 0 &&
-                      dueDate.getUTCSeconds() === 0 &&
-                      dueDate.getUTCMilliseconds() === 0 &&
-                      !isSameDay(startDate, dueDate);
-
-                    const adjustedDueDate = isExclusiveEndDate ? subDays(dueDate, 1) : dueDate;
-                    
-                    isMultiDay = !isSameDay(startDate, adjustedDueDate);
-                    displayDueDate = adjustedDueDate;
-                  }
-                  
-                  const formattedVenue = formatVenue(project.venue);
-
-                  return (
-                    <div 
-                      key={project.id} 
-                      className="bg-card border border-l-4 rounded-lg p-2 sm:p-3 flex items-center justify-between hover:shadow-md transition-shadow group"
-                      style={{ borderLeftColor: getStatusStyles(project.status).hex }}
-                    >
-                      <div 
-                        className="flex-1 flex items-center space-x-3 cursor-pointer min-w-0"
-                        onClick={() => navigate(`/projects/${project.slug}`)}
-                      >
-                        <div className="w-32 text-sm text-muted-foreground hidden md:block">
-                          <div className="flex items-center gap-2">
-                            <Clock size={14} />
-                            <span>Seharian</span>
-                          </div>
-                          {isMultiDay && displayDueDate && (
-                            <Badge variant="outline" className="mt-1.5 font-normal text-xs">
-                              Hingga {formatInJakarta(displayDueDate, 'd MMM')}
-                            </Badge>
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium truncate flex items-center gap-2" title={project.name}>
-                            {project.status === 'Completed' && <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />}
-                            {project.name}
-                          </p>
-                          {project.venue && (
-                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-1">
-                              <MapPin size={12} />
-                              <span className="truncate" title={formattedVenue}>{formattedVenue}</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center space-x-1 sm:space-x-2 flex-shrink-0 pl-2">
-                        <div onClick={(e) => e.stopPropagation()}>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8 p-0">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem className="text-destructive" onSelect={() => onDeleteProject(project.id)}>
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                <span>Delete</span>
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
-                        <div className="flex flex-shrink-0 -space-x-2">
-                          {project.assignedTo.slice(0, 3).map((user) => (
-                            <Avatar key={user.id} className="h-6 w-6 sm:h-8 sm:w-8 border-2 border-card">
-                              <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} alt={user.name} />
-                              <AvatarFallback style={generatePastelColor(user.id)}>{user.initials}</AvatarFallback>
-                            </Avatar>
-                          ))}
-                        </div>
+              return (
+                <TooltipProvider key={project.id}>
+                  <Link
+                    to={`/projects/${project.slug}`}
+                    className="bg-card border border-l-4 rounded-lg p-2 sm:p-3 flex items-center justify-between hover:shadow-md transition-shadow group"
+                    style={{ borderLeftColor: statusStyle.hex }}
+                  >
+                    <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Icon className={`h-5 w-5 sm:h-6 sm:w-6 ${statusStyle.tw.split(' ')[0].replace('bg-', 'text-')}`} />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{project.status}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold truncate group-hover:text-primary">{project.name}</p>
+                        <p className="text-xs sm:text-sm text-muted-foreground truncate">{project.category}</p>
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-            </div>
+
+                    <div className="flex items-center gap-3 sm:gap-6 ml-4">
+                      <div className="hidden md:flex items-center gap-3 text-muted-foreground">
+                        <div className="flex items-center gap-1">
+                          <MessageSquare className="h-4 w-4" />
+                          <span className="text-sm">{project.comments?.length || 0}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Paperclip className="h-4 w-4" />
+                          <span className="text-sm">{project.briefFiles?.length || 0}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <ListChecks className="h-4 w-4" />
+                          <span className="text-sm">{project.tasks?.length || 0}</span>
+                        </div>
+                      </div>
+
+                      {project.due_date && (
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <Badge variant="outline" className="hidden lg:flex items-center gap-1.5">
+                              <Calendar className="h-3.5 w-3.5" />
+                              {format(new Date(project.due_date), "d MMM", { locale: indonesia })}
+                            </Badge>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Due Date: {format(new Date(project.due_date), "PPP")}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
+
+                      <div className="flex items-center -space-x-2">
+                        {project.assignedTo?.slice(0, 3).map((user) => (
+                          <Tooltip key={user.id}>
+                            <TooltipTrigger>
+                              <Avatar key={user.id} className="h-6 w-6 sm:h-8 sm:w-8 border-2 border-card">
+                                <AvatarImage src={getAvatarUrl(user.avatar_url) || undefined} alt={user.name} />
+                                <AvatarFallback style={{ backgroundColor: generatePastelColor(user.id) }}>{user.initials}</AvatarFallback>
+                              </Avatar>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>{user.name}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        ))}
+                        {project.assignedTo && project.assignedTo.length > 3 && (
+                          <Avatar className="h-6 w-6 sm:h-8 sm:w-8 border-2 border-card">
+                            <AvatarFallback>+{project.assignedTo.length - 3}</AvatarFallback>
+                          </Avatar>
+                        )}
+                      </div>
+                    </div>
+                  </Link>
+                </TooltipProvider>
+              );
+            })}
           </div>
-        );
-      })}
-      {dayEntries.length > visibleDays && (
-        <div className="text-center mt-6">
-          <Button variant="outline" onClick={() => setVisibleDays(prev => prev + 10)}>
-            Load More
-          </Button>
         </div>
-      )}
+      ))}
     </div>
   );
 };
