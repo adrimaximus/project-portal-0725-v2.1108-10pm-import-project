@@ -20,7 +20,7 @@ import {
 import StatusBadge from "../StatusBadge";
 import { getStatusStyles, cn, formatInJakarta, getPaymentStatusStyles } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import { getMonth, getYear, isSameDay, subDays } from 'date-fns';
+import { getMonth, getYear, isSameDay, subDays, isValid } from 'date-fns';
 import { toZonedTime } from 'date-fns-tz';
 import {
   Tooltip,
@@ -41,9 +41,17 @@ interface TableViewProps {
 const formatProjectDateRange = (startDateStr: string | null | undefined, dueDateStr: string | null | undefined): string => {
   if (!startDateStr) return '-';
 
-  const timeZone = 'Asia/Jakarta';
   const startDate = new Date(startDateStr);
+  if (!isValid(startDate)) {
+    return 'Invalid Date';
+  }
+
   let dueDate = dueDateStr ? new Date(dueDateStr) : startDate;
+  if (!isValid(dueDate)) {
+    dueDate = startDate;
+  }
+  
+  const timeZone = 'Asia/Jakarta';
 
   // An exclusive end date (e.g., from Google Calendar for an all-day event) is stored as the next day at midnight UTC.
   const isExclusiveEndDate = 

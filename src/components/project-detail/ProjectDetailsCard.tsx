@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Project as BaseProject, PROJECT_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS, Person } from "@/types";
 import { Calendar, Wallet, Briefcase, MapPin, ListTodo, CreditCard, User, Building } from "lucide-react";
-import { isSameDay, subDays } from "date-fns";
+import { isSameDay, subDays, isValid } from "date-fns";
 import { DateRangePicker } from "../DateRangePicker";
 import { DateRange } from "react-day-picker";
 import { CurrencyInput } from "../ui/currency-input";
@@ -145,7 +145,12 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetail
   const renderDateRange = () => {
     if (!project.start_date) return 'N/A';
     const start = new Date(project.start_date);
-    const end = project.due_date ? new Date(project.due_date) : start;
+    if (!isValid(start)) return 'Invalid Start Date';
+
+    let end = project.due_date ? new Date(project.due_date) : start;
+    if (!isValid(end)) {
+      end = start;
+    }
 
     const isExclusiveEndDate =
       project.due_date &&

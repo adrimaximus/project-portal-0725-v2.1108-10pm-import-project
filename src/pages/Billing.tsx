@@ -3,7 +3,7 @@ import PortalLayout from "@/components/PortalLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useProjects } from "@/hooks/useProjects";
 import { PaymentStatus, Project, Invoice, ExtendedProject, Member, Owner } from "@/types";
-import { addDays, isPast } from "date-fns";
+import { addDays, isPast, isValid } from "date-fns";
 import { Loader2 } from "lucide-react";
 import { EditInvoiceDialog } from "@/components/billing/EditInvoiceDialog";
 import { useProjectMutations } from "@/hooks/useProjectMutations";
@@ -32,7 +32,13 @@ const Billing = () => {
         return null;
       }
       
-      const dueDate = addDays(new Date(eventDate), 30);
+      const eventDateObj = new Date(eventDate);
+      if (!isValid(eventDateObj)) {
+        console.warn(`Invalid eventDate for project ${project.name}: ${eventDate}`);
+        return null;
+      }
+      
+      const dueDate = addDays(eventDateObj, 30);
 
       let finalStatus = project.payment_status;
       if (['Unpaid', 'Pending', 'In Process'].includes(finalStatus) && isPast(dueDate)) {
@@ -115,6 +121,9 @@ const Billing = () => {
       }
       if (aValue === null || aValue === undefined) return 1;
       if (bValue === null || bValue === undefined) return -1;
+      if (aValue instanceof Date && bValue instanceof Date) {
+        return sortDirection === 'asc' ? aValue.getTime() - bValue.getTime() : bValue.getTime() - aValue.getTime();
+      }
       if (typeof aValue === 'string' && typeof bValue === 'string') {
         return sortDirection === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
       }
