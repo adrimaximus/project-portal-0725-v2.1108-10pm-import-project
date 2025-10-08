@@ -1,29 +1,22 @@
-import { PaymentStatus, PAYMENT_STATUS_OPTIONS } from "@/types";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dispatch, SetStateAction } from "react";
+import { Input } from "@/components/ui/input";
+import { Search } from "lucide-react";
 
 export interface BillingToolbarProps {
-  statusFilter: PaymentStatus | 'all';
-  onStatusFilterChange: Dispatch<SetStateAction<PaymentStatus | 'all'>>;
+  searchTerm: string;
+  onSearchTermChange: (term: string) => void;
 }
 
-const BillingToolbar = ({ statusFilter, onStatusFilterChange }: BillingToolbarProps) => {
+const BillingToolbar = ({ searchTerm, onSearchTermChange }: BillingToolbarProps) => {
   return (
-    <div className="flex items-center justify-between mb-4">
-      <div className="flex items-center gap-2">
-        <Select value={statusFilter} onValueChange={(value) => onStatusFilterChange(value as PaymentStatus | 'all')}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Filter by status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Statuses</SelectItem>
-            {PAYMENT_STATUS_OPTIONS.map(option => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+    <div className="flex items-center justify-between">
+      <div className="relative w-full max-w-sm">
+        <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Search by invoice #, project, client, PO #, or channel..."
+          value={searchTerm}
+          onChange={(e) => onSearchTermChange(e.target.value)}
+          className="pl-8"
+        />
       </div>
     </div>
   );

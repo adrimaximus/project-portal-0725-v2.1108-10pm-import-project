@@ -9,11 +9,12 @@ import BillingToolbar from '@/components/billing/BillingToolbar';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 const Billing = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [statusFilter, setStatusFilter] = useState<PaymentStatus | 'all'>('all');
+  const [searchTerm, setSearchTerm] = useState('');
 
   const { data: projects = [], isLoading, error } = useQuery<ExtendedProject[]>({
     queryKey: ['dashboardProjects'],
@@ -32,7 +33,7 @@ const Billing = () => {
         if (!project.payment_due_date) return null;
 
         return {
-            id: project.id,
+            id: project.invoice_number || `INV-${project.id.substring(0, 8).toUpperCase()}`,
             projectId: project.slug,
             projectName: project.name,
             amount: project.budget || 0,
@@ -58,11 +59,20 @@ const Billing = () => {
     .filter((invoice): invoice is Invoice => invoice !== null), [projects]);
 
   const filteredInvoices = useMemo(() => {
-    if (statusFilter === 'all') {
+    if (!searchTerm) {
       return invoices;
     }
-    return invoices.filter(invoice => invoice.status === statusFilter);
-  }, [invoices, statusFilter]);
+    const lowercasedFilter = searchTerm.toLowerCase();
+    return invoices.filter(invoice => {
+      return (
+        invoice.id.toLowerCase().includes(lowercasedFilter) ||
+        invoice.projectName.toLowerCase().includes(lowercasedFilter) ||
+        (invoice.clientName && invoice.clientName.toLowerCase().includes(lowercasedFilter)) ||
+        (invoice.poNumber && invoice.poNumber.toLowerCase().includes(lowercasedFilter)) ||
+        (invoice.channel && invoice.channel.toLowerCase().includes(lowercasedFilter))
+      );
+    });
+  }, [invoices, searchTerm]);
 
   const updateInvoiceMutation = useMutation({
     mutationFn: async ({ invoiceId, updates }: { invoiceId: string, updates: Partial<Invoice> }) => {
@@ -105,13 +115,29 @@ const Billing = () => {
   }
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-bold">Billing</h1>
-      <BillingSummary invoices={invoices} />
-      <div className="bg-card p-4 rounded-lg shadow-sm">
-        <BillingToolbar statusFilter={statusFilter} onStatusFilterChange={setStatusFilter} />
-        <DataTable columns={columns} data={filteredInvoices} />
+    <div className="space-y-6 p-4 md:p-6">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">Billing</h1>
+        <p className="text-muted-foreground">
+          View your invoices and manage your payment details, derived from your projects.
+        </p>
       </div>
+      
+      <BillingToolbar 
+        searchTerm={searchTerm}
+        onSearchTermChange={setSearchTerm}
+      />
+
+      <BillingSummary invoices={invoices} projects={projects} />
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Invoice History</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <DataTable columns={columns} data={filteredInvoices} />
+        </CardContent>
+      </Card>
     </div>
   );
 };

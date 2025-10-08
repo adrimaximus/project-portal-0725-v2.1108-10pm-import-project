@@ -30,13 +30,13 @@ const calculateDueDate = (invoice: Invoice): string => {
 
 export const getColumns = ({ onUpdate, currentUser }: { onUpdate: (invoiceId: string, updates: Partial<Invoice>) => void, currentUser: User | null }): ColumnDef<Invoice>[] => [
   {
+    accessorKey: "id",
+    header: "Invoice #",
+    cell: ({ row }) => <div className="font-mono text-xs">{row.original.id}</div>,
+  },
+  {
     accessorKey: "projectName",
-    header: ({ column }) => (
-      <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
-        Project
-        <ArrowUpDown className="ml-2 h-4 w-4" />
-      </Button>
-    ),
+    header: "Project",
     cell: ({ row }) => (
       <Link to={`/projects/${row.original.projectId}`} className="font-medium text-primary hover:underline">
         {row.original.projectName}
@@ -60,6 +60,40 @@ export const getColumns = ({ onUpdate, currentUser }: { onUpdate: (invoiceId: st
     )
   },
   {
+    id: "owner",
+    header: "Owner",
+    cell: ({ row }) => {
+        const owner = row.original.projectOwner;
+        if (!owner) return "N/A";
+        return (
+            <div className="flex items-center gap-2">
+                <Avatar className="h-8 w-8">
+                    <AvatarImage src={owner.avatar_url || undefined} alt={owner.name} />
+                    <AvatarFallback>{owner.initials}</AvatarFallback>
+                </Avatar>
+            </div>
+        )
+    }
+  },
+  {
+    id: "projectAdmin",
+    header: "Project Admin",
+    cell: ({ row }) => {
+        const admins = row.original.assignedMembers.filter(m => m.role === 'admin' || m.role === 'owner');
+        if (admins.length === 0) return "N/A";
+        return (
+            <div className="flex -space-x-2">
+                {admins.slice(0, 3).map(admin => (
+                    <Avatar key={admin.id} className="h-8 w-8 border-2 border-background">
+                        <AvatarImage src={admin.avatar_url || undefined} alt={admin.name} />
+                        <AvatarFallback>{admin.initials}</AvatarFallback>
+                    </Avatar>
+                ))}
+            </div>
+        )
+    }
+  },
+  {
     accessorKey: "status",
     header: "Status",
     cell: ({ row }) => {
@@ -69,14 +103,21 @@ export const getColumns = ({ onUpdate, currentUser }: { onUpdate: (invoiceId: st
     },
   },
   {
+    accessorKey: "poNumber",
+    header: "PO #",
+    cell: ({ row }) => row.original.poNumber || "N/A",
+  },
+  {
     accessorKey: "amount",
     header: ({ column }) => (
-      <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
-        Amount
-        <ArrowUpDown className="ml-2 h-4 w-4" />
-      </Button>
+      <div className="text-right">
+        <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
+          Amount
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      </div>
     ),
-    cell: ({ row }) => `Rp ${row.original.amount.toLocaleString('id-ID')}`,
+    cell: ({ row }) => <div className="text-right">Rp {row.original.amount.toLocaleString('id-ID')}</div>,
   },
   {
     accessorKey: "dueDate",
@@ -85,7 +126,7 @@ export const getColumns = ({ onUpdate, currentUser }: { onUpdate: (invoiceId: st
   },
   {
     id: "attachments",
-    header: "Attachments",
+    header: "Attachment",
     cell: ({ row }) => {
         const attachments = row.original.invoiceAttachments;
         if (!attachments || attachments.length === 0) return "N/A";
