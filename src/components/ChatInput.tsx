@@ -23,7 +23,7 @@ interface ChatInputProps {
   onCancelReply: () => void;
 }
 
-export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({ 
+export const ChatInput = forwardRef<Mention, ChatInputProps>(({ 
   onSendMessage, 
   onTyping, 
   isSending, 
@@ -38,7 +38,7 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
   const { theme } = useTheme();
   const [suggestions, setSuggestions] = useState<any[]>([]);
 
-  const userSuggestions = (selectedConversation?.participants || []).map(m => ({
+  const userSuggestions = ((selectedConversation as any)?.participants || []).map((m: any) => ({
     id: m.id,
     display: m.name,
     avatar_url: m.avatar_url,
@@ -88,7 +88,7 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
     }
   };
 
-  const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+  const handleTextChange = (e: any) => {
     setText(e.target.value);
     triggerTyping();
   };
@@ -172,8 +172,8 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
       {replyTo && (
         <div className="p-2 mb-2 bg-muted rounded-md flex justify-between items-center">
           <div className="text-sm overflow-hidden">
-            <p className="font-semibold text-primary">Replying to {replyTo.sender_first_name}</p>
-            <p className="text-xs text-muted-foreground truncate">{replyTo.content}</p>
+            <p className="font-semibold text-primary">Replying to {(replyTo as any).sender_first_name}</p>
+            <p className="text-xs text-muted-foreground truncate">{(replyTo as any).content}</p>
           </div>
           <Button variant="ghost" size="icon" onClick={onCancelReply} className="h-7 w-7">
             <X className="h-4 w-4" />

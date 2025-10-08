@@ -1,69 +1,135 @@
-import { useRef, useState } from "react";
-import ChatHeader from "./ChatHeader";
-import { ChatConversation } from "./ChatConversation";
-import { ChatInput } from "./ChatInput";
-import ChatPlaceholder from "./ChatPlaceholder";
-import { forwardRef } from "react";
-import { useChatContext } from "@/contexts/ChatContext";
-import AiChatView from "./AiChatView";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
-import { Message } from "@/types";
+import { useState, useRef, useEffect, forwardRef } from 'react';
+import { ChatInput } from './ChatInput';
+import { MessageList } from './MessageList';
+import { Message, Conversation } from '@/types';
+import { useChatContext } from '@/contexts/ChatContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase';
+import { toast } from 'sonner';
+import { Mention } from 'primereact/mention';
 
 interface ChatWindowProps {
-  onBack?: () => void;
+  conversation: Conversation;
 }
 
-export const ChatWindow = forwardRef<HTMLTextAreaElement, ChatWindowProps>(({ onBack }, ref) => {
-  const { selectedConversation, isSomeoneTyping, sendMessage, sendTyping, isSendingMessage, leaveGroup, refetchConversations } = useChatContext();
+const ChatWindow = forwardRef<Mention, ChatWindowProps>(({ conversation }, ref) => {
+  const { user } = useAuth();
+  const { addMessage, updateMessage } = useChatContext();
+  const [isSending, setIsSending] = useState(false);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
 
-  const handleClearChat = async (conversationId: string) => {
-    const { error } = await supabase.from('messages').delete().eq('conversation_id', conversationId);
-    if (error) toast.error("Failed to clear chat history.");
-    else {
-      toast.success("Chat history has been cleared.");
-      refetchConversations();
+  const handleSendMessage = async (text: string, attachment: File | null, replyToMessageId: string | null) => {
+    if (!user || !conversation) return;
+    if (!text.trim() && !attachment) return;
+
+    setIsSending(true);
+
+    let attachmentUrl: string | null = null;
+    let attachmentName: string | null = null;
+    let attachmentType: string | null = null;
+
+    if (attachment) {
+      const fileExt = attachment.name.split('.').pop();
+      const fileName = `${Math.random()}.${fileExt}`;
+      const filePath = `${user.id}/${conversation.conversation_id}/${fileName}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('chat_attachments')
+        .upload(filePath, attachment);
+
+      if (uploadError) {
+        toast.error(`Failed to upload attachment: ${uploadError.message}`);
+        setIsSending(false);
+        return;
+      }
+
+      const { data } = supabase.storage.from('chat_attachments').getPublicUrl(filePath);
+      attachmentUrl = data.publicUrl;
+      attachmentName = attachment.name;
+      attachmentType = attachment.type;
+    }
+
+    const tempId = `temp_${Date.now()}`;
+    const messageData = {
+      id: tempId,
+      conversation_id: conversation.conversation_id,
+      sender_id: user.id,
+      content: text,
+      created_at: new Date().toISOString(),
+      attachment_url: attachmentUrl,
+      attachment_name: attachmentName,
+      attachment_type: attachmentType,
+      reply_to_message_id: replyToMessageId,
+      isSending: true,
+      sender_first_name: user.first_name,
+      sender_last_name: user.last_name,
+      sender_avatar_url: user.avatar_url,
+      sender_email: user.email,
+    };
+
+    addMessage(conversation.conversation_id, messageData);
+    setReplyTo(null);
+
+    const { data: insertedMessage, error } = await supabase
+      .from('messages')
+      .insert({
+        conversation_id: conversation.conversation_id,
+        sender_id: user.id,
+        content: text,
+        attachment_url: attachmentUrl,
+        attachment_name: attachmentName,
+        attachment_type: attachmentType,
+        reply_to_message_id: replyToMessageId,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      toast.error(`Failed to send message: ${error.message}`);
+      updateMessage(conversation.conversation_id, tempId, { isSending: false, error: true });
+    } else {
+      updateMessage(conversation.conversation_id, tempId, { ...insertedMessage, isSending: false });
+    }
+
+    setIsSending(false);
+  };
+
+  const handleTyping = () => {
+    if (conversation) {
+      const channel = supabase.channel(`chat:${conversation.conversation_id}`);
+      channel.track({
+        event: 'typing',
+        user_id: user?.id,
+        user_name: user?.first_name,
+      });
     }
   };
 
-  if (!selectedConversation) {
-    return <ChatPlaceholder />;
-  }
-
-  if (selectedConversation.id === 'ai-assistant') {
-    return <AiChatView ref={ref} onBack={onBack} />;
-  }
-
-  const handleSendMessage = (text: string, attachmentFile: File | null) => {
-    sendMessage(text, attachmentFile, replyTo?.id);
-    setReplyTo(null);
+  const handleSetReplyTo = (message: Message) => {
+    setReplyTo(message);
+    if (ref && 'current' in ref && ref.current) {
+      const input = ref.current.getInput() as HTMLTextAreaElement;
+      if (input) input.focus();
+    }
   };
 
   return (
-    <div className="flex flex-col h-full bg-background overflow-hidden">
-      <ChatHeader
-        onBack={onBack}
-        typing={isSomeoneTyping}
-        conversation={selectedConversation}
-        onLeaveGroup={leaveGroup}
-        onClearChat={handleClearChat}
-        onRefetchConversations={refetchConversations}
+    <div className="flex flex-col h-full">
+      <MessageList 
+        messages={conversation.messages || []} 
+        onReply={handleSetReplyTo}
       />
-      <ChatConversation
-        messages={selectedConversation.messages}
-        members={selectedConversation.members || []}
-        onReply={setReplyTo}
-      />
-      <ChatInput 
-        ref={ref} 
+      <ChatInput
+        ref={ref}
         onSendMessage={handleSendMessage}
-        onTyping={sendTyping}
-        isSending={isSendingMessage}
-        conversationId={selectedConversation.id}
+        onTyping={handleTyping}
+        isSending={isSending}
+        conversationId={conversation.conversation_id}
         replyTo={replyTo}
         onCancelReply={() => setReplyTo(null)}
       />
     </div>
   );
 });
+
+export default ChatWindow;
