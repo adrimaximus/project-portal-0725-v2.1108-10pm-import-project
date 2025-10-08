@@ -27,6 +27,3 @@ export type Collaborator = {
   initials: string;
   avatar_url?: string | null;
 };
-
-// This line is important if you have auto-generated Supabase types
-export * from './db-types';
