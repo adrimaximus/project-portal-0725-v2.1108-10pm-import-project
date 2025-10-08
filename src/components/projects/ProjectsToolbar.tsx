@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { List, LayoutGrid, KanbanSquare, ListChecks, CheckSquare, PlusCircle, Download, RefreshCw, ListPlus, Filter } from "lucide-react";
+import { List, LayoutGrid, KanbanSquare, ListChecks, CheckSquare, PlusCircle, Download, RefreshCw, ListPlus } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -20,8 +20,6 @@ type ProjectsToolbarProps = {
   isGCalConnected: boolean | undefined;
   onImportClick: () => void;
   onRefreshClick: () => void;
-  myProjectsOnly: boolean;
-  onToggleMyProjectsOnly: () => void;
 };
 
 const ProjectsToolbar = ({
@@ -37,8 +35,6 @@ const ProjectsToolbar = ({
   isGCalConnected,
   onImportClick,
   onRefreshClick,
-  myProjectsOnly,
-  onToggleMyProjectsOnly,
 }: ProjectsToolbarProps) => {
   return (
     <div className="p-4 border-t flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -50,16 +46,6 @@ const ProjectsToolbar = ({
           <ToggleGroupItem value="tasks" aria-label="Tasks list view"><ListChecks className="h-4 w-4" /></ToggleGroupItem>
           <ToggleGroupItem value="tasks-kanban" aria-label="Tasks kanban view"><CheckSquare className="h-4 w-4" /></ToggleGroupItem>
         </ToggleGroup>
-
-        <Button
-          variant={myProjectsOnly ? "secondary" : "outline"}
-          size="icon"
-          onClick={onToggleMyProjectsOnly}
-          title="Show my projects only"
-        >
-          <Filter className="h-4 w-4" />
-          <span className="sr-only">Show my projects only</span>
-        </Button>
 
         {view === 'kanban' && (
           <Select value={kanbanGroupBy} onValueChange={onKanbanGroupByChange}>
