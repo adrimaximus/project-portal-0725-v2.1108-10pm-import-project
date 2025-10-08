@@ -99,7 +99,7 @@ const CompaniesView = () => {
     };
 
     const visibleProperties = properties.filter(prop => prop.type !== 'image');
-    const totalColumns = 5 + visibleProperties.length;
+    const totalColumns = 6 + visibleProperties.length;
 
     return (
         <TooltipProvider>
@@ -144,6 +144,7 @@ const CompaniesView = () => {
                                 <TableHead className="min-w-[250px] md:sticky left-0 bg-card">Company</TableHead>
                                 <TableHead className="min-w-[200px]">Legal Name</TableHead>
                                 <TableHead className="min-w-[300px]">Address</TableHead>
+                                <TableHead className="min-w-[120px]">TOP (Days)</TableHead>
                                 {visibleProperties.map(prop => (
                                     <TableHead key={prop.id} className="min-w-[200px]">{prop.label}</TableHead>
                                 ))}
@@ -199,6 +200,7 @@ const CompaniesView = () => {
                                                     );
                                                 })()}
                                             </TableCell>
+                                            <TableCell>{(company as any).term_of_payment_days ?? 0}</TableCell>
                                             {visibleProperties.map(prop => (
                                                 <TableCell key={prop.id}>
                                                     {renderCustomPropertyValue(company.custom_properties?.[prop.name], prop.type)}
