@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { format, getMonth } from 'date-fns';
-import { getStatusStyles, getPaymentStatusStyles } from '@/lib/utils';
+import { getProjectStatusStyles, getPaymentStatusStyles } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 
 type ChartType = 'quantity' | 'value' | 'project_status' | 'payment_status' | 'company_quantity' | 'company_value';
@@ -167,7 +167,7 @@ const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
             <Tooltip content={<CustomTooltip chartType={chartType} />} cursor={{ fill: 'hsl(var(--muted))' }} />
             <Legend content={<CustomLegend />} />
             {PROJECT_STATUS_OPTIONS.map(status => (
-              <Bar key={status.value} dataKey={status.value} stackId="a" fill={getStatusStyles(status.value).hex} name={status.label} radius={[4, 4, 0, 0]} />
+              <Bar key={status.value} dataKey={status.value} stackId="a" fill={getProjectStatusStyles(status.value).hex} name={status.label} radius={[4, 4, 0, 0]} />
             ))}
           </BarChart>
         );

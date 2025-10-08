@@ -2,7 +2,7 @@ import { Task, TaskAssignee, TaskAttachment } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { generatePastelColor, getPriorityStyles, isOverdue, cn, getAvatarUrl, getInitials } from '@/lib/utils';
+import { generatePastelColor, getPriorityStyles, isOverdue, cn, getAvatarUrl, getInitials, formatTaskText } from '@/lib/utils';
 import { Link } from 'react-router-dom';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -20,15 +20,6 @@ interface TasksKanbanCardProps {
   onEdit: (task: Task) => void;
   onDelete: (taskId: string) => void;
 }
-
-const processMentions = (text: string | null | undefined) => {
-  if (!text) return '';
-  let processedText = text.replace(/@\[([^\]]+)\]\(([^)]+)\)/g, '@$1');
-  if (processedText.length > 50) {
-    return processedText.substring(0, 50) + '...';
-  }
-  return processedText;
-};
 
 const TasksKanbanCard = ({ task, onEdit, onDelete }: TasksKanbanCardProps) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id });
@@ -101,7 +92,7 @@ const TasksKanbanCard = ({ task, onEdit, onDelete }: TasksKanbanCardProps) => {
             {task.status === 'Done' && <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />}
             {task.originTicketId && <Ticket className={cn("h-4 w-4 flex-shrink-0", task.status === 'Done' ? 'text-green-500' : 'text-red-500')} />}
             <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ p: 'span' }}>
-              {processMentions(task.title)}
+              {formatTaskText(task.title)}
             </ReactMarkdown>
           </CardTitle>
           <DropdownMenu>
@@ -136,8 +127,8 @@ const TasksKanbanCard = ({ task, onEdit, onDelete }: TasksKanbanCardProps) => {
             </div>
           )}
           {task.description && (
-            <p className="text-xs text-muted-foreground line-clamp-2" title={task.description}>
-              {task.description}
+            <p className="text-xs text-muted-foreground line-clamp-2" title={formatTaskText(task.description)}>
+              {formatTaskText(task.description)}
             </p>
           )}
         </div>

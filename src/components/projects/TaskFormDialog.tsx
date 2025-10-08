@@ -12,7 +12,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { CalendarIcon, Loader2 } from 'lucide-react';
-import { cn, getTaskStatusStyles } from '@/lib/utils';
+import { cn, getTaskStatusStyles, getPriorityStyles } from '@/lib/utils';
 import { format } from 'date-fns';
 import { useProjects } from '@/hooks/useProjects';
 import { MultiSelect } from '@/components/ui/multi-select';
@@ -295,7 +295,15 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task }: Ta
               <FormLabel>Priority</FormLabel>
               <Select onValueChange={field.onChange} value={field.value}>
                 <FormControl>
-                  <SelectTrigger><SelectValue placeholder="Select priority" /></SelectTrigger>
+                  <SelectTrigger>
+                    {field.value ? (
+                      <Badge variant="outline" className={cn(getPriorityStyles(field.value).tw, 'border-0 font-normal')}>
+                        {TASK_PRIORITY_OPTIONS.find(opt => opt.value === field.value)?.label}
+                      </Badge>
+                    ) : (
+                      <SelectValue placeholder="Select priority" />
+                    )}
+                  </SelectTrigger>
                 </FormControl>
                 <SelectContent>
                   {TASK_PRIORITY_OPTIONS.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}

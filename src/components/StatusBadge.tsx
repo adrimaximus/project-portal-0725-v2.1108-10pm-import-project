@@ -1,4 +1,4 @@
-import { cn, getStatusStyles } from "@/lib/utils";
+import { cn, getProjectStatusStyles } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 
 interface StatusBadgeProps {
@@ -9,7 +9,7 @@ const StatusBadge = ({ status }: StatusBadgeProps) => {
   if (!status) {
     return null;
   }
-  const styles = getStatusStyles(status);
+  const styles = getProjectStatusStyles(status);
   return (
     <Badge className={cn(styles.tw)}>
       {status}

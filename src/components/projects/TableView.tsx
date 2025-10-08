@@ -18,7 +18,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import StatusBadge from "../StatusBadge";
-import { getStatusStyles, cn, formatInJakarta, getPaymentStatusStyles } from "@/lib/utils";
+import { getProjectStatusStyles, cn, formatInJakarta, getPaymentStatusStyles } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { getMonth, getYear, isSameDay, subDays } from 'date-fns';
 import { toZonedTime } from 'date-fns-tz';
@@ -51,7 +51,8 @@ const formatProjectDateRange = (startDateStr: string | null | undefined, dueDate
     dueDate.getUTCHours() === 0 &&
     dueDate.getUTCMinutes() === 0 &&
     dueDate.getUTCSeconds() === 0 &&
-    dueDate.getUTCMilliseconds() === 0;
+    dueDate.getUTCMilliseconds() === 0 &&
+    !isSameDay(startDate, dueDate);
   
   const zonedStartDate = toZonedTime(startDate, timeZone);
   const zonedDueDateCheck = toZonedTime(dueDate, timeZone);
@@ -146,7 +147,7 @@ const TableView = ({ projects, isLoading, onDeleteProject, sortConfig, requestSo
                   else rowRefs.current.delete(project.id);
                 }}
               >
-                <TableCell style={{ borderLeft: `4px solid ${getStatusStyles(project.status).hex}` }}>
+                <TableCell style={{ borderLeft: `4px solid ${getProjectStatusStyles(project.status).hex}` }}>
                   <Link to={`/projects/${project.slug}`} className="font-medium text-primary hover:underline">
                     {project.name}
                   </Link>

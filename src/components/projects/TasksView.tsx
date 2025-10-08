@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
-import { generatePastelColor, getPriorityStyles, getTaskStatusStyles, isOverdue, cn, getAvatarUrl, getInitials } from "@/lib/utils";
+import { generatePastelColor, getPriorityStyles, getTaskStatusStyles, isOverdue, cn, getAvatarUrl, getInitials, formatTaskText } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
@@ -144,12 +144,25 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
                         {task.originTicketId && <Ticket className={`h-4 w-4 flex-shrink-0 ${task.completed ? 'text-green-500' : 'text-red-500'}`} />}
                         <div className={`${task.completed ? 'line-through text-muted-foreground' : ''}`}>
                           <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ p: 'span' }}>
-                            {processMentions(task.title)}
+                            {formatTaskText(task.title)}
                           </ReactMarkdown>
                         </div>
                         {renderAttachments(task)}
                       </div>
-                      {task.description && <p className="text-xs text-muted-foreground mt-1 truncate">{task.description}</p>}
+                      {task.description && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <p className="text-xs text-muted-foreground mt-1 truncate cursor-default">
+                                {formatTaskText(task.description, 150)}
+                              </p>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p className="max-w-xs">{formatTaskText(task.description)}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
                       <div className="flex gap-1 flex-wrap mt-2">
                         {task.tags?.map(tag => (
                           <Badge key={tag.id} variant="outline" style={{ borderColor: tag.color, color: tag.color }}>{tag.name}</Badge>

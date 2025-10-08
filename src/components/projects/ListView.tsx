@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, Clock, Trash2, MapPin, CheckCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { getStatusStyles, formatInJakarta, generatePastelColor, getAvatarUrl } from '@/lib/utils';
+import { getProjectStatusStyles, formatInJakarta, generatePastelColor, getAvatarUrl } from '@/lib/utils';
 import { format, isSameDay, subDays } from 'date-fns';
 import {
   Tooltip,
@@ -137,6 +137,7 @@ const ListView = ({ projects, onDeleteProject }: { projects: Project[], onDelete
 
                   if (startDate && dueDate) {
                     const isExclusiveEndDate =
+                      project.due_date &&
                       dueDate.getUTCHours() === 0 &&
                       dueDate.getUTCMinutes() === 0 &&
                       dueDate.getUTCSeconds() === 0 &&
@@ -155,7 +156,7 @@ const ListView = ({ projects, onDeleteProject }: { projects: Project[], onDelete
                     <div 
                       key={project.id} 
                       className="bg-card border border-l-4 rounded-lg p-2 sm:p-3 flex items-center justify-between hover:shadow-md transition-shadow group"
-                      style={{ borderLeftColor: getStatusStyles(project.status).hex }}
+                      style={{ borderLeftColor: getProjectStatusStyles(project.status).hex }}
                     >
                       <div 
                         className="flex-1 flex items-center space-x-3 cursor-pointer min-w-0"

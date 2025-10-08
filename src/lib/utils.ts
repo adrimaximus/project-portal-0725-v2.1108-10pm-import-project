@@ -11,7 +11,7 @@ export function timeAgo(date: string | Date): string {
   return formatDistanceToNowStrict(new Date(date), { addSuffix: true });
 }
 
-export const getStatusStyles = (status: string) => {
+export const getProjectStatusStyles = (status: string) => {
   switch (status) {
     case 'Requested':
       return { tw: 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300', hex: '#3B82F6' };
@@ -98,13 +98,13 @@ export const formatInJakarta = (date: string | Date, formatString: string = 'dd 
 
 export const getPriorityStyles = (priority: string) => {
   switch (priority) {
-    case 'low':
+    case 'Low':
       return { tw: 'bg-gray-100 text-gray-800 dark:bg-gray-900/50 dark:text-gray-300', hex: '#A0AEC0' };
-    case 'medium':
+    case 'Normal':
       return { tw: 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300', hex: '#63B3ED' };
-    case 'high':
+    case 'High':
       return { tw: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300', hex: '#F6E05E' };
-    case 'urgent':
+    case 'Urgent':
       return { tw: 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300', hex: '#FC8181' };
     default:
       return { tw: 'bg-gray-100 text-gray-800 dark:bg-gray-900/50 dark:text-gray-300', hex: '#A0AEC0' };
@@ -153,4 +153,13 @@ export const getColorForTag = (tag: string): string => {
   }
   const hue = hash % 360;
   return `hsl(${hue}, 70%, 80%)`;
+};
+
+export const formatTaskText = (text: string | null | undefined, truncateLength?: number): string => {
+  if (!text) return '';
+  let processedText = text.replace(/@\[([^\]]+)\]\(([^)]+)\)/g, '@$1');
+  if (truncateLength && processedText.length > truncateLength) {
+    return processedText.substring(0, truncateLength) + '...';
+  }
+  return processedText;
 };

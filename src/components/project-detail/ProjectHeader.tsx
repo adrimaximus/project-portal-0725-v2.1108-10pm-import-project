@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Pencil, Loader2, MoreVertical, Trash2, CheckCircle, Link as LinkIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import StatusBadge from "../StatusBadge";
-import { getStatusStyles, cn } from "@/lib/utils";
+import { getProjectStatusStyles, cn } from "@/lib/utils";
 import { Input } from "../ui/input";
 import {
   DropdownMenu,
@@ -41,7 +41,7 @@ const ProjectHeader = ({
 }: ProjectHeaderProps) => {
   const navigate = useNavigate();
 
-  const statusStyles = getStatusStyles(project.status);
+  const statusStyles = getProjectStatusStyles(project.status);
   const isCompleted = project.status === 'Completed';
   const hasOpenTasks = project.tasks?.some(task => !task.completed);
 
