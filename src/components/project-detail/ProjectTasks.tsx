@@ -24,6 +24,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 interface ProjectTasksProps {
   project: Project;
@@ -32,6 +34,11 @@ interface ProjectTasksProps {
   onTaskStatusChange: (taskId: string, completed: boolean) => void;
   onTaskDelete: (taskId: string) => void;
 }
+
+const processMentions = (text: string | null | undefined) => {
+  if (!text) return '';
+  return text.replace(/@\[([^\]]+)\]\(([^)]+)\)/g, '**@$1**');
+};
 
 const ProjectTasks = ({
   project,
@@ -144,7 +151,7 @@ const ProjectTasks = ({
           return (
             <div
               key={task.id}
-              className={`flex items-center space-x-3 p-2 rounded-md hover:bg-muted ${
+              className={`flex items-start space-x-3 p-2 rounded-md hover:bg-muted ${
                 (task.priority as string) === 'high' ? 'bg-red-100 border-l-4 border-red-500' : ''
               }`}
             >
@@ -154,21 +161,28 @@ const ProjectTasks = ({
                 onCheckedChange={(checked) =>
                   onTaskStatusChange(task.id, !!checked)
                 }
+                className="mt-1"
               />
-              <div className="flex-1 flex items-center gap-2 min-w-0">
+              <div className="flex-1 flex items-start gap-2 min-w-0">
                 <label
                   htmlFor={`task-${task.id}`}
-                  className={`text-sm break-words cursor-pointer ${
+                  className={`text-sm break-words cursor-pointer w-full ${
                     task.completed ? "text-muted-foreground line-through" : ""
                   }`}
                 >
-                  {task.title}
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    components={{ p: 'span' }}
+                    className="w-full"
+                  >
+                    {processMentions(task.title)}
+                  </ReactMarkdown>
                 </label>
                 {(task as any).originTicketId && (
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger>
-                        <Badge variant={task.completed ? 'default' : 'outline'} className={task.completed ? 'bg-green-600 hover:bg-green-700 text-white' : ''}>
+                        <Badge variant={task.completed ? 'default' : 'outline'} className={`mt-0.5 ${task.completed ? 'bg-green-600 hover:bg-green-700 text-white' : ''}`}>
                           <Ticket className="h-3 w-3 mr-1" />
                           {task.completed ? 'Done' : 'Ticket'}
                         </Badge>

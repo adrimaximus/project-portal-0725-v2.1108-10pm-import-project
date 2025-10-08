@@ -39,6 +39,11 @@ interface ProjectCommentsProps {
   project: Project;
 }
 
+const processMentions = (text: string | null | undefined) => {
+  if (!text) return '';
+  return text.replace(/@\[([^\]]+)\]\(([^)]+)\)/g, '**@$1**');
+};
+
 const ProjectComments = ({ project }: ProjectCommentsProps) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -173,11 +178,6 @@ const ProjectComments = ({ project }: ProjectCommentsProps) => {
       queryClient.invalidateQueries({ queryKey: ['project', project.slug] });
     }
     setIsSubmitting(false);
-  };
-
-  const processMentions = (text: string | null | undefined) => {
-    if (!text) return '';
-    return text.replace(/@\[([^\]]+)\]\(([^)]+)\)/g, '**@$1**');
   };
 
   return (
