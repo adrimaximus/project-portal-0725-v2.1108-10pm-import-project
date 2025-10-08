@@ -1,118 +1,94 @@
-import { useState, useRef, forwardRef, useEffect } from 'react';
-import { ChatInput } from './ChatInput';
-import { Message as MessageType } from '@/types';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase';
-import { toast } from 'sonner';
-import { MessageList } from './MessageList';
-import { Mention } from 'primereact/mention';
+import { useAuth } from "@/contexts/AuthContext";
+import { useAiChat } from "@/hooks/useAiChat";
+import ChatHeader from "./ChatHeader";
+import { ChatConversation } from "./ChatConversation";
+import { ChatInput } from "./ChatInput";
+import { forwardRef, useMemo, useState } from "react";
+import { Conversation, Message } from "@/types";
+import { Link } from 'react-router-dom';
+import { Button } from './ui/button';
+import { Card, CardContent } from './ui/card';
+import { Loader2 } from 'lucide-react';
 
 interface AiChatViewProps {
-  initialMessages?: MessageType[];
+  onBack?: () => void;
 }
 
-const AiChatView = forwardRef<Mention, AiChatViewProps>(({ initialMessages = [] }, ref) => {
-  const { user } = useAuth();
-  const [messages, setMessages] = useState<MessageType[]>(initialMessages);
-  const [isSending, setIsSending] = useState(false);
+const AiChatView = forwardRef<HTMLTextAreaElement, AiChatViewProps>(({ onBack }, ref) => {
+  const { user: currentUser } = useAuth();
+  const { conversation, isLoading, sendMessage, aiUser, isConnected, isCheckingConnection } = useAiChat(currentUser);
+  const [replyTo, setReplyTo] = useState<Message | null>(null);
 
-  useEffect(() => {
-    const fetchHistory = async () => {
-      if (!user) return;
-      const { data, error } = await supabase
-        .from('ai_chat_history')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: true });
+  if (!currentUser) return null;
 
-      if (error) {
-        console.error('Error fetching chat history:', error);
-        toast.error('Failed to load chat history.');
-      } else {
-        const formattedMessages: MessageType[] = data.map((item: any) => ({
-          id: item.id,
-          sender_id: item.sender === 'user' ? user.id : 'ai',
-          content: item.content,
-          created_at: item.created_at,
-          conversation_id: 'ai-chat',
-          sender_first_name: item.sender === 'user' ? user.first_name : 'AI',
-          sender_last_name: item.sender === 'user' ? user.last_name : 'Assistant',
-          sender_avatar_url: item.sender === 'user' ? user.avatar_url : '/ai-avatar.png',
-          sender_email: item.sender === 'user' ? user.email : 'ai@assistant.com',
-        }));
-        setMessages(formattedMessages);
-      }
-    };
+  const aiConversationObject = useMemo((): Conversation => ({
+    id: 'ai-assistant',
+    userName: 'AI Assistant',
+    userAvatar: aiUser.avatar_url,
+    isGroup: false,
+    members: [currentUser!, aiUser],
+    messages: conversation,
+    lastMessage: conversation[conversation.length - 1]?.text || "Ask me anything...",
+    lastMessageTimestamp: conversation[conversation.length - 1]?.timestamp || new Date().toISOString(),
+    unreadCount: 0,
+  }), [aiUser, conversation, currentUser]);
 
-    fetchHistory();
-  }, [user]);
-
-  const handleSendMessage = async (text: string, attachment: File | null) => {
-    if (!user) {
-      toast.error("You must be logged in to chat.");
-      return;
-    }
-    if (!text.trim()) return;
-
-    const userMessage: MessageType = {
-      id: Date.now().toString(),
-      sender_id: user.id,
-      content: text,
-      created_at: new Date().toISOString(),
-      conversation_id: 'ai-chat',
-      sender_first_name: user.first_name,
-      sender_last_name: user.last_name,
-      sender_avatar_url: user.avatar_url,
-      sender_email: user.email,
-    };
-
-    setMessages(prev => [...prev, userMessage]);
-    setIsSending(true);
-
-    try {
-      // Here you would call your AI backend
-      // For demonstration, we'll just echo the message back from "AI"
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate network delay
-
-      const aiResponse: MessageType = {
-        id: (Date.now() + 1).toString(),
-        sender_id: 'ai',
-        content: `This is a simulated AI response to: "${text}"`,
-        created_at: new Date().toISOString(),
-        conversation_id: 'ai-chat',
-        sender_first_name: 'AI',
-        sender_last_name: 'Assistant',
-        sender_avatar_url: '/ai-avatar.png',
-        sender_email: 'ai@assistant.com',
-      };
-      setMessages(prev => [...prev, aiResponse]);
-
-      // Save to DB
-      await supabase.from('ai_chat_history').insert([
-        { user_id: user.id, sender: 'user', content: text },
-        { user_id: user.id, sender: 'ai', content: aiResponse.content }
-      ]);
-
-    } catch (error) {
-      console.error("Error sending message:", error);
-      toast.error("Failed to get response from AI.");
-      // Optionally remove the user's message if the API call fails
-      setMessages(prev => prev.filter(m => m.id !== userMessage.id));
-    } finally {
-      setIsSending(false);
-    }
+  const handleSendMessage = (text: string, attachmentFile: File | null) => {
+    sendMessage(text, attachmentFile, replyTo?.id);
+    setReplyTo(null);
   };
 
+  if (isCheckingConnection) {
+    return (
+      <div className="flex flex-col h-full bg-background overflow-hidden">
+        <ChatHeader onBack={onBack} conversation={aiConversationObject} />
+        <div className="flex-1 flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!isConnected) {
+    return (
+      <div className="flex flex-col h-full bg-background overflow-hidden">
+        <ChatHeader onBack={onBack} conversation={aiConversationObject} />
+        <div className="flex-1 flex items-center justify-center p-4">
+          <Card className="w-full max-w-md text-center">
+            <CardContent className="p-6">
+              <h3 className="text-lg font-semibold">AI Assistant is Offline</h3>
+              <p className="text-sm text-muted-foreground mt-2">
+                An administrator needs to configure the OpenAI integration in the settings to enable the AI Assistant.
+              </p>
+              <Button asChild className="mt-4">
+                <Link to="/settings/integrations/openai">Go to Settings</Link>
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex flex-col h-full">
-      <MessageList messages={messages} />
+    <div className="flex flex-col h-full bg-background overflow-hidden">
+      <ChatHeader
+        onBack={onBack}
+        conversation={aiConversationObject}
+      />
+      <ChatConversation
+        messages={conversation}
+        members={[currentUser, aiUser]}
+        isLoading={isLoading}
+        onReply={setReplyTo}
+      />
       <ChatInput 
         ref={ref} 
         onSendMessage={handleSendMessage}
-        isSending={isSending}
-        conversationId="ai-chat"
-        replyTo={null}
-        onCancelReply={() => {}}
+        isSending={isLoading}
+        conversationId="ai-assistant"
+        replyTo={replyTo}
+        onCancelReply={() => setReplyTo(null)}
       />
     </div>
   );
