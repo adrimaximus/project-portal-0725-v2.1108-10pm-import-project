@@ -23,7 +23,11 @@ interface TasksKanbanCardProps {
 
 const processMentions = (text: string | null | undefined) => {
   if (!text) return '';
-  return text.replace(/@\[([^\]]+)\]\(([^)]+)\)/g, '**@$1**');
+  let processedText = text.replace(/@\[([^\]]+)\]\(([^)]+)\)/g, '@$1');
+  if (processedText.length > 50) {
+    return processedText.substring(0, 50) + '...';
+  }
+  return processedText;
 };
 
 const TasksKanbanCard = ({ task, onEdit, onDelete }: TasksKanbanCardProps) => {
@@ -93,7 +97,7 @@ const TasksKanbanCard = ({ task, onEdit, onDelete }: TasksKanbanCardProps) => {
     >
       <CardHeader className="p-3">
         <div className="flex justify-between items-start">
-          <CardTitle className="text-sm font-medium leading-snug flex items-center gap-1.5 pr-2">
+          <CardTitle className="text-sm leading-snug flex items-center gap-1.5 pr-2">
             {task.status === 'Done' && <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />}
             {task.originTicketId && <Ticket className={cn("h-4 w-4 flex-shrink-0", task.status === 'Done' ? 'text-green-500' : 'text-red-500')} />}
             <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ p: 'span' }}>
