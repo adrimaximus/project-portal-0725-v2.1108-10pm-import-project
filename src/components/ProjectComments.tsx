@@ -88,7 +88,7 @@ const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps
       <div className="relative w-full text-sm rounded-lg border bg-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
         <Mention
           value={newComment}
-          onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setNewComment(e.target.value)}
+          onChange={(e: any) => setNewComment(e.target.value)}
           trigger="@"
           suggestions={suggestions}
           onSearch={onSearch}

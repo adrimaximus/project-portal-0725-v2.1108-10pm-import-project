@@ -9,6 +9,7 @@ import { Toaster } from "@/components/ui/sonner"
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ThemeProvider } from './contexts/ThemeProvider'
 import { ConfigProvider } from 'antd';
+import { PrimeReactProvider } from 'primereact/api';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -49,16 +50,18 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         <AuthProvider>
           <FeaturesProvider>
             <ThemeProvider defaultTheme="system">
-              <ConfigProvider
-                theme={{
-                  token: {
-                    colorPrimary: '#1E293B', // slate-800
-                    colorInfo: '#1E293B',
-                  },
-                }}
-              >
-                <App />
-              </ConfigProvider>
+              <PrimeReactProvider>
+                <ConfigProvider
+                  theme={{
+                    token: {
+                      colorPrimary: '#1E293B', // slate-800
+                      colorInfo: '#1E293B',
+                    },
+                  }}
+                >
+                  <App />
+                </ConfigProvider>
+              </PrimeReactProvider>
               <Toaster />
             </ThemeProvider>
           </FeaturesProvider>
