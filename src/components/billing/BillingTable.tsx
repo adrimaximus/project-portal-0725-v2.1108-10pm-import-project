@@ -31,17 +31,15 @@ const BillingTable = ({ invoices, onEdit, sortColumn, sortDirection, handleSort 
     const baseDateInput = invoice.hardcopySendingDate || invoice.emailSendingDate;
 
     if (baseDateInput && topDays && typeof topDays === 'number' && topDays > 0) {
-      const baseDate = typeof baseDateInput === 'string' ? parseISO(baseDateInput) : baseDateInput;
-      if (isValid(baseDate)) {
-        const newDueDate = addDays(baseDate, topDays);
+      if (isValid(baseDateInput)) {
+        const newDueDate = addDays(baseDateInput, topDays);
         return format(newDueDate, 'MMM dd, yyyy');
       }
     }
 
     if (invoice.dueDate) {
-      const originalDueDate = typeof invoice.dueDate === 'string' ? parseISO(invoice.dueDate) : invoice.dueDate;
-      if (isValid(originalDueDate)) {
-        return format(originalDueDate, 'MMM dd, yyyy');
+      if (isValid(invoice.dueDate)) {
+        return format(invoice.dueDate, 'MMM dd, yyyy');
       }
     }
     
