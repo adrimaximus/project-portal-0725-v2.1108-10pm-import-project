@@ -8,12 +8,11 @@ import { cn } from '@/lib/utils';
 import { Button } from '../ui/button';
 import { ChevronsLeft } from 'lucide-react';
 
-const PeopleKanbanColumn = ({ tag, people, dragHappened, onEditPerson, onDeletePerson, isCollapsed, onToggleCollapse }: { 
+const PeopleKanbanColumn = ({ tag, people, onEditPerson, onDeletePerson, isCollapsed, onToggleCollapse }: { 
   tag: Tag | { id: string, name: string, color: string }, 
   people: Person[], 
-  dragHappened: React.MutableRefObject<boolean>, 
   onEditPerson: (person: Person) => void,
-  onDeletePerson: (person: Person) => void,
+  onDeletePerson: (personId: string) => void,
   isCollapsed: boolean,
   onToggleCollapse: (tagId: string) => void,
 }) => {
@@ -52,7 +51,7 @@ const PeopleKanbanColumn = ({ tag, people, dragHappened, onEditPerson, onDeleteP
           <div className="flex-grow min-h-0 overflow-y-auto p-2 pt-0">
             <SortableContext id={tag.id} items={personIds} strategy={verticalListSortingStrategy}>
               {people.map(person => (
-                <PeopleKanbanCard key={person.id} person={person} dragHappened={dragHappened} onEdit={onEditPerson} onDelete={onDeletePerson} />
+                <PeopleKanbanCard key={person.id} person={person} onEdit={onEditPerson} onDelete={onDeletePerson} />
               ))}
             </SortableContext>
             {people.length === 0 && (

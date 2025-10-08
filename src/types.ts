@@ -130,6 +130,9 @@ export interface Project {
   activities: Activity[];
   people?: Person[];
   person_ids?: string[];
+  client_name?: string;
+  client_company_logo_url?: string;
+  client_company_name?: string;
 }
 
 // Tasks
@@ -177,6 +180,8 @@ export interface Task {
     due_date: string | null;
     priority: TaskPriority | null;
     project_id: string;
+    project_name: string;
+    project_slug: string;
     projects: {
         id: string;
         name: string;
@@ -287,7 +292,7 @@ export interface Person {
   updated_at: string;
   projects: { id: string; name: string; slug: string }[];
   tags: Tag[];
-  contact?: { emails?: string[], phones?: string[] };
+  contact?: { emails?: string[], phones?: string[], websites?: string[] };
   address?: any;
   custom_properties?: Record<string, any>;
   company_id?: string;

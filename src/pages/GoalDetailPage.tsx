@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Edit, Trash2 } from 'lucide-react';
 import GoalYearlyProgress from '@/components/goals/GoalYearlyProgress';
-import GoalCollaborationManager from '@/components/goals/GoalCollaborationManager';
+import { GoalCollaborationManager } from '@/components/goals/GoalCollaborationManager';
 import GoalIcon from '@/components/goals/GoalIcon';
 import {
   AlertDialog,
@@ -224,12 +224,12 @@ const GoalDetailPage = () => {
             {goal.type === 'quantity' ? (
               <GoalQuantityTracker goal={goal} onLogProgress={handleLogQuantity} />
             ) : (
-              <GoalValueTracker goal={goal} onLogValue={handleLogValue} />
+              <GoalValueTracker completions={goal.completions as any} targetValue={goal.target_value} unit={goal.unit} />
             )}
           </div>
         )}
 
-        <GoalCollaborationManager goal={goal} onCollaboratorsUpdate={handleCollaboratorsUpdate} />
+        <GoalCollaborationManager goal={goal} />
       </div>
       
       <GoalFormDialog

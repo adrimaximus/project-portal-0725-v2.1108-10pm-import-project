@@ -78,8 +78,8 @@ const Index = () => {
               <MonthlyProgressChart projects={filteredProjects} />
               <UnsplashImage />
             </div>
-            <DashboardStatsGrid projects={filteredProjects} />
-            <CollaboratorsList projects={filteredProjects} />
+            <DashboardStatsGrid />
+            <CollaboratorsList />
         </div>
       </div>
     </PortalLayout>

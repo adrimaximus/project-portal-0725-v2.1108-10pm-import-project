@@ -1,22 +1,12 @@
-import { useEffect, useState } from 'react';
-import { useForm, Controller, useFieldArray } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '@/components/ui/dialog';
+import React, { useEffect, useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase';
 import { toast } from 'sonner';
 import { Person, Project, Tag } from '@/types';
 import { MultiSelect } from '../ui/multi-select';
@@ -26,6 +16,9 @@ import { generatePastelColor } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { Camera, User as UserIcon } from 'lucide-react';
 import AddressAutocompleteInput from '../AddressAutocompleteInput';
+import { useForm, Controller, useFieldArray } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
 
 const phoneRegex = new RegExp(
   /^([+]?[\s0-9]+)?(\d{3}|[(]?[0-9]+[)])?([-]?[\s]?[0-9])+$/
@@ -34,9 +27,9 @@ const phoneRegex = new RegExp(
 const schema = z.object({
   full_name: z.string().min(1, 'Full name is required'),
   contact: z.object({
-    emails: z.array(z.string().email('Invalid email').or(z.literal(''))).optional(),
-    phones: z.array(z.string().regex(phoneRegex, 'Invalid phone number').or(z.literal(''))).optional(),
-    websites: z.array(z.string().url('Invalid URL').or(z.literal(''))).optional(),
+    emails: z.array(z.object({ value: z.string().email('Invalid email').or(z.literal('')) })).optional(),
+    phones: z.array(z.object({ value: z.string().regex(phoneRegex, 'Invalid phone number').or(z.literal('')) })).optional(),
+    websites: z.array(z.object({ value: z.string().url('Invalid URL').or(z.literal('')) })).optional(),
   }),
   company: z.string().optional(),
   job_title: z.string().optional(),
@@ -80,7 +73,7 @@ export default function PersonFormDialog({ isOpen, onClose, person }: PersonForm
     queryFn: async () => {
       const { data, error } = await supabase.from('projects').select('id, name');
       if (error) throw error;
-      return data;
+      return data as Project[];
     },
   });
 
@@ -97,7 +90,7 @@ export default function PersonFormDialog({ isOpen, onClose, person }: PersonForm
     resolver: zodResolver(schema),
     defaultValues: {
       full_name: '',
-      contact: { emails: [''], phones: [''], websites: [''] },
+      contact: { emails: [{value: ''}], phones: [{value: ''}], websites: [{value: ''}] },
       company: '',
       job_title: '',
       department: '',
@@ -121,9 +114,9 @@ export default function PersonFormDialog({ isOpen, onClose, person }: PersonForm
       reset({
         full_name: person.full_name,
         contact: {
-          emails: person.contact?.emails || [''],
-          phones: person.contact?.phones || [''],
-          websites: person.contact?.websites || [''],
+          emails: person.contact?.emails?.map(v => ({value: v})) || [{value: ''}],
+          phones: person.contact?.phones?.map(v => ({value: v})) || [{value: ''}],
+          websites: person.contact?.websites?.map(v => ({value: v})) || [{value: ''}],
         },
         company: person.company,
         job_title: person.job_title,
@@ -163,9 +156,9 @@ export default function PersonFormDialog({ isOpen, onClose, person }: PersonForm
         p_id: person?.id,
         p_full_name: formData.full_name,
         p_contact: {
-          emails: formData.contact?.emails?.filter(e => e),
-          phones: formData.contact?.phones?.filter(p => p),
-          websites: formData.contact?.websites?.filter(w => w),
+          emails: formData.contact?.emails?.map(e => e.value).filter(e => e),
+          phones: formData.contact?.phones?.map(p => p.value).filter(p => p),
+          websites: formData.contact?.websites?.map(w => w.value).filter(w => w),
         },
         p_company: formData.company,
         p_job_title: formData.job_title,

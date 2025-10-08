@@ -1,5 +1,5 @@
 import { KbArticle } from '@/types';
-import { KBCard } from './KBCard';
+import KBCard from './KBCard';
 
 interface PageGridViewProps {
   articles: KbArticle[];
@@ -14,8 +14,6 @@ const PageGridView = ({ articles, onEdit, onDelete }: PageGridViewProps) => {
         <KBCard
           key={article.id}
           article={article}
-          onEdit={onEdit}
-          onDelete={onDelete}
         />
       ))}
     </div>

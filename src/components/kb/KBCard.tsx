@@ -1,4 +1,4 @@
-import { KBArticle } from "@/types";
+import { KbArticle } from "@/types";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -7,7 +7,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { getAvatarUrl } from "@/lib/utils";
 
 interface KBCardProps {
-  article: KBArticle;
+  article: KbArticle;
 }
 
 export default function KBCard({ article }: KBCardProps) {

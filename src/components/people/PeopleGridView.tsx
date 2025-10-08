@@ -88,9 +88,6 @@ const PeopleGridView = ({ people, onEditPerson, onDeletePerson, onViewProfile }:
           <PersonCard 
             key={person.id} 
             person={person} 
-            onEdit={onEditPerson} 
-            onDelete={onDeletePerson} 
-            onViewProfile={onViewProfile}
           />
         ))}
       </div>

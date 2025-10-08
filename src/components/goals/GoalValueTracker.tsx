@@ -1,4 +1,4 @@
-import { GoalCompletion } from '@/types';
+import { GoalCompletion, User } from '@/types';
 import {
   BarChart,
   Bar,
@@ -14,7 +14,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { generatePastelColor } from '@/lib/utils';
 
 interface GoalValueTrackerProps {
-  completions: GoalCompletion[];
+  completions: (GoalCompletion & { user: User })[];
   targetValue?: number;
   unit?: string;
 }

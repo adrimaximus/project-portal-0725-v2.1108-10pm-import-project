@@ -7,7 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
-import TestNotificationToast from "./TestNotificationToast";
+import { TestNotificationToast } from "./TestNotificationToast";
 
 const notificationTypes = [
   { id: 'project_update', label: 'Project Updates', description: 'When you are added to a project, a task is assigned to you, or a project you are in is updated.' },
@@ -82,7 +82,7 @@ const NotificationPreferencesCard = () => {
     if (success) {
       if (isEnabled) {
         const notificationType = notificationTypes.find(t => t.id === typeId);
-        toast(<TestNotificationToast user={user} type={notificationType} />);
+        toast(<TestNotificationToast />);
       } else {
         toast.success("Notification setting updated.");
       }

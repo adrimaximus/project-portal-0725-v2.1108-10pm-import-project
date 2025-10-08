@@ -40,11 +40,11 @@ import {
 } from "@/components/ui/popover";
 import { formatDistanceToNow } from "date-fns";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import OnlineCollaborators from "./OnlineCollaborators";
 import { useCurrentProject } from "@/hooks/useCurrentProject";
-import { useMemo } from "react";
+import { useMemo, ReactNode } from "react";
 import { useUserNavigation } from "@/hooks/useUserNavigation";
 
 const iconMapping: { [key: string]: React.ElementType } = {
@@ -61,14 +61,13 @@ const iconMapping: { [key: string]: React.ElementType } = {
   Target,
 };
 
-const PortalHeader = () => {
-  const { user, signOut } = useAuth();
+const PortalHeader = ({ summary }: { summary?: ReactNode }) => {
+  const { user, logout } = useAuth();
   const location = useLocation();
   const { project } = useCurrentProject();
   const queryClient = useQueryClient();
 
-  const { data: notifications, isLoading } = useNotifications();
-  const unreadCount = notifications?.filter((n) => !n.read_at).length || 0;
+  const { notifications, isLoading, unreadCount } = useNotifications();
 
   const { data: navItems } = useUserNavigation();
 
@@ -182,7 +181,7 @@ const PortalHeader = () => {
         <div className="ml-auto flex-1 sm:flex-initial">
           <GlobalSearch />
         </div>
-        {project && <OnlineCollaborators projectId={project.id} />}
+        {project && <OnlineCollaborators projectId={project.id} isCollapsed={false} />}
         <Popover>
           <PopoverTrigger asChild>
             <Button variant="secondary" size="icon" className="rounded-full relative">
@@ -257,7 +256,7 @@ const PortalHeader = () => {
             </DropdownMenuItem>
             <DropdownMenuItem>Support</DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={signOut}>Logout</DropdownMenuItem>
+            <DropdownMenuItem onClick={logout}>Logout</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
