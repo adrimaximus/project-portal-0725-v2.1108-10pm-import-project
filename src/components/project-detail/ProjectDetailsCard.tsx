@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Project as BaseProject, PROJECT_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS, Person } from "@/types";
-import { Calendar, Wallet, Briefcase, MapPin, ListTodo, CreditCard, User, Building } from "lucide-react";
+import { Calendar, Wallet, Briefcase, MapPin, ListTodo, CreditCard, User, Building, ChevronDown } from "lucide-react";
 import { isSameDay, subDays } from "date-fns";
 import { DateRangePicker } from "../DateRangePicker";
 import { DateRange } from "react-day-picker";
@@ -14,7 +14,9 @@ import AddressAutocompleteInput from '../AddressAutocompleteInput';
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Button } from "@/components/ui/button";
 
 // Extend types to include the new optional company_id field for a robust relationship.
 type LocalPerson = Person & { company_id?: string | null };
@@ -39,6 +41,7 @@ const paymentStatusConfig: Record<string, { color: string; label: string }> = {
 };
 
 const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetailsCardProps) => {
+  const [isOpen, setIsOpen] = useState(true);
   const { hasPermission } = useAuth();
   const canViewValue = hasPermission('projects:view_value');
 
@@ -208,194 +211,204 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetail
   const hasOpenTasks = project.tasks?.some(task => !task.completed);
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Project Details</CardTitle>
-      </CardHeader>
-      <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 text-sm">
-        {/* Left Column */}
-        <div className="space-y-6">
-          <div className="flex items-start gap-4">
-            <Calendar className="h-4 w-4 mt-1 flex-shrink-0 text-muted-foreground" />
-            <div className="w-full">
-              <p className="font-medium">Timeline</p>
-              {isEditing ? (
-                <DateRangePicker
-                  date={{
-                    from: project.start_date ? new Date(project.start_date) : undefined,
-                    to: project.due_date ? new Date(project.due_date) : undefined,
-                  }}
-                  onDateChange={handleDateChange}
-                />
-              ) : (
-                <p className="text-muted-foreground">
-                  {renderDateRange()}
-                </p>
-              )}
-            </div>
-          </div>
-          {canViewValue && (
-            <div className="flex items-start gap-4">
-              <Wallet className="h-4 w-4 mt-1 flex-shrink-0 text-muted-foreground" />
-              <div>
-                <p className="font-medium">Budget</p>
-                {isEditing ? (
-                  <CurrencyInput
-                    value={project.budget || 0}
-                    onChange={handleBudgetChange}
-                    placeholder="Enter budget"
-                    className="w-full"
-                  />
-                ) : (
-                  <p className="text-muted-foreground">
-                    {formatCurrency(project.budget || 0)}
-                  </p>
-                )}
-              </div>
-            </div>
-          )}
-          <div className="flex items-start gap-4">
-            <MapPin className="h-4 w-4 mt-1 flex-shrink-0 text-muted-foreground" />
-            <div className="w-full">
-              <p className="font-medium">Venue</p>
-              {isEditing ? (
-                <AddressAutocompleteInput
-                  value={project.venue || ''}
-                  onChange={(value) => onFieldChange('venue', value)}
-                />
-              ) : (
-                renderVenue()
-              )}
-            </div>
-          </div>
-          <div className="flex items-start gap-4">
-            <Briefcase className="h-4 w-4 mt-1 flex-shrink-0 text-muted-foreground" />
-            <div className="w-full">
-              <p className="font-medium">Services</p>
-              <div className="mt-1">
-                <ProjectServices
-                  selectedServices={project.services || []}
-                  isEditing={isEditing}
-                  onServicesChange={(services) => onFieldChange('services', services)}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Right Column */}
-        <div className="space-y-6">
-          <div className="flex items-start gap-4">
-            <ListTodo className="h-4 w-4 mt-1 flex-shrink-0 text-muted-foreground" />
-            <div className="w-full">
-              <p className="font-medium">Status</p>
-              {isEditing ? (
-                <Select
-                  value={project.status}
-                  onValueChange={(value) => onFieldChange('status', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {PROJECT_STATUS_OPTIONS.map(option => (
-                      <SelectItem 
-                        key={option.value} 
-                        value={option.value}
-                        disabled={option.value === 'Completed' && hasOpenTasks}
-                      >
-                        <StatusBadge status={option.label} />
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : (
-                <div className="pt-1">
-                  <StatusBadge status={project.status} />
-                </div>
-              )}
-            </div>
-          </div>
-          <div className="flex items-start gap-4">
-            <CreditCard className="h-4 w-4 mt-1 flex-shrink-0 text-muted-foreground" />
-            <div className="w-full">
-              <p className="font-medium">Payment Status</p>
-              {isEditing ? (
-                <Select
-                  value={project.payment_status}
-                  onValueChange={(value) => onFieldChange('payment_status', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a payment status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {PAYMENT_STATUS_OPTIONS.map(option => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : (
-                <div className="pt-1">
-                  <Badge variant="outline" className={cn("font-normal", paymentBadgeColor)}>
-                    {project.payment_status}
-                  </Badge>
-                </div>
-              )}
-            </div>
-          </div>
-          <div className="flex items-start gap-4">
-            <User className="h-4 w-4 mt-1 flex-shrink-0 text-muted-foreground" />
-            <div className="w-full">
-              <p className="font-medium">Client</p>
-              {isEditing ? (
-                <Select
-                  value={client?.id}
-                  onValueChange={handleClientChange}
-                  disabled={isLoadingPeople}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a client" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {isLoadingPeople ? (
-                      <SelectItem value="loading" disabled>Loading...</SelectItem>
-                    ) : (
-                      allPeople?.map(person => (
-                        <SelectItem key={person.id} value={person.id}>
-                          {person.full_name} {person.company && `(${person.company})`}
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
-              ) : (
-                <div className="pt-1">
-                  {client ? (
-                    <div className="flex items-center gap-3">
-                      {companyLogoUrl ? (
-                        <img src={companyLogoUrl} alt={client.company || ''} className="h-8 w-8 object-contain rounded-md bg-muted p-1" />
-                      ) : (
-                        <div className="h-8 w-8 rounded-md bg-muted flex items-center justify-center">
-                          <Building className="h-4 w-4 text-muted-foreground" />
-                        </div>
-                      )}
-                      <div>
-                        <p className="text-foreground font-semibold">{client.full_name}</p>
-                        <p className="text-muted-foreground text-xs">{client.company}</p>
-                      </div>
-                    </div>
+    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between cursor-pointer">
+          <CardTitle>Project Details</CardTitle>
+          <CollapsibleTrigger asChild>
+            <Button variant="ghost" size="sm" className="w-9 p-0">
+              <ChevronDown className={cn("h-4 w-4 transition-transform", !isOpen && "-rotate-90")} />
+              <span className="sr-only">Toggle</span>
+            </Button>
+          </CollapsibleTrigger>
+        </CardHeader>
+        <CollapsibleContent>
+          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 text-sm">
+            {/* Left Column */}
+            <div className="space-y-6">
+              <div className="flex items-start gap-4">
+                <Calendar className="h-4 w-4 mt-1 flex-shrink-0 text-muted-foreground" />
+                <div className="w-full">
+                  <p className="font-medium">Timeline</p>
+                  {isEditing ? (
+                    <DateRangePicker
+                      date={{
+                        from: project.start_date ? new Date(project.start_date) : undefined,
+                        to: project.due_date ? new Date(project.due_date) : undefined,
+                      }}
+                      onDateChange={handleDateChange}
+                    />
                   ) : (
-                    <p className="text-muted-foreground">No client assigned</p>
+                    <p className="text-muted-foreground">
+                      {renderDateRange()}
+                    </p>
                   )}
                 </div>
+              </div>
+              {canViewValue && (
+                <div className="flex items-start gap-4">
+                  <Wallet className="h-4 w-4 mt-1 flex-shrink-0 text-muted-foreground" />
+                  <div>
+                    <p className="font-medium">Budget</p>
+                    {isEditing ? (
+                      <CurrencyInput
+                        value={project.budget || 0}
+                        onChange={handleBudgetChange}
+                        placeholder="Enter budget"
+                        className="w-full"
+                      />
+                    ) : (
+                      <p className="text-muted-foreground">
+                        {formatCurrency(project.budget || 0)}
+                      </p>
+                    )}
+                  </div>
+                </div>
               )}
+              <div className="flex items-start gap-4">
+                <MapPin className="h-4 w-4 mt-1 flex-shrink-0 text-muted-foreground" />
+                <div className="w-full">
+                  <p className="font-medium">Venue</p>
+                  {isEditing ? (
+                    <AddressAutocompleteInput
+                      value={project.venue || ''}
+                      onChange={(value) => onFieldChange('venue', value)}
+                    />
+                  ) : (
+                    renderVenue()
+                  )}
+                </div>
+              </div>
+              <div className="flex items-start gap-4">
+                <Briefcase className="h-4 w-4 mt-1 flex-shrink-0 text-muted-foreground" />
+                <div className="w-full">
+                  <p className="font-medium">Services</p>
+                  <div className="mt-1">
+                    <ProjectServices
+                      selectedServices={project.services || []}
+                      isEditing={isEditing}
+                      onServicesChange={(services) => onFieldChange('services', services)}
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+
+            {/* Right Column */}
+            <div className="space-y-6">
+              <div className="flex items-start gap-4">
+                <ListTodo className="h-4 w-4 mt-1 flex-shrink-0 text-muted-foreground" />
+                <div className="w-full">
+                  <p className="font-medium">Status</p>
+                  {isEditing ? (
+                    <Select
+                      value={project.status}
+                      onValueChange={(value) => onFieldChange('status', value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {PROJECT_STATUS_OPTIONS.map(option => (
+                          <SelectItem 
+                            key={option.value} 
+                            value={option.value}
+                            disabled={option.value === 'Completed' && hasOpenTasks}
+                          >
+                            <StatusBadge status={option.label} />
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <div className="pt-1">
+                      <StatusBadge status={project.status} />
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-start gap-4">
+                <CreditCard className="h-4 w-4 mt-1 flex-shrink-0 text-muted-foreground" />
+                <div className="w-full">
+                  <p className="font-medium">Payment Status</p>
+                  {isEditing ? (
+                    <Select
+                      value={project.payment_status}
+                      onValueChange={(value) => onFieldChange('payment_status', value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a payment status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {PAYMENT_STATUS_OPTIONS.map(option => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <div className="pt-1">
+                      <Badge variant="outline" className={cn("font-normal", paymentBadgeColor)}>
+                        {project.payment_status}
+                      </Badge>
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-start gap-4">
+                <User className="h-4 w-4 mt-1 flex-shrink-0 text-muted-foreground" />
+                <div className="w-full">
+                  <p className="font-medium">Client</p>
+                  {isEditing ? (
+                    <Select
+                      value={client?.id}
+                      onValueChange={handleClientChange}
+                      disabled={isLoadingPeople}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a client" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {isLoadingPeople ? (
+                          <SelectItem value="loading" disabled>Loading...</SelectItem>
+                        ) : (
+                          allPeople?.map(person => (
+                            <SelectItem key={person.id} value={person.id}>
+                              {person.full_name} {person.company && `(${person.company})`}
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <div className="pt-1">
+                      {client ? (
+                        <div className="flex items-center gap-3">
+                          {companyLogoUrl ? (
+                            <img src={companyLogoUrl} alt={client.company || ''} className="h-8 w-8 object-contain rounded-md bg-muted p-1" />
+                          ) : (
+                            <div className="h-8 w-8 rounded-md bg-muted flex items-center justify-center">
+                              <Building className="h-4 w-4 text-muted-foreground" />
+                            </div>
+                          )}
+                          <div>
+                            <p className="text-foreground font-semibold">{client.full_name}</p>
+                            <p className="text-muted-foreground text-xs">{client.company}</p>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-muted-foreground">No client assigned</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </CollapsibleContent>
+      </Card>
+    </Collapsible>
   );
 };
 
