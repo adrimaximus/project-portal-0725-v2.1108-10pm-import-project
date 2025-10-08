@@ -2,7 +2,6 @@ import { useRef, useState, forwardRef } from "react";
 import { useDropzone } from 'react-dropzone';
 import { Button } from "./ui/button";
 import { Paperclip, Send, X, Loader2, UploadCloud, Smile, Briefcase } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { Message } from "@/types";
 import VoiceMessageRecorder from "./VoiceMessageRecorder";
 import { useChatContext } from "@/contexts/ChatContext";
@@ -11,7 +10,7 @@ import Picker from '@emoji-mart/react';
 import data from '@emoji-mart/data';
 import { useTheme } from "@/contexts/ThemeProvider";
 import * as chatApi from '@/lib/chatApi';
-import { Mention, MentionsInput } from "react-mentions";
+import { Mention } from 'primereact/mention';
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { generatePastelColor, getAvatarUrl } from "@/lib/utils";
 
@@ -37,23 +36,14 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
   const lastTypingSentAtRef = useRef<number>(0);
   const { selectedConversation } = useChatContext();
   const { theme } = useTheme();
+  const [suggestions, setSuggestions] = useState<any[]>([]);
 
-  const userSuggestions = (selectedConversation?.members || []).map(m => ({
+  const userSuggestions = (selectedConversation?.participants || []).map(m => ({
     id: m.id,
     display: m.name,
     avatar_url: m.avatar_url,
     initials: m.initials,
   }));
-
-  const fetchProjectSuggestions = (query: string, callback: (data: { id: string, display: string }[]) => void) => {
-    if (query.length < 1) {
-      callback([]);
-      return;
-    }
-    chatApi.searchProjects(query).then(projects => {
-      callback(projects.map(p => ({ id: p.slug, display: p.name })));
-    });
-  };
 
   const onDrop = (acceptedFiles: File[]) => {
     if (acceptedFiles && acceptedFiles.length > 0) {
@@ -98,8 +88,8 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
     }
   };
 
-  const handleTextChange = (event: any, newValue: string) => {
-    setText(newValue);
+  const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setText(e.target.value);
     triggerTyping();
   };
 
@@ -116,6 +106,58 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
     setText(prev => prev + emoji.native);
   };
 
+  const onSearch = (event: { query: string, trigger: string }) => {
+    const trigger = event.trigger;
+    const query = event.query;
+
+    if (trigger === '@') {
+      setTimeout(() => {
+        let suggestions;
+        if (!query.trim().length) {
+          suggestions = [...userSuggestions];
+        } else {
+          suggestions = userSuggestions.filter((user) =>
+            user.display.toLowerCase().startsWith(query.toLowerCase())
+          );
+        }
+        setSuggestions(suggestions);
+      }, 250);
+    } else if (trigger === '/') {
+      if (query.length < 1) {
+        setSuggestions([]);
+        return;
+      }
+      chatApi.searchProjects(query).then(projects => {
+        const projectSuggestions = projects.map(p => ({ id: p.slug, display: p.name }));
+        setSuggestions(projectSuggestions);
+      });
+    }
+  };
+
+  const itemTemplate = (suggestion: any, options: { trigger: string }) => {
+    const trigger = options.trigger;
+
+    if (trigger === '@') {
+      return (
+        <div className="flex items-center gap-3">
+          <Avatar className="h-8 w-8">
+            <AvatarImage src={getAvatarUrl(suggestion.avatar_url, suggestion.id)} />
+            <AvatarFallback style={generatePastelColor(suggestion.id)}>{suggestion.initials}</AvatarFallback>
+          </Avatar>
+          <span>{suggestion.display}</span>
+        </div>
+      );
+    } else if (trigger === '/') {
+      return (
+        <div className="flex items-center">
+          <Briefcase className="h-4 w-4 mr-2 text-muted-foreground" />
+          <span>{suggestion.display}</span>
+        </div>
+      );
+    }
+    return null;
+  };
+
   return (
     <div {...getRootProps()} className="border-t p-4 flex-shrink-0 relative">
       <input {...getInputProps()} />
@@ -130,8 +172,8 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
       {replyTo && (
         <div className="p-2 mb-2 bg-muted rounded-md flex justify-between items-center">
           <div className="text-sm overflow-hidden">
-            <p className="font-semibold text-primary">Replying to {replyTo.sender.name}</p>
-            <p className="text-xs text-muted-foreground truncate">{replyTo.text}</p>
+            <p className="font-semibold text-primary">Replying to {replyTo.sender_first_name}</p>
+            <p className="text-xs text-muted-foreground truncate">{replyTo.content}</p>
           </div>
           <Button variant="ghost" size="icon" onClick={onCancelReply} className="h-7 w-7">
             <X className="h-4 w-4" />
@@ -142,55 +184,23 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
       <div className="flex items-end gap-2">
         <div className="relative flex-1">
           <div className="w-full rounded-lg border bg-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
-            <MentionsInput
-              inputRef={ref}
+            <Mention
+              ref={ref}
               placeholder="Type a message..."
               value={text}
               onChange={handleTextChange}
               onKeyDown={handleKeyDown}
               disabled={isSending}
-              classNames={{
-                input: 'w-full p-3 pr-24 bg-transparent placeholder:text-muted-foreground focus:outline-none resize-none',
-                suggestions: {
-                  list: 'bg-popover text-popover-foreground border rounded-lg shadow-lg p-1 mt-2 z-10 max-h-60 overflow-y-auto',
-                  item: 'flex items-center gap-3 px-2 py-1.5 text-sm rounded-sm cursor-pointer outline-none',
-                  itemFocused: 'bg-accent text-accent-foreground',
-                },
-                mention: 'bg-primary/10 text-primary font-semibold rounded-sm px-1 py-0.5',
-              }}
-              // @ts-ignore
-              appendSpaceOnAdd
-            >
-              <Mention
-                trigger="@"
-                data={userSuggestions}
-                markup="@[__display__](__id__)"
-                displayTransform={(id, display) => `@${display}`}
-                renderSuggestion={(suggestion: any) => (
-                  <>
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={getAvatarUrl(suggestion.avatar_url, suggestion.id)} />
-                      <AvatarFallback style={generatePastelColor(suggestion.id)}>{suggestion.initials}</AvatarFallback>
-                    </Avatar>
-                    <span>{suggestion.display}</span>
-                  </>
-                )}
-              />
-              <Mention
-                trigger="/"
-                data={fetchProjectSuggestions}
-                markup="[__display__](/projects/__id__)"
-                displayTransform={(id, display) => `/${display}`}
-                renderSuggestion={(suggestion: any) => (
-                  <div className="flex items-center">
-                    <Briefcase className="h-4 w-4 mr-2 text-muted-foreground" />
-                    <span>{suggestion.display}</span>
-                  </div>
-                )}
-                // @ts-ignore
-                appendSpaceOnAdd
-              />
-            </MentionsInput>
+              trigger={['@', '/']}
+              suggestions={suggestions}
+              onSearch={onSearch}
+              field="display"
+              itemTemplate={itemTemplate}
+              rows={1}
+              autoResize
+              className="w-full"
+              inputClassName="w-full p-3 pr-24 bg-transparent placeholder:text-muted-foreground focus:outline-none resize-none"
+            />
           </div>
           <div className="absolute bottom-2 right-2 flex items-center">
             <Popover>
