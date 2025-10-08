@@ -10,7 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Plus, MoreHorizontal, Trash2, UserPlus, Sparkles, RefreshCw } from "lucide-react";
+import { Plus, MoreHorizontal, Trash2, UserPlus, Sparkles, RefreshCw, Ticket } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -23,6 +23,7 @@ import { generatePastelColor, getInitials } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
 
 interface ProjectTasksProps {
   project: Project;
@@ -154,14 +155,31 @@ const ProjectTasks = ({
                   onTaskStatusChange(task.id, !!checked)
                 }
               />
-              <label
-                htmlFor={`task-${task.id}`}
-                className={`flex-1 text-sm ${
-                  task.completed ? "text-muted-foreground line-through" : ""
-                }`}
-              >
-                {task.title}
-              </label>
+              <div className="flex-1 flex items-center gap-2 min-w-0">
+                <label
+                  htmlFor={`task-${task.id}`}
+                  className={`text-sm truncate cursor-pointer ${
+                    task.completed ? "text-muted-foreground line-through" : ""
+                  }`}
+                >
+                  {task.title}
+                </label>
+                {(task as any).originTicketId && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <Badge variant={task.completed ? 'default' : 'outline'} className={task.completed ? 'bg-green-600 hover:bg-green-700 text-white' : ''}>
+                          <Ticket className="h-3 w-3 mr-1" />
+                          {task.completed ? 'Done' : 'Ticket'}
+                        </Badge>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>This task was created from a ticket.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
+              </div>
               <div className="flex items-center -space-x-2">
                 {(assignees && assignees.length > 0)
                   ? assignees.map((user) => {
