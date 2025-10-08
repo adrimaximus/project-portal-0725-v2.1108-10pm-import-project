@@ -415,8 +415,8 @@ export type Invoice = {
   projectEndDate: Date | null;
   poNumber: string | null;
   paidDate: Date | null;
-  emailSendingDate: Date | null;
-  hardcopySendingDate: Date | null;
+  emailSendingDate: Date | string | null;
+  hardcopySendingDate: Date | string | null;
   channel: string | null;
   clientName: string | null;
   clientLogo: string | null;
@@ -424,10 +424,12 @@ export type Invoice = {
   projectOwner: Owner | null;
   assignedMembers: Member[];
   invoiceAttachments: InvoiceAttachment[];
+  clientCompanyCustomProperties?: { [key: string]: any } | null;
 };
 
 export interface ExtendedProject extends Project {
   client_name?: string | null;
   client_company_logo_url?: string | null;
   client_company_name?: string | null;
+  client_company_custom_properties?: { [key: string]: any } | null;
 }

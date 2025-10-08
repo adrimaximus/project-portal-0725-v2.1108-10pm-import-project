@@ -60,6 +60,7 @@ const Billing = () => {
         projectOwner: project.created_by as Owner | null,
         assignedMembers: (project.assignedTo as Member[]) || [],
         invoiceAttachments: project.invoice_attachments || [],
+        clientCompanyCustomProperties: project.client_company_custom_properties || null,
       };
     })
     .filter((invoice): invoice is Invoice => invoice !== null), [projects]);
