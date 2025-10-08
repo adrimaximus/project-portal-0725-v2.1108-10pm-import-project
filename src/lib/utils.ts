@@ -24,7 +24,7 @@ export const getStatusStyles = (status: string) => {
     case 'At Risk':
       return { tw: 'bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-300', hex: '#F97316' };
     case 'Completed':
-      return { tw: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300', hex: '#FBBF24' };
+      return { tw: 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300', hex: '#22C55E' };
     case 'Cancelled':
       return { tw: 'bg-gray-100 text-gray-800 dark:bg-gray-800/50 dark:text-gray-300', hex: '#6B7280' };
     case 'Off Track':
@@ -37,7 +37,7 @@ export const getStatusStyles = (status: string) => {
 export const getPaymentStatusStyles = (status: string) => {
   switch (status) {
     case 'Paid':
-      return { tw: 'bg-teal-100 text-teal-800 dark:bg-teal-900/50 dark:text-teal-300', hex: '#14B8A6' };
+      return { tw: 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300', hex: '#22C55E' };
     case 'Unpaid':
     case 'Pending':
       return { tw: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300', hex: '#FBBF24' };
