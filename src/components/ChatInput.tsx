@@ -38,7 +38,7 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
   const { theme } = useTheme();
   const [suggestions, setSuggestions] = useState<any[]>([]);
 
-  const userSuggestions = (selectedConversation?.members || []).map(m => ({
+  const userSuggestions = (selectedConversation?.participants || []).map(m => ({
     id: m.id,
     display: m.name,
     avatar_url: m.avatar_url,
@@ -172,8 +172,8 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
       {replyTo && (
         <div className="p-2 mb-2 bg-muted rounded-md flex justify-between items-center">
           <div className="text-sm overflow-hidden">
-            <p className="font-semibold text-primary">Replying to {replyTo.sender.name}</p>
-            <p className="text-xs text-muted-foreground truncate">{replyTo.text}</p>
+            <p className="font-semibold text-primary">Replying to {replyTo.sender_first_name}</p>
+            <p className="text-xs text-muted-foreground truncate">{replyTo.content}</p>
           </div>
           <Button variant="ghost" size="icon" onClick={onCancelReply} className="h-7 w-7">
             <X className="h-4 w-4" />
@@ -185,10 +185,10 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
         <div className="relative flex-1">
           <div className="w-full rounded-lg border bg-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
             <Mention
-              inputRef={ref as any}
+              ref={ref}
               placeholder="Type a message..."
               value={text}
-              onChange={(e: any) => handleTextChange(e)}
+              onChange={handleTextChange}
               onKeyDown={handleKeyDown}
               disabled={isSending}
               trigger={['@', '/']}
