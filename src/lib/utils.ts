@@ -13,24 +13,16 @@ export function timeAgo(date: string | Date): string {
 
 export const getStatusStyles = (status: string) => {
   switch (status) {
-    case 'Requested':
-      return { tw: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300', hex: '#D1D5DB' };
-    case 'In Progress':
-      return { tw: 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300', hex: '#60A5FA' };
-    case 'In Review':
-      return { tw: 'bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300', hex: '#A78BFA' };
-    case 'On Hold':
-      return { tw: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300', hex: '#FBBF24' };
-    case 'Completed':
-      return { tw: 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300', hex: '#48BB78' };
-    case 'Cancelled':
-      return { tw: 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300', hex: '#F56565' };
     case 'On Track':
       return { tw: 'bg-teal-100 text-teal-800 dark:bg-teal-900/50 dark:text-teal-300', hex: '#4FD1C5' };
-    case 'At Risk':
-      return { tw: 'bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-300', hex: '#F6AD55' };
     case 'Off Track':
       return { tw: 'bg-pink-100 text-pink-800 dark:bg-pink-900/50 dark:text-pink-300', hex: '#F56565' };
+    case 'At Risk':
+      return { tw: 'bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-300', hex: '#F6AD55' };
+    case 'Completed':
+      return { tw: 'bg-sky-100 text-sky-800 dark:bg-sky-900/50 dark:text-sky-300', hex: '#4299E1' };
+    case 'On Hold':
+      return { tw: 'bg-slate-100 text-slate-800 dark:bg-slate-800/50 dark:text-slate-300', hex: '#CBD5E0' };
     default:
       return { tw: 'bg-slate-100 text-slate-800 dark:bg-slate-800/50 dark:text-slate-300', hex: '#CBD5E0' };
   }
@@ -42,16 +34,12 @@ export const getPaymentStatusStyles = (status: string) => {
       return { tw: 'bg-teal-100 text-teal-800 dark:bg-teal-900/50 dark:text-teal-300', hex: '#4FD1C5' };
     case 'Unpaid':
       return { tw: 'bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-300', hex: '#F6AD55' };
-    case 'Pending':
+    case 'Partially Paid':
       return { tw: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300', hex: '#F6E05E' };
     case 'Overdue':
       return { tw: 'bg-pink-100 text-pink-800 dark:bg-pink-900/50 dark:text-pink-300', hex: '#F56565' };
     case 'Cancelled':
       return { tw: 'bg-slate-100 text-slate-800 dark:bg-slate-800/50 dark:text-slate-300', hex: '#CBD5E0' };
-    case 'In Process':
-      return { tw: 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300', hex: '#60A5FA' };
-    case 'Proposed':
-      return { tw: 'bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300', hex: '#A78BFA' };
     default:
       return { tw: 'bg-slate-100 text-slate-800 dark:bg-slate-800/50 dark:text-slate-300', hex: '#CBD5E0' };
   }

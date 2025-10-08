@@ -9,12 +9,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { ContactProperty } from '@/types';
 import { Loader2 } from 'lucide-react';
-import { Textarea } from '../ui/textarea';
 
 interface PropertyFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: (property: Omit<ContactProperty, 'id' | 'is_default' | 'company_logo_url' | 'options'> & { options?: string[] | null }) => void;
+  onSave: (property: Omit<ContactProperty, 'id' | 'is_default' | 'company_logo_url'>) => void;
   property?: ContactProperty | null;
   isSaving: boolean;
 }
@@ -22,15 +21,6 @@ interface PropertyFormDialogProps {
 const propertySchema = z.object({
   label: z.string().min(1, "Label is required."),
   type: z.enum(['text', 'email', 'phone', 'url', 'date', 'textarea', 'number', 'image', 'select', 'multi-select', 'checkbox']),
-  options: z.string().optional(),
-}).refine(data => {
-  if (data.type === 'select' || data.type === 'multi-select') {
-    return data.options && data.options.trim().length > 0;
-  }
-  return true;
-}, {
-  message: "Options are required for select types. Please provide a comma-separated list.",
-  path: ['options'],
 });
 
 type PropertyFormValues = z.infer<typeof propertySchema>;
@@ -40,47 +30,29 @@ const PropertyFormDialog = ({ open, onOpenChange, onSave, property, isSaving }: 
 
   const form = useForm<PropertyFormValues>({
     resolver: zodResolver(propertySchema),
-    defaultValues: {
-      label: '',
-      type: 'text',
-      options: '',
-    }
   });
-
-  const selectedType = form.watch('type');
 
   useEffect(() => {
     if (open && property) {
       form.reset({
         label: property.label,
         type: property.type,
-        options: Array.isArray(property.options) ? property.options.map((opt: any) => typeof opt === 'string' ? opt : opt.value).join(', ') : '',
       });
     } else if (open) {
       form.reset({
         label: '',
         type: 'text',
-        options: '',
       });
     }
   }, [property, open, form]);
 
   const onSubmit = (values: PropertyFormValues) => {
     const machineName = values.label.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
-    
-    const saveData: Omit<ContactProperty, 'id' | 'is_default' | 'company_logo_url' | 'options'> & { options?: string[] | null } = {
+    onSave({
       name: machineName,
       label: values.label,
       type: values.type,
-    };
-
-    if ((values.type === 'select' || values.type === 'multi-select') && values.options) {
-      saveData.options = values.options.split(',').map(opt => opt.trim()).filter(Boolean);
-    } else {
-      saveData.options = null;
-    }
-    
-    onSave(saveData);
+    });
   };
 
   return (
@@ -115,26 +87,11 @@ const PropertyFormDialog = ({ open, onOpenChange, onSave, property, isSaving }: 
                     <SelectItem value="phone">Phone</SelectItem>
                     <SelectItem value="url">URL</SelectItem>
                     <SelectItem value="image">Image</SelectItem>
-                    <SelectItem value="select">Select</SelectItem>
                   </SelectContent>
                 </Select>
                 <FormMessage />
               </FormItem>
             )} />
-            {(selectedType === 'select' || selectedType === 'multi-select') && (
-              <FormField control={form.control} name="options" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Options</FormLabel>
-                  <FormControl>
-                    <Textarea 
-                      {...field} 
-                      placeholder="Enter comma-separated values, e.g., Option 1, Option 2" 
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
-            )}
             <DialogFooter className="pt-4">
               <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={isSaving}>Cancel</Button>
               <Button type="submit" disabled={isSaving}>

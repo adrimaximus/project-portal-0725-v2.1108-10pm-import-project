@@ -389,16 +389,16 @@ export interface Notification {
 export type Member = {
   id: string;
   name: string;
-  avatar_url: string | null;
+  avatar_url: string;
   initials: string;
   email: string;
-  role?: string;
+  role: string;
 };
 
 export type Owner = {
   id: string;
   name: string;
-  avatar_url: string | null;
+  avatar_url: string;
   initials: string;
   email: string;
 };
@@ -408,7 +408,7 @@ export type Invoice = {
   projectId: string; // slug
   projectName: string;
   amount: number;
-  dueDate: Date;
+  dueDate: Date; // This is the payment due date
   status: PaymentStatus;
   rawProjectId: string; // original uuid
   projectStartDate: Date | null;
@@ -424,12 +424,10 @@ export type Invoice = {
   projectOwner: Owner | null;
   assignedMembers: Member[];
   invoiceAttachments: InvoiceAttachment[];
-  clientCompanyCustomProperties?: { [key: string]: any } | null;
 };
 
 export interface ExtendedProject extends Project {
   client_name?: string | null;
   client_company_logo_url?: string | null;
   client_company_name?: string | null;
-  client_company_custom_properties?: { [key: string]: any } | null;
 }

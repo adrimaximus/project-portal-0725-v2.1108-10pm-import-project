@@ -7,7 +7,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn, getPaymentStatusStyles } from "@/lib/utils";
-import { format, addDays, parseISO, isValid } from "date-fns";
+import { format } from "date-fns";
 import { Invoice } from "@/types";
 
 interface BillingTableProps {
@@ -22,30 +22,6 @@ const BillingTable = ({ invoices, onEdit, sortColumn, sortDirection, handleSort 
   const renderSortIcon = (column: keyof Invoice) => {
     if (sortColumn !== column) return null;
     return sortDirection === 'asc' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />;
-  };
-
-  const calculateDueDate = (invoice: Invoice): string => {
-    const customProps = invoice.clientCompanyCustomProperties as { [key: string]: any } | undefined;
-    const topDays = customProps?.['top_days'];
-
-    const baseDateInput = invoice.hardcopySendingDate || invoice.emailSendingDate;
-
-    if (baseDateInput && topDays && typeof topDays === 'number' && topDays > 0) {
-      const baseDate = typeof baseDateInput === 'string' ? parseISO(baseDateInput) : baseDateInput;
-      if (isValid(baseDate)) {
-        const newDueDate = addDays(baseDate, topDays);
-        return format(newDueDate, 'MMM dd, yyyy');
-      }
-    }
-
-    if (invoice.dueDate) {
-      const originalDueDate = typeof invoice.dueDate === 'string' ? parseISO(invoice.dueDate) : invoice.dueDate;
-      if (isValid(originalDueDate)) {
-        return format(originalDueDate, 'MMM dd, yyyy');
-      }
-    }
-    
-    return 'N/A';
   };
 
   return (
@@ -174,7 +150,7 @@ const BillingTable = ({ invoices, onEdit, sortColumn, sortDirection, handleSort 
               </TableCell>
               <TableCell>{invoice.poNumber || 'N/A'}</TableCell>
               <TableCell>{'Rp ' + invoice.amount.toLocaleString('id-ID')}</TableCell>
-              <TableCell>{calculateDueDate(invoice)}</TableCell>
+              <TableCell>{format(invoice.dueDate, 'MMM dd, yyyy')}</TableCell>
               <TableCell>
                 {invoice.invoiceAttachments && invoice.invoiceAttachments.length > 0 ? (
                   <DropdownMenu>
