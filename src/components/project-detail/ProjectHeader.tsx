@@ -1,6 +1,6 @@
 import { Project } from "@/types";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Pencil, Loader2, MoreVertical, Trash2, CheckCircle, Link as LinkIcon, Pin, PinOff } from "lucide-react";
+import { ArrowLeft, Pencil, Loader2, MoreVertical, Trash2, CheckCircle, Link as LinkIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import StatusBadge from "../StatusBadge";
 import { getStatusStyles, cn } from "@/lib/utils";
@@ -19,8 +19,6 @@ interface ProjectHeaderProps {
   isEditing: boolean;
   isSaving: boolean;
   canEdit: boolean;
-  isPinned: boolean;
-  onTogglePin: () => void;
   onEditToggle: () => void;
   onSaveChanges: () => void;
   onCancelChanges: () => void;
@@ -34,8 +32,6 @@ const ProjectHeader = ({
   isEditing,
   isSaving,
   canEdit,
-  isPinned,
-  onTogglePin,
   onEditToggle,
   onSaveChanges,
   onCancelChanges,
@@ -91,19 +87,6 @@ const ProjectHeader = ({
               </div>
             ) : (
               <>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="outline" size="icon" onClick={onTogglePin}>
-                        {isPinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
-                        <span className="sr-only">{isPinned ? 'Unpin project' : 'Pin project'}</span>
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{isPinned ? 'Unpin project' : 'Pin project'}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
                 <Button variant="outline" size="icon" onClick={handleCopyLink}>
                   <LinkIcon className="h-4 w-4" />
                   <span className="sr-only">Copy link</span>
