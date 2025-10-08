@@ -9,7 +9,7 @@ import BillingToolbar from '@/components/billing/BillingToolbar';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import PortalLayout from '@/components/layout/PortalLayout';
 
 const Billing = () => {
@@ -107,9 +107,11 @@ const Billing = () => {
 
   const columns = getColumns({ onUpdate: handleUpdateInvoice, currentUser: user });
 
+  const pageSummary = <h1 className="text-lg font-semibold md:text-2xl">Billing</h1>;
+
   if (isLoading) {
     return (
-      <PortalLayout>
+      <PortalLayout summary={pageSummary}>
         <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin" /></div>
       </PortalLayout>
     );
@@ -117,33 +119,31 @@ const Billing = () => {
 
   if (error) {
     return (
-      <PortalLayout>
+      <PortalLayout summary={pageSummary}>
         <div className="text-red-500 p-4">Error loading billing data: {error.message}</div>
       </PortalLayout>
     );
   }
 
   return (
-    <PortalLayout>
-      <div className="space-y-6 p-4 md:p-6">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Billing</h1>
-          <p className="text-muted-foreground">
-            View your invoices and manage your payment details, derived from your projects.
-          </p>
+    <PortalLayout summary={pageSummary}>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight">Invoice History</h2>
+            <p className="text-muted-foreground">
+              View your invoices and manage your payment details.
+            </p>
+          </div>
+          <BillingToolbar 
+            searchTerm={searchTerm}
+            onSearchTermChange={setSearchTerm}
+          />
         </div>
         
-        <BillingToolbar 
-          searchTerm={searchTerm}
-          onSearchTermChange={setSearchTerm}
-        />
-
         <BillingSummary invoices={invoices} projects={projects} />
 
         <Card>
-          <CardHeader>
-            <CardTitle>Invoice History</CardTitle>
-          </CardHeader>
           <CardContent className="p-0">
             <DataTable columns={columns} data={filteredInvoices} />
           </CardContent>
