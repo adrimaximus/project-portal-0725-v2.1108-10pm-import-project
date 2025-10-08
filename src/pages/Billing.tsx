@@ -1,154 +1,198 @@
-import { useMemo, useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { ExtendedProject, Invoice } from '@/types';
-import { DataTable } from '@/components/billing/DataTable';
-import { getColumns } from '@/components/billing/Columns';
-import { BillingSummary } from '@/components/billing/BillingSummary';
-import BillingToolbar from '@/components/billing/BillingToolbar';
-import { Loader2 } from 'lucide-react';
-import { toast } from 'sonner';
-import { useAuth } from '@/contexts/AuthContext';
-import { Card, CardContent } from '@/components/ui/card';
-import PortalLayout from '@/components/layout/PortalLayout';
+import { useMemo, useState } from "react";
+import PortalLayout from "@/components/PortalLayout";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useProjects } from "@/hooks/useProjects";
+import { PaymentStatus, Project, Invoice, ExtendedProject, Member, Owner } from "@/types";
+import { addDays, isPast } from "date-fns";
+import { Loader2 } from "lucide-react";
+import { EditInvoiceDialog } from "@/components/billing/EditInvoiceDialog";
+import { useProjectMutations } from "@/hooks/useProjectMutations";
+import BillingStats from "@/components/billing/BillingStats";
+import BillingToolbar from "@/components/billing/BillingToolbar";
+import BillingTable from "@/components/billing/BillingTable";
+import BillingKanbanView from "@/components/billing/BillingKanbanView";
+import { DateRange } from "react-day-picker";
 
 const Billing = () => {
-  const { user } = useAuth();
-  const queryClient = useQueryClient();
-  const [searchTerm, setSearchTerm] = useState('');
+  const { data: projects = [], isLoading } = useProjects();
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const [sortColumn, setSortColumn] = useState<keyof Invoice>('dueDate');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+  const [viewMode, setViewMode] = useState<'table' | 'kanban'>('table');
+  
+  const { updateProject } = useProjectMutations(selectedInvoice?.projectId || '');
 
-  const { data: projects = [], isLoading, error } = useQuery<ExtendedProject[]>({
-    queryKey: ['dashboardProjects'],
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_dashboard_projects', {
-        p_limit: 1000, 
-        p_offset: 0,
-      });
-      if (error) throw new Error(error.message);
-      return data;
-    },
-  });
-
-  const invoices: Invoice[] = useMemo(() => projects
+  const invoices: Invoice[] = useMemo(() => (projects as ExtendedProject[])
     .map(project => {
-        if (!project.payment_due_date) return null;
+      const eventDate = project.due_date || project.start_date;
+      if (!project.payment_status || !project.budget || !eventDate) {
+        return null;
+      }
+      
+      const dueDate = addDays(new Date(eventDate), 30);
 
-        return {
-            id: project.invoice_number || `INV-${project.id.substring(0, 8).toUpperCase()}`,
-            projectId: project.slug,
-            projectName: project.name,
-            amount: project.budget || 0,
-            dueDate: new Date(project.payment_due_date),
-            status: project.payment_status,
-            rawProjectId: project.id,
-            projectStartDate: project.start_date ? new Date(project.start_date) : null,
-            projectEndDate: project.due_date ? new Date(project.due_date) : null,
-            poNumber: project.po_number || null,
-            paidDate: project.paid_date ? new Date(project.paid_date) : null,
-            emailSendingDate: project.email_sending_date ? new Date(project.email_sending_date) : null,
-            hardcopySendingDate: project.hardcopy_sending_date ? new Date(project.hardcopy_sending_date) : null,
-            channel: project.channel || null,
-            clientName: project.client_name || null,
-            clientLogo: project.client_company_logo_url || null,
-            clientCompanyName: project.client_company_name || null,
-            projectOwner: project.created_by,
-            assignedMembers: project.assignedTo,
-            invoiceAttachments: project.invoice_attachments || [],
-            clientCompanyCustomProperties: project.client_company_custom_properties || null,
-        };
+      let finalStatus = project.payment_status;
+      if (['Unpaid', 'Pending', 'In Process'].includes(finalStatus) && isPast(dueDate)) {
+        finalStatus = 'Overdue';
+      }
+
+      return {
+        id: project.invoice_number || `INV-${project.id.substring(0, 8).toUpperCase()}`,
+        projectId: project.slug,
+        projectName: project.name,
+        amount: project.budget,
+        dueDate: dueDate,
+        status: finalStatus as PaymentStatus,
+        rawProjectId: project.id,
+        projectStartDate: project.start_date ? new Date(project.start_date) : null,
+        projectEndDate: project.due_date ? new Date(project.due_date) : null,
+        poNumber: project.po_number || null,
+        paidDate: project.paid_date ? new Date(project.paid_date) : null,
+        emailSendingDate: project.email_sending_date ? new Date(project.email_sending_date) : null,
+        hardcopySendingDate: project.hardcopy_sending_date ? new Date(project.hardcopy_sending_date) : null,
+        channel: project.channel || null,
+        clientName: project.client_name || null,
+        clientLogo: project.client_company_logo_url || null,
+        clientCompanyName: project.client_company_name || null,
+        projectOwner: project.created_by as Owner | null,
+        assignedMembers: (project.assignedTo as Member[]) || [],
+        invoiceAttachments: project.invoice_attachments || [],
+        clientCompanyCustomProperties: project.client_company_custom_properties || null,
+      };
     })
     .filter((invoice): invoice is Invoice => invoice !== null), [projects]);
 
   const filteredInvoices = useMemo(() => {
-    if (!searchTerm) {
-      return invoices;
-    }
-    const lowercasedFilter = searchTerm.toLowerCase();
     return invoices.filter(invoice => {
-      return (
-        invoice.id.toLowerCase().includes(lowercasedFilter) ||
-        invoice.projectName.toLowerCase().includes(lowercasedFilter) ||
-        (invoice.clientName && invoice.clientName.toLowerCase().includes(lowercasedFilter)) ||
-        (invoice.poNumber && invoice.poNumber.toLowerCase().includes(lowercasedFilter)) ||
-        (invoice.channel && invoice.channel.toLowerCase().includes(lowercasedFilter))
-      );
+      const searchTermLower = searchTerm.toLowerCase();
+      const matchesSearch =
+        invoice.id.toLowerCase().includes(searchTermLower) ||
+        invoice.projectName.toLowerCase().includes(searchTermLower) ||
+        (invoice.clientName && invoice.clientName.toLowerCase().includes(searchTermLower)) ||
+        (invoice.poNumber && invoice.poNumber.toLowerCase().includes(searchTermLower)) ||
+        (invoice.channel && invoice.channel.toLowerCase().includes(searchTermLower));
+
+      const matchesDate = (() => {
+        if (!dateRange || !dateRange.from) {
+          return true;
+        }
+        if (!invoice.projectStartDate) {
+          return false;
+        }
+        const filterStart = dateRange.from;
+        const filterEnd = dateRange.to || dateRange.from;
+        const projectStart = invoice.projectStartDate;
+        const projectEnd = invoice.projectEndDate || projectStart;
+        return projectStart <= filterEnd && projectEnd >= filterStart;
+      })();
+
+      return matchesSearch && matchesDate;
     });
-  }, [invoices, searchTerm]);
+  }, [invoices, searchTerm, dateRange]);
 
-  const updateInvoiceMutation = useMutation({
-    mutationFn: async ({ invoiceId, updates }: { invoiceId: string, updates: Partial<Invoice> }) => {
-      const projectUpdates: Partial<ExtendedProject> = {};
-      if (updates.status) projectUpdates.payment_status = updates.status;
-      if (updates.poNumber) projectUpdates.po_number = updates.poNumber;
-      if (updates.paidDate) projectUpdates.paid_date = (updates.paidDate as Date).toISOString();
-      if (updates.emailSendingDate) projectUpdates.email_sending_date = (updates.emailSendingDate as Date).toISOString();
-      if (updates.hardcopySendingDate) projectUpdates.hardcopy_sending_date = (updates.hardcopySendingDate as Date).toISOString();
-      if (updates.channel) projectUpdates.channel = updates.channel;
-
-      const { error } = await supabase
-        .from('projects')
-        .update(projectUpdates)
-        .eq('id', invoiceId);
-
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success('Invoice updated successfully');
-      queryClient.invalidateQueries({ queryKey: ['dashboardProjects'] });
-    },
-    onError: (error: any) => {
-      toast.error('Failed to update invoice', { description: error.message });
+  const handleSort = (column: keyof Invoice) => {
+    if (sortColumn === column) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortColumn(column);
+      setSortDirection('asc');
     }
-  });
-
-  const handleUpdateInvoice = (invoiceId: string, updates: Partial<Invoice>) => {
-    updateInvoiceMutation.mutate({ invoiceId, updates });
   };
 
-  const columns = getColumns({ onUpdate: handleUpdateInvoice, currentUser: user });
+  const sortedInvoices = useMemo(() => {
+    if (!sortColumn) return filteredInvoices;
+    return [...filteredInvoices].sort((a, b) => {
+      let aValue: any = a[sortColumn];
+      let bValue: any = b[sortColumn];
+      if (sortColumn === 'projectOwner') {
+        aValue = a.projectOwner?.name;
+        bValue = b.projectOwner?.name;
+      } else if (sortColumn === 'assignedMembers') {
+        aValue = a.assignedMembers?.find(m => m.role === 'admin')?.name;
+        bValue = b.assignedMembers?.find(m => m.role === 'admin')?.name;
+      }
+      if (aValue === null || aValue === undefined) return 1;
+      if (bValue === null || bValue === undefined) return -1;
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
+        return sortDirection === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+      }
+      return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
+    });
+  }, [filteredInvoices, sortColumn, sortDirection]);
 
-  const pageSummary = <h1 className="text-lg font-semibold md:text-2xl">Billing</h1>;
+  const handleEdit = (invoice: Invoice) => {
+    setSelectedInvoice(invoice);
+    setIsFormOpen(true);
+  };
+
+  const handleSave = (updatedProjectData: Partial<Project> & { id: string }) => {
+    const originalProject = projects.find(p => p.id === updatedProjectData.id);
+    if (originalProject) {
+      const projectToUpdate = { ...originalProject, ...updatedProjectData };
+      updateProject.mutate(projectToUpdate);
+    }
+  };
 
   if (isLoading) {
     return (
-      <PortalLayout summary={pageSummary}>
-        <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin" /></div>
-      </PortalLayout>
-    );
-  }
-
-  if (error) {
-    return (
-      <PortalLayout summary={pageSummary}>
-        <div className="text-red-500 p-4">Error loading billing data: {error.message}</div>
+      <PortalLayout>
+        <div className="flex items-center justify-center h-full">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
       </PortalLayout>
     );
   }
 
   return (
-    <PortalLayout summary={pageSummary}>
+    <PortalLayout>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-bold tracking-tight">Invoice History</h2>
-            <p className="text-muted-foreground">
-              View your invoices and manage your payment details.
-            </p>
-          </div>
-          <BillingToolbar 
-            searchTerm={searchTerm}
-            onSearchTermChange={setSearchTerm}
-          />
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Billing</h1>
+          <p className="text-muted-foreground">
+            View your invoices and manage your payment details, derived from your projects.
+          </p>
         </div>
-        
-        <BillingSummary invoices={invoices} projects={projects} />
+
+        <BillingToolbar
+          searchTerm={searchTerm}
+          onSearchTermChange={setSearchTerm}
+          dateRange={dateRange}
+          onDateRangeChange={setDateRange}
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+        />
+
+        <BillingStats invoices={filteredInvoices} />
 
         <Card>
+          <CardHeader>
+            <CardTitle>Invoice History</CardTitle>
+          </CardHeader>
           <CardContent className="p-0">
-            <DataTable columns={columns} data={filteredInvoices} />
+            {viewMode === 'table' ? (
+              <BillingTable
+                invoices={sortedInvoices}
+                onEdit={handleEdit}
+                sortColumn={sortColumn}
+                sortDirection={sortDirection}
+                handleSort={handleSort}
+              />
+            ) : (
+              <BillingKanbanView invoices={sortedInvoices} onEditInvoice={handleEdit} />
+            )}
           </CardContent>
         </Card>
       </div>
+      <EditInvoiceDialog
+        isOpen={isFormOpen}
+        onClose={() => setIsFormOpen(false)}
+        invoice={selectedInvoice}
+        project={projects.find(p => p.id === selectedInvoice?.rawProjectId) || null}
+        onSave={handleSave}
+      />
     </PortalLayout>
   );
 };
