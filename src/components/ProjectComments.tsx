@@ -14,6 +14,7 @@ import { Project } from '@/types';
 import { formatDistanceToNow } from 'date-fns';
 import ReactMarkdown from 'react-markdown';
 import { Link } from 'react-router-dom';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface ProjectCommentsProps {
   project: Project;
@@ -167,52 +168,54 @@ const ProjectComments = ({ project }: ProjectCommentsProps) => {
         </div>
       </div>
 
-      <div className="mt-6 space-y-6">
-        {(project.comments || []).map((c) => (
-          <div key={c.id} className="flex items-start gap-4">
-            <Avatar>
-              <AvatarImage src={getAvatarUrl(c.author.avatar_url, c.author.id)} />
-              <AvatarFallback>{c.author.initials}</AvatarFallback>
-            </Avatar>
-            <div className="flex-1">
-              <div className="flex items-center gap-2">
-                <span className="font-semibold">{c.author.name}</span>
-                <span className="text-xs text-muted-foreground">
-                  {formatDistanceToNow(new Date(c.timestamp), { addSuffix: true })}
-                </span>
-              </div>
-              <div className="prose prose-sm dark:prose-invert max-w-none mt-1">
-                <ReactMarkdown
-                  components={{
-                    a: ({ node, ...props }) => {
-                      const href = props.href || '';
-                      if (href.startsWith('/')) {
-                        return <Link to={href} {...props} className="text-primary hover:underline" />;
+      <ScrollArea className="h-[500px] mt-6">
+        <div className="space-y-6 pr-4">
+          {(project.comments || []).map((c) => (
+            <div key={c.id} className="flex items-start gap-4">
+              <Avatar>
+                <AvatarImage src={getAvatarUrl(c.author.avatar_url, c.author.id)} />
+                <AvatarFallback>{c.author.initials}</AvatarFallback>
+              </Avatar>
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold">{c.author.name}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {formatDistanceToNow(new Date(c.timestamp), { addSuffix: true })}
+                  </span>
+                </div>
+                <div className="prose prose-sm dark:prose-invert max-w-none mt-1">
+                  <ReactMarkdown
+                    components={{
+                      a: ({ node, ...props }) => {
+                        const href = props.href || '';
+                        if (href.startsWith('/')) {
+                          return <Link to={href} {...props} className="text-primary hover:underline" />;
+                        }
+                        return <a {...props} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline" />;
                       }
-                      return <a {...props} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline" />;
-                    }
-                  }}
-                >
-                  {c.text}
-                </ReactMarkdown>
-                {c.attachment_url && (
-                  <div className="mt-2">
-                    <a
-                      href={c.attachment_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-2 text-sm text-primary hover:underline not-prose"
-                    >
-                      <Paperclip className="h-4 w-4" />
-                      <span>{c.attachment_name}</span>
-                    </a>
-                  </div>
-                )}
+                    }}
+                  >
+                    {c.text}
+                  </ReactMarkdown>
+                  {c.attachment_url && (
+                    <div className="mt-2">
+                      <a
+                        href={c.attachment_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 text-sm text-primary hover:underline not-prose"
+                      >
+                        <Paperclip className="h-4 w-4" />
+                        <span>{c.attachment_name}</span>
+                      </a>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      </ScrollArea>
     </div>
   );
 };
