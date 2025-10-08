@@ -158,7 +158,7 @@ const ProjectTasks = ({
               <div className="flex-1 flex items-center gap-2 min-w-0">
                 <label
                   htmlFor={`task-${task.id}`}
-                  className={`text-sm truncate cursor-pointer ${
+                  className={`text-sm break-words cursor-pointer ${
                     task.completed ? "text-muted-foreground line-through" : ""
                   }`}
                 >

@@ -175,6 +175,11 @@ const ProjectComments = ({ project }: ProjectCommentsProps) => {
     setIsSubmitting(false);
   };
 
+  const processMentions = (text: string | null | undefined) => {
+    if (!text) return '';
+    return text.replace(/@\[([^\]]+)\]\(([^)]+)\)/g, '**@$1**');
+  };
+
   return (
     <div className="mt-6">
       <h3 className="text-lg font-semibold mb-4">Comments & Tickets</h3>
@@ -311,7 +316,7 @@ const ProjectComments = ({ project }: ProjectCommentsProps) => {
                             }
                           }}
                         >
-                          {c.text}
+                          {processMentions(c.text)}
                         </ReactMarkdown>
                       </div>
                     )}
