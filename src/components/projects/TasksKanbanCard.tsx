@@ -121,7 +121,7 @@ const TasksKanbanCard = ({ task, onEdit, onDelete }: TasksKanbanCardProps) => {
         <div className="space-y-2">
           {task.projects && task.projects.name !== 'General Tasks' && (
             <div className="text-xs text-muted-foreground">
-              <Link to={`/projects/${task.projects.slug}`} className="hover:underline text-primary truncate max-w-[120px]">
+              <Link to={`/projects/${task.projects.slug}`} className="hover:underline text-primary break-words">
                 {task.projects.name}
               </Link>
             </div>
