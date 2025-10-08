@@ -153,7 +153,7 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <p className="text-xs text-muted-foreground mt-1 truncate cursor-default">
+                              <p className="text-xs text-muted-foreground mt-1">
                                 {formatTaskText(task.description, 150)}
                               </p>
                             </TooltipTrigger>
