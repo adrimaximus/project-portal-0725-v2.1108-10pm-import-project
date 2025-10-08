@@ -13,6 +13,7 @@ import MentionInput from './MentionInput';
 import { Project } from '@/types';
 import { formatDistanceToNow } from 'date-fns';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { Link } from 'react-router-dom';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
@@ -185,6 +186,7 @@ const ProjectComments = ({ project }: ProjectCommentsProps) => {
                 </div>
                 <div className="prose prose-sm dark:prose-invert max-w-none mt-1">
                   <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
                     components={{
                       a: ({ node, ...props }) => {
                         const href = props.href || '';
