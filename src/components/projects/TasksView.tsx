@@ -154,7 +154,7 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <p className="text-xs text-muted-foreground mt-1">
-                                {formatTaskText(task.description, 150)}
+                                {formatTaskText(task.description, 50)}
                               </p>
                             </TooltipTrigger>
                             <TooltipContent>
