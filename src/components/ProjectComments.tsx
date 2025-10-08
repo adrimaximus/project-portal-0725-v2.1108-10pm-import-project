@@ -7,7 +7,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { Loader2, Paperclip, X } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Loader2, Paperclip, Ticket, X } from 'lucide-react';
 import { getAvatarUrl, getInitials } from '@/lib/utils';
 import MentionInput from './MentionInput';
 import { Project } from '@/types';
@@ -79,27 +80,47 @@ const ProjectComments = ({ project }: ProjectCommentsProps) => {
       attachmentName = attachment.name;
     }
 
-    const { error } = await supabase.from('comments').insert({
-      project_id: project.id,
-      author_id: user.id,
-      text: comment,
-      is_ticket: isTicketMode,
-      attachment_url: attachmentUrl,
-      attachment_name: attachmentName,
-    });
+    const { data: newCommentData, error: commentError } = await supabase
+      .from('comments')
+      .insert({
+        project_id: project.id,
+        author_id: user.id,
+        text: comment,
+        is_ticket: isTicketMode,
+        attachment_url: attachmentUrl,
+        attachment_name: attachmentName,
+      })
+      .select()
+      .single();
 
-    if (error) {
-      toast.error('Failed to add comment.', { description: error.message });
-    } else {
-      setComment('');
-      setIsTicketMode(false);
-      setAttachment(null);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-      toast.success(isTicketMode ? 'Ticket created successfully.' : 'Comment added.');
-      queryClient.invalidateQueries({ queryKey: ['project', project.slug] });
+    if (commentError) {
+      toast.error('Failed to add comment.', { description: commentError.message });
+      setIsSubmitting(false);
+      return;
     }
+
+    if (isTicketMode && newCommentData) {
+      const { error: taskError } = await supabase.from('tasks').insert({
+        project_id: project.id,
+        created_by: user.id,
+        title: comment,
+        origin_ticket_id: newCommentData.id,
+      });
+
+      if (taskError) {
+        toast.error('Comment created, but failed to create task.', { description: taskError.message });
+      }
+    }
+
+    setComment('');
+    setIsTicketMode(false);
+    setAttachment(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+    toast.success(isTicketMode ? 'Ticket created successfully.' : 'Comment added.');
+    queryClient.invalidateQueries({ queryKey: ['project', project.slug] });
+    
     setIsSubmitting(false);
   };
 
@@ -181,53 +202,66 @@ const ProjectComments = ({ project }: ProjectCommentsProps) => {
       </div>
 
       <div className="mt-6 space-y-6">
-        {(project.comments || []).map((c) => (
-          <div key={c.id} className="flex items-start gap-4">
-            <Avatar>
-              <AvatarImage src={getAvatarUrl(c.author.avatar_url, c.author.id)} />
-              <AvatarFallback>{c.author.initials}</AvatarFallback>
-            </Avatar>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="font-semibold">{c.author.name}</span>
-                <span className="text-xs text-muted-foreground">
-                  {formatDistanceToNow(new Date(c.timestamp), { addSuffix: true })}
-                </span>
-              </div>
-              {c.text && (
-                <div className="prose prose-sm dark:prose-invert max-w-none mt-1 break-words">
-                  <ReactMarkdown
-                    remarkPlugins={[remarkGfm]}
-                    components={{
-                      a: ({ node, ...props }) => {
-                        const href = props.href || '';
-                        if (href.startsWith('/')) {
-                          return <Link to={href} {...props} className="text-primary hover:underline" />;
+        {(project.comments || []).map((c) => {
+          const isTicket = c.isTicket;
+          const ticketTask = isTicket
+            ? (project.tasks || []).find(t => t.originTicketId === c.id)
+            : null;
+
+          return (
+            <div key={c.id} className="flex items-start gap-4">
+              <Avatar>
+                <AvatarImage src={getAvatarUrl(c.author.avatar_url, c.author.id)} />
+                <AvatarFallback>{c.author.initials}</AvatarFallback>
+              </Avatar>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-semibold">{c.author.name}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {formatDistanceToNow(new Date(c.timestamp), { addSuffix: true })}
+                  </span>
+                  {isTicket && (
+                    <Badge variant={ticketTask?.completed ? 'default' : 'destructive'} className={ticketTask?.completed ? 'bg-green-600 hover:bg-green-700' : ''}>
+                      <Ticket className="h-3 w-3 mr-1" />
+                      {ticketTask?.completed ? 'Done' : 'Ticket'}
+                    </Badge>
+                  )}
+                </div>
+                {c.text && (
+                  <div className="prose prose-sm dark:prose-invert max-w-none mt-1 break-words">
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      components={{
+                        a: ({ node, ...props }) => {
+                          const href = props.href || '';
+                          if (href.startsWith('/')) {
+                            return <Link to={href} {...props} className="text-primary hover:underline" />;
+                          }
+                          return <a {...props} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline" />;
                         }
-                        return <a {...props} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline" />;
-                      }
-                    }}
-                  >
-                    {c.text}
-                  </ReactMarkdown>
-                </div>
-              )}
-              {c.attachment_url && c.attachment_name && (
-                <div className="mt-2">
-                  <a
-                    href={c.attachment_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground bg-muted hover:bg-muted/80 p-2 rounded-md transition-colors"
-                  >
-                    <Paperclip className="h-4 w-4 flex-shrink-0" />
-                    <span className="truncate">{c.attachment_name}</span>
-                  </a>
-                </div>
-              )}
+                      }}
+                    >
+                      {c.text}
+                    </ReactMarkdown>
+                  </div>
+                )}
+                {c.attachment_url && c.attachment_name && (
+                  <div className="mt-2">
+                    <a
+                      href={c.attachment_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground bg-muted hover:bg-muted/80 p-2 rounded-md transition-colors"
+                    >
+                      <Paperclip className="h-4 w-4 flex-shrink-0" />
+                      <span className="truncate">{c.attachment_name}</span>
+                    </a>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
