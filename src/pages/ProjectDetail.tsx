@@ -2,13 +2,12 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Project, Task } from '@/types';
+import { Project } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 
 import ProjectHeader from '@/components/project-detail/ProjectHeader';
-import ProjectTabs from '@/components/project-detail/ProjectTabs';
 import ProjectOverview from '@/components/project-detail/ProjectOverview';
 import ProjectTasks from '@/components/project-detail/ProjectTasks';
 import ProjectBrief from '@/components/project-detail/ProjectBrief';
@@ -37,7 +36,6 @@ const ProjectDetail = () => {
 
   const [editedProject, setEditedProject] = useState<Project | null>(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [activeTab, setActiveTab] = useState('overview');
   const [pinnedProjects, setPinnedProjects] = useState<string[]>([]);
 
   useEffect(() => {
@@ -178,13 +176,12 @@ const ProjectDetail = () => {
         onDeleteProject={handleDeleteProject}
         onFieldChange={handleFieldChange}
       />
-      <ProjectTabs activeTab={activeTab} onTabChange={setActiveTab} />
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
         <div className="lg:col-span-2 space-y-6">
-          {activeTab === 'overview' && <ProjectOverview project={editedProject} onFieldChange={handleFieldChange} isEditing={isEditing} />}
-          {activeTab === 'tasks' && <ProjectTasks project={project} onTaskAdd={() => {}} onTaskAssignUsers={() => {}} onTaskStatusChange={() => {}} onTaskDelete={() => {}} />}
-          {activeTab === 'brief' && <ProjectBrief project={project} />}
-          {activeTab === 'discussion' && <ProjectComments project={project} />}
+          <ProjectOverview project={editedProject} onFieldChange={handleFieldChange} isEditing={isEditing} />
+          <ProjectTasks project={project} onTaskAdd={() => {}} onTaskAssignUsers={() => {}} onTaskStatusChange={() => {}} onTaskDelete={() => {}} />
+          <ProjectBrief project={project} />
+          <ProjectComments project={project} />
         </div>
         <div className="lg:col-span-1">
           <ProjectActivity activities={project.activities} />

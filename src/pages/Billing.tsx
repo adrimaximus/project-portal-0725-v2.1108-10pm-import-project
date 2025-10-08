@@ -26,7 +26,7 @@ const Billing = () => {
     },
   });
 
-  const invoices = useMemo(() => projects
+  const invoices: Invoice[] = useMemo(() => projects
     .map(project => {
         if (!project.payment_due_date) return null;
 
@@ -67,11 +67,11 @@ const Billing = () => {
     try {
       const projectUpdates: Partial<ExtendedProject> = {};
       if (updates.status) projectUpdates.payment_status = updates.status;
-      if (updates.dueDate) projectUpdates.payment_due_date = updates.dueDate.toISOString();
+      if (updates.dueDate && updates.dueDate instanceof Date) projectUpdates.payment_due_date = updates.dueDate.toISOString();
       if (updates.poNumber) projectUpdates.po_number = updates.poNumber;
-      if (updates.paidDate) projectUpdates.paid_date = updates.paidDate.toISOString();
-      if (updates.emailSendingDate) projectUpdates.email_sending_date = updates.emailSendingDate.toISOString();
-      if (updates.hardcopySendingDate) projectUpdates.hardcopy_sending_date = updates.hardcopySendingDate.toISOString();
+      if (updates.paidDate && updates.paidDate instanceof Date) projectUpdates.paid_date = updates.paidDate.toISOString();
+      if (updates.emailSendingDate && updates.emailSendingDate instanceof Date) projectUpdates.email_sending_date = updates.emailSendingDate.toISOString();
+      if (updates.hardcopySendingDate && updates.hardcopySendingDate instanceof Date) projectUpdates.hardcopy_sending_date = updates.hardcopySendingDate.toISOString();
       if (updates.channel) projectUpdates.channel = updates.channel;
 
       const { error } = await supabase

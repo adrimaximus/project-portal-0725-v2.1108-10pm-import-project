@@ -1,94 +1,43 @@
-import { Button } from "@/components/ui/button";
-import { Plus, Trash2, Download, Eye } from "lucide-react";
-import React, { useRef } from "react";
-import FileIcon from "../FileIcon";
-import { ProjectFile } from "@/types";
+import { Project, ProjectFile } from "@/types";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { FileText, Download } from "lucide-react";
+import { Button } from "../ui/button";
 
-interface ProjectBriefProps {
-  files: ProjectFile[];
-  isEditing: boolean;
-  onFilesAdd: (files: File[]) => void;
-  onFileDelete: (fileId: string) => void;
+export interface ProjectBriefProps {
+  project: Project;
 }
 
-const ProjectBrief = ({ files, isEditing, onFilesAdd, onFileDelete }: ProjectBriefProps) => {
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleFileAdd = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files) {
-      const newFiles = Array.from(event.target.files);
-      onFilesAdd(newFiles);
-    }
-  };
-
-  const handleAddClick = () => {
-    fileInputRef.current?.click();
-  };
-
+const ProjectBrief = ({ project }: ProjectBriefProps) => {
   return (
-    <div className="space-y-4">
-      {files.length > 0 ? (
-        <ul className="space-y-2">
-          {files.map((file) => (
-            <li key={file.id} className="flex items-center justify-between p-2 rounded-md border bg-background">
-              <div className="flex items-center gap-3 truncate">
-                <FileIcon fileType={file.type || ''} className="h-5 w-5 flex-shrink-0 text-muted-foreground" />
-                <span className="truncate text-sm font-medium">{file.name}</span>
-              </div>
-              <div className="flex items-center flex-shrink-0">
-                <a
-                  href={file.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  title={`Preview ${file.name}`}
-                >
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                    <Eye className="h-4 w-4" />
-                    <span className="sr-only">Preview file</span>
-                  </Button>
-                </a>
-                <a
-                  href={file.url}
-                  download={file.name}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  title={`Download ${file.name}`}
-                >
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
+    <Card>
+      <CardHeader>
+        <CardTitle>Brief & Files</CardTitle>
+      </CardHeader>
+      <CardContent>
+        {project.briefFiles && project.briefFiles.length > 0 ? (
+          <ul className="space-y-3">
+            {project.briefFiles.map((file: ProjectFile) => (
+              <li key={file.id} className="flex items-center justify-between p-2 rounded-md border">
+                <div className="flex items-center gap-3">
+                  <FileText className="h-5 w-5 text-muted-foreground" />
+                  <div className="flex flex-col">
+                    <span className="text-sm font-medium">{file.name}</span>
+                    <span className="text-xs text-muted-foreground">{(file.size / 1024).toFixed(2)} KB</span>
+                  </div>
+                </div>
+                <Button asChild variant="ghost" size="icon">
+                  <a href={file.url} download={file.name} target="_blank" rel="noopener noreferrer">
                     <Download className="h-4 w-4" />
-                    <span className="sr-only">Download file</span>
-                  </Button>
-                </a>
-                {isEditing && (
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => onFileDelete(file.id)}>
-                    <Trash2 className="h-4 w-4" />
-                    <span className="sr-only">Remove file</span>
-                  </Button>
-                )}
-              </div>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="text-sm text-muted-foreground text-center py-4">No files attached.</p>
-      )}
-
-      {isEditing && (
-        <>
-          <input
-            type="file"
-            multiple
-            ref={fileInputRef}
-            onChange={handleFileAdd}
-            className="hidden"
-          />
-          <Button variant="outline" className="w-full" onClick={handleAddClick}>
-            <Plus className="mr-2 h-4 w-4" />
-            Add Files
-          </Button>
-        </>
-      )}
-    </div>
+                  </a>
+                </Button>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-sm text-muted-foreground text-center py-4">No files attached to the brief.</p>
+        )}
+      </CardContent>
+    </Card>
   );
 };
 
