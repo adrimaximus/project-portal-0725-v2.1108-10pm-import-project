@@ -195,7 +195,7 @@ const ProjectComments = ({ project }: ProjectCommentsProps) => {
                 </span>
               </div>
               {c.text && (
-                <div className="prose prose-sm dark:prose-invert max-w-none mt-1">
+                <div className="prose prose-sm dark:prose-invert max-w-none mt-1 break-words">
                   <ReactMarkdown
                     remarkPlugins={[remarkGfm]}
                     components={{
