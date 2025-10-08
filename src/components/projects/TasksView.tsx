@@ -160,7 +160,7 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
                 </TableCell>
                 <TableCell className="w-[20%]">
                   {task.projects && task.projects.name !== 'General Tasks' ? (
-                    <Link to={`/projects/${task.projects.slug}`} className="hover:underline text-primary text-xs">
+                    <Link to={`/projects/${task.projects.slug}`} className="hover:underline text-primary text-xs block max-w-[50ch] break-words">
                       {task.projects.name}
                     </Link>
                   ) : null}
