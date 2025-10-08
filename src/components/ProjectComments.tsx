@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Paperclip, X } from 'lucide-react';
 import { getAvatarUrl, getInitials } from '@/lib/utils';
 import MentionInput from './MentionInput';
 import { Project } from '@/types';
@@ -25,7 +25,9 @@ const ProjectComments = ({ project }: ProjectCommentsProps) => {
   const [comment, setComment] = useState('');
   const [isTicketMode, setIsTicketMode] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [attachment, setAttachment] = useState<File | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!user) return null;
 
@@ -36,15 +38,57 @@ const ProjectComments = ({ project }: ProjectCommentsProps) => {
     initials: member.initials || getInitials(member.name, member.email),
   }));
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      if (e.target.files[0].size > 10 * 1024 * 1024) { // 10MB limit
+        toast.error('File is too large.', { description: 'Maximum file size is 10MB.' });
+        return;
+      }
+      setAttachment(e.target.files[0]);
+    }
+  };
+
+  const handleAttachmentClick = () => {
+    fileInputRef.current?.click();
+  };
+
   const handleSubmit = async () => {
-    if (!comment.trim()) return;
+    if (!comment.trim() && !attachment) return;
     setIsSubmitting(true);
+
+    let attachmentUrl: string | null = null;
+    let attachmentName: string | null = null;
+
+    if (attachment) {
+      const fileExt = attachment.name.split('.').pop();
+      const fileName = `${crypto.randomUUID()}.${fileExt}`;
+      const filePath = `${project.id}/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('project-files')
+        .upload(filePath, attachment);
+
+      if (uploadError) {
+        toast.error('Failed to upload attachment.', { description: uploadError.message });
+        setIsSubmitting(false);
+        return;
+      }
+
+      const { data } = supabase.storage
+        .from('project-files')
+        .getPublicUrl(filePath);
+      
+      attachmentUrl = data.publicUrl;
+      attachmentName = attachment.name;
+    }
 
     const { error } = await supabase.from('comments').insert({
       project_id: project.id,
       author_id: user.id,
       text: comment,
       is_ticket: isTicketMode,
+      attachment_url: attachmentUrl,
+      attachment_name: attachmentName,
     });
 
     if (error) {
@@ -52,6 +96,10 @@ const ProjectComments = ({ project }: ProjectCommentsProps) => {
     } else {
       setComment('');
       setIsTicketMode(false);
+      setAttachment(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
       toast.success(isTicketMode ? 'Ticket created successfully.' : 'Comment added.');
       queryClient.invalidateQueries({ queryKey: ['project', project.slug] });
     }
@@ -91,8 +139,26 @@ const ProjectComments = ({ project }: ProjectCommentsProps) => {
                 <Label htmlFor="ticket-mode" className="text-sm font-medium">
                   Create a ticket
                 </Label>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileChange}
+                  className="hidden"
+                />
+                <Button variant="ghost" size="icon" onClick={handleAttachmentClick} disabled={isSubmitting} aria-label="Add attachment">
+                  <Paperclip className="h-4 w-4" />
+                </Button>
+                {attachment && (
+                  <div className="flex items-center gap-2 text-sm bg-background/50 p-1 rounded-md">
+                    <Paperclip className="h-4 w-4 text-muted-foreground" />
+                    <span className="max-w-[150px] truncate">{attachment.name}</span>
+                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setAttachment(null)} disabled={isSubmitting}>
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
               </div>
-              <Button onClick={handleSubmit} disabled={isSubmitting || !comment.trim()}>
+              <Button onClick={handleSubmit} disabled={isSubmitting || (!comment.trim() && !attachment)}>
                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {isTicketMode ? 'Create Ticket' : 'Comment'}
               </Button>
@@ -129,6 +195,19 @@ const ProjectComments = ({ project }: ProjectCommentsProps) => {
                 >
                   {c.text}
                 </ReactMarkdown>
+                {c.attachment_url && (
+                  <div className="mt-2">
+                    <a
+                      href={c.attachment_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 text-sm text-primary hover:underline not-prose"
+                    >
+                      <Paperclip className="h-4 w-4" />
+                      <span>{c.attachment_name}</span>
+                    </a>
+                  </div>
+                )}
               </div>
             </div>
           </div>
