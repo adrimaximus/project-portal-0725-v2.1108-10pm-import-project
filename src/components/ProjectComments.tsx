@@ -14,6 +14,7 @@ import { Project } from '@/types';
 import { formatDistanceToNow } from 'date-fns';
 import ReactMarkdown from 'react-markdown';
 import { Link } from 'react-router-dom';
+import remarkGfm from 'remark-gfm';
 
 interface ProjectCommentsProps {
   project: Project;
@@ -186,7 +187,7 @@ const ProjectComments = ({ project }: ProjectCommentsProps) => {
               <AvatarImage src={getAvatarUrl(c.author.avatar_url, c.author.id)} />
               <AvatarFallback>{c.author.initials}</AvatarFallback>
             </Avatar>
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
                 <span className="font-semibold">{c.author.name}</span>
                 <span className="text-xs text-muted-foreground">
@@ -196,6 +197,7 @@ const ProjectComments = ({ project }: ProjectCommentsProps) => {
               {c.text && (
                 <div className="prose prose-sm dark:prose-invert max-w-none mt-1">
                   <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
                     components={{
                       a: ({ node, ...props }) => {
                         const href = props.href || '';
