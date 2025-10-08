@@ -48,7 +48,6 @@ const KanbanView = ({ projects, groupBy }: { projects: Project[], groupBy: 'stat
 
   const projectGroups = useMemo(() => {
     const groups: Record<string, Project[]> = {};
-    const orderKey = groupBy === 'status' ? 'kanban_order' : 'payment_kanban_order';
     
     columns.forEach(opt => {
       groups[opt.value] = [];
@@ -59,8 +58,6 @@ const KanbanView = ({ projects, groupBy }: { projects: Project[], groupBy: 'stat
       if (key && Object.prototype.hasOwnProperty.call(groups, key)) {
         groups[key].push(project);
       } else {
-        // If status is null, undefined, or not a valid column,
-        // assign it to the first column as a default.
         if (columns.length > 0) {
           groups[columns[0].value].push(project);
         }
@@ -68,7 +65,11 @@ const KanbanView = ({ projects, groupBy }: { projects: Project[], groupBy: 'stat
     });
 
     for (const groupKey in groups) {
-        groups[groupKey].sort((a, b) => (a[orderKey] || 0) - (b[orderKey] || 0));
+        groups[groupKey].sort((a, b) => {
+            const dateA = a.updated_at ? new Date(a.updated_at).getTime() : 0;
+            const dateB = b.updated_at ? new Date(b.updated_at).getTime() : 0;
+            return dateB - dateA;
+        });
     }
     return groups;
   }, [projects, columns, groupBy]);
