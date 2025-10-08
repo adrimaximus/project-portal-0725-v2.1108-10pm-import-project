@@ -88,7 +88,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     const messageMatches = conversations.filter(c => messageSearchResults.includes(c.id));
     const combined = new Map(nameMatches.map(c => [c.id, c]));
     messageMatches.forEach(c => combined.set(c.id, c));
-    return Array.from(combined.values()).sort((a, b) => new Date(b.lastMessageTimestamp).getTime() - new Date(a.lastMessageTimestamp).getTime());
+    return Array.from(combined.values()).sort((a, b) => new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime());
   }, [conversations, searchTerm, messageSearchResults]);
 
   const sendMessageMutation = useMutation({

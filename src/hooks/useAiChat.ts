@@ -17,15 +17,15 @@ const AI_ASSISTANT_USER: User = {
 
 const initialMessage: Message = {
   id: 'ai-initial-message',
-  text: "You can ask me to create projects, add tasks, write articles, or find information. How can I help you today?",
-  timestamp: new Date().toISOString(),
+  content: "You can ask me to create projects, add tasks, write articles, or find information. How can I help you today?",
+  createdAt: new Date().toISOString(),
   sender: AI_ASSISTANT_USER,
 };
 
 const mapDbMessageToUiMessage = (dbMsg: any, currentUser: User): Message => ({
   id: dbMsg.id,
-  text: dbMsg.content,
-  timestamp: dbMsg.created_at,
+  content: dbMsg.content,
+  createdAt: dbMsg.created_at,
   sender: dbMsg.sender === 'user' ? currentUser : AI_ASSISTANT_USER,
   reply_to_message_id: dbMsg.reply_to_message_id,
 });
@@ -59,8 +59,8 @@ export const useAiChat = (currentUser: User | null) => {
               if (repliedMsg) {
                   return {
                       ...msg,
-                      repliedMessage: {
-                          content: repliedMsg.text,
+                      replyTo: {
+                          content: repliedMsg.content,
                           senderName: repliedMsg.sender.name,
                           isDeleted: false,
                       }
@@ -142,8 +142,8 @@ export const useAiChat = (currentUser: User | null) => {
 
     const userMessage: Message = {
       id: uuidv4(), // Optimistic ID
-      text,
-      timestamp: new Date().toISOString(),
+      content: text,
+      createdAt: new Date().toISOString(),
       sender: currentUser,
       attachment: attachmentForUi,
       reply_to_message_id: replyToMessageId,
@@ -152,8 +152,8 @@ export const useAiChat = (currentUser: User | null) => {
     if (replyToMessageId) {
         const repliedMsg = conversation.find(m => m.id === replyToMessageId);
         if (repliedMsg) {
-            userMessage.repliedMessage = {
-                content: repliedMsg.text,
+            userMessage.replyTo = {
+                content: repliedMsg.content,
                 senderName: repliedMsg.sender.name,
                 isDeleted: false,
             };
@@ -192,8 +192,8 @@ export const useAiChat = (currentUser: User | null) => {
       
       const aiMessage: Message = {
         id: uuidv4(),
-        text: result,
-        timestamp: new Date().toISOString(),
+        content: result,
+        createdAt: new Date().toISOString(),
         sender: AI_ASSISTANT_USER,
       };
       setConversation(prev => [...prev, aiMessage]);
@@ -232,8 +232,8 @@ export const useAiChat = (currentUser: User | null) => {
       
       const errorMessage: Message = {
         id: uuidv4(),
-        text: `Sorry, I'm having trouble: ${description}`,
-        timestamp: new Date().toISOString(),
+        content: `Sorry, I'm having trouble: ${description}`,
+        createdAt: new Date().toISOString(),
         sender: AI_ASSISTANT_USER,
       };
       setConversation(prev => [...prev, errorMessage]);

@@ -26,12 +26,11 @@ const AiChatView = forwardRef<HTMLTextAreaElement, AiChatViewProps>(({ onBack },
     userName: 'AI Assistant',
     userAvatar: aiUser.avatar_url,
     isGroup: false,
-    members: [currentUser!, aiUser],
+    participants: [currentUser!, aiUser],
     messages: conversation,
     lastMessage: conversation[conversation.length - 1]?.content || "Ask me anything...",
     lastMessageAt: conversation[conversation.length - 1]?.createdAt || new Date().toISOString(),
     unreadCount: 0,
-    participants: [currentUser!, aiUser],
   }), [aiUser, conversation, currentUser]);
 
   const handleSendMessage = (text: string, attachmentFile: File | null) => {
@@ -42,7 +41,7 @@ const AiChatView = forwardRef<HTMLTextAreaElement, AiChatViewProps>(({ onBack },
   if (isCheckingConnection) {
     return (
       <div className="flex flex-col h-full bg-background overflow-hidden">
-        <ChatHeader onBack={onBack} conversation={aiConversationObject} />
+        <ChatHeader onBack={onBack} conversation={aiConversationObject} onLeaveGroup={() => {}} onClearChat={() => {}} onRefetchConversations={() => {}} />
         <div className="flex-1 flex items-center justify-center">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
@@ -53,7 +52,7 @@ const AiChatView = forwardRef<HTMLTextAreaElement, AiChatViewProps>(({ onBack },
   if (!isConnected) {
     return (
       <div className="flex flex-col h-full bg-background overflow-hidden">
-        <ChatHeader onBack={onBack} conversation={aiConversationObject} />
+        <ChatHeader onBack={onBack} conversation={aiConversationObject} onLeaveGroup={() => {}} onClearChat={() => {}} onRefetchConversations={() => {}} />
         <div className="flex-1 flex items-center justify-center p-4">
           <Card className="w-full max-w-md text-center">
             <CardContent className="p-6">
@@ -76,6 +75,9 @@ const AiChatView = forwardRef<HTMLTextAreaElement, AiChatViewProps>(({ onBack },
       <ChatHeader
         onBack={onBack}
         conversation={aiConversationObject}
+        onLeaveGroup={() => {}}
+        onClearChat={() => {}}
+        onRefetchConversations={() => {}}
       />
       <ChatConversation
         messages={conversation}

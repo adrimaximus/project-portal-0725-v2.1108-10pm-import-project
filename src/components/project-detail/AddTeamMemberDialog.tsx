@@ -1,8 +1,16 @@
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Project, User } from '@/types';
 
-export const AddTeamMemberDialog = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) => {
+interface AddTeamMemberDialogProps {
+  isOpen: boolean;
+  onClose: () => void;
+  project: Project;
+  existingMembers: User[];
+}
+
+export const AddTeamMemberDialog = ({ isOpen, onClose, project, existingMembers }: AddTeamMemberDialogProps) => {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent>

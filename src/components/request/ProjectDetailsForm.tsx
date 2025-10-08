@@ -84,14 +84,6 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
     }
   };
 
-  const handleTeamChange = (userToToggle: User) => {
-    setTeam((currentTeam) =>
-      currentTeam.some((user) => user.id === userToToggle.id)
-        ? currentTeam.filter((user) => user.id !== userToToggle.id)
-        : [...currentTeam, userToToggle]
-    );
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentUser) {
@@ -280,7 +272,7 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
           </div>
           <div className="space-y-2">
             <Label>Assign Team</Label>
-            <ModernTeamSelector selectedUsers={team} onChange={handleTeamChange} />
+            <ModernTeamSelector selectedUsers={team} onChange={setTeam} />
           </div>
           <div className="space-y-2">
             <Label>Attach Files</Label>

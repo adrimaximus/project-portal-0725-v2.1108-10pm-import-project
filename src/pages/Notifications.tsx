@@ -71,12 +71,12 @@ const NotificationsPage = () => {
                       key={notification.id}
                       className={cn(
                         "flex items-start gap-4 p-4 transition-colors",
-                        !notification.read && "bg-muted/50"
+                        !notification.read_at && "bg-muted/50"
                       )}
                     >
                       <div className="relative">
                         <Icon className="h-6 w-6 text-muted-foreground mt-1" />
-                        {!notification.read && (
+                        {!notification.read_at && (
                           <span className="absolute -top-1 -right-1 block h-2.5 w-2.5 rounded-full bg-primary ring-2 ring-background" />
                         )}
                       </div>
@@ -84,12 +84,12 @@ const NotificationsPage = () => {
                         <Link to={notification.link || "#"} className="hover:underline">
                           <p className="font-semibold">{notification.title}</p>
                         </Link>
-                        <p className="text-sm text-muted-foreground">{notification.description}</p>
+                        <p className="text-sm text-muted-foreground">{notification.body}</p>
                         <p className="text-xs text-muted-foreground mt-1">
-                          {formatDistanceToNow(new Date(notification.timestamp), { addSuffix: true, locale: id })}
+                          {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true, locale: id })}
                         </p>
                       </div>
-                      {notification.read ? (
+                      {notification.read_at ? (
                         <Button
                           variant="ghost"
                           size="sm"

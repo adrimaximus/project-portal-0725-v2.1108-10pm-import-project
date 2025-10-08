@@ -6,7 +6,7 @@ export const mapToConversation = (c: any): Conversation => ({
   id: c.conversation_id,
   isGroup: c.is_group,
   userName: c.conversation_name || 'Chat',
-  userAvatar: getAvatarUrl(c.conversation_avatar || c.other_user_id || c.conversation_id),
+  userAvatar: getAvatarUrl(c.conversation_avatar),
   lastMessage: c.last_message_content || "No messages yet.",
   lastMessageAt: c.last_message_at,
   participants: c.participants?.map((p: any) => ({

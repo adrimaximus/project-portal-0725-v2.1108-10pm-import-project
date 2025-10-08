@@ -11,7 +11,7 @@ import {
   Trash2,
   Edit,
 } from "lucide-react";
-import { TaskFormDialog } from "@/components/projects/TaskFormDialog";
+import TaskFormDialog from "@/components/projects/TaskFormDialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -200,7 +200,8 @@ const ProjectTasks = ({ projectId }: { projectId: string }) => {
         open={isDialogOpen}
         onOpenChange={handleDialogClose}
         task={editingTask}
-        projectId={projectId}
+        onSubmit={() => {}}
+        isSubmitting={false}
       />
     </div>
   );
