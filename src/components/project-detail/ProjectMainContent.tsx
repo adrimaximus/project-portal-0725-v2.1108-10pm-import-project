@@ -13,11 +13,12 @@ interface ProjectMainContentProps {
   isEditing: boolean;
   onFieldChange: (field: keyof Project, value: any) => void;
   mutations: any; // Simplified for brevity, contains all mutation functions
+  defaultTab: string;
 }
 
-const ProjectMainContent = ({ project, isEditing, onFieldChange, mutations }: ProjectMainContentProps) => {
+const ProjectMainContent = ({ project, isEditing, onFieldChange, mutations, defaultTab }: ProjectMainContentProps) => {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState('tasks');
+  const [activeTab, setActiveTab] = useState(defaultTab);
 
   if (!user) {
     return null;
