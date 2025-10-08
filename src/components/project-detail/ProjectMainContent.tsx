@@ -41,6 +41,11 @@ const ProjectMainContent = ({ project, isEditing, onFieldChange, mutations, defa
     mutations.deleteTask.mutate(taskId);
   };
 
+  const handleAddCommentOrTicket = (text: string, isTicket: boolean, attachment: File | null) => {
+    if (!project || !user) return;
+    mutations.addComment.mutate({ project, user, text, isTicket, attachment });
+  };
+
   return (
     <div className="p-4">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -89,6 +94,7 @@ const ProjectMainContent = ({ project, isEditing, onFieldChange, mutations, defa
         <TabsContent value="discussion" className="mt-4">
           <ProjectComments
             project={project}
+            onAddCommentOrTicket={handleAddCommentOrTicket}
           />
         </TabsContent>
         <TabsContent value="activity" className="mt-4">

@@ -1,18 +1,19 @@
-import { useRef, useState, forwardRef, useEffect } from "react";
+import { useRef, useState, forwardRef } from "react";
 import { useDropzone } from 'react-dropzone';
 import { Button } from "./ui/button";
-import { Paperclip, Send, X, Loader2, UploadCloud, Smile } from "lucide-react";
+import { Paperclip, Send, X, Loader2, UploadCloud, Smile, Briefcase } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Message } from "@/types";
 import VoiceMessageRecorder from "./VoiceMessageRecorder";
-import MentionInput, { UserSuggestion, ProjectSuggestion } from "./MentionInput";
 import { useChatContext } from "@/contexts/ChatContext";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import Picker from '@emoji-mart/react';
 import data from '@emoji-mart/data';
 import { useTheme } from "@/contexts/ThemeProvider";
-import { useQuery } from "@tanstack/react-query";
 import * as chatApi from '@/lib/chatApi';
+import { Mention, MentionsInput } from "react-mentions";
+import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
+import { generatePastelColor, getAvatarUrl } from "@/lib/utils";
 
 interface ChatInputProps {
   onSendMessage: (text: string, attachment: File | null, replyToMessageId?: string | null) => void;
@@ -37,48 +38,22 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
   const { selectedConversation } = useChatContext();
   const { theme } = useTheme();
 
-  const [isProjectMentionActive, setIsProjectMentionActive] = useState(false);
-  const [projectSearchTerm, setProjectSearchTerm] = useState('');
-  const [debouncedProjectSearchTerm, setDebouncedProjectSearchTerm] = useState('');
-
-  const { data: projectSuggestionsData } = useQuery({
-    queryKey: ['project-search', debouncedProjectSearchTerm],
-    queryFn: () => chatApi.searchProjects(debouncedProjectSearchTerm),
-    enabled: isProjectMentionActive,
-  });
-
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedProjectSearchTerm(projectSearchTerm);
-    }, 300);
-
-    return () => {
-      clearTimeout(handler);
-    };
-  }, [projectSearchTerm]);
-
-  const handleSearchTermChange = (trigger: '@' | '/' | null, term: string) => {
-    if (trigger === '/') {
-      setIsProjectMentionActive(true);
-      setProjectSearchTerm(term);
-    } else {
-      setIsProjectMentionActive(false);
-      setProjectSearchTerm('');
-    }
-  };
-
-  const projectSuggestions: ProjectSuggestion[] = (projectSuggestionsData || []).map(p => ({
-    id: p.id,
-    display: p.name,
-    slug: p.slug,
-  }));
-
-  const userSuggestions: UserSuggestion[] = (selectedConversation?.members || []).map(m => ({
+  const userSuggestions = (selectedConversation?.members || []).map(m => ({
     id: m.id,
     display: m.name,
     avatar_url: m.avatar_url,
     initials: m.initials,
   }));
+
+  const fetchProjectSuggestions = (query: string, callback: (data: { id: string, display: string }[]) => void) => {
+    if (query.length < 1) {
+      callback([]);
+      return;
+    }
+    chatApi.searchProjects(query).then(projects => {
+      callback(projects.map(p => ({ id: p.slug, display: p.name })));
+    });
+  };
 
   const onDrop = (acceptedFiles: File[]) => {
     if (acceptedFiles && acceptedFiles.length > 0) {
@@ -123,10 +98,10 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
     }
   };
 
-  const handleTextChange = (newText: string) => {
-    setText(newText);
+  const handleTextChange = (event: any, newValue: string) => {
+    setText(newValue);
     triggerTyping();
-  }
+  };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -166,18 +141,57 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
 
       <div className="flex items-end gap-2">
         <div className="relative flex-1">
-          <MentionInput
-            ref={ref}
-            placeholder="Type a message..."
-            value={text}
-            onChange={handleTextChange}
-            onKeyDown={handleKeyDown}
-            userSuggestions={userSuggestions}
-            projectSuggestions={projectSuggestions}
-            onSearchTermChange={handleSearchTermChange}
-            disabled={isSending}
-            className="pr-24"
-          />
+          <div className="w-full rounded-lg border bg-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
+            <MentionsInput
+              inputRef={ref}
+              placeholder="Type a message..."
+              value={text}
+              onChange={handleTextChange}
+              onKeyDown={handleKeyDown}
+              disabled={isSending}
+              classNames={{
+                input: 'w-full p-3 pr-24 bg-transparent placeholder:text-muted-foreground focus:outline-none resize-none',
+                suggestions: {
+                  list: 'bg-popover text-popover-foreground border rounded-lg shadow-lg p-1 mt-2 z-10 max-h-60 overflow-y-auto',
+                  item: 'flex items-center gap-3 px-2 py-1.5 text-sm rounded-sm cursor-pointer outline-none',
+                  itemFocused: 'bg-accent text-accent-foreground',
+                },
+                mention: 'bg-primary/10 text-primary font-semibold rounded-sm px-1 py-0.5',
+              }}
+              // @ts-ignore
+              appendSpaceOnAdd
+            >
+              <Mention
+                trigger="@"
+                data={userSuggestions}
+                markup="@[__display__](__id__)"
+                displayTransform={(id, display) => `@${display}`}
+                renderSuggestion={(suggestion: any) => (
+                  <>
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={getAvatarUrl(suggestion.avatar_url, suggestion.id)} />
+                      <AvatarFallback style={generatePastelColor(suggestion.id)}>{suggestion.initials}</AvatarFallback>
+                    </Avatar>
+                    <span>{suggestion.display}</span>
+                  </>
+                )}
+              />
+              <Mention
+                trigger="/"
+                data={fetchProjectSuggestions}
+                markup="[__display__](/projects/__id__)"
+                displayTransform={(id, display) => `/${display}`}
+                renderSuggestion={(suggestion: any) => (
+                  <div className="flex items-center">
+                    <Briefcase className="h-4 w-4 mr-2 text-muted-foreground" />
+                    <span>{suggestion.display}</span>
+                  </div>
+                )}
+                // @ts-ignore
+                appendSpaceOnAdd
+              />
+            </MentionsInput>
+          </div>
           <div className="absolute bottom-2 right-2 flex items-center">
             <Popover>
               <PopoverTrigger asChild>
