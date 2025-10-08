@@ -1,179 +1,185 @@
-import { useState, useEffect, useRef } from "react";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import PortalLayout from "@/components/PortalLayout";
-import ProjectHeader from "@/components/project-detail/ProjectHeader";
-import ProjectMainContent from "@/components/project-detail/ProjectMainContent";
-import { Skeleton } from "@/components/ui/skeleton";
-import ProjectProgressCard from "@/components/project-detail/ProjectProgressCard";
-import ProjectTeamCard from "@/components/project-detail/ProjectTeamCard";
-import ProjectDetailsCard from "@/components/project-detail/ProjectDetailsCard";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { useAuth } from "@/contexts/AuthContext";
-import { useProject } from "@/hooks/useProject";
-import { useProjectMutations } from "@/hooks/useProjectMutations";
-import { toast } from "sonner";
-import { Project } from "@/types";
-
-const ProjectDetailSkeleton = () => (
-  <PortalLayout>
-    <div className="space-y-4">
-      <Skeleton className="h-16 w-full" />
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-4">
-          <Skeleton className="h-96" />
-        </div>
-        <div className="space-y-4">
-          <Skeleton className="h-28" />
-          <Skeleton className="h-32" />
-          <Skeleton className="h-48" />
-        </div>
-      </div>
-    </div>
-  </PortalLayout>
-);
+import { useState, useEffect, useMemo } from 'react';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useProject } from '@/hooks/useProject';
+import { useProjectMutations } from '@/hooks/useProjectMutations';
+import { Project, Tag } from '@/types';
+import { toast } from 'sonner';
+import { Skeleton } from '@/components/ui/skeleton';
+import ProjectHeader from '@/components/project-detail/ProjectHeader';
+import ProjectMainContent from '@/components/project-detail/ProjectMainContent';
+import { useQueryClient } from '@tanstack/react-query';
 
 const ProjectDetail = () => {
-  const { slug } = useParams<{ slug: string }>();
-  const [searchParams] = useSearchParams();
-  const { user, loading: authLoading } = useAuth();
+  const { projectSlug } = useParams<{ projectSlug: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  const queryClient = useQueryClient();
+  const { data: project, isLoading, isError, error } = useProject(projectSlug || '');
+  const mutations = useProjectMutations(projectSlug);
+
   const [isEditing, setIsEditing] = useState(false);
-  const [editedProject, setEditedProject] = useState<Project | null>(null);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const mainContentRef = useRef<HTMLDivElement>(null);
+  const [editableProject, setEditableProject] = useState<Project | null>(null);
 
-  const { data: project, isLoading, error } = useProject(slug!);
-  const mutations = useProjectMutations(slug!);
-
-  const defaultTab = searchParams.get('tab') || 'overview';
+  const defaultTab = useMemo(() => {
+    const params = new URLSearchParams(location.search);
+    return params.get('tab') || 'tasks';
+  }, [location.search]);
 
   useEffect(() => {
     if (project) {
-      setEditedProject(project);
+      setEditableProject(project);
     }
   }, [project]);
 
-  useEffect(() => {
-    const taskParam = searchParams.get('task');
-    const tabParam = searchParams.get('tab');
-    if (taskParam && tabParam === 'tasks' && mainContentRef.current && !isLoading) {
-      setTimeout(() => {
-        mainContentRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }, 100);
-    }
-  }, [searchParams, isLoading, project]);
-
-  useEffect(() => {
-    if (!isLoading && !error && !project) {
-      toast.error("Project not found or you do not have access.");
-      navigate("/projects");
-    }
-    if (error) {
-      toast.error("Failed to load project", { description: "Please check the URL or try again later." });
-      navigate("/projects");
-    }
-  }, [isLoading, error, project, navigate]);
-
-  if (authLoading || isLoading || !project || !editedProject) {
-    return <ProjectDetailSkeleton />;
-  }
-
-  const canEdit = user && (user.id === project.created_by.id || user.role === 'admin' || user.role === 'master admin');
-
   const handleFieldChange = (field: keyof Project, value: any) => {
-    setEditedProject(prev => prev ? { ...prev, [field]: value } : null);
-  };
-
-  const handleSaveChanges = () => {
-    if (!editedProject) return;
-    mutations.updateProject.mutate(editedProject, {
-      onSuccess: () => setIsEditing(false),
+    setEditableProject(prev => {
+      if (!prev) return null;
+      if (field === 'tags') {
+        const newTags = value as Tag[];
+        const existingTagIds = prev.tags?.map(t => t.id) || [];
+        const newTagIds = newTags.map(t => t.id);
+        const addedTags = newTags.filter(t => !existingTagIds.includes(t.id));
+        const removedTags = prev.tags?.filter(t => !newTagIds.includes(t.id)) || [];
+        
+        if (addedTags.length > 0) {
+          mutations.addTags.mutate({ tagIds: addedTags.map(t => t.id) });
+        }
+        if (removedTags.length > 0) {
+          mutations.removeTags.mutate({ tagIds: removedTags.map(t => t.id) });
+        }
+      }
+      return { ...prev, [field]: value };
     });
   };
 
-  const handleCancelChanges = () => {
-    setEditedProject(project);
-    setIsEditing(false);
-  };
+  const handleSave = () => {
+    if (editableProject) {
+      const { assignedTo, services, tags, ...updatePayload } = editableProject;
+      
+      const changedFields: Partial<Project> = {};
+      if (project) {
+        for (const key in updatePayload) {
+          if (updatePayload[key as keyof typeof updatePayload] !== project[key as keyof typeof project]) {
+            (changedFields as any)[key] = updatePayload[key as keyof typeof updatePayload];
+          }
+        }
+      }
 
-  const handleToggleComplete = () => {
-    const newStatus = project.status === 'Completed' ? 'In Progress' : 'Completed';
-    if (editedProject) {
-      mutations.updateProject.mutate({ ...editedProject, status: newStatus });
+      if (Object.keys(changedFields).length > 0) {
+        mutations.updateProject.mutate(
+          { ...changedFields, id: editableProject.id },
+          {
+            onSuccess: (data) => {
+              toast.success('Project details updated successfully');
+              queryClient.invalidateQueries({ queryKey: ['project', projectSlug] });
+              if (data && data.slug !== projectSlug) {
+                navigate(`/projects/${data.slug}`, { replace: true });
+              }
+            },
+            onError: (error) => {
+              toast.error(`Failed to update project: ${error.message}`);
+            },
+          }
+        );
+      }
+
+      const originalMemberIds = new Set(project?.assignedTo?.map(m => m.id));
+      const newMemberIds = new Set(assignedTo?.map(m => m.id));
+      const membersToAdd = assignedTo?.filter(m => !originalMemberIds.has(m.id));
+      const membersToRemove = project?.assignedTo?.filter(m => !newMemberIds.has(m.id));
+
+      if (membersToAdd && membersToAdd.length > 0) {
+        mutations.addMembers.mutate({ members: membersToAdd });
+      }
+      if (membersToRemove && membersToRemove.length > 0) {
+        mutations.removeMembers.mutate({ memberIds: membersToRemove.map(m => m.id) });
+      }
+
+      const originalServiceTitles = new Set(project?.services?.map(s => s));
+      const newServiceTitles = new Set(services?.map(s => s));
+      const servicesToAdd = services?.filter(s => !originalServiceTitles.has(s));
+      const servicesToRemove = project?.services?.filter(s => !newServiceTitles.has(s));
+
+      if (servicesToAdd && servicesToAdd.length > 0) {
+        mutations.addServices.mutate({ serviceTitles: servicesToAdd });
+      }
+      if (servicesToRemove && servicesToRemove.length > 0) {
+        mutations.removeServices.mutate({ serviceTitles: servicesToRemove });
+      }
+
+      setIsEditing(false);
     }
   };
 
-  const handleDeleteProject = () => {
-    mutations.deleteProject.mutate(project.id);
-    setIsDeleteDialogOpen(false);
+  const handleCancel = () => {
+    if (project) {
+      setEditableProject(project);
+    }
+    setIsEditing(false);
   };
 
+  const handleDelete = () => {
+    if (window.confirm('Are you sure you want to delete this project? This action cannot be undone.')) {
+      mutations.deleteProject.mutate(undefined, {
+        onSuccess: () => {
+          toast.success('Project deleted successfully');
+          navigate('/projects');
+        },
+        onError: (error) => {
+          toast.error(`Failed to delete project: ${error.message}`);
+        },
+      });
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="p-4 md:p-6 space-y-4">
+        <Skeleton className="h-12 w-1/2" />
+        <Skeleton className="h-8 w-1/4" />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Skeleton className="h-64 col-span-2" />
+          <Skeleton className="h-64" />
+        </div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return <div className="text-center text-red-500 p-8">Error loading project: {error?.message}</div>;
+  }
+
+  if (!project || !editableProject) {
+    return <div className="text-center text-muted-foreground p-8">Project not found.</div>;
+  }
+
   return (
-    <PortalLayout>
-      <div className="space-y-6">
-        <ProjectHeader
-          project={editedProject}
-          isEditing={isEditing}
-          isSaving={mutations.updateProject.isPending}
-          canEdit={canEdit}
-          onEditToggle={() => setIsEditing(true)}
-          onSaveChanges={handleSaveChanges}
-          onCancelChanges={handleCancelChanges}
-          onToggleComplete={handleToggleComplete}
-          onDeleteProject={() => setIsDeleteDialogOpen(true)}
-          onFieldChange={handleFieldChange}
-        />
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-          <div className="lg:col-span-2 space-y-6">
-            <ProjectDetailsCard
-              project={editedProject}
-              isEditing={isEditing}
-              onFieldChange={handleFieldChange}
-            />
-            <div ref={mainContentRef}>
+    <div className="flex flex-col h-full">
+      <ProjectHeader
+        project={editableProject}
+        isEditing={isEditing}
+        onEditToggle={() => setIsEditing(!isEditing)}
+        onSave={handleSave}
+        onCancel={handleCancel}
+        onDelete={handleDelete}
+        onFieldChange={handleFieldChange}
+        isSaving={mutations.updateProject.isLoading}
+      />
+      <div className="flex-grow overflow-y-auto">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1">
+            <div className="bg-background rounded-lg">
               <ProjectMainContent
-                project={editedProject}
+                project={editableProject}
                 isEditing={isEditing}
                 onFieldChange={handleFieldChange}
                 mutations={mutations}
-                defaultTab={defaultTab}
               />
             </div>
           </div>
-          <div className="lg:col-span-1 space-y-6">
-            <ProjectProgressCard project={editedProject} />
-            <ProjectTeamCard
-              project={editedProject}
-              isEditing={isEditing}
-              onFieldChange={handleFieldChange}
-            />
-          </div>
         </div>
       </div>
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the project and all its associated data.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteProject}>Delete</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </PortalLayout>
+    </div>
   );
 };
 
