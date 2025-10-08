@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Paperclip, Ticket, X } from 'lucide-react';
+import { Loader2, MoreVertical, Paperclip, Ticket, X } from 'lucide-react';
 import { getAvatarUrl, getInitials } from '@/lib/utils';
 import MentionInput from './MentionInput';
 import { Project } from '@/types';
@@ -16,6 +16,24 @@ import { formatDistanceToNow } from 'date-fns';
 import ReactMarkdown from 'react-markdown';
 import { Link } from 'react-router-dom';
 import remarkGfm from 'remark-gfm';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { Textarea } from './ui/textarea';
 
 interface ProjectCommentsProps {
   project: Project;
@@ -28,6 +46,7 @@ const ProjectComments = ({ project }: ProjectCommentsProps) => {
   const [isTicketMode, setIsTicketMode] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [attachment, setAttachment] = useState<File | null>(null);
+  const [editingComment, setEditingComment] = useState<{ id: string; text: string } | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -124,6 +143,38 @@ const ProjectComments = ({ project }: ProjectCommentsProps) => {
     setIsSubmitting(false);
   };
 
+  const handleUpdateComment = async () => {
+    if (!editingComment || !editingComment.text.trim()) return;
+    setIsSubmitting(true);
+
+    const { error } = await supabase
+      .from('comments')
+      .update({ text: editingComment.text })
+      .eq('id', editingComment.id);
+
+    if (error) {
+      toast.error('Failed to update comment.', { description: error.message });
+    } else {
+      toast.success('Comment updated.');
+      setEditingComment(null);
+      queryClient.invalidateQueries({ queryKey: ['project', project.slug] });
+    }
+    setIsSubmitting(false);
+  };
+
+  const handleDeleteComment = async (commentId: string) => {
+    setIsSubmitting(true);
+    const { error } = await supabase.from('comments').delete().eq('id', commentId);
+
+    if (error) {
+      toast.error('Failed to delete comment.', { description: error.message });
+    } else {
+      toast.success('Comment deleted.');
+      queryClient.invalidateQueries({ queryKey: ['project', project.slug] });
+    }
+    setIsSubmitting(false);
+  };
+
   return (
     <div className="mt-6">
       <h3 className="text-lg font-semibold mb-4">Comments & Tickets</h3>
@@ -207,6 +258,7 @@ const ProjectComments = ({ project }: ProjectCommentsProps) => {
           const ticketTask = isTicket
             ? (project.tasks || []).find(t => t.originTicketId === c.id)
             : null;
+          const isOwner = user?.id === c.author.id;
 
           return (
             <div key={c.id} className="flex items-start gap-4">
@@ -227,38 +279,93 @@ const ProjectComments = ({ project }: ProjectCommentsProps) => {
                     </Badge>
                   )}
                 </div>
-                {c.text && (
-                  <div className="prose prose-sm dark:prose-invert max-w-none mt-1 break-words">
-                    <ReactMarkdown
-                      remarkPlugins={[remarkGfm]}
-                      components={{
-                        a: ({ node, ...props }) => {
-                          const href = props.href || '';
-                          if (href.startsWith('/')) {
-                            return <Link to={href} {...props} className="text-primary hover:underline" />;
-                          }
-                          return <a {...props} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline" />;
-                        }
-                      }}
-                    >
-                      {c.text}
-                    </ReactMarkdown>
+                {editingComment?.id === c.id ? (
+                  <div className="mt-2 space-y-2">
+                    <Textarea
+                      value={editingComment.text}
+                      onChange={(e) => setEditingComment({ ...editingComment, text: e.target.value })}
+                      className="min-h-[80px]"
+                      disabled={isSubmitting}
+                    />
+                    <div className="flex gap-2 justify-end">
+                      <Button variant="ghost" onClick={() => setEditingComment(null)} disabled={isSubmitting}>Cancel</Button>
+                      <Button onClick={handleUpdateComment} disabled={isSubmitting}>
+                        {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Save
+                      </Button>
+                    </div>
                   </div>
-                )}
-                {c.attachment_url && c.attachment_name && (
-                  <div className="mt-2">
-                    <a
-                      href={c.attachment_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground bg-muted hover:bg-muted/80 p-2 rounded-md transition-colors"
-                    >
-                      <Paperclip className="h-4 w-4 flex-shrink-0" />
-                      <span className="truncate">{c.attachment_name}</span>
-                    </a>
-                  </div>
+                ) : (
+                  <>
+                    {c.text && (
+                      <div className="prose prose-sm dark:prose-invert max-w-none mt-1 break-words">
+                        <ReactMarkdown
+                          remarkPlugins={[remarkGfm]}
+                          components={{
+                            a: ({ node, ...props }) => {
+                              const href = props.href || '';
+                              if (href.startsWith('/')) {
+                                return <Link to={href} {...props} className="text-primary hover:underline" />;
+                              }
+                              return <a {...props} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline" />;
+                            }
+                          }}
+                        >
+                          {c.text}
+                        </ReactMarkdown>
+                      </div>
+                    )}
+                    {c.attachment_url && c.attachment_name && (
+                      <div className="mt-2">
+                        <a
+                          href={c.attachment_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground bg-muted hover:bg-muted/80 p-2 rounded-md transition-colors"
+                        >
+                          <Paperclip className="h-4 w-4 flex-shrink-0" />
+                          <span className="truncate">{c.attachment_name}</span>
+                        </a>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
+              {isOwner && !editingComment && (
+                <AlertDialog>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0">
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => setEditingComment({ id: c.id, text: c.text || '' })}>
+                        Edit
+                      </DropdownMenuItem>
+                      <AlertDialogTrigger asChild>
+                        <DropdownMenuItem className="text-red-600 focus:text-red-600 focus:bg-red-50">
+                          Delete
+                        </DropdownMenuItem>
+                      </AlertDialogTrigger>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This action cannot be undone. This will permanently delete the comment.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={() => handleDeleteComment(c.id)} className="bg-red-600 hover:bg-red-700">
+                        Delete
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
             </div>
           );
         })}
