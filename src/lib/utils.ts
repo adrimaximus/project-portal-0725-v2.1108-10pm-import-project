@@ -13,16 +13,22 @@ export function timeAgo(date: string | Date): string {
 
 export const getStatusStyles = (status: string) => {
   switch (status) {
+    case 'Requested':
+      return { tw: 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300', hex: '#3B82F6' };
+    case 'In Progress':
     case 'On Track':
-      return { tw: 'bg-teal-100 text-teal-800 dark:bg-teal-900/50 dark:text-teal-300', hex: '#4FD1C5' };
-    case 'Off Track':
-      return { tw: 'bg-pink-100 text-pink-800 dark:bg-pink-900/50 dark:text-pink-300', hex: '#F56565' };
-    case 'At Risk':
-      return { tw: 'bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-300', hex: '#F6AD55' };
-    case 'Completed':
-      return { tw: 'bg-sky-100 text-sky-800 dark:bg-sky-900/50 dark:text-sky-300', hex: '#4299E1' };
+      return { tw: 'bg-teal-100 text-teal-800 dark:bg-teal-900/50 dark:text-teal-300', hex: '#14B8A6' };
+    case 'In Review':
+      return { tw: 'bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300', hex: '#8B5CF6' };
     case 'On Hold':
-      return { tw: 'bg-slate-100 text-slate-800 dark:bg-slate-800/50 dark:text-slate-300', hex: '#CBD5E0' };
+    case 'At Risk':
+      return { tw: 'bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-300', hex: '#F97316' };
+    case 'Completed':
+      return { tw: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300', hex: '#FBBF24' };
+    case 'Cancelled':
+      return { tw: 'bg-gray-100 text-gray-800 dark:bg-gray-800/50 dark:text-gray-300', hex: '#6B7280' };
+    case 'Off Track':
+      return { tw: 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300', hex: '#EF4444' };
     default:
       return { tw: 'bg-slate-100 text-slate-800 dark:bg-slate-800/50 dark:text-slate-300', hex: '#CBD5E0' };
   }
