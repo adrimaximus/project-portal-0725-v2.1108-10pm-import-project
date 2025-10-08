@@ -108,7 +108,8 @@ const MentionInput = React.forwardRef<HTMLTextAreaElement, MentionInputProps>(
 
       let mentionText = '';
       if (activeTrigger === '@') {
-        mentionText = `@${suggestion.display} `;
+        const user = suggestion as UserSuggestion;
+        mentionText = `@[${user.display}](${user.id}) `;
       } else if (activeTrigger === '/') {
         const proj = suggestion as ProjectSuggestion;
         mentionText = `[${proj.display}](/projects/${proj.slug}) `;
