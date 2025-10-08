@@ -173,7 +173,6 @@ const ProjectTasks = ({
                   <ReactMarkdown
                     remarkPlugins={[remarkGfm]}
                     components={{ p: 'span' }}
-                    className="w-full"
                   >
                     {processMentions(task.title)}
                   </ReactMarkdown>
