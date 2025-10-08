@@ -13,6 +13,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Checkbox } from "@/components/ui/checkbox";
 import TaskAttachmentList from './TaskAttachmentList';
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface TasksViewProps {
   tasks: Task[];
@@ -23,6 +25,11 @@ interface TasksViewProps {
   sortConfig: { key: string; direction: 'asc' | 'desc' };
   requestSort: (key: string) => void;
 }
+
+const processMentions = (text: string | null | undefined) => {
+  if (!text) return '';
+  return text.replace(/@\[([^\]]+)\]\(([^)]+)\)/g, '**@$1**');
+};
 
 const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion, sortConfig, requestSort }: TasksViewProps) => {
   if (isLoading) {
@@ -131,7 +138,11 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
                     <div className="flex flex-col">
                       <div className="flex items-center gap-2">
                         {task.originTicketId && <Ticket className={`h-4 w-4 flex-shrink-0 ${task.completed ? 'text-green-500' : 'text-red-500'}`} />}
-                        <span className={`font-semibold ${task.completed ? 'line-through text-muted-foreground' : ''}`}>{task.title}</span>
+                        <div className={`font-semibold ${task.completed ? 'line-through text-muted-foreground' : ''}`}>
+                          <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ p: 'span' }}>
+                            {processMentions(task.title)}
+                          </ReactMarkdown>
+                        </div>
                         {renderAttachments(task)}
                       </div>
                       {task.description && <p className="text-xs text-muted-foreground mt-1 truncate">{task.description}</p>}
