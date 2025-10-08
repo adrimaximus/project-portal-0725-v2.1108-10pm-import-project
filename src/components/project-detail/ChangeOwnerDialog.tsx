@@ -1,116 +1,98 @@
-import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase';
-import { Project, User } from '@/types';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from '@/components/ui/command';
+import { useState, useEffect } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from '@/components/ui/command';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Project, User } from '@/types';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { generatePastelColor } from '@/lib/utils';
 
 interface ChangeOwnerDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   project: Project;
-  isOpen: boolean;
-  onClose: () => void;
+  onOwnerChange: (newOwnerId: string) => Promise<void>;
 }
 
-export function ChangeOwnerDialog({ project, isOpen, onClose }: ChangeOwnerDialogProps) {
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const queryClient = useQueryClient();
+const ChangeOwnerDialog = ({ open, onOpenChange, project, onOwnerChange }: ChangeOwnerDialogProps) => {
+  const { user: currentUser } = useAuth();
+  const [potentialOwners, setPotentialOwners] = useState<User[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const { data: members } = useQuery<User[]>({
-    queryKey: ['project-members-for-owner-change', project.id],
-    queryFn: async () => {
-      // Fetch all members of the project
-      const { data, error } = await supabase
-        .from('project_members')
-        .select('profiles(*)')
-        .eq('project_id', project.id);
-      if (error) throw error;
-      return data.map((item: any) => {
-        const p = item.profiles;
-        const name = `${p.first_name || ''} ${p.last_name || ''}`.trim();
-        return {
-          id: p.id,
-          name: name || p.email,
-          email: p.email,
-          avatar_url: p.avatar_url,
-          initials: (name ? (name.split(' ')[0][0] + (name.split(' ').length > 1 ? name.split(' ')[1][0] : '')) : p.email[0]).toUpperCase(),
+  useEffect(() => {
+    if (!open || !currentUser) return;
+
+    const fetchPotentialOwners = async () => {
+      setIsLoading(true);
+      let query;
+      const isAdmin = currentUser.role === 'admin' || currentUser.role === 'master admin';
+
+      if (isAdmin) {
+        // Admin can transfer to any user except the current owner
+        query = supabase.from('profiles').select('*').neq('id', project.created_by.id);
+      } else {
+        // Owner can only transfer to existing collaborators
+        const collaboratorIds = project.assignedTo.map(u => u.id).filter(id => id !== project.created_by.id);
+        if (collaboratorIds.length === 0) {
+          setPotentialOwners([]);
+          setIsLoading(false);
+          return;
         }
-      }).filter(member => member.id !== project.created_by.id); // Exclude current owner
-    },
-    enabled: isOpen,
-  });
+        query = supabase.from('profiles').select('*').in('id', collaboratorIds);
+      }
 
-  const transferOwnershipMutation = useMutation({
-    mutationFn: async (newOwnerId: string) => {
-      const { data, error } = await supabase.rpc('transfer_project_ownership', {
-        p_project_id: project.id,
-        p_new_owner_id: newOwnerId,
-      });
+      const { data, error } = await query;
 
-      if (error) throw new Error(error.message);
-      return data;
-    },
-    onSuccess: () => {
-      toast.success('Project ownership transferred successfully.');
-      queryClient.invalidateQueries({ queryKey: ['project', project.slug] });
-      queryClient.invalidateQueries({ queryKey: ['projects'] });
-      onClose();
-    },
-    onError: (error) => {
-      toast.error(`Failed to transfer ownership: ${error.message}`);
-    },
-  });
+      if (error) {
+        toast.error("Failed to fetch users.");
+      } else {
+        const users = data.map(profile => ({
+          id: profile.id,
+          name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email || 'No name',
+          avatar_url: profile.avatar_url,
+          email: profile.email,
+          initials: `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase() || 'NN',
+        }));
+        setPotentialOwners(users);
+      }
+      setIsLoading(false);
+    };
 
-  const handleTransfer = () => {
-    if (selectedUser) {
-      transferOwnershipMutation.mutate(selectedUser.id);
-    }
+    fetchPotentialOwners();
+  }, [open, currentUser, project]);
+
+  const handleSelect = async (newOwnerId: string) => {
+    await onOwnerChange(newOwnerId);
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Change Project Owner</DialogTitle>
-          <DialogDescription>
-            Select a new owner for this project. The current owner will become a member.
-          </DialogDescription>
+          <DialogTitle>Transfer Project Ownership</DialogTitle>
+          <DialogDescription>Select a new owner for this project. The current owner will become a member.</DialogDescription>
         </DialogHeader>
         <Command>
-          <CommandInput placeholder="Search for a team member..." />
+          <CommandInput placeholder="Search for a user..." />
           <CommandList>
-            <CommandEmpty>No members found.</CommandEmpty>
+            {isLoading && <CommandEmpty>Loading users...</CommandEmpty>}
+            {!isLoading && potentialOwners.length === 0 && <CommandEmpty>No eligible users to transfer to.</CommandEmpty>}
             <CommandGroup>
-              {members?.map((user) => (
+              {potentialOwners.map(user => (
                 <CommandItem
                   key={user.id}
-                  onSelect={() => setSelectedUser(user)}
-                  className={`cursor-pointer ${selectedUser?.id === user.id ? 'bg-accent' : ''}`}
+                  value={user.name}
+                  onSelect={() => handleSelect(user.id)}
+                  className="cursor-pointer"
                 >
-                  <div className="flex items-center">
-                    <Avatar className="h-9 w-9 mr-3">
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-8 w-8">
                       <AvatarImage src={user.avatar_url} />
-                      <AvatarFallback style={{ backgroundColor: generatePastelColor(user.id) }}>{user.initials}</AvatarFallback>
+                      <AvatarFallback style={generatePastelColor(user.id)}>{user.initials}</AvatarFallback>
                     </Avatar>
                     <div>
-                      <p>{user.name}</p>
+                      <p className="font-medium">{user.name}</p>
                       <p className="text-sm text-muted-foreground">{user.email}</p>
                     </div>
                   </div>
@@ -119,16 +101,9 @@ export function ChangeOwnerDialog({ project, isOpen, onClose }: ChangeOwnerDialo
             </CommandGroup>
           </CommandList>
         </Command>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button
-            onClick={handleTransfer}
-            disabled={!selectedUser || transferOwnershipMutation.isPending}
-          >
-            {transferOwnershipMutation.isPending ? 'Transferring...' : 'Transfer Ownership'}
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
-}
+};
+
+export default ChangeOwnerDialog;

@@ -1,97 +1,135 @@
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase";
-import { TrendingUp, TrendingDown, CircleDollarSign, FileText } from "lucide-react";
+import { Invoice } from '@/types';
+import StatCard from '@/components/dashboard/StatCard';
+import { DollarSign, Clock, AlertTriangle, Users } from "lucide-react";
+import { format } from 'date-fns';
+import { useMemo, useState } from 'react';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { getAvatarUrl, generatePastelColor } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-const BillingStats = () => {
-  const { data: stats, isLoading } = useQuery({
-    queryKey: ['billing-stats'],
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_billing_stats');
-      if (error) throw error;
-      return data[0];
-    }
-  });
+type UserStatData = {
+  id: string;
+  name: string;
+  avatar_url: string;
+  initials: string;
+  projectCount: number;
+  totalValue: number;
+};
 
-  if (isLoading || !stats) {
+const UserStat = ({ user, metric, metricType }: { user: UserStatData | null, metric: number, metricType: 'count' | 'value' }) => {
+  if (!user || metric === 0) {
     return (
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {[...Array(4)].map((_, i) => (
-          <Card key={i} className="animate-pulse">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <div className="h-4 bg-gray-200 rounded w-1/4"></div>
-              <div className="h-6 w-6 bg-gray-200 rounded-full"></div>
-            </CardHeader>
-            <CardContent>
-              <div className="h-8 bg-gray-200 rounded w-1/2 mb-2"></div>
-              <div className="h-3 bg-gray-200 rounded w-3/4"></div>
-            </CardContent>
-          </Card>
-        ))}
+      <div className="pt-2">
+        <div className="text-2xl font-bold">N/A</div>
+        <p className="text-xs text-muted-foreground">No data available</p>
       </div>
     );
   }
+  return (
+    <div className="flex items-center gap-2 pt-2">
+      <Avatar className="h-6 w-6">
+        <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} alt={user.name} />
+        <AvatarFallback style={generatePastelColor(user.id)}>{user.initials}</AvatarFallback>
+      </Avatar>
+      <div>
+        <div className="text-sm font-bold leading-tight">{user.name}</div>
+        <p className="text-xs text-muted-foreground">
+          {metricType === 'count'
+            ? `${metric} project${metric === 1 ? '' : 's'}`
+            : `Rp\u00A0${new Intl.NumberFormat('id-ID').format(metric)}`}
+        </p>
+      </div>
+    </div>
+  );
+};
+
+const BillingStats = ({ invoices }: { invoices: Invoice[] }) => {
+  const [adminView, setAdminView] = useState<'count' | 'value'>('count');
+
+  const stats = useMemo(() => {
+    const outstandingBalance = invoices
+      .filter(inv => ['Due', 'Overdue', 'Unpaid', 'Pending', 'In Process'].includes(inv.status))
+      .reduce((sum, inv) => sum + inv.amount, 0);
+
+    const nextDueDate = invoices
+      .filter(inv => ['Due', 'Unpaid', 'Pending', 'In Process'].includes(inv.status))
+      .sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime())[0]?.dueDate;
+
+    const overdueInvoicesCount = invoices.filter(inv => inv.status === 'Overdue').length;
+
+    const projectAdmins = invoices.reduce((acc, invoice) => {
+      invoice.assignedMembers
+        .filter(member => member.role === 'admin')
+        .forEach(admin => {
+          if (!acc[admin.id]) {
+            acc[admin.id] = { ...admin, projectCount: 0, totalValue: 0 };
+          }
+          acc[admin.id].projectCount++;
+          acc[admin.id].totalValue += invoice.amount;
+        });
+      return acc;
+    }, {} as Record<string, UserStatData>);
+
+    return { outstandingBalance, nextDueDate, overdueInvoicesCount, projectAdmins };
+  }, [invoices]);
+
+  const sortedAdmins = useMemo(() => {
+    const adminArray = Object.values(stats.projectAdmins);
+    if (adminView === 'count') {
+      return adminArray.sort((a, b) => b.projectCount - a.projectCount);
+    }
+    return adminArray.sort((a, b) => b.totalValue - a.totalValue);
+  }, [stats.projectAdmins, adminView]);
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <StatCard
+        title="Outstanding Balance"
+        value={`Rp ${stats.outstandingBalance.toLocaleString('id-ID')}`}
+        icon={<DollarSign className="h-4 w-4 text-muted-foreground" />}
+        description="Total amount due"
+      />
+      <StatCard
+        title="Next Payment Due"
+        value={stats.nextDueDate ? format(stats.nextDueDate, 'MMM dd, yyyy') : 'N/A'}
+        icon={<Clock className="h-4 w-4 text-muted-foreground" />}
+        description="Date of next invoice payment"
+      />
+      <StatCard
+        title="Overdue Invoices"
+        value={stats.overdueInvoicesCount}
+        icon={<AlertTriangle className="h-4 w-4 text-muted-foreground" />}
+        description="Invoices past their due date"
+      />
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-          <CircleDollarSign className="h-4 w-4 text-muted-foreground" />
+          <CardTitle className="text-sm font-medium">Project Admins</CardTitle>
+          <Users className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">Rp{stats.total_revenue.toLocaleString('id-ID')}</div>
-          <p className="text-xs text-muted-foreground">
-            +Rp{stats.revenue_this_month.toLocaleString('id-ID')} this month
-          </p>
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Outstanding</CardTitle>
-          <TrendingDown className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">Rp{stats.total_outstanding.toLocaleString('id-ID')}</div>
-          <p className="text-xs text-muted-foreground">
-            from {stats.unpaid_invoices} invoices
-          </p>
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Overdue</CardTitle>
-          <TrendingDown className="h-4 w-4 text-red-500" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">Rp{stats.total_overdue.toLocaleString('id-ID')}</div>
-          <p className="text-xs text-muted-foreground">
-            from {stats.overdue_invoices} invoices
-          </p>
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Highest Paying Client</CardTitle>
-          <FileText className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          {stats.top_client ? (
-            <div className="flex items-center">
-              <Avatar className="h-6 w-6">
-                <AvatarImage src={getAvatarUrl(stats.top_client.avatar_url) || undefined} alt={stats.top_client.name} />
-                <AvatarFallback style={{ backgroundColor: generatePastelColor(stats.top_client.id) }}>{stats.top_client.initials}</AvatarFallback>
-              </Avatar>
-              <p className="text-sm font-medium ml-2">{stats.top_client.name}</p>
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">No client data</p>
-          )}
-          <p className="text-xs text-muted-foreground mt-1">
-            Rp{stats.top_client_revenue.toLocaleString('id-ID')} total
-          </p>
+          <ToggleGroup
+            type="single"
+            value={adminView}
+            onValueChange={(value) => { if (value) setAdminView(value as 'count' | 'value') }}
+            className="mb-2 justify-end"
+            size="sm"
+          >
+            <ToggleGroupItem value="count" aria-label="Show by project count">Qty</ToggleGroupItem>
+            <ToggleGroupItem value="value" aria-label="Show by total value">Value</ToggleGroupItem>
+          </ToggleGroup>
+          <div className="space-y-3 max-h-24 overflow-y-auto pr-2">
+            {sortedAdmins.length > 0 ? sortedAdmins.map(adminData => (
+              <UserStat
+                key={adminData.id}
+                user={adminData}
+                metric={adminView === 'count' ? adminData.projectCount : adminData.totalValue}
+                metricType={adminView}
+              />
+            )) : (
+              <p className="text-sm text-muted-foreground text-center pt-4">No project admins found.</p>
+            )}
+          </div>
         </CardContent>
       </Card>
     </div>

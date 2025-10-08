@@ -1,137 +1,207 @@
-import { Conversation } from "@/types";
+import { useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "./ui/button";
-import {
-  Phone,
-  Video,
-  MoreVertical,
-  Users,
-  UserPlus,
-  Edit,
-  Trash2,
-  LogOut,
-} from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { ArrowLeft, MoreVertical, Trash2, UserX, Users, Settings, Bot } from "lucide-react";
 import StackedAvatar from "./StackedAvatar";
 import { getInitials, generatePastelColor } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase";
-import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
+import GroupSettingsDialog from "./GroupSettingsDialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
+import { Conversation } from "@/types";
 
 interface ChatHeaderProps {
   conversation: Conversation;
+  onBack?: () => void;
+  typing?: boolean;
+  onLeaveGroup?: (conversationId: string) => void;
+  onClearChat?: (conversationId: string) => void;
+  onRefetchConversations?: () => void;
 }
 
-export default function ChatHeader({ conversation }: ChatHeaderProps) {
-  const { user: currentUser } = useAuth();
-  const queryClient = useQueryClient();
-  const { id, isGroup, userName, userAvatar, participants, createdBy } = conversation;
+const ChatHeader = ({ conversation, onBack, typing = false, onLeaveGroup, onClearChat, onRefetchConversations }: ChatHeaderProps) => {
+  const { user: currentUser, onlineCollaborators } = useAuth();
+  const navigate = useNavigate();
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
-  const otherUser = !isGroup ? participants.find(p => p.id !== currentUser?.id) : null;
-  const isOwner = isGroup && createdBy === currentUser?.id;
+  if (!conversation) {
+    return (
+      <div className="flex items-center justify-center p-4 border-b h-[81px] flex-shrink-0">
+        <p className="text-muted-foreground">Select a conversation to start chatting</p>
+      </div>
+    );
+  }
 
-  const leaveGroupMutation = useMutation({
-    mutationFn: async (conversationId: string) => {
-      const { error } = await supabase.rpc('leave_group', { p_conversation_id: conversationId });
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success("You have left the group.");
-      queryClient.invalidateQueries({ queryKey: ['conversations'] });
-      // You might want to navigate away from the chat here
-    },
-    onError: (error: any) => {
-      toast.error(`Failed to leave group: ${error.message}`);
-    },
-  });
+  const { id, userName, userAvatar, isGroup, members, created_by } = conversation;
+  const otherUser = !isGroup ? members?.find(m => m.id !== currentUser?.id) : null;
+  const isOwner = currentUser?.id === created_by;
+  const isOtherUserOnline = otherUser ? onlineCollaborators.some(c => c.id === otherUser.id) : false;
+  const isAiAssistant = userName === "AI Assistant";
 
-  const deleteGroupMutation = useMutation({
-    mutationFn: async (conversationId: string) => {
-      // This needs a proper backend function with cascading deletes for participants and messages
-      const { error } = await supabase.from('conversations').delete().eq('id', conversationId);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success("Group deleted.");
-      queryClient.invalidateQueries({ queryKey: ['conversations'] });
-    },
-    onError: (error: any) => {
-      toast.error(`Failed to delete group: ${error.message}`);
-    },
-  });
+  const handleViewProfile = () => {
+    if (otherUser) {
+      navigate(`/users/${otherUser.id}`);
+    }
+  };
+
+  const LeaveGroupMenuItem = () => (
+    <AlertDialogTrigger asChild>
+      <DropdownMenuItem className="text-red-500 focus:text-red-500" onSelect={(e) => e.preventDefault()} disabled={isOwner}>
+        <UserX className="mr-2 h-4 w-4" />
+        <span>Leave Group</span>
+      </DropdownMenuItem>
+    </AlertDialogTrigger>
+  );
 
   return (
-    <div className="flex items-center justify-between p-4 border-b">
-      <div className="flex items-center">
-        <Avatar className="h-12 w-12 mr-4">
-          <AvatarImage src={userAvatar || undefined} alt={userName} />
-          <AvatarFallback style={{ backgroundColor: generatePastelColor(otherUser?.id || id) }}>{getInitials(userName)}</AvatarFallback>
-        </Avatar>
-        <div>
-          <h2 className="text-lg font-semibold">{userName}</h2>
+    <>
+      <div className="flex items-center p-4 border-b bg-background/60 backdrop-blur flex-shrink-0">
+        {onBack && (
+          <Button variant="ghost" size="icon" className="mr-2 md:hidden" onClick={onBack}>
+            <ArrowLeft className="h-5 w-5" />
+            <span className="sr-only">Back</span>
+          </Button>
+        )}
+        {isGroup && members && members.length > 0 ? (
+          <StackedAvatar members={members} />
+        ) : isAiAssistant ? (
+          <Avatar className="h-10 w-10 border flex items-center justify-center bg-primary/10 text-primary">
+            <Bot className="h-6 w-6" />
+          </Avatar>
+        ) : (
+          <Avatar className="h-10 w-10 border">
+            <AvatarImage src={userAvatar} alt={userName} />
+            <AvatarFallback style={generatePastelColor(otherUser?.id || id)}>{getInitials(userName)}</AvatarFallback>
+          </Avatar>
+        )}
+        <div className="ml-4 flex-1">
+          <p className="text-lg font-semibold">{userName}</p>
           {isGroup ? (
-            <div className="flex items-center text-sm text-muted-foreground">
-              <Users className="h-4 w-4 mr-1" />
-              <span>{participants.length} members</span>
-            </div>
+            <p className="text-sm text-muted-foreground">{members?.length} members</p>
+          ) : isAiAssistant ? (
+            <p className="text-sm text-muted-foreground flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-full bg-blue-500"></span>
+              <span>Ready to help</span>
+            </p>
           ) : (
-            <p className="text-sm text-muted-foreground">Online</p>
+            <p className="text-sm text-muted-foreground flex items-center gap-1.5">
+              {typing ? (
+                "Typing..."
+              ) : isOtherUserOnline ? (
+                <>
+                  <span className="h-2 w-2 rounded-full bg-green-500"></span>
+                  Online
+                </>
+              ) : (
+                "Offline"
+              )}
+            </p>
           )}
         </div>
-      </div>
-      <div className="flex items-center gap-2">
-        <Button variant="ghost" size="icon">
-          <Phone />
-        </Button>
-        <Button variant="ghost" size="icon">
-          <Video />
-        </Button>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon">
-              <MoreVertical />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent>
-            {isGroup && (
-              <>
-                {isOwner && (
+        <div className="flex items-center gap-2">
+          <AlertDialog>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <MoreVertical className="h-5 w-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {isGroup ? (
                   <>
-                    <DropdownMenuItem>
-                      <Edit className="mr-2 h-4 w-4" />
-                      <span>Edit Group</span>
+                    <DropdownMenuItem onClick={() => setIsSettingsOpen(true)}>
+                      <Settings className="mr-2 h-4 w-4" />
+                      <span>Group Settings</span>
                     </DropdownMenuItem>
-                    <DropdownMenuItem>
-                      <UserPlus className="mr-2 h-4 w-4" />
-                      <span>Add Members</span>
+                    <DropdownMenuSeparator />
+                    {isOwner ? (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div><LeaveGroupMenuItem /></div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Owners cannot leave a group.</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    ) : (
+                      <LeaveGroupMenuItem />
+                    )}
+                  </>
+                ) : isAiAssistant ? (
+                  <AlertDialogTrigger asChild>
+                    <DropdownMenuItem className="text-red-500 focus:text-red-500" onSelect={(e) => e.preventDefault()}>
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      <span>Clear Chat</span>
                     </DropdownMenuItem>
+                  </AlertDialogTrigger>
+                ) : (
+                  <>
+                    <DropdownMenuItem onClick={handleViewProfile}>
+                      <Users className="mr-2 h-4 w-4" />
+                      <span>View Profile</span>
+                    </DropdownMenuItem>
+                    <AlertDialogTrigger asChild>
+                      <DropdownMenuItem className="text-red-500 focus:text-red-500" onSelect={(e) => e.preventDefault()}>
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        <span>Clear Chat</span>
+                      </DropdownMenuItem>
+                    </AlertDialogTrigger>
                   </>
                 )}
-                <DropdownMenuSeparator />
-              </>
-            )}
-            {!isOwner && isGroup && (
-              <DropdownMenuItem onClick={() => leaveGroupMutation.mutate(id)}>
-                <LogOut className="mr-2 h-4 w-4" />
-                <span>Leave Group</span>
-              </DropdownMenuItem>
-            )}
-            {isOwner && (
-              <DropdownMenuItem className="text-red-500" onClick={() => deleteGroupMutation.mutate(id)}>
-                <Trash2 className="mr-2 h-4 w-4" />
-                <span>Delete Group</span>
-              </DropdownMenuItem>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  {isGroup
+                    ? "You will be removed from this group and will no longer receive messages. Are you sure?"
+                    : "This will permanently delete all messages in this conversation. This action cannot be undone."}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={() => isGroup ? onLeaveGroup?.(id) : onClearChat?.(id)}>
+                  {isGroup ? "Leave" : "Continue"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
       </div>
-    </div>
+      {isGroup && (
+        <GroupSettingsDialog
+          open={isSettingsOpen}
+          onOpenChange={setIsSettingsOpen}
+          conversation={conversation}
+          onUpdate={() => {
+            onRefetchConversations?.();
+            setIsSettingsOpen(false);
+          }}
+        />
+      )}
+    </>
   );
-}
+};
+
+export default ChatHeader;

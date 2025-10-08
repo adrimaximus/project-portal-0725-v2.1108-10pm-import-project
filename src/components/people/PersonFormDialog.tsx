@@ -1,286 +1,418 @@
-import { useEffect, useState } from 'react';
-import { useForm, Controller, useFieldArray } from 'react-hook-form';
+import { useState, useEffect, useMemo } from 'react';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Loader2, User as UserIcon, Briefcase } from "lucide-react";
+import { format } from "date-fns";
+import { supabase } from '@/integrations/supabase/client';
+import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Person, Project, Tag } from '@/types';
+import { Person, Project, Tag, ContactProperty, Company } from '@/types';
 import { MultiSelect } from '../ui/multi-select';
-import { TagInput } from '../ui/TagInput';
+import PhoneNumberInput from '../PhoneNumberInput';
+import AntDatePicker from './AntDatePicker';
+import AddressAutocompleteInput from '../AddressAutocompleteInput';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { generatePastelColor } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
-import { Camera, User as UserIcon } from 'lucide-react';
-import AddressAutocompleteInput from '../AddressAutocompleteInput';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-const phoneRegex = new RegExp(
-  /^([+]?[\s0-9]+)?(\d{3}|[(]?[0-9]+[)])?([-]?[\s]?[0-9])+$/
-);
+interface PersonFormDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  person: Person | null;
+}
 
-const schema = z.object({
-  full_name: z.string().min(1, 'Full name is required'),
-  contact: z.object({
-    emails: z.array(z.string().email('Invalid email').or(z.literal(''))).optional(),
-    phones: z.array(z.string().regex(phoneRegex, 'Invalid phone number').or(z.literal(''))).optional(),
-    websites: z.array(z.string().url('Invalid URL').or(z.literal(''))).optional(),
-  }),
+const personSchema = z.object({
+  full_name: z.string().min(1, "Full name is required"),
+  email: z.string().email("Invalid email address").optional().or(z.literal('')),
+  phone: z.string().optional(),
   company: z.string().optional(),
   job_title: z.string().optional(),
   department: z.string().optional(),
-  social_media: z.object({
-    linkedin: z.string().optional(),
-    twitter: z.string().optional(),
-    instagram: z.string().optional(),
-  }).optional(),
-  birthday: z.string().optional(),
+  linkedin: z.string().url("Invalid URL").optional().or(z.literal('')),
+  twitter: z.string().url("Invalid URL").optional().or(z.literal('')),
+  instagram: z.string().url("Invalid URL").optional().or(z.literal('')),
+  birthday: z.date().optional().nullable(),
   notes: z.string().optional(),
   project_ids: z.array(z.string()).optional(),
-  existing_tag_ids: z.array(z.string()).optional(),
-  custom_tags: z.array(z.object({ name: z.string(), color: z.string() })).optional(),
-  avatar_url: z.string().optional(),
-  address: z.object({
-    street: z.string().optional(),
-    city: z.string().optional(),
-    state: z.string().optional(),
-    zip: z.string().optional(),
-    country: z.string().optional(),
-  }).optional(),
+  tag_ids: z.array(z.string()).optional(),
+  address: z.string().optional(),
+  custom_properties: z.record(z.any()).optional(),
 });
 
-type FormData = z.infer<typeof schema>;
+type PersonFormValues = z.infer<typeof personSchema>;
 
-interface PersonFormDialogProps {
-  isOpen: boolean;
-  onClose: () => void;
-  person?: Person | null;
-}
-
-export default function PersonFormDialog({ isOpen, onClose, person }: PersonFormDialogProps) {
-  const { user } = useAuth();
+const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps) => {
+  const { user: currentUser } = useAuth();
   const queryClient = useQueryClient();
+  const [isSaving, setIsSaving] = useState(false);
+  const [allProjects, setAllProjects] = useState<Project[]>([]);
+  const [allTags, setAllTags] = useState<Tag[]>([]);
+  const [allCompanies, setAllCompanies] = useState<Company[]>([]);
+  const [customProperties, setCustomProperties] = useState<ContactProperty[]>([]);
+  const [companyProperties, setCompanyProperties] = useState<any[]>([]);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(person?.avatar_url || null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
 
-  const { data: projects } = useQuery<Project[]>({
-    queryKey: ['projects'],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('projects').select('id, name');
-      if (error) throw error;
-      return data;
-    },
-  });
-
-  const { data: tags } = useQuery<Tag[]>({
-    queryKey: ['tags'],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('tags').select('id, name, color');
-      if (error) throw error;
-      return data;
-    },
-  });
-
-  const { control, register, handleSubmit, reset, setValue, formState: { errors } } = useForm<FormData>({
-    resolver: zodResolver(schema),
+  const form = useForm<PersonFormValues>({
+    resolver: zodResolver(personSchema),
     defaultValues: {
-      full_name: '',
-      contact: { emails: [''], phones: [''], websites: [''] },
-      company: '',
-      job_title: '',
-      department: '',
-      social_media: { linkedin: '', twitter: '', instagram: '' },
-      birthday: '',
-      notes: '',
-      project_ids: [],
-      existing_tag_ids: [],
-      custom_tags: [],
-      avatar_url: '',
-      address: { street: '', city: '', state: '', zip: '', country: '' },
-    },
+      full_name: '', email: '', phone: '', company: '', job_title: '',
+      department: '', linkedin: '', twitter: '', instagram: '', birthday: null,
+      notes: '', project_ids: [], tag_ids: [], address: '', custom_properties: {},
+    }
   });
 
-  const { fields: emailFields, append: appendEmail, remove: removeEmail } = useFieldArray({ control, name: "contact.emails" });
-  const { fields: phoneFields, append: appendPhone, remove: removePhone } = useFieldArray({ control, name: "contact.phones" });
-  const { fields: websiteFields, append: appendWebsite, remove: removeWebsite } = useFieldArray({ control, name: "contact.websites" });
+  const selectedCompanyName = useWatch({ control: form.control, name: 'company' });
+
+  const selectedCompany = useMemo(() => {
+    if (!selectedCompanyName || !allCompanies) return null;
+    return allCompanies.find(c => c.name === selectedCompanyName);
+  }, [selectedCompanyName, allCompanies]);
+
+  const logoProperty = useMemo(() => {
+    return companyProperties.find(p => p.label === 'Logo Image');
+  }, [companyProperties]);
+
+  const companyLogoUrl = useMemo(() => {
+    if (!selectedCompany) return null;
+    if (logoProperty && selectedCompany.custom_properties) {
+        const customLogo = selectedCompany.custom_properties[logoProperty.name];
+        if (customLogo) return customLogo;
+    }
+    return selectedCompany.logo_url;
+  }, [selectedCompany, logoProperty]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const { data: projectsData } = await supabase.from('projects').select('id, name');
+      if (projectsData) setAllProjects(projectsData as any);
+
+      const { data: tagsData } = await supabase.from('tags').select('id, name, color');
+      if (tagsData) setAllTags(tagsData);
+
+      const { data: companiesData } = await supabase.from('companies').select('id, name, logo_url, custom_properties');
+      if (companiesData) setAllCompanies(companiesData as any);
+
+      const { data: companyPropsData } = await supabase.from('company_properties').select('*');
+      if (companyPropsData) setCompanyProperties(companyPropsData);
+
+      const { data: customPropsData } = await supabase.from('contact_properties').select('*').eq('is_default', false);
+      if (customPropsData) setCustomProperties(customPropsData);
+    };
+    if (open) {
+      fetchData();
+    }
+  }, [open]);
 
   useEffect(() => {
     if (person) {
-      reset({
+      form.reset({
         full_name: person.full_name,
-        contact: {
-          emails: person.contact?.emails || [''],
-          phones: person.contact?.phones || [''],
-          websites: person.contact?.websites || [''],
-        },
-        company: person.company,
-        job_title: person.job_title,
-        department: person.department,
-        social_media: person.social_media,
-        birthday: person.birthday ? person.birthday.split('T')[0] : '',
-        notes: person.notes,
+        email: person.email || person.contact?.emails?.[0] || '',
+        phone: person.phone || person.contact?.phones?.[0] || '',
+        company: person.company || '',
+        job_title: person.job_title || '',
+        department: person.department || '',
+        linkedin: person.social_media?.linkedin || '',
+        twitter: person.social_media?.twitter || '',
+        instagram: person.social_media?.instagram || '',
+        birthday: person.birthday ? new Date(person.birthday) : null,
+        notes: person.notes || '',
         project_ids: person.projects?.map(p => p.id) || [],
-        existing_tag_ids: person.tags?.map(t => t.id) || [],
-        avatar_url: person.avatar_url,
-        address: person.address,
+        tag_ids: person.tags?.map(t => t.id) || [],
+        address: person.address?.formatted_address || '',
+        custom_properties: person.custom_properties || {},
       });
       setAvatarPreview(person.avatar_url || null);
     } else {
-      reset();
+      form.reset({
+        full_name: '', email: '', phone: '', company: '', job_title: '',
+        department: '', linkedin: '', twitter: '', instagram: '', birthday: null,
+        notes: '', project_ids: [], tag_ids: [], address: '', custom_properties: {},
+      });
       setAvatarPreview(null);
     }
-  }, [person, reset]);
+    setAvatarFile(null);
+  }, [person, form, open]);
 
-  const upsertPersonMutation = useMutation({
-    mutationFn: async (formData: FormData) => {
-      let avatarUrl = person?.avatar_url || '';
-
-      if (avatarFile) {
-        const filePath = `${user!.id}/${Date.now()}_${avatarFile.name}`;
-        const { error: uploadError } = await supabase.storage
-          .from('avatars')
-          .upload(filePath, avatarFile);
-
-        if (uploadError) throw new Error(`Avatar upload failed: ${uploadError.message}`);
-
-        const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(filePath);
-        avatarUrl = urlData.publicUrl;
-      }
-
-      const { data, error } = await supabase.rpc('upsert_person_with_details', {
-        p_id: person?.id,
-        p_full_name: formData.full_name,
-        p_contact: {
-          emails: formData.contact?.emails?.filter(e => e),
-          phones: formData.contact?.phones?.filter(p => p),
-          websites: formData.contact?.websites?.filter(w => w),
-        },
-        p_company: formData.company,
-        p_job_title: formData.job_title,
-        p_department: formData.department,
-        p_social_media: formData.social_media,
-        p_birthday: formData.birthday || null,
-        p_notes: formData.notes,
-        p_project_ids: formData.project_ids,
-        p_existing_tag_ids: formData.existing_tag_ids,
-        p_custom_tags: formData.custom_tags,
-        p_avatar_url: avatarUrl,
-        p_address: formData.address,
-      });
-
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: () => {
-      toast.success(`Person ${person ? 'updated' : 'created'} successfully.`);
-      queryClient.invalidateQueries({ queryKey: ['people'] });
-      if (person) {
-        queryClient.invalidateQueries({ queryKey: ['person', person.id] });
-      }
-      onClose();
-    },
-    onError: (error: any) => {
-      toast.error(`Error: ${error.message}`);
-    },
-  });
-
-  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
       setAvatarFile(file);
       setAvatarPreview(URL.createObjectURL(file));
     }
   };
 
-  const onSubmit = (data: FormData) => {
-    upsertPersonMutation.mutate(data);
+  const onSubmit = async (values: PersonFormValues) => {
+    setIsSaving(true);
+    try {
+      let personId = person?.id;
+      let avatar_url = person?.avatar_url || null;
+
+      // If it's a new person and they have an avatar, we need an ID first.
+      if (!personId && avatarFile) {
+        const { data: newPerson, error: createError } = await supabase
+          .from('people')
+          .insert({ full_name: values.full_name }) // insert minimal data to get an ID
+          .select('id')
+          .single();
+        if (createError) throw createError;
+        personId = newPerson.id;
+      }
+
+      // Now, if there's an avatar file, upload it.
+      if (avatarFile && personId) {
+        const formData = new FormData();
+        formData.append('file', avatarFile);
+        formData.append('targetUserId', personId);
+
+        const { data, error: invokeError } = await supabase.functions.invoke('upload-avatar-fixed', {
+            body: formData,
+        });
+
+        if (invokeError) throw invokeError;
+        avatar_url = data.avatar_url;
+      }
+
+      // Finally, upsert all the data.
+      const { error } = await supabase.rpc('upsert_person_with_details', {
+        p_id: personId || null,
+        p_full_name: values.full_name,
+        p_contact: { 
+          emails: values.email ? [values.email] : [],
+          phones: values.phone ? [values.phone] : []
+        },
+        p_company: values.company,
+        p_job_title: values.job_title,
+        p_department: values.department,
+        p_social_media: { linkedin: values.linkedin, twitter: values.twitter, instagram: values.instagram },
+        p_birthday: values.birthday ? format(values.birthday, 'yyyy-MM-dd') : null,
+        p_notes: values.notes,
+        p_project_ids: values.project_ids,
+        p_existing_tag_ids: values.tag_ids,
+        p_custom_tags: [],
+        p_avatar_url: avatar_url,
+        p_address: values.address ? { formatted_address: values.address } : null,
+        p_custom_properties: values.custom_properties,
+      });
+
+      if (error) throw error;
+
+      toast.success(`Successfully saved ${values.full_name}.`);
+      queryClient.invalidateQueries({ queryKey: ['people'] });
+      if (personId) {
+        queryClient.invalidateQueries({ queryKey: ['person', personId] });
+      }
+      onOpenChange(false);
+
+    } catch (error: any) {
+      toast.error(`Failed to save: ${error.message}`);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
+  const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'master admin';
+
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-4xl">
-        <DialogHeader>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-2xl p-0">
+        <DialogHeader className="p-6 pb-4">
           <DialogTitle>{person ? 'Edit Person' : 'Add New Person'}</DialogTitle>
-          <DialogDescription>
-            {person ? 'Update the details of this person.' : 'Add a new person to your contacts.'}
-          </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="md:col-span-1 flex flex-col items-center gap-4">
-            <div className="relative">
-              <Avatar className="h-32 w-32">
-                <AvatarImage src={avatarPreview || undefined} />
-                <AvatarFallback style={{ backgroundColor: generatePastelColor(person?.id || '') }}>
-                  <UserIcon className="h-8 w-8 text-white" />
-                </AvatarFallback>
-              </Avatar>
-              <Label htmlFor="avatar-upload" className="absolute bottom-0 right-0 bg-primary text-primary-foreground rounded-full p-2 cursor-pointer hover:bg-primary/90">
-                <Camera className="h-4 w-4" />
-              </Label>
-              <Input id="avatar-upload" type="file" className="hidden" onChange={handleAvatarChange} accept="image/*" />
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)}>
+            <div className="max-h-[70vh] overflow-y-auto px-6 space-y-4">
+              <div className="flex items-center gap-4">
+                <Avatar className="h-20 w-20">
+                  <AvatarImage src={avatarPreview || undefined} />
+                  <AvatarFallback style={generatePastelColor(person?.id || '')}>
+                    <UserIcon className="h-8 w-8 text-white" />
+                  </AvatarFallback>
+                </Avatar>
+                <div className="space-y-2">
+                  <Label>Profile Picture</Label>
+                  {isAdmin ? (
+                    <Input type="file" accept="image/*" onChange={handleFileChange} className="text-xs" />
+                  ) : (
+                    <p className="text-xs text-muted-foreground pt-2">
+                      You don't have permission to change this.
+                    </p>
+                  )}
+                </div>
+              </div>
+              <FormField control={form.control} name="full_name" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Full Name</FormLabel>
+                  <FormControl><Input {...field} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+              <div className="grid grid-cols-2 gap-4">
+                <FormField control={form.control} name="email" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl><Input type="email" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="phone" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Phone</FormLabel>
+                    <FormControl>
+                      <PhoneNumberInput {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+              </div>
+              <FormField control={form.control} name="address" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Address</FormLabel>
+                  <FormControl>
+                    <AddressAutocompleteInput
+                      value={field.value || ''}
+                      onChange={field.onChange}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+              <div className="grid grid-cols-2 gap-4">
+                <FormField control={form.control} name="job_title" render={({ field }) => (
+                  <FormItem><FormLabel>Job Title</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                )} />
+                <FormField control={form.control} name="department" render={({ field }) => (
+                  <FormItem><FormLabel>Department</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                )} />
+              </div>
+              <div className="grid grid-cols-[1fr_auto] items-end gap-4">
+                <FormField
+                  control={form.control}
+                  name="company"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Company</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value || ''} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a company" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {allCompanies.map((company) => (
+                            <SelectItem key={company.id} value={company.name}>
+                              {company.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                {companyLogoUrl ? (
+                  <Avatar>
+                    <AvatarImage src={companyLogoUrl} alt={selectedCompany?.name} />
+                    <AvatarFallback><Briefcase className="h-5 w-5" /></AvatarFallback>
+                  </Avatar>
+                ) : selectedCompanyName ? (
+                  <Avatar>
+                    <AvatarFallback><Briefcase className="h-5 w-5" /></AvatarFallback>
+                  </Avatar>
+                ) : null}
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <FormField control={form.control} name="linkedin" render={({ field }) => (
+                  <FormItem><FormLabel>LinkedIn URL</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                )} />
+                <FormField control={form.control} name="twitter" render={({ field }) => (
+                  <FormItem><FormLabel>Twitter URL</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                )} />
+              </div>
+              <FormField control={form.control} name="instagram" render={({ field }) => (
+                <FormItem><FormLabel>Instagram URL</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+              )} />
+              <FormField control={form.control} name="tag_ids" render={({ field }) => (
+                <FormItem><FormLabel>Tags</FormLabel>
+                  <MultiSelect
+                    options={allTags.map(t => ({ value: t.id, label: t.name }))}
+                    value={field.value || []}
+                    onChange={field.onChange}
+                    placeholder="Select tags..."
+                  />
+                  <FormMessage />
+                </FormItem>
+              )} />
+              <FormField control={form.control} name="project_ids" render={({ field }) => (
+                <FormItem><FormLabel>Related Projects</FormLabel>
+                  <MultiSelect
+                    options={allProjects.map(p => ({ value: p.id, label: p.name }))}
+                    value={field.value || []}
+                    onChange={field.onChange}
+                    placeholder="Select projects..."
+                  />
+                  <FormMessage />
+                </FormItem>
+              )} />
+              <FormField control={form.control} name="birthday" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Birthday</FormLabel>
+                  <FormControl>
+                    <AntDatePicker 
+                      value={field.value} 
+                      onChange={field.onChange} 
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+              <FormField control={form.control} name="notes" render={({ field }) => (
+                <FormItem><FormLabel>Notes</FormLabel><FormControl><Textarea rows={4} {...field} /></FormControl><FormMessage /></FormItem>
+              )} />
+              
+              {customProperties.length > 0 && (
+                <div className="space-y-4 pt-4 border-t">
+                  <h3 className="text-sm font-medium text-muted-foreground">Additional Information</h3>
+                  {customProperties.map(prop => (
+                    <FormField
+                      key={prop.id}
+                      control={form.control}
+                      name={`custom_properties.${prop.name}`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>{prop.label}</FormLabel>
+                          <FormControl>
+                            <Input type={prop.type} {...field} value={field.value || ''} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
-            <div className="w-full space-y-2">
-              <Label htmlFor="full_name">Full Name</Label>
-              <Input id="full_name" {...register('full_name')} />
-              {errors.full_name && <p className="text-red-500 text-xs">{errors.full_name.message}</p>}
-            </div>
-            <div className="w-full space-y-2">
-              <Label htmlFor="job_title">Job Title</Label>
-              <Input id="job_title" {...register('job_title')} />
-            </div>
-            <div className="w-full space-y-2">
-              <Label htmlFor="company">Company</Label>
-              <Input id="company" {...register('company')} />
-            </div>
-            <div className="w-full space-y-2">
-              <Label htmlFor="department">Department</Label>
-              <Input id="department" {...register('department')} />
-            </div>
-          </div>
-
-          <div className="md:col-span-2">
-            <Tabs defaultValue="contact">
-              <TabsList>
-                <TabsTrigger value="contact">Contact</TabsTrigger>
-                <TabsTrigger value="details">Details</TabsTrigger>
-                <TabsTrigger value="relations">Relations</TabsTrigger>
-                <TabsTrigger value="notes">Notes</TabsTrigger>
-              </TabsList>
-              <TabsContent value="contact" className="space-y-4 pt-4">
-                {/* Contact fields */}
-              </TabsContent>
-              <TabsContent value="details" className="space-y-4 pt-4">
-                {/* Details fields */}
-              </TabsContent>
-              <TabsContent value="relations" className="space-y-4 pt-4">
-                {/* Relations fields */}
-              </TabsContent>
-              <TabsContent value="notes" className="pt-4">
-                <Textarea {...register('notes')} placeholder="Add any relevant notes here..." rows={10} />
-              </TabsContent>
-            </Tabs>
-          </div>
-
-          <DialogFooter className="md:col-span-3">
-            <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
-            <Button type="submit" disabled={upsertPersonMutation.isPending}>
-              {upsertPersonMutation.isPending ? 'Saving...' : 'Save'}
-            </Button>
-          </DialogFooter>
-        </form>
+            <DialogFooter className="p-6 pt-4 border-t">
+              <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
+              <Button type="submit" disabled={isSaving}>
+                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Save
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   );
-}
+};
+
+export default PersonFormDialog;

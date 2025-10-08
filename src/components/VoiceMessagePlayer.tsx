@@ -1,57 +1,76 @@
-import { useState, useRef, useEffect } from 'react';
-import { Play, Pause, Download } from 'lucide-react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { Play, Pause } from 'lucide-react';
 import { Button } from './ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Slider } from './ui/slider';
+import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { User } from '@/types';
 import { generatePastelColor } from '@/lib/utils';
 
 interface VoiceMessagePlayerProps {
   src: string;
   sender: User;
+  isCurrentUser: boolean;
 }
 
 const formatTime = (time: number) => {
-  if (isNaN(time)) return '0:00';
+  if (isNaN(time) || !isFinite(time)) return '0:00';
   const minutes = Math.floor(time / 60);
   const seconds = Math.floor(time % 60);
   return `${minutes}:${seconds.toString().padStart(2, '0')}`;
 };
 
-export default function VoiceMessagePlayer({ src, sender }: VoiceMessagePlayerProps) {
+const VoiceMessagePlayer = ({ src, sender, isCurrentUser }: VoiceMessagePlayerProps) => {
   const audioRef = useRef<HTMLAudioElement>(null);
+  const animationFrameRef = useRef<number>();
+  const wasPlayingBeforeDragRef = useRef(false);
+
   const [isPlaying, setIsPlaying] = useState(false);
   const [duration, setDuration] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
-  const [isDragging, setIsDragging] = useState(false);
+
+  const updateProgress = useCallback(() => {
+    if (audioRef.current) {
+      setCurrentTime(audioRef.current.currentTime);
+      animationFrameRef.current = requestAnimationFrame(updateProgress);
+    }
+  }, []);
 
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
 
     const setAudioData = () => {
-      setDuration(audio.duration);
-      setCurrentTime(audio.currentTime);
+      if (isFinite(audio.duration)) setDuration(audio.duration);
+    };
+    const onEnded = () => {
+      setIsPlaying(false);
+      setCurrentTime(0);
     };
 
-    const setAudioTime = () => {
-      if (!isDragging) {
-        setCurrentTime(audio.currentTime);
-      }
-    };
-
-    audio.addEventListener('loadeddata', setAudioData);
-    audio.addEventListener('timeupdate', setAudioTime);
-    audio.addEventListener('ended', () => setIsPlaying(false));
+    audio.addEventListener('loadedmetadata', setAudioData);
+    audio.addEventListener('ended', onEnded);
+    if (audio.readyState >= 1) setAudioData();
 
     return () => {
-      audio.removeEventListener('loadeddata', setAudioData);
-      audio.removeEventListener('timeupdate', setAudioTime);
-      audio.removeEventListener('ended', () => setIsPlaying(false));
+      audio.removeEventListener('loadedmetadata', setAudioData);
+      audio.removeEventListener('ended', onEnded);
+      if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
     };
-  }, [isDragging]);
+  }, [src]);
 
-  const togglePlayPause = () => {
+  useEffect(() => {
+    if (isPlaying) {
+      animationFrameRef.current = requestAnimationFrame(updateProgress);
+    } else {
+      if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+    }
+    return () => {
+      if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+    };
+  }, [isPlaying, updateProgress]);
+
+  const togglePlayPause = (e: React.MouseEvent) => {
+    e.stopPropagation();
     const audio = audioRef.current;
     if (!audio) return;
 
@@ -64,50 +83,65 @@ export default function VoiceMessagePlayer({ src, sender }: VoiceMessagePlayerPr
   };
 
   const handleSliderChange = (value: number[]) => {
-    const newTime = value[0];
-    setCurrentTime(newTime);
-    if (audioRef.current) {
-      audioRef.current.currentTime = newTime;
+    const audio = audioRef.current;
+    if (audio && isFinite(value[0])) {
+      audio.currentTime = value[0];
+      setCurrentTime(value[0]);
     }
   };
 
+  const handlePointerDown = () => {
+    if (audioRef.current) {
+      wasPlayingBeforeDragRef.current = !audioRef.current.paused;
+      if (wasPlayingBeforeDragRef.current) {
+        audioRef.current.pause();
+        setIsPlaying(false);
+      }
+    }
+  };
+
+  const handlePointerUp = () => {
+    if (audioRef.current && wasPlayingBeforeDragRef.current) {
+      audioRef.current.play();
+      setIsPlaying(true);
+    }
+    wasPlayingBeforeDragRef.current = false;
+  };
+
   return (
-    <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg w-full max-w-sm">
+    <div className="flex items-center gap-2 w-full max-w-[280px] min-w-[240px] p-2">
       <audio ref={audioRef} src={src} preload="metadata" />
-      <Button
-        variant="ghost"
-        size="icon"
-        className="rounded-full h-10 w-10 flex-shrink-0"
-        onClick={togglePlayPause}
+      <Button 
+        variant="default"
+        size="icon" 
+        onClick={togglePlayPause} 
+        className="h-9 w-9 flex-shrink-0 rounded-full bg-blue-500 hover:bg-blue-600 text-white"
       >
-        {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
+        {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 ml-0.5" />}
       </Button>
-      <div className="flex-grow flex items-center gap-2">
-        <div className="w-full">
-          <Slider
-            value={[currentTime]}
-            max={duration}
-            step={0.1}
-            onValueChange={handleSliderChange}
-            onPointerDown={() => setIsDragging(true)}
-            onPointerUp={() => setIsDragging(false)}
-          />
+      <div className="flex-1 flex flex-col justify-center gap-1.5">
+        <Slider
+          value={[currentTime]}
+          max={duration || 1}
+          step={0.1}
+          onValueChange={handleSliderChange}
+          onPointerDown={handlePointerDown}
+          onPointerUp={handlePointerUp}
+          className="w-full [&>span:first-child]:h-1 [&>span:first-child>span]:bg-blue-500 [&>span:last-child]:h-3 [&>span:last-child]:w-3 [&>span:last-child]:bg-blue-500"
+        />
+        <div className="flex justify-between items-center">
+            <span className="text-xs font-mono text-muted-foreground">{formatTime(currentTime)}</span>
+            <span className="text-xs font-mono text-muted-foreground">{formatTime(duration)}</span>
         </div>
-        <span className="text-xs text-muted-foreground w-10 text-right">
-          {formatTime(currentTime)} / {formatTime(duration)}
-        </span>
       </div>
-      <div className="relative">
-        <Avatar className="h-10 w-10">
+      {!isCurrentUser && (
+        <Avatar className="h-8 w-8 flex-shrink-0 ml-2">
           <AvatarImage src={sender.avatar_url} />
-          <AvatarFallback style={{ backgroundColor: generatePastelColor(sender.id) }}>{sender.initials}</AvatarFallback>
+          <AvatarFallback style={generatePastelColor(sender.id)}>{sender.initials}</AvatarFallback>
         </Avatar>
-      </div>
-      <Button variant="ghost" size="icon" asChild>
-        <a href={src} download>
-          <Download className="h-5 w-5" />
-        </a>
-      </Button>
+      )}
     </div>
   );
-}
+};
+
+export default VoiceMessagePlayer;

@@ -1,97 +1,51 @@
 // @ts-nocheck
-import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { serve } from 'https://deno.land/std@0.224.0/http/server.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
-};
+}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
-  }
-
-  if (req.method !== "POST") {
-    return new Response(JSON.stringify({ error: "Method not allowed" }), { 
-        status: 405,
-        headers: { ...corsHeaders, "Content-Type": "application/json" } 
-    });
+    return new Response('ok', { headers: corsHeaders })
   }
 
   try {
-    // Authenticate user making the request
-    const supabaseUserClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
-    );
-    const { data: { user } } = await supabaseUserClient.auth.getUser();
-    if (!user) throw new Error("User not authenticated.");
-
-    const { to, subject, html } = await req.json();
-
-    if (!to || !subject || !html) {
-      return new Response(JSON.stringify({ error: "Missing fields: to, subject, and html are required." }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 400,
-      });
+    const { to, subject, html, text } = await req.json();
+    if (!to || !subject || (!html && !text)) {
+        throw new Error("Missing required fields: to, subject, and html or text.");
     }
 
-    // Use admin client to get credentials
-    const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
-
-    const { data: credentials, error: credsError } = await supabaseAdmin
-      .from('app_config')
-      .select('key, value')
-      .in('key', ['EMAILIT_API_KEY', 'EMAILIT_SENDER', 'EMAILIT_FROM_NAME']);
-
-    if (credsError) throw credsError;
-
-    const config = credentials.reduce((acc, { key, value }) => {
-      acc[key] = value;
-      return acc;
-    }, {});
-
-    const apiKey = config.EMAILIT_API_KEY;
-    const senderEmail = config.EMAILIT_SENDER;
-    const fromName = config.EMAILIT_FROM_NAME;
-
-    if (!apiKey || !senderEmail || !fromName) {
-        throw new Error("Email service is not configured in settings.");
+    const emailitApiKey = Deno.env.get("EMAILIT_API_KEY");
+    if (!emailitApiKey) {
+        throw new Error("Emailit API key is not configured on the server.");
     }
 
-    const res = await fetch("https://api.emailit.io/v1/send", {
+    const response = await fetch("https://api.emailit.com/v1/emails", {
       method: "POST",
       headers: {
+        "Authorization": `Bearer ${emailitApiKey}`,
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        from: {
-          email: senderEmail,
-          name: fromName,
-        },
-        to: [{ email: to }],
-        subject,
-        html,
+        from: Deno.env.get("EMAIL_FROM") ?? "Betterworks <no-reply@mail.betterworks.id>",
+        to, subject, html, text,
       }),
     });
 
-    const data = await res.json().catch(() => ({}));
-
-    return new Response(JSON.stringify({ ok: res.ok, data }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: res.status,
+    const data = await response.json().catch(() => ({}));
+    
+    return new Response(JSON.stringify({ ok: response.ok, data }), { 
+      status: response.status, 
+      headers: { ...corsHeaders, "Content-Type": "application/json" } 
     });
-  } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 500,
+
+  } catch (e) {
+    return new Response(JSON.stringify({ ok: false, error: e.message }), {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
 });

@@ -1,111 +1,125 @@
+import React from 'react';
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { Project } from '@/types';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
+import { useNavigate } from 'react-router-dom';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { formatInJakarta, cn, generatePastelColor, getAvatarUrl } from '@/lib/utils';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import {
-  MessageSquare,
-  Paperclip,
-  ListChecks,
-  Calendar,
-  Users,
-} from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { useDraggable } from '@dnd-kit/core';
+import { Badge } from '../ui/badge';
+import { CheckCircle } from 'lucide-react';
+import { isSameDay, subDays } from 'date-fns';
 
-interface KanbanCardProps {
-  project: Project;
-}
+const KanbanCard = ({ project, dragHappened }: { project: Project, dragHappened: React.MutableRefObject<boolean> }) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: project.id });
+  const navigate = useNavigate();
+  
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition: isDragging ? 'none' : undefined,
+  };
 
-const KanbanCard = ({ project }: KanbanCardProps) => {
-  const { attributes, listeners, setNodeRef, transform } = useDraggable({
-    id: project.id,
-    data: { project },
-  });
+  const handleClick = () => {
+    if (!dragHappened.current) {
+      navigate(`/projects/${project.slug}`);
+    }
+  };
 
-  const style = transform ? {
-    transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
-  } : undefined;
+  const renderDateBadge = () => {
+    const { start_date, due_date } = project;
+
+    if (!start_date) {
+      return null;
+    }
+
+    const startDate = new Date(start_date);
+    const dueDate = due_date ? new Date(due_date) : startDate;
+
+    const isExclusiveEndDate = 
+      due_date &&
+      dueDate.getUTCHours() === 0 &&
+      dueDate.getUTCMinutes() === 0 &&
+      dueDate.getUTCSeconds() === 0 &&
+      dueDate.getUTCMilliseconds() === 0 &&
+      !isSameDay(startDate, dueDate);
+
+    const adjustedDueDate = isExclusiveEndDate ? subDays(dueDate, 1) : dueDate;
+
+    if (isSameDay(startDate, adjustedDueDate)) {
+      return (
+        <Badge variant="outline" className="text-xs font-normal">
+          {formatInJakarta(start_date, 'd MMM')}
+        </Badge>
+      );
+    }
+
+    const startMonth = formatInJakarta(start_date, 'MMM');
+    const endMonth = formatInJakarta(adjustedDueDate, 'MMM');
+
+    if (startMonth === endMonth) {
+      return (
+        <Badge variant="outline" className="text-xs font-normal">
+          {`${formatInJakarta(start_date, 'd')}-${formatInJakarta(adjustedDueDate, 'd')} ${startMonth}`}
+        </Badge>
+      );
+    }
+
+    return (
+      <Badge variant="outline" className="text-xs font-normal">
+        {`${formatInJakarta(start_date, 'd MMM')} - ${formatInJakarta(adjustedDueDate, 'd MMM')}`}
+      </Badge>
+    );
+  };
 
   return (
-    <Card
-      ref={setNodeRef}
-      style={style}
-      {...listeners}
-      {...attributes}
-      className="mb-4 bg-card hover:shadow-lg transition-shadow cursor-grab active:cursor-grabbing"
-    >
-      <Link to={`/projects/${project.slug}`} className="block">
-        <CardHeader className="p-4">
-          <CardTitle className="text-base font-semibold leading-tight group-hover:text-primary">
-            {project.name}
-          </CardTitle>
-          <Badge variant="outline" className="w-fit mt-1">{project.category}</Badge>
-        </CardHeader>
-        <CardContent className="p-4 pt-0">
-          <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
-            {project.description}
-          </p>
-          <div className="flex justify-between items-center text-xs text-muted-foreground mb-4">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1">
-                <MessageSquare className="h-3.5 w-3.5" />
-                <span>{project.comments?.length || 0}</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <Paperclip className="h-3.5 w-3.5" />
-                <span>{project.briefFiles?.length || 0}</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <ListChecks className="h-3.5 w-3.5" />
-                <span>{project.tasks?.length || 0}</span>
-              </div>
-            </div>
-            {project.due_date && (
-              <div className="flex items-center gap-1">
-                <Calendar className="h-3.5 w-3.5" />
-                <span>{formatInJakarta(new Date(project.due_date), 'd MMM')}</span>
-              </div>
-            )}
-          </div>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center -space-x-2">
-              <TooltipProvider>
-                {project.assignedTo?.slice(0, 3).map((user) => (
-                  <Tooltip key={user.id}>
-                    <TooltipTrigger>
-                      <Avatar key={user.id} className="h-6 w-6 border-2 border-card">
-                        <AvatarImage src={getAvatarUrl(user.avatar_url) || undefined} />
-                        <AvatarFallback style={{ backgroundColor: generatePastelColor(user.id) }}>{user.initials}</AvatarFallback>
-                      </Avatar>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{user.name}</p>
-                    </TooltipContent>
-                  </Tooltip>
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners} className={cn(isDragging && "opacity-30")}>
+      <Card className="mb-3 hover:shadow-md transition-shadow cursor-pointer" onClick={handleClick}>
+        <CardContent className="p-3">
+          <div className="space-y-2 block">
+            <h4 className="font-semibold text-sm leading-snug flex items-center gap-1.5">
+              {project.status === 'Completed' && <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />}
+              {project.name}
+            </h4>
+            
+            {project.tags && project.tags.length > 0 && (
+              <div className="flex flex-wrap gap-1 pt-1">
+                {project.tags.slice(0, 2).map(tag => (
+                  <Badge
+                    key={tag.id}
+                    variant="outline"
+                    className="text-xs font-normal"
+                    style={{
+                      backgroundColor: `${tag.color}20`,
+                      borderColor: tag.color,
+                      color: tag.color,
+                    }}
+                  >
+                    {tag.name}
+                  </Badge>
                 ))}
-                {project.assignedTo && project.assignedTo.length > 3 && (
-                  <Avatar className="h-6 w-6 border-2 border-card">
-                    <AvatarFallback>+{project.assignedTo.length - 3}</AvatarFallback>
-                  </Avatar>
+                {project.tags.length > 2 && (
+                  <Badge variant="outline" className="text-xs font-normal">
+                    +{project.tags.length - 2}
+                  </Badge>
                 )}
-              </TooltipProvider>
-            </div>
-            {project.client_name && (
-              <Badge variant="secondary" className="font-normal">
-                {project.client_name}
-              </Badge>
+              </div>
             )}
+
+            <div className="flex justify-between items-center pt-1">
+              <div className="flex -space-x-2">
+                {project.assignedTo.slice(0, 3).map(user => (
+                  <Avatar key={user.id} className="h-6 w-6 border-2 border-card">
+                    <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
+                    <AvatarFallback style={generatePastelColor(user.id)}>{user.initials}</AvatarFallback>
+                  </Avatar>
+                ))}
+              </div>
+              {renderDateBadge()}
+            </div>
           </div>
         </CardContent>
-      </Link>
-    </Card>
+      </Card>
+    </div>
   );
 };
 

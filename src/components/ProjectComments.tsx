@@ -1,140 +1,138 @@
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase";
-import { useAuth } from "@/contexts/AuthContext";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { formatDistanceToNow } from "date-fns";
-import { Loader2 } from "lucide-react";
-import { getAvatarUrl, getInitials } from "@/lib/utils";
-import MentionInput from "./MentionInput";
+import { useState, useRef } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import { useQueryClient } from '@tanstack/react-query';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
+import { Loader2 } from 'lucide-react';
+import { getAvatarUrl, getInitials } from '@/lib/utils';
+import MentionInput from './MentionInput';
+import { Project } from '@/types';
+import { formatDistanceToNow } from 'date-fns';
+import ReactMarkdown from 'react-markdown';
+import { Link } from 'react-router-dom';
 
-interface Comment {
-  id: string;
-  text: string;
-  created_at: string;
-  is_ticket: boolean;
-  attachment_url?: string;
-  attachment_name?: string;
-  author: {
-    id: string;
-    name: string;
-    avatar_url: string;
-    initials: string;
-  };
+interface ProjectCommentsProps {
+  project: Project;
 }
 
-const ProjectComments = ({ projectId }: { projectId: string }) => {
+const ProjectComments = ({ project }: ProjectCommentsProps) => {
   const { user } = useAuth();
-  const [newComment, setNewComment] = useState("");
   const queryClient = useQueryClient();
-
-  const { data: comments, isLoading } = useQuery<Comment[]>({
-    queryKey: ["comments", projectId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("comments")
-        .select(
-          `
-          id, text, created_at, is_ticket, attachment_url, attachment_name,
-          author:profiles (id, first_name, last_name, email, avatar_url)
-        `
-        )
-        .eq("project_id", projectId)
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-
-      return data.map((c: any) => {
-        const name = `${c.author.first_name || ""} ${c.author.last_name || ""}`.trim();
-        return {
-          ...c,
-          author: {
-            ...c.author,
-            name: name || c.author.email,
-            initials: (name ? (name.split(" ")[0][0] + (name.split(" ").length > 1 ? name.split(" ")[1][0] : "")) : c.author.email[0]).toUpperCase(),
-          },
-        };
-      });
-    },
-  });
-
-  const addCommentMutation = useMutation({
-    mutationFn: async (text: string) => {
-      const { data, error } = await supabase
-        .from("comments")
-        .insert({ project_id: projectId, author_id: user?.id, text })
-        .select()
-        .single();
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["comments", projectId] });
-      queryClient.invalidateQueries({ queryKey: ["project", projectId] });
-      setNewComment("");
-    },
-  });
-
-  const handleSubmit = () => {
-    if (newComment.trim()) {
-      addCommentMutation.mutate(newComment.trim());
-    }
-  };
+  const [comment, setComment] = useState('');
+  const [isTicketMode, setIsTicketMode] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   if (!user) return null;
 
+  const mentionableUsers = (project.assignedTo || []).map(member => ({
+    id: member.id,
+    display: member.name,
+    avatar_url: member.avatar_url || '',
+    initials: member.initials || getInitials(member.name, member.email),
+  }));
+
+  const handleSubmit = async () => {
+    if (!comment.trim()) return;
+    setIsSubmitting(true);
+
+    const { error } = await supabase.from('comments').insert({
+      project_id: project.id,
+      author_id: user.id,
+      text: comment,
+      is_ticket: isTicketMode,
+    });
+
+    if (error) {
+      toast.error('Failed to add comment.', { description: error.message });
+    } else {
+      setComment('');
+      setIsTicketMode(false);
+      toast.success(isTicketMode ? 'Ticket created successfully.' : 'Comment added.');
+      queryClient.invalidateQueries({ queryKey: ['project', project.slug] });
+    }
+    setIsSubmitting(false);
+  };
+
   return (
-    <div className="space-y-6">
-      <div className="flex gap-4">
+    <div className="mt-6">
+      <h3 className="text-lg font-semibold mb-4">Comments & Tickets</h3>
+      <div className="flex items-start gap-4">
         <Avatar>
-          <AvatarImage src={getAvatarUrl(user.avatar_url) || undefined} />
+          <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
           <AvatarFallback>{getInitials(user.name, user.email)}</AvatarFallback>
         </Avatar>
         <div className="flex-1">
-          <MentionInput
-            value={newComment}
-            onChange={setNewComment}
-            placeholder="Add a comment... @ to mention, # to link project"
-          />
-          <Button
-            onClick={handleSubmit}
-            disabled={addCommentMutation.isPending}
-            className="mt-2"
-          >
-            {addCommentMutation.isPending && (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            )}
-            Comment
-          </Button>
+          <div className="border rounded-lg">
+            <div className="p-4">
+              <MentionInput
+                ref={textareaRef}
+                value={comment}
+                onChange={setComment}
+                placeholder={isTicketMode ? "Describe the ticket..." : "Add a comment... @ to mention"}
+                userSuggestions={mentionableUsers}
+                projectSuggestions={[]}
+                disabled={isSubmitting}
+                className="min-h-[100px] border-none focus-visible:ring-0 p-0"
+              />
+            </div>
+            <div className="flex justify-between items-center p-2 border-t bg-muted/50 rounded-b-lg">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="ticket-mode"
+                  checked={isTicketMode}
+                  onCheckedChange={(checked) => setIsTicketMode(!!checked)}
+                  disabled={isSubmitting}
+                />
+                <Label htmlFor="ticket-mode" className="text-sm font-medium">
+                  Create a ticket
+                </Label>
+              </div>
+              <Button onClick={handleSubmit} disabled={isSubmitting || !comment.trim()}>
+                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {isTicketMode ? 'Create Ticket' : 'Comment'}
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="space-y-4">
-        {isLoading ? (
-          <p>Loading comments...</p>
-        ) : (
-          comments?.map((c) => (
-            <div key={c.id} className="flex gap-4">
-              <Avatar>
-                <AvatarImage src={getAvatarUrl(c.author.avatar_url) || undefined} />
-                <AvatarFallback>{c.author.initials}</AvatarFallback>
-              </Avatar>
-              <div className="flex-1">
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold">{c.author.name}</span>
-                  <span className="text-xs text-muted-foreground">
-                    {formatDistanceToNow(new Date(c.created_at), {
-                      addSuffix: true,
-                    })}
-                  </span>
-                </div>
-                <p className="text-sm whitespace-pre-wrap">{c.text}</p>
+      <div className="mt-6 space-y-6">
+        {(project.comments || []).map((c) => (
+          <div key={c.id} className="flex items-start gap-4">
+            <Avatar>
+              <AvatarImage src={getAvatarUrl(c.author.avatar_url, c.author.id)} />
+              <AvatarFallback>{c.author.initials}</AvatarFallback>
+            </Avatar>
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <span className="font-semibold">{c.author.name}</span>
+                <span className="text-xs text-muted-foreground">
+                  {formatDistanceToNow(new Date(c.timestamp), { addSuffix: true })}
+                </span>
+              </div>
+              <div className="prose prose-sm dark:prose-invert max-w-none mt-1">
+                <ReactMarkdown
+                  components={{
+                    a: ({ node, ...props }) => {
+                      const href = props.href || '';
+                      if (href.startsWith('/')) {
+                        return <Link to={href} {...props} className="text-primary hover:underline" />;
+                      }
+                      return <a {...props} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline" />;
+                    }
+                  }}
+                >
+                  {c.text}
+                </ReactMarkdown>
               </div>
             </div>
-          ))
-        )}
+          </div>
+        ))}
       </div>
     </div>
   );

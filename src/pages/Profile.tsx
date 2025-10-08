@@ -1,191 +1,323 @@
-import { useState, useEffect } from "react";
-import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase";
-import { Button } from "@/components/ui/button";
+import { useState, useEffect, useMemo } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { Camera, Loader2 } from "lucide-react";
+import PortalLayout from "@/components/PortalLayout";
+import { supabase } from "@/integrations/supabase/client";
+import { Eye, EyeOff, Loader2, Camera } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { generatePastelColor, getAvatarUrl, getInitials } from "@/lib/utils";
 import NotificationPreferencesCard from "@/components/settings/NotificationPreferencesCard";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { useQueryClient } from "@tanstack/react-query";
+import AvatarCropper from "@/components/settings/AvatarCropper";
 
-export default function Profile() {
-  const { user, refreshUser } = useAuth();
+const Profile = () => {
+  const { user, session, refreshUser, logout } = useAuth();
+  const queryClient = useQueryClient();
+  
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
-  const [avatarFile, setAvatarFile] = useState<File | null>(null);
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [theme, setTheme] = useState('system');
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isPasswordUpdating, setIsPasswordUpdating] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [imageToCrop, setImageToCrop] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
       setFirstName(user.first_name || "");
       setLastName(user.last_name || "");
-      setAvatarPreview(user.avatar_url || null);
-      setTheme(user.theme || 'system');
     }
   }, [user]);
 
-  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setAvatarFile(file);
-      setAvatarPreview(URL.createObjectURL(file));
-    }
-  };
-
-  const handleUpdateProfile = async () => {
-    if (!user) return;
-
-    setLoading(true);
-    let avatarUrl = user.avatar_url;
-
-    if (avatarFile) {
-      const filePath = `${user.id}/${Date.now()}_${avatarFile.name}`;
-      const { error: uploadError } = await supabase.storage
-        .from("avatars")
-        .upload(filePath, avatarFile);
-
-      if (uploadError) {
-        toast.error(`Avatar upload failed: ${uploadError.message}`);
-        setLoading(false);
-        return;
-      }
-
-      const { data: urlData } = supabase.storage
-        .from("avatars")
-        .getPublicUrl(filePath);
-      avatarUrl = urlData.publicUrl;
-    }
-
-    const { error } = await supabase
-      .from("profiles")
-      .update({
-        first_name: firstName,
-        last_name: lastName,
-        avatar_url: avatarUrl,
-        theme: theme,
-      })
-      .eq("id", user.id);
-
-    if (error) {
-      toast.error(`Profile update failed: ${error.message}`);
-    } else {
-      // Also update auth user metadata
-      await supabase.auth.updateUser({
-        data: {
-          first_name: firstName,
-          last_name: lastName,
-          avatar_url: avatarUrl,
-        },
-      });
-      toast.success("Profile updated successfully!");
-      await refreshUser();
-    }
-    setLoading(false);
-  };
+  const canChangePassword = useMemo(() => {
+    if (!session?.user) return false;
+    // Check the main provider and also check identities array for email provider
+    return session.user.app_metadata?.provider === 'email' || 
+           session.user.identities?.some(i => i.provider === 'email');
+  }, [session]);
 
   if (!user) {
-    return <div>Loading...</div>;
+    return <PortalLayout><div>Loading...</div></PortalLayout>;
   }
 
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) { // 2MB limit
+        toast.error("Ukuran file terlalu besar. Maksimal 2MB.");
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.addEventListener('load', () => {
+        setImageToCrop(reader.result as string);
+    });
+    reader.readAsDataURL(file);
+    
+    // Reset file input value to allow re-selecting the same file
+    event.target.value = '';
+  };
+
+  const handleAvatarUpload = async (imageBlob: Blob) => {
+    setImageToCrop(null);
+    if (!imageBlob) return;
+
+    setIsUploading(true);
+    try {
+        const fileExt = 'png';
+        const filePath = `${user.id}/${Date.now()}.${fileExt}`;
+
+        if (user.avatar_url && !user.avatar_url.includes('dicebear.com')) {
+            try {
+                const oldAvatarPath = new URL(user.avatar_url).pathname.split('/avatars/')[1];
+                if (oldAvatarPath) {
+                    await supabase.storage.from('avatars').remove([oldAvatarPath]);
+                }
+            } catch (e) {
+                console.warn("Could not remove old avatar.", e);
+            }
+        }
+
+        const { error: uploadError } = await supabase.storage
+            .from('avatars')
+            .upload(filePath, imageBlob, { contentType: 'image/png', upsert: true });
+
+        if (uploadError) throw uploadError;
+
+        const { data: publicUrlData } = supabase.storage
+            .from('avatars')
+            .getPublicUrl(filePath);
+
+        if (!publicUrlData.publicUrl) {
+            throw new Error("Could not get public URL for avatar.");
+        }
+
+        const { error: updateError } = await supabase
+            .from('profiles')
+            .update({ avatar_url: publicUrlData.publicUrl, updated_at: new Date().toISOString() })
+            .eq('id', user.id);
+
+        if (updateError) throw updateError;
+
+        toast.success("Avatar berhasil diperbarui.");
+        await refreshUser();
+        queryClient.invalidateQueries({ queryKey: ['user', user.id] });
+
+    } catch (error: any) {
+        toast.error("Gagal mengunggah avatar.", { description: error.message });
+        console.error(error);
+    } finally {
+        setIsUploading(false);
+    }
+  };
+
+  const handleSaveChanges = async () => {
+    setIsSaving(true);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ 
+          first_name: firstName, 
+          last_name: lastName,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      toast.success("Profil berhasil diperbarui.");
+      await refreshUser();
+    } catch (error: any) {
+      toast.error("Gagal memperbarui profil.", { description: error.message });
+      console.error(error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handlePasswordChange = async () => {
+    if (newPassword.length < 8) {
+      toast.error("Password minimal 8 karakter.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast.error("Konfirmasi password tidak cocok.");
+      return;
+    }
+
+    setIsPasswordUpdating(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) {
+        throw error;
+      }
+      toast.success("Password berhasil diperbarui.");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (error: any) {
+      if (error.message.includes('New password should be different from the old password')) {
+        toast.info("Password baru sama dengan password lama. Tidak ada perubahan yang dilakukan.");
+      } else {
+        toast.error("Gagal memperbarui password.", { description: error.message });
+      }
+    } finally {
+      setIsPasswordUpdating(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    await logout();
+  };
+
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Public Profile</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center gap-6">
-            <div className="relative">
-              <Avatar className="h-20 w-20">
-                <AvatarImage src={avatarPreview || undefined} alt={user.first_name || ""} />
-                <AvatarFallback style={{ backgroundColor: generatePastelColor(user.id) }}>{getInitials(user.first_name, user.email)}</AvatarFallback>
-              </Avatar>
-              <Label
-                htmlFor="avatar-upload"
-                className="absolute bottom-0 right-0 bg-primary text-primary-foreground rounded-full p-2 cursor-pointer hover:bg-primary/90"
-              >
-                <Camera className="h-4 w-4" />
-              </Label>
-              <Input
-                id="avatar-upload"
-                type="file"
-                className="hidden"
-                onChange={handleAvatarChange}
-                accept="image/*"
-              />
+    <PortalLayout>
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Profile & Settings</h1>
+          <p className="text-muted-foreground">
+            Manage your account settings and profile information.
+          </p>
+        </div>
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Personal Information</CardTitle>
+                <CardDescription>Update your personal details here.</CardDescription>
+              </div>
+              {user.role && (
+                <Badge variant="outline" className="capitalize text-sm">
+                  {user.role}
+                </Badge>
+              )}
             </div>
-            <div className="flex-1">
-              <h2 className="text-2xl font-bold">{`${firstName} ${lastName}`}</h2>
-              <p className="text-muted-foreground">{user.email}</p>
-              <Badge className="mt-2 capitalize">{user.role}</Badge>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center space-x-4">
+              <div className="relative group">
+                <Avatar className="h-20 w-20">
+                  <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} alt={user.first_name || ''} />
+                  <AvatarFallback style={generatePastelColor(user.id)}>{getInitials(user.first_name, user.email)}</AvatarFallback>
+                </Avatar>
+                <label 
+                    htmlFor="avatar-upload" 
+                    className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 rounded-full cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                    {isUploading ? (
+                        <Loader2 className="h-6 w-6 text-white animate-spin" />
+                    ) : (
+                        <Camera className="h-6 w-6 text-white" />
+                    )}
+                    <input 
+                        id="avatar-upload" 
+                        type="file" 
+                        className="hidden" 
+                        accept="image/png, image/jpeg, image/gif"
+                        onChange={handleFileSelect}
+                        disabled={isUploading}
+                    />
+                </label>
+              </div>
             </div>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="firstName">First Name</Label>
-              <Input
-                id="firstName"
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="first-name">First Name</Label>
+                <Input id="first-name" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="last-name">Last Name</Label>
+                <Input id="last-name" value={lastName} onChange={(e) => setLastName(e.target.value)} />
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="email">Email</Label>
+                <Input id="email" type="email" value={user.email || ''} disabled />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="lastName">Last Name</Label>
-              <Input
-                id="lastName"
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+            <Button onClick={handleSaveChanges} disabled={isSaving}>
+              {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Save Changes
+            </Button>
+          </CardContent>
+        </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Appearance</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            <Label htmlFor="theme">Theme</Label>
-            <Select value={theme} onValueChange={setTheme}>
-              <SelectTrigger id="theme" className="w-[180px]">
-                <SelectValue placeholder="Select theme" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="system">System</SelectItem>
-                <SelectItem value="light">Light</SelectItem>
-                <SelectItem value="dark">Dark</SelectItem>
-              </SelectContent>
-            </Select>
-            <p className="text-sm text-muted-foreground">
-              Select the theme for the dashboard.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+        {canChangePassword ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>Security</CardTitle>
+              <CardDescription>Update your password. It's recommended to use a strong, unique password.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="new-password">New Password</Label>
+                <div className="relative">
+                  <Input id="new-password" type={showNewPassword ? "text" : "password"} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+                  <Button type="button" variant="ghost" size="icon" className="absolute inset-y-0 right-0 h-full px-3" onClick={() => setShowNewPassword(!showNewPassword)}>
+                    {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </Button>
+                </div>
+              </div>
+               <div className="space-y-2">
+                <Label htmlFor="confirm-password">Confirm New Password</Label>
+                <div className="relative">
+                  <Input id="confirm-password" type={showConfirmPassword ? "text" : "password"} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
+                  <Button type="button" variant="ghost" size="icon" className="absolute inset-y-0 right-0 h-full px-3" onClick={() => setShowConfirmPassword(!showConfirmPassword)}>
+                    {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </Button>
+                </div>
+              </div>
+              <Button onClick={handlePasswordChange} disabled={isPasswordUpdating}>
+                {isPasswordUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Change Password
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card>
+            <CardHeader>
+              <CardTitle>Security</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                You are signed in with a social provider (e.g., Google). You can manage your password through your provider's settings.
+              </p>
+            </CardContent>
+          </Card>
+        )}
 
-      <NotificationPreferencesCard />
+        <NotificationPreferencesCard />
 
-      <div className="flex justify-end">
-        <Button onClick={handleUpdateProfile} disabled={loading}>
-          {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Update Profile
-        </Button>
+        <Card>
+          <CardHeader>
+            <CardTitle>Danger Zone</CardTitle>
+            <CardDescription>
+              These actions can have permanent consequences.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button variant="destructive" onClick={handleLogout}>
+              Logout
+            </Button>
+          </CardContent>
+        </Card>
       </div>
-    </div>
+      {imageToCrop && (
+        <AvatarCropper
+          imageSrc={imageToCrop}
+          onCropComplete={handleAvatarUpload}
+          onClose={() => setImageToCrop(null)}
+        />
+      )}
+    </PortalLayout>
   );
-}
+};
+
+export default Profile;
