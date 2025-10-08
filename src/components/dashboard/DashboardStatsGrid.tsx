@@ -3,7 +3,7 @@ import { Briefcase, CheckCircle, Clock, Users, TrendingUp, AlertCircle } from "l
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase";
+import { supabase } from "@/integrations/supabase/client";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { generatePastelColor, getAvatarUrl } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';

@@ -3,7 +3,7 @@ import { Task, TaskStatus, TASK_STATUS_OPTIONS } from '@/types';
 import TasksKanbanColumn from './TasksKanbanColumn';
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, MouseSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
-import TasksKanbanCard from './TasksKanbanCard';
+import { TasksKanbanCard } from './TasksKanbanCard';
 import { useTaskMutations } from '@/hooks/useTaskMutations';
 
 interface TasksKanbanViewProps {

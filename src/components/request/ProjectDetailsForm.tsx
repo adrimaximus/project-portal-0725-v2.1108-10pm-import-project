@@ -4,7 +4,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import ModernTeamSelector from "./ModernTeamSelector";
+import { ModernTeamSelector } from "./ModernTeamSelector";
 import FileUploader from "./FileUploader";
 import { useNavigate } from "react-router-dom";
 import { Service, services as allServicesData } from "@/data/services";
@@ -280,7 +280,7 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
           </div>
           <div className="space-y-2">
             <Label>Assign Team</Label>
-            <ModernTeamSelector users={assignableUsers} selectedUsers={team} onSelectionChange={handleTeamChange} />
+            <ModernTeamSelector selectedUsers={team} onChange={handleTeamChange} />
           </div>
           <div className="space-y-2">
             <Label>Attach Files</Label>

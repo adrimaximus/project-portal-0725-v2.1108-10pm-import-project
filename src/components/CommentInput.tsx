@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase';
+import { supabase } from '@/integrations/supabase/client';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Button } from './ui/button';
 import { Mention, MentionsInput, SuggestionDataItem } from "react-mentions";
@@ -50,7 +50,7 @@ export default function CommentInput({ onSubmit, isLoading }: CommentInputProps)
       <div className="flex items-center p-2">
         <Avatar className="h-8 w-8 mr-2">
           <AvatarImage src={getAvatarUrl(userSuggestion.avatar_url) || undefined} />
-          <AvatarFallback style={{ backgroundColor: generatePastelColor(userSuggestion.id) }}>{userSuggestion.initials}</AvatarFallback>
+          <AvatarFallback style={{ backgroundColor: generatePastelColor(userSuggestion.id as string) }}>{userSuggestion.initials}</AvatarFallback>
         </Avatar>
         <span>{userSuggestion.display}</span>
       </div>

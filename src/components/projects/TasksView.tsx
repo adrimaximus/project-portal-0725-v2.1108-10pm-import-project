@@ -38,10 +38,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useState } from "react";
-import { TaskFormDialog } from "./TaskFormDialog";
+import TaskFormDialog from "./TaskFormDialog";
 
 interface TasksViewProps {
   tasks: Task[];
@@ -239,10 +239,11 @@ export function TasksView({ tasks, isLoading }: TasksViewProps) {
       </Table>
       {editingTask && (
         <TaskFormDialog
-          isOpen={!!editingTask}
-          onClose={() => setEditingTask(null)}
+          open={!!editingTask}
+          onOpenChange={(open) => !open && setEditingTask(null)}
           task={editingTask}
-          projectId={editingTask.project_id}
+          onSubmit={() => {}}
+          isSubmitting={false}
         />
       )}
     </TooltipProvider>

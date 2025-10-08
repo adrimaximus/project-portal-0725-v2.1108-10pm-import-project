@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import ChatHeader from "./ChatHeader";
-import { ChatConversation } from "./ChatConversation";
+import ChatConversation from "./ChatConversation";
 import { ChatInput } from "./ChatInput";
 import ChatPlaceholder from "./ChatPlaceholder";
 import { forwardRef } from "react";
@@ -52,7 +52,6 @@ export const ChatWindow = forwardRef<HTMLTextAreaElement, ChatWindowProps>(({ on
       />
       <ChatConversation
         messages={selectedConversation.messages}
-        members={selectedConversation.members || []}
         onReply={setReplyTo}
       />
       <ChatInput 

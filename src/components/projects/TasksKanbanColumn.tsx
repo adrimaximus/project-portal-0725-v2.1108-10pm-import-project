@@ -1,5 +1,5 @@
 import { Task, TaskStatus } from '@/types';
-import TasksKanbanCard from './TasksKanbanCard';
+import { TasksKanbanCard } from './TasksKanbanCard';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useDroppable } from '@dnd-kit/core';
 import { ChevronsLeft } from 'lucide-react';

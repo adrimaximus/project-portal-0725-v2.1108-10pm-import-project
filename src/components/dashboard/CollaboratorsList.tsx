@@ -16,7 +16,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase";
+import { supabase } from "@/integrations/supabase/client";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -50,7 +50,7 @@ const CollaboratorsList = () => {
     }
   });
 
-  if (isLoading) {
+  if (isLoading || !collaborators) {
     return <Card>
       <CardHeader>
         <CardTitle>Team Activity</CardTitle>

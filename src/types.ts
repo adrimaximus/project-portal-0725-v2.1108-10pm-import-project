@@ -221,13 +221,14 @@ export interface RepliedMessageInfo {
 
 export interface Message {
   id: string;
-  text: string;
-  timestamp: string;
+  content: string;
+  createdAt: string;
   sender: User;
   attachment?: Attachment;
-  reply_to_message_id?: string | null;
-  repliedMessage?: RepliedMessageInfo | null;
+  replyTo?: RepliedMessageInfo | null;
+  isDeleted?: boolean;
   reactions?: Reaction[];
+  reply_to_message_id?: string | null;
 }
 
 export interface Conversation {
@@ -235,12 +236,12 @@ export interface Conversation {
   userName: string;
   userAvatar?: string;
   lastMessage: string;
-  lastMessageTimestamp: string;
+  lastMessageAt: string;
   unreadCount: number;
   messages: Message[];
   isGroup: boolean;
-  members: Collaborator[];
-  created_by?: string;
+  participants: Collaborator[];
+  createdBy?: string;
 }
 
 // Goals
@@ -379,9 +380,9 @@ export interface Notification {
   id: string;
   type: string;
   title: string;
-  description: string;
-  timestamp: string;
-  read: boolean;
+  body: string;
+  created_at: string;
+  read_at: string | null;
   link?: string;
   actor: {
     id: string;

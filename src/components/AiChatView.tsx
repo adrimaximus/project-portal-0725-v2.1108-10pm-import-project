@@ -1,7 +1,7 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { useAiChat } from "@/hooks/useAiChat";
 import ChatHeader from "./ChatHeader";
-import { ChatConversation } from "./ChatConversation";
+import ChatConversation from "./ChatConversation";
 import { ChatInput } from "./ChatInput";
 import { forwardRef, useMemo, useState } from "react";
 import { Conversation, Message } from "@/types";
@@ -28,9 +28,10 @@ const AiChatView = forwardRef<HTMLTextAreaElement, AiChatViewProps>(({ onBack },
     isGroup: false,
     members: [currentUser!, aiUser],
     messages: conversation,
-    lastMessage: conversation[conversation.length - 1]?.text || "Ask me anything...",
-    lastMessageTimestamp: conversation[conversation.length - 1]?.timestamp || new Date().toISOString(),
+    lastMessage: conversation[conversation.length - 1]?.content || "Ask me anything...",
+    lastMessageAt: conversation[conversation.length - 1]?.createdAt || new Date().toISOString(),
     unreadCount: 0,
+    participants: [currentUser!, aiUser],
   }), [aiUser, conversation, currentUser]);
 
   const handleSendMessage = (text: string, attachmentFile: File | null) => {
@@ -78,8 +79,6 @@ const AiChatView = forwardRef<HTMLTextAreaElement, AiChatViewProps>(({ onBack },
       />
       <ChatConversation
         messages={conversation}
-        members={[currentUser, aiUser]}
-        isLoading={isLoading}
         onReply={setReplyTo}
       />
       <ChatInput 

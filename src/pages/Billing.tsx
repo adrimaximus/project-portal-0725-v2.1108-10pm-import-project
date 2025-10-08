@@ -164,7 +164,7 @@ const Billing = () => {
           onViewModeChange={setViewMode}
         />
 
-        <BillingStats invoices={filteredInvoices} />
+        <BillingStats />
 
         <Card>
           <CardHeader>
