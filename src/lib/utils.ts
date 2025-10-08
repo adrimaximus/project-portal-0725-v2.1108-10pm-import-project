@@ -37,15 +37,18 @@ export const getStatusStyles = (status: string) => {
 export const getPaymentStatusStyles = (status: string) => {
   switch (status) {
     case 'Paid':
-      return { tw: 'bg-teal-100 text-teal-800 dark:bg-teal-900/50 dark:text-teal-300', hex: '#4FD1C5' };
+      return { tw: 'bg-teal-100 text-teal-800 dark:bg-teal-900/50 dark:text-teal-300', hex: '#14B8A6' };
     case 'Unpaid':
-      return { tw: 'bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-300', hex: '#F6AD55' };
-    case 'Partially Paid':
-      return { tw: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300', hex: '#F6E05E' };
+    case 'Pending':
+      return { tw: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300', hex: '#FBBF24' };
     case 'Overdue':
-      return { tw: 'bg-pink-100 text-pink-800 dark:bg-pink-900/50 dark:text-pink-300', hex: '#F56565' };
+      return { tw: 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300', hex: '#EF4444' };
+    case 'In Process':
+      return { tw: 'bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300', hex: '#8B5CF6' };
+    case 'Proposed':
+      return { tw: 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300', hex: '#3B82F6' };
     case 'Cancelled':
-      return { tw: 'bg-slate-100 text-slate-800 dark:bg-slate-800/50 dark:text-slate-300', hex: '#CBD5E0' };
+      return { tw: 'bg-gray-100 text-gray-800 dark:bg-gray-800/50 dark:text-gray-300', hex: '#6B7280' };
     default:
       return { tw: 'bg-slate-100 text-slate-800 dark:bg-slate-800/50 dark:text-slate-300', hex: '#CBD5E0' };
   }

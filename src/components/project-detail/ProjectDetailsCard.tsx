@@ -6,7 +6,7 @@ import { DateRangePicker } from "../DateRangePicker";
 import { DateRange } from "react-day-picker";
 import { CurrencyInput } from "../ui/currency-input";
 import ProjectServices from "./ProjectServices";
-import { formatInJakarta, cn } from "@/lib/utils";
+import { formatInJakarta, cn, getPaymentStatusStyles } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import StatusBadge from "../StatusBadge";
 import { Badge } from "@/components/ui/badge";
@@ -28,15 +28,6 @@ interface ProjectDetailsCardProps {
   isEditing: boolean;
   onFieldChange: (field: keyof Project, value: any) => void;
 }
-
-const paymentStatusConfig: Record<string, { color: string; label: string }> = {
-  'Paid': { color: "bg-green-100 text-green-800", label: "Paid" },
-  'Pending': { color: "bg-yellow-100 text-yellow-800", label: "Pending" },
-  'In Process': { color: "bg-purple-100 text-purple-800", label: "In Process" },
-  'Overdue': { color: "bg-red-100 text-red-800", label: "Overdue" },
-  'Proposed': { color: "bg-blue-100 text-blue-800", label: "Proposed" },
-  'Cancelled': { color: "bg-gray-100 text-gray-800", label: "Cancelled" },
-};
 
 const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetailsCardProps) => {
   const { hasPermission } = useAuth();
@@ -204,7 +195,7 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetail
     );
   };
 
-  const paymentBadgeColor = paymentStatusConfig[project.payment_status]?.color || "bg-gray-100 text-gray-800";
+  const paymentBadgeColor = getPaymentStatusStyles(project.payment_status).tw;
   const hasOpenTasks = project.tasks?.some(task => !task.completed);
 
   return (
