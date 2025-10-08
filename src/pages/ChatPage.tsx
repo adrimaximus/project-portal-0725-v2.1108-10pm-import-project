@@ -27,7 +27,7 @@ const ChatPageContent = () => {
     return (
       <div className="flex-1 h-full">
         {!selectedConversation ? (
-          <ChatList selectedConversationId={null} onSelectConversation={selectConversation} />
+          <ChatList />
         ) : (
           <ChatWindow ref={chatInputRef} onBack={() => selectConversation(null)} />
         )}
@@ -41,7 +41,7 @@ const ChatPageContent = () => {
       className="flex-1 items-stretch"
     >
       <ResizablePanel defaultSize={25} minSize={15} maxSize={60}>
-        <ChatList selectedConversationId={selectedConversation?.id || null} onSelectConversation={selectConversation} />
+        <ChatList />
       </ResizablePanel>
       <ResizableHandle withHandle />
       <ResizablePanel>

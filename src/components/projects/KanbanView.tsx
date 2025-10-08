@@ -1,7 +1,7 @@
-import { Project, PROJECT_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS } from '@/types';
+import { Project } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { formatInJakarta, generatePastelColor, getAvatarUrl, getStatusStyles, getPaymentStatusStyles } from '@/lib/utils';
+import { formatInJakarta, generatePastelColor, getAvatarUrl } from '@/lib/utils';
 import { Badge } from '../ui/badge';
 import {
   Tooltip,
@@ -35,12 +35,13 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase';
 import { toast } from 'sonner';
 import KanbanCard from './KanbanCard';
 
 interface KanbanViewProps {
   projects: Project[];
+  statusOptions: { value: string; label: string; color: string }[];
   groupBy: 'status' | 'payment_status';
 }
 
@@ -71,13 +72,9 @@ const KanbanColumn = ({ title, projects, color }: { title: string, projects: Pro
   );
 };
 
-const KanbanView = ({ projects, groupBy }: KanbanViewProps) => {
+const KanbanView = ({ projects, statusOptions, groupBy }: KanbanViewProps) => {
   const [activeProject, setActiveProject] = useState<Project | null>(null);
   const queryClient = useQueryClient();
-
-  const statusOptions = groupBy === 'status' 
-    ? PROJECT_STATUS_OPTIONS.map(s => ({ ...s, color: getStatusStyles(s.value).hex }))
-    : PAYMENT_STATUS_OPTIONS.map(s => ({ ...s, color: getPaymentStatusStyles(s.value).hex }));
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -166,7 +163,7 @@ const KanbanView = ({ projects, groupBy }: KanbanViewProps) => {
   const groupedProjects = statusOptions.reduce((acc, status) => {
     acc[status.value] = projects
       .filter(p => p[groupBy] === status.value)
-      .sort((a, b) => (groupBy === 'status' ? (a.kanban_order || 0) : (a.payment_kanban_order || 0)) - (groupBy === 'status' ? (b.kanban_order || 0) : (b.payment_kanban_order || 0)));
+      .sort((a, b) => (groupBy === 'status' ? a.kanban_order : a.payment_kanban_order) - (groupBy === 'status' ? b.kanban_order : b.payment_kanban_order));
     return acc;
   }, {} as { [key: string]: Project[] });
 

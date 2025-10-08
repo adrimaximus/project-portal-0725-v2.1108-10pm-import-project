@@ -1,4 +1,4 @@
-import { GoalCompletion, User } from '@/types';
+import { GoalCompletion } from '@/types';
 import {
   Table,
   TableBody,
@@ -18,24 +18,23 @@ import {
 } from "@/components/ui/tooltip";
 
 interface GoalLogTableProps {
-  logs: (GoalCompletion & { user: User })[];
-  goalType: string;
+  completions: GoalCompletion[];
   unit?: string;
 }
 
-const GoalLogTable = ({ logs, goalType, unit }: GoalLogTableProps) => {
-  const groupedCompletions = logs.reduce((acc, completion) => {
+const GoalLogTable = ({ completions, unit }: GoalLogTableProps) => {
+  const groupedCompletions = completions.reduce((acc, completion) => {
     const date = format(new Date(completion.date), 'yyyy-MM-dd');
     if (!acc[date]) {
       acc[date] = [];
     }
     acc[date].push(completion);
     return acc;
-  }, {} as Record<string, (GoalCompletion & { user: User })[]>);
+  }, {} as Record<string, GoalCompletion[]>);
 
   return (
-    <div className="space-y-4 mt-4">
-      {Object.entries(groupedCompletions).map(([date, logsForDate]) => (
+    <div className="space-y-4">
+      {Object.entries(groupedCompletions).map(([date, logs]) => (
         <div key={date}>
           <h4 className="font-semibold text-sm mb-2">{format(new Date(date), 'MMMM d, yyyy')}</h4>
           <Table>
@@ -47,7 +46,7 @@ const GoalLogTable = ({ logs, goalType, unit }: GoalLogTableProps) => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {logsForDate.map(log => {
+              {logs.map(log => {
                 const achiever = log.user;
                 return (
                   <TableRow key={log.id}>

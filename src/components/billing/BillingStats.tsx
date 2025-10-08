@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase";
 import { TrendingUp, TrendingDown, CircleDollarSign, FileText } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { getAvatarUrl, generatePastelColor } from '@/lib/utils';

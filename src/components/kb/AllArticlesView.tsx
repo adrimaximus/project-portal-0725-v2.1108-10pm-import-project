@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { KbArticle } from '@/types';
-import KBCard from './KBCard';
+import { KBCard } from './KBCard';
 import { Button } from '../ui/button';
 
 interface AllArticlesViewProps {
@@ -35,6 +35,8 @@ const AllArticlesView = ({ articles, onEdit, onDelete }: AllArticlesViewProps) =
           <KBCard
             key={article.id}
             article={article}
+            onEdit={onEdit}
+            onDelete={onDelete}
           />
         ))}
       </div>

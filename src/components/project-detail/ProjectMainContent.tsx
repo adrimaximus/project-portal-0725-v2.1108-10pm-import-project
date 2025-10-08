@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { Project, Task } from "@/types";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import ProjectComments from "@/components/ProjectComments";
+import { Project, Task } from '@/types';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import ProjectComments from '@/components/ProjectComments';
 import { useAuth } from '@/contexts/AuthContext';
 import ProjectOverviewTab from './ProjectOverviewTab';
 import ProjectTasks from './ProjectTasks';
@@ -79,12 +79,16 @@ const ProjectMainContent = ({ project, isEditing, onFieldChange, mutations, defa
         </TabsContent>
         <TabsContent value="tasks" className="mt-6">
           <ProjectTasks
-            projectId={project.id}
+            project={project}
+            onTaskAdd={handleTaskAdd}
+            onTaskAssignUsers={handleTaskAssignUsers}
+            onTaskStatusChange={handleTaskStatusChange}
+            onTaskDelete={handleTaskDelete}
           />
         </TabsContent>
         <TabsContent value="discussion" className="mt-6">
           <ProjectComments
-            projectId={project.id}
+            project={project}
           />
         </TabsContent>
         <TabsContent value="activity" className="mt-6">

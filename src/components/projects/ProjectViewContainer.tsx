@@ -4,7 +4,7 @@ import { Task } from '@/types';
 import TableView from './TableView';
 import ListView from './ListView';
 import KanbanView from './KanbanView';
-import { TasksView } from './TasksView';
+import TasksView from './TasksView';
 import TasksKanbanView from './TasksKanbanView';
 
 type ViewMode = 'table' | 'list' | 'kanban' | 'tasks' | 'tasks-kanban';
@@ -37,13 +37,18 @@ const ProjectViewContainer = ({
     case 'table':
       return <TableView projects={projects} isLoading={isLoading} onDeleteProject={onDeleteProject} sortConfig={sortConfig} requestSort={requestSort} rowRefs={rowRefs} />;
     case 'list':
-      return <ListView projects={projects} />;
+      return <ListView projects={projects} onDeleteProject={onDeleteProject} />;
     case 'kanban':
       return <KanbanView projects={projects} groupBy={kanbanGroupBy} />;
     case 'tasks':
       return <TasksView 
         tasks={tasks} 
         isLoading={isTasksLoading} 
+        onEdit={onEditTask}
+        onDelete={onDeleteTask}
+        onToggleTaskCompletion={onToggleTaskCompletion}
+        sortConfig={taskSortConfig}
+        requestSort={requestTaskSort}
       />;
     case 'tasks-kanban':
       return <TasksKanbanView 

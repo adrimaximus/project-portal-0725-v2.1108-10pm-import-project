@@ -29,18 +29,17 @@ import {
 
 interface GoalsTableViewProps {
   goals: Goal[];
-  onDeleteGoal: (goalId: string) => void;
-  sortConfig: { key: keyof Goal | null; direction: 'ascending' | 'descending' };
-  requestSort: (key: keyof Goal) => void;
+  onEdit: (goal: Goal) => void;
+  onDelete: (goalId: string) => void;
 }
 
-const GoalsTableView = ({ goals, onDeleteGoal, sortConfig, requestSort }: GoalsTableViewProps) => {
+const GoalsTableView = ({ goals, onEdit, onDelete }: GoalsTableViewProps) => {
   const getProgress = (goal: Goal) => {
-    if (goal.type === 'value' && goal.target_value) {
+    if (goal.type === 'target' && goal.target_value) {
       const totalValue = goal.completions.reduce((sum, c) => sum + (c.value || 0), 0);
       return (totalValue / goal.target_value) * 100;
     }
-    if (goal.type === 'quantity' && goal.target_quantity) {
+    if (goal.type === 'habit' && goal.target_quantity) {
       const completedCount = goal.completions.length;
       return (completedCount / goal.target_quantity) * 100;
     }
@@ -108,7 +107,8 @@ const GoalsTableView = ({ goals, onDeleteGoal, sortConfig, requestSort }: GoalsT
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent>
-                    <DropdownMenuItem onClick={() => onDeleteGoal(goal.id)} className="text-red-500">Delete</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => onEdit(goal)}>Edit</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => onDelete(goal.id)} className="text-red-500">Delete</DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </TableCell>

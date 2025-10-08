@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase';
 import { Person } from '@/types';
 import { getAvatarUrl } from '@/lib/utils';
 

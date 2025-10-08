@@ -11,11 +11,12 @@ import { ChevronsLeft } from 'lucide-react';
 interface KanbanColumnProps {
   status: { value: string, label: string };
   projects: Project[];
+  dragHappened: React.MutableRefObject<boolean>;
   isCollapsed: boolean;
   onToggleCollapse: (columnId: string) => void;
 }
 
-const KanbanColumn = ({ status, projects, isCollapsed, onToggleCollapse }: KanbanColumnProps) => {
+const KanbanColumn = ({ status, projects, dragHappened, isCollapsed, onToggleCollapse }: KanbanColumnProps) => {
   const { setNodeRef } = useDroppable({ id: status.value });
   const projectIds = useMemo(() => projects.map(p => p.id), [projects]);
 
@@ -53,7 +54,7 @@ const KanbanColumn = ({ status, projects, isCollapsed, onToggleCollapse }: Kanba
           <div className="flex-grow min-h-0 overflow-y-auto p-2 pt-0">
             <SortableContext id={status.value} items={projectIds} strategy={verticalListSortingStrategy}>
               {projects.map(project => (
-                <KanbanCard key={project.id} project={project} />
+                <KanbanCard key={project.id} project={project} dragHappened={dragHappened} />
               ))}
             </SortableContext>
             {projects.length === 0 && (

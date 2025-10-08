@@ -1,4 +1,4 @@
-import { Message, Reaction, User } from "@/types";
+import { Message } from "@/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn, generatePastelColor } from "@/lib/utils";
@@ -71,7 +71,7 @@ const MessageBubble = ({ message, isCurrentUser, onReply }: { message: Message, 
                         {r.emoji}
                       </div>
                     </TooltipTrigger>
-                    <TooltipContent>{r.user_name}</TooltipContent>
+                    <TooltipContent>{r.userName}</TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
               ))}

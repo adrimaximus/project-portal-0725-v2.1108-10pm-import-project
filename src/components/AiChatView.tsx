@@ -1,7 +1,7 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { useAiChat } from "@/hooks/useAiChat";
 import ChatHeader from "./ChatHeader";
-import ChatConversation from "./ChatConversation";
+import { ChatConversation } from "./ChatConversation";
 import { ChatInput } from "./ChatInput";
 import { forwardRef, useMemo, useState } from "react";
 import { Conversation, Message } from "@/types";
@@ -26,10 +26,10 @@ const AiChatView = forwardRef<HTMLTextAreaElement, AiChatViewProps>(({ onBack },
     userName: 'AI Assistant',
     userAvatar: aiUser.avatar_url,
     isGroup: false,
-    participants: [currentUser!, aiUser],
+    members: [currentUser!, aiUser],
     messages: conversation,
-    lastMessage: conversation[conversation.length - 1]?.content || "Ask me anything...",
-    lastMessageAt: conversation[conversation.length - 1]?.createdAt || new Date().toISOString(),
+    lastMessage: conversation[conversation.length - 1]?.text || "Ask me anything...",
+    lastMessageTimestamp: conversation[conversation.length - 1]?.timestamp || new Date().toISOString(),
     unreadCount: 0,
   }), [aiUser, conversation, currentUser]);
 
@@ -41,7 +41,7 @@ const AiChatView = forwardRef<HTMLTextAreaElement, AiChatViewProps>(({ onBack },
   if (isCheckingConnection) {
     return (
       <div className="flex flex-col h-full bg-background overflow-hidden">
-        <ChatHeader onBack={onBack} conversation={aiConversationObject} onLeaveGroup={() => {}} onClearChat={() => {}} onRefetchConversations={() => {}} />
+        <ChatHeader onBack={onBack} conversation={aiConversationObject} />
         <div className="flex-1 flex items-center justify-center">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
@@ -52,7 +52,7 @@ const AiChatView = forwardRef<HTMLTextAreaElement, AiChatViewProps>(({ onBack },
   if (!isConnected) {
     return (
       <div className="flex flex-col h-full bg-background overflow-hidden">
-        <ChatHeader onBack={onBack} conversation={aiConversationObject} onLeaveGroup={() => {}} onClearChat={() => {}} onRefetchConversations={() => {}} />
+        <ChatHeader onBack={onBack} conversation={aiConversationObject} />
         <div className="flex-1 flex items-center justify-center p-4">
           <Card className="w-full max-w-md text-center">
             <CardContent className="p-6">
@@ -75,12 +75,11 @@ const AiChatView = forwardRef<HTMLTextAreaElement, AiChatViewProps>(({ onBack },
       <ChatHeader
         onBack={onBack}
         conversation={aiConversationObject}
-        onLeaveGroup={() => {}}
-        onClearChat={() => {}}
-        onRefetchConversations={() => {}}
       />
       <ChatConversation
         messages={conversation}
+        members={[currentUser, aiUser]}
+        isLoading={isLoading}
         onReply={setReplyTo}
       />
       <ChatInput 

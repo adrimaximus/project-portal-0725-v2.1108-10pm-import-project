@@ -115,7 +115,7 @@ const GroupSettingsDialog = ({ open, onOpenChange, conversation, onUpdate }: Gro
     }
   };
 
-  const availableUsersToAdd = allUsers.filter(u => !conversation.participants.some(m => m.id === u.id));
+  const availableUsersToAdd = allUsers.filter(u => !conversation.members.some(m => m.id === u.id));
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -151,10 +151,10 @@ const GroupSettingsDialog = ({ open, onOpenChange, conversation, onUpdate }: Gro
           </Button>
 
           <div className="space-y-2 pt-4 border-t">
-            <h4 className="font-semibold">Members ({conversation.participants.length})</h4>
+            <h4 className="font-semibold">Members ({conversation.members.length})</h4>
             <ScrollArea className="h-40">
               <div className="space-y-2 pr-4">
-                {conversation.participants.map(member => (
+                {conversation.members.map(member => (
                   <div key={member.id} className="flex items-center justify-between p-2 rounded-md hover:bg-muted">
                     <div className="flex items-center gap-3">
                       <Avatar className="h-8 w-8">
@@ -163,7 +163,7 @@ const GroupSettingsDialog = ({ open, onOpenChange, conversation, onUpdate }: Gro
                       </Avatar>
                       <span className="font-medium text-sm">{member.name}</span>
                     </div>
-                    {currentUser?.id === conversation.createdBy && member.id !== currentUser.id && (
+                    {currentUser?.id === conversation.created_by && member.id !== currentUser.id && (
                       <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleRemoveMember(member.id)}>
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>

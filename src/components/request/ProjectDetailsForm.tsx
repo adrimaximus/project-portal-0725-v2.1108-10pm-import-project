@@ -4,7 +4,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { ModernTeamSelector } from "./ModernTeamSelector";
+import ModernTeamSelector from "./ModernTeamSelector";
 import FileUploader from "./FileUploader";
 import { useNavigate } from "react-router-dom";
 import { Service, services as allServicesData } from "@/data/services";
@@ -82,6 +82,14 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
     } else {
       setBudget('');
     }
+  };
+
+  const handleTeamChange = (userToToggle: User) => {
+    setTeam((currentTeam) =>
+      currentTeam.some((user) => user.id === userToToggle.id)
+        ? currentTeam.filter((user) => user.id !== userToToggle.id)
+        : [...currentTeam, userToToggle]
+    );
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -272,7 +280,7 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
           </div>
           <div className="space-y-2">
             <Label>Assign Team</Label>
-            <ModernTeamSelector selectedUsers={team} onChange={setTeam} />
+            <ModernTeamSelector users={assignableUsers} selectedUsers={team} onSelectionChange={handleTeamChange} />
           </div>
           <div className="space-y-2">
             <Label>Attach Files</Label>

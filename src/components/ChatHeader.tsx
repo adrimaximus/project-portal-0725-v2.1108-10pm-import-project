@@ -22,19 +22,14 @@ import StackedAvatar from "./StackedAvatar";
 import { getInitials, generatePastelColor } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase";
 import { toast } from "sonner";
 
 interface ChatHeaderProps {
   conversation: Conversation;
-  onBack?: () => void;
-  typing?: boolean;
-  onLeaveGroup?: (conversationId: string) => void;
-  onClearChat?: (conversationId: string) => void;
-  onRefetchConversations?: () => void;
 }
 
-export default function ChatHeader({ conversation, onBack, typing, onLeaveGroup, onClearChat, onRefetchConversations }: ChatHeaderProps) {
+export default function ChatHeader({ conversation }: ChatHeaderProps) {
   const { user: currentUser } = useAuth();
   const queryClient = useQueryClient();
   const { id, isGroup, userName, userAvatar, participants, createdBy } = conversation;
@@ -122,7 +117,7 @@ export default function ChatHeader({ conversation, onBack, typing, onLeaveGroup,
                 <DropdownMenuSeparator />
               </>
             )}
-            {!isOwner && isGroup && onLeaveGroup && (
+            {!isOwner && isGroup && (
               <DropdownMenuItem onClick={() => leaveGroupMutation.mutate(id)}>
                 <LogOut className="mr-2 h-4 w-4" />
                 <span>Leave Group</span>

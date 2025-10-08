@@ -14,7 +14,7 @@ type PeopleKanbanViewProps = {
   people: Person[];
   tags: Tag[];
   onEditPerson: (person: Person) => void;
-  onDeletePerson: (personId: string) => void;
+  onDeletePerson: (person: Person) => void;
 };
 
 type KanbanViewHandle = {
@@ -37,6 +37,7 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
       },
     })
   );
+  const dragHappened = useRef(false);
   const [activePerson, setActivePerson] = useState<Person | null>(null);
   
   const [collapseOverrides, setCollapseOverrides] = useState<Record<string, boolean>>({});
@@ -150,12 +151,14 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
   }, [tags, columnOrder, visibleColumnIds, uncategorizedTag]);
 
   const handleDragStart = (event: DragStartEvent) => {
+    dragHappened.current = true;
     const { active } = event;
     setActivePerson(people.find(p => p.id === active.id) || null);
   };
 
   const handleDragEnd = async (event: DragEndEvent) => {
     setActivePerson(null);
+    setTimeout(() => { dragHappened.current = false; }, 0);
 
     const { active, over } = event;
     if (!over) return;
@@ -276,6 +279,7 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
               key={tag.id}
               tag={tag}
               people={peopleInColumn}
+              dragHappened={dragHappened}
               onEditPerson={onEditPerson}
               onDeletePerson={onDeletePerson}
               isCollapsed={isColumnCollapsed}
@@ -287,7 +291,7 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
       <DragOverlay dropAnimation={null}>
         {activePerson ? (
           <div className="w-72">
-            <PeopleKanbanCard person={activePerson} onEdit={() => {}} onDelete={() => {}} />
+            <PeopleKanbanCard person={activePerson} dragHappened={dragHappened} onEdit={() => {}} onDelete={() => {}} />
           </div>
         ) : null}
       </DragOverlay>

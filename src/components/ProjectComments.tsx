@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -97,9 +97,6 @@ const ProjectComments = ({ projectId }: { projectId: string }) => {
             value={newComment}
             onChange={setNewComment}
             placeholder="Add a comment... @ to mention, # to link project"
-            userSuggestions={[]}
-            projectSuggestions={[]}
-            onSearchTermChange={() => {}}
           />
           <Button
             onClick={handleSubmit}

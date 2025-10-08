@@ -57,14 +57,15 @@ const GoalQuantityTracker = ({ goal, onLogProgress }: GoalQuantityTrackerProps) 
   };
 
   const handleNumericInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const rawValue = e.target.value.replace(/,/g, '');
+    const rawValue = e.target.value;
+    const sanitizedValue = rawValue.replace(/,/g, '');
 
-    if (rawValue === '') {
+    if (sanitizedValue === '') {
       setLogValue('');
       return;
     }
 
-    const numValue = parseInt(rawValue, 10);
+    const numValue = parseInt(sanitizedValue, 10);
     if (!isNaN(numValue)) {
       setLogValue(numValue);
     }
@@ -106,7 +107,7 @@ const GoalQuantityTracker = ({ goal, onLogProgress }: GoalQuantityTrackerProps) 
           />
           <Button onClick={handleLog}>Log</Button>
         </div>
-        <GoalLogTable logs={logsInPeriod as any} goalType={goal.type} />
+        <GoalLogTable logs={logsInPeriod} goalType={goal.type} />
       </CardContent>
     </Card>
   );

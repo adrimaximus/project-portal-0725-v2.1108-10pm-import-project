@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase";
 import { Task } from "@/types";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,7 +11,7 @@ import {
   Trash2,
   Edit,
 } from "lucide-react";
-import TaskFormDialog from "@/components/projects/TaskFormDialog";
+import { TaskFormDialog } from "@/components/projects/TaskFormDialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -197,11 +197,10 @@ const ProjectTasks = ({ projectId }: { projectId: string }) => {
       )}
 
       <TaskFormDialog
-        open={isDialogOpen}
-        onOpenChange={handleDialogClose}
+        isOpen={isDialogOpen}
+        onClose={handleDialogClose}
+        projectId={projectId}
         task={editingTask}
-        onSubmit={() => {}}
-        isSubmitting={false}
       />
     </div>
   );

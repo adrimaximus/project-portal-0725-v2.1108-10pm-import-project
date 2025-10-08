@@ -21,9 +21,9 @@ const fetchNotifications = async (pageParam: number = 0): Promise<Notification[]
     id: n.id,
     type: n.type,
     title: n.title,
-    body: n.body,
-    created_at: n.created_at,
-    read_at: n.read_at,
+    description: n.body,
+    timestamp: n.created_at,
+    read: n.read_at !== null,
     link: n.data?.link || '#',
     actor: {
       id: n.actor.id,
@@ -117,7 +117,7 @@ export const useNotifications = () => {
   }, [user, queryClient]);
 
   const notifications = data?.pages.flatMap(page => page) ?? [];
-  const unreadCount = notifications.filter(n => !n.read_at).length;
+  const unreadCount = notifications.filter(n => !n.read).length;
 
   const updateNotificationStatus = (notificationId: string, read: boolean) => {
     queryClient.setQueryData<InfiniteData<Notification[]>>(queryKey, (oldData) => {
@@ -127,7 +127,7 @@ export const useNotifications = () => {
         pages: oldData.pages.map(page =>
           page.map(notification =>
             notification.id === notificationId
-              ? { ...notification, read_at: read ? new Date().toISOString() : null }
+              ? { ...notification, read }
               : notification
           )
         )
@@ -199,7 +199,7 @@ export const useNotifications = () => {
         return {
           ...oldData,
           pages: oldData.pages.map(page =>
-            page.map(notification => ({ ...notification, read_at: new Date().toISOString() }))
+            page.map(notification => ({ ...notification, read: true }))
           )
         };
       });

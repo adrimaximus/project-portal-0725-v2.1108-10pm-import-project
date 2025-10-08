@@ -73,7 +73,7 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
     slug: p.slug,
   }));
 
-  const userSuggestions: UserSuggestion[] = (selectedConversation?.participants || []).map(m => ({
+  const userSuggestions: UserSuggestion[] = (selectedConversation?.members || []).map(m => ({
     id: m.id,
     display: m.name,
     avatar_url: m.avatar_url,
@@ -156,7 +156,7 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
         <div className="p-2 mb-2 bg-muted rounded-md flex justify-between items-center">
           <div className="text-sm overflow-hidden">
             <p className="font-semibold text-primary">Replying to {replyTo.sender.name}</p>
-            <p className="text-xs text-muted-foreground truncate">{replyTo.content}</p>
+            <p className="text-xs text-muted-foreground truncate">{replyTo.text}</p>
           </div>
           <Button variant="ghost" size="icon" onClick={onCancelReply} className="h-7 w-7">
             <X className="h-4 w-4" />

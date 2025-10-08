@@ -19,15 +19,14 @@ interface GoalCardProps {
 
 const GoalCard = ({ goal }: GoalCardProps) => {
   const getProgress = () => {
-    if (goal.type === 'value' && goal.target_value) {
+    if (goal.type === 'target' && goal.target_value) {
       const totalValue = goal.completions.reduce((sum, c) => sum + (c.value || 0), 0);
       return (totalValue / goal.target_value) * 100;
     }
-    if (goal.type === 'quantity' && goal.target_quantity) {
+    if (goal.type === 'habit' && goal.target_quantity) {
       const completedCount = goal.completions.length;
       return (completedCount / goal.target_quantity) * 100;
     }
-    // For frequency, we can't easily calculate a simple progress percentage here
     return 0;
   };
 
@@ -35,9 +34,8 @@ const GoalCard = ({ goal }: GoalCardProps) => {
 
   const getIcon = () => {
     switch (goal.type) {
-      case 'value': return <TrendingUp className="h-4 w-4" />;
-      case 'quantity': return <Target className="h-4 w-4" />;
-      case 'frequency': return <Repeat className="h-4 w-4" />;
+      case 'target': return <TrendingUp className="h-4 w-4" />;
+      case 'habit': return <Repeat className="h-4 w-4" />;
       default: return <Target className="h-4 w-4" />;
     }
   };
