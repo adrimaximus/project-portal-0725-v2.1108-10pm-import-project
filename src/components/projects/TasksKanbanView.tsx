@@ -36,19 +36,30 @@ const TasksKanbanView = ({ tasks, onStatusChange, onEdit, onDelete }: TasksKanba
   };
 
   const tasksByStatus = useMemo(() => {
-    const grouped: { [key in TaskStatus]?: Task[] } = {};
-    TASK_STATUS_OPTIONS.forEach(opt => {
-      grouped[opt.value] = [];
-    });
+    const grouped: { [key in TaskStatus]: Task[] } = TASK_STATUS_OPTIONS.reduce((acc, opt) => {
+      acc[opt.value] = [];
+      return acc;
+    }, {} as { [key in TaskStatus]: Task[] });
+
     internalTasks.forEach(task => {
       const status = task.status || 'To do';
       if (grouped[status]) {
-        grouped[status]!.push(task);
+        grouped[status].push(task);
       } else {
-        grouped['To do']!.push(task);
+        grouped['To do'].push(task);
       }
     });
-    return grouped as { [key in TaskStatus]: Task[] };
+
+    // Sort tasks in each column by last updated date
+    for (const status in grouped) {
+      grouped[status as TaskStatus].sort((a, b) => {
+        const dateA = a.updated_at ? new Date(a.updated_at).getTime() : 0;
+        const dateB = b.updated_at ? new Date(b.updated_at).getTime() : 0;
+        return dateB - dateA;
+      });
+    }
+
+    return grouped;
   }, [internalTasks]);
 
   const sensors = useSensors(
