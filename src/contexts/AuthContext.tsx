@@ -1,238 +1,96 @@
-import React, { createContext, useState, useEffect, useContext, useCallback, useRef } from 'react';
-import { Session } from '@supabase/supabase-js';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
-
-// This is the full profile data we get from the RPC call
-type UserProfileData = {
-  id: string;
-  first_name: string | null;
-  last_name: string | null;
-  avatar_url: string | null;
-  email: string;
-  role: string;
-  permissions: string[];
-  people_kanban_settings: any;
-  notification_preferences: any;
-  theme: string | null;
-};
-
-// This is the user object we'll use throughout the app, with derived properties
-export type UserProfile = UserProfileData & {
-  name: string;
-  initials: string;
-};
+import { User, Collaborator } from '@/types';
+import { useQuery } from '@tanstack/react-query';
+import { RealtimeChannel, Session } from '@supabase/supabase-js';
 
 type AuthContextType = {
+  user: User | null;
   session: Session | null;
-  user: UserProfile | null;
-  loading: boolean;
-  hasPermission: (permission: string) => boolean;
-  logout: () => Promise<void>;
-  refreshUser: () => Promise<void>;
-  onlineCollaborators: any[];
-  isImpersonating: boolean;
-  startImpersonation: (user: { id: string }) => void;
-  stopImpersonation: () => void;
+  isLoading: boolean;
+  onlineCollaborators: Collaborator[];
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const getInitials = (firstName?: string | null, lastName?: string | null, email?: string) => {
-  if (firstName && lastName) return `${firstName[0]}${lastName[0]}`.toUpperCase();
-  if (firstName) return `${firstName[0]}`.toUpperCase();
-  if (email) return `${email.substring(0, 2)}`.toUpperCase();
-  return '??';
-};
-
-export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
-  const [user, setUser] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [onlineCollaborators, setOnlineCollaborators] = useState<any[]>([]);
-  const [isImpersonating, setIsImpersonating] = useState(false);
-  const userRef = useRef(user);
-  userRef.current = user;
+  const [onlineCollaborators, setOnlineCollaborators] = useState<Collaborator[]>([]);
+  const [channel, setChannel] = useState<RealtimeChannel | null>(null);
 
-  const fetchUserProfile = useCallback(async (session: Session | null) => {
-    if (session?.user) {
-      try {
-        // Backfill navigation items for existing users who might be missing them
-        await supabase.rpc('ensure_user_navigation_items', { p_user_id: session.user.id });
-
-        const { data, error } = await supabase
-          .rpc('get_user_profile_with_permissions', { p_user_id: session.user.id });
-
-        if (error) throw error;
-        
-        if (data && data.length > 0) {
-          const profileData = data[0] as UserProfileData;
-          const name = `${profileData.first_name || ''} ${profileData.last_name || ''}`.trim() || profileData.email;
-          const initials = getInitials(profileData.first_name, profileData.last_name, profileData.email);
-          setUser({ ...profileData, name, initials });
-        } else {
-          setUser(null);
-        }
-      } catch (error) {
-        console.error("Error fetching user profile:", error);
-        setUser(null);
+  const { data: user, isLoading: isUserLoading } = useQuery({
+    queryKey: ['userProfile', session?.user?.id],
+    queryFn: async () => {
+      if (!session?.user?.id) return null;
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', session.user.id)
+        .single();
+      if (error) {
+        console.error('Error fetching user profile:', error);
+        return null;
       }
-    } else {
-      setUser(null);
-    }
+      return data as User;
+    },
+    enabled: !!session?.user?.id,
+  });
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   useEffect(() => {
-    setLoading(true);
-    supabase.auth.getSession().then(async ({ data: { session: initialSession } }) => {
-      setSession(initialSession);
-      await fetchUserProfile(initialSession);
-      setLoading(false);
-
-      const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
-        if (isImpersonating) return;
-        
-        setLoading(true);
-        setSession(newSession);
-        await fetchUserProfile(newSession);
-        setLoading(false);
+    if (user && !channel) {
+      const newChannel = supabase.channel(`online-users`, {
+        config: {
+          presence: {
+            key: user.id,
+          },
+        },
       });
 
-      return () => {
-        subscription?.unsubscribe();
-      };
-    });
-  }, [fetchUserProfile, isImpersonating]);
-
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        // This will trigger onAuthStateChange if the session has changed in another tab
-        supabase.auth.getSession();
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, []);
-
-  useEffect(() => {
-    // This listener reacts to any change in the roles table.
-    const channel = supabase
-      .channel('public:roles')
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'roles' },
-        (payload) => {
-          const updatedRole = payload.new as { name: string };
-          // If the updated role is the one the current user has, refresh their profile.
-          if (user && updatedRole.name === user.role) {
-            console.log(`User's role '${user.role}' was updated. Refreshing profile and permissions.`);
-            toast.info("Your permissions have been updated and will now be reflected.");
-            if (session) {
-              fetchUserProfile(session);
-            }
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user, session, fetchUserProfile]);
-
-  useEffect(() => {
-    if (!user?.id) {
-      setOnlineCollaborators([]);
-      return;
-    }
-    const userId = user.id;
-
-    const room = supabase.channel('online-collaborators');
-
-    room
-      .on('presence', { event: 'sync' }, () => {
-        const presenceState = room.presenceState();
-        const collaboratorsMap = new Map<string, any>();
-
-        for (const key in presenceState) {
-          const presences = presenceState[key] as unknown as { user: any }[];
-          if (presences.length > 0) {
-            const user = presences[0].user;
-            if (user && user.id !== userId && !collaboratorsMap.has(user.id)) {
-              collaboratorsMap.set(user.id, user);
-            }
-          }
-        }
-        
-        const uniqueCollaborators = Array.from(collaboratorsMap.values());
-        setOnlineCollaborators(uniqueCollaborators);
-      })
-      .subscribe(async (status) => {
-        if (status === 'SUBSCRIBED') {
-          if (userRef.current) {
-            await room.track({
-              user: {
-                id: userRef.current.id,
-                name: userRef.current.name,
-                avatar_url: userRef.current.avatar_url,
-                initials: userRef.current.initials,
-              },
+      newChannel
+        .on('presence', { event: 'sync' }, () => {
+          const newState = newChannel.presenceState<Collaborator>();
+          const collaborators = Object.values(newState)
+            .flat()
+            .filter(c => c.id !== user.id);
+          setOnlineCollaborators(collaborators);
+        })
+        .subscribe(async (status) => {
+          if (status === 'SUBSCRIBED') {
+            await newChannel.track({
+              id: user.id,
+              name: `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email,
+              initials: `${user.first_name?.[0] || ''}${user.last_name?.[0] || ''}`.toUpperCase(),
+              avatar_url: user.avatar_url,
             });
           }
-        }
-      });
+        });
+      
+      setChannel(newChannel);
+    }
 
     return () => {
-      supabase.removeChannel(room);
+      if (channel) {
+        supabase.removeChannel(channel);
+        setChannel(null);
+      }
     };
-  }, [user?.id]);
-
-  const hasPermission = useCallback((permission: string): boolean => {
-    if (!user || !user.permissions) return false;
-    if (user.permissions.includes('*')) return true;
-    return user.permissions.includes(permission);
-  }, [user]);
-
-  const logout = async () => {
-    await supabase.auth.signOut();
-  };
-
-  const refreshUser = useCallback(async () => {
-    if (session) {
-      await fetchUserProfile(session);
-    }
-  }, [session, fetchUserProfile]);
-
-  const startImpersonation = (targetUser: { id: string }) => {
-    toast.warning("Impersonation is a developer feature and not fully implemented.");
-    console.log(`Attempting to impersonate user ${targetUser.id}`);
-  };
-
-  const stopImpersonation = () => {
-    console.log("Stopping impersonation");
-  };
-
-  const value = { 
-    session, 
-    user, 
-    loading, 
-    hasPermission,
-    logout,
-    refreshUser,
-    onlineCollaborators,
-    isImpersonating,
-    startImpersonation,
-    stopImpersonation
-  };
+  }, [user, channel]);
 
   return (
-    <AuthContext.Provider value={value}>
-      {children}
+    <AuthContext.Provider value={{ user, session, isLoading: isUserLoading, onlineCollaborators }}>
+      {!isUserLoading && children}
     </AuthContext.Provider>
   );
 };
