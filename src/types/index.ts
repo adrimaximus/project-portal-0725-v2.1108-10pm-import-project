@@ -389,16 +389,16 @@ export interface Notification {
 export type Member = {
   id: string;
   name: string;
-  avatar_url: string;
+  avatar_url: string | null;
   initials: string;
   email: string;
-  role: string;
+  role?: string;
 };
 
 export type Owner = {
   id: string;
   name: string;
-  avatar_url: string;
+  avatar_url: string | null;
   initials: string;
   email: string;
 };
@@ -408,15 +408,15 @@ export type Invoice = {
   projectId: string; // slug
   projectName: string;
   amount: number;
-  dueDate: Date; // This is the payment due date
+  dueDate: Date | string;
   status: PaymentStatus;
   rawProjectId: string; // original uuid
-  projectStartDate: Date | null;
-  projectEndDate: Date | null;
+  projectStartDate: Date | string | null;
+  projectEndDate: Date | string | null;
   poNumber: string | null;
-  paidDate: Date | null;
-  emailSendingDate: Date | null;
-  hardcopySendingDate: Date | null;
+  paidDate: Date | string | null;
+  emailSendingDate: Date | string | null;
+  hardcopySendingDate: Date | string | null;
   channel: string | null;
   clientName: string | null;
   clientLogo: string | null;

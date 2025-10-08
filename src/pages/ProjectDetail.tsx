@@ -1,179 +1,264 @@
-import { useState, useEffect, useRef } from "react";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import PortalLayout from "@/components/PortalLayout";
-import ProjectHeader from "@/components/project-detail/ProjectHeader";
-import ProjectMainContent from "@/components/project-detail/ProjectMainContent";
-import { Skeleton } from "@/components/ui/skeleton";
-import ProjectProgressCard from "@/components/project-detail/ProjectProgressCard";
-import ProjectTeamCard from "@/components/project-detail/ProjectTeamCard";
-import ProjectDetailsCard from "@/components/project-detail/ProjectDetailsCard";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { useAuth } from "@/contexts/AuthContext";
-import { useProject } from "@/hooks/useProject";
-import { useProjectMutations } from "@/hooks/useProjectMutations";
-import { toast } from "sonner";
-import { Project } from "@/types";
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { Project } from '@/types';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
+import { Loader2 } from 'lucide-react';
 
-const ProjectDetailSkeleton = () => (
-  <PortalLayout>
-    <div className="space-y-4">
-      <Skeleton className="h-16 w-full" />
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-4">
-          <Skeleton className="h-96" />
-        </div>
-        <div className="space-y-4">
-          <Skeleton className="h-28" />
-          <Skeleton className="h-32" />
-          <Skeleton className="h-48" />
-        </div>
-      </div>
-    </div>
-  </PortalLayout>
-);
+import ProjectHeader from '@/components/project-detail/ProjectHeader';
+import ProjectOverview from '@/components/project-detail/ProjectOverview';
+import ProjectTasks from '@/components/project-detail/ProjectTasks';
+import ProjectBrief from '@/components/project-detail/ProjectBrief';
+import ProjectComments from '@/components/ProjectComments';
+import ProjectActivity from '@/components/project-detail/ProjectActivity';
+
+const fetchProjectBySlug = async (slug: string) => {
+  const { data, error } = await supabase
+    .rpc('get_project_by_slug', { p_slug: slug })
+    .single();
+  if (error) throw new Error(error.message);
+  return data as Project;
+};
 
 const ProjectDetail = () => {
   const { slug } = useParams<{ slug: string }>();
-  const [searchParams] = useSearchParams();
-  const { user, loading: authLoading } = useAuth();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const [isEditing, setIsEditing] = useState(false);
+
+  const { data: project, isLoading, error } = useQuery<Project>({
+    queryKey: ['project', slug],
+    queryFn: () => fetchProjectBySlug(slug!),
+    enabled: !!slug && !!user,
+  });
+
   const [editedProject, setEditedProject] = useState<Project | null>(null);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const mainContentRef = useRef<HTMLDivElement>(null);
-
-  const { data: project, isLoading, error } = useProject(slug!);
-  const mutations = useProjectMutations(slug!);
-
-  const defaultTab = searchParams.get('tab') || 'overview';
+  const [isEditing, setIsEditing] = useState(false);
+  const [pinnedProjects, setPinnedProjects] = useState<string[]>([]);
 
   useEffect(() => {
     if (project) {
-      setEditedProject(project);
+      setEditedProject(JSON.parse(JSON.stringify(project)));
     }
   }, [project]);
 
   useEffect(() => {
-    const taskParam = searchParams.get('task');
-    const tabParam = searchParams.get('tab');
-    if (taskParam && tabParam === 'tasks' && mainContentRef.current && !isLoading) {
-      setTimeout(() => {
-        mainContentRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }, 100);
+    try {
+      const saved = localStorage.getItem('pinnedProjects');
+      setPinnedProjects(saved ? JSON.parse(saved) : []);
+    } catch (e) {
+      console.error("Failed to parse pinned projects from localStorage", e);
+      setPinnedProjects([]);
     }
-  }, [searchParams, isLoading, project]);
+  }, []);
 
-  useEffect(() => {
-    if (!isLoading && !error && !project) {
-      toast.error("Project not found or you do not have access.");
-      navigate("/projects");
-    }
-    if (error) {
-      toast.error("Failed to load project", { description: "Please check the URL or try again later." });
-      navigate("/projects");
-    }
-  }, [isLoading, error, project, navigate]);
+  const isPinned = project ? pinnedProjects.includes(project.id) : false;
 
-  if (authLoading || isLoading || !project || !editedProject) {
-    return <ProjectDetailSkeleton />;
-  }
-
-  const canEdit = user && (user.id === project.created_by.id || user.role === 'admin' || user.role === 'master admin');
-
-  const handleFieldChange = (field: keyof Project, value: any) => {
-    setEditedProject(prev => prev ? { ...prev, [field]: value } : null);
+  const handleTogglePin = () => {
+    if (!project) return;
+    const newPinned = isPinned
+      ? pinnedProjects.filter(id => id !== project.id)
+      : [...pinnedProjects, project.id];
+    
+    setPinnedProjects(newPinned);
+    localStorage.setItem('pinnedProjects', JSON.stringify(newPinned));
+    toast.success(isPinned ? 'Project unpinned' : 'Project pinned');
+    queryClient.invalidateQueries({ queryKey: ['pinnedProjects'] });
   };
 
+  const updateMutation = useMutation({
+    mutationFn: async (updatedProject: Partial<Project>) => {
+      const { data, error } = await supabase
+        .from('projects')
+        .update(updatedProject)
+        .eq('id', project!.id)
+        .select()
+        .single();
+      if (error) throw new Error(error.message);
+      return data;
+    },
+    onSuccess: () => {
+      toast.success('Project updated successfully');
+      queryClient.invalidateQueries({ queryKey: ['project', slug] });
+      queryClient.invalidateQueries({ queryKey: ['dashboardProjects'] });
+      setIsEditing(false);
+    },
+    onError: (error) => {
+      toast.error('Failed to update project', { description: error.message });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (projectId: string) => {
+      const { error } = await supabase.from('projects').delete().eq('id', projectId);
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: () => {
+      toast.success('Project deleted successfully');
+      queryClient.invalidateQueries({ queryKey: ['dashboardProjects'] });
+      navigate('/projects');
+    },
+    onError: (error) => {
+      toast.error('Failed to delete project', { description: error.message });
+    },
+  });
+
+  const uploadFilesMutation = useMutation({
+    mutationFn: async (files: File[]) => {
+      if (!project || !user) throw new Error("Project or user not found");
+      for (const file of files) {
+        const filePath = `${project.id}/${file.name}`;
+        const { error: uploadError } = await supabase.storage
+          .from('project-files')
+          .upload(filePath, file, { upsert: true });
+        if (uploadError) throw uploadError;
+
+        const { data: urlData } = supabase.storage.from('project-files').getPublicUrl(filePath);
+        
+        const { error: dbError } = await supabase.from('project_files').insert({
+          project_id: project.id,
+          user_id: user.id,
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          url: urlData.publicUrl,
+          storage_path: filePath,
+        });
+        if (dbError) throw dbError;
+      }
+    },
+    onSuccess: () => {
+      toast.success("Files uploaded successfully");
+      queryClient.invalidateQueries({ queryKey: ['project', slug] });
+    },
+    onError: (error: any) => {
+      toast.error("Failed to upload files", { description: error.message });
+    },
+  });
+
+  const deleteFileMutation = useMutation({
+    mutationFn: async (fileId: string) => {
+      if (!project) throw new Error("Project not found");
+      const fileToDelete = project.briefFiles.find(f => f.id === fileId);
+      if (!fileToDelete) throw new Error("File not found");
+
+      const { error: storageError } = await supabase.storage
+        .from('project-files')
+        .remove([fileToDelete.storage_path]);
+      if (storageError) throw storageError;
+
+      const { error: dbError } = await supabase.from('project_files').delete().eq('id', fileId);
+      if (dbError) throw dbError;
+    },
+    onSuccess: () => {
+      toast.success("File deleted successfully");
+      queryClient.invalidateQueries({ queryKey: ['project', slug] });
+    },
+    onError: (error: any) => {
+      toast.error("Failed to delete file", { description: error.message });
+    },
+  });
+
+  const handleFilesAdd = (files: File[]) => {
+    uploadFilesMutation.mutate(files);
+  };
+
+  const handleFileDelete = (fileId: string) => {
+    if (window.confirm("Are you sure you want to delete this file?")) {
+      deleteFileMutation.mutate(fileId);
+    }
+  };
+
+  const handleEditToggle = () => setIsEditing(!isEditing);
+
   const handleSaveChanges = () => {
-    if (!editedProject) return;
-    mutations.updateProject.mutate(editedProject, {
-      onSuccess: () => setIsEditing(false),
-    });
+    if (editedProject) {
+      const changes: Partial<Project> = {};
+      (Object.keys(editedProject) as Array<keyof Project>).forEach(key => {
+        if (JSON.stringify(editedProject[key]) !== JSON.stringify(project?.[key])) {
+          (changes as any)[key] = editedProject[key];
+        }
+      });
+      if (Object.keys(changes).length > 0) {
+        updateMutation.mutate(changes);
+      } else {
+        setIsEditing(false);
+      }
+    }
   };
 
   const handleCancelChanges = () => {
-    setEditedProject(project);
+    if (project) setEditedProject(JSON.parse(JSON.stringify(project)));
     setIsEditing(false);
   };
 
-  const handleToggleComplete = () => {
-    const newStatus = project.status === 'Completed' ? 'In Progress' : 'Completed';
+  const handleFieldChange = (field: keyof Project, value: any) => {
     if (editedProject) {
-      mutations.updateProject.mutate({ ...editedProject, status: newStatus });
+      setEditedProject({ ...editedProject, [field]: value });
     }
   };
 
-  const handleDeleteProject = () => {
-    mutations.deleteProject.mutate(project.id);
-    setIsDeleteDialogOpen(false);
+  const handleToggleComplete = () => {
+    if (!project) return;
+    const newStatus = project.status === 'Completed' ? 'In Progress' : 'Completed';
+    updateMutation.mutate({ status: newStatus });
   };
 
+  const handleDeleteProject = () => {
+    if (window.confirm('Are you sure you want to delete this project?')) {
+      deleteMutation.mutate(project!.id);
+    }
+  };
+
+  if (isLoading || !user) {
+    return <div className="flex items-center justify-center h-screen"><Loader2 className="h-8 w-8 animate-spin" /></div>;
+  }
+
+  if (error) {
+    return <div className="text-red-500 p-4">Error: {error.message}</div>;
+  }
+
+  if (!project || !editedProject) {
+    return <div>Project not found.</div>;
+  }
+
+  const canEdit = user?.id === project.created_by.id || user?.role === 'admin' || user?.role === 'master admin';
+
   return (
-    <PortalLayout>
-      <div className="space-y-6">
-        <ProjectHeader
-          project={editedProject}
-          isEditing={isEditing}
-          isSaving={mutations.updateProject.isPending}
-          canEdit={canEdit}
-          onEditToggle={() => setIsEditing(true)}
-          onSaveChanges={handleSaveChanges}
-          onCancelChanges={handleCancelChanges}
-          onToggleComplete={handleToggleComplete}
-          onDeleteProject={() => setIsDeleteDialogOpen(true)}
-          onFieldChange={handleFieldChange}
-        />
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-          <div className="lg:col-span-2 space-y-6">
-            <ProjectDetailsCard
-              project={editedProject}
-              isEditing={isEditing}
-              onFieldChange={handleFieldChange}
-            />
-            <div ref={mainContentRef}>
-              <ProjectMainContent
-                project={editedProject}
-                isEditing={isEditing}
-                onFieldChange={handleFieldChange}
-                mutations={mutations}
-                defaultTab={defaultTab}
-              />
-            </div>
-          </div>
-          <div className="lg:col-span-1 space-y-6">
-            <ProjectProgressCard project={editedProject} />
-            <ProjectTeamCard
-              project={editedProject}
-              isEditing={isEditing}
-              onFieldChange={handleFieldChange}
-            />
-          </div>
+    <div className="space-y-6">
+      <ProjectHeader
+        project={editedProject}
+        isEditing={isEditing}
+        isSaving={updateMutation.isPending}
+        canEdit={canEdit}
+        isPinned={isPinned}
+        onTogglePin={handleTogglePin}
+        onEditToggle={handleEditToggle}
+        onSaveChanges={handleSaveChanges}
+        onCancelChanges={handleCancelChanges}
+        onToggleComplete={handleToggleComplete}
+        onDeleteProject={handleDeleteProject}
+        onFieldChange={handleFieldChange}
+      />
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+        <div className="lg:col-span-2 space-y-6">
+          <ProjectOverview project={editedProject} onFieldChange={handleFieldChange} isEditing={isEditing} />
+          <ProjectTasks project={project} onTaskAdd={() => {}} onTaskAssignUsers={() => {}} onTaskStatusChange={() => {}} onTaskDelete={() => {}} />
+          <ProjectBrief 
+            files={project.briefFiles || []} 
+            isEditing={isEditing} 
+            onFilesAdd={handleFilesAdd} 
+            onFileDelete={handleFileDelete} 
+          />
+          <ProjectComments project={project} />
+        </div>
+        <div className="lg:col-span-1">
+          <ProjectActivity activities={project.activities} />
         </div>
       </div>
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the project and all its associated data.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteProject}>Delete</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </PortalLayout>
+    </div>
   );
 };
 
