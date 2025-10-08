@@ -12,12 +12,19 @@ import { Button } from '../ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
 import TaskAttachmentList from './TaskAttachmentList';
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface TasksKanbanCardProps {
   task: Task;
   onEdit: (task: Task) => void;
   onDelete: (taskId: string) => void;
 }
+
+const processMentions = (text: string | null | undefined) => {
+  if (!text) return '';
+  return text.replace(/@\[([^\]]+)\]\(([^)]+)\)/g, '**@$1**');
+};
 
 const TasksKanbanCard = ({ task, onEdit, onDelete }: TasksKanbanCardProps) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id });
@@ -89,7 +96,9 @@ const TasksKanbanCard = ({ task, onEdit, onDelete }: TasksKanbanCardProps) => {
           <CardTitle className="text-sm font-medium leading-snug flex items-center gap-1.5 pr-2">
             {task.status === 'Done' && <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />}
             {task.originTicketId && <Ticket className={cn("h-4 w-4 flex-shrink-0", task.status === 'Done' ? 'text-green-500' : 'text-red-500')} />}
-            <span>{task.title}</span>
+            <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ p: 'span' }}>
+              {processMentions(task.title)}
+            </ReactMarkdown>
           </CardTitle>
           <DropdownMenu>
             <DropdownMenuTrigger asChild onClick={handleDropdownClick}>
