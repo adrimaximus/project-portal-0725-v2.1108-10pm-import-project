@@ -40,6 +40,7 @@ const ProjectsPage = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { data: projects = [], isLoading, refetch } = useProjects();
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const viewFromUrl = searchParams.get('view') as ViewMode;
   const view: ViewMode = useMemo(() => {
@@ -187,6 +188,10 @@ const ProjectsPage = () => {
   const handleViewChange = (newView: ViewMode | null) => {
     if (newView) {
       setSearchParams({ view: newView }, { replace: true });
+      if (scrollContainerRef.current) {
+        scrollContainerRef.current.scrollTop = 0;
+        scrollContainerRef.current.scrollLeft = 0;
+      }
     }
   };
 
@@ -372,7 +377,7 @@ const ProjectsPage = () => {
             onRefreshClick={handleRefresh}
           />
         </div>
-        <div className="flex-grow min-h-0 overflow-y-auto">
+        <div ref={scrollContainerRef} className="flex-grow min-h-0 overflow-y-auto">
           <div className="p-0 data-[view=kanban]:px-4 data-[view=kanban]:pb-4 data-[view=kanban]:md:px-6 data-[view=kanban]:md:pb-6 data-[view=tasks-kanban]:p-0" data-view={view}>
             <ProjectViewContainer
               view={view}
