@@ -3,7 +3,7 @@ import PortalLayout from "@/components/PortalLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useProjects } from "@/hooks/useProjects";
 import { PaymentStatus, Project, Invoice, ExtendedProject, Member, Owner } from "@/types";
-import { addDays, isPast } from "date-fns";
+import { isPast } from "date-fns";
 import { Loader2 } from "lucide-react";
 import { EditInvoiceDialog } from "@/components/billing/EditInvoiceDialog";
 import { useProjectMutations } from "@/hooks/useProjectMutations";
@@ -32,7 +32,7 @@ const Billing = () => {
         return null;
       }
       
-      const dueDate = addDays(new Date(eventDate), 30);
+      const dueDate = project.payment_due_date ? new Date(project.payment_due_date) : new Date(eventDate);
 
       let finalStatus = project.payment_status;
       if (['Unpaid', 'Pending', 'In Process'].includes(finalStatus) && isPast(dueDate)) {

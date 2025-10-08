@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Loader2, Building, Image as ImageIcon } from "lucide-react";
+import { Loader2, Building } from "lucide-react";
 import { Company } from '@/types';
 import AddressAutocompleteInput from '../AddressAutocompleteInput';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
@@ -26,6 +26,7 @@ const companySchema = z.object({
   legal_name: z.string().optional(),
   address: z.string().optional(),
   billing_address: z.string().optional(),
+  term_of_payment_days: z.coerce.number().int().min(0).optional(),
 });
 
 export type CompanyFormValues = z.infer<typeof companySchema>;
@@ -37,7 +38,7 @@ const CompanyFormDialog = ({ open, onOpenChange, onSave, company, isSaving }: Co
 
   const form = useForm<CompanyFormValues>({
     resolver: zodResolver(companySchema),
-    defaultValues: { name: '', legal_name: '', address: '', billing_address: '' }
+    defaultValues: { name: '', legal_name: '', address: '', billing_address: '', term_of_payment_days: 0 }
   });
 
   useEffect(() => {
@@ -48,10 +49,11 @@ const CompanyFormDialog = ({ open, onOpenChange, onSave, company, isSaving }: Co
           legal_name: company.legal_name || '',
           address: company.address || '',
           billing_address: company.billing_address || '',
+          term_of_payment_days: (company as any).term_of_payment_days || 0,
         });
         setLogoPreview(company.logo_url || null);
       } else {
-        form.reset({ name: '', legal_name: '', address: '', billing_address: '' });
+        form.reset({ name: '', legal_name: '', address: '', billing_address: '', term_of_payment_days: 0 });
         setLogoPreview(null);
       }
       setLogoFile(null);
@@ -101,6 +103,24 @@ const CompanyFormDialog = ({ open, onOpenChange, onSave, company, isSaving }: Co
             <FormField control={form.control} name="billing_address" render={({ field }) => (
               <FormItem><FormLabel>Billing Address</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
             )} />
+            <FormField
+              control={form.control}
+              name="term_of_payment_days"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Term of Payment (Days)</FormLabel>
+                  <FormControl>
+                    <Input 
+                      type="number" 
+                      {...field} 
+                      onChange={event => field.onChange(event.target.value === '' ? undefined : +event.target.value)}
+                      placeholder="e.g., 7, 14, 30"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <DialogFooter className="pt-4 sticky bottom-0 bg-background">
               <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
               <Button type="submit" disabled={isSaving}>

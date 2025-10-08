@@ -349,6 +349,15 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetail
                 </div>
               </div>
               <div className="flex items-start gap-4">
+                <Calendar className="h-4 w-4 mt-1 flex-shrink-0 text-muted-foreground" />
+                <div>
+                  <p className="font-medium">Payment Due Date</p>
+                  <p className="text-muted-foreground">
+                    {project.payment_due_date ? formatInJakarta(project.payment_due_date, "dd MMM yyyy") : 'N/A'}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-start gap-4">
                 <User className="h-4 w-4 mt-1 flex-shrink-0 text-muted-foreground" />
                 <div className="w-full">
                   <p className="font-medium">Client</p>
