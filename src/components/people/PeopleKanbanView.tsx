@@ -66,7 +66,11 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
       }
     });
     for (const groupId in groups) {
-      groups[groupId].sort((a, b) => (a.kanban_order || 0) - (b.kanban_order || 0));
+      groups[groupId].sort((a, b) => {
+        const dateA = a.updated_at ? new Date(a.updated_at).getTime() : 0;
+        const dateB = b.updated_at ? new Date(b.updated_at).getTime() : 0;
+        return dateB - dateA;
+      });
     }
     return groups;
   }, [people, tags, visibleColumnIds]);
