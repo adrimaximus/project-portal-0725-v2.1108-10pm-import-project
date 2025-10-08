@@ -40,6 +40,11 @@ const processMentions = (text: string | null | undefined) => {
   return text.replace(/@\[([^\]]+)\]\(([^)]+)\)/g, '**@$1**');
 };
 
+const plainTextMentions = (text: string | null | undefined) => {
+  if (!text) return '';
+  return text.replace(/@\[([^\]]+)\]\(([^)]+)\)/g, '@$1');
+};
+
 const ProjectTasks = ({
   project,
   onTaskAdd,
@@ -271,7 +276,7 @@ const ProjectTasks = ({
                 </DropdownMenu>
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>Assign to: {task.title}</DialogTitle>
+                    <DialogTitle>Assign to: {plainTextMentions(task.title)}</DialogTitle>
                   </DialogHeader>
                   <MultiSelect
                     options={userOptions}
