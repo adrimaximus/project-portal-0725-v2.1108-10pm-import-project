@@ -373,7 +373,7 @@ const ProjectsPage = () => {
           />
         </div>
         <div className="flex-grow min-h-0 overflow-y-auto">
-          <div className="p-0 data-[view=kanban]:p-4 data-[view=kanban]:md:p-6 data-[view=tasks-kanban]:p-0" data-view={view}>
+          <div className="p-0 data-[view=kanban]:px-4 data-[view=kanban]:pb-4 data-[view=kanban]:md:px-6 data-[view=kanban]:md:pb-6 data-[view=tasks-kanban]:p-0" data-view={view}>
             <ProjectViewContainer
               view={view}
               projects={sortedProjects}
