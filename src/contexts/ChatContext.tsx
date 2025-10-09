@@ -1,13 +1,13 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useMemo, useRef } from 'react';
-import { useQuery, useQueryClient, useMutation, InfiniteData, UseMutateFunction } from '@tanstack/react-query';
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useAuth } from './AuthContext';
 import * as chatApi from '@/lib/chatApi';
+import * as chatRealtime from '@/lib/chatRealtime';
 import { Conversation, Message, Collaborator, Attachment, Reaction } from '@/types';
 import debounce from 'lodash.debounce';
-import { v4 as uuidv4 } from 'uuid';
 
 interface ChatContextType {
   conversations: Omit<Conversation, 'messages'>[];
@@ -53,16 +53,12 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     queryKey: ['conversations', currentUser?.id],
     queryFn: chatApi.fetchConversations,
     enabled: !!currentUser,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
   });
 
-  const { data: messages = [], isLoading: isLoadingMessages } = useQuery({
+  const { data: messages = [], isLoading: isLoadingMessages, refetch: refetchMessages } = useQuery({
     queryKey: ['messages', selectedConversationId],
     queryFn: () => chatApi.fetchMessages(selectedConversationId!),
     enabled: !!selectedConversationId && selectedConversationId !== 'ai-assistant',
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
   });
 
   const debouncedSearchMessages = useCallback(
@@ -98,33 +94,32 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
 
   const sendMessageMutation = useMutation({
     mutationFn: async (variables: { text: string, attachmentFile: File | null, replyToMessageId?: string | null }) => {
-      let attachment: Attachment | null = null;
+      let attachmentUrl: string | null = null;
+      let attachmentName: string | null = null;
+      let attachmentType: string | null = null;
+
       if (variables.attachmentFile && currentUser && selectedConversationId) {
         const file = variables.attachmentFile;
         const sanitizedFileName = file.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
-        const filePath = `chat-uploads/${currentUser.id}/${selectedConversationId}/${uuidv4()}-${sanitizedFileName}`;
+        const filePath = `chat-uploads/${currentUser.id}/${selectedConversationId}/${Date.now()}-${sanitizedFileName}`;
         const { error: uploadError } = await supabase.storage.from('chat-attachments').upload(filePath, file);
         if (uploadError) throw new Error(`Failed to upload attachment: ${uploadError.message}`);
         
         const { data: urlData } = supabase.storage.from('chat-attachments').getPublicUrl(filePath);
-        attachment = {
-          name: file.name,
-          url: urlData.publicUrl,
-          type: file.type,
-        };
+        attachmentUrl = urlData.publicUrl;
+        attachmentName = file.name;
+        attachmentType = file.type;
       }
       
-      return chatApi.sendMessage({ 
+      return chatRealtime.sendHybridMessage({ 
         conversationId: selectedConversationId!, 
         senderId: currentUser!.id, 
         text: variables.text, 
-        attachment,
+        attachmentUrl,
+        attachmentName,
+        attachmentType,
         replyToMessageId: variables.replyToMessageId,
       });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['messages', selectedConversationId] });
-      queryClient.invalidateQueries({ queryKey: ['conversations', currentUser?.id] });
     },
     onError: (error: any) => toast.error("Failed to send message.", { description: error.message }),
   });
@@ -205,58 +200,29 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
   });
 
   useEffect(() => {
-    if (!currentUser) return;
+    if (!currentUser || !selectedConversationId || selectedConversationId === 'ai-assistant') return;
 
-    const channel = supabase.channel('chat-room-realtime-listener')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'messages' },
-        (payload) => {
-          const changedMessage = payload.new as { conversation_id: string };
-          queryClient.invalidateQueries({ queryKey: ['conversations', currentUser.id] });
-          if (changedMessage.conversation_id === selectedConversationIdRef.current) {
-            queryClient.invalidateQueries({ queryKey: ['messages', changedMessage.conversation_id] });
+    const unsubscribe = chatRealtime.subscribeToConversation({
+      conversationId: selectedConversationId,
+      onNewMessage: (newMessage) => {
+        // Don't add our own broadcast messages
+        if (newMessage.is_broadcast && newMessage.sender_id === currentUser.id) {
+          return;
+        }
+        queryClient.setQueryData<Message[]>(['messages', selectedConversationId], (oldMessages) => {
+          if (!oldMessages) return [newMessage as Message];
+          // Prevent duplicates from broadcast + postgres_changes
+          if (oldMessages.some(m => m.id === newMessage.id)) {
+            return oldMessages;
           }
-        }
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'message_reactions' },
-        async (payload) => {
-          const reaction = (payload.new || payload.old) as { message_id: string, user_id: string };
-          if (reaction.user_id === currentUser.id) return;
+          return [...oldMessages, newMessage as Message];
+        });
+        queryClient.invalidateQueries({ queryKey: ['conversations', currentUser.id] });
+      },
+    });
 
-          const { data: messageData } = await supabase
-            .from('messages')
-            .select('conversation_id')
-            .eq('id', reaction.message_id)
-            .single();
-
-          if (messageData && messageData.conversation_id === selectedConversationIdRef.current) {
-            queryClient.invalidateQueries({ queryKey: ['messages', selectedConversationIdRef.current] });
-          }
-        }
-      )
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'conversations' },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ['conversations', currentUser.id] });
-        }
-      )
-      .on('broadcast', { event: 'typing' }, (payload: any) => {
-        if (payload?.userId !== currentUser?.id && payload.conversationId === selectedConversationIdRef.current) {
-          setIsSomeoneTyping(true);
-          if (typingTimerRef.current) window.clearTimeout(typingTimerRef.current);
-          typingTimerRef.current = window.setTimeout(() => setIsSomeoneTyping(false), 1500);
-        }
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [currentUser, queryClient]);
+    return () => unsubscribe();
+  }, [currentUser, selectedConversationId, queryClient]);
 
   useEffect(() => {
     const collaboratorToChat = (location.state as any)?.selectedCollaborator as Collaborator | undefined;
@@ -268,14 +234,14 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
 
   const sendTyping = useCallback(() => {
     if (selectedConversationId === 'ai-assistant') return;
-    const channel = supabase.channel('chat-room');
-    channel.send({ type: 'broadcast', event: 'typing', payload: { userId: currentUser?.id, conversationId: selectedConversationId } });
+    const channel = supabase.channel(`conversation:${selectedConversationId}`);
+    channel.send({ type: 'broadcast', event: 'typing', payload: { userId: currentUser?.id } });
   }, [currentUser, selectedConversationId]);
 
   const selectedConversation = useMemo(() => {
     if (!selectedConversationId) return null;
     if (selectedConversationId === 'ai-assistant') {
-      return { id: 'ai-assistant' } as Conversation; // Return a shell object
+      return { id: 'ai-assistant' } as Conversation;
     }
     const conversation = conversations.find(c => c.id === selectedConversationId);
     return conversation ? { ...conversation, messages } : null;
