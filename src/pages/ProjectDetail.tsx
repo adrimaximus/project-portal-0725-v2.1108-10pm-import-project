@@ -153,7 +153,6 @@ const ProjectDetail = () => {
             <ProjectProgressCard project={editedProject} />
             <ProjectTeamCard
               project={editedProject}
-              isEditing={isEditing}
               onFieldChange={handleFieldChange}
             />
           </div>
