@@ -120,8 +120,6 @@ export interface Project {
   email_sending_date?: string | null;
   hardcopy_sending_date?: string | null;
   channel?: string | null;
-  invoice_attachment_url?: string | null;
-  invoice_attachment_name?: string | null;
   invoice_attachments?: InvoiceAttachment[];
   
   assignedTo: AssignedUser[];
@@ -433,4 +431,5 @@ export interface ExtendedProject extends Project {
   client_name?: string | null;
   client_company_logo_url?: string | null;
   client_company_name?: string | null;
+  invoice_attachments?: InvoiceAttachment[];
 }

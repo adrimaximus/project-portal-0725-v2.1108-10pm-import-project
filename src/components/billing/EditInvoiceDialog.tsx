@@ -22,7 +22,7 @@ interface EditInvoiceDialogProps {
   onClose: () => void;
   invoice: Invoice | null;
   project: Project | null;
-  onSave: (updatedProjectData: Partial<Project> & { id: string }) => Promise<void>;
+  onSave: (updatedProjectData: Partial<Project> & { id: string }) => void;
 }
 
 const paymentStatuses: PaymentStatus[] = ['Paid', 'Unpaid', 'Pending', 'Overdue', 'Cancelled', 'In Process', 'Proposed'];
@@ -156,8 +156,7 @@ export const EditInvoiceDialog = ({ isOpen, onClose, invoice, project, onSave }:
             Update details for invoice related to project "{invoice.projectName}".
           </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
-          {/* Other form fields remain the same */}
+        <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-4">
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="invoiceNumber" className="text-right">
               Invoice #

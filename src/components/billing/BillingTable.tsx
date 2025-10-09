@@ -157,7 +157,7 @@ const BillingTable = ({ invoices, onEdit, sortColumn, sortDirection, handleSort 
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="sm" className="flex items-center gap-1 text-muted-foreground">
                         <Paperclip className="h-4 w-4" />
-                        {invoice.invoiceAttachments.length} attachment{invoice.invoiceAttachments.length > 1 ? 's' : ''}
+                        {invoice.invoiceAttachments.length}
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
@@ -191,10 +191,6 @@ const BillingTable = ({ invoices, onEdit, sortColumn, sortDirection, handleSort 
                     <DropdownMenuItem onSelect={() => onEdit(invoice)}>
                       <Edit className="mr-2 h-4 w-4" />
                       Edit
-                    </DropdownMenuItem>
-                    <DropdownMenuItem>
-                      <Download className="mr-2 h-4 w-4" />
-                      Download
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
