@@ -13,8 +13,13 @@ export const getAvatarUrl = (avatarUrl: string | null | undefined, seed?: string
   if (avatarUrl) {
     return avatarUrl;
   }
-  // Menggunakan gaya 'adventurer' dengan palet warna latar belakang yang bervariasi
-  return `https://api.dicebear.com/8.x/adventurer/svg?seed=${seed || 'default'}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf`;
+  
+  const effectiveSeed = seed || 'default-seed';
+  // Logika sederhana untuk memilih gaya avatar secara bervariasi berdasarkan seed
+  const style = (parseInt(effectiveSeed.slice(-1), 16) % 2 === 0) ? 'lorelei' : 'micah';
+  const backgroundColorPalette = 'b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf';
+
+  return `https://api.dicebear.com/8.x/${style}/svg?seed=${effectiveSeed}&backgroundColor=${backgroundColorPalette}`;
 };
 
 export const generatePastelColor = (seed: string) => {
