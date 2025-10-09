@@ -8,7 +8,7 @@ const mapConversationData = (c: any): Omit<Conversation, 'messages'> => ({
   userAvatar: getAvatarUrl(c.conversation_avatar, c.other_user_id || c.conversation_id),
   lastMessage: c.last_message_content || "No messages yet.",
   lastMessageTimestamp: c.last_message_at || new Date(0).toISOString(),
-  unreadCount: 0,
+  unreadCount: c.unread_count || 0,
   isGroup: c.is_group,
   members: (c.participants || []).map((p: any) => ({
     id: p.id, name: p.name, 
@@ -137,4 +137,12 @@ export const searchProjects = async (searchTerm: string): Promise<{ id: string, 
     return [];
   }
   return data;
+};
+
+export const markConversationAsRead = async (conversationId: string) => {
+  const { error } = await supabase.rpc('mark_conversation_as_read', { p_conversation_id: conversationId });
+  if (error) {
+    console.error("Error marking conversation as read:", error);
+    // Don't throw, it's not a critical failure
+  }
 };
