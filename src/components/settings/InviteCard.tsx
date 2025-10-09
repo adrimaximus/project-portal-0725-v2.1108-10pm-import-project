@@ -20,6 +20,14 @@ interface InviteCardProps {
   isMasterAdmin: boolean;
 }
 
+const capitalizeWords = (str: string) => {
+  if (!str) return '';
+  return str
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+};
+
 const InviteCard = ({ roles, onSendInvites, onAddManually, isMasterAdmin }: InviteCardProps) => {
   const [invites, setInvites] = useState<Invite[]>([{ id: Date.now(), email: '', role: 'member' }]);
 
@@ -43,6 +51,13 @@ const InviteCard = ({ roles, onSendInvites, onAddManually, isMasterAdmin }: Invi
     onSendInvites(invites);
     setInvites([{ id: Date.now(), email: '', role: 'member' }]);
   };
+
+  const processedRoles = roles
+    .map(role => ({
+      ...role,
+      displayName: capitalizeWords(role.name),
+    }))
+    .sort((a, b) => a.displayName.localeCompare(b.displayName));
 
   return (
     <Card>
@@ -71,8 +86,8 @@ const InviteCard = ({ roles, onSendInvites, onAddManually, isMasterAdmin }: Invi
                 <Select value={invite.role} onValueChange={(value) => handleInviteChange(invite.id, 'role', value)}>
                   <SelectTrigger id={`role-${invite.id}`} className="w-full sm:w-[220px]"><SelectValue placeholder="Select a role" /></SelectTrigger>
                   <SelectContent>
-                    {roles.filter(r => isMasterAdmin || r.name !== 'master admin').map(role => (
-                      <SelectItem key={role.id} value={role.name}>{role.name}</SelectItem>
+                    {processedRoles.filter(r => isMasterAdmin || r.name !== 'master admin').map(role => (
+                      <SelectItem key={role.id} value={role.name}>{role.displayName}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
