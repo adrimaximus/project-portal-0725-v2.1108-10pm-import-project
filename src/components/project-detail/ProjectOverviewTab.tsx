@@ -1,4 +1,4 @@
-import { Project, AssignedUser } from '@/types';
+import { Project, Task } from "@/types";
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,7 +12,6 @@ interface ProjectOverviewTabProps {
   project: Project;
   isEditing: boolean;
   onDescriptionChange: (value: string) => void;
-  onTeamChange: (users: AssignedUser[]) => void;
   onFilesAdd: (files: File[]) => void;
   onFileDelete: (fileId: string) => void;
   onServicesChange: (services: string[]) => void;
