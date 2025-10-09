@@ -43,11 +43,6 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const typingTimerRef = useRef<number | null>(null);
-  const selectedConversationIdRef = useRef<string | null>(null);
-
-  useEffect(() => {
-    selectedConversationIdRef.current = selectedConversationId;
-  }, [selectedConversationId]);
 
   const { data: conversations = [], isLoading: isLoadingConversations, refetch: refetchConversations } = useQuery({
     queryKey: ['conversations', currentUser?.id],
@@ -213,7 +208,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         (payload) => {
           const changedMessage = payload.new as { conversation_id: string };
           queryClient.invalidateQueries({ queryKey: ['conversations', currentUser.id] });
-          if (changedMessage.conversation_id === selectedConversationIdRef.current) {
+          if (changedMessage.conversation_id === selectedConversationId) {
             queryClient.invalidateQueries({ queryKey: ['messages', changedMessage.conversation_id] });
           }
         }
@@ -222,8 +217,10 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         'postgres_changes',
         { event: '*', schema: 'public', table: 'message_reactions' },
         (payload) => {
-          if (selectedConversationIdRef.current) {
-            queryClient.invalidateQueries({ queryKey: ['messages', selectedConversationIdRef.current] });
+          const reaction = (payload.new || payload.old) as { message_id: string };
+          const message = messages.find(m => m.id === reaction.message_id);
+          if (message && message.sender.id !== currentUser.id) {
+            queryClient.invalidateQueries({ queryKey: ['messages', selectedConversationId] });
           }
         }
       )
@@ -235,7 +232,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         }
       )
       .on('broadcast', { event: 'typing' }, (payload: any) => {
-        if (payload?.userId !== currentUser?.id && payload.conversationId === selectedConversationIdRef.current) {
+        if (payload?.userId !== currentUser?.id && payload.conversationId === selectedConversationId) {
           setIsSomeoneTyping(true);
           if (typingTimerRef.current) window.clearTimeout(typingTimerRef.current);
           typingTimerRef.current = window.setTimeout(() => setIsSomeoneTyping(false), 1500);
@@ -246,7 +243,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [currentUser, queryClient]);
+  }, [currentUser, selectedConversationId, queryClient, messages]);
 
   useEffect(() => {
     const collaboratorToChat = (location.state as any)?.selectedCollaborator as Collaborator | undefined;
@@ -261,15 +258,6 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     const channel = supabase.channel('chat-room');
     channel.send({ type: 'broadcast', event: 'typing', payload: { userId: currentUser?.id, conversationId: selectedConversationId } });
   }, [currentUser, selectedConversationId]);
-
-  const selectConversation = (id: string | null) => {
-    if (id && id !== 'ai-assistant') {
-      chatApi.markConversationAsRead(id).then(() => {
-        queryClient.invalidateQueries({ queryKey: ['conversations', currentUser?.id] });
-      });
-    }
-    setSelectedConversationId(id);
-  };
 
   const selectedConversation = useMemo(() => {
     if (!selectedConversationId) return null;
@@ -292,7 +280,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     conversations: filteredConversations,
     isLoadingConversations,
     selectedConversation,
-    selectConversation,
+    selectConversation: setSelectedConversationId,
     messages,
     isLoadingMessages,
     isSendingMessage: sendMessageMutation.isPending,

@@ -12,7 +12,6 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useChatContext } from "@/contexts/ChatContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Badge } from "./ui/badge";
 
 const ChatList = () => {
   const [isNewConversationOpen, setIsNewConversationOpen] = useState(false);
@@ -118,14 +117,9 @@ const ChatList = () => {
                     <p className="font-semibold truncate">{c.userName}</p>
                     <span className="text-xs text-muted-foreground flex-shrink-0">{formatTimestamp(c.lastMessageTimestamp)}</span>
                   </div>
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="text-sm text-muted-foreground truncate">
-                      {formatLastMessage(c.lastMessage)}
-                    </p>
-                    {c.unreadCount > 0 && (
-                      <Badge className="h-5 w-5 p-0 flex items-center justify-center text-xs">{c.unreadCount}</Badge>
-                    )}
-                  </div>
+                  <p className="text-sm text-muted-foreground truncate">
+                    {formatLastMessage(c.lastMessage)}
+                  </p>
                 </div>
               </div>
               <AlertDialog>
