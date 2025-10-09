@@ -2,8 +2,7 @@ import { createContext, useContext, useEffect, useState, ReactNode, useCallback 
 import { useAuth } from "./AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-
-export type Theme = "dark" | "light" | "system" | "claude" | "claude-light";
+import { Theme } from "@/types";
 
 const themeClasses = ["light", "dark", "theme-claude", "theme-claude-light"];
 

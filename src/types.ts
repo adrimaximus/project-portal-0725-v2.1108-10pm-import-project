@@ -2,6 +2,8 @@
 export type ProjectStatus = 'Requested' | 'In Progress' | 'In Review' | 'On Hold' | 'Completed' | 'Cancelled' | 'On Track' | 'At Risk' | 'Off Track' | 'Archived' | 'Idea' | 'Done';
 export type PaymentStatus = 'Paid' | 'Unpaid' | 'Pending' | 'Overdue' | 'Cancelled' | 'In Process' | 'Due' | 'Proposed';
 
+export type Theme = "dark" | "light" | "system" | "claude" | "claude-light";
+
 export interface User {
   id: string;
   name: string;
@@ -15,6 +17,7 @@ export interface User {
   people_kanban_settings?: any;
   updated_at?: string;
   permissions?: string[];
+  theme?: Theme | null;
 }
 
 export type Collaborator = User;
