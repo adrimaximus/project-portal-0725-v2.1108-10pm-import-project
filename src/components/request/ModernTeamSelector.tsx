@@ -71,7 +71,7 @@ const ModernTeamSelector = ({ users, selectedUsers, onSelectionChange }: ModernT
       </PopoverTrigger>
       <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
         <Command>
-          <CommandInput placeholder="Search for a user..." />
+          <CommandInput placeholder="Search by name or email..." />
           <CommandList>
             <CommandEmpty>No user found.</CommandEmpty>
             <CommandGroup>
@@ -81,7 +81,7 @@ const ModernTeamSelector = ({ users, selectedUsers, onSelectionChange }: ModernT
                   onSelect={() => {
                     onSelectionChange(user);
                   }}
-                  value={user.name}
+                  value={`${user.name} ${user.email}`}
                 >
                   <Check
                     className={cn(
@@ -94,9 +94,12 @@ const ModernTeamSelector = ({ users, selectedUsers, onSelectionChange }: ModernT
                   <div className="flex items-center gap-2">
                      <Avatar className="h-6 w-6">
                        <AvatarImage src={user.avatar_url} alt={user.name} />
-                       <AvatarFallback style={generatePastelColor(user.id)}>{user.initials}</AvatarFallback>
+                       <AvatarFallback style={{backgroundColor: generatePastelColor(user.id)}}>{user.initials}</AvatarFallback>
                      </Avatar>
-                     <span>{user.name}</span>
+                     <div className="flex flex-col">
+                       <span className="text-sm font-medium">{user.name}</span>
+                       <span className="text-xs text-muted-foreground">{user.email}</span>
+                     </div>
                   </div>
                 </CommandItem>
               ))}
