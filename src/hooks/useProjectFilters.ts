@@ -3,18 +3,11 @@ import { Project } from '@/types';
 import { DateRange } from 'react-day-picker';
 
 export const useProjectFilters = (projects: Project[]) => {
-  const [searchTerm, setSearchTerm] = useState('');
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [sortConfig, setSortConfig] = useState<{ key: keyof Project | null; direction: 'ascending' | 'descending' }>({ key: 'start_date', direction: 'ascending' });
 
   const filteredProjects = useMemo(() => {
     return projects.filter(project => {
-      const searchTermLower = searchTerm.toLowerCase();
-      const matchesSearch =
-        project.name.toLowerCase().includes(searchTermLower) ||
-        (project.description && project.description.toLowerCase().includes(searchTermLower)) ||
-        (project.category && project.category.toLowerCase().includes(searchTermLower));
-
       const projectStart = project.start_date ? new Date(project.start_date) : null;
       const projectEnd = project.due_date ? new Date(project.due_date) : projectStart;
 
@@ -37,9 +30,9 @@ export const useProjectFilters = (projects: Project[]) => {
         return projectStart <= filterEnd && effectiveProjectEnd >= filterStart;
       })();
 
-      return matchesSearch && matchesDate;
+      return matchesDate;
     });
-  }, [projects, searchTerm, dateRange]);
+  }, [projects, dateRange]);
 
   const sortedProjects = useMemo(() => {
     let sortableItems = [...filteredProjects];
@@ -72,8 +65,6 @@ export const useProjectFilters = (projects: Project[]) => {
   };
 
   return {
-    searchTerm,
-    setSearchTerm,
     dateRange,
     setDateRange,
     sortConfig,

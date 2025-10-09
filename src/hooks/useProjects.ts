@@ -5,10 +5,12 @@ import { toast } from 'sonner';
 import { useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 
-const fetchProjects = async (): Promise<Project[]> => {
+const fetchProjects = async ({ queryKey }: { queryKey: any[] }): Promise<Project[]> => {
+  const [_key, _userId, { searchTerm }] = queryKey;
   const { data, error } = await supabase.rpc('get_dashboard_projects', {
-    p_limit: 1000, // Fetch a large number of projects, assuming no server-side pagination in UI yet
+    p_limit: 1000,
     p_offset: 0,
+    p_search_term: searchTerm || null,
   });
     
   if (error) {
@@ -17,12 +19,11 @@ const fetchProjects = async (): Promise<Project[]> => {
     throw new Error(error.message);
   }
   
-  // The RPC function now returns data in the shape that the frontend expects.
-  // No complex client-side transformation is needed anymore.
   return data as Project[];
 };
 
-export const useProjects = () => {
+export const useProjects = (options: { searchTerm?: string } = {}) => {
+  const { searchTerm } = options;
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
@@ -36,7 +37,7 @@ export const useProjects = () => {
         { event: '*', schema: 'public', table: 'project_members' },
         (payload) => {
           console.log('Project members change received, refetching projects.', payload);
-          queryClient.invalidateQueries({ queryKey: ['projects', user.id] });
+          queryClient.invalidateQueries({ queryKey: ['projects'] });
         }
       )
       .on(
@@ -44,7 +45,7 @@ export const useProjects = () => {
         { event: '*', schema: 'public', table: 'projects' },
         (payload) => {
           console.log('Projects table change received, refetching projects.', payload);
-          queryClient.invalidateQueries({ queryKey: ['projects', user.id] });
+          queryClient.invalidateQueries({ queryKey: ['projects'] });
         }
       )
       .subscribe();
@@ -55,7 +56,7 @@ export const useProjects = () => {
   }, [user, queryClient]);
 
   return useQuery<Project[], Error>({
-    queryKey: ['projects', user?.id],
+    queryKey: ['projects', user?.id, { searchTerm }],
     queryFn: fetchProjects,
     enabled: !!user,
   });

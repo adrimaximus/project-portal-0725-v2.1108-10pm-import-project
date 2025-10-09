@@ -39,7 +39,8 @@ type ViewMode = 'table' | 'list' | 'kanban' | 'tasks' | 'tasks-kanban';
 const ProjectsPage = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { data: projects = [], isLoading, refetch } = useProjects();
+  const [searchTerm, setSearchTerm] = useState(""); // Moved from useProjectFilters
+  const { data: projects = [], isLoading, refetch } = useProjects({ searchTerm }); // Pass searchTerm
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const viewFromUrl = searchParams.get('view') as ViewMode;
@@ -65,7 +66,7 @@ const ProjectsPage = () => {
   const { upsertTask, isUpserting, deleteTask } = useTaskMutations();
 
   const {
-    searchTerm, setSearchTerm, dateRange, setDateRange,
+    dateRange, setDateRange,
     sortConfig, requestSort, sortedProjects
   } = useProjectFilters(projects);
 
