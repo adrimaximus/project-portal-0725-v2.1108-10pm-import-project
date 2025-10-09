@@ -43,7 +43,11 @@ const ChatList = () => {
     if (!message) return "";
     // This regex looks for markdown-style links and extracts the link text.
     const linkRegex = /\[([^\]]+)\]\([^)]+\)/g;
-    return message.replace(linkRegex, '$1');
+    const cleanedMessage = message.replace(linkRegex, '$1');
+    if (cleanedMessage.length > 25) {
+      return cleanedMessage.substring(0, 25) + "...";
+    }
+    return cleanedMessage;
   };
 
   return (
@@ -120,7 +124,7 @@ const ChatList = () => {
                     <span className="text-xs text-muted-foreground flex-shrink-0">{formatTimestamp(c.lastMessageTimestamp)}</span>
                   </div>
                   <div className="flex items-center justify-between gap-2">
-                    <p className={cn("text-sm text-muted-foreground truncate", isUnread && "text-foreground font-medium")}>
+                    <p className={cn("text-sm text-muted-foreground", isUnread && "text-foreground font-medium")}>
                       {formatLastMessage(c.lastMessage)}
                     </p>
                     {isUnread && <div className="h-2 w-2 rounded-full bg-primary flex-shrink-0" />}
