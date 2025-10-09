@@ -15,7 +15,7 @@ export const useProjectMutations = (slug: string) => {
 
     const useUpdateProject = () => useMutation({
         mutationFn: async (editedProject: Project) => {
-            const { id, name, description, category, status, budget, start_date, due_date, payment_status, payment_due_date, services, assignedTo, venue, tags, person_ids } = editedProject;
+            const { id, name, description, category, status, budget, start_date, due_date, payment_status, payment_due_date, services, assignedTo, venue, tags, person_ids, invoice_number, po_number, paid_date, email_sending_date, hardcopy_sending_date, channel } = editedProject;
             const { data, error } = await supabase
                 .rpc('update_project_details', {
                     p_project_id: id, p_name: name, p_description: description || null,
@@ -27,6 +27,12 @@ export const useProjectMutations = (slug: string) => {
                     p_venue: venue || null,
                     p_existing_tags: (tags || []).filter(t => !t.isNew).map(t => t.id),
                     p_custom_tags: (tags || []).filter(t => t.isNew).map(({ name, color }) => ({ name, color })),
+                    p_invoice_number: invoice_number || null,
+                    p_po_number: po_number || null,
+                    p_paid_date: paid_date || null,
+                    p_email_sending_date: email_sending_date || null,
+                    p_hardcopy_sending_date: hardcopy_sending_date || null,
+                    p_channel: channel || null,
                 })
                 .single();
             if (error) throw error;
