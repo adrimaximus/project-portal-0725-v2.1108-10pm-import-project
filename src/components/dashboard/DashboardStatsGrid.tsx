@@ -84,7 +84,7 @@ const DashboardStatsGrid = ({ projects }: DashboardStatsGridProps) => {
     }, {} as Record<string, number>);
 
     const ownerStats = projects.reduce((acc, p) => {
-        if (p.created_by) {
+        if (p.created_by && p.created_by.email !== 'adri@7inked.com') {
             if (!acc[p.created_by.id]) acc[p.created_by.id] = { ...p.created_by, projectCount: 0, totalValue: 0 };
             acc[p.created_by.id].projectCount++;
             acc[p.created_by.id].totalValue += p.budget || 0;
@@ -112,7 +112,7 @@ const DashboardStatsGrid = ({ projects }: DashboardStatsGridProps) => {
     );
 
     const mostPendingPaymentStats = mostPendingPaymentProjects.reduce((acc, p) => {
-        if (p.created_by) {
+        if (p.created_by && p.created_by.email !== 'adri@7inked.com') {
             if (!acc[p.created_by.id]) {
                 acc[p.created_by.id] = { ...p.created_by, projectCount: 0, totalValue: 0 };
             }
