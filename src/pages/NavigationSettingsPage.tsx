@@ -145,12 +145,15 @@ const NavigationSettingsPage = () => {
   useEffect(() => { if (foldersData) setFoldersState(foldersData) }, [foldersData]);
 
   const { mutate: updateItems } = useMutation({
-    mutationFn: async (items: Partial<NavItem>[]) => {
+    mutationFn: async (items: { id: string, position: number, folder_id: string | null }[]) => {
       if (items.length === 0) return;
-      const { error } = await supabase.from('user_navigation_items').upsert(items);
+      const { error } = await supabase.rpc('reorder_navigation_items', { p_items: items });
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: itemsQueryKey }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: itemsQueryKey });
+      queryClient.invalidateQueries({ queryKey: foldersQueryKey });
+    },
     onError: (e: any) => toast.error("Failed to save reorder changes", { description: e.message })
   });
 
@@ -231,46 +234,54 @@ const NavigationSettingsPage = () => {
     } else if (activeType === 'item') {
         setNavItemsState((items) => {
             const oldIndex = items.findIndex((i) => i.id === activeId);
-            const overIsItem = overType === 'item';
-            const newIndex = overIsItem ? items.findIndex((i) => i.id === overId) : -1;
+            if (oldIndex === -1) return items;
 
-            let newItems = [...items];
-            const activeItem = items[oldIndex];
+            const overIsItem = overType === 'item';
             const newFolderId = overType === 'folder' 
                 ? (overId === 'uncategorized-folder' ? null : overId) 
-                : (overIsItem ? items.find(i => i.id === overId)?.folder_id : activeItem.folder_id);
+                : (overIsItem ? items.find(i => i.id === overId)?.folder_id : items[oldIndex].folder_id);
 
-            if (overIsItem && newIndex !== -1) {
-                newItems = arrayMove(items, oldIndex, newIndex);
-                const movedItemIndex = newItems.findIndex(i => i.id === activeId);
-                if (newItems[movedItemIndex].folder_id !== newFolderId) {
-                    newItems[movedItemIndex] = { ...newItems[movedItemIndex], folder_id: newFolderId };
-                }
-            } else if (overType === 'folder') {
-                const [movedItem] = newItems.splice(oldIndex, 1);
-                movedItem.folder_id = newFolderId;
+            let newItems = [...items];
+            const [movedItem] = newItems.splice(oldIndex, 1);
+            movedItem.folder_id = newFolderId;
+
+            let newIndex = -1;
+            if (overIsItem) {
+                newIndex = newItems.findIndex(i => i.id === overId);
+                newItems.splice(newIndex, 0, movedItem);
+            } else { // Dropped on a folder
                 const itemsInDest = newItems.filter(i => i.folder_id === newFolderId);
-                const lastItemInDest = itemsInDest[itemsInDest.length - 1];
-                const insertAtIndex = lastItemInDest ? newItems.findIndex(i => i.id === lastItemInDest.id) + 1 : oldIndex;
-                newItems.splice(insertAtIndex, 0, movedItem);
-            }
-
-            const updates: Partial<NavItem>[] = [];
-            const allFolderIds = [null, ...foldersState.map(f => f.id)];
-            let currentPosition = 0;
-            allFolderIds.forEach(folderId => {
-                newItems.filter(i => i.folder_id === folderId).forEach(item => {
-                    const originalItem = items.find(i => i.id === item.id);
-                    if (!originalItem || originalItem.position !== currentPosition || originalItem.folder_id !== item.folder_id) {
-                        updates.push({ id: item.id, position: currentPosition, folder_id: item.folder_id });
+                if (itemsInDest.length > 0) {
+                    const lastItem = itemsInDest[itemsInDest.length - 1];
+                    newIndex = newItems.findIndex(i => i.id === lastItem.id) + 1;
+                } else {
+                    const folder = foldersState.find(f => f.id === newFolderId);
+                    if (folder) {
+                        const folderIndex = foldersState.indexOf(folder);
+                        let firstItemOfNextFolderIndex = -1;
+                        for (let i = folderIndex + 1; i < foldersState.length; i++) {
+                            const nextFolder = foldersState[i];
+                            const firstItem = newItems.find(item => item.folder_id === nextFolder.id);
+                            if (firstItem) {
+                                firstItemOfNextFolderIndex = newItems.indexOf(firstItem);
+                                break;
+                            }
+                        }
+                        newIndex = firstItemOfNextFolderIndex !== -1 ? firstItemOfNextFolderIndex : newItems.length;
+                    } else { // Uncategorized
+                        newIndex = newItems.filter(i => i.folder_id === null).length;
                     }
-                    currentPosition++;
-                });
-            });
-
-            if (updates.length > 0) {
-                updateItems(updates);
+                }
+                newItems.splice(newIndex, 0, movedItem);
             }
+
+            const payload = newItems.map((item, index) => ({
+                id: item.id,
+                position: index,
+                folder_id: item.folder_id,
+            }));
+
+            updateItems(payload);
             
             return newItems;
         });

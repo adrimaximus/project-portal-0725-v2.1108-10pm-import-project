@@ -39,6 +39,7 @@ import {
   LayoutGrid,
   Zap,
   Briefcase,
+  Presentation,
 } from "lucide-react";
 
 export type Service = {
@@ -252,6 +253,12 @@ export const services: Service[] = [
     description: "Transportation services",
     icon: Plane,
     iconColor: "text-blue-600 bg-blue-100",
+  },
+  {
+    title: "TTT (Training The Trainers)",
+    description: "Empower your team with our comprehensive training programs.",
+    icon: Presentation,
+    iconColor: "text-indigo-600 bg-indigo-100",
   },
   {
     title: "Venue",
