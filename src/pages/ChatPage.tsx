@@ -40,11 +40,11 @@ const ChatPageContent = () => {
       direction="horizontal"
       className="flex-1 items-stretch"
     >
-      <ResizablePanel defaultSize={25} minSize={15} maxSize={60}>
+      <ResizablePanel defaultSize={35} minSize={25} maxSize={50} className="min-w-[400px]">
         <ChatList />
       </ResizablePanel>
       <ResizableHandle withHandle />
-      <ResizablePanel>
+      <ResizablePanel defaultSize={65}>
         <ChatWindow ref={chatInputRef} />
       </ResizablePanel>
     </ResizablePanelGroup>
