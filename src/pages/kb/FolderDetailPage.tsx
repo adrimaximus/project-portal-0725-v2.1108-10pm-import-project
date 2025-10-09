@@ -54,7 +54,7 @@ const FolderDetailPage = () => {
     queryKey: ['kb_articles', folder?.id],
     queryFn: async () => {
       if (!folder) return [];
-      const { data, error } = await supabase.rpc('get_user_kb_articles');
+      const { data, error } = await supabase.rpc('get_user_kb_articles', { p_search_term: null });
       if (error) {
         toast.error("Failed to fetch pages.");
         throw error;

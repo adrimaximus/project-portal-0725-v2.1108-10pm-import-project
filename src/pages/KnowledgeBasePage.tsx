@@ -42,9 +42,9 @@ const KnowledgeBasePage = () => {
   });
 
   const { data: articles = [], isLoading: isLoadingArticles, error: articlesError } = useQuery({
-    queryKey: ['kb_articles'],
+    queryKey: ['kb_articles', searchTerm],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_user_kb_articles');
+      const { data, error } = await supabase.rpc('get_user_kb_articles', { p_search_term: searchTerm || null });
       if (error) throw error;
       return data as KbArticle[];
     }
@@ -99,12 +99,6 @@ const KnowledgeBasePage = () => {
       (folder.category && folder.category.toLowerCase().includes(searchTerm.toLowerCase()))
     );
   }, [folders, searchTerm]);
-
-  const filteredArticles = useMemo(() => {
-    return articles.filter(article =>
-      article.title.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [articles, searchTerm]);
 
   const handleDeleteFolder = async () => {
     if (dialog?.type !== 'delete-folder') return;
@@ -172,7 +166,7 @@ const KnowledgeBasePage = () => {
             <div className="border-t pt-6">
               <h2 className="text-2xl font-bold mb-4">All Pages</h2>
               <AllArticlesView
-                articles={filteredArticles}
+                articles={articles}
                 onEdit={(article) => setDialog({ type: 'edit-page', data: article })}
                 onDelete={(article) => setDialog({ type: 'delete-page', data: article })}
               />
