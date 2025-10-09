@@ -2,6 +2,7 @@ import { Outlet, Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import LoadingScreen from "./LoadingScreen";
 import React from "react";
+import { ChatProvider } from "@/contexts/ChatContext";
 
 const ProtectedRouteLayout = () => {
   const { session, user, isLoading } = useAuth();
@@ -19,7 +20,11 @@ const ProtectedRouteLayout = () => {
     return <Navigate to="/dashboard" replace />;
   }
 
-  return <Outlet />;
+  return (
+    <ChatProvider>
+      <Outlet />
+    </ChatProvider>
+  );
 };
 
 export default ProtectedRouteLayout;
