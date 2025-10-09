@@ -5,8 +5,10 @@ import { toast } from 'sonner';
 import { useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 
-const fetchProjects = async ({ queryKey }: { queryKey: any[] }): Promise<Project[]> => {
-  const [_key, _userId, { searchTerm }] = queryKey;
+const fetchProjects = async ({ queryKey }: { queryKey: readonly (string | { searchTerm?: string } | undefined)[] }): Promise<Project[]> => {
+  const [_key, _userId, options] = queryKey;
+  const searchTerm = (options as { searchTerm?: string })?.searchTerm;
+  
   const { data, error } = await supabase.rpc('get_dashboard_projects', {
     p_limit: 1000,
     p_offset: 0,
