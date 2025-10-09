@@ -17,8 +17,8 @@ const fetchProjects = async (): Promise<Project[]> => {
       invoice_attachments(*),
       people_projects(people(*, companies(*)))
     `)
-    .order('kanban_order', { ascending: true, nulls: 'last' })
-    .order('created_at', { ascending: false, nulls: 'last' });
+    .order('kanban_order', { ascending: true, nullsFirst: false })
+    .order('created_at', { ascending: false, nullsFirst: false });
     
   if (error) {
     console.error('Error fetching projects:', error);
