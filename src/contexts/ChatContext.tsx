@@ -43,6 +43,11 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const typingTimerRef = useRef<number | null>(null);
+  const selectedConversationIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    selectedConversationIdRef.current = selectedConversationId;
+  }, [selectedConversationId]);
 
   const { data: conversations = [], isLoading: isLoadingConversations, refetch: refetchConversations } = useQuery({
     queryKey: ['conversations', currentUser?.id],
@@ -208,7 +213,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         (payload) => {
           const changedMessage = payload.new as { conversation_id: string };
           queryClient.invalidateQueries({ queryKey: ['conversations', currentUser.id] });
-          if (changedMessage.conversation_id === selectedConversationId) {
+          if (changedMessage.conversation_id === selectedConversationIdRef.current) {
             queryClient.invalidateQueries({ queryKey: ['messages', changedMessage.conversation_id] });
           }
         }
@@ -217,7 +222,9 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         'postgres_changes',
         { event: '*', schema: 'public', table: 'message_reactions' },
         (payload) => {
-          queryClient.invalidateQueries({ queryKey: ['messages', selectedConversationId] });
+          if (selectedConversationIdRef.current) {
+            queryClient.invalidateQueries({ queryKey: ['messages', selectedConversationIdRef.current] });
+          }
         }
       )
       .on(
@@ -228,7 +235,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         }
       )
       .on('broadcast', { event: 'typing' }, (payload: any) => {
-        if (payload?.userId !== currentUser?.id && payload.conversationId === selectedConversationId) {
+        if (payload?.userId !== currentUser?.id && payload.conversationId === selectedConversationIdRef.current) {
           setIsSomeoneTyping(true);
           if (typingTimerRef.current) window.clearTimeout(typingTimerRef.current);
           typingTimerRef.current = window.setTimeout(() => setIsSomeoneTyping(false), 1500);
@@ -239,7 +246,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [currentUser, selectedConversationId, queryClient]);
+  }, [currentUser, queryClient]);
 
   useEffect(() => {
     const collaboratorToChat = (location.state as any)?.selectedCollaborator as Collaborator | undefined;
