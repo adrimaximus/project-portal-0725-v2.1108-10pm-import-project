@@ -262,15 +262,6 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     channel.send({ type: 'broadcast', event: 'typing', payload: { userId: currentUser?.id, conversationId: selectedConversationId } });
   }, [currentUser, selectedConversationId]);
 
-  const selectConversation = (id: string | null) => {
-    if (id && id !== 'ai-assistant') {
-      chatApi.markConversationAsRead(id).then(() => {
-        queryClient.invalidateQueries({ queryKey: ['conversations', currentUser?.id] });
-      });
-    }
-    setSelectedConversationId(id);
-  };
-
   const selectedConversation = useMemo(() => {
     if (!selectedConversationId) return null;
     if (selectedConversationId === 'ai-assistant') {
@@ -292,7 +283,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     conversations: filteredConversations,
     isLoadingConversations,
     selectedConversation,
-    selectConversation,
+    selectConversation: setSelectedConversationId,
     messages,
     isLoadingMessages,
     isSendingMessage: sendMessageMutation.isPending,

@@ -44,7 +44,6 @@ import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
 import TermsOfServicePage from "./pages/TermsOfServicePage";
 import NotFound from "./pages/NotFound";
 import ThemeSettingsPage from "./pages/ThemeSettingsPage";
-import { ChatProvider } from "./contexts/ChatContext";
 
 function App() {
   useEffect(() => {
@@ -85,7 +84,7 @@ function App() {
       <Route path="/terms-of-service" element={<TermsOfServicePage />} />
 
       {/* Protected routes */}
-      <Route element={<ChatProvider><ProtectedRouteLayout /></ChatProvider>}>
+      <Route element={<ProtectedRouteLayout />}>
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/projects" element={<ProjectsPage />} />
         <Route path="/projects/:slug" element={<ProjectDetail />} />
