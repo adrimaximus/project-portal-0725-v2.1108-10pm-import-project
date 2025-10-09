@@ -105,17 +105,24 @@ const DashboardStatsGrid = ({ projects }: DashboardStatsGridProps) => {
     const topCollaboratorByCount = Object.values(collaboratorStats).sort((a, b) => b.projectCount - a.projectCount)[0] || null;
     const topCollaboratorByValue = Object.values(collaboratorStats).sort((a, b) => b.totalValue - a.totalValue)[0] || null;
 
-    const pendingProjects = projects.filter(p => p.payment_status === 'Pending');
-    const pendingStats = pendingProjects.reduce((acc, p) => {
-        p.assignedTo.forEach(user => {
-            if (!acc[user.id]) acc[user.id] = { ...user, projectCount: 0, totalValue: 0 };
-            acc[user.id].projectCount++;
-            acc[user.id].totalValue += p.budget || 0;
-        });
+    const mostPendingPaymentProjects = projects.filter(p => 
+      p.status === 'Completed' && 
+      ['Unpaid', 'Pending', 'Overdue', 'In Process'].includes(p.payment_status)
+    );
+
+    const mostPendingPaymentStats = mostPendingPaymentProjects.reduce((acc, p) => {
+        if (p.created_by) {
+            if (!acc[p.created_by.id]) {
+                acc[p.created_by.id] = { ...p.created_by, projectCount: 0, totalValue: 0 };
+            }
+            acc[p.created_by.id].projectCount++;
+            acc[p.created_by.id].totalValue += p.budget || 0;
+        }
         return acc;
     }, {} as Record<string, UserStatData>);
-    const topUserByPendingCount = Object.values(pendingStats).sort((a, b) => b.projectCount - a.projectCount)[0] || null;
-    const topUserByPendingValue = Object.values(pendingStats).sort((a, b) => b.totalValue - a.totalValue)[0] || null;
+    
+    const topOwnerByPendingCount = Object.values(mostPendingPaymentStats).sort((a, b) => b.projectCount - a.projectCount)[0] || null;
+    const topOwnerByPendingValue = Object.values(mostPendingPaymentStats).sort((a, b) => b.totalValue - a.totalValue)[0] || null;
 
     return {
       totalProjects,
@@ -124,13 +131,13 @@ const DashboardStatsGrid = ({ projects }: DashboardStatsGridProps) => {
       paymentStatusCounts, paymentStatusValues,
       topOwnerByCount, topOwnerByValue,
       topCollaboratorByCount, topCollaboratorByValue,
-      topUserByPendingCount, topUserByPendingValue,
+      topOwnerByPendingCount, topOwnerByPendingValue,
     };
   }, [projects]);
 
   const topOwner = viewMode === 'quantity' ? stats.topOwnerByCount : stats.topOwnerByValue;
   const topCollaborator = viewMode === 'quantity' ? stats.topCollaboratorByCount : stats.topCollaboratorByValue;
-  const topPendingUser = viewMode === 'quantity' ? stats.topUserByPendingCount : stats.topUserByPendingValue;
+  const topPendingOwner = viewMode === 'quantity' ? stats.topOwnerByPendingCount : stats.topOwnerByPendingValue;
 
   return (
     <div>
@@ -231,8 +238,8 @@ const DashboardStatsGrid = ({ projects }: DashboardStatsGridProps) => {
           icon={<Hourglass className="h-4 w-4 text-muted-foreground" />}
           value={
             <UserStat 
-              user={topPendingUser}
-              metric={viewMode === 'quantity' ? topPendingUser?.projectCount ?? 0 : topPendingUser?.totalValue ?? 0}
+              user={topPendingOwner}
+              metric={viewMode === 'quantity' ? topPendingOwner?.projectCount ?? 0 : topPendingOwner?.totalValue ?? 0}
               metricType={viewMode}
             />
           }
