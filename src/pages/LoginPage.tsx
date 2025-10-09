@@ -101,7 +101,7 @@ const LoginPage = () => {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: 'https://7inked.ahensi.xyz/dashboard',
+          redirectTo: `${window.location.origin}/auth/callback`,
         },
       });
       if (error) {
