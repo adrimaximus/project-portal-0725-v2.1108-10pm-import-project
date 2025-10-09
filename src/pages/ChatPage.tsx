@@ -3,7 +3,7 @@ import ChatList from "@/components/ChatList";
 import { ChatWindow } from "@/components/ChatWindow";
 import PortalLayout from "@/components/PortalLayout";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { ChatProvider, useChatContext } from "@/contexts/ChatContext";
+import { useChatContext } from "@/contexts/ChatContext";
 import {
   ResizablePanelGroup,
   ResizablePanel,
@@ -54,9 +54,7 @@ const ChatPageContent = () => {
 const ChatPage = () => {
   return (
     <PortalLayout noPadding disableMainScroll>
-      <ChatProvider>
-        <ChatPageContent />
-      </ChatProvider>
+      <ChatPageContent />
     </PortalLayout>
   );
 };

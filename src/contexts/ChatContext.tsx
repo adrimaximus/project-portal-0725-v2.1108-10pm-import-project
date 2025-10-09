@@ -36,6 +36,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [isSomeoneTyping, setIsSomeoneTyping] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [messageSearchResults, setMessageSearchResults] = useState<string[]>([]);
   
   const { user: currentUser } = useAuth();
   const queryClient = useQueryClient();
@@ -64,15 +65,36 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     refetchOnReconnect: false,
   });
 
-  const filteredConversations = useMemo(() => {
-    if (!searchTerm) {
-      return conversations;
+  const debouncedSearchMessages = useCallback(
+    debounce(async (term: string) => {
+      const { data, error } = await supabase.rpc('search_conversations', { p_search_term: term });
+      if (error) {
+        console.error("Message search error:", error);
+        setMessageSearchResults([]);
+      } else {
+        setMessageSearchResults(data.map((r: any) => r.conversation_id));
+      }
+    }, 300),
+    []
+  );
+
+  useEffect(() => {
+    if (searchTerm.length > 2) {
+      debouncedSearchMessages(searchTerm);
+    } else {
+      setMessageSearchResults([]);
     }
+  }, [searchTerm, debouncedSearchMessages]);
+
+  const filteredConversations = useMemo(() => {
+    if (!searchTerm) return conversations;
     const lowercasedSearchTerm = searchTerm.toLowerCase();
-    return conversations.filter(c => 
-      c.userName && c.userName.toLowerCase().includes(lowercasedSearchTerm)
-    );
-  }, [conversations, searchTerm]);
+    const nameMatches = conversations.filter(c => c.userName.toLowerCase().includes(lowercasedSearchTerm));
+    const messageMatches = conversations.filter(c => messageSearchResults.includes(c.id));
+    const combined = new Map(nameMatches.map(c => [c.id, c]));
+    messageMatches.forEach(c => combined.set(c.id, c));
+    return Array.from(combined.values()).sort((a, b) => new Date(b.lastMessageTimestamp).getTime() - new Date(a.lastMessageTimestamp).getTime());
+  }, [conversations, searchTerm, messageSearchResults]);
 
   const sendMessageMutation = useMutation({
     mutationFn: async (variables: { text: string, attachmentFile: File | null, replyToMessageId?: string | null }) => {
@@ -240,6 +262,15 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     channel.send({ type: 'broadcast', event: 'typing', payload: { userId: currentUser?.id, conversationId: selectedConversationId } });
   }, [currentUser, selectedConversationId]);
 
+  const selectConversation = (id: string | null) => {
+    if (id && id !== 'ai-assistant') {
+      chatApi.markConversationAsRead(id).then(() => {
+        queryClient.invalidateQueries({ queryKey: ['conversations', currentUser?.id] });
+      });
+    }
+    setSelectedConversationId(id);
+  };
+
   const selectedConversation = useMemo(() => {
     if (!selectedConversationId) return null;
     if (selectedConversationId === 'ai-assistant') {
@@ -261,7 +292,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     conversations: filteredConversations,
     isLoadingConversations,
     selectedConversation,
-    selectConversation: setSelectedConversationId,
+    selectConversation,
     messages,
     isLoadingMessages,
     isSendingMessage: sendMessageMutation.isPending,
