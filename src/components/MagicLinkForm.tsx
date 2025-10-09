@@ -28,12 +28,8 @@ const MagicLinkForm = () => {
     setLoading(true);
     setSubmitted(false);
     try {
-      const redirectTo = `${import.meta.env.VITE_APP_URL || window.location.origin}/dashboard`;
       const { error } = await supabase.auth.signInWithOtp({
         email,
-        options: {
-          emailRedirectTo: redirectTo,
-        },
       });
       if (error) throw error;
       setSubmitted(true);
