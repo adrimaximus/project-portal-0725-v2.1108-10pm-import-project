@@ -28,6 +28,7 @@ interface ChatContextType {
   sendTyping: () => void;
   refetchConversations: () => void;
   toggleReaction: (messageId: string, emoji: string) => void;
+  unreadConversationIds: Set<string>;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -38,6 +39,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
   const [isSomeoneTyping, setIsSomeoneTyping] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [messageSearchResults, setMessageSearchResults] = useState<string[]>([]);
+  const [unreadConversationIds, setUnreadConversationIds] = useState(new Set<string>());
   
   const { user: currentUser } = useAuth();
   const queryClient = useQueryClient();
@@ -60,6 +62,36 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     queryFn: () => chatApi.fetchMessages(selectedConversationId!),
     enabled: !!selectedConversationId && selectedConversationId !== 'ai-assistant',
   });
+
+  // Centralized real-time subscription for all messages
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const handleNewMessage = (newMessage: any) => {
+      const isRelevant = conversations.some(c => c.id === newMessage.conversation_id);
+      
+      if (isRelevant && newMessage.sender_id !== currentUser.id) {
+        queryClient.invalidateQueries({ queryKey: ['conversations', currentUser.id] });
+
+        if (selectedConversationIdRef.current !== newMessage.conversation_id) {
+          setUnreadConversationIds(prev => new Set(prev).add(newMessage.conversation_id));
+        }
+      }
+    };
+
+    const messagesChannel = supabase
+      .channel('public:messages')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'messages' },
+        (payload) => handleNewMessage(payload.new)
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(messagesChannel);
+    };
+  }, [currentUser, conversations, queryClient]);
 
   const debouncedSearchMessages = useCallback(
     debounce(async (term: string) => {
@@ -93,7 +125,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
   }, [conversations, searchTerm, messageSearchResults]);
 
   const sendMessageMutation = useMutation({
-    mutationFn: async (variables: { text: string, attachmentFile: File | null, replyToMessageId?: string | null, participantIds: string[] }) => {
+    mutationFn: async (variables: { text: string, attachmentFile: File | null, replyToMessageId?: string | null }) => {
       let attachmentUrl: string | null = null;
       let attachmentName: string | null = null;
       let attachmentType: string | null = null;
@@ -119,7 +151,6 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         attachmentName,
         attachmentType,
         replyToMessageId: variables.replyToMessageId,
-        participantIds: variables.participantIds,
       });
     },
     onError: (error: any) => toast.error("Failed to send message.", { description: error.message }),
@@ -275,19 +306,29 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
   }, [selectedConversationId, conversations, messages]);
 
   const sendMessage = (text: string, attachmentFile: File | null, replyToMessageId?: string | null) => {
-    const participantIds = selectedConversation?.members.map(m => m.id) || [];
-    sendMessageMutation.mutate({ text, attachmentFile, replyToMessageId, participantIds });
+    sendMessageMutation.mutate({ text, attachmentFile, replyToMessageId });
   };
 
   const toggleReaction = (messageId: string, emoji: string) => {
     toggleReactionMutation.mutate({ messageId, emoji });
   };
 
+  const selectConversation = (id: string | null) => {
+    setSelectedConversationId(id);
+    if (id) {
+      setUnreadConversationIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(id);
+        return newSet;
+      });
+    }
+  };
+
   const value: ChatContextType = {
     conversations: filteredConversations,
     isLoadingConversations,
     selectedConversation,
-    selectConversation: setSelectedConversationId,
+    selectConversation,
     messages,
     isLoadingMessages,
     isSendingMessage: sendMessageMutation.isPending,
@@ -302,6 +343,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     sendTyping,
     refetchConversations,
     toggleReaction,
+    unreadConversationIds,
   };
 
   return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;

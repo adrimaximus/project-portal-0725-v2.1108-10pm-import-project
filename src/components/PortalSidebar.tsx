@@ -13,6 +13,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { NavItem as DbNavItem, NavFolder } from "@/pages/NavigationSettingsPage";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./ui/collapsible";
 import { toast } from "sonner";
+import { useChatContext } from "@/contexts/ChatContext";
 
 type PortalSidebarProps = { isCollapsed: boolean; onToggle: () => void; };
 type NavItem = { id: string; href: string; label: string; icon: LucideIcon; badge?: number; folder_id: string | null; };
@@ -79,9 +80,8 @@ const NavLink = ({ item, isCollapsed }: { item: NavItem, isCollapsed: boolean })
 const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
   const { user, hasPermission } = useAuth();
   const { unreadCount: unreadNotificationCount } = useNotifications();
+  const { unreadConversationIds } = useChatContext();
   const queryClient = useQueryClient();
-  const location = useLocation();
-  const [hasUnreadChat, setHasUnreadChat] = useState(false);
   const backfillAttempted = useRef(false);
 
   const { data: customNavItems = [], isLoading: isLoadingItems, error: navItemsError, refetch } = useQuery({ 
@@ -131,30 +131,6 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
     retry: false,
   });
 
-  // Realtime subscription for new chat messages
-  useEffect(() => {
-    if (!user) return;
-
-    const userChannel = supabase.channel(`user-channel:${user.id}`);
-    
-    userChannel.on('broadcast', { event: 'new_message' }, () => {
-      if (!location.pathname.startsWith('/chat')) {
-        setHasUnreadChat(true);
-      }
-    }).subscribe();
-
-    return () => {
-      supabase.removeChannel(userChannel);
-    };
-  }, [user, location.pathname]);
-
-  // Clear chat indicator when user navigates to the chat page
-  useEffect(() => {
-    if (location.pathname.startsWith('/chat')) {
-      setHasUnreadChat(false);
-    }
-  }, [location.pathname]);
-
   useEffect(() => {
     if (!user) return;
     const channel = supabase.channel(`user-nav-items:${user.id}`)
@@ -186,6 +162,8 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
   };
 
   const { navItems, settingsItem } = useMemo(() => {
+    const hasUnreadChat = unreadConversationIds.size > 0;
+
     if (navItemsError || foldersError) {
       console.warn("Using fallback navigation due to errors:", { navItemsError, foldersError });
       return {
@@ -255,7 +233,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
     const otherItems = allItems.filter(item => item.href !== '/settings');
 
     return { navItems: otherItems, settingsItem: settings };
-  }, [customNavItems, unreadNotificationCount, navItemsError, foldersError, hasPermission, hasUnreadChat]);
+  }, [customNavItems, unreadNotificationCount, navItemsError, foldersError, hasPermission, unreadConversationIds]);
 
   const topLevelItems = useMemo(() => navItems.filter(item => !item.folder_id), [navItems]);
 

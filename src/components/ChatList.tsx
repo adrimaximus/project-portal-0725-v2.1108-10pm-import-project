@@ -24,6 +24,7 @@ const ChatList = () => {
     startNewChat,
     startNewGroupChat,
     deleteConversation,
+    unreadConversationIds,
   } = useChatContext();
   const { user: currentUser } = useAuth();
 
@@ -95,6 +96,7 @@ const ChatList = () => {
           const otherUser = !c.isGroup ? c.members?.find(m => m.id !== currentUser?.id) : null;
           const avatarSeed = otherUser?.id || c.id;
           const finalAvatarUrl = getAvatarUrl(c.userAvatar, avatarSeed);
+          const isUnread = unreadConversationIds.has(c.id);
 
           return (
             <div
@@ -114,12 +116,15 @@ const ChatList = () => {
                 </Avatar>
                 <div className="flex-1 overflow-hidden">
                   <div className="flex items-center justify-between gap-2">
-                    <p className="font-semibold truncate">{c.userName}</p>
+                    <p className={cn("font-semibold truncate", isUnread && "text-primary")}>{c.userName}</p>
                     <span className="text-xs text-muted-foreground flex-shrink-0">{formatTimestamp(c.lastMessageTimestamp)}</span>
                   </div>
-                  <p className="text-sm text-muted-foreground truncate">
-                    {formatLastMessage(c.lastMessage)}
-                  </p>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className={cn("text-sm text-muted-foreground truncate", isUnread && "text-foreground font-medium")}>
+                      {formatLastMessage(c.lastMessage)}
+                    </p>
+                    {isUnread && <div className="h-2 w-2 rounded-full bg-primary flex-shrink-0" />}
+                  </div>
                 </div>
               </div>
               <AlertDialog>
