@@ -23,6 +23,7 @@ export async function sendHybridMessage({
   attachmentName,
   attachmentType,
   replyToMessageId,
+  participantIds,
 }: {
   conversationId: string
   senderId: string
@@ -31,6 +32,7 @@ export async function sendHybridMessage({
   attachmentName?: string | null
   attachmentType?: string | null
   replyToMessageId?: string | null
+  participantIds: string[]
 }) {
   const payload = {
     id: crypto.randomUUID(), // Add a temporary client-side ID
@@ -53,7 +55,19 @@ export async function sendHybridMessage({
     payload,
   })
 
-  // 2️⃣ Simpan ke database untuk persistensi
+  // 2️⃣ Kirim broadcast ke channel personal user untuk notifikasi sidebar
+  participantIds.forEach(userId => {
+    if (userId !== senderId) {
+      const userChannel = supabase.channel(`user-channel:${userId}`);
+      userChannel.send({
+        type: 'broadcast',
+        event: 'new_message',
+        payload: { conversationId }
+      });
+    }
+  });
+
+  // 3️⃣ Simpan ke database untuk persistensi
   const { error } = await supabase.from('messages').insert({
     id: payload.id, // Use the same ID for consistency
     conversation_id: payload.conversation_id,

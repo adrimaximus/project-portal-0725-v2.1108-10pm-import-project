@@ -135,27 +135,22 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
   useEffect(() => {
     if (!user) return;
 
-    const channel = supabase
-      .channel('public:messages:sidebar-chat-indicator')
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'messages' },
-        (payload) => {
-          if (payload.new.sender_id !== user.id && location.pathname !== '/chat') {
-            setHasUnreadChat(true);
-          }
-        }
-      )
-      .subscribe();
+    const userChannel = supabase.channel(`user-channel:${user.id}`);
+    
+    userChannel.on('broadcast', { event: 'new_message' }, () => {
+      if (!location.pathname.startsWith('/chat')) {
+        setHasUnreadChat(true);
+      }
+    }).subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(userChannel);
     };
   }, [user, location.pathname]);
 
   // Clear chat indicator when user navigates to the chat page
   useEffect(() => {
-    if (location.pathname === '/chat') {
+    if (location.pathname.startsWith('/chat')) {
       setHasUnreadChat(false);
     }
   }, [location.pathname]);

@@ -93,7 +93,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
   }, [conversations, searchTerm, messageSearchResults]);
 
   const sendMessageMutation = useMutation({
-    mutationFn: async (variables: { text: string, attachmentFile: File | null, replyToMessageId?: string | null }) => {
+    mutationFn: async (variables: { text: string, attachmentFile: File | null, replyToMessageId?: string | null, participantIds: string[] }) => {
       let attachmentUrl: string | null = null;
       let attachmentName: string | null = null;
       let attachmentType: string | null = null;
@@ -119,6 +119,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         attachmentName,
         attachmentType,
         replyToMessageId: variables.replyToMessageId,
+        participantIds: variables.participantIds,
       });
     },
     onError: (error: any) => toast.error("Failed to send message.", { description: error.message }),
@@ -274,7 +275,8 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
   }, [selectedConversationId, conversations, messages]);
 
   const sendMessage = (text: string, attachmentFile: File | null, replyToMessageId?: string | null) => {
-    sendMessageMutation.mutate({ text, attachmentFile, replyToMessageId });
+    const participantIds = selectedConversation?.members.map(m => m.id) || [];
+    sendMessageMutation.mutate({ text, attachmentFile, replyToMessageId, participantIds });
   };
 
   const toggleReaction = (messageId: string, emoji: string) => {
