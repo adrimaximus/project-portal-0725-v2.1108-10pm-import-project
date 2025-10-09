@@ -217,11 +217,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         'postgres_changes',
         { event: '*', schema: 'public', table: 'message_reactions' },
         (payload) => {
-          const reaction = (payload.new || payload.old) as { message_id: string };
-          const message = messages.find(m => m.id === reaction.message_id);
-          if (message && message.sender.id !== currentUser.id) {
-            queryClient.invalidateQueries({ queryKey: ['messages', selectedConversationId] });
-          }
+          queryClient.invalidateQueries({ queryKey: ['messages', selectedConversationId] });
         }
       )
       .on(
@@ -243,7 +239,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [currentUser, selectedConversationId, queryClient, messages]);
+  }, [currentUser, selectedConversationId, queryClient]);
 
   useEffect(() => {
     const collaboratorToChat = (location.state as any)?.selectedCollaborator as Collaborator | undefined;
