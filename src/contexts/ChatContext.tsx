@@ -211,13 +211,13 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
 
         const currentConversation = conversations.find(c => c.id === selectedConversationId);
         if (!currentConversation) {
-            console.warn("Received message for a conversation not in the current list.");
-            return;
+          queryClient.invalidateQueries({ queryKey: ['conversations', currentUser.id] });
+          return;
         };
 
         const sender = currentConversation.members.find(m => m.id === newMessagePayload.sender_id);
         if (!sender) {
-            console.warn("Received a message from an unknown sender in this conversation.", newMessagePayload.sender_id);
+            console.warn("Received a message from an unknown sender. Refetching messages for consistency.", newMessagePayload.sender_id);
             queryClient.invalidateQueries({ queryKey: ['messages', selectedConversationId] });
             return;
         }
