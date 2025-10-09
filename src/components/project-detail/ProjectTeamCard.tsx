@@ -163,7 +163,7 @@ const ProjectTeamCard = ({ project, onFieldChange }: ProjectTeamCardProps) => {
           {/* Project Admins */}
           {isEditing ? (
             <div>
-              <h4 className="text-xs font-semibold text-muted-foreground mb-2">PROJECT ADMINS</h4>
+              <h4 className="text-xs font-semibold text-muted-foreground mb-2">PROJECT ADMIN</h4>
               <ModernTeamSelector
                 users={assignableUsers}
                 selectedUsers={projectAdmins}
@@ -173,7 +173,7 @@ const ProjectTeamCard = ({ project, onFieldChange }: ProjectTeamCardProps) => {
           ) : (
             projectAdmins.length > 0 && (
               <div>
-                <h4 className="text-xs font-semibold text-muted-foreground mb-2">PROJECT ADMINS</h4>
+                <h4 className="text-xs font-semibold text-muted-foreground mb-2">PROJECT ADMIN</h4>
                 {renderUserList(projectAdmins)}
               </div>
             )
