@@ -9,7 +9,7 @@ const fetchProjects = async (): Promise<Project[]> => {
   // Fetch up to 1000 projects in a single call for dashboard efficiency.
   // The previous loop was causing performance issues.
   const { data, error } = await supabase
-    .rpc('get_dashboard_projects', { p_limit: 1000, p_offset: 0 });
+    .rpc('get_dashboard_projects', { p_limit: 1000, p_offset: 0, p_search_term: null });
     
   if (error) {
     console.error('Error fetching projects:', error);
