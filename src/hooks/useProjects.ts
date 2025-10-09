@@ -6,18 +6,63 @@ import { useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 
 const fetchProjects = async (): Promise<Project[]> => {
-  // Fetch up to 1000 projects in a single call for dashboard efficiency.
-  // The previous loop was causing performance issues.
   const { data, error } = await supabase
-    .rpc('get_dashboard_projects', { p_limit: 1000, p_offset: 0, p_search_term: null });
+    .from('projects')
+    .select(`
+      *,
+      created_by:profiles!projects_created_by_fkey(*),
+      project_members(role, profiles(*)),
+      project_tags(tags(*)),
+      project_services(service_title),
+      invoice_attachments(*),
+      people_projects(people(*, companies(*)))
+    `)
+    .order('kanban_order', { ascending: true, nulls: 'last' })
+    .order('created_at', { ascending: false, nulls: 'last' });
     
   if (error) {
     console.error('Error fetching projects:', error);
-    toast.error('Failed to fetch projects.');
+    toast.error('Failed to fetch projects.', { description: error.message });
     throw new Error(error.message);
   }
   
-  return data as Project[];
+  // Transform the data to match the shape expected by the application
+  return data.map((p: any) => {
+    const assignedTo = p.project_members.map((m: any) => ({
+      ...(m.profiles || {}),
+      id: m.profiles?.id,
+      role: m.role,
+      name: `${m.profiles?.first_name || ''} ${m.profiles?.last_name || ''}`.trim() || m.profiles?.email,
+      initials: `${m.profiles?.first_name?.[0] || ''}${m.profiles?.last_name?.[0] || ''}`.toUpperCase(),
+    }));
+
+    // Ensure the project owner is in the assignedTo list
+    if (p.created_by && !assignedTo.some((m: any) => m.id === p.created_by.id)) {
+      assignedTo.push({
+        ...p.created_by,
+        role: 'owner',
+        name: `${p.created_by.first_name || ''} ${p.created_by.last_name || ''}`.trim() || p.created_by.email,
+        initials: `${p.created_by.first_name?.[0] || ''}${p.created_by.last_name?.[0] || ''}`.toUpperCase(),
+      });
+    }
+
+    return {
+      ...p,
+      assignedTo,
+      services: p.project_services.map((s: any) => s.service_title),
+      tags: p.project_tags.map((t: any) => t.tags).filter(Boolean),
+      client_name: p.people_projects[0]?.people?.full_name || null,
+      client_company_name: p.people_projects[0]?.people?.companies?.name || p.people_projects[0]?.people?.company || null,
+      client_company_logo_url: p.people_projects[0]?.people?.companies?.logo_url || null,
+      client_company_custom_properties: p.people_projects[0]?.people?.companies?.custom_properties || null,
+      // The RPC also returned tasks and comments, which we are omitting for now for dashboard performance.
+      // The ProjectDetail page will fetch these separately.
+      tasks: [],
+      comments: [],
+      activities: [],
+      briefFiles: [],
+    };
+  });
 };
 
 export const useProjects = () => {
