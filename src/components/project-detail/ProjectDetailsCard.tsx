@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Project as BaseProject, PROJECT_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS, Person } from "@/types";
-import { Calendar, Wallet, Briefcase, MapPin, ListTodo, CreditCard, User, Building, ChevronsUpDown } from "lucide-react";
+import { Calendar, Wallet, Briefcase, MapPin, ListTodo, CreditCard, User, Building, ChevronsUpDown, AlertCircle } from "lucide-react";
 import { isSameDay, subDays } from "date-fns";
 import { DateRangePicker } from "../DateRangePicker";
 import { DateRange } from "react-day-picker";
@@ -14,7 +14,7 @@ import AddressAutocompleteInput from '../AddressAutocompleteInput';
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
 
@@ -34,8 +34,18 @@ interface ProjectDetailsCardProps {
 const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetailsCardProps) => {
   const { hasPermission } = useAuth();
   const canViewValue = hasPermission('projects:view_value');
-
   const client = project.people?.[0];
+
+  const localStorageKey = `project-details-card-open-${project.id}`;
+  const [isOpen, setIsOpen] = useState(() => {
+    const storedValue = localStorage.getItem(localStorageKey);
+    return storedValue ? JSON.parse(storedValue) : true;
+  });
+
+  const handleOpenChange = (open: boolean) => {
+    setIsOpen(open);
+    localStorage.setItem(localStorageKey, JSON.stringify(open));
+  };
 
   const { data: companyProperties = [] } = useQuery({
     queryKey: ['company_properties'],
@@ -202,10 +212,18 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetail
 
   return (
     <Card>
-      <Collapsible defaultOpen>
+      <Collapsible open={isOpen} onOpenChange={handleOpenChange}>
         <div className="flex items-center justify-between">
           <CardHeader>
-            <CardTitle>Project Details</CardTitle>
+            <div className="flex items-center">
+              <CardTitle>Project Details</CardTitle>
+              {project.payment_status === 'Overdue' && (
+                <Badge variant="destructive" className="ml-3">
+                  <AlertCircle className="h-4 w-4 mr-1.5" />
+                  Overdue Payment
+                </Badge>
+              )}
+            </div>
           </CardHeader>
           <CollapsibleTrigger asChild>
             <Button variant="ghost" size="icon" className="mr-4">
