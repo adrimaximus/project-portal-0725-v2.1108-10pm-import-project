@@ -1,7 +1,7 @@
 import { Project, AssignedUser, User } from "@/types";
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Users, RefreshCw, Edit } from "lucide-react";
+import { RefreshCw, Edit } from "lucide-react";
 import ModernTeamSelector from "../request/ModernTeamSelector";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,21 +14,15 @@ import { getInitials, generatePastelColor, getAvatarUrl } from "@/lib/utils";
 
 interface ProjectTeamCardProps {
   project: Project;
+  isEditing: boolean;
   onFieldChange: (field: keyof Project, value: any) => void;
 }
 
-const ProjectTeamCard = ({ project, onFieldChange }: ProjectTeamCardProps) => {
-  const [isEditing, setIsEditing] = useState(false);
-  const [editedTeam, setEditedTeam] = useState<AssignedUser[]>(project.assignedTo);
+const ProjectTeamCard = ({ project, isEditing, onFieldChange }: ProjectTeamCardProps) => {
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const { user: currentUser } = useAuth();
   const [isChangeOwnerDialogOpen, setIsChangeOwnerDialogOpen] = useState(false);
   const queryClient = useQueryClient();
-
-  useEffect(() => {
-    // When the project prop updates (e.g., after saving), reset the editedTeam state
-    setEditedTeam(project.assignedTo);
-  }, [project.assignedTo]);
 
   useEffect(() => {
     if (isEditing) {
@@ -54,36 +48,21 @@ const ProjectTeamCard = ({ project, onFieldChange }: ProjectTeamCardProps) => {
     }
   }, [isEditing]);
 
-  const handleEditClick = () => {
-    setEditedTeam(project.assignedTo); // Reset to current project state on edit start
-    setIsEditing(true);
-  };
-
-  const handleCancel = () => {
-    setIsEditing(false);
-    setEditedTeam(project.assignedTo); // Revert changes
-  };
-
-  const handleSave = () => {
-    onFieldChange('assignedTo', editedTeam);
-    setIsEditing(false);
-  };
-
   const handleRoleChange = (userToToggle: User, role: 'admin' | 'member') => {
-    const existingMember = editedTeam.find(u => u.id === userToToggle.id);
+    const existingMember = project.assignedTo.find(u => u.id === userToToggle.id);
     let newTeam: AssignedUser[];
 
     if (existingMember && existingMember.role === role) {
-      newTeam = editedTeam.filter(u => u.id !== userToToggle.id);
+      newTeam = project.assignedTo.filter(u => u.id !== userToToggle.id);
     } else {
-      const filteredTeam = editedTeam.filter(u => u.id !== userToToggle.id);
+      const filteredTeam = project.assignedTo.filter(u => u.id !== userToToggle.id);
       const newUser: AssignedUser = {
         ...userToToggle,
         role: role,
       };
       newTeam = [...filteredTeam, newUser];
     }
-    setEditedTeam(newTeam);
+    onFieldChange('assignedTo', newTeam);
   };
 
   const handleOwnerChange = async (newOwnerId: string) => {
@@ -102,8 +81,8 @@ const ProjectTeamCard = ({ project, onFieldChange }: ProjectTeamCardProps) => {
     }
   };
 
-  const projectAdmins = editedTeam.filter(member => member.role === 'admin');
-  const teamMembers = editedTeam.filter(member => member.role === 'member');
+  const projectAdmins = project.assignedTo.filter(member => member.role === 'admin');
+  const teamMembers = project.assignedTo.filter(member => member.role === 'member');
   const assignableUsers = project.created_by
     ? allUsers.filter(u => u.id !== project.created_by.id)
     : allUsers;
@@ -131,11 +110,6 @@ const ProjectTeamCard = ({ project, onFieldChange }: ProjectTeamCardProps) => {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Team</CardTitle>
-          {!isEditing && (
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleEditClick}>
-              <Edit className="h-4 w-4" />
-            </Button>
-          )}
         </CardHeader>
         <CardContent className="space-y-4 pt-4">
           {/* Project Owner */}
@@ -198,12 +172,6 @@ const ProjectTeamCard = ({ project, onFieldChange }: ProjectTeamCardProps) => {
             )
           )}
         </CardContent>
-        {isEditing && (
-          <CardFooter className="flex justify-end gap-2">
-            <Button variant="ghost" onClick={handleCancel}>Cancel</Button>
-            <Button onClick={handleSave}>Save</Button>
-          </CardFooter>
-        )}
       </Card>
       {canChangeOwner && (
         <ChangeOwnerDialog
