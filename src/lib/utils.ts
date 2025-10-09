@@ -3,6 +3,7 @@ import { twMerge } from "tailwind-merge"
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { isSameDay, subDays, isPast as isPastDate } from 'date-fns';
+import { colors } from "@/data/colors";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -147,4 +148,16 @@ export const formatPhoneNumberForApi = (phone: string): string => {
     return '62' + cleaned;
   }
   return cleaned;
+};
+
+export const getColorForTag = (tagName: string): string => {
+  if (!tagName) {
+    return colors[0];
+  }
+  let hash = 0;
+  for (let i = 0; i < tagName.length; i++) {
+    hash = tagName.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const index = Math.abs(hash % colors.length);
+  return colors[index];
 };
