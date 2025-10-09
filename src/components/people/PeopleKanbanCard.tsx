@@ -4,7 +4,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { Person as BasePerson } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { cn, generatePastelColor, formatInJakarta, formatPhoneNumberForApi } from '@/lib/utils';
+import { cn, generatePastelColor, formatInJakarta, formatPhoneNumberForApi, getAvatarUrl } from '@/lib/utils';
 import { User as UserIcon, Mail, MoreHorizontal, Edit, Trash2, Instagram, Briefcase } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../ui/button';
@@ -115,7 +115,7 @@ const PeopleKanbanCard = ({ person, dragHappened, onEdit, onDelete }: { person: 
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-2 flex-1 min-w-0">
               <Avatar className="h-8 w-8">
-                <AvatarImage src={person.avatar_url} />
+                <AvatarImage src={getAvatarUrl(person.avatar_url, person.id)} />
                 <AvatarFallback style={generatePastelColor(person.id)}>
                   <UserIcon className="h-4 w-4 text-white" />
                 </AvatarFallback>

@@ -13,7 +13,8 @@ export const getAvatarUrl = (avatarUrl: string | null | undefined, seed?: string
   if (avatarUrl) {
     return avatarUrl;
   }
-  return `https://api.dicebear.com/8.x/initials/svg?seed=${seed || 'default'}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf&fontWeight=600`;
+  // Menggunakan gaya 'adventurer' seperti yang diminta untuk avatar yang lebih mirip karakter
+  return `https://api.dicebear.com/8.x/adventurer/svg?seed=${seed || 'default'}`;
 };
 
 export const generatePastelColor = (seed: string) => {

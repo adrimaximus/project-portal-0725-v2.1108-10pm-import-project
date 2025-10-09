@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Person as BasePerson } from '@/types';
 import { Card } from '@/components/ui/card';
 import { User as UserIcon, Instagram, Briefcase, Mail } from 'lucide-react';
-import { generatePastelColor } from '@/lib/utils';
+import { generatePastelColor, getAvatarUrl } from '@/lib/utils';
 import WhatsappIcon from '../icons/WhatsappIcon';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -30,11 +30,6 @@ const formatPhoneNumberForWhatsApp = (phone: string | undefined) => {
 
 const PersonCard = ({ person, onViewProfile }: PersonCardProps) => {
   const [imageError, setImageError] = useState(false);
-
-  const avatarUrl = useMemo(
-    () => person.avatar_url || `https://api.dicebear.com/8.x/initials/svg?seed=${person.id}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf&fontWeight=600`,
-    [person.avatar_url, person.id]
-  );
 
   const { data: companyProperties = [] } = useQuery({
     queryKey: ['company_properties'],
@@ -102,7 +97,7 @@ const PersonCard = ({ person, onViewProfile }: PersonCardProps) => {
 
   useEffect(() => {
     setImageError(false);
-  }, [avatarUrl]);
+  }, [person.avatar_url]);
 
   const handleImageError = () => {
     setImageError(true);
@@ -132,7 +127,7 @@ const PersonCard = ({ person, onViewProfile }: PersonCardProps) => {
         <div className="aspect-[16/9] w-full overflow-hidden rounded-t-2xl">
           {!imageError ? (
             <img
-              src={avatarUrl}
+              src={getAvatarUrl(person.avatar_url, person.id)}
               alt={person.full_name}
               onError={handleImageError}
               className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"

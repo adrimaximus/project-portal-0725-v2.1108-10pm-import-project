@@ -34,7 +34,7 @@ const PersonListCard: React.FC<PersonListCardProps> = ({ person, onEdit, onDelet
       <CardHeader className="flex flex-row items-start justify-between p-4">
         <div className="flex items-center gap-3">
           <Avatar className="h-10 w-10">
-            <AvatarImage src={person.avatar_url} />
+            <AvatarImage src={getAvatarUrl(person.avatar_url, person.id)} />
             <AvatarFallback style={generatePastelColor(person.id)}>
               <UserIcon className="h-5 w-5 text-white" />
             </AvatarFallback>

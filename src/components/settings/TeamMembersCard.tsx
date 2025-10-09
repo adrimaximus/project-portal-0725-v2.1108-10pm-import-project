@@ -15,6 +15,7 @@ import { Role } from './RoleManagerDialog';
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { useAuth } from '@/contexts/AuthContext';
+import { getAvatarUrl } from '@/lib/utils';
 
 interface TeamMembersCardProps {
   members: User[];
@@ -139,7 +140,7 @@ const TeamMembersCard = ({
                     <TableRow key={member.id}>
                       <TableCell>
                         <div className="flex items-center gap-3">
-                          <Avatar><AvatarImage src={member.avatar_url} /><AvatarFallback>{member.initials}</AvatarFallback></Avatar>
+                          <Avatar><AvatarImage src={getAvatarUrl(member.avatar_url, member.id)} /><AvatarFallback>{member.initials}</AvatarFallback></Avatar>
                           <div>
                             <span className="font-medium">{member.name}</span>
                             <p className="text-sm text-muted-foreground">{member.email}</p>

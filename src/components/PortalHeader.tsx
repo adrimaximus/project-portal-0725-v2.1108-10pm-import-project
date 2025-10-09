@@ -16,7 +16,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { ReactNode, useState } from "react";
 import { useTheme } from "@/contexts/ThemeProvider";
 import { GlobalSearch } from "./GlobalSearch";
-import { generatePastelColor } from "@/lib/utils";
+import { generatePastelColor, getAvatarUrl } from "@/lib/utils";
 import { useNotifications } from "@/hooks/useNotifications";
 import { Badge } from "./ui/badge";
 import { useFeatures } from "@/contexts/FeaturesContext";
@@ -149,7 +149,7 @@ const PortalHeader = ({ summary }: PortalHeaderProps) => {
           <DropdownMenuTrigger asChild>
             <Button variant="secondary" size="icon" className="rounded-full">
               <Avatar className="h-8 w-8">
-                <AvatarImage src={user.avatar_url || undefined} alt={user.name} />
+                <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} alt={user.name} />
                 <AvatarFallback style={generatePastelColor(user.id)}>{user.initials}</AvatarFallback>
               </Avatar>
               <span className="sr-only">Toggle user menu</span>
