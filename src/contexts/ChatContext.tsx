@@ -204,25 +204,51 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
 
     const unsubscribe = chatRealtime.subscribeToConversation({
       conversationId: selectedConversationId,
-      onNewMessage: (newMessage) => {
-        // Don't add our own broadcast messages
-        if (newMessage.is_broadcast && newMessage.sender_id === currentUser.id) {
+      onNewMessage: (newMessagePayload) => {
+        if (newMessagePayload.is_broadcast && newMessagePayload.sender_id === currentUser.id) {
           return;
         }
+
+        const currentConversation = conversations.find(c => c.id === selectedConversationId);
+        if (!currentConversation) {
+            console.warn("Received message for a conversation not in the current list.");
+            return;
+        };
+
+        const sender = currentConversation.members.find(m => m.id === newMessagePayload.sender_id);
+        if (!sender) {
+            console.warn("Received a message from an unknown sender in this conversation.", newMessagePayload.sender_id);
+            queryClient.invalidateQueries({ queryKey: ['messages', selectedConversationId] });
+            return;
+        }
+
+        const formattedMessage: Message = {
+            id: newMessagePayload.id,
+            text: newMessagePayload.content,
+            timestamp: newMessagePayload.created_at,
+            sender: sender,
+            attachment: newMessagePayload.attachment_url ? {
+                name: newMessagePayload.attachment_name,
+                url: newMessagePayload.attachment_url,
+                type: newMessagePayload.attachment_type,
+            } : undefined,
+            reply_to_message_id: newMessagePayload.reply_to_message_id,
+            reactions: [],
+        };
+
         queryClient.setQueryData<Message[]>(['messages', selectedConversationId], (oldMessages) => {
-          if (!oldMessages) return [newMessage as Message];
-          // Prevent duplicates from broadcast + postgres_changes
-          if (oldMessages.some(m => m.id === newMessage.id)) {
+          if (!oldMessages) return [formattedMessage];
+          if (oldMessages.some(m => m.id === formattedMessage.id)) {
             return oldMessages;
           }
-          return [...oldMessages, newMessage as Message];
+          return [...oldMessages, formattedMessage];
         });
         queryClient.invalidateQueries({ queryKey: ['conversations', currentUser.id] });
       },
     });
 
     return () => unsubscribe();
-  }, [currentUser, selectedConversationId, queryClient]);
+  }, [currentUser, selectedConversationId, queryClient, conversations]);
 
   useEffect(() => {
     const collaboratorToChat = (location.state as any)?.selectedCollaborator as Collaborator | undefined;
