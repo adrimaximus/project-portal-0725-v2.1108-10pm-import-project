@@ -36,7 +36,6 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [isSomeoneTyping, setIsSomeoneTyping] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [messageSearchResults, setMessageSearchResults] = useState<string[]>([]);
   
   const { user: currentUser } = useAuth();
   const queryClient = useQueryClient();
@@ -65,36 +64,15 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     refetchOnReconnect: false,
   });
 
-  const debouncedSearchMessages = useCallback(
-    debounce(async (term: string) => {
-      const { data, error } = await supabase.rpc('search_conversations', { p_search_term: term });
-      if (error) {
-        console.error("Message search error:", error);
-        setMessageSearchResults([]);
-      } else {
-        setMessageSearchResults(data.map((r: any) => r.conversation_id));
-      }
-    }, 300),
-    []
-  );
-
-  useEffect(() => {
-    if (searchTerm.length > 2) {
-      debouncedSearchMessages(searchTerm);
-    } else {
-      setMessageSearchResults([]);
-    }
-  }, [searchTerm, debouncedSearchMessages]);
-
   const filteredConversations = useMemo(() => {
-    if (!searchTerm) return conversations;
+    if (!searchTerm) {
+      return conversations;
+    }
     const lowercasedSearchTerm = searchTerm.toLowerCase();
-    const nameMatches = conversations.filter(c => c.userName.toLowerCase().includes(lowercasedSearchTerm));
-    const messageMatches = conversations.filter(c => messageSearchResults.includes(c.id));
-    const combined = new Map(nameMatches.map(c => [c.id, c]));
-    messageMatches.forEach(c => combined.set(c.id, c));
-    return Array.from(combined.values()).sort((a, b) => new Date(b.lastMessageTimestamp).getTime() - new Date(a.lastMessageTimestamp).getTime());
-  }, [conversations, searchTerm, messageSearchResults]);
+    return conversations.filter(c => 
+      c.userName && c.userName.toLowerCase().includes(lowercasedSearchTerm)
+    );
+  }, [conversations, searchTerm]);
 
   const sendMessageMutation = useMutation({
     mutationFn: async (variables: { text: string, attachmentFile: File | null, replyToMessageId?: string | null }) => {
