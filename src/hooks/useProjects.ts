@@ -10,7 +10,7 @@ const fetchProjects = async (): Promise<Project[]> => {
     .from('projects')
     .select(`
       *,
-      created_by:profiles!projects_created_by_fkey(*),
+      created_by:profiles!created_by(*),
       project_members(role, profiles(*)),
       project_tags(tags(*)),
       project_services(service_title),
