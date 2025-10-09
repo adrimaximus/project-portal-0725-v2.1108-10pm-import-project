@@ -1,8 +1,8 @@
-import * as React from "react";
-import { Check, ChevronsUpDown, X } from "lucide-react";
+import * as React from "react"
+import { Check, ChevronsUpDown, X } from "lucide-react"
 
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
 import {
   Command,
   CommandEmpty,
@@ -10,16 +10,16 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from "@/components/ui/command";
+} from "@/components/ui/command"
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { AssignedUser } from "@/types";
-import { generatePastelColor } from "@/lib/utils";
+} from "@/components/ui/popover"
+import { Badge } from "@/components/ui/badge"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { AssignedUser } from "@/types"
+import { generatePastelColor } from "@/lib/utils"
 
 interface ModernTeamSelectorProps {
   users: AssignedUser[];
@@ -28,7 +28,7 @@ interface ModernTeamSelectorProps {
 }
 
 const ModernTeamSelector = ({ users, selectedUsers, onSelectionChange }: ModernTeamSelectorProps) => {
-  const [open, setOpen] = React.useState(false);
+  const [open, setOpen] = React.useState(false)
 
   // This function ensures we always pass a consistent user object to the parent
   const handleToggleSelection = (userToToggle: AssignedUser) => {
@@ -103,7 +103,7 @@ const ModernTeamSelector = ({ users, selectedUsers, onSelectionChange }: ModernT
                   <div className="flex items-center gap-2">
                      <Avatar className="h-6 w-6">
                        <AvatarImage src={user.avatar_url} alt={user.name} />
-                       <AvatarFallback style={{backgroundColor: generatePastelColor(user.id)}}>{user.initials}</AvatarFallback>
+                       <AvatarFallback style={generatePastelColor(user.id)}>{user.initials}</AvatarFallback>
                      </Avatar>
                      <div className="flex flex-col">
                        <span className="text-sm font-medium">{user.name}</span>
