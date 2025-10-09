@@ -1,5 +1,5 @@
 import { Project, AssignedUser, User } from "@/types";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { RefreshCw, Edit } from "lucide-react";
 import ModernTeamSelector from "../request/ModernTeamSelector";
@@ -9,20 +9,24 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "../ui/button";
 import ChangeOwnerDialog from "./ChangeOwnerDialog";
 import { toast } from "sonner";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { getInitials, generatePastelColor, getAvatarUrl } from "@/lib/utils";
 
 interface ProjectTeamCardProps {
   project: Project;
-  isEditing: boolean;
-  onFieldChange: (field: keyof Project, value: any) => void;
 }
 
-const ProjectTeamCard = ({ project, isEditing, onFieldChange }: ProjectTeamCardProps) => {
+const ProjectTeamCard = ({ project }: ProjectTeamCardProps) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedTeam, setEditedTeam] = useState<AssignedUser[]>(project.assignedTo);
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const { user: currentUser } = useAuth();
   const [isChangeOwnerDialogOpen, setIsChangeOwnerDialogOpen] = useState(false);
   const queryClient = useQueryClient();
+
+  useEffect(() => {
+    setEditedTeam(project.assignedTo);
+  }, [project.assignedTo]);
 
   useEffect(() => {
     if (isEditing) {
@@ -48,21 +52,39 @@ const ProjectTeamCard = ({ project, isEditing, onFieldChange }: ProjectTeamCardP
     }
   }, [isEditing]);
 
+  const updateTeamMutation = useMutation({
+    mutationFn: async (newTeam: AssignedUser[]) => {
+      const { error } = await supabase.rpc('update_project_details', {
+        p_project_id: project.id,
+        p_members: newTeam,
+        p_name: null, p_description: null, p_category: null, p_status: null, p_budget: null,
+        p_start_date: null, p_due_date: null, p_payment_status: null, p_payment_due_date: null,
+        p_venue: null, p_service_titles: null, p_existing_tags: null, p_custom_tags: null
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Team updated successfully.");
+      queryClient.invalidateQueries({ queryKey: ['project', project.slug] });
+      setIsEditing(false);
+    },
+    onError: (error: any) => {
+      toast.error("Failed to update team.", { description: error.message });
+    }
+  });
+
   const handleRoleChange = (userToToggle: User, role: 'admin' | 'member') => {
-    const existingMember = project.assignedTo.find(u => u.id === userToToggle.id);
+    const existingMember = editedTeam.find(u => u.id === userToToggle.id);
     let newTeam: AssignedUser[];
 
     if (existingMember && existingMember.role === role) {
-      newTeam = project.assignedTo.filter(u => u.id !== userToToggle.id);
+      newTeam = editedTeam.filter(u => u.id !== userToToggle.id);
     } else {
-      const filteredTeam = project.assignedTo.filter(u => u.id !== userToToggle.id);
-      const newUser: AssignedUser = {
-        ...userToToggle,
-        role: role,
-      };
+      const filteredTeam = editedTeam.filter(u => u.id !== userToToggle.id);
+      const newUser: AssignedUser = { ...userToToggle, role: role };
       newTeam = [...filteredTeam, newUser];
     }
-    onFieldChange('assignedTo', newTeam);
+    setEditedTeam(newTeam);
   };
 
   const handleOwnerChange = async (newOwnerId: string) => {
@@ -81,12 +103,19 @@ const ProjectTeamCard = ({ project, isEditing, onFieldChange }: ProjectTeamCardP
     }
   };
 
-  const projectAdmins = project.assignedTo.filter(member => member.role === 'admin');
-  const teamMembers = project.assignedTo.filter(member => member.role === 'member');
-  const assignableUsers = project.created_by
-    ? allUsers.filter(u => u.id !== project.created_by.id)
-    : allUsers;
-    
+  const handleSave = () => {
+    updateTeamMutation.mutate(editedTeam);
+  };
+
+  const handleCancel = () => {
+    setEditedTeam(project.assignedTo);
+    setIsEditing(false);
+  };
+
+  const currentTeam = isEditing ? editedTeam : project.assignedTo;
+  const projectAdmins = currentTeam.filter(member => member.role === 'admin');
+  const teamMembers = currentTeam.filter(member => member.role === 'member');
+  const assignableUsers = project.created_by ? allUsers.filter(u => u.id !== project.created_by.id) : allUsers;
   const canChangeOwner = currentUser && (currentUser.id === project.created_by.id || currentUser.role === 'admin' || currentUser.role === 'master admin');
 
   const renderUserList = (users: AssignedUser[]) => (
@@ -110,16 +139,19 @@ const ProjectTeamCard = ({ project, isEditing, onFieldChange }: ProjectTeamCardP
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Team</CardTitle>
+          {!isEditing && (
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setIsEditing(true)}>
+              <Edit className="h-4 w-4" />
+            </Button>
+          )}
         </CardHeader>
         <CardContent className="space-y-4 pt-4">
-          {/* Project Owner */}
           <div>
             <div className="flex justify-between items-center">
               <h4 className="text-xs font-semibold text-muted-foreground mb-2">PROJECT OWNER</h4>
               {isEditing && canChangeOwner && (
                 <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => setIsChangeOwnerDialogOpen(true)}>
-                  <RefreshCw className="mr-1 h-3 w-3" />
-                  Change
+                  <RefreshCw className="mr-1 h-3 w-3" /> Change
                 </Button>
               )}
             </div>
@@ -134,15 +166,10 @@ const ProjectTeamCard = ({ project, isEditing, onFieldChange }: ProjectTeamCardP
             </div>
           </div>
 
-          {/* Project Admins */}
           {isEditing ? (
             <div>
               <h4 className="text-xs font-semibold text-muted-foreground mb-2">PROJECT ADMIN</h4>
-              <ModernTeamSelector
-                users={assignableUsers}
-                selectedUsers={projectAdmins}
-                onSelectionChange={(user) => handleRoleChange(user, 'admin')}
-              />
+              <ModernTeamSelector users={assignableUsers} selectedUsers={projectAdmins} onSelectionChange={(user) => handleRoleChange(user, 'admin')} />
             </div>
           ) : (
             projectAdmins.length > 0 && (
@@ -153,15 +180,10 @@ const ProjectTeamCard = ({ project, isEditing, onFieldChange }: ProjectTeamCardP
             )
           )}
 
-          {/* Team Members */}
           {isEditing ? (
             <div>
               <h4 className="text-xs font-semibold text-muted-foreground mb-2">TEAM MEMBERS</h4>
-              <ModernTeamSelector
-                users={assignableUsers}
-                selectedUsers={teamMembers}
-                onSelectionChange={(user) => handleRoleChange(user, 'member')}
-              />
+              <ModernTeamSelector users={assignableUsers} selectedUsers={teamMembers} onSelectionChange={(user) => handleRoleChange(user, 'member')} />
             </div>
           ) : (
             teamMembers.length > 0 && (
@@ -172,14 +194,17 @@ const ProjectTeamCard = ({ project, isEditing, onFieldChange }: ProjectTeamCardP
             )
           )}
         </CardContent>
+        {isEditing && (
+          <CardFooter className="flex justify-end gap-2">
+            <Button variant="ghost" onClick={handleCancel}>Cancel</Button>
+            <Button onClick={handleSave} disabled={updateTeamMutation.isPending}>
+              {updateTeamMutation.isPending ? 'Saving...' : 'Save'}
+            </Button>
+          </CardFooter>
+        )}
       </Card>
       {canChangeOwner && (
-        <ChangeOwnerDialog
-          open={isChangeOwnerDialogOpen}
-          onOpenChange={setIsChangeOwnerDialogOpen}
-          project={project}
-          onOwnerChange={handleOwnerChange}
-        />
+        <ChangeOwnerDialog open={isChangeOwnerDialogOpen} onOpenChange={setIsChangeOwnerDialogOpen} project={project} onOwnerChange={handleOwnerChange} />
       )}
     </>
   );
