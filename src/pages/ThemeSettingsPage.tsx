@@ -5,7 +5,8 @@ import { Label } from "@/components/ui/label";
 import { Link } from "react-router-dom";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import { cn } from "@/lib/utils";
-import { useTheme, type Theme } from "@/contexts/ThemeProvider";
+import { useTheme } from "@/contexts/ThemeProvider";
+import type { Theme } from "@/types";
 
 const themeFamilies = [
   { 
