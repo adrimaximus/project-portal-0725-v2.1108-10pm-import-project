@@ -36,16 +36,36 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const fetchUserProfile = async (userId: string | undefined) => {
     if (!userId) return null;
-    const { data, error } = await supabase
-      .rpc('get_user_profile_with_permissions', { p_user_id: userId })
-      .single();
+
+    const tryFetch = async () => {
+        const { data, error } = await supabase
+            .rpc('get_user_profile_with_permissions', { p_user_id: userId })
+            .single();
+        return { data, error };
+    };
+
+    let { data, error } = await tryFetch();
+
+    // If no profile found (PGRST116), it might be a new user whose profile is being created.
+    // Retry once after a short delay to handle potential race conditions with the new_user trigger.
+    if (error && error.code === 'PGRST116') {
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
+        const retryResult = await tryFetch();
+        data = retryResult.data;
+        error = retryResult.error;
+    }
+
     if (error) {
       console.error('Error fetching user profile with permissions:', error);
       if (error.code === 'PGRST116') {
+        toast.error("Your user profile could not be found. Please contact support.", {
+          description: "Signing you out for security."
+        });
         await supabase.auth.signOut();
       }
       return null;
     }
+    
     const userProfile = data as User;
     if (userProfile.first_name || userProfile.last_name) {
       SafeLocalStorage.setItem('lastUserName', `${userProfile.first_name || ''} ${userProfile.last_name || ''}`.trim());
