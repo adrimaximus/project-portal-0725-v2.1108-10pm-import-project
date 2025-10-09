@@ -67,7 +67,6 @@ const ProjectMainContent = ({ project, isEditing, onFieldChange, mutations, defa
             project={project}
             isEditing={isEditing}
             onDescriptionChange={(value) => onFieldChange('description', value)}
-            onTeamChange={(users) => onFieldChange('assignedTo', users)}
             onFilesAdd={(files) => mutations.addFiles.mutate({ files, project, user })}
             onFileDelete={(fileId) => {
               const file = project.briefFiles.find(f => f.id === fileId);
