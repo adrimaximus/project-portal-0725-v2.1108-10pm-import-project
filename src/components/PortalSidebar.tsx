@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Bell, Home, Settings, LayoutGrid, MessageSquare, Smile, Target, CreditCard, Link as LinkIcon, LucideIcon, Users, BookOpen, Folder as FolderIcon, ChevronDown } from "lucide-react";
 import * as LucideIcons from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +12,7 @@ import { useNotifications } from "@/hooks/useNotifications";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { NavItem as DbNavItem, NavFolder } from "@/pages/NavigationSettingsPage";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./ui/collapsible";
+import { toast } from "sonner";
 
 type PortalSidebarProps = { isCollapsed: boolean; onToggle: () => void; };
 type NavItem = { id: string; href: string; label: string; icon: LucideIcon; badge?: number; folder_id: string | null; };
@@ -81,8 +82,9 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
   const queryClient = useQueryClient();
   const location = useLocation();
   const [hasUnreadChat, setHasUnreadChat] = useState(false);
+  const backfillAttempted = useRef(false);
 
-  const { data: customNavItems = [], error: navItemsError } = useQuery({ 
+  const { data: customNavItems = [], isLoading: isLoadingItems, error: navItemsError, refetch } = useQuery({ 
     queryKey: ['user_navigation_items', user?.id], 
     queryFn: async () => { 
       if (!user) return []; 
@@ -96,6 +98,23 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
     enabled: !!user,
     retry: false,
   });
+
+  useEffect(() => {
+    if (user && !isLoadingItems && customNavItems.length === 0 && !backfillAttempted.current) {
+      backfillAttempted.current = true; // Attempt only once per session
+      const backfill = async () => {
+        console.log("No navigation items found for user, attempting to backfill...");
+        const { error } = await supabase.rpc('ensure_user_navigation_items', { p_user_id: user.id });
+        if (error) {
+          toast.error("Could not set up default navigation.", { description: error.message });
+        } else {
+          toast.info("Setting up your navigation menu...");
+          refetch();
+        }
+      };
+      backfill();
+    }
+  }, [user, isLoadingItems, customNavItems, refetch]);
 
   const { data: folders = [], error: foldersError } = useQuery({ 
     queryKey: ['navigation_folders', user?.id], 
