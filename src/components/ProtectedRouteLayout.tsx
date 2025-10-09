@@ -4,13 +4,13 @@ import LoadingScreen from "./LoadingScreen";
 import React from "react";
 
 const ProtectedRouteLayout = () => {
-  const { session, user, loading } = useAuth();
+  const { session, user, isLoading } = useAuth();
   const location = useLocation();
 
-  if (loading) {
+  if (isLoading) {
     return <LoadingScreen />;
   }
-
+  
   if (!session || !user) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }

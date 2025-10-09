@@ -4,11 +4,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import LoadingScreen from '@/components/LoadingScreen';
 
 const AuthCallbackPage = () => {
-  const { session, loading } = useAuth();
+  const { session, isLoading } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!loading) {
+    if (!isLoading) {
       if (session) {
         navigate('/dashboard', { replace: true });
       } else {
@@ -17,7 +17,7 @@ const AuthCallbackPage = () => {
         navigate('/login', { replace: true });
       }
     }
-  }, [session, loading, navigate]);
+  }, [session, isLoading, navigate]);
 
   return <LoadingScreen />;
 };

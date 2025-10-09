@@ -6,16 +6,16 @@ import { Package, BarChart, Users, ListChecks, ArrowRight, BrainCircuit } from '
 import LoadingSpinner from '@/components/LoadingSpinner';
 
 const LandingPage = () => {
-  const { session, loading } = useAuth();
+  const { session, isLoading } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!loading && session) {
+    if (!isLoading && session) {
       navigate('/dashboard', { replace: true });
     }
-  }, [session, loading, navigate]);
+  }, [session, isLoading, navigate]);
 
-  if (loading) {
+  if (isLoading) {
     return <LoadingSpinner />;
   }
 

@@ -4,10 +4,10 @@ import { useAuth } from '@/contexts/AuthContext';
 import LoadingScreen from './LoadingScreen';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { session, loading } = useAuth();
+  const { session, isLoading } = useAuth();
   const location = useLocation();
 
-  if (loading) {
+  if (isLoading) {
     return <LoadingScreen />;
   }
 
