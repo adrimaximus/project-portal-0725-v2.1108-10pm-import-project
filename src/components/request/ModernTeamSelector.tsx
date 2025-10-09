@@ -30,10 +30,19 @@ interface ModernTeamSelectorProps {
 const ModernTeamSelector = ({ users, selectedUsers, onSelectionChange }: ModernTeamSelectorProps) => {
   const [open, setOpen] = React.useState(false);
 
-  const handleUnselect = (e: React.MouseEvent, user: AssignedUser) => {
+  // This function ensures we always pass a consistent user object to the parent
+  const handleToggleSelection = (userToToggle: AssignedUser) => {
+    // Find the original user object from the main list to ensure we don't pass stale role data
+    const pristineUser = users.find(u => u.id === userToToggle.id);
+    if (pristineUser) {
+      onSelectionChange(pristineUser);
+    }
+  };
+
+  const handleUnselectBadge = (e: React.MouseEvent, user: AssignedUser) => {
     e.preventDefault();
     e.stopPropagation();
-    onSelectionChange(user);
+    handleToggleSelection(user);
   };
 
   return (
@@ -55,7 +64,7 @@ const ModernTeamSelector = ({ users, selectedUsers, onSelectionChange }: ModernT
                 >
                   {user.name}
                   <button
-                    onClick={(e) => handleUnselect(e, user)}
+                    onClick={(e) => handleUnselectBadge(e, user)}
                     className="ml-1 rounded-full outline-none ring-offset-background focus:ring-2 focus:ring-ring focus:ring-offset-2"
                   >
                     <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
@@ -79,7 +88,7 @@ const ModernTeamSelector = ({ users, selectedUsers, onSelectionChange }: ModernT
                 <CommandItem
                   key={user.id}
                   onSelect={() => {
-                    onSelectionChange(user);
+                    handleToggleSelection(user);
                   }}
                   value={`${user.name} ${user.email}`}
                 >
