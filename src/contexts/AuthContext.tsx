@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { RealtimeChannel, Session } from '@supabase/supabase-js';
 import { toast } from 'sonner';
 import SafeLocalStorage from '@/lib/localStorage';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 type AuthContextType = {
   user: User | null;
@@ -30,6 +31,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [channel, setChannel] = useState<RealtimeChannel | null>(null);
   const [isImpersonating, setIsImpersonating] = useState(false);
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const fetchUserProfile = async (userId: string | undefined) => {
     if (!userId) return null;
@@ -81,6 +84,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    // This effect handles navigation after a successful login.
+    // It waits until the user profile is loaded before redirecting.
+    if (!isUserLoading && user && session) {
+      const from = (location.state as any)?.from?.pathname || '/dashboard';
+      if (location.pathname === '/login' || location.pathname === '/') {
+        navigate(from, { replace: true });
+      }
+    }
+  }, [user, isUserLoading, session, navigate, location]);
 
   useEffect(() => {
     if (user && !channel) {

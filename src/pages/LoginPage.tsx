@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Package, Mail, Lock, Eye, EyeOff, Loader2, User as UserIcon } from 'lucide-react';
 import MagicLinkForm from '@/components/MagicLinkForm';
@@ -18,9 +17,7 @@ const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
 );
 
 const LoginPage = () => {
-  const { session, loading: authContextLoading } = useAuth();
-  const navigate = useNavigate();
-  const location = useLocation();
+  const { isLoading: authContextLoading } = useAuth();
   const [lastUserName, setLastUserName] = useState<string | null>(null);
 
   // Login state
@@ -46,16 +43,6 @@ const LoginPage = () => {
       setLastUserName(storedName);
     }
   }, []);
-
-  useEffect(() => {
-    if (authContextLoading) return;
-
-    if (session) {
-      // Get the intended destination from location state, or default to dashboard
-      const from = (location.state as any)?.from?.pathname || '/dashboard';
-      navigate(from, { replace: true });
-    }
-  }, [session, authContextLoading, navigate, location.state]);
 
   const handlePasswordLogin = async (e: React.FormEvent) => {
     e.preventDefault();
