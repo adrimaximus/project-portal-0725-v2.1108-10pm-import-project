@@ -22,7 +22,7 @@ interface EditInvoiceDialogProps {
   onClose: () => void;
   invoice: Invoice | null;
   project: Project | null;
-  onSave: (updatedProjectData: Partial<Project> & { id: string }) => void;
+  onSave: (updatedProjectData: Partial<Project> & { id: string }) => Promise<void>;
 }
 
 const paymentStatuses: PaymentStatus[] = ['Paid', 'Unpaid', 'Pending', 'Overdue', 'Cancelled', 'In Process', 'Proposed'];
@@ -81,7 +81,7 @@ export const EditInvoiceDialog = ({ isOpen, onClose, invoice, project, onSave }:
 
     try {
       // 1. Update project details (non-attachment fields)
-      onSave({
+      await onSave({
         id: project.id,
         invoice_number: invoiceNumber,
         po_number: poNumber || null,
