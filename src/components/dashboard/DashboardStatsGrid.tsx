@@ -96,6 +96,7 @@ const DashboardStatsGrid = ({ projects }: DashboardStatsGridProps) => {
 
     const collaboratorStats = projects.reduce((acc, p) => {
         p.assignedTo.forEach(user => {
+            if (user.email === 'adri@7inked.com') return;
             if (!acc[user.id]) acc[user.id] = { ...user, projectCount: 0, totalValue: 0 };
             acc[user.id].projectCount++;
             acc[user.id].totalValue += p.budget || 0;
