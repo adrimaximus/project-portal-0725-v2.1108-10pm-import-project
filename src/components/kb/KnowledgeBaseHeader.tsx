@@ -36,7 +36,7 @@ const KnowledgeBaseHeader = ({
         <div className="relative w-full sm:flex-1 sm:max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search..."
+            placeholder="Search by title, content, or tag..."
             value={searchTerm}
             onChange={(e) => onSearchTermChange(e.target.value)}
             className="pl-9 w-full"
