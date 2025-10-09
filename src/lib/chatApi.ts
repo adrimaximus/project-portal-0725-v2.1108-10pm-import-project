@@ -8,7 +8,7 @@ const mapConversationData = (c: any): Omit<Conversation, 'messages'> => ({
   userAvatar: getAvatarUrl(c.conversation_avatar, c.other_user_id || c.conversation_id),
   lastMessage: c.last_message_content || "No messages yet.",
   lastMessageTimestamp: c.last_message_at || new Date(0).toISOString(),
-  unreadCount: 0,
+  unreadCount: c.unread_count || 0,
   isGroup: c.is_group,
   members: (c.participants || []).map((p: any) => ({
     id: p.id, name: p.name, 

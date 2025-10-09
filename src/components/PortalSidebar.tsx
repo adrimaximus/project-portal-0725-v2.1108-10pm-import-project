@@ -13,6 +13,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { NavItem as DbNavItem, NavFolder } from "@/pages/NavigationSettingsPage";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./ui/collapsible";
 import { toast } from "sonner";
+import { useUnreadChatCount } from "@/hooks/useUnreadChatCount";
 
 type PortalSidebarProps = { isCollapsed: boolean; onToggle: () => void; };
 type NavItem = { id: string; href: string; label: string; icon: LucideIcon; badge?: number; folder_id: string | null; };
@@ -79,9 +80,8 @@ const NavLink = ({ item, isCollapsed }: { item: NavItem, isCollapsed: boolean })
 const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
   const { user, hasPermission } = useAuth();
   const { unreadCount: unreadNotificationCount } = useNotifications();
+  const { data: hasUnreadChat } = useUnreadChatCount();
   const queryClient = useQueryClient();
-  const location = useLocation();
-  const [hasUnreadChat, setHasUnreadChat] = useState(false);
   const backfillAttempted = useRef(false);
 
   const { data: customNavItems = [], isLoading: isLoadingItems, error: navItemsError, refetch } = useQuery({ 
@@ -99,23 +99,6 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
     retry: false,
   });
 
-  useEffect(() => {
-    if (user && !isLoadingItems && customNavItems.length === 0 && !backfillAttempted.current) {
-      backfillAttempted.current = true; // Attempt only once per session
-      const backfill = async () => {
-        console.log("No navigation items found for user, attempting to backfill...");
-        const { error } = await supabase.rpc('ensure_user_navigation_items', { p_user_id: user.id });
-        if (error) {
-          toast.error("Could not set up default navigation.", { description: error.message });
-        } else {
-          toast.info("Setting up your navigation menu...");
-          refetch();
-        }
-      };
-      backfill();
-    }
-  }, [user, isLoadingItems, customNavItems, refetch]);
-
   const { data: folders = [], error: foldersError } = useQuery({ 
     queryKey: ['navigation_folders', user?.id], 
     queryFn: async () => { 
@@ -131,34 +114,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
     retry: false,
   });
 
-  // Realtime subscription for new chat messages
-  useEffect(() => {
-    if (!user) return;
-
-    const channel = supabase
-      .channel('public:messages:sidebar-chat-indicator')
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'messages' },
-        (payload) => {
-          if (payload.new.sender_id !== user.id && location.pathname !== '/chat') {
-            setHasUnreadChat(true);
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user, location.pathname]);
-
-  // Clear chat indicator when user navigates to the chat page
-  useEffect(() => {
-    if (location.pathname === '/chat') {
-      setHasUnreadChat(false);
-    }
-  }, [location.pathname]);
+  useEffect(() => { if (user && !isLoadingItems && customNavItems.length === 0 && !backfillAttempted.current) { backfillAttempted.current = true; const backfill = async () => { console.log("No navigation items found for user, attempting to backfill..."); const { error } = await supabase.rpc('ensure_user_navigation_items', { p_user_id: user.id }); if (error) { toast.error("Could not set up default navigation.", { description: error.message }); } else { toast.info("Setting up your navigation menu..."); refetch(); } }; backfill(); } }, [user, isLoadingItems, customNavItems, refetch]);
 
   useEffect(() => {
     if (!user) return;
