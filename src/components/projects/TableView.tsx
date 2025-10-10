@@ -87,27 +87,6 @@ const formatProjectDateRange = (startDateStr: string | null | undefined, dueDate
 };
 
 const TableView = ({ projects, isLoading, onDeleteProject, sortConfig, requestSort, rowRefs }: TableViewProps) => {
-  const sortedProjects = useMemo(() => {
-    if (sortConfig.key) {
-      return projects;
-    }
-
-    const today = startOfToday();
-    
-    const projectsWithDates = projects.filter(p => p.start_date);
-    const projectsWithoutDates = projects.filter(p => !p.start_date);
-
-    const upcomingProjects = projectsWithDates
-      .filter(p => !isBefore(new Date(p.start_date!), today))
-      .sort((a, b) => new Date(a.start_date!).getTime() - new Date(b.start_date!).getTime());
-
-    const pastProjects = projectsWithDates
-      .filter(p => isBefore(new Date(p.start_date!), today))
-      .sort((a, b) => new Date(b.start_date!).getTime() - new Date(a.start_date!).getTime());
-
-    return [...upcomingProjects, ...pastProjects, ...projectsWithoutDates];
-  }, [projects, sortConfig]);
-
   return (
     <Table>
       <TableHeader>
@@ -152,14 +131,14 @@ const TableView = ({ projects, isLoading, onDeleteProject, sortConfig, requestSo
               Loading projects...
             </TableCell>
           </TableRow>
-        ) : sortedProjects.length === 0 ? (
+        ) : projects.length === 0 ? (
           <TableRow>
             <TableCell colSpan={7} className="h-24 text-center">
               No projects found.
             </TableCell>
           </TableRow>
         ) : (
-          sortedProjects.map((project) => {
+          projects.map((project) => {
             const paymentBadgeColor = getPaymentStatusStyles(project.payment_status).tw;
             return (
               <TableRow 

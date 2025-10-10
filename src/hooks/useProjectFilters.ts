@@ -1,10 +1,11 @@
 import { useState, useMemo } from 'react';
 import { Project } from '@/types';
 import { DateRange } from 'react-day-picker';
+import { isBefore, startOfToday } from 'date-fns';
 
 export const useProjectFilters = (projects: Project[]) => {
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
-  const [sortConfig, setSortConfig] = useState<{ key: keyof Project | null; direction: 'ascending' | 'descending' }>({ key: 'start_date', direction: 'ascending' });
+  const [sortConfig, setSortConfig] = useState<{ key: keyof Project | null; direction: 'ascending' | 'descending' }>({ key: null, direction: 'ascending' });
 
   const filteredProjects = useMemo(() => {
     return projects.filter(project => {
@@ -52,6 +53,22 @@ export const useProjectFilters = (projects: Project[]) => {
         }
         return 0;
       });
+    } else {
+      // Default sorting logic
+      const today = startOfToday();
+      
+      const projectsWithDates = sortableItems.filter(p => p.start_date);
+      const projectsWithoutDates = sortableItems.filter(p => !p.start_date);
+
+      const upcomingProjects = projectsWithDates
+        .filter(p => !isBefore(new Date(p.start_date!), today))
+        .sort((a, b) => new Date(a.start_date!).getTime() - new Date(b.start_date!).getTime());
+
+      const pastProjects = projectsWithDates
+        .filter(p => isBefore(new Date(p.start_date!), today))
+        .sort((a, b) => new Date(b.start_date!).getTime() - new Date(a.start_date!).getTime());
+
+      sortableItems = [...upcomingProjects, ...pastProjects, ...projectsWithoutDates];
     }
     return sortableItems;
   }, [filteredProjects, sortConfig]);
