@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import React, { useMemo } from "react";
 import {
   Table,
   TableBody,
@@ -87,6 +87,12 @@ const formatProjectDateRange = (startDateStr: string | null | undefined, dueDate
 };
 
 const TableView = ({ projects, isLoading, onDeleteProject, sortConfig, requestSort, rowRefs }: TableViewProps) => {
+  const firstPastProjectIndex = useMemo(() => {
+    if (sortConfig.key) return -1;
+    const today = startOfToday();
+    return projects.findIndex(p => p.start_date && isBefore(new Date(p.start_date), today));
+  }, [projects, sortConfig.key]);
+
   return (
     <Table>
       <TableHeader>
@@ -138,70 +144,80 @@ const TableView = ({ projects, isLoading, onDeleteProject, sortConfig, requestSo
             </TableCell>
           </TableRow>
         ) : (
-          projects.map((project) => {
+          projects.map((project, index) => {
             const paymentBadgeColor = getPaymentStatusStyles(project.payment_status).tw;
+            const showSeparator = index === firstPastProjectIndex && firstPastProjectIndex !== -1;
+
             return (
-              <TableRow 
-                key={project.id}
-                ref={el => {
-                  if (el) rowRefs.current.set(project.id, el);
-                  else rowRefs.current.delete(project.id);
-                }}
-              >
-                <TableCell style={{ borderLeft: `4px solid ${getProjectStatusStyles(project.status).hex}` }}>
-                  <Link to={`/projects/${project.slug}`} className="font-medium text-primary hover:underline">
-                    {project.name}
-                  </Link>
-                  <div className="text-sm text-muted-foreground">{project.category}</div>
-                </TableCell>
-                <TableCell>
-                  <StatusBadge status={project.status} />
-                </TableCell>
-                <TableCell>
-                  <Badge variant="outline" className={cn("border-transparent font-normal", paymentBadgeColor)}>
-                    {project.payment_status}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-2">
-                    <Progress value={project.progress} className="h-2" />
-                    <span className="text-sm text-muted-foreground">{project.progress}%</span>
-                  </div>
-                </TableCell>
-                <TableCell className="whitespace-nowrap">
-                  {formatProjectDateRange(project.start_date, project.due_date)}
-                </TableCell>
-                <TableCell>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <p className="truncate max-w-[15ch]">{project.venue || '-'}</p>
-                      </TooltipTrigger>
-                      {project.venue && project.venue.length > 15 && (
-                        <TooltipContent>
-                          <p>{project.venue}</p>
-                        </TooltipContent>
-                      )}
-                    </Tooltip>
-                  </TooltipProvider>
-                </TableCell>
-                <TableCell>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="h-8 w-8 p-0">
-                        <span className="sr-only">Open menu</span>
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onSelect={() => onDeleteProject(project.id)} className="text-destructive">
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        <span>Hapus Proyek</span>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
-              </TableRow>
+              <React.Fragment key={project.id}>
+                {showSeparator && (
+                  <TableRow className="bg-muted/50 hover:bg-muted/50">
+                    <TableCell colSpan={7} className="py-2 px-4 text-xs text-muted-foreground font-semibold tracking-wider uppercase">
+                      - Past Projects -
+                    </TableCell>
+                  </TableRow>
+                )}
+                <TableRow 
+                  ref={el => {
+                    if (el) rowRefs.current.set(project.id, el);
+                    else rowRefs.current.delete(project.id);
+                  }}
+                >
+                  <TableCell style={{ borderLeft: `4px solid ${getProjectStatusStyles(project.status).hex}` }}>
+                    <Link to={`/projects/${project.slug}`} className="font-medium text-primary hover:underline">
+                      {project.name}
+                    </Link>
+                    <div className="text-sm text-muted-foreground">{project.category}</div>
+                  </TableCell>
+                  <TableCell>
+                    <StatusBadge status={project.status} />
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className={cn("border-transparent font-normal", paymentBadgeColor)}>
+                      {project.payment_status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <Progress value={project.progress} className="h-2" />
+                      <span className="text-sm text-muted-foreground">{project.progress}%</span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap">
+                    {formatProjectDateRange(project.start_date, project.due_date)}
+                  </TableCell>
+                  <TableCell>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <p className="truncate max-w-[15ch]">{project.venue || '-'}</p>
+                        </TooltipTrigger>
+                        {project.venue && project.venue.length > 15 && (
+                          <TooltipContent>
+                            <p>{project.venue}</p>
+                          </TooltipContent>
+                        )}
+                      </Tooltip>
+                    </TooltipProvider>
+                  </TableCell>
+                  <TableCell>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="h-8 w-8 p-0">
+                          <span className="sr-only">Open menu</span>
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onSelect={() => onDeleteProject(project.id)} className="text-destructive">
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          <span>Hapus Proyek</span>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              </React.Fragment>
             );
           })
         )}
