@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Project, User } from '@/types';
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import {
@@ -23,6 +23,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ChevronsUpDown } from "lucide-react";
 import { generatePastelColor, getAvatarUrl } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
 
 interface CollaboratorsListProps {
   projects: Project[];
@@ -30,24 +31,89 @@ interface CollaboratorsListProps {
 
 interface CollaboratorStat extends User {
   projectCount: number;
+  upcomingProjectCount: number;
+  ongoingProjectCount: number;
+  activeTaskCount: number;
+  activeTicketCount: number;
 }
 
 const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [tasks, setTasks] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchTasks = async () => {
+      if (!projects || projects.length === 0) {
+        setTasks([]);
+        return;
+      }
+      const projectIds = projects.map(p => p.id);
+      const { data, error } = await supabase.rpc('get_project_tasks', { p_project_ids: projectIds });
+      
+      if (error) {
+        console.error("Error fetching project tasks:", error);
+        setTasks([]);
+      } else {
+        setTasks(data || []);
+      }
+    };
+
+    fetchTasks();
+  }, [projects]);
 
   const collaborators = useMemo(() => {
-    const collaboratorStats = projects.reduce((acc, p) => {
-        p.assignedTo.forEach(user => {
-            if (!acc[user.id]) {
-                acc[user.id] = { ...user, projectCount: 0 };
-            }
-            acc[user.id].projectCount++;
-        });
-        return acc;
-    }, {} as Record<string, CollaboratorStat>);
+    const stats: Record<string, CollaboratorStat & { countedProjectIds: Set<string> }> = {};
 
-    return Object.values(collaboratorStats).sort((a, b) => b.projectCount - a.projectCount);
-  }, [projects]);
+    const ensureUser = (user: User) => {
+        if (!stats[user.id]) {
+            stats[user.id] = {
+                ...user,
+                projectCount: 0,
+                upcomingProjectCount: 0,
+                ongoingProjectCount: 0,
+                activeTaskCount: 0,
+                activeTicketCount: 0,
+                countedProjectIds: new Set(),
+            };
+        }
+        return stats[user.id];
+    };
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    projects.forEach(p => {
+        const startDate = p.start_date ? new Date(p.start_date) : null;
+        const isUpcoming = startDate ? startDate > today : false;
+        const isOngoing = !['Completed', 'Cancelled'].includes(p.status);
+
+        p.assignedTo.forEach(user => {
+            const userStat = ensureUser(user);
+            if (!userStat.countedProjectIds.has(p.id)) {
+                userStat.projectCount++;
+                if (isUpcoming) userStat.upcomingProjectCount++;
+                if (isOngoing) userStat.ongoingProjectCount++;
+                userStat.countedProjectIds.add(p.id);
+            }
+        });
+    });
+
+    tasks.forEach(task => {
+        if (!task.completed) {
+            task.assignees.forEach((assignee: User) => {
+                const userStat = ensureUser(assignee);
+                userStat.activeTaskCount++;
+                if (task.origin_ticket_id) {
+                    userStat.activeTicketCount++;
+                }
+            });
+        }
+    });
+
+    return Object.values(stats)
+        .map(({ countedProjectIds, ...rest }) => rest)
+        .sort((a, b) => b.projectCount - a.projectCount);
+  }, [projects, tasks]);
 
   return (
     <Card>
@@ -85,7 +151,11 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
                       <TableHeader>
                           <TableRow>
                               <TableHead>Collaborator</TableHead>
-                              <TableHead className="text-right">Projects</TableHead>
+                              <TableHead className="text-right">Total Projects</TableHead>
+                              <TableHead className="text-right">Upcoming</TableHead>
+                              <TableHead className="text-right">On Going</TableHead>
+                              <TableHead className="text-right">Active Tasks</TableHead>
+                              <TableHead className="text-right">Active Tickets</TableHead>
                           </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -101,6 +171,10 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
                                       </div>
                                   </TableCell>
                                   <TableCell className="text-right font-medium">{c.projectCount}</TableCell>
+                                  <TableCell className="text-right font-medium">{c.upcomingProjectCount}</TableCell>
+                                  <TableCell className="text-right font-medium">{c.ongoingProjectCount}</TableCell>
+                                  <TableCell className="text-right font-medium">{c.activeTaskCount}</TableCell>
+                                  <TableCell className="text-right font-medium">{c.activeTicketCount}</TableCell>
                               </TableRow>
                           ))}
                       </TableBody>
