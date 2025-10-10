@@ -99,7 +99,7 @@ const CompaniesView = () => {
     };
 
     const visibleProperties = properties.filter(prop => prop.type !== 'image');
-    const totalColumns = 5 + visibleProperties.length;
+    const totalColumns = 4 + visibleProperties.length;
 
     return (
         <TooltipProvider>
