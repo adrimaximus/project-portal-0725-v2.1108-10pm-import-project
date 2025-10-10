@@ -1,408 +1,479 @@
 import { useState, useEffect, useMemo, useRef } from "react";
-import { Project } from "@/types";
+import { Project, User, Tag, Person } from '@/types';
 import { useNavigate, useSearchParams } from "react-router-dom";
 import PortalLayout from "@/components/PortalLayout";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, RefreshCw, Search, Download } from "lucide-react";
-import { useProjects } from "@/hooks/useProjects";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { toast } from "sonner";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { supabase } from "@/integrations/supabase/client";
-import { useCreateProject } from "@/hooks/useCreateProject";
-import { format } from "date-fns";
-import { formatInJakarta } from "@/lib/utils";
-import { useProjectFilters } from "@/hooks/useProjectFilters";
-import ProjectsToolbar from "@/components/projects/ProjectsToolbar";
-import ProjectViewContainer from "@/components/projects/ProjectViewContainer";
-import { useTasks } from "@/hooks/useTasks";
-import { useTaskMutations, UpsertTaskPayload } from "@/hooks/useTaskMutations";
-import TaskFormDialog from "@/components/projects/TaskFormDialog";
-import { Task, TaskStatus } from "@/types";
-import { DatePickerWithRange } from "@/components/ui/date-picker-with-range";
 import { Input } from "@/components/ui/input";
-import { useQueryClient, useQuery, useMutation } from "@tanstack/react-query";
-import { useAuth } from "@/contexts/AuthContext";
-import { GoogleCalendarImportDialog } from "@/components/projects/GoogleCalendarImportDialog";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { MoreHorizontal, PlusCircle, Search, Trash2, Edit, User as UserIcon, Linkedin, Twitter, Instagram, GitMerge, Loader2, Kanban, LayoutGrid, Table as TableIcon, Settings, Building } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { formatDistanceToNow } from "date-fns";
+import { generatePastelColor, getAvatarUrl } from "@/lib/utils";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import PersonFormDialog from "@/components/people/PersonFormDialog";
+import { Badge } from "@/components/ui/badge";
+import WhatsappIcon from "@/components/icons/WhatsappIcon";
+import { DuplicatePair } from "@/components/people/DuplicateContactsCard";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import PeopleKanbanView from "@/components/people/PeopleKanbanView";
+import PeopleGridView from "@/components/people/PeopleGridView";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import DuplicateSummaryDialog from "@/components/people/DuplicateSummaryDialog";
+import MergeDialog from "@/components/people/MergeDialog";
+import CompaniesView from "@/components/people/CompaniesView";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useIsMobile } from "@/hooks/use-mobile";
+import PersonListCard from "@/components/people/PersonListCard";
 
-type ViewMode = 'table' | 'list' | 'kanban' | 'tasks' | 'tasks-kanban';
+type KanbanViewHandle = {
+  openSettings: () => void;
+};
 
-const ProjectsPage = () => {
-  const navigate = useNavigate();
+const PeoplePage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [searchTerm, setSearchTerm] = useState(""); // Moved from useProjectFilters
-  const { data: projects = [], isLoading, refetch } = useProjects({ searchTerm }); // Pass searchTerm
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-
-  const viewFromUrl = searchParams.get('view') as ViewMode;
-  const view: ViewMode = useMemo(() => {
-    if (viewFromUrl && ['table', 'list', 'kanban', 'tasks', 'tasks-kanban'].includes(viewFromUrl)) {
-      return viewFromUrl;
-    }
-    return 'list';
-  }, [viewFromUrl]);
-
-  const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
-  const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
-  const [kanbanGroupBy, setKanbanGroupBy] = useState<'status' | 'payment_status'>('status');
-  const createProjectMutation = useCreateProject();
-  const rowRefs = useRef(new Map<string, HTMLTableRowElement>());
-  const [scrollToProjectId, setScrollToProjectId] = useState<string | null>(null);
-  const initialTableScrollDone = useRef(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [personToEdit, setPersonToEdit] = useState<Person | null>(null);
+  const [personToDelete, setPersonToDelete] = useState<Person | null>(null);
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [sortConfig, setSortConfig] = useState<{ key: keyof Person | null; direction: 'ascending' | 'descending' }>({ key: 'updated_at', direction: 'descending' });
+  
+  const activeTab = searchParams.get('tab') || 'people';
+  const viewModeFromUrl = searchParams.get('view') as 'table' | 'kanban' | 'grid';
+  const [viewMode, setViewMode] = useState<'table' | 'kanban' | 'grid'>(viewModeFromUrl || 'grid');
 
-  const [isTaskFormOpen, setIsTaskFormOpen] = useState(false);
-  const [editingTask, setEditingTask] = useState<Task | null>(null);
-  const { upsertTask, isUpserting, deleteTask } = useTaskMutations();
+  const [isFindingDuplicates, setIsFindingDuplicates] = useState(false);
+  const [duplicateData, setDuplicateData] = useState<{ summary: string; pairs: DuplicatePair[] } | null>(null);
+  const [isSummaryDialogOpen, setIsSummaryDialogOpen] = useState(false);
+  const [selectedMergePair, setSelectedMergePair] = useState<DuplicatePair | null>(null);
+  const kanbanViewRef = useRef<KanbanViewHandle>(null);
+  const isMobile = useIsMobile();
 
-  const {
-    dateRange, setDateRange,
-    sortConfig, requestSort, sortedProjects
-  } = useProjectFilters(projects);
+  useEffect(() => {
+    if (activeTab === 'people') {
+      localStorage.setItem('people_view_mode', viewMode);
+      setSearchParams({ tab: 'people', view: viewMode }, { replace: true });
+    } else {
+      setSearchParams({ tab: 'companies' }, { replace: true });
+    }
+  }, [viewMode, activeTab, setSearchParams]);
 
-  const [taskSearchTerm, setTaskSearchTerm] = useState('');
-  const [taskSortConfig, setTaskSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'updated_at', direction: 'desc' });
-  const [hideCompletedTasks, setHideCompletedTasks] = useState(() => localStorage.getItem('hideCompletedTasks') === 'true');
-
-  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
-
-  const { data: isGCalConnected } = useQuery({
-    queryKey: ['googleCalendarConnection', user?.id],
+  const { data: people = [], isLoading } = useQuery({
+    queryKey: ['people'],
     queryFn: async () => {
-        if (!user) return false;
-        const { data } = await supabase.from('google_calendar_tokens').select('user_id').eq('user_id', user.id).maybeSingle();
-        return !!data;
-    },
-    enabled: !!user,
-  });
-
-  const importEventsMutation = useMutation({
-    mutationFn: async (events: any[]) => {
-        const { error } = await supabase.functions.invoke('import-google-calendar-events', {
-            body: { eventsToImport: events },
-        });
-        if (error) throw new Error(error.message);
-    },
-    onSuccess: () => {
-        toast.success("Events imported successfully as projects!");
-        setIsImportDialogOpen(false);
-        refetch();
-    },
-    onError: (error) => {
-        toast.error("Failed to import events.", { description: error.message });
+      const { data, error } = await supabase.rpc('get_people_with_details');
+      if (error) throw error;
+      return (data as Person[]).map(person => ({
+        ...person,
+        avatar_url: getAvatarUrl(person.avatar_url, person.id),
+        tags: person.tags ? [...person.tags].sort((a, b) => a.name.localeCompare(b.name)) : [],
+      }));
     }
   });
 
-  const { tasks, loading: tasksLoading, refetch: refetchTasks } = useTasks({ 
-    enabled: view === 'tasks' || view === 'tasks-kanban',
-    orderBy: view === 'tasks-kanban' ? 'kanban_order' : taskSortConfig.key,
-    orderDirection: view === 'tasks-kanban' ? 'asc' : taskSortConfig.direction,
+  const { data: tags = [] } = useQuery({
+    queryKey: ['tags'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('tags').select('*');
+      if (error) throw error;
+      return data as Tag[];
+    }
   });
 
-  const filteredTasks = useMemo(() => {
-    let tasksToFilter = tasks;
-    if (hideCompletedTasks) {
-      tasksToFilter = tasksToFilter.filter(task => task.status !== 'Done');
+  const findAndAnalyzeDuplicates = async () => {
+    setIsFindingDuplicates(true);
+    toast.info("Searching for duplicates...");
+
+    const { data: pairs, error: rpcError } = await supabase.rpc('find_duplicate_people');
+    if (rpcError) {
+      toast.error("Failed to check for duplicates.", { description: rpcError.message });
+      setIsFindingDuplicates(false);
+      return;
     }
-    if (!taskSearchTerm) return tasksToFilter;
-    const lowercasedFilter = taskSearchTerm.toLowerCase();
-    return tasksToFilter.filter(task => 
-      task.title.toLowerCase().includes(lowercasedFilter) ||
-      (task.description && task.description.toLowerCase().includes(lowercasedFilter)) ||
-      (task.projects?.name && task.projects.name.toLowerCase().includes(lowercasedFilter))
-    );
-  }, [tasks, taskSearchTerm, hideCompletedTasks]);
 
-  useEffect(() => {
-    if (!user) return;
+    if (!pairs || pairs.length === 0) {
+      toast.info("No potential duplicates found.");
+      setIsFindingDuplicates(false);
+      return;
+    }
 
-    const channel = supabase
-      .channel('realtime-tasks-page-channel')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'tasks' },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ['tasks'] });
+    toast.info(`Found ${pairs.length} potential duplicate(s). Asking AI for analysis...`);
+
+    const { data: aiData, error: aiError } = await supabase.functions.invoke('ai-handler', {
+      body: { feature: 'analyze-duplicates', payload: { duplicates: pairs } },
+    });
+
+    if (aiError) {
+      toast.error("AI analysis failed.", { description: aiError.message });
+      setIsFindingDuplicates(false);
+      return;
+    }
+
+    setDuplicateData({ summary: aiData.result, pairs: pairs as DuplicatePair[] });
+    setIsSummaryDialogOpen(true);
+    setIsFindingDuplicates(false);
+  };
+
+  const requestSort = (key: keyof Person) => {
+    let direction: 'ascending' | 'descending' = 'ascending';
+    if (sortConfig.key === key && sortConfig.direction === 'ascending') {
+      direction = 'descending';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const sortedPeople = useMemo(() => {
+    let sortableItems = [...people];
+    if (sortConfig.key !== null) {
+      sortableItems.sort((a, b) => {
+        const aValue = a[sortConfig.key!];
+        const bValue = b[sortConfig.key!];
+
+        if (aValue === null || aValue === undefined) return 1;
+        if (bValue === null || bValue === undefined) return -1;
+        
+        if (String(aValue).toLowerCase() < String(bValue).toLowerCase()) {
+          return sortConfig.direction === 'ascending' ? -1 : 1;
         }
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'task_assignees' },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ['tasks'] });
+        if (String(aValue).toLowerCase() > String(bValue).toLowerCase()) {
+          return sortConfig.direction === 'ascending' ? 1 : -1;
         }
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'task_tags' },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ['tasks'] });
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user, queryClient]);
-
-  useEffect(() => {
-    if (view === 'table' && !initialTableScrollDone.current && sortedProjects.length > 0) {
-      const todayStr = formatInJakarta(new Date(), 'yyyy-MM-dd');
-      let targetProject = sortedProjects.find(p => p.start_date && formatInJakarta(p.start_date, 'yyyy-MM-dd') >= todayStr);
-      if (!targetProject && sortedProjects.length > 0) {
-        targetProject = sortedProjects[sortedProjects.length - 1];
-      }
-      if (targetProject) {
-        setScrollToProjectId(targetProject.id);
-        initialTableScrollDone.current = true;
-      }
-    }
-  }, [sortedProjects, view]);
-
-  useEffect(() => {
-    if (scrollToProjectId) {
-      const targetElement = rowRefs.current.get(scrollToProjectId);
-      if (targetElement) {
-        setTimeout(() => {
-          targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          targetElement.classList.add('bg-muted', 'transition-colors', 'duration-1000');
-          setTimeout(() => {
-            targetElement.classList.remove('bg-muted');
-          }, 2000);
-          setScrollToProjectId(null);
-        }, 100);
-      }
-    }
-  }, [scrollToProjectId]);
-
-  const handleViewChange = (newView: ViewMode | null) => {
-    if (newView) {
-      setSearchParams({ view: newView }, { replace: true });
-      if (scrollContainerRef.current) {
-        scrollContainerRef.current.scrollTop = 0;
-        scrollContainerRef.current.scrollLeft = 0;
-      }
-    }
-  };
-
-  const handleDeleteProject = (projectId: string) => {
-    const project = projects.find(p => p.id === projectId);
-    if (project) setProjectToDelete(project);
-  };
-
-  const confirmDeleteProject = async () => {
-    if (projectToDelete) {
-      const { error } = await supabase.from('projects').delete().eq('id', projectToDelete.id);
-      if (error) toast.error(`Failed to delete project "${projectToDelete.name}".`);
-      else {
-        toast.success(`Project "${projectToDelete.name}" has been deleted.`);
-        refetch();
-      }
-      setProjectToDelete(null);
-    }
-  };
-
-  const handleRefresh = () => {
-    switch (view) {
-      case 'tasks':
-      case 'tasks-kanban':
-        refetchTasks();
-        break;
-      default:
-        refetch();
-        break;
-    }
-    toast.success("Data diperbarui.");
-  };
-
-  const requestTaskSort = (key: string) => {
-    let direction: 'asc' | 'desc' = 'asc';
-    if (taskSortConfig.key === key && taskSortConfig.direction === 'asc') {
-      direction = 'desc';
-    }
-    setTaskSortConfig({ key, direction });
-  };
-
-  const handleTaskStatusChange = (taskId: string, newStatus: TaskStatus) => {
-    const task = tasks.find(t => t.id === taskId);
-    if (task) {
-        upsertTask({
-            id: task.id,
-            project_id: task.project_id,
-            title: task.title,
-            status: newStatus,
-        }, {
-            onSuccess: () => {
-                toast.success(`Task "${task.title}" moved to ${newStatus}.`);
-                refetchTasks();
-            },
-            onError: (error) => toast.error(`Failed to update task status: ${error.message}`),
-        });
-    }
-  };
-
-  const handleCreateTask = () => {
-    setEditingTask(null);
-    setIsTaskFormOpen(true);
-  };
-
-  const handleEditTask = (task: Task) => {
-    setEditingTask(task);
-    setIsTaskFormOpen(true);
-  };
-
-  const handleDeleteTask = (taskId: string) => {
-    setTaskToDelete(taskId);
-  };
-
-  const confirmDeleteTask = () => {
-    if (taskToDelete) {
-      deleteTask(taskToDelete, {
-        onSuccess: () => {
-          refetchTasks();
-          setTaskToDelete(null);
-        }
+        return 0;
       });
     }
+    return sortableItems;
+  }, [people, sortConfig]);
+
+  const filteredPeople = useMemo(() => {
+    return sortedPeople.filter(person =>
+      person.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (person.company && person.company.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (person.job_title && person.job_title.toLowerCase().includes(searchTerm.toLowerCase()))
+    );
+  }, [sortedPeople, searchTerm]);
+
+  const groupedPeople = useMemo(() => {
+    return filteredPeople.reduce((acc, person) => {
+      const company = person.company || 'No Company';
+      if (!acc[company]) {
+        acc[company] = [];
+      }
+      acc[company].push(person);
+      return acc;
+    }, {} as Record<string, Person[]>);
+  }, [filteredPeople]);
+
+  const handleAddNew = () => {
+    setPersonToEdit(null);
+    setIsFormOpen(true);
   };
 
-  const handleTaskFormSubmit = (data: UpsertTaskPayload) => {
-    upsertTask(data, {
-      onSuccess: () => {
-        setIsTaskFormOpen(false);
-        setEditingTask(null);
-        refetchTasks();
-      },
-    });
+  const handleEdit = (person: Person) => {
+    setPersonToEdit(person);
+    setIsFormOpen(true);
   };
 
-  const handleToggleTaskCompletion = (task: Task, completed: boolean) => {
-    upsertTask({
-      id: task.id,
-      project_id: task.project_id,
-      title: task.title,
-      status: completed ? 'Done' : 'To do',
-    }, {
-      onSuccess: () => {
-        toast.success(`Task "${task.title}" marked as ${completed ? 'done' : 'to do'}.`);
-        refetchTasks();
-      },
-      onError: (error) => toast.error(`Failed to update task status: ${error.message}`),
-    });
+  const handleViewProfile = (person: Person) => {
+    navigate(`/people/${person.id}`);
   };
 
-  const toggleHideCompleted = () => {
-    setHideCompletedTasks(prev => {
-      const newState = !prev;
-      localStorage.setItem('hideCompletedTasks', String(newState));
-      return newState;
-    });
+  const handleDelete = async () => {
+    if (!personToDelete) return;
+
+    await queryClient.cancelQueries({ queryKey: ['people'] });
+    const previousPeople = queryClient.getQueryData<Person[]>(['people']);
+    queryClient.setQueryData<Person[]>(['people'], (old) =>
+      old ? old.filter((p) => p.id !== personToDelete.id) : []
+    );
+    setPersonToDelete(null);
+
+    const { error } = await supabase.from('people').delete().eq('id', personToDelete.id);
+
+    if (error) {
+      queryClient.setQueryData(['people'], previousPeople);
+      toast.error(`Failed to delete ${personToDelete.full_name}.`);
+    } else {
+      toast.success(`${personToDelete.full_name} has been deleted.`);
+      queryClient.invalidateQueries({ queryKey: ['people'] });
+    }
   };
 
-  const isTaskView = view === 'tasks' || view === 'tasks-kanban';
+  const formatPhoneNumberForWhatsApp = (phone: string | undefined) => {
+    if (!phone) return '';
+    let cleaned = phone.replace(/\D/g, '');
+    if (cleaned.startsWith('0')) {
+      cleaned = '62' + cleaned.substring(1);
+    } else if (!cleaned.startsWith('62')) {
+      cleaned = '62' + cleaned;
+    }
+    return cleaned;
+  };
+
+  const getInstagramUsername = (url: string | undefined) => {
+    if (!url) return null;
+    try {
+      const path = new URL(url).pathname;
+      const parts = path.split('/').filter(p => p);
+      return parts[0] ? `@${parts[0]}` : null;
+    } catch (e) {
+      return null;
+    }
+  };
 
   return (
-    <PortalLayout disableMainScroll noPadding>
-      <AlertDialog open={!!projectToDelete} onOpenChange={(open) => !open && setProjectToDelete(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader><AlertDialogTitle>Are you sure?</AlertDialogTitle><AlertDialogDescription>This action cannot be undone. This will permanently delete the project "{projectToDelete?.name}".</AlertDialogDescription></AlertDialogHeader>
-          <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={confirmDeleteProject}>Delete</AlertDialogAction></AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog open={!!taskToDelete} onOpenChange={(open) => !open && setTaskToDelete(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader><AlertDialogTitle>Delete Task?</AlertDialogTitle><AlertDialogDescription>This action cannot be undone. Are you sure you want to delete this task?</AlertDialogDescription></AlertDialogHeader>
-          <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={confirmDeleteTask}>Delete</AlertDialogAction></AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <TaskFormDialog
-        open={isTaskFormOpen}
-        onOpenChange={setIsTaskFormOpen}
-        onSubmit={handleTaskFormSubmit}
-        isSubmitting={isUpserting}
-        task={editingTask}
-      />
-
-      <GoogleCalendarImportDialog
-        open={isImportDialogOpen}
-        onOpenChange={setIsImportDialogOpen}
-        onImport={(events) => importEventsMutation.mutate(events)}
-        isImporting={importEventsMutation.isPending}
-      />
-
-      <Card className="flex-1 flex flex-col min-h-0 rounded-none border-0 sm:border sm:rounded-lg">
-        <div className="flex-shrink-0 bg-background z-10 border-b">
-          <div className="p-4 space-y-4">
-            <div className="flex items-center justify-between">
-              <CardTitle>All Projects</CardTitle>
+    <PortalLayout>
+      <div className="flex flex-col h-full space-y-6">
+        <div className="flex-shrink-0">
+          <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 flex-wrap">
+            <div>
+              <h1 className="text-3xl font-bold">People & Companies</h1>
+              <p className="text-muted-foreground">Manage your contacts, connections, and companies.</p>
             </div>
+          </div>
+        </div>
 
-            <div className="flex items-center gap-2">
-              <div className="flex-1">
-                <DatePickerWithRange date={dateRange} onDateChange={setDateRange} />
-              </div>
-              <div className="relative flex-1">
+        <Tabs value={activeTab} onValueChange={(value) => setSearchParams({ tab: value })} className="flex-grow flex flex-col space-y-4">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="people">People</TabsTrigger>
+            <TabsTrigger value="companies">Companies</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="people" className="flex-grow flex flex-col space-y-4 mt-0">
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-4 flex-shrink-0 flex-wrap">
+              <div className="relative w-full sm:flex-1 sm:max-w-md">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder={isTaskView ? "Search tasks..." : "Search projects..."}
-                  value={isTaskView ? taskSearchTerm : searchTerm}
-                  onChange={(e) => isTaskView ? setTaskSearchTerm(e.target.value) : setSearchTerm(e.target.value)}
+                  placeholder="Search by name, company, or title..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-9 w-full"
                 />
               </div>
+              <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                <Button variant="outline" size="icon" onClick={findAndAnalyzeDuplicates} disabled={isFindingDuplicates}>
+                  {isFindingDuplicates ? <Loader2 className="h-4 w-4 animate-spin" /> : <GitMerge className="h-4 w-4" />}
+                </Button>
+                <Button size="icon" onClick={handleAddNew}>
+                  <PlusCircle className="h-4 w-4" />
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="icon">
+                      <Settings className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onSelect={() => navigate('/settings/people-properties')}>
+                      Manage Properties
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <ToggleGroup type="single" value={viewMode} onValueChange={(value) => { if (value) setViewMode(value as 'grid' | 'table' | 'kanban')}}>
+                  <TooltipProvider>
+                    <Tooltip><TooltipTrigger asChild><ToggleGroupItem value="grid" aria-label="Grid view"><LayoutGrid className="h-4 w-4" /></ToggleGroupItem></TooltipTrigger><TooltipContent><p>Grid View</p></TooltipContent></Tooltip>
+                    <Tooltip><TooltipTrigger asChild><ToggleGroupItem value="table" aria-label="Table view"><TableIcon className="h-4 w-4" /></ToggleGroupItem></TooltipTrigger><TooltipContent><p>Table View</p></TooltipContent></Tooltip>
+                    <Tooltip><TooltipTrigger asChild><ToggleGroupItem value="kanban" aria-label="Kanban view"><Kanban className="h-4 w-4" /></ToggleGroupItem></TooltipTrigger><TooltipContent><p>Kanban View</p></TooltipContent></Tooltip>
+                  </TooltipProvider>
+                </ToggleGroup>
+              </div>
             </div>
-          </div>
-          <ProjectsToolbar
-            view={view} onViewChange={handleViewChange}
-            kanbanGroupBy={kanbanGroupBy} onKanbanGroupByChange={setKanbanGroupBy}
-            hideCompletedTasks={hideCompletedTasks}
-            onToggleHideCompleted={toggleHideCompleted}
-            onNewProjectClick={() => navigate('/request')}
-            onNewTaskClick={handleCreateTask}
-            isTaskView={isTaskView}
-            isGCalConnected={isGCalConnected}
-            onImportClick={() => setIsImportDialogOpen(true)}
-            onRefreshClick={handleRefresh}
+            <div className="flex-grow min-h-0">
+              {viewMode === 'table' ? (
+                isMobile ? (
+                  <div className="overflow-y-auto h-full space-y-4">
+                    {Object.entries(groupedPeople).map(([company, peopleInGroup]) => (
+                      <div key={company}>
+                        <h3 className="font-semibold px-2 mb-2">{company}</h3>
+                        <div className="space-y-2">
+                          {peopleInGroup.map(person => (
+                            <PersonListCard
+                              key={person.id}
+                              person={person}
+                              onEdit={handleEdit}
+                              onDelete={() => setPersonToDelete(person)}
+                              onViewProfile={handleViewProfile}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="border rounded-lg overflow-auto h-full">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-[250px] sticky left-0 bg-card z-10">
+                            <Button variant="ghost" onClick={() => requestSort('full_name')} className="px-2">Name</Button>
+                          </TableHead>
+                          <TableHead className="hidden sm:table-cell">
+                            <Button variant="ghost" onClick={() => requestSort('job_title')} className="px-2">Work</Button>
+                          </TableHead>
+                          <TableHead className="hidden lg:table-cell">
+                            <Button variant="ghost" onClick={() => requestSort('address')} className="px-2">Address</Button>
+                          </TableHead>
+                          <TableHead className="hidden md:table-cell">Contact</TableHead>
+                          <TableHead className="hidden sm:table-cell">Tags</TableHead>
+                          <TableHead className="hidden lg:table-cell">
+                            <Button variant="ghost" onClick={() => requestSort('updated_at')} className="px-2">Last Activity</Button>
+                          </TableHead>
+                          <TableHead className="text-right sticky right-0 bg-card z-10">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {isLoading ? (
+                          <TableRow><TableCell colSpan={7} className="text-center h-24">Loading...</TableCell></TableRow>
+                        ) : Object.keys(groupedPeople).length === 0 ? (
+                          <TableRow><TableCell colSpan={7} className="text-center h-24">No people found.</TableCell></TableRow>
+                        ) : (
+                          Object.entries(groupedPeople).map(([company, peopleInGroup]) => (
+                            <React.Fragment key={company}>
+                              <TableRow className="hover:bg-transparent">
+                                <TableCell className="font-semibold bg-muted/50 sticky left-0 z-10">
+                                  {company}
+                                </TableCell>
+                                <TableCell colSpan={6} className="bg-muted/50" />
+                              </TableRow>
+                              {peopleInGroup.map(person => (
+                                <TableRow key={person.id}>
+                                  <TableCell className="sticky left-0 bg-card z-10 cursor-pointer" onClick={() => handleViewProfile(person)}>
+                                    <div className="flex items-center gap-3">
+                                      <Avatar className="h-10 w-10">
+                                        <AvatarImage src={person.avatar_url} />
+                                        <AvatarFallback style={generatePastelColor(person.id)}>
+                                          <UserIcon className="h-5 w-5 text-white" />
+                                        </AvatarFallback>
+                                      </Avatar>
+                                      <div>
+                                        <p className="font-medium">{person.full_name}</p>
+                                        <p className="text-sm text-muted-foreground">{person.contact?.emails?.[0]}</p>
+                                      </div>
+                                    </div>
+                                  </TableCell>
+                                  <TableCell className="hidden sm:table-cell cursor-pointer" onClick={() => handleViewProfile(person)}>
+                                    <p className="font-medium">{person.job_title || '-'}</p>
+                                    <p className="text-sm text-muted-foreground">
+                                      {person.department}{person.department && person.company ? ' at ' : ''}{person.company}
+                                    </p>
+                                  </TableCell>
+                                  <TableCell className="hidden lg:table-cell max-w-[200px] truncate text-sm text-muted-foreground cursor-pointer" onClick={() => handleViewProfile(person)}>
+                                    {person.address?.formatted_address || '-'}
+                                  </TableCell>
+                                  <TableCell className="hidden md:table-cell cursor-pointer" onClick={() => handleViewProfile(person)}>
+                                    <div className="flex items-center gap-3">
+                                      {person.contact?.phones?.[0] && (
+                                        <a href={`https://wa.me/${formatPhoneNumberForWhatsApp(person.contact.phones[0])}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors" onClick={(e) => e.stopPropagation()}>
+                                          <WhatsappIcon className="h-4 w-4" />
+                                          <span className="text-sm">{person.contact.phones[0]}</span>
+                                        </a>
+                                      )}
+                                      {person.social_media?.linkedin && <a href={person.social_media.linkedin} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}><Linkedin className="h-4 w-4 text-muted-foreground hover:text-primary" /></a>}
+                                      {person.social_media?.twitter && <a href={person.social_media.twitter} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}><Twitter className="h-4 w-4 text-muted-foreground hover:text-primary" /></a>}
+                                      {person.social_media?.instagram && (
+                                        <a href={person.social_media.instagram} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-muted-foreground hover:text-primary transition-colors" onClick={(e) => e.stopPropagation()}>
+                                          <Instagram className="h-4 w-4" />
+                                          <span className="text-sm">{getInstagramUsername(person.social_media.instagram)}</span>
+                                        </a>
+                                      )}
+                                    </div>
+                                  </TableCell>
+                                  <TableCell className="hidden sm:table-cell cursor-pointer" onClick={() => handleViewProfile(person)}>
+                                    <div className="flex flex-wrap gap-1">
+                                      {(person.tags || []).map(tag => (
+                                        <Badge key={tag.id} variant="outline" style={{ backgroundColor: `${tag.color}20`, borderColor: tag.color, color: tag.color }}>
+                                          {tag.name}
+                                        </Badge>
+                                      ))}
+                                    </div>
+                                  </TableCell>
+                                  <TableCell className="hidden lg:table-cell text-sm text-muted-foreground cursor-pointer" onClick={() => handleViewProfile(person)}>
+                                    {formatDistanceToNow(new Date(person.updated_at), { addSuffix: true })}
+                                  </TableCell>
+                                  <TableCell className="text-right sticky right-0 bg-card z-10">
+                                    <DropdownMenu>
+                                      <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
+                                      </DropdownMenuTrigger>
+                                      <DropdownMenuContent align="end">
+                                        <DropdownMenuItem onSelect={() => handleEdit(person)}><Edit className="mr-2 h-4 w-4" /> Edit</DropdownMenuItem>
+                                        <DropdownMenuItem onSelect={() => setPersonToDelete(person)} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Delete</DropdownMenuItem>
+                                      </DropdownMenuContent>
+                                    </DropdownMenu>
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </React.Fragment>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )
+              ) : viewMode === 'kanban' ? (
+                <PeopleKanbanView ref={kanbanViewRef} people={filteredPeople} tags={tags} onEditPerson={handleEdit} onDeletePerson={setPersonToDelete} />
+              ) : (
+                <div className="overflow-y-auto h-full">
+                  <PeopleGridView people={filteredPeople} onEditPerson={handleEdit} onDeletePerson={setPersonToDelete} onViewProfile={handleViewProfile} />
+                </div>
+              )}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="companies" className="flex-grow flex flex-col mt-0">
+            <CompaniesView />
+          </TabsContent>
+        </Tabs>
+
+        <PersonFormDialog
+          open={isFormOpen}
+          onOpenChange={setIsFormOpen}
+          person={personToEdit}
+        />
+
+        <AlertDialog open={!!personToDelete} onOpenChange={(open) => !open && setPersonToDelete(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will permanently delete the record for {personToDelete?.full_name}. This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {duplicateData && (
+          <DuplicateSummaryDialog
+            open={isSummaryDialogOpen}
+            onOpenChange={setIsSummaryDialogOpen}
+            summary={duplicateData.summary}
+            duplicates={duplicateData.pairs}
+            onSelectPair={(pair) => {
+              setIsSummaryDialogOpen(false);
+              setSelectedMergePair(pair);
+            }}
           />
-        </div>
-        <div ref={scrollContainerRef} className="flex-grow min-h-0 overflow-y-auto">
-          <div className="p-0 data-[view=kanban]:px-4 data-[view=kanban]:pb-4 data-[view=kanban]:md:px-6 data-[view=kanban]:md:pb-6 data-[view=tasks-kanban]:p-0" data-view={view}>
-            <ProjectViewContainer
-              view={view}
-              projects={sortedProjects}
-              tasks={filteredTasks}
-              isLoading={isLoading}
-              isTasksLoading={tasksLoading}
-              onDeleteProject={handleDeleteProject}
-              sortConfig={sortConfig}
-              requestSort={requestSort}
-              rowRefs={rowRefs}
-              kanbanGroupBy={kanbanGroupBy}
-              onEditTask={handleEditTask}
-              onDeleteTask={handleDeleteTask}
-              onToggleTaskCompletion={handleToggleTaskCompletion}
-              taskSortConfig={taskSortConfig}
-              requestTaskSort={requestTaskSort}
-              onTaskStatusChange={handleTaskStatusChange}
-            />
-          </div>
-        </div>
-      </Card>
+        )}
+
+        {selectedMergePair && (
+          <MergeDialog
+            open={!!selectedMergePair}
+            onOpenChange={() => setSelectedMergePair(null)}
+            person1={selectedMergePair.person1}
+            person2={selectedMergePair.person2}
+          />
+        )}
+      </div>
     </PortalLayout>
   );
 };
 
-export default ProjectsPage;
+export default PeoplePage;
