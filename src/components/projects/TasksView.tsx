@@ -1,3 +1,4 @@
+import React from "react";
 import { Task, TaskAssignee, TaskAttachment } from "@/types";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -99,6 +100,9 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
     );
   };
 
+  let lastMonthYear: string | null = null;
+  const isDateSorted = sortConfig.key === 'due_date';
+
   return (
     <div className="w-full overflow-x-auto">
       <Table>
@@ -128,139 +132,156 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
           {tasks.map(task => {
             const statusStyle = getTaskStatusStyles(task.status);
             const priorityStyle = getPriorityStyles(task.priority);
+
+            const taskMonthYear = task.due_date ? format(new Date(task.due_date), 'MMMM yyyy') : 'No Due Date';
+            let showMonthSeparator = false;
+            if (isDateSorted && taskMonthYear !== lastMonthYear) {
+              showMonthSeparator = true;
+              lastMonthYear = taskMonthYear;
+            }
+
             return (
-              <TableRow key={task.id} data-state={task.completed ? "completed" : ""}>
-                <TableCell className="font-medium sticky left-0 bg-background z-10 w-[40%] sm:w-[30%]">
-                  <div className="flex items-start gap-3">
-                    <Checkbox
-                      id={`task-${task.id}`}
-                      checked={task.completed}
-                      onCheckedChange={(checked) => onToggleTaskCompletion(task, !!checked)}
-                      aria-label={`Mark task ${task.title} as complete`}
-                      className="mt-1"
-                    />
-                    <div className="flex flex-col">
-                      <div className="flex items-center gap-2">
-                        {task.originTicketId && <Ticket className={`h-4 w-4 flex-shrink-0 ${task.completed ? 'text-green-500' : 'text-red-500'}`} />}
-                        <div className={`${task.completed ? 'line-through text-muted-foreground' : ''}`}>
-                          <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ p: 'span' }}>
-                            {formatTaskText(task.title)}
-                          </ReactMarkdown>
+              <React.Fragment key={task.id}>
+                {showMonthSeparator && (
+                  <TableRow className="border-none hover:bg-transparent">
+                    <TableCell colSpan={8} className="pt-6 pb-2 px-4 text-sm font-semibold text-foreground">
+                      {taskMonthYear}
+                    </TableCell>
+                  </TableRow>
+                )}
+                <TableRow data-state={task.completed ? "completed" : ""}>
+                  <TableCell className="font-medium sticky left-0 bg-background z-10 w-[40%] sm:w-[30%]">
+                    <div className="flex items-start gap-3">
+                      <Checkbox
+                        id={`task-${task.id}`}
+                        checked={task.completed}
+                        onCheckedChange={(checked) => onToggleTaskCompletion(task, !!checked)}
+                        aria-label={`Mark task ${task.title} as complete`}
+                        className="mt-1"
+                      />
+                      <div className="flex flex-col">
+                        <div className="flex items-center gap-2">
+                          {task.originTicketId && <Ticket className={`h-4 w-4 flex-shrink-0 ${task.completed ? 'text-green-500' : 'text-red-500'}`} />}
+                          <div className={`${task.completed ? 'line-through text-muted-foreground' : ''}`}>
+                            <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ p: 'span' }}>
+                              {formatTaskText(task.title)}
+                            </ReactMarkdown>
+                          </div>
+                          {renderAttachments(task)}
                         </div>
-                        {renderAttachments(task)}
-                      </div>
-                      {task.description && (
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <p className="text-xs text-muted-foreground mt-1">
-                                {formatTaskText(task.description, 50)}
-                              </p>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p className="max-w-xs">{formatTaskText(task.description)}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      )}
-                      <div className="flex gap-1 flex-wrap mt-2">
-                        {task.tags?.map(tag => (
-                          <Badge key={tag.id} variant="outline" style={{ borderColor: tag.color, color: tag.color }}>{tag.name}</Badge>
-                        ))}
+                        {task.description && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  {formatTaskText(task.description, 50)}
+                                </p>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p className="max-w-xs">{formatTaskText(task.description)}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
+                        <div className="flex gap-1 flex-wrap mt-2">
+                          {task.tags?.map(tag => (
+                            <Badge key={tag.id} variant="outline" style={{ borderColor: tag.color, color: tag.color }}>{tag.name}</Badge>
+                          ))}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </TableCell>
-                <TableCell className="w-[20%]">
-                  {task.projects && task.projects.name !== 'General Tasks' ? (
-                    <Link to={`/projects/${task.projects.slug}`} className="hover:underline text-primary text-xs block max-w-[50ch] break-words">
-                      {task.projects.name}
-                    </Link>
-                  ) : null}
-                </TableCell>
-                <TableCell>
-                  <Badge className={cn(statusStyle.tw, 'border-transparent')}>{task.status}</Badge>
-                </TableCell>
-                <TableCell>
-                  <Badge className={priorityStyle.tw}>{task.priority || 'Low'}</Badge>
-                </TableCell>
-                <TableCell>
-                  {task.due_date ? (
-                    <span className={cn(isOverdue(task.due_date) && "text-red-600 font-bold")}>
-                      {format(new Date(task.due_date), "MMM d, yyyy")}
-                    </span>
-                  ) : <span className="text-muted-foreground text-xs">No due date</span>}
-                </TableCell>
-                <TableCell>
-                  {task.updated_at ? (
-                    <span className="text-muted-foreground text-xs">
-                      {format(new Date(task.updated_at), "MMM d, yyyy")}
-                    </span>
-                  ) : <span className="text-muted-foreground text-xs">-</span>}
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center -space-x-2">
-                    {(task.assignees && task.assignees.length > 0)
-                      ? task.assignees.map((user) => (
-                        <TooltipProvider key={user.id}>
-                          <Tooltip>
-                            <TooltipTrigger>
-                              <Avatar className="h-8 w-8 border-2 border-background">
-                                <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
-                                <AvatarFallback style={generatePastelColor(user.id)}>
-                                  {getInitials([user.first_name, user.last_name].filter(Boolean).join(' '), user.email || undefined)}
-                                </AvatarFallback>
-                              </Avatar>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>{[user.first_name, user.last_name].filter(Boolean).join(' ')}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      ))
-                      : task.created_by && (
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger>
-                              <Avatar key={task.created_by.id} className="h-8 w-8 border-2 border-background opacity-50">
-                                <AvatarImage src={getAvatarUrl(task.created_by.avatar_url, task.created_by.id)} />
-                                <AvatarFallback style={generatePastelColor(task.created_by.id)}>
-                                  {getInitials([task.created_by.first_name, task.created_by.last_name].filter(Boolean).join(' '), task.created_by.email || undefined)}
-                                </AvatarFallback>
-                              </Avatar>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Created by {[task.created_by.first_name, task.created_by.last_name].filter(Boolean).join(' ')}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      )
-                    }
-                  </div>
-                </TableCell>
-                <TableCell className="text-right">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => onEdit(task)}>
-                        <Edit className="mr-2 h-4 w-4" />
-                        Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className="text-red-500"
-                        onClick={() => onDelete(task.id)}
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
-              </TableRow>
+                  </TableCell>
+                  <TableCell className="w-[20%]">
+                    {task.projects && task.projects.name !== 'General Tasks' ? (
+                      <Link to={`/projects/${task.projects.slug}`} className="hover:underline text-primary text-xs block max-w-[50ch] break-words">
+                        {task.projects.name}
+                      </Link>
+                    ) : null}
+                  </TableCell>
+                  <TableCell>
+                    <Badge className={cn(statusStyle.tw, 'border-transparent')}>{task.status}</Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge className={priorityStyle.tw}>{task.priority || 'Low'}</Badge>
+                  </TableCell>
+                  <TableCell>
+                    {task.due_date ? (
+                      <span className={cn(isOverdue(task.due_date) && "text-red-600 font-bold")}>
+                        {format(new Date(task.due_date), "MMM d, yyyy")}
+                      </span>
+                    ) : <span className="text-muted-foreground text-xs">No due date</span>}
+                  </TableCell>
+                  <TableCell>
+                    {task.updated_at ? (
+                      <span className="text-muted-foreground text-xs">
+                        {format(new Date(task.updated_at), "MMM d, yyyy")}
+                      </span>
+                    ) : <span className="text-muted-foreground text-xs">-</span>}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center -space-x-2">
+                      {(task.assignees && task.assignees.length > 0)
+                        ? task.assignees.map((user) => (
+                          <TooltipProvider key={user.id}>
+                            <Tooltip>
+                              <TooltipTrigger>
+                                <Avatar className="h-8 w-8 border-2 border-background">
+                                  <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
+                                  <AvatarFallback style={generatePastelColor(user.id)}>
+                                    {getInitials([user.first_name, user.last_name].filter(Boolean).join(' '), user.email || undefined)}
+                                  </AvatarFallback>
+                                </Avatar>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>{[user.first_name, user.last_name].filter(Boolean).join(' ')}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        ))
+                        : task.created_by && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger>
+                                <Avatar key={task.created_by.id} className="h-8 w-8 border-2 border-background opacity-50">
+                                  <AvatarImage src={getAvatarUrl(task.created_by.avatar_url, task.created_by.id)} />
+                                  <AvatarFallback style={generatePastelColor(task.created_by.id)}>
+                                    {getInitials([task.created_by.first_name, task.created_by.last_name].filter(Boolean).join(' '), task.created_by.email || undefined)}
+                                  </AvatarFallback>
+                                </Avatar>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Created by {[task.created_by.first_name, task.created_by.last_name].filter(Boolean).join(' ')}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )
+                      }
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => onEdit(task)}>
+                          <Edit className="mr-2 h-4 w-4" />
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className="text-red-500"
+                          onClick={() => onDelete(task.id)}
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              </React.Fragment>
             )
           })}
         </TableBody>
