@@ -184,6 +184,9 @@ const TableView = ({ projects, isLoading, onDeleteProject, sortConfig, requestSo
     setVisibleUpcomingCount(upcomingProjects.length);
   };
 
+  let lastMonthYear: string | null = null;
+  const isDateSorted = sortConfig.key === null || sortConfig.key === 'start_date';
+
   return (
     <Table>
       <TableHeader>
@@ -236,9 +239,27 @@ const TableView = ({ projects, isLoading, onDeleteProject, sortConfig, requestSo
           </TableRow>
         ) : (
           <>
-            {visibleUpcomingProjects.map(project => (
-              <ProjectRow key={project.id} project={project} onDeleteProject={onDeleteProject} rowRefs={rowRefs} />
-            ))}
+            {visibleUpcomingProjects.map(project => {
+              const projectMonthYear = project.start_date ? formatInJakarta(new Date(project.start_date), 'MMMM yyyy') : null;
+              let showMonthSeparator = false;
+              if (isDateSorted && projectMonthYear && projectMonthYear !== lastMonthYear) {
+                showMonthSeparator = true;
+                lastMonthYear = projectMonthYear;
+              }
+
+              return (
+                <React.Fragment key={project.id}>
+                  {showMonthSeparator && (
+                    <TableRow className="border-none hover:bg-transparent">
+                      <TableCell colSpan={7} className="pt-6 pb-2 px-4 text-sm font-semibold text-foreground">
+                        {projectMonthYear}
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  <ProjectRow project={project} onDeleteProject={onDeleteProject} rowRefs={rowRefs} />
+                </React.Fragment>
+              );
+            })}
 
             {hasMoreUpcoming && (
               <TableRow className="border-none hover:bg-transparent">
@@ -264,9 +285,27 @@ const TableView = ({ projects, isLoading, onDeleteProject, sortConfig, requestSo
               </TableRow>
             )}
 
-            {pastProjects.map(project => (
-              <ProjectRow key={project.id} project={project} onDeleteProject={onDeleteProject} rowRefs={rowRefs} />
-            ))}
+            {pastProjects.map(project => {
+              const projectMonthYear = project.start_date ? formatInJakarta(new Date(project.start_date), 'MMMM yyyy') : null;
+              let showMonthSeparator = false;
+              if (isDateSorted && projectMonthYear && projectMonthYear !== lastMonthYear) {
+                showMonthSeparator = true;
+                lastMonthYear = projectMonthYear;
+              }
+
+              return (
+                <React.Fragment key={project.id}>
+                  {showMonthSeparator && (
+                    <TableRow className="border-none hover:bg-transparent">
+                      <TableCell colSpan={7} className="pt-6 pb-2 px-4 text-sm font-semibold text-foreground">
+                        {projectMonthYear}
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  <ProjectRow project={project} onDeleteProject={onDeleteProject} rowRefs={rowRefs} />
+                </React.Fragment>
+              );
+            })}
           </>
         )}
       </TableBody>
