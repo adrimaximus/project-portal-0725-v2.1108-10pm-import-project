@@ -159,6 +159,7 @@ const ProjectRow = ({ project, onDeleteProject, rowRefs }: ProjectRowProps) => {
 
 const TableView = ({ projects, isLoading, onDeleteProject, sortConfig, requestSort, rowRefs }: TableViewProps) => {
   const [visibleUpcomingCount, setVisibleUpcomingCount] = useState(10);
+  const [visiblePastCount, setVisiblePastCount] = useState(15);
 
   const { upcomingProjects, pastProjects } = useMemo(() => {
     if (sortConfig.key) {
@@ -180,8 +181,15 @@ const TableView = ({ projects, isLoading, onDeleteProject, sortConfig, requestSo
   const visibleUpcomingProjects = upcomingProjects.slice(0, visibleUpcomingCount);
   const hasMoreUpcoming = upcomingProjects.length > visibleUpcomingCount;
 
-  const handleLoadMore = () => {
+  const visiblePastProjects = pastProjects.slice(0, visiblePastCount);
+  const hasMorePast = pastProjects.length > visiblePastCount;
+
+  const handleLoadMoreUpcoming = () => {
     setVisibleUpcomingCount(upcomingProjects.length);
+  };
+
+  const handleLoadMorePast = () => {
+    setVisiblePastCount(pastProjects.length);
   };
 
   let lastMonthYear: string | null = null;
@@ -264,7 +272,7 @@ const TableView = ({ projects, isLoading, onDeleteProject, sortConfig, requestSo
             {hasMoreUpcoming && (
               <TableRow className="border-none hover:bg-transparent">
                 <TableCell colSpan={7} className="py-2 text-center">
-                  <Button variant="outline" onClick={handleLoadMore}>
+                  <Button variant="outline" onClick={handleLoadMoreUpcoming}>
                     Load More Upcoming
                   </Button>
                 </TableCell>
@@ -285,7 +293,7 @@ const TableView = ({ projects, isLoading, onDeleteProject, sortConfig, requestSo
               </TableRow>
             )}
 
-            {pastProjects.map(project => {
+            {visiblePastProjects.map(project => {
               const projectMonthYear = project.start_date ? formatInJakarta(new Date(project.start_date), 'MMMM yyyy') : null;
               let showMonthSeparator = false;
               if (isDateSorted && projectMonthYear && projectMonthYear !== lastMonthYear) {
@@ -306,6 +314,16 @@ const TableView = ({ projects, isLoading, onDeleteProject, sortConfig, requestSo
                 </React.Fragment>
               );
             })}
+
+            {hasMorePast && (
+              <TableRow className="border-none hover:bg-transparent">
+                <TableCell colSpan={7} className="py-2 text-center">
+                  <Button variant="outline" onClick={handleLoadMorePast}>
+                    Load More Past Project
+                  </Button>
+                </TableCell>
+              </TableRow>
+            )}
           </>
         )}
       </TableBody>
