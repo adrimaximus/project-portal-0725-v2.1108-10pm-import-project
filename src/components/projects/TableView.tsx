@@ -1,3 +1,16 @@
+import { useState, useMemo } from "react";
+import { Project } from '@/types';
+import { useNavigate } from 'react-router-dom';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { MoreHorizontal, Trash2, CheckCircle } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import {
   Table,
   TableBody,
@@ -6,206 +19,147 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Progress } from "@/components/ui/progress";
-import { Project } from "@/types";
-import { Link } from "react-router-dom";
-import { MoreHorizontal, Trash2 } from "lucide-react";
-import { Button } from "../ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import StatusBadge from "../StatusBadge";
-import { getProjectStatusStyles, cn, formatInJakarta, getPaymentStatusStyles } from "@/lib/utils";
-import { Badge } from "@/components/ui/badge";
-import { getMonth, getYear, isSameDay, subDays } from 'date-fns';
-import { toZonedTime } from 'date-fns-tz';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { getProjectStatusStyles, formatInJakarta, generatePastelColor, getAvatarUrl } from '@/lib/utils';
+import { isBefore, startOfToday } from 'date-fns';
 
-interface TableViewProps {
-  projects: Project[];
-  isLoading: boolean;
-  onDeleteProject: (projectId: string) => void;
-  sortConfig: { key: keyof Project | null; direction: 'ascending' | 'descending' };
-  requestSort: (key: keyof Project) => void;
-  rowRefs: React.MutableRefObject<Map<string, HTMLTableRowElement>>;
-}
-
-const formatProjectDateRange = (startDateStr: string | null | undefined, dueDateStr: string | null | undefined): string => {
-  if (!startDateStr) return '-';
-
-  const timeZone = 'Asia/Jakarta';
-  const startDate = new Date(startDateStr);
-  let dueDate = dueDateStr ? new Date(dueDateStr) : startDate;
-
-  // An exclusive end date (e.g., from Google Calendar for an all-day event) is stored as the next day at midnight UTC.
-  const isExclusiveEndDate = 
-    dueDateStr &&
-    dueDate.getUTCHours() === 0 &&
-    dueDate.getUTCMinutes() === 0 &&
-    dueDate.getUTCSeconds() === 0 &&
-    dueDate.getUTCMilliseconds() === 0 &&
-    !isSameDay(startDate, dueDate);
-  
-  const zonedStartDate = toZonedTime(startDate, timeZone);
-  const zonedDueDateCheck = toZonedTime(dueDate, timeZone);
-
-  // If it's an exclusive end date and it's not the same day as the start date, subtract one day for display.
-  if (isExclusiveEndDate && !isSameDay(zonedStartDate, zonedDueDateCheck)) {
-    dueDate = subDays(dueDate, 1);
-  }
-
-  const finalZonedStartDate = toZonedTime(startDate, timeZone);
-  const finalZonedDueDate = toZonedTime(dueDate, timeZone);
-
-  if (isSameDay(finalZonedStartDate, finalZonedDueDate)) {
-    return formatInJakarta(startDate, 'd MMM yyyy');
-  }
-
-  const startMonth = getMonth(finalZonedStartDate);
-  const endMonth = getMonth(finalZonedDueDate);
-  const startYear = getYear(finalZonedStartDate);
-  const endYear = getYear(finalZonedDueDate);
-
-  if (startYear !== endYear) {
-    return `${formatInJakarta(startDate, 'd MMM yyyy')} - ${formatInJakarta(dueDate, 'd MMM yyyy')}`;
-  }
-
-  if (startMonth !== endMonth) {
-    return `${formatInJakarta(startDate, 'd MMM')} - ${formatInJakarta(dueDate, 'd MMM yyyy')}`;
-  }
-
-  return `${formatInJakarta(startDate, 'd')} - ${formatInJakarta(dueDate, 'd MMM yyyy')}`;
-};
-
-const TableView = ({ projects, isLoading, onDeleteProject, sortConfig, requestSort, rowRefs }: TableViewProps) => {
+const ProjectTable = ({ projects, onDeleteProject, navigate }: { projects: Project[], onDeleteProject: (id: string) => void, navigate: (path: string) => void }) => {
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead className="w-[300px] p-2">
-            <Button variant="ghost" onClick={() => requestSort('name')} className="w-full justify-start px-2 group">
-              Project
-            </Button>
-          </TableHead>
-          <TableHead className="p-2">
-            <Button variant="ghost" onClick={() => requestSort('status')} className="w-full justify-start px-2 group">
-              Status
-            </Button>
-          </TableHead>
-          <TableHead className="p-2">
-            <Button variant="ghost" onClick={() => requestSort('payment_status')} className="w-full justify-start px-2 group">
-              Payment
-            </Button>
-          </TableHead>
-          <TableHead className="p-2">
-            <Button variant="ghost" onClick={() => requestSort('progress')} className="w-full justify-start px-2 group">
-              Progress
-            </Button>
-          </TableHead>
-          <TableHead className="p-2">
-            <Button variant="ghost" onClick={() => requestSort('start_date')} className="w-full justify-start px-2 group">
-              Date
-            </Button>
-          </TableHead>
-          <TableHead className="p-2">
-            <Button variant="ghost" onClick={() => requestSort('venue')} className="w-full justify-start px-2 group">
-              Venue
-            </Button>
-          </TableHead>
-          <TableHead className="w-[50px]"></TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {isLoading ? (
+    <div className="border rounded-lg">
+      <Table>
+        <TableHeader>
           <TableRow>
-            <TableCell colSpan={7} className="h-24 text-center">
-              Loading projects...
-            </TableCell>
+            <TableHead className="w-[40%]">Proyek</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>Pembayaran</TableHead>
+            <TableHead>Jatuh Tempo</TableHead>
+            <TableHead>Tim</TableHead>
+            <TableHead className="w-[50px]"></TableHead>
           </TableRow>
-        ) : projects.length === 0 ? (
-          <TableRow>
-            <TableCell colSpan={7} className="h-24 text-center">
-              No projects found.
-            </TableCell>
-          </TableRow>
-        ) : (
-          projects.map((project) => {
-            const paymentBadgeColor = getPaymentStatusStyles(project.payment_status).tw;
+        </TableHeader>
+        <TableBody>
+          {projects.map((project) => {
+            const statusStyles = getProjectStatusStyles(project.status);
+            const paymentStatusStyles = getProjectStatusStyles(project.payment_status, true);
             return (
-              <TableRow 
-                key={project.id}
-                ref={el => {
-                  if (el) rowRefs.current.set(project.id, el);
-                  else rowRefs.current.delete(project.id);
-                }}
-              >
-                <TableCell style={{ borderLeft: `4px solid ${getProjectStatusStyles(project.status).hex}` }}>
-                  <Link to={`/projects/${project.slug}`} className="font-medium text-primary hover:underline">
-                    {project.name}
-                  </Link>
-                  <div className="text-sm text-muted-foreground">{project.category}</div>
+              <TableRow key={project.id} onClick={() => navigate(`/projects/${project.slug}`)} className="cursor-pointer">
+                <TableCell className="font-medium">
+                  <div className="flex items-center gap-2">
+                    {project.status === 'Completed' && <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />}
+                    <span className="truncate" title={project.name}>{project.name}</span>
+                  </div>
                 </TableCell>
                 <TableCell>
-                  <StatusBadge status={project.status} />
-                </TableCell>
-                <TableCell>
-                  <Badge variant="outline" className={cn("border-transparent font-normal", paymentBadgeColor)}>
-                    {project.payment_status}
+                  <Badge style={{ backgroundColor: statusStyles.hex, color: statusStyles.textColor }} className="border-transparent">
+                    {project.status}
                   </Badge>
                 </TableCell>
                 <TableCell>
-                  <div className="flex items-center gap-2">
-                    <Progress value={project.progress} className="h-2" />
-                    <span className="text-sm text-muted-foreground">{project.progress}%</span>
+                  <Badge style={{ backgroundColor: paymentStatusStyles.hex, color: paymentStatusStyles.textColor }} className="border-transparent">
+                    {project.payment_status}
+                  </Badge>
+                </TableCell>
+                <TableCell>{project.due_date ? formatInJakarta(project.due_date, 'd MMM yyyy') : 'N/A'}</TableCell>
+                <TableCell>
+                  <div className="flex -space-x-2">
+                    {project.assignedTo.slice(0, 3).map((user) => (
+                      <Avatar key={user.id} className="h-8 w-8 border-2 border-background">
+                        <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} alt={user.name} />
+                        <AvatarFallback style={generatePastelColor(user.id)}>{user.initials}</AvatarFallback>
+                      </Avatar>
+                    ))}
                   </div>
                 </TableCell>
-                <TableCell className="whitespace-nowrap">
-                  {formatProjectDateRange(project.start_date, project.due_date)}
-                </TableCell>
-                <TableCell>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <p className="truncate max-w-[15ch]">{project.venue || '-'}</p>
-                      </TooltipTrigger>
-                      {project.venue && project.venue.length > 15 && (
-                        <TooltipContent>
-                          <p>{project.venue}</p>
-                        </TooltipContent>
-                      )}
-                    </Tooltip>
-                  </TooltipProvider>
-                </TableCell>
-                <TableCell>
+                <TableCell onClick={(e) => e.stopPropagation()}>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="h-8 w-8 p-0">
-                        <span className="sr-only">Open menu</span>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 p-0">
                         <MoreHorizontal className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onSelect={() => onDeleteProject(project.id)} className="text-destructive">
+                      <DropdownMenuItem className="text-destructive" onSelect={() => onDeleteProject(project.id)}>
                         <Trash2 className="mr-2 h-4 w-4" />
-                        <span>Hapus Proyek</span>
+                        <span>Delete</span>
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </TableCell>
               </TableRow>
             );
-          })
-        )}
-      </TableBody>
-    </Table>
+          })}
+        </TableBody>
+      </Table>
+    </div>
+  );
+};
+
+const TableView = ({ projects, onDeleteProject }: { projects: Project[], onDeleteProject: (projectId: string) => void }) => {
+  const navigate = useNavigate();
+  const [visibleUpcomingCount, setVisibleUpcomingCount] = useState(10);
+  const [visiblePastCount, setVisiblePastCount] = useState(5);
+
+  const { upcomingProjects, pastProjects } = useMemo(() => {
+    const today = startOfToday();
+    const projectsWithDates = projects.filter(p => p.due_date);
+
+    const upcoming = projectsWithDates
+      .filter(p => !isBefore(new Date(p.due_date!), today))
+      .sort((a, b) => new Date(a.due_date!).getTime() - new Date(b.due_date!).getTime());
+
+    const past = projectsWithDates
+      .filter(p => isBefore(new Date(p.due_date!), today))
+      .sort((a, b) => new Date(b.due_date!).getTime() - new Date(a.due_date!).getTime());
+    
+    return { upcomingProjects: upcoming, pastProjects: past };
+  }, [projects]);
+
+  if (projects.length > 0 && upcomingProjects.length === 0 && pastProjects.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-40 text-muted-foreground">
+        Tidak ada proyek dengan tanggal jatuh tempo untuk ditampilkan.
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4 p-4">
+      {upcomingProjects.length > 0 && (
+        <div>
+          <h3 className="text-lg font-semibold my-4 px-1">Proyek Akan Datang</h3>
+          <ProjectTable projects={upcomingProjects.slice(0, visibleUpcomingCount)} onDeleteProject={onDeleteProject} navigate={navigate} />
+          {upcomingProjects.length > visibleUpcomingCount && (
+            <div className="text-center mt-6">
+              <Button variant="outline" onClick={() => setVisibleUpcomingCount(prev => prev + 10)}>
+                Muat Lebih Banyak
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {pastProjects.length > 0 && (
+        <div>
+          <div className="relative my-8">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center">
+              <span className="bg-background px-4 text-sm font-medium text-muted-foreground">
+                Proyek Sudah Lewat
+              </span>
+            </div>
+          </div>
+          <ProjectTable projects={pastProjects.slice(0, visiblePastCount)} onDeleteProject={onDeleteProject} navigate={navigate} />
+          {pastProjects.length > visiblePastCount && (
+            <div className="text-center mt-6">
+              <Button variant="outline" onClick={() => setVisiblePastCount(prev => prev + 10)}>
+                Muat Lebih Banyak
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
   );
 };
 
