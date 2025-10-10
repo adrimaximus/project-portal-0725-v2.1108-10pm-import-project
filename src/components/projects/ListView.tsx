@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { Project } from '@/types';
 import { useNavigate } from 'react-router-dom';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -12,7 +12,7 @@ import {
 import { MoreHorizontal, Clock, Trash2, MapPin, CheckCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { getProjectStatusStyles, formatInJakarta, generatePastelColor, getAvatarUrl } from '@/lib/utils';
-import { format, isSameDay, subDays } from 'date-fns';
+import { format, isSameDay, subDays, isBefore, startOfToday } from 'date-fns';
 import {
   Tooltip,
   TooltipContent,
@@ -23,14 +23,21 @@ import {
 const ListView = ({ projects, onDeleteProject }: { projects: Project[], onDeleteProject: (projectId: string) => void }) => {
   const navigate = useNavigate();
   const [visibleDays, setVisibleDays] = useState(10);
-  const dayRefs = useRef(new Map<string, HTMLDivElement>());
-  const [scrollToDate, setScrollToDate] = useState<string | null>(null);
-  const initialScrollDone = useRef(false);
 
   const dayEntries = useMemo(() => {
-    const sortedProjects = projects
-      .filter(p => p.start_date)
+    const today = startOfToday();
+
+    const projectsWithDates = projects.filter(p => p.start_date);
+
+    const upcomingProjects = projectsWithDates
+      .filter(p => !isBefore(new Date(p.start_date!), today))
       .sort((a, b) => new Date(a.start_date!).getTime() - new Date(b.start_date!).getTime());
+
+    const pastProjects = projectsWithDates
+      .filter(p => isBefore(new Date(p.start_date!), today))
+      .sort((a, b) => new Date(b.start_date!).getTime() - new Date(a.start_date!).getTime());
+
+    const sortedProjects = [...upcomingProjects, ...pastProjects];
 
     const groupedByDay = sortedProjects.reduce((acc, project) => {
       const dateKey = formatInJakarta(project.start_date!, 'yyyy-MM-dd');
@@ -43,38 +50,6 @@ const ListView = ({ projects, onDeleteProject }: { projects: Project[], onDelete
 
     return Object.entries(groupedByDay);
   }, [projects]);
-
-  useEffect(() => {
-    if (dayEntries.length === 0 || initialScrollDone.current) return;
-
-    const todayStr = format(new Date(), 'yyyy-MM-dd');
-    let targetIndex = dayEntries.findIndex(([dateStr]) => dateStr >= todayStr);
-
-    if (targetIndex === -1 && dayEntries.length > 0) {
-      targetIndex = dayEntries.length - 1;
-    }
-
-    if (targetIndex !== -1) {
-      const targetDateStr = dayEntries[targetIndex][0];
-      if (targetIndex >= visibleDays) {
-        setVisibleDays(targetIndex + 1);
-      }
-      setScrollToDate(targetDateStr);
-      initialScrollDone.current = true;
-    }
-  }, [dayEntries, visibleDays]);
-
-  useEffect(() => {
-    if (scrollToDate) {
-      const targetElement = dayRefs.current.get(scrollToDate);
-      if (targetElement) {
-        setTimeout(() => {
-          targetElement.scrollIntoView({ behavior: 'auto', block: 'start' });
-          setScrollToDate(null);
-        }, 100);
-      }
-    }
-  }, [scrollToDate, visibleDays]);
 
   const formatVenue = (venue: string | null): string => {
     if (!venue) return "";
@@ -115,10 +90,6 @@ const ListView = ({ projects, onDeleteProject }: { projects: Project[], onDelete
         return (
           <div 
             key={dateStr}
-            ref={el => {
-                if (el) dayRefs.current.set(dateStr, el);
-                else dayRefs.current.delete(dateStr);
-            }}
           >
             {showMonthHeader && (
               <h2 className="text-lg font-semibold my-4 pl-2">{currentMonth}</h2>
@@ -131,7 +102,7 @@ const ListView = ({ projects, onDeleteProject }: { projects: Project[], onDelete
               <div className="flex-1 space-y-3 pt-1 min-w-0">
                 {projectsOnDay.map(project => {
                   const startDate = project.start_date ? new Date(project.start_date) : null;
-                  const dueDate = project.due_date ? new Date(project.due_date) : null;
+                  const dueDate = project.due_date ? new Date(project.due_date) : startDate;
                   let displayDueDate = dueDate;
                   let isMultiDay = false;
 
