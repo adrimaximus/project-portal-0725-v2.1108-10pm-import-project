@@ -151,9 +151,15 @@ const TableView = ({ projects, isLoading, onDeleteProject, sortConfig, requestSo
             return (
               <React.Fragment key={project.id}>
                 {showSeparator && (
-                  <TableRow className="bg-muted/50 hover:bg-muted/50">
-                    <TableCell colSpan={7} className="py-2 px-4 text-xs text-muted-foreground font-semibold tracking-wider uppercase">
-                      - Past Projects -
+                  <TableRow className="border-none hover:bg-transparent">
+                    <TableCell colSpan={7} className="py-4">
+                      <div className="flex items-center">
+                        <div className="flex-grow border-t"></div>
+                        <span className="flex-shrink mx-4 text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+                          Past Projects
+                        </span>
+                        <div className="flex-grow border-t"></div>
+                      </div>
                     </TableCell>
                   </TableRow>
                 )}
