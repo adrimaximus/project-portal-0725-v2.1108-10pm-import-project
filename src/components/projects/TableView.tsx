@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import {
   Table,
   TableBody,
@@ -20,7 +21,7 @@ import {
 import StatusBadge from "../StatusBadge";
 import { getProjectStatusStyles, cn, formatInJakarta, getPaymentStatusStyles } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import { getMonth, getYear, isSameDay, subDays } from 'date-fns';
+import { getMonth, getYear, isSameDay, subDays, isBefore, startOfToday } from 'date-fns';
 import { toZonedTime } from 'date-fns-tz';
 import {
   Tooltip,
@@ -86,6 +87,27 @@ const formatProjectDateRange = (startDateStr: string | null | undefined, dueDate
 };
 
 const TableView = ({ projects, isLoading, onDeleteProject, sortConfig, requestSort, rowRefs }: TableViewProps) => {
+  const sortedProjects = useMemo(() => {
+    if (sortConfig.key) {
+      return projects;
+    }
+
+    const today = startOfToday();
+    
+    const projectsWithDates = projects.filter(p => p.start_date);
+    const projectsWithoutDates = projects.filter(p => !p.start_date);
+
+    const upcomingProjects = projectsWithDates
+      .filter(p => !isBefore(new Date(p.start_date!), today))
+      .sort((a, b) => new Date(a.start_date!).getTime() - new Date(b.start_date!).getTime());
+
+    const pastProjects = projectsWithDates
+      .filter(p => isBefore(new Date(p.start_date!), today))
+      .sort((a, b) => new Date(b.start_date!).getTime() - new Date(a.start_date!).getTime());
+
+    return [...upcomingProjects, ...pastProjects, ...projectsWithoutDates];
+  }, [projects, sortConfig]);
+
   return (
     <Table>
       <TableHeader>
@@ -130,14 +152,14 @@ const TableView = ({ projects, isLoading, onDeleteProject, sortConfig, requestSo
               Loading projects...
             </TableCell>
           </TableRow>
-        ) : projects.length === 0 ? (
+        ) : sortedProjects.length === 0 ? (
           <TableRow>
             <TableCell colSpan={7} className="h-24 text-center">
               No projects found.
             </TableCell>
           </TableRow>
         ) : (
-          projects.map((project) => {
+          sortedProjects.map((project) => {
             const paymentBadgeColor = getPaymentStatusStyles(project.payment_status).tw;
             return (
               <TableRow 
