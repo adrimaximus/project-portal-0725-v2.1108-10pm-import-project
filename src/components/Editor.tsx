@@ -16,7 +16,7 @@ export default function Editor({ data, onChange }: EditorProps) {
       const { default: Warning } = await import("@editorjs/warning");
       const { default: Header } = await import("editorjs-header-with-alignment");
       const { default: Paragraph } = await import("editorjs-paragraph-with-alignment");
-      const { default: Alert } = await import("@editorjs/alert");
+      const { default: Alert } = await import("editorjs-alert");
       const { default: Delimiter } = await import("editorjs-delimiter");
 
       if (!ref.current) {
