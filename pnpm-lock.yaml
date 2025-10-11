@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@alkhipce/editorjs-aitext':
+        specifier: ^1.2.0
+        version: 1.2.0
       '@anthropic-ai/sdk':
         specifier: ^0.65.0
         version: 0.65.0(zod@3.24.3)
@@ -413,6 +416,9 @@ importers:
         version: 6.3.4(@types/node@22.14.1)(jiti@1.21.7)(yaml@2.7.1)
 
 packages:
+
+  '@alkhipce/editorjs-aitext@1.2.0':
+    resolution: {integrity: sha512-r7jaA6lN2lys8ZuV2POO3zKM+1TNEVwsIOMhAcN8ALzIzyA0Q/4Qdmshjfn2uX/RYbsWQ6cr976ITltC4k1C/g==}
 
   '@alloc/quick-lru@5.2.0':
     resolution: {integrity: sha512-UrcABB+4bUrFABwbluTIBErXwvbsU/V7TZWfmbgJfbkwiBuziS9gxdODUyuiecfdGQ85jglMW6juS3+z5TsKLw==}
@@ -4770,6 +4776,10 @@ packages:
     resolution: {integrity: sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A==}
 
 snapshots:
+
+  '@alkhipce/editorjs-aitext@1.2.0':
+    dependencies:
+      '@editorjs/paragraph': 2.11.7
 
   '@alloc/quick-lru@5.2.0': {}
 

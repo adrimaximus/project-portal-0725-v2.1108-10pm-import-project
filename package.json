@@ -11,6 +11,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@alkhipce/editorjs-aitext": "^1.2.0",
     "@anthropic-ai/sdk": "^0.65.0",
     "@capacitor/android": "^7.4.3",
     "@capacitor/cli": "^7.4.3",

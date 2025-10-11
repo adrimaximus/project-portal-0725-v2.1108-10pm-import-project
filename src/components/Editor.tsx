@@ -12,7 +12,7 @@ import Delimiter from "@editorjs/delimiter";
 // @ts-ignore
 import ToggleBlock from 'editorjs-toggle-block';
 // @ts-ignore
-import AIText from 'editorjs-aitext';
+import AIText from '@alkhipce/editorjs-aitext';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
