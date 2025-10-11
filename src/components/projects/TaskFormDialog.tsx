@@ -26,6 +26,7 @@ import { useProfiles } from '@/hooks/useProfiles';
 import { useIsMobile } from '@/hooks/use-mobile';
 import TaskFileUpload from './TaskFileUpload';
 import { Badge } from '@/components/ui/badge';
+import { ProjectCombobox } from './ProjectCombobox';
 
 interface TaskFormDialogProps {
   open: boolean;
@@ -209,22 +210,14 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task }: Ta
         control={form.control}
         name="project_id"
         render={({ field }) => (
-          <FormItem>
+          <FormItem className="flex flex-col">
             <FormLabel>Project</FormLabel>
-            <Select onValueChange={field.onChange} value={field.value} disabled={isLoadingProjects}>
-              <FormControl>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a project" />
-                </SelectTrigger>
-              </FormControl>
-              <SelectContent>
-                {isLoadingProjects ? (
-                  <SelectItem value="loading" disabled>Loading projects...</SelectItem>
-                ) : (
-                  projects.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)
-                )}
-              </SelectContent>
-            </Select>
+            <ProjectCombobox
+              projects={projects}
+              value={field.value}
+              onChange={field.onChange}
+              isLoading={isLoadingProjects}
+            />
             <FormMessage />
           </FormItem>
         )}
