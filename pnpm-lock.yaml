@@ -272,6 +272,9 @@ importers:
       editorjs-style:
         specifier: ^3.0.3
         version: 3.0.3
+      editorjs-text-color-plugin:
+        specifier: ^2.0.4
+        version: 2.0.4
       editorjs-toggle-block:
         specifier: ^0.3.16
         version: 0.3.16
@@ -2754,6 +2757,9 @@ packages:
 
   editorjs-style@3.0.3:
     resolution: {integrity: sha512-Ur+lAu5g3oaGKzWh7oJx+DsjaUNAwKouHGJDbE6+ZCF6QTxNj8EjE22DQXjtX26qL1YHt54ku2sC3lhVhm8MKQ==}
+
+  editorjs-text-color-plugin@2.0.4:
+    resolution: {integrity: sha512-QpibTkOxs3ndlKNOLT8ZlC4ktc3/eKIajiLO0Jm/hh9AJug/CrM1/rAvHy+ldfUKavbWeI+YZvgjad0YTyoyGw==}
 
   editorjs-toggle-block@0.3.16:
     resolution: {integrity: sha512-vjLE0bTF2HcQ7gQdgQ4c+Dl0n2o+oA0JICseJSYkQluDIE+LA9oHfTAE8ziJr03oeya7iVQ/b+d21Ez5hKsVsw==}
@@ -7306,6 +7312,8 @@ snapshots:
   editorjs-paragraph-with-alignment@3.0.0: {}
 
   editorjs-style@3.0.3: {}
+
+  editorjs-text-color-plugin@2.0.4: {}
 
   editorjs-toggle-block@0.3.16:
     dependencies:
