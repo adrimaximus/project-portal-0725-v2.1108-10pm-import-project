@@ -90,7 +90,12 @@ const Editor: React.FC<EditorProps> = ({ data, onChange }) => {
               }
             }
           },
-          link: LinkTool,
+          link: {
+            class: LinkTool,
+            config: {
+              endpoint: 'https://quuecudndfztjlxbrvyb.supabase.co/functions/v1/fetch-url-metadata',
+            }
+          },
           attaches: {
             class: AttachesTool,
             config: {
