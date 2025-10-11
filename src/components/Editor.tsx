@@ -2,7 +2,7 @@
 import React, { useEffect, useRef } from "react";
 import EditorJS, { OutputData } from "@editorjs/editorjs";
 // @ts-ignore
-import HeaderWithAnchor from "editorjs-header-with-anchor";
+import Header from "@editorjs/header";
 // @ts-ignore
 import List from "@editorjs/list";
 // @ts-ignore
@@ -60,13 +60,12 @@ const Editor: React.FC<EditorProps> = ({ data, onChange }) => {
             inlineToolbar: true,
           },
           header: {
-            class: HeaderWithAnchor,
+            class: Header,
             inlineToolbar: true,
             config: {
               levels: [1, 2, 3],
               defaultLevel: 2,
               placeholder: "Type heading...",
-              anchor: true,
             },
             tunes: ['textVariantTune'],
           },
