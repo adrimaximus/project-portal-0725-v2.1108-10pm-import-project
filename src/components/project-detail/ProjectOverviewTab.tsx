@@ -77,18 +77,18 @@ const ProjectOverviewTab = ({
               prompt: 'Generate with AI from project details'
             }}
           />
-          <Separator className="my-6" />
+          <Separator className="my-4" />
           <div>
-            <h3 className="text-base font-semibold mb-4">Project Tags</h3>
+            <h3 className="text-base font-semibold mb-2">Project Tags</h3>
             <ProjectTags
               project={project}
               isEditing={isEditing}
               onTagsChange={onTagsChange}
             />
           </div>
-          <Separator className="my-6" />
+          <Separator className="my-4" />
           <div>
-            <h3 className="text-base font-semibold mb-4">Project Files</h3>
+            <h3 className="text-base font-semibold mb-2">Project Files</h3>
             <ProjectBrief
               files={project.briefFiles || []}
               isEditing={isEditing}
