@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo } from "react";
 import { Project } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -66,7 +66,6 @@ const CommentInput = ({ project, onAddCommentOrTicket }: CommentInputProps) => {
           classNames={{
             control: 'relative w-full',
             input: 'w-full min-h-[100px] p-3 text-sm rounded-lg border bg-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
-            highlighter: 'w-full min-h-[100px] p-3 text-sm rounded-lg whitespace-pre-wrap break-words',
             suggestions: {
               list: 'bg-popover text-popover-foreground border rounded-lg shadow-lg p-1 mt-2 z-10 max-h-60 overflow-y-auto',
               item: 'flex items-center gap-3 px-2 py-1.5 text-sm rounded-sm cursor-pointer outline-none',
@@ -79,8 +78,6 @@ const CommentInput = ({ project, onAddCommentOrTicket }: CommentInputProps) => {
           <Mention
             trigger="@"
             data={mentionableUsers}
-            markup="@[__display__](__id__)"
-            displayTransform={(id, display) => `@${display}`}
             renderSuggestion={(suggestion: any) => (
               <>
                 <Avatar className="h-8 w-8">

@@ -8,46 +8,46 @@ interface CommentRendererProps {
 }
 
 const CommentRenderer = ({ text, members }: CommentRendererProps) => {
-  // Regex to find markdown-style mentions like @[DisplayName](userId)
-  const mentionRegex = /@\[([^\]]+)\]\(([^)]+)\)/g;
+  // Sort members by name length, descending, to match longer names first (e.g., "Adri Maximus" before "Adri")
+  const sortedMembers = [...members].sort((a, b) => b.name.length - a.name.length);
+  
+  // Create a regex pattern from member names to accurately find mentions
+  const mentionPattern = sortedMembers.map(m => m.name.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')).join('|');
+  
+  // This regex will find `@` followed by one of the member names, ensuring it's not part of an email
+  const regex = new RegExp(`(?<!\\S)@(${mentionPattern})(?!\\S)`, 'g');
+  
+  const parts = text.split(regex);
   const urlRegex = /(https?:\/\/[^\s]+|www\.[^\s]+)/g;
-
-  // Combine regexes to split the text by both mentions and URLs
-  const combinedRegex = new RegExp(`(${mentionRegex.source}|${urlRegex.source})`, 'g');
-  const parts = text.split(combinedRegex);
 
   return (
     <p className="text-sm text-muted-foreground whitespace-pre-wrap break-words">
       {parts.map((part, index) => {
-        if (!part) return null;
-
-        // Check if the part is a mention
-        const mentionMatch = part.match(/@\[([^\]]+)\]\(([^)]+)\)/);
-        if (mentionMatch) {
-          const [, displayName, userId] = mentionMatch;
-          const user = members.find(m => m.id === userId);
-          // If user is found, render UserMention, otherwise render the display name as text
-          return user ? <UserMention key={index} user={user} /> : `@${displayName}`;
+        // Matched names are at odd indices
+        if (index % 2 === 1) {
+          const user = members.find(m => m.name === part);
+          return user ? <UserMention key={index} user={user} /> : `@${part}`;
         }
 
-        // Check if the part is a URL
-        if (part.match(urlRegex)) {
-          const href = part.startsWith('www.') ? `https://${part}` : part;
-          return (
-            <a
-              key={index}
-              href={href}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-primary underline hover:text-primary/80"
-            >
-              {part}
-            </a>
-          );
-        }
-
-        // Otherwise, it's plain text
-        return part;
+        // Plain text parts are at even indices, check for URLs in them
+        const textParts = part.split(urlRegex);
+        return textParts.map((textPart, i) => {
+          if (textPart.match(urlRegex)) {
+            const href = textPart.startsWith('www.') ? `https://${textPart}` : textPart;
+            return (
+              <a
+                key={`${index}-${i}`}
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary underline hover:text-primary/80"
+              >
+                {textPart}
+              </a>
+            );
+          }
+          return textPart;
+        });
       })}
     </p>
   );
