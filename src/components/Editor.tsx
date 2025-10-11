@@ -19,8 +19,6 @@ import ImageTool from '@editorjs/image';
 import LinkTool from '@editorjs/link';
 // @ts-ignore
 import AttachesTool from '@editorjs/attaches';
-// @ts-ignore
-import Embed from '@editorjs/embed';
 import { supabase } from "@/integrations/supabase/client";
 
 interface EditorProps {
@@ -59,27 +57,6 @@ const Editor: React.FC<EditorProps> = ({ data, onChange }) => {
           list: {
             class: List,
             inlineToolbar: true,
-          },
-          embed: {
-            class: Embed,
-            inlineToolbar: true,
-            config: {
-              services: {
-                youtube: true,
-                coub: true,
-                vimeo: true,
-                imgur: true,
-                gfycat: true,
-                twitch: true,
-                "twitch-videos": true,
-                "twitch-clips": true,
-                "yandex-music-track": true,
-                "yandex-music-album": true,
-                "yandex-music-playlist": true,
-                codepen: true,
-                pinterest: true,
-              }
-            }
           },
           image: {
             class: ImageTool,
@@ -177,7 +154,7 @@ const Editor: React.FC<EditorProps> = ({ data, onChange }) => {
         editorRef.current = null;
       }
     };
-  }, [data, onChange]);
+  }, []);
 
   return (
     <div className="w-full border rounded-md p-4 bg-white">

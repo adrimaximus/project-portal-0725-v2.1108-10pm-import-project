@@ -44,9 +44,6 @@ importers:
       '@editorjs/editorjs':
         specifier: ^2.31.0
         version: 2.31.0
-      '@editorjs/embed':
-        specifier: ^2.7.6
-        version: 2.7.6
       '@editorjs/header':
         specifier: ^2.8.8
         version: 2.8.8
@@ -607,9 +604,6 @@ packages:
 
   '@editorjs/editorjs@2.31.0':
     resolution: {integrity: sha512-CBcIZXtPlg0dSlC5clO9OfTCmcxelj723jd4d67teFlaFJobjjxU1PmMxFJdhaRep5+nqdD0jr+fdJBqEDqt1g==}
-
-  '@editorjs/embed@2.7.6':
-    resolution: {integrity: sha512-L3agW/23mOI0L+oksUE9UOR5VSNCqapxLH5lma+5j+idjKCC31nxbx07x53MSJ4rlOTO1L7cFVhkqptEdOliJA==}
 
   '@editorjs/header@2.8.8':
     resolution: {integrity: sha512-bsMSs34u2hoi0UBuRoc5EGWXIFzJiwYgkFUYQGVm63y5FU+s8zPBmVx5Ip2sw1xgs0fqfDROqmteMvvmbCy62w==}
@@ -5036,10 +5030,6 @@ snapshots:
       '@editorjs/caret': 1.0.3
       codex-notifier: 1.1.2
       codex-tooltip: 1.0.5
-
-  '@editorjs/embed@2.7.6':
-    dependencies:
-      '@editorjs/editorjs': 2.31.0
 
   '@editorjs/header@2.8.8':
     dependencies:
