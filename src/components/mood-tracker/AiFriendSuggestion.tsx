@@ -163,7 +163,12 @@ const AiFriendSuggestion: React.FC<AiFriendSuggestionProps> = ({ data, period, u
                 </AvatarFallback>
               </Avatar>
             )}
-            <div className={`max-w-md rounded-lg px-3 py-2 text-sm ${msg.sender === 'user' ? 'bg-primary text-primary-foreground' : 'bg-[#eff3f4] dark:bg-stone-800'}`}>
+            <div className={cn(
+              "rounded-lg px-3 py-2 text-sm",
+              msg.sender === 'user' 
+                ? 'bg-primary text-primary-foreground max-w-md' 
+                : 'bg-[#eff3f4] dark:bg-stone-800 flex-1'
+            )}>
               {msg.content}
             </div>
             {msg.sender === 'user' && user && (
