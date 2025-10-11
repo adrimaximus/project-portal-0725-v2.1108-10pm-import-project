@@ -30,6 +30,10 @@ import Underline from '@editorjs/underline';
 import Marker from '@editorjs/marker';
 // @ts-ignore
 import InlineCode from '@editorjs/inline-code';
+// @ts-ignore
+import ChangeCase from 'editorjs-change-case';
+// @ts-ignore
+import Style from 'editorjs-style';
 
 interface EditorProps {
   data?: OutputData;
@@ -192,6 +196,8 @@ const Editor: React.FC<EditorProps> = ({ data, onChange }) => {
             class: InlineCode,
             shortcut: 'CMD+SHIFT+C',
           },
+          changeCase: ChangeCase,
+          style: Style,
         },
         data: data || {},
         onChange: async () => {

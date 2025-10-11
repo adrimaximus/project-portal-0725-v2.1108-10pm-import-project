@@ -257,6 +257,9 @@ importers:
       editorjs-alert:
         specifier: ^1.1.4
         version: 1.1.4
+      editorjs-change-case:
+        specifier: ^0.0.3
+        version: 0.0.3
       editorjs-header-with-alignment:
         specifier: ^1.0.1
         version: 1.0.1
@@ -266,6 +269,9 @@ importers:
       editorjs-paragraph-with-alignment:
         specifier: ^3.0.0
         version: 3.0.0
+      editorjs-style:
+        specifier: ^3.0.3
+        version: 3.0.3
       editorjs-toggle-block:
         specifier: ^0.3.16
         version: 0.3.16
@@ -2734,6 +2740,9 @@ packages:
   editorjs-alert@1.1.4:
     resolution: {integrity: sha512-m6w/cRxnFucC3dyfrB+DTNXw70SnJNv05AX6P3bZ8qkbzB1OAJTuaFrEKZBdN0YvEvTe1zvg3S344EkPAveemQ==}
 
+  editorjs-change-case@0.0.3:
+    resolution: {integrity: sha512-1g5RueRFLGsvKNiKdpq9nLgn0xeHylXmXJLMqqobAhB7uNJ7N978vN1mKGgMSThxi4y6mU45aNYhBJy9xQFrZA==}
+
   editorjs-header-with-alignment@1.0.1:
     resolution: {integrity: sha512-L7cDSx/H3wgb9dg05HH9xPMotj3tkoElTd0TeY81pxvO0+tPV+yRZ9hV7fUyZolYUObKfYL9QS+yeTY/YCht5g==}
 
@@ -2742,6 +2751,9 @@ packages:
 
   editorjs-paragraph-with-alignment@3.0.0:
     resolution: {integrity: sha512-vSjjB/KUECEBxYqbj9yn1L799L14n0uoKrvk5qfaAokIHB8mYg5hZ8mOTtoS2cJu+xE3QZ/jmHY/Fh0EJeM8ZQ==}
+
+  editorjs-style@3.0.3:
+    resolution: {integrity: sha512-Ur+lAu5g3oaGKzWh7oJx+DsjaUNAwKouHGJDbE6+ZCF6QTxNj8EjE22DQXjtX26qL1YHt54ku2sC3lhVhm8MKQ==}
 
   editorjs-toggle-block@0.3.16:
     resolution: {integrity: sha512-vjLE0bTF2HcQ7gQdgQ4c+Dl0n2o+oA0JICseJSYkQluDIE+LA9oHfTAE8ziJr03oeya7iVQ/b+d21Ez5hKsVsw==}
@@ -7285,11 +7297,15 @@ snapshots:
 
   editorjs-alert@1.1.4: {}
 
+  editorjs-change-case@0.0.3: {}
+
   editorjs-header-with-alignment@1.0.1: {}
 
   editorjs-header-with-anchor@2.6.0: {}
 
   editorjs-paragraph-with-alignment@3.0.0: {}
+
+  editorjs-style@3.0.3: {}
 
   editorjs-toggle-block@0.3.16:
     dependencies:
