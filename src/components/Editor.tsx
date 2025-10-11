@@ -1,6 +1,7 @@
 "use client";
 import React, { useEffect, useRef } from "react";
 import EditorJS, { OutputData } from "@editorjs/editorjs";
+import Paragraph from "editorjs-paragraph-with-alignment";
 
 interface EditorProps {
   data?: OutputData;
@@ -21,7 +22,12 @@ export default function Editor({ data, onChange }: EditorProps) {
       if (!ref.current) {
         const editor = new EditorJS({
           holder: "editorjs",
+          defaultBlock: 'paragraph',
           tools: { 
+            paragraph: {
+              class: Paragraph,
+              inlineToolbar: true,
+            },
             header: {
               class: Header,
               inlineToolbar: true,
