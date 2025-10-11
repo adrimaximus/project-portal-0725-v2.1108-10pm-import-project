@@ -1,8 +1,8 @@
 "use client";
 
-import React from 'react';
-import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
+import React, { useEffect, useRef } from 'react';
+import EditorJS, { OutputData } from '@editorjs/editorjs';
+import { EDITOR_JS_TOOLS } from './editor/editor-tools';
 import { Button } from '@/components/ui/button';
 import { Sparkles, RefreshCw } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -16,20 +16,58 @@ interface RichTextEditorProps {
   prompt?: string;
 }
 
-const RichTextEditor = React.forwardRef<ReactQuill, RichTextEditorProps>(({ value, onChange, placeholder, onGenerate, isGenerating, prompt }, ref) => {
-  const modules = {
-    toolbar: [
-      [{ 'font': [] }, { 'size': [] }],
-      ['bold', 'italic', 'underline', 'strike'],
-      [{ 'color': [] }, { 'background': [] }],
-      [{ 'script': 'sub'}, { 'script': 'super' }],
-      [{ 'header': '1' }, { 'header': '2' }, 'blockquote', 'code-block'],
-      [{ 'list': 'ordered'}, { 'list': 'bullet' }, { 'indent': '-1'}, { 'indent': '+1' }],
-      [{ 'direction': 'rtl' }, { 'align': [] }],
-      ['link', 'image', 'video', 'formula'],
-      ['clean']
-    ],
-  };
+const RichTextEditor = React.forwardRef<EditorJS, RichTextEditorProps>(({ value, onChange, placeholder, onGenerate, isGenerating, prompt }, ref) => {
+  const editorInstanceRef = useRef<EditorJS | null>(null);
+  const holderId = React.useId();
+
+  useEffect(() => {
+    if (!editorInstanceRef.current) {
+      let initialData: OutputData;
+      try {
+        initialData = value ? JSON.parse(value) : { blocks: [] };
+      } catch (error) {
+        console.error("Invalid JSON in RichTextEditor value prop. Initializing with empty editor.", error);
+        initialData = { blocks: [] };
+      }
+
+      const editor = new EditorJS({
+        holder: holderId,
+        tools: EDITOR_JS_TOOLS,
+        data: initialData,
+        placeholder: placeholder || 'Let`s write an awesome story!',
+        async onChange(api, event) {
+          const outputData = await api.saver.save();
+          onChange(JSON.stringify(outputData));
+        },
+      });
+      editorInstanceRef.current = editor;
+    }
+
+    return () => {
+      if (editorInstanceRef.current?.destroy) {
+        editorInstanceRef.current.destroy();
+        editorInstanceRef.current = null;
+      }
+    };
+  }, [holderId]);
+
+  useEffect(() => {
+    if (editorInstanceRef.current && value) {
+      editorInstanceRef.current.isReady.then(async () => {
+        const currentData = await editorInstanceRef.current!.save();
+        if (value !== JSON.stringify(currentData)) {
+          try {
+            const newData = JSON.parse(value);
+            editorInstanceRef.current!.render(newData);
+          } catch (e) {
+            console.error("Error rendering new data in Editor.js", e);
+          }
+        }
+      }).catch(e => console.error("Editor.js not ready for value update", e));
+    }
+  }, [value]);
+
+  React.useImperativeHandle(ref, () => editorInstanceRef.current!, []);
 
   return (
     <div className="bg-background rounded-md border relative">
@@ -54,15 +92,7 @@ const RichTextEditor = React.forwardRef<ReactQuill, RichTextEditorProps>(({ valu
           </Tooltip>
         </TooltipProvider>
       )}
-      <ReactQuill
-        ref={ref}
-        theme="snow"
-        value={value}
-        onChange={onChange}
-        modules={modules}
-        placeholder={placeholder}
-        className="[&_.ql-editor]:min-h-[120px] [&_.ql-toolbar]:rounded-t-md [&_.ql-container]:border-none [&_.ql-toolbar]:pr-10"
-      />
+      <div id={holderId} className="prose max-w-full p-4 [&_.ce-block__content]:max-w-full [&_.ce-toolbar__content]:max-w-full [&_h1]:mt-2 [&_h2]:mt-2 [&_h3]:mt-2 [&_h4]:mt-2 [&_h5]:mt-2 [&_h6]:mt-2" />
     </div>
   );
 });
