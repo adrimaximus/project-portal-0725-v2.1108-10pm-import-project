@@ -7,6 +7,7 @@ import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
 import { OnChangePlugin } from "@lexical/react/LexicalOnChangePlugin";
 import { LexicalErrorBoundary } from "@lexical/react/LexicalErrorBoundary";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+
 import {
   FORMAT_TEXT_COMMAND,
   $getSelection,
@@ -125,7 +126,7 @@ export default function Editor({ onChange, initialState }: EditorProps) {
         <ToolbarPlugin />
         <RichTextPlugin
           contentEditable={<ContentEditable className="min-h-[200px] outline-none prose dark:prose-invert max-w-none" />}
-          placeholder={<div className="text-muted-foreground absolute top-[62px] left-4 select-none pointer-events-none">Start typing here...</div>}
+          placeholder={<div className="text-muted-foreground absolute top-[62px] left-4 select-none pointer-events-none">Type “/” for commands…</div>}
           ErrorBoundary={LexicalErrorBoundary}
         />
         <HistoryPlugin />
