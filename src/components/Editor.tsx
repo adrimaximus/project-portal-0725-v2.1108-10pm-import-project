@@ -14,6 +14,8 @@ export default function Editor({ data, onChange }: EditorProps) {
     async function init() {
       const { default: Header } = await import("@editorjs/header");
       const { default: List } = await import("@editorjs/list");
+      const { default: Warning } = await import("@editorjs/warning");
+      const { default: Delimiter } = await import("@editorjs/delimiter");
 
       if (!ref.current) {
         const editor = new EditorJS({
@@ -26,7 +28,17 @@ export default function Editor({ data, onChange }: EditorProps) {
             list: {
               class: List,
               inlineToolbar: true,
-            }
+            },
+            warning: {
+              class: Warning,
+              inlineToolbar: true,
+              shortcut: 'CMD+SHIFT+W',
+              config: {
+                titlePlaceholder: 'Title',
+                messagePlaceholder: 'Message',
+              },
+            },
+            delimiter: Delimiter,
           },
           data: data || { blocks: [] },
           async onChange(api, event) {
