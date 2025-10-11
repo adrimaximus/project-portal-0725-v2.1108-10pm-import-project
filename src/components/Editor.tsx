@@ -13,6 +13,8 @@ import Delimiter from "@editorjs/delimiter";
 import ToggleBlock from 'editorjs-toggle-block';
 // @ts-ignore
 import Title from 'title-editorjs';
+// @ts-ignore
+import Style from '@skchawala/editorjs-text-style';
 
 interface EditorProps {
   data?: OutputData;
@@ -33,6 +35,7 @@ const Editor: React.FC<EditorProps> = ({ data, onChange }) => {
             placeholder: 'Enter a title',
             inlineToolbar: true,
           },
+          style: Style,
           header: {
             class: HeaderWithAnchor,
             inlineToolbar: true,
