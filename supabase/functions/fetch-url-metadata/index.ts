@@ -6,16 +6,16 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'GET, OPTIONS',
 }
 
-// Simple regex parsers to find metadata in HTML
 const parseTitle = (html: string): string => {
-  const match = html.match(/<title>(.*?)<\/title>/i);
+  const match = html.match(/<title[^>]*>(.*?)<\/title>/i);
   return match ? match[1] : '';
 };
 
 const parseMeta = (html: string, property: string): string => {
-  const regex = new RegExp(`<meta (?:name|property)="${property}" content="(.*?)"`, 'i');
+  // This regex handles various quote styles and attribute orders
+  const regex = new RegExp(`<meta[^>]*?(?:name|property)=["']${property}["'][^>]*?content=(["'])(.*?)\\1`, 'i');
   const match = html.match(regex);
-  return match ? match[1] : '';
+  return match ? match[2] : '';
 };
 
 serve(async (req) => {
@@ -31,17 +31,17 @@ serve(async (req) => {
       throw new Error('URL query parameter is required');
     }
 
-    // Ensure the URL has a protocol
     const fullUrl = url.startsWith('http') ? url : `https://${url}`;
 
     const response = await fetch(fullUrl, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        // Use a common crawler User-Agent to improve success rate
+        'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)'
       }
     });
     
     if (!response.ok) {
-      throw new Error(`Failed to fetch URL: Status ${response.status}`);
+      throw new Error(`Failed to fetch URL: Status ${response.status} ${response.statusText}`);
     }
 
     const html = await response.text();
@@ -74,7 +74,7 @@ serve(async (req) => {
       meta: {},
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 200, // Return 200 OK with success: 0 as some tools prefer this
+      status: 200, // Return 200 OK with success: 0 as Editor.js LinkTool expects
     });
   }
 })
