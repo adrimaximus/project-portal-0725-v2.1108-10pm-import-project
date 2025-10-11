@@ -9,10 +9,6 @@ interface StatCardProps {
 }
 
 const StatCard = ({ title, value, icon, description }: StatCardProps) => {
-  if (value === null || value === undefined) {
-    return null;
-  }
-
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

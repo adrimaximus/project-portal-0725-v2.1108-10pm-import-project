@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { Project, User, PROJECT_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS } from '@/types';
-import StatCard from '@/components/dashboard/StatCard';
+import StatCard from './StatCard';
 import { DollarSign, ListChecks, CreditCard, User as UserIcon, Users, Hourglass, Briefcase } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -15,7 +15,12 @@ type UserStatData = User & { projectCount: number; totalValue: number };
 
 const UserStat = ({ user, metric, metricType }: { user: UserStatData | null, metric: number, metricType: 'quantity' | 'value' }) => {
   if (!user || metric === 0) {
-    return null;
+    return (
+      <div className="pt-2">
+        <div className="text-2xl font-bold">N/A</div>
+        <p className="text-xs text-muted-foreground">No data available</p>
+      </div>
+    );
   }
   return (
     <div className="flex items-center gap-2 sm:gap-4 pt-2">
