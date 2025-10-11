@@ -1,0 +1,9 @@
+#editorjs.prose p,
+#editorjs.prose ul,
+#editorjs.prose ol,
+#editorjs.prose li,
+#editorjs.prose li p {
+  line-height: 0.8;
+  margin-top: 0.2rem;
+  margin-bottom: 0.2rem;
+}

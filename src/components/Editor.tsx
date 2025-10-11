@@ -6,6 +6,7 @@ import List from "@editorjs/list";
 import Paragraph from "@editorjs/paragraph";
 import Quote from "@editorjs/quote";
 import ImageTool from "@editorjs/image";
+import "@/styles/editor.css";
 
 interface EditorProps {
   data?: OutputData;
