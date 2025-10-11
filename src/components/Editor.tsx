@@ -26,6 +26,10 @@ import GroupImage from '@cychann/editorjs-group-image';
 import Table from '@editorjs/table';
 // @ts-ignore
 import Underline from '@editorjs/underline';
+// @ts-ignore
+import Marker from '@editorjs/marker';
+// @ts-ignore
+import InlineCode from '@editorjs/inline-code';
 
 interface EditorProps {
   data?: OutputData;
@@ -180,6 +184,14 @@ const Editor: React.FC<EditorProps> = ({ data, onChange }) => {
             inlineToolbar: true,
           },
           underline: Underline,
+          marker: {
+            class: Marker,
+            shortcut: 'CMD+SHIFT+M',
+          },
+          inlineCode: {
+            class: InlineCode,
+            shortcut: 'CMD+SHIFT+C',
+          },
         },
         data: data || {},
         onChange: async () => {
