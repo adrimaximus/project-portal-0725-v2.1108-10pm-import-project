@@ -8,6 +8,8 @@ import ProjectTags from './ProjectTags';
 import { Tag } from '@/types';
 import { toast } from 'sonner';
 import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
+import { Edit } from "lucide-react";
 
 interface ProjectOverviewTabProps {
   project: Project;
@@ -17,6 +19,7 @@ interface ProjectOverviewTabProps {
   onFileDelete: (fileId: string) => void;
   onServicesChange: (services: string[]) => void;
   onTagsChange: (tags: Tag[]) => void;
+  onSetIsEditing?: (isEditing: boolean) => void;
 }
 
 const ProjectOverviewTab = ({ 
@@ -25,7 +28,8 @@ const ProjectOverviewTab = ({
   onDescriptionChange, 
   onFilesAdd, 
   onFileDelete,
-  onTagsChange
+  onTagsChange,
+  onSetIsEditing
 }: ProjectOverviewTabProps) => {
   const [isGenerating, setIsGenerating] = useState(false);
 
@@ -64,8 +68,15 @@ const ProjectOverviewTab = ({
   
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader className="p-4 pb-2"><CardTitle>Description & Brief</CardTitle></CardHeader>
+      <Card className="group">
+        <CardHeader className="flex flex-row items-center justify-between p-4 pb-2">
+          <CardTitle>Description & Brief</CardTitle>
+          {!isEditing && onSetIsEditing && (
+            <Button variant="ghost" size="icon" className="invisible group-hover:visible" onClick={() => onSetIsEditing(true)}>
+              <Edit className="h-4 w-4" />
+            </Button>
+          )}
+        </CardHeader>
         <CardContent className="p-4 pt-0">
           <ProjectDescription
             description={project.description}
