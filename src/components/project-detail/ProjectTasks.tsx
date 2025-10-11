@@ -75,7 +75,7 @@ const ProjectTasks = ({
           services: project.services,
           description: project.description,
           existingTasks: existingTaskTitles,
-          language: 'Indonesian',
+          language: 'Bahasa Indonesia',
           taskCount: 3,
         },
       });
