@@ -24,6 +24,8 @@ import { supabase } from "@/integrations/supabase/client";
 import GroupImage from '@cychann/editorjs-group-image';
 // @ts-ignore
 import Table from '@editorjs/table';
+// @ts-ignore
+import Columns from 'editorjs-columns';
 
 interface EditorProps {
   data?: OutputData;
@@ -69,6 +71,19 @@ const Editor: React.FC<EditorProps> = ({ data, onChange }) => {
               rows: 2,
               cols: 3,
             },
+          },
+          columns: {
+            class: Columns,
+            config: {
+              EditorJsLibrary: EditorJS,
+              tools: {
+                header: HeaderWithAnchor,
+                paragraph: ParagraphWithAlignment,
+                list: List,
+                image: ImageTool,
+                delimiter: Delimiter,
+              }
+            }
           },
           image: {
             class: ImageTool,
