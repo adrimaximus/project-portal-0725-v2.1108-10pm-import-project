@@ -1,4 +1,4 @@
-import { Project, Task } from "@/types";
+import { Project } from "@/types";
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -86,18 +86,16 @@ const ProjectOverviewTab = ({
               onTagsChange={onTagsChange}
             />
           </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader><CardTitle>Shared Files</CardTitle></CardHeader>
-        <CardContent>
-          <ProjectBrief
-            files={project.briefFiles || []}
-            isEditing={isEditing}
-            onFilesAdd={onFilesAdd}
-            onFileDelete={onFileDelete}
-          />
+          <Separator className="my-6" />
+          <div>
+            <h3 className="text-base font-semibold mb-4">Project Files</h3>
+            <ProjectBrief
+              files={project.briefFiles || []}
+              isEditing={isEditing}
+              onFilesAdd={onFilesAdd}
+              onFileDelete={onFileDelete}
+            />
+          </div>
         </CardContent>
       </Card>
     </div>
