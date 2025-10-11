@@ -38,7 +38,7 @@ interface TaskFormDialogProps {
 
 const taskFormSchema = z.object({
   title: z.string().min(1, 'Title is required'),
-  project_id: z.string({ required_error: "Project is required" }).uuid('Project is required'),
+  project_id: z.string().optional().nullable(),
   description: z.string().optional().nullable(),
   due_date: z.date().optional().nullable(),
   priority: z.string().optional().nullable(),
@@ -179,9 +179,17 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task }: Ta
     const existingTagIds = selectedTags.filter(t => !t.isNew).map(t => t.id);
     finalTagIds.push(...existingTagIds);
 
+    const generalTasksProject = projects.find(p => p.slug === 'general-tasks');
+    const projectId = values.project_id || generalTasksProject?.id;
+
+    if (!projectId) {
+      toast.error("Cannot create task. Default 'General Tasks' project not found.");
+      return;
+    }
+
     const payload: UpsertTaskPayload = {
       id: task?.id,
-      project_id: values.project_id,
+      project_id: projectId,
       title: values.title,
       description: values.description,
       priority: values.priority,
@@ -214,7 +222,7 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task }: Ta
             <FormLabel>Project</FormLabel>
             <ProjectCombobox
               projects={projects}
-              value={field.value}
+              value={field.value || ''}
               onChange={field.onChange}
               isLoading={isLoadingProjects}
             />
