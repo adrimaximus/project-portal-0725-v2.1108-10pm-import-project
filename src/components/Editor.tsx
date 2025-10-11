@@ -28,7 +28,14 @@ const Editor: React.FC<EditorProps> = ({ data, onChange }) => {
         holder: "editorjs",
         autofocus: true,
         tools: {
-          header: Header,
+          header: {
+            class: Header,
+            inlineToolbar: true,
+            config: {
+              levels: [1, 2, 3],
+              defaultLevel: 2,
+            },
+          },
           paragraph: {
             class: Paragraph,
             inlineToolbar: true,
