@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Sparkles, RefreshCw } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import Editor from './Editor';
-import { type OutputData } from '@editorjs/editorjs';
+import EditorJS, { type OutputData } from '@editorjs/editorjs';
 
 interface RichTextEditorProps {
   data?: OutputData;
@@ -15,7 +15,7 @@ interface RichTextEditorProps {
   prompt?: string;
 }
 
-const RichTextEditor: React.FC<RichTextEditorProps> = ({ data, onChange, onGenerate, isGenerating, prompt }) => {
+const RichTextEditor = React.forwardRef<EditorJS, RichTextEditorProps>(({ data, onChange, onGenerate, isGenerating, prompt }, ref) => {
   return (
     <div className="bg-background rounded-md border relative">
       {onGenerate && (
@@ -39,9 +39,9 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ data, onChange, onGener
           </Tooltip>
         </TooltipProvider>
       )}
-      <Editor data={data} onChange={onChange} />
+      <Editor ref={ref} data={data} onChange={onChange} />
     </div>
   );
-};
+});
 
 export default RichTextEditor;

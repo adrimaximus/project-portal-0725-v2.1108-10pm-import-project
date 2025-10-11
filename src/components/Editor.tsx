@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useImperativeHandle } from "react";
 import EditorJS, { OutputData } from "@editorjs/editorjs";
 // @ts-ignore
 import Header from "@editorjs/header";
@@ -38,15 +38,19 @@ import TextVariantTune from '@editorjs/text-variant-tune';
 import DragDrop from 'editorjs-drag-drop';
 // @ts-ignore
 import Undo from 'editorjs-undo';
+// @ts-ignore
+import RawTool from '@editorjs/raw';
 
 interface EditorProps {
   data?: OutputData;
   onChange?: (data: OutputData) => void;
 }
 
-const Editor: React.FC<EditorProps> = ({ data, onChange }) => {
+const Editor = React.forwardRef<EditorJS, EditorProps>(({ data, onChange }, ref) => {
   const editorRef = useRef<EditorJS | null>(null);
   const holderRef = useRef<HTMLDivElement>(null);
+
+  useImperativeHandle(ref, () => editorRef.current!, []);
 
   useEffect(() => {
     if (!editorRef.current && holderRef.current) {
@@ -204,6 +208,7 @@ const Editor: React.FC<EditorProps> = ({ data, onChange }) => {
             shortcut: 'CMD+SHIFT+C',
           },
           changeCase: ChangeCase,
+          raw: RawTool,
         },
         data: data || {},
         onChange: async (api, event) => {
@@ -230,7 +235,7 @@ const Editor: React.FC<EditorProps> = ({ data, onChange }) => {
         editorRef.current = null;
       }
     };
-  }, []);
+  }, [data]);
 
   return (
     <div className="w-full border rounded-md p-4 bg-white">
@@ -256,6 +261,6 @@ const Editor: React.FC<EditorProps> = ({ data, onChange }) => {
       />
     </div>
   );
-};
+});
 
 export default Editor;

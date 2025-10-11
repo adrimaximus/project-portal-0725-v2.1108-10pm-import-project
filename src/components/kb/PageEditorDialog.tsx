@@ -15,11 +15,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import UnsplashImagePicker from './UnsplashImagePicker';
-import ReactQuill from 'react-quill';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 import { useTags } from '@/hooks/useTags';
 import { TagsMultiselect } from '@/components/ui/TagsMultiselect';
 import { v4 as uuidv4 } from 'uuid';
+import EditorJS, { OutputData } from '@editorjs/editorjs';
 
 interface ArticleValues {
   id?: string;
@@ -41,11 +41,24 @@ interface PageEditorDialogProps {
 
 const articleSchema = z.object({
   title: z.string().min(1, "Title is required."),
-  content: z.string().min(10, "Content is too short.").optional().or(z.literal('')),
+  content: z.any().optional(),
   folder_id: z.string().optional(),
 });
 
 type ArticleFormValues = z.infer<typeof articleSchema>;
+
+function editorDataToText(data: OutputData): string {
+    if (!data || !data.blocks) return '';
+    return data.blocks.map(block => {
+        if (block.type === 'paragraph' || block.type === 'header') {
+            return block.data.text;
+        }
+        if (block.type === 'list') {
+            return block.data.items.join('\n');
+        }
+        return '';
+    }).join('\n\n');
+}
 
 const PageEditorDialog = ({ open, onOpenChange, folders = [], folder, article, onSuccess }: PageEditorDialogProps) => {
   const [isSaving, setIsSaving] = useState(false);
@@ -57,7 +70,7 @@ const PageEditorDialog = ({ open, onOpenChange, folders = [], folder, article, o
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isImproving, setIsImproving] = useState(false);
   const [isSummarizing, setIsSummarizing] = useState(false);
-  const editorRef = useRef<ReactQuill>(null);
+  const editorRef = useRef<EditorJS>(null);
   const [debouncedTitle, setDebouncedTitle] = useState('');
   const { data: allTags = [] } = useTags();
   const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
@@ -66,7 +79,7 @@ const PageEditorDialog = ({ open, onOpenChange, folders = [], folder, article, o
     resolver: zodResolver(articleSchema),
     defaultValues: {
       title: '',
-      content: '',
+      content: undefined,
       folder_id: '',
     }
   });
@@ -90,7 +103,7 @@ const PageEditorDialog = ({ open, onOpenChange, folders = [], folder, article, o
       if (article) {
         form.reset({
           title: article.title,
-          content: article.content?.html || article.content || '',
+          content: article.content,
           folder_id: article.folder_id,
         });
         setSelectedTags(article.tags || []);
@@ -98,7 +111,7 @@ const PageEditorDialog = ({ open, onOpenChange, folders = [], folder, article, o
       } else {
         form.reset({
           title: '',
-          content: '',
+          content: undefined,
           folder_id: folder?.id || '',
         });
         setSelectedTags([]);
@@ -144,21 +157,20 @@ const PageEditorDialog = ({ open, onOpenChange, folders = [], folder, article, o
   };
 
   const handleImproveContent = async () => {
-    const editor = editorRef.current?.getEditor();
+    const editor = editorRef.current;
     if (!editor) {
       toast.error("Editor is not ready.");
       return;
     }
 
     const title = form.getValues('title');
-    const fullContent = form.getValues('content');
-    const selection = editor.getSelection();
-    const selectedText = selection ? editor.getText(selection.index, selection.length) : '';
+    const contentData = form.getValues('content');
+    const contentText = editorDataToText(contentData);
 
     let feature: string;
     let payload: any;
 
-    if (!fullContent || fullContent.trim() === '<p><br></p>' || fullContent.trim().length < 15) {
+    if (!contentText.trim()) {
       if (!title.trim()) {
         toast.error("Please provide a title to generate a page.");
         return;
@@ -166,13 +178,9 @@ const PageEditorDialog = ({ open, onOpenChange, folders = [], folder, article, o
       feature = 'generate-article-from-title';
       payload = { title };
       toast.info("Generating page from title...");
-    } else if (selection && selection.length > 0 && selectedText.trim()) {
-      feature = 'expand-article-text';
-      payload = { title, fullContent, selectedText };
-      toast.info("Expanding on your selected text...");
     } else {
       feature = 'improve-article-content';
-      payload = { content: fullContent };
+      payload = { content: contentText };
       toast.info("Improving the entire page...");
     }
     
@@ -183,13 +191,12 @@ const PageEditorDialog = ({ open, onOpenChange, folders = [], folder, article, o
       });
       if (error) throw error;
 
-      if (feature === 'expand-article-text' && selection) {
-        editor.deleteText(selection.index, selection.length);
-        editor.clipboard.dangerouslyPasteHTML(selection.index, data.result);
-        form.setValue('content', editor.root.innerHTML, { shouldDirty: true });
-      } else {
-        form.setValue('content', data.result, { shouldDirty: true });
-      }
+      await editor.isReady;
+      await editor.clear();
+      await editor.blocks.insert('raw', { html: data.result });
+      const savedData = await editor.save();
+      form.setValue('content', savedData, { shouldDirty: true, shouldValidate: true });
+
       toast.success("Content updated by AI!");
     } catch (error: any) {
       toast.error("Failed to update content.", { description: error.message });
@@ -199,47 +206,34 @@ const PageEditorDialog = ({ open, onOpenChange, folders = [], folder, article, o
   };
 
   const handleSummarizeContent = async () => {
-    const editor = editorRef.current?.getEditor();
+    const editor = editorRef.current;
     if (!editor) {
       toast.error("Editor is not ready.");
       return;
     }
 
-    const title = form.getValues('title');
-    const fullContent = form.getValues('content');
-    const selection = editor.getSelection();
-    const selectedText = selection ? editor.getText(selection.index, selection.length) : '';
+    const contentData = form.getValues('content');
+    const contentText = editorDataToText(contentData);
 
-    let payload: any;
-    let isSelection = false;
-
-    if (selection && selection.length > 0 && selectedText.trim()) {
-      payload = { content: selectedText, fullArticleContent: fullContent, articleTitle: title };
-      isSelection = true;
-      toast.info("Summarizing selected text...");
-    } else {
-      if (!fullContent || fullContent.trim() === '<p><br></p>' || fullContent.trim().length < 50) {
-        toast.error("There is not enough content to summarize.");
-        return;
-      }
-      payload = { content: fullContent };
-      toast.info("Summarizing the entire page...");
+    if (!contentText.trim()) {
+      toast.error("There is not enough content to summarize.");
+      return;
     }
     
+    toast.info("Summarizing the entire page...");
     setIsSummarizing(true);
     try {
       const { data, error } = await supabase.functions.invoke('ai-handler', {
-        body: { feature: 'summarize-article-content', payload }
+        body: { feature: 'summarize-article-content', payload: { content: contentText } }
       });
       if (error) throw error;
 
-      if (isSelection && selection) {
-        editor.deleteText(selection.index, selection.length);
-        editor.clipboard.dangerouslyPasteHTML(selection.index, data.result);
-        form.setValue('content', editor.root.innerHTML, { shouldDirty: true });
-      } else {
-        form.setValue('content', data.result, { shouldDirty: true });
-      }
+      await editor.isReady;
+      await editor.clear();
+      await editor.blocks.insert('raw', { html: data.result });
+      const savedData = await editor.save();
+      form.setValue('content', savedData, { shouldDirty: true, shouldValidate: true });
+
       toast.success("Content summarized by AI!");
     } catch (error: any) {
       toast.error("Failed to summarize content.", { description: error.message });
@@ -300,7 +294,7 @@ const PageEditorDialog = ({ open, onOpenChange, folders = [], folder, article, o
     const rpcParams = {
         p_id: isEditMode ? article?.id : null,
         p_title: values.title,
-        p_content: values.content ? { html: values.content } : null,
+        p_content: values.content || null,
         p_folder_id: finalFolderId,
         p_header_image_url: header_image_url || null,
         p_tags: existingTagIds,
@@ -425,7 +419,7 @@ const PageEditorDialog = ({ open, onOpenChange, folders = [], folder, article, o
                             {isImproving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
                           </Button>
                         </TooltipTrigger>
-                        <TooltipContent><p>Improve or Expand</p></TooltipContent>
+                        <TooltipContent><p>Improve or Generate</p></TooltipContent>
                       </Tooltip>
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -439,7 +433,7 @@ const PageEditorDialog = ({ open, onOpenChange, folders = [], folder, article, o
                   </div>
                 </div>
                 <FormControl>
-                  <RichTextEditor ref={editorRef} value={field.value || ''} onChange={field.onChange} />
+                  <RichTextEditor ref={editorRef} data={field.value} onChange={field.onChange} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
