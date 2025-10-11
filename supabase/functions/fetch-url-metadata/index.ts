@@ -3,6 +3,7 @@ import { serve } from 'https://deno.land/std@0.224.0/http/server.ts'
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'GET, OPTIONS',
 }
 
 // Simple regex parsers to find metadata in HTML
@@ -23,9 +24,11 @@ serve(async (req) => {
   }
 
   try {
-    const { url } = await req.json();
+    const reqUrl = new URL(req.url);
+    const url = reqUrl.searchParams.get('url');
+
     if (!url) {
-      throw new Error('URL is required');
+      throw new Error('URL query parameter is required');
     }
 
     // Ensure the URL has a protocol
