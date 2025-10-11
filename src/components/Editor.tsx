@@ -84,9 +84,7 @@ const Editor: React.FC<EditorProps> = ({ data, onChange }) => {
       <div
         id="editorjs"
         className="
-          -mx-4
           leading-tight space-y-1
-          [&_.ce-block__content]:px-4
           [&_.ce-header[data-level='1']]:text-2xl
           [&_.ce-header[data-level='2']]:text-xl
           [&_.ce-header[data-level='3']]:text-lg
