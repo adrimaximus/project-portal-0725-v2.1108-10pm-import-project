@@ -2,7 +2,7 @@
 import React, { useEffect, useRef } from "react";
 import EditorJS, { OutputData } from "@editorjs/editorjs";
 // @ts-ignore
-import HeaderWithAlignment from "editorjs-header-with-alignment";
+import HeaderWithAnchor from "editorjs-header-with-anchor";
 // @ts-ignore
 import List from "@editorjs/list";
 // @ts-ignore
@@ -25,12 +25,13 @@ const Editor: React.FC<EditorProps> = ({ data, onChange }) => {
         autofocus: true,
         tools: {
           header: {
-            class: HeaderWithAlignment,
+            class: HeaderWithAnchor,
             inlineToolbar: true,
             config: {
               levels: [1, 2, 3],
               defaultLevel: 2,
               placeholder: "Type heading...",
+              anchor: true,
             },
           },
           paragraph: {
