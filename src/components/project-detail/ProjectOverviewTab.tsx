@@ -78,7 +78,7 @@ const ProjectOverviewTab = ({
             size="icon" 
             onClick={() => onSetIsEditing && onSetIsEditing(true)}
             disabled={!onSetIsEditing}
-            className="absolute top-4 right-4"
+            className="absolute top-4 right-4 z-10"
           >
             <Edit className="h-4 w-4" />
           </Button>
