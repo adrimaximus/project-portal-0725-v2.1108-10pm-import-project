@@ -22,6 +22,8 @@ import AttachesTool from '@editorjs/attaches';
 import { supabase } from "@/integrations/supabase/client";
 // @ts-ignore
 import GroupImage from '@cychann/editorjs-group-image';
+// @ts-ignore
+import Table from '@editorjs/table';
 
 interface EditorProps {
   data?: OutputData;
@@ -59,6 +61,14 @@ const Editor: React.FC<EditorProps> = ({ data, onChange }) => {
           list: {
             class: List,
             inlineToolbar: true,
+          },
+          table: {
+            class: Table,
+            inlineToolbar: true,
+            config: {
+              rows: 2,
+              cols: 3,
+            },
           },
           image: {
             class: ImageTool,
