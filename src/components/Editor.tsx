@@ -19,8 +19,6 @@ import ImageTool from '@editorjs/image';
 import LinkTool from '@editorjs/link';
 // @ts-ignore
 import AttachesTool from '@editorjs/attaches';
-// @ts-ignore
-import InlineImage from '@kommitters/editorjs-inline-image';
 import { supabase } from "@/integrations/supabase/client";
 
 interface EditorProps {
@@ -89,19 +87,6 @@ const Editor: React.FC<EditorProps> = ({ data, onChange }) => {
                   const result = await response.json();
                   return result;
                 }
-              }
-            }
-          },
-          inlineImage: {
-            class: InlineImage,
-            inlineToolbar: true,
-            config: {
-              embed: {
-                display: true,
-              },
-              unsplash: {
-                appName: 'project-portal',
-                clientId: import.meta.env.VITE_UNSPLASH_ACCESS_KEY,
               }
             }
           },
