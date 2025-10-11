@@ -15,14 +15,11 @@ import {
   EditorState,
 } from "lexical";
 
-import { ListPlugin, ListItemNode, ListNode } from "@lexical/list";
+import { ListPlugin } from "@lexical/react/LexicalListPlugin";
+import { ListNode, ListItemNode } from "@lexical/list";
 import { LinkPlugin } from "@lexical/react/LexicalLinkPlugin";
 import { LinkNode, TOGGLE_LINK_COMMAND } from "@lexical/link";
-import {
-  HeadingNode,
-  QuoteNode,
-  $createHeadingNode,
-} from "@lexical/rich-text";
+import { HeadingNode, $createHeadingNode } from "@lexical/rich-text";
 import { $setBlocksType } from "@lexical/selection";
 import { Button } from "./ui/button";
 import { Bold, Italic, Underline, Link as LinkIcon, Heading1, Heading2, Heading3 } from "lucide-react";
@@ -107,7 +104,7 @@ export default function Editor({ onChange, initialState }: EditorProps) {
     theme,
     onError,
     editable: true,
-    nodes: [HeadingNode, ListNode, ListItemNode, QuoteNode, LinkNode],
+    nodes: [HeadingNode, ListNode, ListItemNode, LinkNode],
     editorState: initialState,
   };
 
@@ -123,7 +120,7 @@ export default function Editor({ onChange, initialState }: EditorProps) {
         <ToolbarPlugin />
         <RichTextPlugin
           contentEditable={<ContentEditable className="min-h-[200px] outline-none prose dark:prose-invert max-w-none" />}
-          placeholder={<div className="text-muted-foreground absolute top-[62px] left-4 select-none pointer-events-none">Type “/” for commands…</div>}
+          placeholder={<div className="text-muted-foreground absolute top-[62px] left-4 select-none pointer-events-none">Start typing or use / commands…</div>}
           ErrorBoundary={LexicalErrorBoundary}
         />
         <HistoryPlugin />
