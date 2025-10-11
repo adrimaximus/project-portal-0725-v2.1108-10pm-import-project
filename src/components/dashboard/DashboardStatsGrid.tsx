@@ -1,11 +1,13 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { Project, User, PROJECT_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS } from '@/types';
-import StatCard from './StatCard';
+import { Project, User } from '@/types';
+import StatCard from '@/components/dashboard/StatCard';
 import { DollarSign, ListChecks, CreditCard, User as UserIcon, Users, Hourglass, Briefcase } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { generatePastelColor, getAvatarUrl } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
+import { PROJECT_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS } from '@/types';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface DashboardStatsGridProps {
   projects: Project[];
@@ -223,17 +225,19 @@ const DashboardStatsGrid = ({ projects }: DashboardStatsGridProps) => {
             />
           }
         />
-        <StatCard
-          title="Top Collaborator"
-          icon={<Users className="h-4 w-4 text-muted-foreground" />}
-          value={
-            <UserStat 
-              user={topCollaborator}
-              metric={viewMode === 'quantity' ? topCollaborator?.projectCount ?? 0 : topCollaborator?.totalValue ?? 0}
-              metricType={viewMode}
-            />
-          }
-        />
+        {viewMode === 'quantity' && (
+          <StatCard
+            title="Top Collaborator"
+            icon={<Users className="h-4 w-4 text-muted-foreground" />}
+            value={
+              <UserStat 
+                user={topCollaborator}
+                metric={topCollaborator?.projectCount ?? 0}
+                metricType={'quantity'}
+              />
+            }
+          />
+        )}
         <StatCard
           title="Most Pending Payment"
           icon={<Hourglass className="h-4 w-4 text-muted-foreground" />}
