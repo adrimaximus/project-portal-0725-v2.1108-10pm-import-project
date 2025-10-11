@@ -65,8 +65,8 @@ const ProjectOverviewTab = ({
   return (
     <div className="space-y-6">
       <Card>
-        <CardHeader><CardTitle>Description & Brief</CardTitle></CardHeader>
-        <CardContent>
+        <CardHeader className="p-4 pb-2"><CardTitle>Description & Brief</CardTitle></CardHeader>
+        <CardContent className="p-4 pt-0">
           <ProjectDescription
             description={project.description}
             isEditing={isEditing}
