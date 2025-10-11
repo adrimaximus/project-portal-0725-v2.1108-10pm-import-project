@@ -78,7 +78,8 @@ const CommentInput = ({ project, onAddCommentOrTicket }: CommentInputProps) => {
           <Mention
             trigger="@"
             data={mentionableUsers}
-            markup="@__display__"
+            markup="@[__display__](__id__)"
+            displayTransform={(id, display) => `@${display}`}
             renderSuggestion={(suggestion: any) => (
               <>
                 <Avatar className="h-8 w-8">
