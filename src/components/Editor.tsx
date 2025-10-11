@@ -49,7 +49,6 @@ const Editor: React.FC<EditorProps> = ({ data, onChange }) => {
       const editor = new EditorJS({
         holder: holderRef.current,
         autofocus: true,
-        tunes: [IndentTune],
         tools: {
           title: {
             class: Title,
@@ -65,11 +64,14 @@ const Editor: React.FC<EditorProps> = ({ data, onChange }) => {
               placeholder: "Type heading...",
               anchor: true,
             },
+            tunes: ['indentTune'],
           },
           paragraph: {
             class: ParagraphWithAlignment,
             inlineToolbar: true,
+            tunes: ['indentTune'],
           },
+          indentTune: IndentTune,
           list: {
             class: List,
             inlineToolbar: true,
