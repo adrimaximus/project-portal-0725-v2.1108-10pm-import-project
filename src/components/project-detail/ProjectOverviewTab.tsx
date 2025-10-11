@@ -7,6 +7,7 @@ import ProjectBrief from './ProjectBrief';
 import ProjectTags from './ProjectTags';
 import { Tag } from '@/types';
 import { toast } from 'sonner';
+import { Separator } from "@/components/ui/separator";
 
 interface ProjectOverviewTabProps {
   project: Project;
@@ -76,17 +77,15 @@ const ProjectOverviewTab = ({
               prompt: 'Generate with AI from project details'
             }}
           />
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader><CardTitle>Project Tags</CardTitle></CardHeader>
-        <CardContent>
-          <ProjectTags
-            project={project}
-            isEditing={isEditing}
-            onTagsChange={onTagsChange}
-          />
+          <Separator className="my-6" />
+          <div>
+            <h3 className="text-base font-semibold mb-4">Project Tags</h3>
+            <ProjectTags
+              project={project}
+              isEditing={isEditing}
+              onTagsChange={onTagsChange}
+            />
+          </div>
         </CardContent>
       </Card>
 
