@@ -124,6 +124,12 @@
   }
 }
 
+@layer components {
+  .prose .ce-paragraph {
+    @apply my-1;
+  }
+}
+
 .pac-container {
   z-index: 9999 !important;
 }
