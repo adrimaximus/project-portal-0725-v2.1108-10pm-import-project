@@ -163,7 +163,7 @@ const AiFriendSuggestion: React.FC<AiFriendSuggestionProps> = ({ data, period, u
                 </AvatarFallback>
               </Avatar>
             )}
-            <div className={`max-w-xs rounded-lg px-3 py-2 text-sm ${msg.sender === 'user' ? 'bg-primary text-primary-foreground' : 'bg-background'}`}>
+            <div className={`max-w-xs rounded-lg px-3 py-2 text-sm ${msg.sender === 'user' ? 'bg-primary text-primary-foreground' : 'bg-[#eff3f4] dark:bg-stone-800'}`}>
               {msg.content}
             </div>
             {msg.sender === 'user' && user && (
@@ -181,7 +181,7 @@ const AiFriendSuggestion: React.FC<AiFriendSuggestionProps> = ({ data, period, u
                 <Lightbulb className="h-4 w-4" />
               </AvatarFallback>
             </Avatar>
-            <div className="max-w-xs rounded-lg px-3 py-2 text-sm bg-background flex items-center gap-2">
+            <div className="max-w-xs rounded-lg px-3 py-2 text-sm bg-[#eff3f4] dark:bg-stone-800 flex items-center gap-2">
               <Loader2 className="h-4 w-4 animate-spin" />
               <span>Mengetik...</span>
             </div>
