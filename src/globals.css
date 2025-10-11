@@ -127,24 +127,3 @@
 .pac-container {
   z-index: 9999 !important;
 }
-
-/* EditorJS Customizations */
-.ce-toolbar {
-  right: 100% !important;
-  left: auto !important;
-  margin-right: 15px;
-}
-
-.ce-popover--opened {
-  left: 0 !important;
-  right: auto !important;
-  transform: translateX(0) !important;
-}
-
-.ce-toolbox__button-icon {
-  font-size: 1.1rem !important;
-  font-weight: 500 !important;
-  line-height: 1.2 !important;
-  margin: 0 !important;
-  padding: 0 !important;
-}
