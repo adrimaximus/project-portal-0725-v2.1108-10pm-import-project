@@ -32,6 +32,8 @@ import Marker from '@editorjs/marker';
 import InlineCode from '@editorjs/inline-code';
 // @ts-ignore
 import ChangeCase from 'editorjs-change-case';
+// @ts-ignore
+import TextVariantTune from '@editorjs/text-variant-tune';
 
 interface EditorProps {
   data?: OutputData;
@@ -62,11 +64,14 @@ const Editor: React.FC<EditorProps> = ({ data, onChange }) => {
               placeholder: "Type heading...",
               anchor: true,
             },
+            tunes: ['textVariantTune'],
           },
           paragraph: {
             class: ParagraphWithAlignment,
             inlineToolbar: true,
+            tunes: ['textVariantTune'],
           },
+          textVariantTune: TextVariantTune,
           list: {
             class: List,
             inlineToolbar: true,

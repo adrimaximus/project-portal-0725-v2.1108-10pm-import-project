@@ -74,6 +74,9 @@ importers:
       '@editorjs/table':
         specifier: ^2.4.5
         version: 2.4.5
+      '@editorjs/text-variant-tune':
+        specifier: ^1.0.3
+        version: 1.0.3
       '@editorjs/underline':
         specifier: ^1.2.1
         version: 1.2.1
@@ -664,6 +667,9 @@ packages:
 
   '@editorjs/table@2.4.5':
     resolution: {integrity: sha512-pF48R2wc5m0c+N+RjtCLXBGZd23Rl7EjfSFpmcSViwNsu5RwMgYGrEiQ8mzVh98mbvYQwXm/NYBi9DEUUs970A==}
+
+  '@editorjs/text-variant-tune@1.0.3':
+    resolution: {integrity: sha512-zET/uTEnyY0wPYkFI41M6PhtBNqp5DHiUf/sbig4xpq1uwF9xgoJBZh92VultEJSjvLHFAQtD/dP8x7NJ7rouQ==}
 
   '@editorjs/underline@1.2.1':
     resolution: {integrity: sha512-LjJ01ia6Pj0Z/elifycp9+T1bQs0eXNnIcEYKOlk0sGHLy88DPcBOh9oz1i+uWarZ4AjGsvSMaptpWe+yQNsjQ==}
@@ -5126,6 +5132,8 @@ snapshots:
   '@editorjs/table@2.4.5':
     dependencies:
       '@codexteam/icons': 0.0.6
+
+  '@editorjs/text-variant-tune@1.0.3': {}
 
   '@editorjs/underline@1.2.1':
     dependencies:
