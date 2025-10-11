@@ -126,7 +126,7 @@
 
 @layer components {
   .prose .ce-paragraph {
-    @apply my-1;
+    @apply my-0 leading-snug;
   }
 }
 
