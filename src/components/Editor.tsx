@@ -32,6 +32,7 @@ const Editor: React.FC<EditorProps> = ({ data, onChange }) => {
             class: Header,
             inlineToolbar: true,
             config: {
+              placeholder: "Enter a heading",
               levels: [1, 2, 3],
               defaultLevel: 2,
             },
