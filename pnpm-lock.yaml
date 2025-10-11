@@ -266,15 +266,12 @@ importers:
       editorjs-header-with-anchor:
         specifier: ^2.6.0
         version: 2.6.0
+      editorjs-indent-tune:
+        specifier: ^1.4.3
+        version: 1.4.3
       editorjs-paragraph-with-alignment:
         specifier: ^3.0.0
         version: 3.0.0
-      editorjs-style:
-        specifier: ^3.0.3
-        version: 3.0.3
-      editorjs-text-color-plugin:
-        specifier: ^2.0.4
-        version: 2.0.4
       editorjs-toggle-block:
         specifier: ^0.3.16
         version: 0.3.16
@@ -2752,14 +2749,11 @@ packages:
   editorjs-header-with-anchor@2.6.0:
     resolution: {integrity: sha512-krI4GBxAJvgmS0R2RGnaN4QTDMuobu2Qcx1HZ5fJQohyIhEI4GD0uiOpVFZ7oFiDNRRvqn6e8lQin4W2rLOu9A==}
 
+  editorjs-indent-tune@1.4.3:
+    resolution: {integrity: sha512-cDkUqxU8H7K5edy/K9CndFbySxnRriKqjhEwgAOaV1Iwfm9sxEvMC5Uf2J2DxzpFtanusZWaUZyChYLJnMuNhQ==}
+
   editorjs-paragraph-with-alignment@3.0.0:
     resolution: {integrity: sha512-vSjjB/KUECEBxYqbj9yn1L799L14n0uoKrvk5qfaAokIHB8mYg5hZ8mOTtoS2cJu+xE3QZ/jmHY/Fh0EJeM8ZQ==}
-
-  editorjs-style@3.0.3:
-    resolution: {integrity: sha512-Ur+lAu5g3oaGKzWh7oJx+DsjaUNAwKouHGJDbE6+ZCF6QTxNj8EjE22DQXjtX26qL1YHt54ku2sC3lhVhm8MKQ==}
-
-  editorjs-text-color-plugin@2.0.4:
-    resolution: {integrity: sha512-QpibTkOxs3ndlKNOLT8ZlC4ktc3/eKIajiLO0Jm/hh9AJug/CrM1/rAvHy+ldfUKavbWeI+YZvgjad0YTyoyGw==}
 
   editorjs-toggle-block@0.3.16:
     resolution: {integrity: sha512-vjLE0bTF2HcQ7gQdgQ4c+Dl0n2o+oA0JICseJSYkQluDIE+LA9oHfTAE8ziJr03oeya7iVQ/b+d21Ez5hKsVsw==}
@@ -7309,11 +7303,11 @@ snapshots:
 
   editorjs-header-with-anchor@2.6.0: {}
 
+  editorjs-indent-tune@1.4.3:
+    dependencies:
+      '@codexteam/icons': 0.3.3
+
   editorjs-paragraph-with-alignment@3.0.0: {}
-
-  editorjs-style@3.0.3: {}
-
-  editorjs-text-color-plugin@2.0.4: {}
 
   editorjs-toggle-block@0.3.16:
     dependencies:

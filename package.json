@@ -97,6 +97,7 @@
     "editorjs-change-case": "^0.0.3",
     "editorjs-header-with-alignment": "^1.0.1",
     "editorjs-header-with-anchor": "^2.6.0",
+    "editorjs-indent-tune": "^1.4.3",
     "editorjs-paragraph-with-alignment": "^3.0.0",
     "editorjs-toggle-block": "^0.3.16",
     "embla-carousel-react": "^8.3.0",

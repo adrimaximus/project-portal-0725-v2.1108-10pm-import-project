@@ -32,6 +32,8 @@ import Marker from '@editorjs/marker';
 import InlineCode from '@editorjs/inline-code';
 // @ts-ignore
 import ChangeCase from 'editorjs-change-case';
+// @ts-ignore
+import IndentTune from 'editorjs-indent-tune';
 
 interface EditorProps {
   data?: OutputData;
@@ -47,6 +49,7 @@ const Editor: React.FC<EditorProps> = ({ data, onChange }) => {
       const editor = new EditorJS({
         holder: holderRef.current,
         autofocus: true,
+        tunes: [IndentTune],
         tools: {
           title: {
             class: Title,
