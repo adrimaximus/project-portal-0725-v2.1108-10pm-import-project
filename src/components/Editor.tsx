@@ -24,6 +24,8 @@ import { supabase } from "@/integrations/supabase/client";
 import GroupImage from '@cychann/editorjs-group-image';
 // @ts-ignore
 import Table from '@editorjs/table';
+// @ts-ignore
+import Underline from '@editorjs/underline';
 
 interface EditorProps {
   data?: OutputData;
@@ -177,6 +179,7 @@ const Editor: React.FC<EditorProps> = ({ data, onChange }) => {
             class: ToggleBlock,
             inlineToolbar: true,
           },
+          underline: Underline,
         },
         data: data || {},
         onChange: async () => {
