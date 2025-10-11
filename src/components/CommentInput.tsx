@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { Project } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -78,6 +78,7 @@ const CommentInput = ({ project, onAddCommentOrTicket }: CommentInputProps) => {
           <Mention
             trigger="@"
             data={mentionableUsers}
+            markup="@__display__"
             renderSuggestion={(suggestion: any) => (
               <>
                 <Avatar className="h-8 w-8">
