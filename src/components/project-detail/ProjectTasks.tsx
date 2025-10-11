@@ -56,8 +56,6 @@ const ProjectTasks = ({
   const [isAddingTask, setIsAddingTask] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
 
-  const tasks = project.tasks || [];
-
   const handleAddTask = () => {
     if (newTaskTitle.trim() === "") return;
     onTaskAdd(newTaskTitle.trim());
@@ -67,9 +65,9 @@ const ProjectTasks = ({
 
   const handleGenerateTasks = async (isInitial: boolean) => {
     setIsGenerating(true);
-    const toastId = toast.loading(isInitial ? "Membuat tugas awal..." : "Membuat lebih banyak tugas...");
+    const toastId = toast.loading(isInitial ? "Generating initial tasks..." : "Generating more tasks...");
     try {
-      const existingTaskTitles = tasks.map(t => t.title);
+      const existingTaskTitles = project.tasks?.map(t => t.title) || [];
       const { data, error } = await supabase.functions.invoke('generate-tasks', {
         body: {
           projectName: project.name,
@@ -77,8 +75,6 @@ const ProjectTasks = ({
           services: project.services,
           description: project.description,
           existingTasks: existingTaskTitles,
-          language: 'Bahasa Indonesia',
-          taskCount: 3,
         },
       });
 
@@ -88,13 +84,13 @@ const ProjectTasks = ({
         for (const title of data) {
           onTaskAdd(title);
         }
-        toast.success(`${data.length} tugas baru berhasil dibuat!`, { id: toastId });
+        toast.success(`${data.length} new tasks generated!`, { id: toastId });
       } else {
-        throw new Error("AI tidak memberikan daftar judul tugas yang valid.");
+        throw new Error("AI did not return a valid list of task titles.");
       }
     } catch (error: any) {
-      console.error("Gagal membuat tugas:", error);
-      toast.error("Gagal membuat tugas.", {
+      console.error("Failed to generate tasks:", error);
+      toast.error("Failed to generate tasks.", {
         id: toastId,
         description: error.message,
       });
@@ -108,10 +104,12 @@ const ProjectTasks = ({
     label: user.name,
   }));
 
+  const tasks = project.tasks || [];
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">Tugas</h3>
+        <h3 className="text-lg font-semibold">Tasks</h3>
         {tasks.length > 0 && (
           <TooltipProvider>
             <Tooltip>
@@ -125,7 +123,7 @@ const ProjectTasks = ({
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Buat lebih banyak tugas dengan AI</p>
+                <p>Generate more tasks with AI</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -134,17 +132,17 @@ const ProjectTasks = ({
       
       {tasks.length === 0 && !isAddingTask && (
         <div className="text-center py-4 border-2 border-dashed rounded-lg">
-          <p className="text-sm text-muted-foreground mb-4">Belum ada tugas. Mulai dengan menambahkan satu atau biarkan AI membantu.</p>
+          <p className="text-sm text-muted-foreground mb-4">No tasks yet. Get started by adding one or let AI help.</p>
           <Button onClick={() => handleGenerateTasks(true)} disabled={isGenerating}>
             {isGenerating ? (
               <>
                 <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                Membuat...
+                Generating...
               </>
             ) : (
               <>
                 <Sparkles className="mr-2 h-4 w-4" />
-                Buat Tugas Awal dengan AI
+                Generate Initial Tasks with AI
               </>
             )}
           </Button>
@@ -190,11 +188,11 @@ const ProjectTasks = ({
                       <TooltipTrigger>
                         <Badge variant={task.completed ? 'default' : 'outline'} className={`mt-0.5 ${task.completed ? 'bg-green-600 hover:bg-green-700 text-white' : ''}`}>
                           <Ticket className="h-3 w-3 mr-1" />
-                          {task.completed ? 'Selesai' : 'Tiket'}
+                          {task.completed ? 'Done' : 'Ticket'}
                         </Badge>
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p>Tugas ini dibuat dari sebuah tiket.</p>
+                        <p>This task was created from a ticket.</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
@@ -232,7 +230,7 @@ const ProjectTasks = ({
                             </Avatar>
                           </TooltipTrigger>
                           <TooltipContent>
-                            <p>Dibuat oleh {createdByFullName}</p>
+                            <p>Created by {createdByFullName}</p>
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
@@ -246,7 +244,7 @@ const ProjectTasks = ({
                           </div>
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p>Belum ditugaskan</p>
+                          <p>Not assigned</p>
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
@@ -300,13 +298,13 @@ const ProjectTasks = ({
           <Input
             value={newTaskTitle}
             onChange={(e) => setNewTaskTitle(e.target.value)}
-            placeholder="Apa yang harus dilakukan?"
+            placeholder="What needs to be done?"
             onKeyDown={(e) => e.key === "Enter" && handleAddTask()}
             autoFocus
           />
-          <Button onClick={handleAddTask}>Tambah</Button>
+          <Button onClick={handleAddTask}>Add</Button>
           <Button variant="ghost" onClick={() => setIsAddingTask(false)}>
-            Batal
+            Cancel
           </Button>
         </div>
       ) : (
@@ -316,7 +314,7 @@ const ProjectTasks = ({
           onClick={() => setIsAddingTask(true)}
         >
           <Plus className="mr-2 h-4 w-4" />
-          Tambah tugas
+          Add task
         </Button>
       )}
     </div>
