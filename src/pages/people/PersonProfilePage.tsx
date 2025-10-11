@@ -73,9 +73,9 @@ const PersonProfileSkeleton = () => (
 );
 
 const PersonProfilePage = () => {
-  const { id } = useParams<{ id: string }>();
+  const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
-  const { data: basePerson, isLoading, error } = usePerson(id!);
+  const { data: basePerson, isLoading, error } = usePerson(slug!);
   const person = basePerson as Person | null;
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);

@@ -296,6 +296,7 @@ export interface Person {
   social_media?: { [key: string]: string };
   birthday?: string;
   kanban_order?: number;
+  slug?: string;
 }
 
 export interface Company {

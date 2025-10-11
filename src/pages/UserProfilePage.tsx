@@ -5,10 +5,10 @@ import { supabase } from '@/integrations/supabase/client';
 import LoadingScreen from '@/components/LoadingScreen';
 import { toast } from 'sonner';
 
-const findPersonProfileForUser = async (userId: string): Promise<{ personId: string | null }> => {
+const findPersonSlugForUser = async (userId: string): Promise<{ personSlug: string | null }> => {
   const { data, error } = await supabase
     .from('people')
-    .select('id')
+    .select('slug')
     .eq('user_id', userId)
     .limit(1)
     .single();
@@ -18,7 +18,7 @@ const findPersonProfileForUser = async (userId: string): Promise<{ personId: str
     throw new Error(error.message);
   }
   
-  return { personId: data?.id || null };
+  return { personSlug: data?.slug || null };
 };
 
 const UserProfilePage = () => {
@@ -26,8 +26,8 @@ const UserProfilePage = () => {
   const navigate = useNavigate();
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ['personForUser', id],
-    queryFn: () => findPersonProfileForUser(id!),
+    queryKey: ['personSlugForUser', id],
+    queryFn: () => findPersonSlugForUser(id!),
     enabled: !!id,
   });
 
@@ -36,8 +36,8 @@ const UserProfilePage = () => {
       if (isError) {
         toast.error("Could not look up user profile.");
         navigate('/people', { replace: true });
-      } else if (data?.personId) {
-        navigate(`/people/${data.personId}`, { replace: true });
+      } else if (data?.personSlug) {
+        navigate(`/people/${data.personSlug}`, { replace: true });
       } else {
         toast.info("This user does not have a detailed contact profile.");
         navigate('/people', { replace: true });

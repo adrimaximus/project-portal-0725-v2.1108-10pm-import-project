@@ -95,7 +95,7 @@ function App() {
         <Route path="/goals/:slug" element={<GoalDetailPage />} />
         <Route path="/billing" element={<Billing />} />
         <Route path="/people" element={<PeoplePage />} />
-        <Route path="/people/:id" element={<PersonProfilePage />} />
+        <Route path="/people/:slug" element={<PersonProfilePage />} />
         <Route path="/users/:id" element={<UserProfilePage />} />
         <Route path="/companies" element={<CompaniesPage />} />
         <Route path="/settings/people-properties" element={<ContactPropertiesPage />} />

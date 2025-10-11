@@ -12,6 +12,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
+import { id } from "date-fns/locale";
 import { generatePastelColor, getAvatarUrl } from "@/lib/utils";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import PersonFormDialog from "@/components/people/PersonFormDialog";
@@ -179,7 +180,11 @@ const PeoplePage = () => {
   };
 
   const handleViewProfile = (person: Person) => {
-    navigate(`/people/${person.id}`);
+    if (person.slug) {
+      navigate(`/people/${person.slug}`);
+    } else {
+      toast.error('Cannot view profile, slug is missing.');
+    }
   };
 
   const handleDelete = async () => {
