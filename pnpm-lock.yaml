@@ -47,6 +47,9 @@ importers:
       '@editorjs/image':
         specifier: ^2.10.3
         version: 2.10.3
+      '@editorjs/link':
+        specifier: ^2.6.2
+        version: 2.6.2
       '@editorjs/list':
         specifier: ^2.0.8
         version: 2.0.8
@@ -607,6 +610,9 @@ packages:
 
   '@editorjs/image@2.10.3':
     resolution: {integrity: sha512-ekCsGICZOIdghF/U2T34H7CItqaWAoJDXbkRD+x8l/LIo/7Ozf7KovYm21qz+CluArgV4RurVFHqwlz+O0vfJA==}
+
+  '@editorjs/link@2.6.2':
+    resolution: {integrity: sha512-3cPx6M4ZvwDDvsi0E0fvMR3rvveAV/C0GRo1JLeZJ9cG9QgyoNolj4eu5Eqx3/r1XTC/he54qYEIZ/Dc4Lr4Ow==}
 
   '@editorjs/list@2.0.8':
     resolution: {integrity: sha512-/EJNvpeJYa1YDtYa85ug9R3sbDyI5ZlMHQ2bIh5S9iPa19qXe45jk6kgcew+jMNQq3j4NS4Q6YeeFbU1QkNMWw==}
@@ -5027,6 +5033,11 @@ snapshots:
   '@editorjs/image@2.10.3':
     dependencies:
       '@codexteam/icons': 0.3.3
+
+  '@editorjs/link@2.6.2':
+    dependencies:
+      '@babel/runtime': 7.27.0
+      '@codexteam/icons': 0.0.4
 
   '@editorjs/list@2.0.8':
     dependencies:

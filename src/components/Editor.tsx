@@ -15,6 +15,8 @@ import ToggleBlock from 'editorjs-toggle-block';
 import Title from 'title-editorjs';
 // @ts-ignore
 import ImageTool from '@editorjs/image';
+// @ts-ignore
+import LinkTool from '@editorjs/link';
 import { supabase } from "@/integrations/supabase/client";
 
 interface EditorProps {
@@ -86,6 +88,7 @@ const Editor: React.FC<EditorProps> = ({ data, onChange }) => {
               }
             }
           },
+          link: LinkTool,
           delimiter: Delimiter,
           toggle: {
             class: ToggleBlock,
