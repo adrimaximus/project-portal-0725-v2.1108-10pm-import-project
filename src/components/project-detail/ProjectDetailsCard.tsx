@@ -202,8 +202,8 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange, onSetIsEditing 
   const hasOpenTasks = project.tasks?.some(task => !task.completed);
 
   return (
-    <Card className="group">
-      <Collapsible defaultOpen>
+    <Card>
+      <Collapsible defaultOpen className="group">
         <div className="flex items-center justify-between">
           <CardHeader>
             <CardTitle>Project Details</CardTitle>
