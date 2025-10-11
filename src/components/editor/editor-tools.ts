@@ -12,6 +12,10 @@ import LinkTool from '@editorjs/link-tool';
 import Delimiter from '@editorjs/delimiter';
 import Warning from '@editorjs/warning';
 import Marker from '@editorjs/marker';
+import AttachesTool from '@editorjs/attaches';
+
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const UPLOAD_FUNCTION_URL = `${SUPABASE_URL}/functions/v1/upload-editorjs-file`;
 
 export const EDITOR_JS_TOOLS = {
   paragraph: {
@@ -31,4 +35,10 @@ export const EDITOR_JS_TOOLS = {
   delimiter: Delimiter,
   warning: Warning,
   marker: Marker,
+  attaches: {
+    class: AttachesTool,
+    config: {
+      endpoint: UPLOAD_FUNCTION_URL,
+    },
+  },
 };
