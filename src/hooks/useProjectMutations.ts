@@ -181,10 +181,12 @@ export const useProjectMutations = (slug: string) => {
 
     const useDeleteTask = () => useMutation({
         mutationFn: async (taskId: string) => {
-            const { data, error } = await supabase.from('tasks').delete().eq('id', taskId).select();
-            if (error) throw error;
-            if (!data || data.length === 0) {
-                throw new Error("Task not found or you don't have permission to delete it.");
+            const { error } = await supabase.from('tasks').delete().eq('id', taskId);
+            if (error) {
+                if (error.code === '42501') { // permission denied
+                    throw new Error("You don't have permission to delete this task.");
+                }
+                throw error;
             }
         },
         onMutate: async (taskId: string) => {
