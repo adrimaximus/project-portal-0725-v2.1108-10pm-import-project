@@ -16,6 +16,7 @@ export default function Editor({ data, onChange }: EditorProps) {
       const { default: List } = await import("@editorjs/list");
       const { default: Warning } = await import("@editorjs/warning");
       const { default: Delimiter } = await import("@editorjs/delimiter");
+      const { default: Alert } = await import("editorjs-alert");
 
       if (!ref.current) {
         const editor = new EditorJS({
@@ -28,6 +29,15 @@ export default function Editor({ data, onChange }: EditorProps) {
             list: {
               class: List,
               inlineToolbar: true,
+            },
+            alert: {
+              class: Alert,
+              inlineToolbar: true,
+              shortcut: 'CMD+SHIFT+A',
+              config: {
+                defaultType: 'primary',
+                messagePlaceholder: 'Enter something',
+              },
             },
             warning: {
               class: Warning,

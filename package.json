@@ -82,6 +82,7 @@
     "date-fns": "^3.6.0",
     "date-fns-tz": "^3.2.0",
     "dayjs": "^1.11.13",
+    "editorjs-alert": "^1.1.4",
     "embla-carousel-react": "^8.3.0",
     "framer-motion": "^12.23.12",
     "gapi-script": "^1.2.0",
