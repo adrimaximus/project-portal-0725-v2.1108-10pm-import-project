@@ -6,7 +6,7 @@ import LoginPage from "./pages/LoginPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 import AuthCallbackPage from "./pages/AuthCallbackPage";
 import Dashboard from "./pages/Dashboard";
-import ProjectsPage from "./pages/ProjectsPage";
+import ProjectsPage from "./pages/Index";
 import ProjectDetail from "./pages/ProjectDetail";
 import RequestPage from "./pages/Request";
 import ChatPage from "./pages/ChatPage";
