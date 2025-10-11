@@ -34,9 +34,14 @@ serve(async (req) => {
     // Ensure the URL has a protocol
     const fullUrl = url.startsWith('http') ? url : `https://${url}`;
 
-    const response = await fetch(fullUrl);
+    const response = await fetch(fullUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+      }
+    });
+    
     if (!response.ok) {
-      throw new Error(`Failed to fetch URL: ${response.statusText}`);
+      throw new Error(`Failed to fetch URL: Status ${response.status}`);
     }
 
     const html = await response.text();
@@ -63,12 +68,13 @@ serve(async (req) => {
     });
 
   } catch (error) {
+    console.error("Error in fetch-url-metadata:", error.message);
     return new Response(JSON.stringify({
       success: 0,
-      error: { message: error.message }
+      meta: {},
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 400,
+      status: 200, // Return 200 OK with success: 0 as some tools prefer this
     });
   }
 })
