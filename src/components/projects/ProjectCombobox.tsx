@@ -10,6 +10,7 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
+  CommandSeparator,
 } from "@/components/ui/command"
 import {
   Popover,
@@ -27,6 +28,14 @@ interface ProjectComboboxProps {
 
 export function ProjectCombobox({ projects, value, onChange, isLoading }: ProjectComboboxProps) {
   const [open, setOpen] = React.useState(false)
+
+  const { generalTasksProject, sortedProjects } = React.useMemo(() => {
+    const generalProject = projects.find(p => p.slug === 'general-tasks');
+    const otherProjects = projects
+      .filter(p => p.slug !== 'general-tasks')
+      .sort((a, b) => a.name.localeCompare(b.name));
+    return { generalTasksProject: generalProject, sortedProjects: otherProjects };
+  }, [projects]);
 
   const selectedProject = projects.find(
     (project) => project.id === value
@@ -56,7 +65,26 @@ export function ProjectCombobox({ projects, value, onChange, isLoading }: Projec
           <CommandList>
             <CommandEmpty>No project found.</CommandEmpty>
             <CommandGroup>
-              {projects.map((project) => (
+              {generalTasksProject && (
+                <CommandItem
+                  key={generalTasksProject.id}
+                  value={generalTasksProject.name}
+                  onSelect={() => {
+                    onChange(generalTasksProject.id)
+                    setOpen(false)
+                  }}
+                >
+                  <Check
+                    className={cn(
+                      "mr-2 h-4 w-4",
+                      value === generalTasksProject.id ? "opacity-100" : "opacity-0"
+                    )}
+                  />
+                  {generalTasksProject.name}
+                </CommandItem>
+              )}
+              {generalTasksProject && sortedProjects.length > 0 && <CommandSeparator />}
+              {sortedProjects.map((project) => (
                 <CommandItem
                   key={project.id}
                   value={project.name}
