@@ -1,9 +1,19 @@
-#editorjs.prose p,
-#editorjs.prose ul,
-#editorjs.prose ol,
-#editorjs.prose li,
-#editorjs.prose li p {
-  line-height: 0.8;
-  margin-top: 0.2rem;
-  margin-bottom: 0.2rem;
+#editorjs p,
+#editorjs li {
+  line-height: 1.2; /* Sedikit lebih besar dari 1.0 untuk keterbacaan */
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+#editorjs .ce-block {
+  margin-bottom: 4px;
+}
+
+/* Menjaga agar heading tetap memiliki sedikit ruang */
+#editorjs h1,
+#editorjs h2,
+#editorjs h3 {
+    margin-top: 0.8em;
+    margin-bottom: 0.4em;
+    line-height: 1.2;
 }
