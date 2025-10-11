@@ -8,22 +8,18 @@ import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Loader2, Image as ImageIcon, X, Sparkles, ListCollapse, Bot } from 'lucide-react';
+import { Loader2, Image as ImageIcon, X, Sparkles, ListCollapse } from 'lucide-react';
 import RichTextEditor from '../RichTextEditor';
 import { KbFolder, KbArticle as Article, Tag } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import UnsplashImagePicker from './UnsplashImagePicker';
+import ReactQuill from 'react-quill';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 import { useTags } from '@/hooks/useTags';
 import { TagsMultiselect } from '@/components/ui/TagsMultiselect';
 import { v4 as uuidv4 } from 'uuid';
-import EditorJS, { OutputData } from '@editorjs/editorjs';
-import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
-import { Textarea } from '../ui/textarea';
-import { allIcons } from '@/data/icons';
-import { CategoryInput } from './CategoryInput';
 
 interface ArticleValues {
   id?: string;
@@ -45,24 +41,11 @@ interface PageEditorDialogProps {
 
 const articleSchema = z.object({
   title: z.string().min(1, "Title is required."),
-  content: z.any().optional(),
+  content: z.string().min(10, "Content is too short.").optional().or(z.literal('')),
   folder_id: z.string().optional(),
 });
 
 type ArticleFormValues = z.infer<typeof articleSchema>;
-
-function editorDataToText(data: OutputData): string {
-    if (!data || !data.blocks) return '';
-    return data.blocks.map(block => {
-        if (block.type === 'paragraph' || block.type === 'header') {
-            return block.data.text;
-        }
-        if (block.type === 'list') {
-            return block.data.items.join('\n');
-        }
-        return '';
-    }).join('\n\n');
-}
 
 const PageEditorDialog = ({ open, onOpenChange, folders = [], folder, article, onSuccess }: PageEditorDialogProps) => {
   const [isSaving, setIsSaving] = useState(false);
@@ -74,19 +57,16 @@ const PageEditorDialog = ({ open, onOpenChange, folders = [], folder, article, o
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isImproving, setIsImproving] = useState(false);
   const [isSummarizing, setIsSummarizing] = useState(false);
-  const editorRef = useRef<EditorJS>(null);
+  const editorRef = useRef<ReactQuill>(null);
   const [debouncedTitle, setDebouncedTitle] = useState('');
   const { data: allTags = [] } = useTags();
   const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
-  const [aiAgentPrompt, setAiAgentPrompt] = useState('');
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [isAgentPopoverOpen, setIsAgentPopoverOpen] = useState(false);
 
   const form = useForm<ArticleFormValues>({
     resolver: zodResolver(articleSchema),
     defaultValues: {
       title: '',
-      content: undefined,
+      content: '',
       folder_id: '',
     }
   });
@@ -110,7 +90,7 @@ const PageEditorDialog = ({ open, onOpenChange, folders = [], folder, article, o
       if (article) {
         form.reset({
           title: article.title,
-          content: article.content,
+          content: article.content?.html || article.content || '',
           folder_id: article.folder_id,
         });
         setSelectedTags(article.tags || []);
@@ -118,7 +98,7 @@ const PageEditorDialog = ({ open, onOpenChange, folders = [], folder, article, o
       } else {
         form.reset({
           title: '',
-          content: undefined,
+          content: '',
           folder_id: folder?.id || '',
         });
         setSelectedTags([]);
@@ -164,20 +144,21 @@ const PageEditorDialog = ({ open, onOpenChange, folders = [], folder, article, o
   };
 
   const handleImproveContent = async () => {
-    const editor = editorRef.current;
+    const editor = editorRef.current?.getEditor();
     if (!editor) {
       toast.error("Editor is not ready.");
       return;
     }
 
     const title = form.getValues('title');
-    const contentData = form.getValues('content');
-    const contentText = editorDataToText(contentData);
+    const fullContent = form.getValues('content');
+    const selection = editor.getSelection();
+    const selectedText = selection ? editor.getText(selection.index, selection.length) : '';
 
     let feature: string;
     let payload: any;
 
-    if (!contentText.trim()) {
+    if (!fullContent || fullContent.trim() === '<p><br></p>' || fullContent.trim().length < 15) {
       if (!title.trim()) {
         toast.error("Please provide a title to generate a page.");
         return;
@@ -185,9 +166,13 @@ const PageEditorDialog = ({ open, onOpenChange, folders = [], folder, article, o
       feature = 'generate-article-from-title';
       payload = { title };
       toast.info("Generating page from title...");
+    } else if (selection && selection.length > 0 && selectedText.trim()) {
+      feature = 'expand-article-text';
+      payload = { title, fullContent, selectedText };
+      toast.info("Expanding on your selected text...");
     } else {
       feature = 'improve-article-content';
-      payload = { content: contentText };
+      payload = { content: fullContent };
       toast.info("Improving the entire page...");
     }
     
@@ -198,12 +183,13 @@ const PageEditorDialog = ({ open, onOpenChange, folders = [], folder, article, o
       });
       if (error) throw error;
 
-      await editor.isReady;
-      await editor.clear();
-      await editor.blocks.insert('raw', { html: data.result });
-      const savedData = await editor.save();
-      form.setValue('content', savedData, { shouldDirty: true, shouldValidate: true });
-
+      if (feature === 'expand-article-text' && selection) {
+        editor.deleteText(selection.index, selection.length);
+        editor.clipboard.dangerouslyPasteHTML(selection.index, data.result);
+        form.setValue('content', editor.root.innerHTML, { shouldDirty: true });
+      } else {
+        form.setValue('content', data.result, { shouldDirty: true });
+      }
       toast.success("Content updated by AI!");
     } catch (error: any) {
       toast.error("Failed to update content.", { description: error.message });
@@ -213,92 +199,52 @@ const PageEditorDialog = ({ open, onOpenChange, folders = [], folder, article, o
   };
 
   const handleSummarizeContent = async () => {
-    const editor = editorRef.current;
+    const editor = editorRef.current?.getEditor();
     if (!editor) {
       toast.error("Editor is not ready.");
       return;
     }
 
-    const contentData = form.getValues('content');
-    const contentText = editorDataToText(contentData);
+    const title = form.getValues('title');
+    const fullContent = form.getValues('content');
+    const selection = editor.getSelection();
+    const selectedText = selection ? editor.getText(selection.index, selection.length) : '';
 
-    if (!contentText.trim()) {
-      toast.error("There is not enough content to summarize.");
-      return;
+    let payload: any;
+    let isSelection = false;
+
+    if (selection && selection.length > 0 && selectedText.trim()) {
+      payload = { content: selectedText, fullArticleContent: fullContent, articleTitle: title };
+      isSelection = true;
+      toast.info("Summarizing selected text...");
+    } else {
+      if (!fullContent || fullContent.trim() === '<p><br></p>' || fullContent.trim().length < 50) {
+        toast.error("There is not enough content to summarize.");
+        return;
+      }
+      payload = { content: fullContent };
+      toast.info("Summarizing the entire page...");
     }
     
-    toast.info("Summarizing the entire page...");
     setIsSummarizing(true);
     try {
       const { data, error } = await supabase.functions.invoke('ai-handler', {
-        body: { feature: 'summarize-article-content', payload: { content: contentText } }
+        body: { feature: 'summarize-article-content', payload }
       });
       if (error) throw error;
 
-      await editor.isReady;
-      await editor.clear();
-      await editor.blocks.insert('raw', { html: data.result });
-      const savedData = await editor.save();
-      form.setValue('content', savedData, { shouldDirty: true, shouldValidate: true });
-
+      if (isSelection && selection) {
+        editor.deleteText(selection.index, selection.length);
+        editor.clipboard.dangerouslyPasteHTML(selection.index, data.result);
+        form.setValue('content', editor.root.innerHTML, { shouldDirty: true });
+      } else {
+        form.setValue('content', data.result, { shouldDirty: true });
+      }
       toast.success("Content summarized by AI!");
     } catch (error: any) {
       toast.error("Failed to summarize content.", { description: error.message });
     } finally {
       setIsSummarizing(false);
-    }
-  };
-
-  const handleGenerateWithAgent = async () => {
-    const editor = editorRef.current;
-    if (!editor) {
-      toast.error("Editor is not ready.");
-      return;
-    }
-    if (!aiAgentPrompt.trim()) {
-      toast.error("Please enter a prompt.");
-      return;
-    }
-
-    setIsGenerating(true);
-    toast.info("AI Agent is thinking...");
-
-    try {
-      const currentBlockIndex = editor.blocks.getCurrentBlockIndex();
-      const currentBlock = editor.blocks.getBlockByIndex(currentBlockIndex);
-      const currentBlockData = await currentBlock?.save();
-      const contextText = currentBlockData?.data.text || '';
-
-      const fullPrompt = `User prompt: "${aiAgentPrompt}"\n\nContext from current block (if relevant for expansion): "${contextText}"`;
-
-      const { data, error } = await supabase.functions.invoke('ai-agent', {
-        body: { prompt: fullPrompt }
-      });
-
-      if (error) throw error;
-      if (!data.blocks || !Array.isArray(data.blocks)) {
-        throw new Error("AI returned an invalid format.");
-      }
-
-      await editor.isReady;
-
-      for (let i = 0; i < data.blocks.length; i++) {
-        const block = data.blocks[i];
-        await editor.blocks.insert(block.type, block.data, {}, currentBlockIndex + 1 + i, true);
-      }
-      
-      editor.caret.setToBlock(currentBlockIndex + data.blocks.length, 'end');
-
-      const savedData = await editor.save();
-      form.setValue('content', savedData, { shouldDirty: true, shouldValidate: true });
-
-      toast.success("Content generated by AI Agent!");
-      setAiAgentPrompt('');
-      setIsAgentPopoverOpen(false);
-    } catch (error: any) {
-      toast.error("Failed to generate content.", { description: error.message });
-    } finally {
-      setIsGenerating(false);
     }
   };
 
@@ -354,7 +300,7 @@ const PageEditorDialog = ({ open, onOpenChange, folders = [], folder, article, o
     const rpcParams = {
         p_id: isEditMode ? article?.id : null,
         p_title: values.title,
-        p_content: values.content || null,
+        p_content: values.content ? { html: values.content } : null,
         p_folder_id: finalFolderId,
         p_header_image_url: header_image_url || null,
         p_tags: existingTagIds,
@@ -475,43 +421,11 @@ const PageEditorDialog = ({ open, onOpenChange, folders = [], folder, article, o
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <Popover open={isAgentPopoverOpen} onOpenChange={setIsAgentPopoverOpen}>
-                            <PopoverTrigger asChild>
-                              <Button type="button" variant="outline" size="icon">
-                                <Bot className="h-4 w-4" />
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-80">
-                              <div className="grid gap-4">
-                                <div className="space-y-2">
-                                  <h4 className="font-medium leading-none">AI Agent</h4>
-                                  <p className="text-sm text-muted-foreground">
-                                    Describe the content you want to generate.
-                                  </p>
-                                </div>
-                                <div className="grid gap-2">
-                                  <Textarea
-                                    value={aiAgentPrompt}
-                                    onChange={(e) => setAiAgentPrompt(e.target.value)}
-                                    placeholder="e.g., Write a list of 3 benefits of using React."
-                                  />
-                                  <Button onClick={handleGenerateWithAgent} disabled={isGenerating}>
-                                    {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : "Generate"}
-                                  </Button>
-                                </div>
-                              </div>
-                            </PopoverContent>
-                          </Popover>
-                        </TooltipTrigger>
-                        <TooltipContent><p>AI Agent</p></TooltipContent>
-                      </Tooltip>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
                           <Button type="button" variant="outline" size="icon" onClick={handleImproveContent} disabled={isImproving || isSummarizing}>
                             {isImproving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
                           </Button>
                         </TooltipTrigger>
-                        <TooltipContent><p>Improve or Generate</p></TooltipContent>
+                        <TooltipContent><p>Improve or Expand</p></TooltipContent>
                       </Tooltip>
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -525,7 +439,7 @@ const PageEditorDialog = ({ open, onOpenChange, folders = [], folder, article, o
                   </div>
                 </div>
                 <FormControl>
-                  <RichTextEditor ref={editorRef} data={field.value} onChange={field.onChange} />
+                  <RichTextEditor ref={editorRef} value={field.value || ''} onChange={field.onChange} />
                 </FormControl>
                 <FormMessage />
               </FormItem>

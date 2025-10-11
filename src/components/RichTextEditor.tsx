@@ -1,21 +1,36 @@
 "use client";
 
 import React from 'react';
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
 import { Button } from '@/components/ui/button';
 import { Sparkles, RefreshCw } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import Editor from './Editor';
-import EditorJS, { type OutputData } from '@editorjs/editorjs';
 
 interface RichTextEditorProps {
-  data?: OutputData;
-  onChange: (data: OutputData) => void;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
   onGenerate?: () => void;
   isGenerating?: boolean;
   prompt?: string;
 }
 
-const RichTextEditor = React.forwardRef<EditorJS, RichTextEditorProps>(({ data, onChange, onGenerate, isGenerating, prompt }, ref) => {
+const RichTextEditor = React.forwardRef<ReactQuill, RichTextEditorProps>(({ value, onChange, placeholder, onGenerate, isGenerating, prompt }, ref) => {
+  const modules = {
+    toolbar: [
+      [{ 'font': [] }, { 'size': [] }],
+      ['bold', 'italic', 'underline', 'strike'],
+      [{ 'color': [] }, { 'background': [] }],
+      [{ 'script': 'sub'}, { 'script': 'super' }],
+      [{ 'header': '1' }, { 'header': '2' }, 'blockquote', 'code-block'],
+      [{ 'list': 'ordered'}, { 'list': 'bullet' }, { 'indent': '-1'}, { 'indent': '+1' }],
+      [{ 'direction': 'rtl' }, { 'align': [] }],
+      ['link', 'image', 'video', 'formula'],
+      ['clean']
+    ],
+  };
+
   return (
     <div className="bg-background rounded-md border relative">
       {onGenerate && (
@@ -39,7 +54,15 @@ const RichTextEditor = React.forwardRef<EditorJS, RichTextEditorProps>(({ data, 
           </Tooltip>
         </TooltipProvider>
       )}
-      <Editor ref={ref} data={data} onChange={onChange} />
+      <ReactQuill
+        ref={ref}
+        theme="snow"
+        value={value}
+        onChange={onChange}
+        modules={modules}
+        placeholder={placeholder}
+        className="[&_.ql-editor]:min-h-[120px] [&_.ql-toolbar]:rounded-t-md [&_.ql-container]:border-none [&_.ql-toolbar]:pr-10"
+      />
     </div>
   );
 });
