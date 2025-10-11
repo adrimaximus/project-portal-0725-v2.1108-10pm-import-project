@@ -120,7 +120,7 @@ const Editor: React.FC<EditorProps> = ({ data, onChange }) => {
       <div
         id="editorjs"
         className="
-          text-gray-800 leading-snug
+          text-gray-800 leading-none
           [&_.ce-block]:my-2
           [&_.ce-header]:font-semibold
           [&_.ce-header[data-level='1']]:text-2xl
