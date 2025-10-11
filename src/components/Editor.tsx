@@ -19,8 +19,6 @@ import ImageTool from '@editorjs/image';
 import LinkTool from '@editorjs/link';
 // @ts-ignore
 import AttachesTool from '@editorjs/attaches';
-// @ts-ignore
-import Carousel from 'editorjs-carousel';
 import { supabase } from "@/integrations/supabase/client";
 
 interface EditorProps {
@@ -33,34 +31,6 @@ const Editor: React.FC<EditorProps> = ({ data, onChange }) => {
 
   useEffect(() => {
     if (!editorRef.current) {
-      const imageUploader = {
-        async uploadByFile(file: File) {
-          const { data: { session } } = await supabase.auth.getSession();
-          if (!session) {
-            throw new Error('You must be logged in to upload images.');
-          }
-
-          const formData = new FormData();
-          formData.append('image', file);
-
-          const response = await fetch('https://quuecudndfztjlxbrvyb.supabase.co/functions/v1/upload-editor-image', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${session.access_token}`,
-            },
-            body: formData,
-          });
-
-          if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error?.message || 'Image upload failed');
-          }
-
-          const result = await response.json();
-          return result;
-        }
-      };
-
       const editor = new EditorJS({
         holder: "editorjs",
         autofocus: true,
@@ -91,13 +61,33 @@ const Editor: React.FC<EditorProps> = ({ data, onChange }) => {
           image: {
             class: ImageTool,
             config: {
-              uploader: imageUploader
-            }
-          },
-          carousel: {
-            class: Carousel,
-            config: {
-              uploader: imageUploader
+              uploader: {
+                async uploadByFile(file: File) {
+                  const { data: { session } } = await supabase.auth.getSession();
+                  if (!session) {
+                    throw new Error('You must be logged in to upload images.');
+                  }
+
+                  const formData = new FormData();
+                  formData.append('image', file);
+
+                  const response = await fetch('https://quuecudndfztjlxbrvyb.supabase.co/functions/v1/upload-editor-image', {
+                    method: 'POST',
+                    headers: {
+                      'Authorization': `Bearer ${session.access_token}`,
+                    },
+                    body: formData,
+                  });
+
+                  if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error?.message || 'Image upload failed');
+                  }
+
+                  const result = await response.json();
+                  return result;
+                }
+              }
             }
           },
           link: {

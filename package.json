@@ -89,7 +89,6 @@
     "date-fns-tz": "^3.2.0",
     "dayjs": "^1.11.13",
     "editorjs-alert": "^1.1.4",
-    "editorjs-carousel": "^1.0.7",
     "editorjs-header-with-alignment": "^1.0.1",
     "editorjs-header-with-anchor": "^2.6.0",
     "editorjs-paragraph-with-alignment": "^3.0.0",
