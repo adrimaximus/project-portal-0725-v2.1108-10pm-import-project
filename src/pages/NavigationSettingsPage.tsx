@@ -233,13 +233,11 @@ const NavigationSettingsPage = () => {
         });
     } else if (activeType === 'item') {
         setNavItemsState((items) => {
-            const oldIndex = items.findIndex(i => i.id === activeId);
+            const oldIndex = items.findIndex((i) => i.id === activeId);
             if (oldIndex === -1) return items;
 
             const overIsItem = overType === 'item';
-            const originalOverIndex = overIsItem ? items.findIndex(i => i.id === overId) : -1;
-
-            const newFolderId = overType === 'folder'
+            const newFolderId = overType === 'folder' 
                 ? (overId === 'uncategorized-folder' ? null : overId) 
                 : (overIsItem ? items.find(i => i.id === overId)?.folder_id : items[oldIndex].folder_id);
 
@@ -249,22 +247,17 @@ const NavigationSettingsPage = () => {
 
             let newIndex = -1;
             if (overIsItem) {
-                let finalInsertionIndex = newItems.findIndex(i => i.id === overId);
-                // When moving an item down, dnd-kit's default is to place it before the target.
-                // To make it feel like it's placed after, we increment the index.
-                if (originalOverIndex !== -1 && oldIndex < originalOverIndex) {
-                    finalInsertionIndex++;
-                }
-                newItems.splice(finalInsertionIndex, 0, movedItem);
+                newIndex = newItems.findIndex(i => i.id === overId);
+                newItems.splice(newIndex, 0, movedItem);
             } else { // Dropped on a folder
                 const itemsInDest = newItems.filter(i => i.folder_id === newFolderId);
                 if (itemsInDest.length > 0) {
-                    const lastItemIndex = newItems.findLastIndex(i => i.folder_id === newFolderId);
-                    newIndex = lastItemIndex + 1;
+                    const lastItem = itemsInDest[itemsInDest.length - 1];
+                    newIndex = newItems.findIndex(i => i.id === lastItem.id) + 1;
                 } else {
                     const folder = foldersState.find(f => f.id === newFolderId);
                     if (folder) {
-                        const folderIndex = foldersState.findIndex(f => f.id === newFolderId);
+                        const folderIndex = foldersState.indexOf(folder);
                         let firstItemOfNextFolderIndex = -1;
                         for (let i = folderIndex + 1; i < foldersState.length; i++) {
                             const nextFolder = foldersState[i];
@@ -276,8 +269,7 @@ const NavigationSettingsPage = () => {
                         }
                         newIndex = firstItemOfNextFolderIndex !== -1 ? firstItemOfNextFolderIndex : newItems.length;
                     } else { // Uncategorized
-                        const firstFolderedItemIndex = newItems.findIndex(i => i.folder_id !== null);
-                        newIndex = firstFolderedItemIndex !== -1 ? firstFolderedItemIndex : newItems.length;
+                        newIndex = newItems.filter(i => i.folder_id === null).length;
                     }
                 }
                 newItems.splice(newIndex, 0, movedItem);
