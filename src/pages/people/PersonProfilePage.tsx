@@ -334,10 +334,10 @@ const PersonProfilePage = () => {
               <CardHeader><CardTitle>Related Projects</CardTitle></CardHeader>
               <CardContent>
                 {person.projects && person.projects.length > 0 ? (
-                  <div className="space-y-2">
+                  <div className="max-h-60 overflow-y-auto space-y-2 pr-2">
                     {person.projects.map(project => (
                       <Link key={project.id} to={`/projects/${project.slug}`} className="block p-2 rounded-md hover:bg-muted">
-                        <p className="font-medium">{project.name}</p>
+                        <p className="font-medium truncate">{project.name}</p>
                       </Link>
                     ))}
                   </div>
