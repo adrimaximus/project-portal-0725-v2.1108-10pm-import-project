@@ -1,165 +1,152 @@
-import { useMemo, useState, useEffect } from 'react';
-import { Task, TaskStatus, TASK_STATUS_OPTIONS } from '@/types';
-import TasksKanbanColumn from './TasksKanbanColumn';
-import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, MouseSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core';
-import { arrayMove } from '@dnd-kit/sortable';
-import TasksKanbanCard from './TasksKanbanCard';
-import { useTaskMutations } from '@/hooks/useTaskMutations';
+import React, { useState, useMemo } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { DndContext, closestCenter, DragEndEvent, DragOverlay, DragStartEvent } from '@dnd-kit/core';
+import { SortableContext, arrayMove } from '@dnd-kit/sortable';
+import { toast } from 'sonner';
+import { Loader2 } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
+import { Badge } from '../ui/badge';
 
-interface TasksKanbanViewProps {
-  tasks: Task[];
-  onStatusChange: (taskId: string, newStatus: TaskStatus) => void;
-  onEdit: (task: Task) => void;
-  onDelete: (taskId: string) => void;
-}
+type Task = {
+  id: string;
+  title: string;
+  status: string;
+  project_name: string;
+  project_slug: string;
+  assignees: { id: string; avatar_url: string; first_name: string; last_name: string }[];
+};
 
-const TasksKanbanView = ({ tasks, onStatusChange, onEdit, onDelete }: TasksKanbanViewProps) => {
-  const [collapsedColumns, setCollapsedColumns] = useState<Set<TaskStatus>>(new Set());
-  const [internalTasks, setInternalTasks] = useState<Task[]>(tasks);
+const TaskCard = ({ task }: { task: Task }) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id, data: { type: 'Task', task } });
+  const style = { transition, transform: CSS.Transform.toString(transform), opacity: isDragging ? 0.5 : 1 };
+
+  return (
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+      <Card className="mb-2">
+        <CardContent className="p-3">
+          <p className="font-medium">{task.title}</p>
+          <div className="flex justify-between items-center mt-2">
+            <Badge variant="secondary">{task.project_name}</Badge>
+            <div className="flex -space-x-2">
+              {task.assignees.map(assignee => (
+                <Avatar key={assignee.id} className="h-6 w-6 border-2 border-background">
+                  <AvatarImage src={assignee.avatar_url} />
+                  <AvatarFallback>{assignee.first_name?.[0]}{assignee.last_name?.[0]}</AvatarFallback>
+                </Avatar>
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
+const KanbanColumn = ({ id, title, children }: { id: string; title: string; children: React.ReactNode }) => {
+  const { setNodeRef } = useSortable({ id });
+  return (
+    <div ref={setNodeRef} className="w-72 flex-shrink-0">
+      <Card className="bg-muted/50">
+        <CardHeader className="p-4">
+          <CardTitle className="text-base">{title}</CardTitle>
+        </CardHeader>
+        <CardContent className="p-2 min-h-[200px]">
+          {children}
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
+const TasksKanbanView = () => {
+  const queryClient = useQueryClient();
   const [activeTask, setActiveTask] = useState<Task | null>(null);
-  const { updateTaskStatusAndOrder } = useTaskMutations();
 
-  useEffect(() => {
-    setInternalTasks(tasks);
+  const { data: tasks, isLoading } = useQuery<Task[]>({
+    queryKey: ['tasks'],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('get_project_tasks');
+      if (error) throw new Error(error.message);
+      return data as Task[];
+    },
+  });
+
+  const { mutate: updateTaskStatus } = useMutation({
+    mutationFn: async ({ taskId, status }: { taskId: string; status: string }) => {
+      const { error } = await supabase.from('tasks').update({ status }).eq('id', taskId);
+      if (error) throw error;
+    },
+    onMutate: async ({ taskId, status }) => {
+      await queryClient.cancelQueries({ queryKey: ['tasks'] });
+      const previousTasks = queryClient.getQueryData<Task[]>(['tasks']);
+      queryClient.setQueryData<Task[]>(['tasks'], old => old?.map(t => t.id === taskId ? { ...t, status } : t));
+      return { previousTasks };
+    },
+    onError: (err, newTodo, context) => {
+      queryClient.setQueryData(['tasks'], context?.previousTasks);
+      toast.error('Failed to move task');
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+    },
+  });
+
+  const columns = useMemo(() => {
+    const statuses = ['To do', 'In progress', 'In review', 'Done'];
+    return statuses.map(status => ({
+      id: status,
+      title: status,
+      tasks: tasks?.filter(task => task.status === status) || [],
+    }));
   }, [tasks]);
 
-  const toggleColumnCollapse = (status: TaskStatus) => {
-    setCollapsedColumns(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(status)) {
-        newSet.delete(status);
-      } else {
-        newSet.add(status);
-      }
-      return newSet;
-    });
-  };
-
-  const tasksByStatus = useMemo(() => {
-    const grouped: { [key in TaskStatus]: Task[] } = TASK_STATUS_OPTIONS.reduce((acc, opt) => {
-      acc[opt.value] = [];
-      return acc;
-    }, {} as { [key in TaskStatus]: Task[] });
-
-    internalTasks.forEach(task => {
-      const status = task.status || 'To do';
-      if (grouped[status]) {
-        grouped[status].push(task);
-      } else {
-        grouped['To do'].push(task);
-      }
-    });
-
-    // Sort tasks in each column by last updated date
-    for (const status in grouped) {
-      grouped[status as TaskStatus].sort((a, b) => {
-        const dateA = a.updated_at ? new Date(a.updated_at).getTime() : 0;
-        const dateB = b.updated_at ? new Date(b.updated_at).getTime() : 0;
-        return dateB - dateA;
-      });
-    }
-
-    return grouped;
-  }, [internalTasks]);
-
-  const sensors = useSensors(
-    useSensor(MouseSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    }),
-    useSensor(TouchSensor, {
-      activationConstraint: {
-        delay: 250,
-        tolerance: 5,
-      },
-    })
-  );
-
   const handleDragStart = (event: DragStartEvent) => {
-    const { active } = event;
-    const task = internalTasks.find(t => t.id === active.id);
-    if (task) {
-      setActiveTask(task);
+    if (event.active.data.current?.type === 'Task') {
+      setActiveTask(event.active.data.current.task);
     }
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
     setActiveTask(null);
     const { active, over } = event;
+    if (!over) return;
 
-    if (!over || active.id === over.id) return;
+    const activeId = active.id;
+    const overId = over.id;
 
-    const activeId = String(active.id);
-    const overId = String(over.id);
+    const activeContainer = active.data.current?.sortable.containerId;
+    const overContainer = over.data.current?.sortable.containerId || over.id;
 
-    const oldTasks = [...internalTasks];
-    const activeIndex = oldTasks.findIndex(t => t.id === activeId);
-    let overIndex = oldTasks.findIndex(t => t.id === overId);
-
-    if (activeIndex === -1) return;
-
-    const activeTask = oldTasks[activeIndex];
-    const overTask = overIndex !== -1 ? oldTasks[overIndex] : null;
-    
-    const newStatus = overTask ? overTask.status : (overId as TaskStatus);
-
-    if (overIndex === -1) { // Dropped on a column, not a task
-        const tasksInTargetColumn = oldTasks.filter(t => t.status === newStatus);
-        if (tasksInTargetColumn.length > 0) {
-            overIndex = oldTasks.findIndex(t => t.id === tasksInTargetColumn[0].id);
-        } else {
-            const columnOrder = TASK_STATUS_OPTIONS.map(o => o.value);
-            const newStatusIndex = columnOrder.indexOf(newStatus);
-            let nextTask: Task | undefined;
-            for (let i = newStatusIndex + 1; i < columnOrder.length; i++) {
-                nextTask = oldTasks.find(t => t.status === columnOrder[i]);
-                if (nextTask) break;
-            }
-            
-            if (nextTask) {
-                overIndex = oldTasks.findIndex(t => t.id === nextTask!.id);
-            } else {
-                overIndex = oldTasks.length;
-            }
-        }
+    if (activeContainer !== overContainer) {
+      updateTaskStatus({ taskId: String(activeId), status: String(overContainer) });
     }
-
-    // Optimistic update
-    const newTasksOptimistic = arrayMove(oldTasks, activeIndex, overIndex);
-    const movedItemIndexInNew = newTasksOptimistic.findIndex(t => t.id === activeId);
-    if (movedItemIndexInNew !== -1) {
-      newTasksOptimistic[movedItemIndexInNew] = { ...newTasksOptimistic[movedItemIndexInNew], status: newStatus };
-    }
-
-    setInternalTasks(newTasksOptimistic);
-
-    // Call mutation
-    const finalTaskIds = newTasksOptimistic.map(t => t.id);
-    updateTaskStatusAndOrder({ 
-        taskId: activeId, 
-        newStatus, 
-        orderedTaskIds: finalTaskIds 
-    });
   };
 
+  if (isLoading) {
+    return <div className="flex justify-center items-center h-64"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
+  }
+
   return (
-    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-      <div className="flex gap-4 overflow-x-auto p-2 sm:p-4 h-full">
-        {TASK_STATUS_OPTIONS.map(option => (
-          <TasksKanbanColumn
-            key={option.value}
-            status={option.value}
-            tasks={tasksByStatus[option.value] || []}
-            isCollapsed={collapsedColumns.has(option.value)}
-            onToggleCollapse={toggleColumnCollapse}
-            onEdit={onEdit}
-            onDelete={onDelete}
-          />
-        ))}
+    <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd} closestCenter={closestCenter}>
+      <div className="flex gap-4 overflow-x-auto pb-4">
+        <SortableContext items={columns.map(c => c.id)}>
+          {columns.map(column => (
+            <KanbanColumn key={column.id} id={column.id} title={column.title}>
+              <SortableContext items={column.tasks.map(t => t.id)}>
+                {column.tasks.map(task => (
+                  <TaskCard key={task.id} task={task} />
+                ))}
+              </SortableContext>
+            </KanbanColumn>
+          ))}
+        </SortableContext>
       </div>
       <DragOverlay>
-        {activeTask ? <TasksKanbanCard task={activeTask} onEdit={onEdit} onDelete={onDelete} /> : null}
+        {activeTask ? <TaskCard task={activeTask} /> : null}
       </DragOverlay>
     </DndContext>
   );
