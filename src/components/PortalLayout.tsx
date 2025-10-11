@@ -5,7 +5,6 @@ import PortalHeader from "./PortalHeader";
 import StorageWarning from "./StorageWarning";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import PullToRefreshIndicator from "./PullToRefreshIndicator";
-import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 type PortalLayoutProps = {
@@ -18,11 +17,14 @@ type PortalLayoutProps = {
 
 export default function PortalLayout({ children, summary, pageHeader, disableMainScroll, noPadding }: PortalLayoutProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const queryClient = useQueryClient();
 
   const handleRefresh = async () => {
-    await queryClient.invalidateQueries();
-    toast.success("Data refreshed!");
+    toast.info("Refreshing...");
+    // Jeda singkat agar pengguna dapat melihat toast sebelum halaman dimuat ulang
+    await new Promise(resolve => setTimeout(resolve, 300));
+    window.location.reload();
+    // Promise ini kemungkinan tidak akan selesai karena halaman dimuat ulang
+    await new Promise(resolve => setTimeout(resolve, 2000));
   };
 
   const { isRefreshing, pullPosition, handlers, setRef } = usePullToRefresh(handleRefresh);
@@ -45,7 +47,7 @@ export default function PortalLayout({ children, summary, pageHeader, disableMai
           ref={setRef}
           {...handlers}
           className={cn(
-            "flex-1 min-h-0 relative overscroll-y-contain", // Add overscroll-y-contain
+            "flex-1 min-h-0 relative overscroll-y-contain",
             !disableMainScroll && "overflow-y-auto",
             disableMainScroll && "flex flex-col",
             !noPadding && "p-4 md:p-8"
