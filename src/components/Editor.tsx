@@ -1,5 +1,5 @@
 "use client";
-import React from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { LexicalComposer } from "@lexical/react/LexicalComposer";
 import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
 import { ContentEditable } from "@lexical/react/LexicalContentEditable";
@@ -12,17 +12,18 @@ import {
   FORMAT_TEXT_COMMAND,
   $getSelection,
   $isRangeSelection,
+  $createParagraphNode,
   EditorState,
 } from "lexical";
 
 import { ListPlugin } from "@lexical/react/LexicalListPlugin";
-import { ListNode, ListItemNode } from "@lexical/list";
+import { ListNode, ListItemNode, INSERT_ORDERED_LIST_COMMAND, INSERT_UNORDERED_LIST_COMMAND } from "@lexical/list";
 import { LinkPlugin } from "@lexical/react/LexicalLinkPlugin";
 import { LinkNode, TOGGLE_LINK_COMMAND } from "@lexical/link";
-import { HeadingNode, $createHeadingNode } from "@lexical/rich-text";
+import { HeadingNode, QuoteNode, $createHeadingNode } from "@lexical/rich-text";
 import { $setBlocksType } from "@lexical/selection";
 import { Button } from "./ui/button";
-import { Bold, Italic, Underline, Link as LinkIcon, Heading1, Heading2, Heading3 } from "lucide-react";
+import { Bold, Italic, Underline, Link as LinkIcon, Heading1, Heading2, Heading3, List, ListOrdered } from "lucide-react";
 
 const theme = {
   paragraph: "mb-2",
@@ -89,6 +90,83 @@ function ToolbarPlugin() {
   );
 }
 
+function SlashCommandPlugin({ containerRef }: { containerRef: React.RefObject<HTMLDivElement> }) {
+  const [editor] = useLexicalComposerContext();
+  const [showMenu, setShowMenu] = useState(false);
+  const [position, setPosition] = useState({ top: 0, left: 0 });
+
+  useEffect(() => {
+    const unregister = editor.registerTextContentListener((text) => {
+      if (text.endsWith("/")) {
+        const selection = window.getSelection();
+        const range = selection?.getRangeAt(0);
+        const rect = range?.getBoundingClientRect();
+        const containerRect = containerRef.current?.getBoundingClientRect();
+
+        if (rect && containerRect) {
+          setPosition({
+            top: rect.bottom - containerRect.top,
+            left: rect.left - containerRect.left,
+          });
+          setShowMenu(true);
+        }
+      } else {
+        setShowMenu(false);
+      }
+    });
+
+    return () => unregister();
+  }, [editor, containerRef]);
+
+  const handleCommand = (cmd: string) => {
+    editor.update(() => {
+      const selection = $getSelection();
+      if ($isRangeSelection(selection)) {
+        const node = selection.anchor.getNode();
+        node.spliceText(selection.anchor.offset - 1, 1, '');
+
+        if (cmd.startsWith("heading")) {
+          $setBlocksType(selection, () => $createHeadingNode(cmd as "h1" | "h2" | "h3"));
+        } else if (cmd === "paragraph") {
+          $setBlocksType(selection, () => $createParagraphNode());
+        }
+      }
+    });
+    if (cmd === "bullet") editor.dispatchCommand(INSERT_UNORDERED_LIST_COMMAND, undefined);
+    if (cmd === "numbered") editor.dispatchCommand(INSERT_ORDERED_LIST_COMMAND, undefined);
+    setShowMenu(false);
+  };
+
+  const commands = [
+    { label: "Heading 1", cmd: "h1", icon: Heading1 },
+    { label: "Heading 2", cmd: "h2", icon: Heading2 },
+    { label: "Heading 3", cmd: "h3", icon: Heading3 },
+    { label: "Bullet List", cmd: "bullet", icon: List },
+    { label: "Numbered List", cmd: "numbered", icon: ListOrdered },
+  ];
+
+  return (
+    showMenu && (
+      <div
+        style={{ position: "absolute", top: position.top, left: position.left }}
+        className="z-50 bg-popover text-popover-foreground border rounded-md shadow-lg p-1 w-48"
+      >
+        <div className="text-xs text-muted-foreground p-2">Insert block</div>
+        {commands.map(({ label, cmd, icon: Icon }) => (
+          <button
+            key={cmd}
+            onClick={() => handleCommand(cmd)}
+            className="flex items-center w-full text-left px-2 py-1.5 text-sm hover:bg-accent rounded-sm"
+          >
+            <Icon className="h-4 w-4 mr-2" />
+            {label}
+          </button>
+        ))}
+      </div>
+    )
+  );
+}
+
 function onError(error: Error) {
   console.error("Lexical Error:", error);
 }
@@ -99,12 +177,13 @@ interface EditorProps {
 }
 
 export default function Editor({ onChange, initialState }: EditorProps) {
+  const editorContainerRef = useRef<HTMLDivElement>(null);
   const initialConfig = {
     namespace: "BetterworksEditor",
     theme,
     onError,
     editable: true,
-    nodes: [HeadingNode, ListNode, ListItemNode, LinkNode],
+    nodes: [HeadingNode, ListNode, ListItemNode, QuoteNode, LinkNode],
     editorState: initialState,
   };
 
@@ -116,13 +195,14 @@ export default function Editor({ onChange, initialState }: EditorProps) {
 
   return (
     <LexicalComposer initialConfig={initialConfig}>
-      <div className="relative border rounded-lg p-4 bg-background shadow-sm">
+      <div ref={editorContainerRef} className="relative border rounded-lg p-4 bg-background shadow-sm">
         <ToolbarPlugin />
         <RichTextPlugin
           contentEditable={<ContentEditable className="min-h-[200px] outline-none prose dark:prose-invert max-w-none" />}
-          placeholder={<div className="text-muted-foreground absolute top-[62px] left-4 select-none pointer-events-none">Start typing or use / commands…</div>}
+          placeholder={<div className="text-muted-foreground absolute top-[62px] left-4 select-none pointer-events-none">Type “/” for commands…</div>}
           ErrorBoundary={LexicalErrorBoundary}
         />
+        <SlashCommandPlugin containerRef={editorContainerRef} />
         <HistoryPlugin />
         <ListPlugin />
         <LinkPlugin />
