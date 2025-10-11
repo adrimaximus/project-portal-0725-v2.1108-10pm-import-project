@@ -35,6 +35,7 @@ interface CollaboratorStat extends User {
   ongoingProjectCount: number;
   activeTaskCount: number;
   activeTicketCount: number;
+  overdueBillCount: number;
   role: string;
 }
 
@@ -75,6 +76,7 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
                 ongoingProjectCount: 0,
                 activeTaskCount: 0,
                 activeTicketCount: 0,
+                overdueBillCount: 0,
                 role: user.role || 'member',
                 countedProjectIds: new Set(),
             };
@@ -89,6 +91,9 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
         const startDate = p.start_date ? new Date(p.start_date) : null;
         const isUpcoming = startDate ? startDate > today : false;
         const isOngoing = !['Completed', 'Cancelled'].includes(p.status);
+        
+        const paymentDueDate = p.payment_due_date ? new Date(p.payment_due_date) : null;
+        const isOverdue = paymentDueDate ? paymentDueDate < today && p.payment_status !== 'Paid' : false;
 
         p.assignedTo.forEach(user => {
             const userStat = ensureUser(user);
@@ -103,6 +108,7 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
                 userStat.projectCount++;
                 if (isUpcoming) userStat.upcomingProjectCount++;
                 if (isOngoing) userStat.ongoingProjectCount++;
+                if (isOverdue) userStat.overdueBillCount++;
                 userStat.countedProjectIds.add(p.id);
             }
         });
@@ -186,13 +192,14 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
                               <TableHead className="text-right">On Going</TableHead>
                               <TableHead className="text-right">Active Tasks</TableHead>
                               <TableHead className="text-right">Active Tickets</TableHead>
+                              <TableHead className="text-right">Overdue Bill</TableHead>
                           </TableRow>
                       </TableHeader>
                       <TableBody>
                           {Object.entries(collaboratorsByRole).map(([role, collaboratorsInRole]) => (
                             <React.Fragment key={role}>
                               <TableRow className="border-b-0 hover:bg-transparent">
-                                <TableCell colSpan={6} className="pt-6 pb-2">
+                                <TableCell colSpan={7} className="pt-6 pb-2">
                                   <h3 className="text-sm font-semibold uppercase text-muted-foreground tracking-wider">
                                     {role.replace('_', ' ')}
                                   </h3>
@@ -214,6 +221,7 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
                                       <TableCell className="text-right font-medium">{c.ongoingProjectCount}</TableCell>
                                       <TableCell className="text-right font-medium">{c.activeTaskCount}</TableCell>
                                       <TableCell className="text-right font-medium">{c.activeTicketCount}</TableCell>
+                                      <TableCell className="text-right font-medium">{c.overdueBillCount}</TableCell>
                                   </TableRow>
                               ))}
                             </React.Fragment>
