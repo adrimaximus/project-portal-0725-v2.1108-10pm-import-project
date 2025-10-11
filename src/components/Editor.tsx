@@ -17,6 +17,8 @@ import Title from 'title-editorjs';
 import ImageTool from '@editorjs/image';
 // @ts-ignore
 import LinkTool from '@editorjs/link';
+// @ts-ignore
+import AttachesTool from '@editorjs/attaches';
 import { supabase } from "@/integrations/supabase/client";
 
 interface EditorProps {
@@ -89,6 +91,38 @@ const Editor: React.FC<EditorProps> = ({ data, onChange }) => {
             }
           },
           link: LinkTool,
+          attaches: {
+            class: AttachesTool,
+            config: {
+              uploader: {
+                async uploadByFile(file: File) {
+                  const { data: { session } } = await supabase.auth.getSession();
+                  if (!session) {
+                    throw new Error('You must be logged in to upload files.');
+                  }
+
+                  const formData = new FormData();
+                  formData.append('file', file);
+
+                  const response = await fetch('https://quuecudndfztjlxbrvyb.supabase.co/functions/v1/upload-editor-file', {
+                    method: 'POST',
+                    headers: {
+                      'Authorization': `Bearer ${session.access_token}`,
+                    },
+                    body: formData,
+                  });
+
+                  if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error?.message || 'File upload failed');
+                  }
+
+                  const result = await response.json();
+                  return result;
+                }
+              }
+            }
+          },
           delimiter: Delimiter,
           toggle: {
             class: ToggleBlock,
