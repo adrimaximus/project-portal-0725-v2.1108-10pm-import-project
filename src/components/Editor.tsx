@@ -11,10 +11,6 @@ import ParagraphWithAlignment from "editorjs-paragraph-with-alignment";
 import Delimiter from "@editorjs/delimiter";
 // @ts-ignore
 import ToggleBlock from 'editorjs-toggle-block';
-// @ts-ignore
-import AIText from '@alkhipce/editorjs-aitext';
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
 
 interface EditorProps {
   data?: OutputData;
@@ -30,30 +26,6 @@ const Editor: React.FC<EditorProps> = ({ data, onChange }) => {
         holder: "editorjs",
         autofocus: true,
         tools: {
-          aiText: {
-            class: AIText,
-            config: {
-              onGenerate: async (prompt: string) => {
-                try {
-                  const { data, error } = await supabase.functions.invoke('generate-ai-text', {
-                    body: { prompt },
-                  });
-
-                  if (error) {
-                    throw new Error(error.message);
-                  }
-                  if (data.error) {
-                    throw new Error(data.error);
-                  }
-
-                  return data.text;
-                } catch (error: any) {
-                  toast.error("AI text generation failed.", { description: error.message });
-                  return ""; // Return empty string on failure
-                }
-              },
-            },
-          },
           header: {
             class: HeaderWithAnchor,
             inlineToolbar: true,
