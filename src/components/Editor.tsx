@@ -11,6 +11,8 @@ import ParagraphWithAlignment from "editorjs-paragraph-with-alignment";
 import Delimiter from "@editorjs/delimiter";
 // @ts-ignore
 import ToggleBlock from 'editorjs-toggle-block';
+// @ts-ignore
+import Title from 'title-editorjs';
 
 interface EditorProps {
   data?: OutputData;
@@ -26,6 +28,11 @@ const Editor: React.FC<EditorProps> = ({ data, onChange }) => {
         holder: "editorjs",
         autofocus: true,
         tools: {
+          title: {
+            class: Title,
+            placeholder: 'Enter a title',
+            inlineToolbar: true,
+          },
           header: {
             class: HeaderWithAnchor,
             inlineToolbar: true,
