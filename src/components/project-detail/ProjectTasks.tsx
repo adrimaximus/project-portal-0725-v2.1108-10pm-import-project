@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Project, Task, User } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -55,6 +55,11 @@ const ProjectTasks = ({
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [isAddingTask, setIsAddingTask] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [tasks, setTasks] = useState<Task[]>(project.tasks || []);
+
+  useEffect(() => {
+    setTasks(project.tasks || []);
+  }, [project.tasks]);
 
   const handleAddTask = () => {
     if (newTaskTitle.trim() === "") return;
@@ -63,11 +68,18 @@ const ProjectTasks = ({
     setIsAddingTask(false);
   };
 
+  const handleDeleteTask = (taskId: string) => {
+    // Optimistically update the UI
+    setTasks(currentTasks => currentTasks.filter(task => task.id !== taskId));
+    // Call the parent handler to delete from the database
+    onTaskDelete(taskId);
+  };
+
   const handleGenerateTasks = async (isInitial: boolean) => {
     setIsGenerating(true);
     const toastId = toast.loading(isInitial ? "Membuat tugas awal..." : "Membuat lebih banyak tugas...");
     try {
-      const existingTaskTitles = project.tasks?.map(t => t.title) || [];
+      const existingTaskTitles = tasks.map(t => t.title);
       const { data, error } = await supabase.functions.invoke('generate-tasks', {
         body: {
           projectName: project.name,
@@ -105,8 +117,6 @@ const ProjectTasks = ({
     value: user.id,
     label: user.name,
   }));
-
-  const tasks = project.tasks || [];
 
   return (
     <div className="space-y-4">
@@ -269,7 +279,7 @@ const ProjectTasks = ({
                     </DialogTrigger>
                     <DropdownMenuItem
                       className="text-red-500"
-                      onClick={() => onTaskDelete(task.id)}
+                      onClick={() => handleDeleteTask(task.id)}
                     >
                       <Trash2 className="mr-2 h-4 w-4" />
                       Delete
