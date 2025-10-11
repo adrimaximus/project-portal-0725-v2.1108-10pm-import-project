@@ -32,8 +32,6 @@ import Marker from '@editorjs/marker';
 import InlineCode from '@editorjs/inline-code';
 // @ts-ignore
 import ChangeCase from 'editorjs-change-case';
-// @ts-ignore
-import ColorPlugin from 'editorjs-text-color-plugin';
 
 interface EditorProps {
   data?: OutputData;
@@ -198,15 +196,6 @@ const Editor: React.FC<EditorProps> = ({ data, onChange }) => {
             shortcut: 'CMD+SHIFT+C',
           },
           changeCase: ChangeCase,
-          color: {
-            class: ColorPlugin,
-            config: {
-               colorCollections: ['#EC7878','#9C27B0','#673AB7','#3F51B5','#0070FF','#03A9F4','#009688','#4CAF50','#8BC34A','#CDDC39', '#FFF'],
-               defaultColor: '#000000',
-               type: 'text', 
-               customPicker: true 
-            }     
-          },
         },
         data: data || {},
         onChange: async (api) => {
