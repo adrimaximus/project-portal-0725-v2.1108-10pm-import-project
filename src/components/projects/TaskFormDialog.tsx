@@ -27,6 +27,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import TaskFileUpload from './TaskFileUpload';
 import { Badge } from '@/components/ui/badge';
 import { ProjectCombobox } from './ProjectCombobox';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface TaskFormDialogProps {
   open: boolean;
@@ -38,6 +39,7 @@ interface TaskFormDialogProps {
 
 const taskFormSchema = z.object({
   title: z.string().min(1, 'Title is required'),
+  completed: z.boolean().optional(),
   project_id: z.string().optional().nullable(),
   description: z.string().optional().nullable(),
   due_date: z.date().optional().nullable(),
@@ -64,6 +66,7 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task }: Ta
     resolver: zodResolver(taskFormSchema),
     defaultValues: {
       title: '',
+      completed: false,
       project_id: '',
       description: '',
       due_date: null,
@@ -75,6 +78,27 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task }: Ta
   });
 
   const selectedProjectId = useWatch({ control: form.control, name: 'project_id' });
+  const completedValue = useWatch({ control: form.control, name: 'completed' });
+  const statusValue = useWatch({ control: form.control, name: 'status' });
+
+  useEffect(() => {
+    if (completedValue) {
+      if (form.getValues('status') !== 'Completed') {
+        form.setValue('status', 'Completed');
+      }
+    } else {
+      if (form.getValues('status') === 'Completed') {
+        form.setValue('status', 'To do');
+      }
+    }
+  }, [completedValue, form]);
+
+  useEffect(() => {
+    const isCompleted = statusValue === 'Completed';
+    if (form.getValues('completed') !== isCompleted) {
+      form.setValue('completed', isCompleted);
+    }
+  }, [statusValue, form]);
 
   useEffect(() => {
     const getUser = async () => {
@@ -109,6 +133,7 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task }: Ta
       if (task) {
         form.reset({
           title: task.title,
+          completed: task.status === 'Completed' || task.completed,
           project_id: task.project_id,
           description: task.description,
           due_date: task.due_date ? new Date(task.due_date) : null,
@@ -122,6 +147,7 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task }: Ta
         const generalTasksProject = projects.find(p => p.slug === 'general-tasks');
         form.reset({
           title: '',
+          completed: false,
           project_id: generalTasksProject?.id || '',
           description: '',
           due_date: null,
@@ -217,6 +243,7 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task }: Ta
 
     const payload: UpsertTaskPayload = {
       id: task?.id,
+      completed: values.completed,
       project_id: projectId,
       title: values.title,
       description: values.description,
@@ -258,19 +285,36 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task }: Ta
           </FormItem>
         )}
       />
-      <FormField
-        control={form.control}
-        name="title"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>Title</FormLabel>
-            <FormControl>
-              <Input placeholder="e.g., Design the main page" {...field} />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
+      <div className="flex items-center gap-4">
+        <FormField
+          control={form.control}
+          name="completed"
+          render={({ field }) => (
+            <FormItem className="flex items-center pt-6">
+              <FormControl>
+                <Checkbox
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                  className="h-6 w-6"
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="title"
+          render={({ field }) => (
+            <FormItem className="flex-grow">
+              <FormLabel>Title</FormLabel>
+              <FormControl>
+                <Input placeholder="e.g., Design the main page" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      </div>
       <FormField
         control={form.control}
         name="description"
