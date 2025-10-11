@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
-import { Bell, Home, Settings, LayoutGrid, MessageSquare, Smile, Target, CreditCard, Link as LinkIcon, LucideIcon, Users, BookOpen, Folder as FolderIcon, ChevronDown } from "lucide-react";
+import { Bell, Home, Settings, LayoutGrid, MessageSquare, Smile, Target, CreditCard, Link as LinkIcon, LucideIcon, Users, BookOpen, Folder as FolderIcon, ChevronDown, FileText } from "lucide-react";
 import * as LucideIcons from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Link, useLocation } from "react-router-dom";
@@ -272,6 +272,16 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
                     </Collapsible>
                   );
                 })}
+                <NavLink 
+                  item={{
+                    id: 'test-editor-link',
+                    href: '/test-editor',
+                    label: 'Test Editor',
+                    icon: FileText,
+                    folder_id: null
+                  }}
+                  isCollapsed={isCollapsed}
+                />
               </nav>
             </TooltipProvider>
           </div>
