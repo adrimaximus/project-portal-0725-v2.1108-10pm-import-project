@@ -232,69 +232,65 @@ const NavigationSettingsPage = () => {
             updateFolders(newOrder.map((f, index) => ({ id: f.id, position: index })));
             return newOrder;
         });
-    } else if (activeType === 'item') {
-        setNavItemsState((items) => {
-            const oldIndex = items.findIndex((i) => i.id === activeId);
-            if (oldIndex === -1) return items;
+        return;
+    }
 
-            const overIsItem = overType === 'item';
-            const overIsFolder = overType === 'folder';
+    if (activeType === 'item') {
+        setNavItemsState((currentItems) => {
+            const oldIndex = currentItems.findIndex((i) => i.id === activeId);
+            if (oldIndex === -1) return currentItems;
 
-            let newItems = [...items];
-            const [movedItem] = newItems.splice(oldIndex, 1);
+            let finalItems: NavItem[];
 
-            const newFolderId = overIsFolder
-                ? (overId === 'uncategorized-folder' ? null : overId)
-                : (overIsItem ? items.find(i => i.id === overId)?.folder_id : items[oldIndex].folder_id);
-            
-            movedItem.folder_id = newFolderId;
+            if (overType === 'item') {
+                const newIndex = currentItems.findIndex((i) => i.id === overId);
+                if (newIndex === -1) return currentItems;
 
-            let newIndex: number;
+                const reorderedItems = arrayMove(currentItems, oldIndex, newIndex);
+                const newFolderId = currentItems.find(i => i.id === overId)?.folder_id ?? null;
+                
+                finalItems = reorderedItems.map(item => 
+                    item.id === activeId ? { ...item, folder_id: newFolderId } : item
+                );
 
-            if (overIsItem) {
-                newIndex = newItems.findIndex(i => i.id === overId);
-                if (newIndex === -1) return items;
-            } else { // Dropped on a folder
-                const itemsInDest = newItems.filter(i => i.folder_id === newFolderId);
-                if (itemsInDest.length > 0) {
-                    const lastItem = itemsInDest[itemsInDest.length - 1];
-                    newIndex = newItems.findIndex(i => i.id === lastItem.id) + 1;
+            } else if (overType === 'folder') {
+                const newFolderId = overId === 'uncategorized-folder' ? null : overId;
+                const movedItem = { ...currentItems[oldIndex], folder_id: newFolderId };
+                
+                const tempItems = currentItems.filter(item => item.id !== activeId);
+
+                const lastItemInNewFolder = [...tempItems].reverse().find(item => item.folder_id === newFolderId);
+
+                if (lastItemInNewFolder) {
+                    const insertionIndex = tempItems.findIndex(item => item.id === lastItemInNewFolder.id) + 1;
+                    tempItems.splice(insertionIndex, 0, movedItem);
+                    finalItems = tempItems;
                 } else {
-                    // Folder is empty, find correct insertion point based on folder order
-                    if (newFolderId === null) { // Uncategorized is first
-                        newIndex = 0;
-                    } else {
-                        const folderIndex = foldersState.findIndex(f => f.id === newFolderId);
-                        if (folderIndex === -1) return items;
-
-                        let lastItemOfPreviousGroupIndex = -1;
-                        // Find last item of all previous groups
-                        const allPreviousFolderIds = [null, ...foldersState.slice(0, folderIndex).map(f => f.id)];
-                        for (let i = allPreviousFolderIds.length - 1; i >= 0; i--) {
-                            const prevFolderId = allPreviousFolderIds[i];
-                            const itemsInPrevGroup = newItems.filter(item => item.folder_id === prevFolderId);
-                            if (itemsInPrevGroup.length > 0) {
-                                const lastItem = itemsInPrevGroup[itemsInPrevGroup.length - 1];
-                                lastItemOfPreviousGroupIndex = newItems.findIndex(item => item.id === lastItem.id);
-                                break;
-                            }
+                    const folderOrder = [null, ...foldersState.map(f => f.id)];
+                    const newFolderGroupIndex = folderOrder.indexOf(newFolderId);
+                    
+                    let insertionIndex = 0;
+                    if (newFolderGroupIndex > 0) {
+                        const previousFolderId = folderOrder[newFolderGroupIndex - 1];
+                        const lastItemOfPreviousGroup = [...tempItems].reverse().find(item => item.folder_id === previousFolderId);
+                        if (lastItemOfPreviousGroup) {
+                            insertionIndex = tempItems.findIndex(item => item.id === lastItemOfPreviousGroup.id) + 1;
                         }
-                        newIndex = lastItemOfPreviousGroupIndex + 1;
                     }
+                    tempItems.splice(insertionIndex, 0, movedItem);
+                    finalItems = tempItems;
                 }
+            } else {
+                return currentItems;
             }
 
-            newItems.splice(newIndex, 0, movedItem);
-
-            const payload = newItems.map((item, index) => ({
+            const payload = finalItems.map((item, index) => ({
                 id: item.id,
                 position: index,
                 folder_id: item.folder_id,
             }));
-
             updateItems(payload);
-            
-            return newItems;
+            return finalItems;
         });
     }
   };
