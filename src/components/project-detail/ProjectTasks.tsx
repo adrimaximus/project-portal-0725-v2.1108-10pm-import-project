@@ -55,24 +55,14 @@ const ProjectTasks = ({
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [isAddingTask, setIsAddingTask] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [tasks, setTasks] = useState<Task[]>(project.tasks || []);
 
-  useEffect(() => {
-    setTasks(project.tasks || []);
-  }, [project.tasks]);
+  const tasks = project.tasks || [];
 
   const handleAddTask = () => {
     if (newTaskTitle.trim() === "") return;
     onTaskAdd(newTaskTitle.trim());
     setNewTaskTitle("");
     setIsAddingTask(false);
-  };
-
-  const handleDeleteTask = (taskId: string) => {
-    // Optimistically update the UI
-    setTasks(currentTasks => currentTasks.filter(task => task.id !== taskId));
-    // Call the parent handler to delete from the database
-    onTaskDelete(taskId);
   };
 
   const handleGenerateTasks = async (isInitial: boolean) => {
@@ -279,7 +269,7 @@ const ProjectTasks = ({
                     </DialogTrigger>
                     <DropdownMenuItem
                       className="text-red-500"
-                      onClick={() => handleDeleteTask(task.id)}
+                      onClick={() => onTaskDelete(task.id)}
                     >
                       <Trash2 className="mr-2 h-4 w-4" />
                       Delete

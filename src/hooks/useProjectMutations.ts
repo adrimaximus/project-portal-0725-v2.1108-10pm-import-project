@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Project, User } from '@/types';
+import { Project, User, Task } from '@/types';
 import { useNavigate } from 'react-router-dom';
 
 export const useProjectMutations = (slug: string) => {
@@ -112,14 +112,33 @@ export const useProjectMutations = (slug: string) => {
 
     const useAddTask = () => useMutation({
         mutationFn: async ({ project, user, title }: { project: Project, user: User, title: string }) => {
-            const { error } = await supabase.from('tasks').insert({ project_id: project.id, title, created_by: user.id });
+            const { data, error } = await supabase.from('tasks').insert({ project_id: project.id, title, created_by: user.id }).select().single();
             if (error) throw error;
+            return data;
         },
-        onSuccess: () => {
-            toast.success("Task added successfully.");
-            invalidateProjectQueries();
+        onMutate: async ({ project, user, title }) => {
+            await queryClient.cancelQueries({ queryKey: ['project', slug] });
+            const previousProject = queryClient.getQueryData<Project>(['project', slug]);
+            if (previousProject) {
+                const newTask: Partial<Task> = {
+                    id: `temp-${Date.now()}`,
+                    title,
+                    completed: false,
+                    created_by: { id: user.id, name: user.name, avatar_url: user.avatar_url, initials: user.initials, email: user.email },
+                    assignees: [],
+                    project_id: project.id,
+                    created_at: new Date().toISOString(),
+                };
+                const updatedProject = { ...previousProject, tasks: [...previousProject.tasks, newTask as Task] };
+                queryClient.setQueryData(['project', slug], updatedProject);
+            }
+            return { previousProject };
         },
-        onError: (err: any) => toast.error("Failed to add task", { description: err.message }),
+        onError: (err: any, variables, context) => {
+            if (context?.previousProject) queryClient.setQueryData(['project', slug], context.previousProject);
+            toast.error("Failed to add task", { description: err.message });
+        },
+        onSettled: () => invalidateProjectQueries(),
     });
 
     const useUpdateTask = () => useMutation({
@@ -127,11 +146,21 @@ export const useProjectMutations = (slug: string) => {
             const { error } = await supabase.from('tasks').update(updates).eq('id', taskId);
             if (error) throw error;
         },
-        onSuccess: () => {
-            toast.success("Task updated.");
-            invalidateProjectQueries();
+        onMutate: async ({ taskId, updates }) => {
+            await queryClient.cancelQueries({ queryKey: ['project', slug] });
+            const previousProject = queryClient.getQueryData<Project>(['project', slug]);
+            if (previousProject) {
+                const updatedProject = { ...previousProject, tasks: previousProject.tasks.map(task => task.id === taskId ? { ...task, ...updates } : task) };
+                queryClient.setQueryData(['project', slug], updatedProject);
+            }
+            return { previousProject };
         },
-        onError: (err: any) => toast.error("Failed to update task", { description: err.message }),
+        onSuccess: () => toast.success("Task updated."),
+        onError: (err: any, vars, context) => {
+            if (context?.previousProject) queryClient.setQueryData(['project', slug], context.previousProject);
+            toast.error("Failed to update task", { description: err.message });
+        },
+        onSettled: () => invalidateProjectQueries(),
     });
 
     const useAssignUsersToTask = () => useMutation({
@@ -155,11 +184,21 @@ export const useProjectMutations = (slug: string) => {
             const { error } = await supabase.from('tasks').delete().eq('id', taskId);
             if (error) throw error;
         },
-        onSuccess: () => {
-            toast.success("Task deleted.");
-            invalidateProjectQueries();
+        onMutate: async (taskId: string) => {
+            await queryClient.cancelQueries({ queryKey: ['project', slug] });
+            const previousProject = queryClient.getQueryData<Project>(['project', slug]);
+            if (previousProject) {
+                const updatedProject = { ...previousProject, tasks: previousProject.tasks.filter(task => task.id !== taskId) };
+                queryClient.setQueryData(['project', slug], updatedProject);
+            }
+            return { previousProject };
         },
-        onError: (err: any) => toast.error("Failed to delete task", { description: err.message }),
+        onSuccess: () => toast.success("Task deleted."),
+        onError: (err: any, taskId, context) => {
+            if (context?.previousProject) queryClient.setQueryData(['project', slug], context.previousProject);
+            toast.error("Failed to delete task", { description: err.message });
+        },
+        onSettled: () => invalidateProjectQueries(),
     });
 
     const useAddComment = () => useMutation({
