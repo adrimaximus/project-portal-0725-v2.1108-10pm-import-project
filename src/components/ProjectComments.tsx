@@ -29,7 +29,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { Textarea } from './ui/textarea';
 
@@ -165,16 +164,61 @@ const ProjectComments = ({ project }: ProjectCommentsProps) => {
     setIsSubmitting(false);
   };
 
-  const handleDeleteComment = async (commentId: string) => {
+  const handleDeleteComment = async (commentToDelete: Project['comments'][number]) => {
     setIsSubmitting(true);
-    const { error } = await supabase.from('comments').delete().eq('id', commentId);
 
-    if (error) {
-      toast.error('Failed to delete comment.', { description: error.message });
-    } else {
-      toast.success('Comment deleted.');
-      queryClient.invalidateQueries({ queryKey: ['project', project.slug] });
+    // If it's a ticket, delete the associated task first.
+    if (commentToDelete.isTicket) {
+      const ticketTask = (project.tasks || []).find(t => t.originTicketId === commentToDelete.id);
+      if (ticketTask) {
+        const { error: taskDeleteError } = await supabase
+          .from('tasks')
+          .delete()
+          .eq('id', ticketTask.id);
+
+        if (taskDeleteError) {
+          toast.error('Failed to delete associated task.', { description: taskDeleteError.message });
+          setIsSubmitting(false);
+          return;
+        }
+      }
     }
+
+    // Delete the comment itself.
+    const { error: commentDeleteError } = await supabase
+      .from('comments')
+      .delete()
+      .eq('id', commentToDelete.id);
+
+    if (commentDeleteError) {
+      toast.error('Failed to delete comment.', { description: commentDeleteError.message });
+      setIsSubmitting(false);
+      return;
+    }
+
+    // Log the activity.
+    const activityType = commentToDelete.isTicket ? 'TICKET_DELETED' : 'COMMENT_DELETED';
+    const truncatedText = commentToDelete.text && commentToDelete.text.length > 50 
+      ? `${commentToDelete.text.substring(0, 50)}...` 
+      : commentToDelete.text;
+    const description = `${commentToDelete.isTicket ? 'deleted a ticket' : 'deleted a comment'}: "${truncatedText}"`;
+
+    const { error: activityError } = await supabase
+      .from('project_activities')
+      .insert({
+        project_id: project.id,
+        user_id: user.id,
+        type: activityType,
+        details: { description }
+      });
+
+    if (activityError) {
+      toast.warning('Item deleted, but failed to log activity.');
+    } else {
+      toast.success(commentToDelete.isTicket ? 'Ticket deleted.' : 'Comment deleted.');
+    }
+
+    queryClient.invalidateQueries({ queryKey: ['project', project.slug] });
     setIsSubmitting(false);
   };
 
@@ -361,7 +405,7 @@ const ProjectComments = ({ project }: ProjectCommentsProps) => {
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                       <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={() => handleDeleteComment(c.id)} className="bg-red-600 hover:bg-red-700">
+                      <AlertDialogAction onClick={() => handleDeleteComment(c)} className="bg-red-600 hover:bg-red-700">
                         Delete
                       </AlertDialogAction>
                     </AlertDialogFooter>
