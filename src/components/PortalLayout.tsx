@@ -45,7 +45,7 @@ export default function PortalLayout({ children, summary, pageHeader, disableMai
           ref={setRef}
           {...handlers}
           className={cn(
-            "flex-1 min-h-0 relative", // Add relative here
+            "flex-1 min-h-0 relative overscroll-y-contain", // Add overscroll-y-contain
             !disableMainScroll && "overflow-y-auto",
             disableMainScroll && "flex flex-col",
             !noPadding && "p-4 md:p-8"
