@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Project as BaseProject, PROJECT_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS, Person } from "@/types";
-import { Calendar, Wallet, Briefcase, MapPin, ListTodo, CreditCard, User, Building, ChevronsUpDown } from "lucide-react";
+import { Calendar, Wallet, Briefcase, MapPin, ListTodo, CreditCard, User, Building, ChevronsUpDown, Edit } from "lucide-react";
 import { isSameDay, subDays } from "date-fns";
 import { DateRangePicker } from "../DateRangePicker";
 import { DateRange } from "react-day-picker";
@@ -29,9 +29,10 @@ interface ProjectDetailsCardProps {
   project: Project;
   isEditing: boolean;
   onFieldChange: (field: keyof Project, value: any) => void;
+  onSetIsEditing?: (isEditing: boolean) => void;
 }
 
-const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetailsCardProps) => {
+const ProjectDetailsCard = ({ project, isEditing, onFieldChange, onSetIsEditing }: ProjectDetailsCardProps) => {
   const { hasPermission } = useAuth();
   const canViewValue = hasPermission('projects:view_value');
 
@@ -201,18 +202,25 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetail
   const hasOpenTasks = project.tasks?.some(task => !task.completed);
 
   return (
-    <Card>
+    <Card className="group">
       <Collapsible defaultOpen>
         <div className="flex items-center justify-between">
           <CardHeader>
             <CardTitle>Project Details</CardTitle>
           </CardHeader>
-          <CollapsibleTrigger asChild>
-            <Button variant="ghost" size="icon" className="mr-4">
-              <ChevronsUpDown className="h-4 w-4" />
-              <span className="sr-only">Toggle</span>
-            </Button>
-          </CollapsibleTrigger>
+          <div className="flex items-center mr-4">
+            {!isEditing && onSetIsEditing && (
+              <Button variant="ghost" size="icon" className="invisible group-hover:visible" onClick={() => onSetIsEditing(true)}>
+                <Edit className="h-4 w-4" />
+              </Button>
+            )}
+            <CollapsibleTrigger asChild>
+              <Button variant="ghost" size="icon">
+                <ChevronsUpDown className="h-4 w-4" />
+                <span className="sr-only">Toggle</span>
+              </Button>
+            </CollapsibleTrigger>
+          </div>
         </div>
         <CollapsibleContent>
           <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 text-sm pt-0">
