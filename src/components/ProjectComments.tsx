@@ -167,7 +167,9 @@ const ProjectComments = ({ project }: ProjectCommentsProps) => {
 
   const handleDeleteComment = async (commentId: string) => {
     setIsSubmitting(true);
-    const { error } = await supabase.from('comments').delete().eq('id', commentId);
+    const { error } = await supabase.rpc('delete_comment_and_task', {
+      p_comment_id: commentId,
+    });
 
     if (error) {
       toast.error('Failed to delete comment.', { description: error.message });
@@ -356,7 +358,7 @@ const ProjectComments = ({ project }: ProjectCommentsProps) => {
                     <AlertDialogHeader>
                       <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                       <AlertDialogDescription>
-                        This action cannot be undone. This will permanently delete the comment.
+                        This action cannot be undone. This will permanently delete the comment and its associated task if it's a ticket.
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
