@@ -1,36 +1,21 @@
 "use client";
 
 import React from 'react';
-import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
 import { Button } from '@/components/ui/button';
 import { Sparkles, RefreshCw } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import Editor from './Editor';
+import { type OutputData } from '@editorjs/editorjs';
 
 interface RichTextEditorProps {
-  value: string;
-  onChange: (value: string) => void;
-  placeholder?: string;
+  data?: OutputData;
+  onChange: (data: OutputData) => void;
   onGenerate?: () => void;
   isGenerating?: boolean;
   prompt?: string;
 }
 
-const RichTextEditor = React.forwardRef<ReactQuill, RichTextEditorProps>(({ value, onChange, placeholder, onGenerate, isGenerating, prompt }, ref) => {
-  const modules = {
-    toolbar: [
-      [{ 'font': [] }, { 'size': [] }],
-      ['bold', 'italic', 'underline', 'strike'],
-      [{ 'color': [] }, { 'background': [] }],
-      [{ 'script': 'sub'}, { 'script': 'super' }],
-      [{ 'header': '1' }, { 'header': '2' }, 'blockquote', 'code-block'],
-      [{ 'list': 'ordered'}, { 'list': 'bullet' }, { 'indent': '-1'}, { 'indent': '+1' }],
-      [{ 'direction': 'rtl' }, { 'align': [] }],
-      ['link', 'image', 'video', 'formula'],
-      ['clean']
-    ],
-  };
-
+const RichTextEditor: React.FC<RichTextEditorProps> = ({ data, onChange, onGenerate, isGenerating, prompt }) => {
   return (
     <div className="bg-background rounded-md border relative">
       {onGenerate && (
@@ -54,17 +39,9 @@ const RichTextEditor = React.forwardRef<ReactQuill, RichTextEditorProps>(({ valu
           </Tooltip>
         </TooltipProvider>
       )}
-      <ReactQuill
-        ref={ref}
-        theme="snow"
-        value={value}
-        onChange={onChange}
-        modules={modules}
-        placeholder={placeholder}
-        className="[&_.ql-editor]:min-h-[120px] [&_.ql-toolbar]:rounded-t-md [&_.ql-container]:border-none [&_.ql-toolbar]:pr-10"
-      />
+      <Editor data={data} onChange={onChange} />
     </div>
   );
-});
+};
 
 export default RichTextEditor;
