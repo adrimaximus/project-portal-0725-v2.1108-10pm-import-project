@@ -35,6 +35,7 @@ interface CollaboratorStat extends User {
   ongoingProjectCount: number;
   activeTaskCount: number;
   activeTicketCount: number;
+  role: string;
 }
 
 const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
@@ -61,8 +62,9 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
     fetchTasks();
   }, [projects]);
 
-  const collaborators = useMemo(() => {
+  const { collaboratorsByRole, allCollaborators } = useMemo(() => {
     const stats: Record<string, CollaboratorStat & { countedProjectIds: Set<string> }> = {};
+    const roleHierarchy: Record<string, number> = { 'owner': 1, 'admin': 2, 'editor': 3, 'member': 4 };
 
     const ensureUser = (user: User) => {
         if (!stats[user.id]) {
@@ -73,6 +75,7 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
                 ongoingProjectCount: 0,
                 activeTaskCount: 0,
                 activeTicketCount: 0,
+                role: user.role || 'member',
                 countedProjectIds: new Set(),
             };
         }
@@ -89,6 +92,13 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
 
         p.assignedTo.forEach(user => {
             const userStat = ensureUser(user);
+            
+            const currentRolePriority = roleHierarchy[userStat.role] || 99;
+            const newRolePriority = roleHierarchy[user.role || 'member'] || 99;
+            if (newRolePriority < currentRolePriority) {
+                userStat.role = user.role || 'member';
+            }
+
             if (!userStat.countedProjectIds.has(p.id)) {
                 userStat.projectCount++;
                 if (isUpcoming) userStat.upcomingProjectCount++;
@@ -110,9 +120,29 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
         }
     });
 
-    return Object.values(stats)
+    const collaborators = Object.values(stats)
         .map(({ countedProjectIds, ...rest }) => rest)
         .sort((a, b) => b.projectCount - a.projectCount);
+
+    const grouped: Record<string, CollaboratorStat[]> = {};
+    collaborators.forEach(collab => {
+        const role = collab.role || 'member';
+        if (!grouped[role]) {
+            grouped[role] = [];
+        }
+        grouped[role].push(collab);
+    });
+
+    const orderedGrouped: Record<string, CollaboratorStat[]> = {};
+    Object.keys(roleHierarchy).forEach(role => {
+        if (grouped[role]) {
+            orderedGrouped[role] = grouped[role];
+        }
+    });
+    
+    const flatList = Object.values(orderedGrouped).flat();
+
+    return { collaboratorsByRole: orderedGrouped, allCollaborators: flatList };
   }, [projects, tasks]);
 
   return (
@@ -125,7 +155,7 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
               <div className="flex items-center gap-4">
                 {!isOpen && (
                   <div className="flex items-center -space-x-2">
-                    {collaborators.slice(0, 5).map(c => (
+                    {allCollaborators.slice(0, 5).map(c => (
                       <Tooltip key={c.id}>
                         <TooltipTrigger asChild>
                           <Avatar className="h-8 w-8 border-2 border-card">
@@ -159,23 +189,34 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
                           </TableRow>
                       </TableHeader>
                       <TableBody>
-                          {collaborators.map(c => (
-                              <TableRow key={c.id}>
-                                  <TableCell>
-                                      <div className="flex items-center gap-3">
-                                          <Avatar className="h-8 w-8">
-                                              <AvatarImage src={getAvatarUrl(c.avatar_url, c.id)} alt={c.name} />
-                                              <AvatarFallback style={generatePastelColor(c.id)}>{c.initials}</AvatarFallback>
-                                          </Avatar>
-                                          <span className="font-medium whitespace-nowrap">{c.name}</span>
-                                      </div>
-                                  </TableCell>
-                                  <TableCell className="text-right font-medium">{c.projectCount}</TableCell>
-                                  <TableCell className="text-right font-medium">{c.upcomingProjectCount}</TableCell>
-                                  <TableCell className="text-right font-medium">{c.ongoingProjectCount}</TableCell>
-                                  <TableCell className="text-right font-medium">{c.activeTaskCount}</TableCell>
-                                  <TableCell className="text-right font-medium">{c.activeTicketCount}</TableCell>
+                          {Object.entries(collaboratorsByRole).map(([role, collaboratorsInRole]) => (
+                            <React.Fragment key={role}>
+                              <TableRow className="border-b-0 hover:bg-transparent">
+                                <TableCell colSpan={6} className="pt-6 pb-2">
+                                  <h3 className="text-sm font-semibold uppercase text-muted-foreground tracking-wider">
+                                    {role.replace('_', ' ')}
+                                  </h3>
+                                </TableCell>
                               </TableRow>
+                              {collaboratorsInRole.map(c => (
+                                  <TableRow key={c.id}>
+                                      <TableCell>
+                                          <div className="flex items-center gap-3">
+                                              <Avatar className="h-8 w-8">
+                                                  <AvatarImage src={getAvatarUrl(c.avatar_url, c.id)} alt={c.name} />
+                                                  <AvatarFallback style={generatePastelColor(c.id)}>{c.initials}</AvatarFallback>
+                                              </Avatar>
+                                              <span className="font-medium whitespace-nowrap">{c.name}</span>
+                                          </div>
+                                      </TableCell>
+                                      <TableCell className="text-right font-medium">{c.projectCount}</TableCell>
+                                      <TableCell className="text-right font-medium">{c.upcomingProjectCount}</TableCell>
+                                      <TableCell className="text-right font-medium">{c.ongoingProjectCount}</TableCell>
+                                      <TableCell className="text-right font-medium">{c.activeTaskCount}</TableCell>
+                                      <TableCell className="text-right font-medium">{c.activeTicketCount}</TableCell>
+                                  </TableRow>
+                              ))}
+                            </React.Fragment>
                           ))}
                       </TableBody>
                   </Table>
