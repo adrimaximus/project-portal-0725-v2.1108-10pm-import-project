@@ -9,13 +9,7 @@ interface StatCardProps {
 }
 
 const StatCard = ({ title, value, icon, description }: StatCardProps) => {
-  const isEmpty =
-    value === null ||
-    value === undefined ||
-    value === '' ||
-    (typeof value === 'string' && (value.trim() === '-' || value.trim().toLowerCase() === 'n/a'));
-
-  if (isEmpty) {
+  if (value === null || value === undefined) {
     return null;
   }
 
