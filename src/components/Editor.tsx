@@ -2,6 +2,8 @@
 import React, { useEffect, useRef } from "react";
 import EditorJS, { OutputData } from "@editorjs/editorjs";
 import Paragraph from "editorjs-paragraph-with-alignment";
+// @ts-ignore
+import Header from "editorjs-header-with-alignment";
 
 interface EditorProps {
   data?: OutputData;
@@ -13,7 +15,6 @@ export default function Editor({ data, onChange }: EditorProps) {
 
   useEffect(() => {
     async function init() {
-      const { default: Header } = await import("@editorjs/header");
       const { default: List } = await import("@editorjs/list");
       const { default: Warning } = await import("@editorjs/warning");
       const { default: Delimiter } = await import("@editorjs/delimiter");
@@ -31,6 +32,12 @@ export default function Editor({ data, onChange }: EditorProps) {
             header: {
               class: Header,
               inlineToolbar: true,
+              config: {
+                placeholder: 'Enter a header',
+                levels: [1, 2, 3, 4],
+                defaultLevel: 2,
+                defaultAlignment: 'left'
+              }
             }, 
             list: {
               class: List,
