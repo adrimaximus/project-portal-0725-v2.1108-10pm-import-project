@@ -148,7 +148,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
     const mapping: { [key: string]: string } = {
         'dashboard': 'module:dashboard',
         'projects': 'module:projects',
-        'tasks': 'module:projects',
+        'tasks': 'module:tasks',
         'requests': 'module:request',
         'chat': 'module:chat',
         'mood trackers': 'module:mood-tracker',
@@ -190,8 +190,13 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
       .map(item => {
         let href: string;
         let badge;
+        const itemNameLower = item.name.toLowerCase();
 
-        if (item.type === 'multi_embed') {
+        if (itemNameLower === 'projects') {
+          href = '/projects?view=list';
+        } else if (itemNameLower === 'tasks') {
+          href = '/projects?view=tasks-kanban';
+        } else if (item.type === 'multi_embed') {
           href = `/multipage/${item.slug}`;
         } else if (item.url.startsWith('/')) {
           href = item.url;
@@ -205,7 +210,6 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
           href = '/dashboard';
         }
 
-        const itemNameLower = item.name.toLowerCase();
         if (itemNameLower === 'knowledge base' && href !== '/knowledge-base') {
             href = '/knowledge-base';
         }
