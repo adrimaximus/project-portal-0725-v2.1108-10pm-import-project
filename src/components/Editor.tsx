@@ -136,8 +136,6 @@ const Editor: React.FC<EditorProps> = ({ data, onChange }) => {
           [&_[data-alignment='left']]:text-left
           [&_[data-alignment='center']]:text-center
           [&_[data-alignment='right']]:text-right
-          [&_a]:text-blue-600
-          [&_a]:underline
         "
       />
     </div>
