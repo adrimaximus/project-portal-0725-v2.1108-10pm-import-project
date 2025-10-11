@@ -72,7 +72,7 @@ const Editor: React.FC<EditorProps> = ({ data, onChange }) => {
 
   return (
     <div className="w-full border rounded-md p-4 bg-background">
-      <div id="editorjs" className="prose dark:prose-invert max-w-none"></div>
+      <div id="editorjs" className="prose prose-sm dark:prose-invert max-w-none"></div>
     </div>
   );
 };
