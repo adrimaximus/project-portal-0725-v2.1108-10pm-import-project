@@ -12,7 +12,7 @@ const parseTitle = (html: string): string => {
 };
 
 const parseMeta = (html: string, property: string): string => {
-  // This regex handles various quote styles and attribute orders
+  // Regex ini menangani berbagai gaya kutipan dan urutan atribut
   const regex = new RegExp(`<meta[^>]*?(?:name|property)=["']${property}["'][^>]*?content=(["'])(.*?)\\1`, 'i');
   const match = html.match(regex);
   return match ? match[2] : '';
@@ -33,13 +33,20 @@ serve(async (req) => {
 
     const fullUrl = url.startsWith('http') ? url : `https://${url}`;
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5-second timeout
+
     const response = await fetch(fullUrl, {
+      signal: controller.signal,
       headers: {
-        // Use a common crawler User-Agent to improve success rate
-        'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
       }
     });
     
+    clearTimeout(timeoutId);
+
     if (!response.ok) {
       throw new Error(`Failed to fetch URL: Status ${response.status} ${response.statusText}`);
     }
