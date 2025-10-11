@@ -68,11 +68,11 @@ const ProjectOverviewTab = ({
   
   return (
     <div className="space-y-6">
-      <Card className="group">
+      <Card>
         <CardHeader className="flex flex-row items-center justify-between p-4 pb-2">
           <CardTitle>Description & Brief</CardTitle>
           {!isEditing && onSetIsEditing && (
-            <Button variant="ghost" size="icon" className="invisible group-hover:visible" onClick={() => onSetIsEditing(true)}>
+            <Button variant="ghost" size="icon" onClick={() => onSetIsEditing(true)}>
               <Edit className="h-4 w-4" />
             </Button>
           )}
