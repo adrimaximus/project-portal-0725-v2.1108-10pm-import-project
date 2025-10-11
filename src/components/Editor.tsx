@@ -5,8 +5,7 @@ import Header from "@editorjs/header";
 import List from "@editorjs/list";
 import Paragraph from "@editorjs/paragraph";
 import Quote from "@editorjs/quote";
-import ImageTool from "@editorjs/image";
-import "@/styles/editor.css";
+import Delimiter from "@editorjs/delimiter";
 
 interface EditorProps {
   data?: OutputData;
@@ -15,12 +14,6 @@ interface EditorProps {
 
 const Editor: React.FC<EditorProps> = ({ data, onChange }) => {
   const editorRef = useRef<EditorJS | null>(null);
-  const onChangeRef = useRef(onChange);
-
-  // Keep the ref updated with the latest onChange callback
-  useEffect(() => {
-    onChangeRef.current = onChange;
-  }, [onChange]);
 
   useEffect(() => {
     if (!editorRef.current) {
@@ -32,35 +25,29 @@ const Editor: React.FC<EditorProps> = ({ data, onChange }) => {
             class: Header,
             inlineToolbar: true,
             config: {
-              placeholder: "Enter a heading",
               levels: [1, 2, 3],
               defaultLevel: 2,
+              placeholder: "Type heading...",
             },
           },
           paragraph: {
             class: Paragraph,
             inlineToolbar: true,
           },
-          list: List,
-          quote: Quote,
-          image: {
-            class: ImageTool,
-            config: {
-              // These endpoints need to be implemented on your backend.
-              // They are placeholders for now.
-              endpoints: {
-                byFile: "/uploadFile", 
-                byUrl: "/fetchUrl",
-              },
-            },
+          list: {
+            class: List,
+            inlineToolbar: true,
           },
+          quote: {
+            class: Quote,
+            inlineToolbar: true,
+          },
+          delimiter: Delimiter,
         },
         data: data || {},
-        onChange: async (api, event) => {
-          const content = await api.saver.save();
-          if (onChangeRef.current) {
-            onChangeRef.current(content);
-          }
+        onChange: async () => {
+          const content = await editor.saver.save();
+          onChange && onChange(content);
         },
       });
 
@@ -68,7 +55,7 @@ const Editor: React.FC<EditorProps> = ({ data, onChange }) => {
     }
 
     return () => {
-      if (editorRef.current && typeof editorRef.current.destroy === 'function') {
+      if (editorRef.current && editorRef.current.destroy) {
         try {
           editorRef.current.destroy();
         } catch (e) {
@@ -77,22 +64,34 @@ const Editor: React.FC<EditorProps> = ({ data, onChange }) => {
         editorRef.current = null;
       }
     };
-  }, []); // Run only once on mount
+  }, []);
 
   return (
     <div className="w-full border rounded-md p-4 bg-background">
       <div
         id="editorjs"
         className="
-          -mx-4
-          leading-tight space-y-1
-          [&_.ce-block__content]:px-4
+          leading-snug
+          [&_.ce-block]:my-2
+          [&_.ce-header]:font-semibold
           [&_.ce-header[data-level='1']]:text-2xl
           [&_.ce-header[data-level='2']]:text-xl
           [&_.ce-header[data-level='3']]:text-lg
-          [&_.ce-header]:font-semibold
+          [&_.ce-paragraph]:text-base
+          [&_.ce-paragraph]:leading-tight
+          [&_.ce-quote]:border-l-4
+          [&_.ce-quote]:border-border
+          [&_.ce-quote]:pl-3
+          [&_.ce-quote]:italic
+          [&_.ce-delimiter]:flex
+          [&_.ce-delimiter]:justify-center
+          [&_.ce-delimiter]:text-muted-foreground
+          [&_.ce-delimiter]:before:content-['•••']
+          [&_[data-alignment='left']]:text-left
+          [&_[data-alignment='center']]:text-center
+          [&_[data-alignment='right']]:text-right
         "
-      ></div>
+      />
     </div>
   );
 };
