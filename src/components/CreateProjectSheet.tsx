@@ -1,29 +1,22 @@
 "use client";
 
-import { useState } from "react";
 import {
   Sheet,
   SheetContent,
   SheetDescription,
   SheetHeader,
   SheetTitle,
-  SheetTrigger,
 } from "@/components/ui/sheet";
-import { Button } from "./ui/button";
 import { CreateProjectForm } from "./CreateProjectForm";
-import { Plus } from "lucide-react";
 
-export function CreateProjectSheet() {
-  const [open, setOpen] = useState(false);
+interface CreateProjectSheetProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
 
+export function CreateProjectSheet({ open, onOpenChange }: CreateProjectSheetProps) {
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger asChild>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" />
-          Proyek Baru
-        </Button>
-      </SheetTrigger>
+    <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="sm:max-w-lg">
         <SheetHeader>
           <SheetTitle>Buat Proyek Baru</SheetTitle>
@@ -31,7 +24,7 @@ export function CreateProjectSheet() {
             Isi detail di bawah ini untuk membuat proyek baru. Proyek akan muncul di kalender dan daftar proyek Anda.
           </SheetDescription>
         </SheetHeader>
-        <CreateProjectForm onFinished={() => setOpen(false)} />
+        <CreateProjectForm onFinished={() => onOpenChange(false)} />
       </SheetContent>
     </Sheet>
   );
