@@ -28,7 +28,7 @@ const ProjectDescription = ({ description, isEditing, onDescriptionChange, aiOpt
   }
 
   return (
-    <div className="bg-[#f6f7f3] dark:bg-stone-900 p-6 sm:p-8 rounded-lg">
+    <div className="bg-[#f6f7f3] dark:bg-stone-900 p-4 rounded-lg">
       <div className="prose prose-sm dark:prose-invert max-w-none break-words">
         {description ? (
           <div dangerouslySetInnerHTML={{ __html: description }} />
