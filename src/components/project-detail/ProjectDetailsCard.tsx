@@ -210,7 +210,7 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange, onSetIsEditing 
           </CardHeader>
           <div className="flex items-center mr-4">
             {!isEditing && onSetIsEditing && (
-              <Button variant="ghost" size="icon" className="invisible group-hover:visible" onClick={() => onSetIsEditing(true)}>
+              <Button variant="ghost" size="icon" onClick={() => onSetIsEditing(true)}>
                 <Edit className="h-4 w-4" />
               </Button>
             )}
