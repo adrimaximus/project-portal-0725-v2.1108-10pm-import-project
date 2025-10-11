@@ -69,18 +69,20 @@ const ProjectOverviewTab = ({
   return (
     <div className="space-y-6">
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between p-4 pb-2">
-          <CardTitle>Description & Brief</CardTitle>
-          {!isEditing && onSetIsEditing && (
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={() => onSetIsEditing(true)}
-              disabled={!onSetIsEditing}
-            >
-              <Edit className="h-4 w-4" />
-            </Button>
-          )}
+        <CardHeader className="p-4 pb-2">
+          <div className="flex items-center justify-between">
+            <CardTitle>Description & Brief</CardTitle>
+            {!isEditing && onSetIsEditing && (
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => onSetIsEditing(true)}
+                disabled={!onSetIsEditing}
+              >
+                <Edit className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent className="p-4 pt-0">
           <ProjectDescription
