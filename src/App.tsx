@@ -45,6 +45,7 @@ import TermsOfServicePage from "./pages/TermsOfServicePage";
 import NotFound from "./pages/NotFound";
 import ThemeSettingsPage from "./pages/ThemeSettingsPage";
 import TestEditorPage from "./pages/TestEditor";
+import EditorPage from "./pages/EditorPage";
 
 function App() {
   useEffect(() => {
@@ -123,6 +124,7 @@ function App() {
         <Route path="/multipage/:slug" element={<MultiEmbedPage />} />
         <Route path="/multipage/:slug/:itemSlug" element={<MultiEmbedItemPage />} />
         <Route path="/test-editor" element={<TestEditorPage />} />
+        <Route path="/editor-page" element={<EditorPage />} />
       </Route>
 
       {/* Not Found Route */}
