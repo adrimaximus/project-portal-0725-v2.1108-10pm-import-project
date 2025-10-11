@@ -227,6 +227,7 @@ const NavigationSettingsPage = () => {
         setFoldersState((folders) => {
             const oldIndex = folders.findIndex((f) => f.id === activeId);
             const newIndex = folders.findIndex((f) => f.id === overId);
+            if (oldIndex === -1 || newIndex === -1) return folders;
             const newOrder = arrayMove(folders, oldIndex, newIndex);
             updateFolders(newOrder.map((f, index) => ({ id: f.id, position: index })));
             return newOrder;
@@ -237,43 +238,53 @@ const NavigationSettingsPage = () => {
             if (oldIndex === -1) return items;
 
             const overIsItem = overType === 'item';
-            const newFolderId = overType === 'folder' 
-                ? (overId === 'uncategorized-folder' ? null : overId) 
-                : (overIsItem ? items.find(i => i.id === overId)?.folder_id : items[oldIndex].folder_id);
+            const overIsFolder = overType === 'folder';
 
             let newItems = [...items];
             const [movedItem] = newItems.splice(oldIndex, 1);
+
+            const newFolderId = overIsFolder
+                ? (overId === 'uncategorized-folder' ? null : overId)
+                : (overIsItem ? items.find(i => i.id === overId)?.folder_id : items[oldIndex].folder_id);
+            
             movedItem.folder_id = newFolderId;
 
-            let newIndex = -1;
+            let newIndex: number;
+
             if (overIsItem) {
                 newIndex = newItems.findIndex(i => i.id === overId);
-                newItems.splice(newIndex, 0, movedItem);
+                if (newIndex === -1) return items;
             } else { // Dropped on a folder
                 const itemsInDest = newItems.filter(i => i.folder_id === newFolderId);
                 if (itemsInDest.length > 0) {
                     const lastItem = itemsInDest[itemsInDest.length - 1];
                     newIndex = newItems.findIndex(i => i.id === lastItem.id) + 1;
                 } else {
-                    const folder = foldersState.find(f => f.id === newFolderId);
-                    if (folder) {
-                        const folderIndex = foldersState.indexOf(folder);
-                        let firstItemOfNextFolderIndex = -1;
-                        for (let i = folderIndex + 1; i < foldersState.length; i++) {
-                            const nextFolder = foldersState[i];
-                            const firstItem = newItems.find(item => item.folder_id === nextFolder.id);
-                            if (firstItem) {
-                                firstItemOfNextFolderIndex = newItems.indexOf(firstItem);
+                    // Folder is empty, find correct insertion point based on folder order
+                    if (newFolderId === null) { // Uncategorized is first
+                        newIndex = 0;
+                    } else {
+                        const folderIndex = foldersState.findIndex(f => f.id === newFolderId);
+                        if (folderIndex === -1) return items;
+
+                        let lastItemOfPreviousGroupIndex = -1;
+                        // Find last item of all previous groups
+                        const allPreviousFolderIds = [null, ...foldersState.slice(0, folderIndex).map(f => f.id)];
+                        for (let i = allPreviousFolderIds.length - 1; i >= 0; i--) {
+                            const prevFolderId = allPreviousFolderIds[i];
+                            const itemsInPrevGroup = newItems.filter(item => item.folder_id === prevFolderId);
+                            if (itemsInPrevGroup.length > 0) {
+                                const lastItem = itemsInPrevGroup[itemsInPrevGroup.length - 1];
+                                lastItemOfPreviousGroupIndex = newItems.findIndex(item => item.id === lastItem.id);
                                 break;
                             }
                         }
-                        newIndex = firstItemOfNextFolderIndex !== -1 ? firstItemOfNextFolderIndex : newItems.length;
-                    } else { // Uncategorized
-                        newIndex = newItems.filter(i => i.folder_id === null).length;
+                        newIndex = lastItemOfPreviousGroupIndex + 1;
                     }
                 }
-                newItems.splice(newIndex, 0, movedItem);
             }
+
+            newItems.splice(newIndex, 0, movedItem);
 
             const payload = newItems.map((item, index) => ({
                 id: item.id,
