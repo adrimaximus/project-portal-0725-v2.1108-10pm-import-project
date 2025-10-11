@@ -5,8 +5,6 @@ import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, MoreVertical, Paperclip, Ticket, X } from 'lucide-react';
 import { getAvatarUrl, getInitials } from '@/lib/utils';
@@ -204,17 +202,16 @@ const ProjectComments = ({ project }: ProjectCommentsProps) => {
             </div>
             <div className="flex justify-between items-center p-2 border-t bg-muted/50 rounded-b-lg">
               <div className="flex items-center gap-2 flex-wrap">
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="ticket-mode"
-                    checked={isTicketMode}
-                    onCheckedChange={(checked) => setIsTicketMode(!!checked)}
-                    disabled={isSubmitting}
-                  />
-                  <Label htmlFor="ticket-mode" className="text-sm font-medium">
-                    Create a ticket
-                  </Label>
-                </div>
+                <Button
+                  variant={isTicketMode ? 'secondary' : 'ghost'}
+                  size="sm"
+                  onClick={() => setIsTicketMode(!isTicketMode)}
+                  disabled={isSubmitting}
+                  className="text-sm font-medium"
+                >
+                  <Ticket className="h-4 w-4 mr-2" />
+                  Create a ticket
+                </Button>
                 <input
                   type="file"
                   ref={fileInputRef}
