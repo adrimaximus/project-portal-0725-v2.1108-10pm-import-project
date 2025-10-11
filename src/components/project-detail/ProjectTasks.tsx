@@ -264,7 +264,7 @@ const ProjectTasks = ({
                     <DialogTrigger asChild>
                       <DropdownMenuItem>
                         <UserPlus className="mr-2 h-4 w-4" />
-                        Tugaskan
+                        Assign
                       </DropdownMenuItem>
                     </DialogTrigger>
                     <DropdownMenuItem
@@ -272,13 +272,13 @@ const ProjectTasks = ({
                       onClick={() => onTaskDelete(task.id)}
                     >
                       <Trash2 className="mr-2 h-4 w-4" />
-                      Hapus
+                      Delete
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>Tugaskan ke: {plainTextMentions(task.title)}</DialogTitle>
+                    <DialogTitle>Assign to: {plainTextMentions(task.title)}</DialogTitle>
                   </DialogHeader>
                   <MultiSelect
                     options={userOptions}
@@ -286,7 +286,7 @@ const ProjectTasks = ({
                     onChange={(selectedIds) => {
                       onTaskAssignUsers(task.id, selectedIds);
                     }}
-                    placeholder="Pilih anggota tim..."
+                    placeholder="Select team members..."
                   />
                 </DialogContent>
               </Dialog>
