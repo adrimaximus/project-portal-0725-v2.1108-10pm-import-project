@@ -1,14 +1,14 @@
 "use client";
-import React, { useState } from "react";
-import { LexicalComposer } from "@lexical/react/LexicalComposer";
-import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
-import { ContentEditable } from "@lexical/react/LexicalContentEditable";
-import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
-import { OnChangePlugin } from "@lexical/react/LexicalOnChangePlugin";
-import LexicalErrorBoundary from "@lexical/react/LexicalErrorBoundary";
-import { ListPlugin } from "@lexical/react/LexicalListPlugin";
-import { LinkPlugin } from "@lexical/react/LexicalLinkPlugin";
-import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import React from "react";
+import LexicalComposer from "@lexical/react/LexicalComposer";
+import RichTextPlugin from "@lexical/react/LexicalRichTextPlugin";
+import ContentEditable from "@lexical/react/LexicalContentEditable";
+import HistoryPlugin from "@lexical/react/LexicalHistoryPlugin";
+import OnChangePlugin from "@lexical/react/LexicalOnChangePlugin";
+import { default as LexicalErrorBoundary } from "@lexical/react/LexicalErrorBoundary";
+import ListPlugin from "@lexical/react/LexicalListPlugin";
+import LinkPlugin from "@lexical/react/LexicalLinkPlugin";
+import useLexicalComposerContext from "@lexical/react/LexicalComposerContext";
 import {
   FORMAT_TEXT_COMMAND,
   $getSelection,
