@@ -28,12 +28,14 @@ const ProjectDescription = ({ description, isEditing, onDescriptionChange, aiOpt
   }
 
   return (
-    <div className="prose dark:prose-invert max-w-none">
-      {description ? (
-        <div dangerouslySetInnerHTML={{ __html: description }} />
-      ) : (
-        <p className="text-muted-foreground">No description provided.</p>
-      )}
+    <div className="bg-stone-50 dark:bg-stone-900 p-6 sm:p-8 rounded-lg">
+      <div className="prose dark:prose-invert max-w-none">
+        {description ? (
+          <div dangerouslySetInnerHTML={{ __html: description }} />
+        ) : (
+          <p className="text-muted-foreground">No description provided.</p>
+        )}
+      </div>
     </div>
   );
 };
