@@ -11,23 +11,12 @@ import { LinkPlugin } from "@lexical/react/LexicalLinkPlugin";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import {
   FORMAT_TEXT_COMMAND,
-  $getSelection,
-  $isRangeSelection,
   EditorState,
 } from "lexical";
-import {
-  INSERT_ORDERED_LIST_COMMAND,
-  INSERT_UNORDERED_LIST_COMMAND,
-} from "@lexical/list";
-import { $createHeadingNode } from "@lexical/rich-text";
-import { $setBlocksType } from "@lexical/selection";
 
 import { HeadingNode, QuoteNode } from "@lexical/rich-text";
 import { ListItemNode, ListNode } from "@lexical/list";
 import { LinkNode } from "@lexical/link";
-
-import { Bold, Italic, Underline, List, ListOrdered, Heading2 } from "lucide-react";
-import { Button } from "./ui/button";
 
 const theme = {
   paragraph: "mb-2",
@@ -51,65 +40,29 @@ const theme = {
 function ToolbarPlugin() {
   const [editor] = useLexicalComposerContext();
 
-  const formatHeading = (level: 1 | 2 | 3) => {
-    editor.update(() => {
-      const selection = $getSelection();
-      if ($isRangeSelection(selection)) {
-        $setBlocksType(selection, () => $createHeadingNode(`h${level}`));
-      }
-    });
-  };
-
   return (
-    <div className="flex gap-1 border-b pb-2 mb-2">
-      <Button
+    <div className="flex gap-2 border-b pb-1 mb-2 text-sm">
+      <button
         type="button"
-        variant="ghost"
-        size="icon"
         onClick={() => editor.dispatchCommand(FORMAT_TEXT_COMMAND, "bold")}
+        className="px-2 py-1 hover:bg-muted rounded font-bold"
       >
-        <Bold className="h-4 w-4" />
-      </Button>
-      <Button
+        B
+      </button>
+      <button
         type="button"
-        variant="ghost"
-        size="icon"
         onClick={() => editor.dispatchCommand(FORMAT_TEXT_COMMAND, "italic")}
+        className="px-2 py-1 hover:bg-muted rounded italic"
       >
-        <Italic className="h-4 w-4" />
-      </Button>
-      <Button
+        I
+      </button>
+      <button
         type="button"
-        variant="ghost"
-        size="icon"
         onClick={() => editor.dispatchCommand(FORMAT_TEXT_COMMAND, "underline")}
+        className="px-2 py-1 hover:bg-muted rounded underline"
       >
-        <Underline className="h-4 w-4" />
-      </Button>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        onClick={() => formatHeading(2)}
-      >
-        <Heading2 className="h-4 w-4" />
-      </Button>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        onClick={() => editor.dispatchCommand(INSERT_UNORDERED_LIST_COMMAND, undefined)}
-      >
-        <List className="h-4 w-4" />
-      </Button>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        onClick={() => editor.dispatchCommand(INSERT_ORDERED_LIST_COMMAND, undefined)}
-      >
-        <ListOrdered className="h-4 w-4" />
-      </Button>
+        U
+      </button>
     </div>
   );
 }
@@ -149,7 +102,7 @@ export default function Editor({ onChange, initialState }: EditorProps) {
             />
           }
           placeholder={
-            <div className="text-muted-foreground absolute top-[58px] left-3 select-none pointer-events-none">
+            <div className="text-muted-foreground absolute top-[46px] left-3 select-none pointer-events-none">
               Start typing here...
             </div>
           }
