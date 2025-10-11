@@ -66,16 +66,17 @@ const ProjectsToolbar = ({
 
       {/* Desktop Action Buttons */}
       <div className="hidden sm:flex items-center gap-2">
-        {isTaskView && (
+        {isTaskView ? (
           <Button size="icon" variant="outline" onClick={onNewTaskClick}>
             <ListPlus className="h-4 w-4" />
             <span className="sr-only">New Task</span>
           </Button>
+        ) : (
+          <Button size="icon" variant="outline" onClick={onNewProjectClick}>
+            <PlusCircle className="h-4 w-4" />
+            <span className="sr-only">New Project</span>
+          </Button>
         )}
-        <Button size="icon" variant="outline" onClick={onNewProjectClick}>
-          <PlusCircle className="h-4 w-4" />
-          <span className="sr-only">New Project</span>
-        </Button>
         {isGCalConnected ? (
           <Button variant="outline" size="icon" onClick={onImportClick}>
             <Download className="h-4 w-4" />
@@ -91,16 +92,17 @@ const ProjectsToolbar = ({
 
       {/* Mobile Action Buttons */}
       <div className="sm:hidden flex items-center gap-2">
-        {isTaskView && (
+        {isTaskView ? (
           <Button size="icon" variant="outline" onClick={onNewTaskClick}>
             <ListPlus className="h-4 w-4" />
             <span className="sr-only">New Task</span>
           </Button>
+        ) : (
+          <Button size="icon" variant="outline" onClick={onNewProjectClick}>
+            <PlusCircle className="h-4 w-4" />
+            <span className="sr-only">New Project</span>
+          </Button>
         )}
-        <Button size="icon" variant="outline" onClick={onNewProjectClick}>
-          <PlusCircle className="h-4 w-4" />
-          <span className="sr-only">New Project</span>
-        </Button>
         {isGCalConnected ? (
           <Button variant="outline" size="icon" onClick={onImportClick}>
             <Download className="h-4 w-4" />
