@@ -16,11 +16,8 @@ import {
 } from "lexical";
 
 import { ListPlugin, ListItemNode, ListNode } from "@lexical/list";
-import {
-  LinkPlugin,
-  LinkNode,
-  TOGGLE_LINK_COMMAND,
-} from "@lexical/link";
+import { LinkPlugin } from "@lexical/react/LexicalLinkPlugin";
+import { LinkNode, TOGGLE_LINK_COMMAND } from "@lexical/link";
 import {
   HeadingNode,
   QuoteNode,
