@@ -81,7 +81,16 @@ const Editor: React.FC<EditorProps> = ({ data, onChange }) => {
 
   return (
     <div className="w-full border rounded-md p-4 bg-background">
-      <div id="editorjs" className="max-w-none"></div>
+      <div
+        id="editorjs"
+        className="
+          prose prose-neutral dark:prose-invert max-w-none
+          [&_.ce-header[data-level='1']]:text-2xl
+          [&_.ce-header[data-level='2']]:text-xl
+          [&_.ce-header[data-level='3']]:text-lg
+          [&_.ce-header]:font-semibold
+        "
+      ></div>
     </div>
   );
 };
