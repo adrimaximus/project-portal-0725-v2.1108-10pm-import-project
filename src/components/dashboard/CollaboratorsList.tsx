@@ -182,53 +182,92 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
           </CollapsibleTrigger>
           <CollapsibleContent>
             <CardContent className="px-6 pb-6 pt-0">
-                <div className="overflow-x-auto">
-                  <Table>
-                      <TableHeader>
-                          <TableRow>
-                              <TableHead>Collaborator</TableHead>
-                              <TableHead className="text-right">Total Projects</TableHead>
-                              <TableHead className="text-right">Upcoming</TableHead>
-                              <TableHead className="text-right">On Going</TableHead>
-                              <TableHead className="text-right">Active Tasks</TableHead>
-                              <TableHead className="text-right">Active Tickets</TableHead>
-                              <TableHead className="text-right">Overdue Bill</TableHead>
-                          </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                          {Object.entries(collaboratorsByRole).map(([role, collaboratorsInRole]) => (
-                            <React.Fragment key={role}>
-                              <TableRow className="border-b-0 hover:bg-transparent">
-                                <TableCell colSpan={7} className="pt-6 pb-2">
-                                  <h3 className="text-sm font-semibold uppercase text-muted-foreground tracking-wider">
-                                    {role.replace('_', ' ')}
-                                  </h3>
-                                </TableCell>
-                              </TableRow>
-                              {collaboratorsInRole.map(c => (
-                                  <TableRow key={c.id}>
-                                      <TableCell>
-                                          <div className="flex items-center gap-3">
-                                              <Avatar className="h-8 w-8">
-                                                  <AvatarImage src={getAvatarUrl(c.avatar_url, c.id)} alt={c.name} />
-                                                  <AvatarFallback style={generatePastelColor(c.id)}>{c.initials}</AvatarFallback>
-                                              </Avatar>
-                                              <span className="font-medium whitespace-nowrap">{c.name}</span>
-                                          </div>
-                                      </TableCell>
-                                      <TableCell className="text-right font-medium">{c.projectCount}</TableCell>
-                                      <TableCell className="text-right font-medium">{c.upcomingProjectCount}</TableCell>
-                                      <TableCell className="text-right font-medium">{c.ongoingProjectCount}</TableCell>
-                                      <TableCell className="text-right font-medium">{c.activeTaskCount}</TableCell>
-                                      <TableCell className="text-right font-medium">{c.activeTicketCount}</TableCell>
-                                      <TableCell className="text-right font-medium">{c.overdueBillCount}</TableCell>
-                                  </TableRow>
-                              ))}
-                            </React.Fragment>
-                          ))}
-                      </TableBody>
-                  </Table>
-                </div>
+              {/* Mobile View */}
+              <div className="md:hidden">
+                {Object.entries(collaboratorsByRole).map(([role, collaboratorsInRole]) => (
+                  <div key={role}>
+                    <h3 className="text-sm font-semibold uppercase text-muted-foreground tracking-wider pt-6 pb-2">
+                      {role.replace('_', ' ')}
+                    </h3>
+                    <div className="space-y-4">
+                      {collaboratorsInRole.map(c => (
+                        <div key={c.id} className="bg-muted/50 p-4 rounded-lg">
+                          <div className="flex items-center gap-3 mb-4">
+                            <Avatar className="h-10 w-10">
+                              <AvatarImage src={getAvatarUrl(c.avatar_url, c.id)} alt={c.name} />
+                              <AvatarFallback style={generatePastelColor(c.id)}>{c.initials}</AvatarFallback>
+                            </Avatar>
+                            <span className="font-medium">{c.name}</span>
+                          </div>
+                          <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                            <div className="text-muted-foreground">Total Projects</div>
+                            <div className="text-right font-medium">{c.projectCount}</div>
+                            <div className="text-muted-foreground">Upcoming</div>
+                            <div className="text-right font-medium">{c.upcomingProjectCount}</div>
+                            <div className="text-muted-foreground">On Going</div>
+                            <div className="text-right font-medium">{c.ongoingProjectCount}</div>
+                            <div className="text-muted-foreground">Active Tasks</div>
+                            <div className="text-right font-medium">{c.activeTaskCount}</div>
+                            <div className="text-muted-foreground">Active Tickets</div>
+                            <div className="text-right font-medium">{c.activeTicketCount}</div>
+                            <div className="text-muted-foreground">Overdue Bill</div>
+                            <div className="text-right font-medium">{c.overdueBillCount}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop View */}
+              <div className="hidden md:block overflow-x-auto">
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Collaborator</TableHead>
+                            <TableHead className="text-right">Total Projects</TableHead>
+                            <TableHead className="text-right">Upcoming</TableHead>
+                            <TableHead className="text-right">On Going</TableHead>
+                            <TableHead className="text-right">Active Tasks</TableHead>
+                            <TableHead className="text-right">Active Tickets</TableHead>
+                            <TableHead className="text-right">Overdue Bill</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {Object.entries(collaboratorsByRole).map(([role, collaboratorsInRole]) => (
+                          <React.Fragment key={role}>
+                            <TableRow className="border-b-0 hover:bg-transparent">
+                              <TableCell colSpan={7} className="pt-6 pb-2">
+                                <h3 className="text-sm font-semibold uppercase text-muted-foreground tracking-wider">
+                                  {role.replace('_', ' ')}
+                                </h3>
+                              </TableCell>
+                            </TableRow>
+                            {collaboratorsInRole.map(c => (
+                                <TableRow key={c.id}>
+                                    <TableCell>
+                                        <div className="flex items-center gap-3">
+                                            <Avatar className="h-8 w-8">
+                                                <AvatarImage src={getAvatarUrl(c.avatar_url, c.id)} alt={c.name} />
+                                                <AvatarFallback style={generatePastelColor(c.id)}>{c.initials}</AvatarFallback>
+                                            </Avatar>
+                                            <span className="font-medium whitespace-nowrap">{c.name}</span>
+                                        </div>
+                                    </TableCell>
+                                    <TableCell className="text-right font-medium">{c.projectCount}</TableCell>
+                                    <TableCell className="text-right font-medium">{c.upcomingProjectCount}</TableCell>
+                                    <TableCell className="text-right font-medium">{c.ongoingProjectCount}</TableCell>
+                                    <TableCell className="text-right font-medium">{c.activeTaskCount}</TableCell>
+                                    <TableCell className="text-right font-medium">{c.activeTicketCount}</TableCell>
+                                    <TableCell className="text-right font-medium">{c.overdueBillCount}</TableCell>
+                                </TableRow>
+                            ))}
+                          </React.Fragment>
+                        ))}
+                    </TableBody>
+                </Table>
+              </div>
             </CardContent>
           </CollapsibleContent>
         </Collapsible>
