@@ -19,8 +19,6 @@ import ImageTool from '@editorjs/image';
 import LinkTool from '@editorjs/link';
 // @ts-ignore
 import AttachesTool from '@editorjs/attaches';
-// @ts-ignore
-import Gif from '@jingjun/editorjs-gif';
 import { supabase } from "@/integrations/supabase/client";
 
 interface EditorProps {
@@ -128,12 +126,6 @@ const Editor: React.FC<EditorProps> = ({ data, onChange }) => {
                   return result;
                 }
               }
-            }
-          },
-          gif: {
-            class: Gif,
-            config: {
-              giphyApiKey: import.meta.env.VITE_GIPHY_API_KEY
             }
           },
           delimiter: Delimiter,
