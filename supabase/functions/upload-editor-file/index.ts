@@ -41,7 +41,7 @@ serve(async (req) => {
     const filePath = `editor-attaches/${user.id}/${Date.now()}.${fileExt}`;
 
     const { error: uploadError } = await supabaseAdmin.storage
-      .from('kb-images') // Re-using the kb-images bucket for simplicity
+      .from('project-files') // Using a more general bucket
       .upload(filePath, fileContent, {
         contentType: file.type,
         upsert: false,
@@ -49,7 +49,7 @@ serve(async (req) => {
     if (uploadError) throw uploadError
 
     // 4. Get public URL
-    const { data: urlData } = supabaseAdmin.storage.from('kb-images').getPublicUrl(filePath)
+    const { data: urlData } = supabaseAdmin.storage.from('project-files').getPublicUrl(filePath)
     
     // 5. Return response in EditorJS Attaches format
     const responsePayload = {

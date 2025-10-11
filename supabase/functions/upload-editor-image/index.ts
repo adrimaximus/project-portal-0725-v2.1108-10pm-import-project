@@ -29,7 +29,7 @@ serve(async (req) => {
       throw new Error('Missing or invalid file in FormData');
     }
 
-    // 3. Upload file using admin client to bypass RLS if needed
+    // 3. Upload file using admin client
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -42,7 +42,7 @@ serve(async (req) => {
     const filePath = `editor-images/${user.id}/${Date.now()}.${fileExt}`;
 
     const { error: uploadError } = await supabaseAdmin.storage
-      .from('kb-images') // Using the existing knowledge base images bucket
+      .from('project-files') // Using a more general bucket
       .upload(filePath, fileContent, {
         contentType: mimeType,
         upsert: false,
@@ -50,7 +50,7 @@ serve(async (req) => {
     if (uploadError) throw uploadError
 
     // 4. Get public URL
-    const { data: urlData } = supabaseAdmin.storage.from('kb-images').getPublicUrl(filePath)
+    const { data: urlData } = supabaseAdmin.storage.from('project-files').getPublicUrl(filePath)
     
     // 5. Return response in EditorJS format
     const responsePayload = {
