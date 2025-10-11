@@ -9,6 +9,8 @@ import List from "@editorjs/list";
 import ParagraphWithAlignment from "editorjs-paragraph-with-alignment";
 // @ts-ignore
 import Delimiter from "@editorjs/delimiter";
+// @ts-ignore
+import ToggleBlock from 'editorjs-toggle-block';
 
 interface EditorProps {
   data?: OutputData;
@@ -43,6 +45,10 @@ const Editor: React.FC<EditorProps> = ({ data, onChange }) => {
             inlineToolbar: true,
           },
           delimiter: Delimiter,
+          toggle: {
+            class: ToggleBlock,
+            inlineToolbar: true,
+          },
         },
         data: data || {},
         onChange: async () => {

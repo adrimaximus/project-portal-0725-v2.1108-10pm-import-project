@@ -128,6 +128,21 @@
   .prose .ce-paragraph {
     @apply my-0 leading-snug;
   }
+  .toggle-block__item {
+    @apply rounded-md shadow-sm border border-border;
+  }
+  .toggle-block__summary {
+    @apply flex items-center p-2 cursor-pointer;
+  }
+  .toggle-block__summary svg {
+    @apply mr-2 transition-transform duration-200 ease-in-out;
+  }
+  .toggle-block__item[open] .toggle-block__summary svg {
+    @apply rotate-90;
+  }
+  .toggle-block__content {
+    @apply p-2 pl-9;
+  }
 }
 
 .pac-container {
