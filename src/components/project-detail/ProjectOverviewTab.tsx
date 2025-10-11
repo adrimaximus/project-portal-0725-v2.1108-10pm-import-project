@@ -71,8 +71,13 @@ const ProjectOverviewTab = ({
       <Card>
         <CardHeader className="flex flex-row items-center justify-between p-4 pb-2">
           <CardTitle>Description & Brief</CardTitle>
-          {!isEditing && onSetIsEditing && (
-            <Button variant="ghost" size="icon" onClick={() => onSetIsEditing(true)}>
+          {!isEditing && (
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => onSetIsEditing && onSetIsEditing(true)}
+              disabled={!onSetIsEditing}
+            >
               <Edit className="h-4 w-4" />
             </Button>
           )}
