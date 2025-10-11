@@ -34,6 +34,10 @@ import InlineCode from '@editorjs/inline-code';
 import ChangeCase from 'editorjs-change-case';
 // @ts-ignore
 import TextVariantTune from '@editorjs/text-variant-tune';
+// @ts-ignore
+import DragDrop from 'editorjs-drag-drop';
+// @ts-ignore
+import Undo from 'editorjs-undo';
 
 interface EditorProps {
   data?: OutputData;
@@ -203,11 +207,15 @@ const Editor: React.FC<EditorProps> = ({ data, onChange }) => {
           changeCase: ChangeCase,
         },
         data: data || {},
-        onChange: async (api) => {
+        onChange: async (api, event) => {
           if (onChange) {
             const content = await api.saver.save();
             onChange(content);
           }
+        },
+        onReady: () => {
+          new Undo({ editor });
+          new DragDrop(editor);
         },
       });
       editorRef.current = editor;

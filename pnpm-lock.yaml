@@ -263,6 +263,9 @@ importers:
       editorjs-change-case:
         specifier: ^0.0.3
         version: 0.0.3
+      editorjs-drag-drop:
+        specifier: ^1.1.16
+        version: 1.1.16
       editorjs-header-with-alignment:
         specifier: ^1.0.1
         version: 1.0.1
@@ -278,6 +281,9 @@ importers:
       editorjs-toggle-block:
         specifier: ^0.3.16
         version: 0.3.16
+      editorjs-undo:
+        specifier: ^2.0.28
+        version: 2.0.28
       embla-carousel-react:
         specifier: ^8.3.0
         version: 8.6.0(react@18.3.1)
@@ -2749,6 +2755,9 @@ packages:
   editorjs-change-case@0.0.3:
     resolution: {integrity: sha512-1g5RueRFLGsvKNiKdpq9nLgn0xeHylXmXJLMqqobAhB7uNJ7N978vN1mKGgMSThxi4y6mU45aNYhBJy9xQFrZA==}
 
+  editorjs-drag-drop@1.1.16:
+    resolution: {integrity: sha512-yOyKZqqZepkdbDQbAw1bZr3mQewkT4a9QgufWW3Aoy1qcTka8uHR01T/dGHqrpyYrF56ykyidPyp0LX79LEHHQ==}
+
   editorjs-header-with-alignment@1.0.1:
     resolution: {integrity: sha512-L7cDSx/H3wgb9dg05HH9xPMotj3tkoElTd0TeY81pxvO0+tPV+yRZ9hV7fUyZolYUObKfYL9QS+yeTY/YCht5g==}
 
@@ -2763,6 +2772,9 @@ packages:
 
   editorjs-toggle-block@0.3.16:
     resolution: {integrity: sha512-vjLE0bTF2HcQ7gQdgQ4c+Dl0n2o+oA0JICseJSYkQluDIE+LA9oHfTAE8ziJr03oeya7iVQ/b+d21Ez5hKsVsw==}
+
+  editorjs-undo@2.0.28:
+    resolution: {integrity: sha512-7MiLdjIsPOXn8+cHDeAt2HapVklg4vcLWWkd2eMMlGI6UVtwYSjdQquDSv9752B/fOEP1C3NMF2sdiCoZV3tTA==}
 
   electron-to-chromium@1.5.138:
     resolution: {integrity: sha512-FWlQc52z1dXqm+9cCJ2uyFgJkESd+16j6dBEjsgDNuHjBpuIzL8/lRc0uvh1k8RNI6waGo6tcy2DvwkTBJOLDg==}
@@ -4704,6 +4716,9 @@ packages:
   uuid@9.0.1:
     resolution: {integrity: sha512-b+1eJOlsR9K8HJpow9Ok3fiWOWSIcIzXodvv0rQjVoOVNpWMpxf1wZNpt4y9h10odCNrqnYp1OBzRktckBe3sA==}
     hasBin: true
+
+  vanilla-caret-js@1.1.0:
+    resolution: {integrity: sha512-vl3R4Xjqb+xnM0gYyg+wcqWGYwKKnkz58Yj29/FQB+w+yP7R8IR1DGoJnDIs05moEZiGlQUTabPMoEtnQNcrpQ==}
 
   vaul@0.9.9:
     resolution: {integrity: sha512-7afKg48srluhZwIkaU+lgGtFCUsYBSGOl8vcc8N/M3YQlZFlynHD15AE+pwrYdc826o7nrIND4lL9Y6b9WWZZQ==}
@@ -7307,6 +7322,8 @@ snapshots:
 
   editorjs-change-case@0.0.3: {}
 
+  editorjs-drag-drop@1.1.16: {}
+
   editorjs-header-with-alignment@1.0.1: {}
 
   editorjs-header-with-anchor@2.6.0: {}
@@ -7320,6 +7337,10 @@ snapshots:
   editorjs-toggle-block@0.3.16:
     dependencies:
       uuid: 9.0.1
+
+  editorjs-undo@2.0.28:
+    dependencies:
+      vanilla-caret-js: 1.1.0
 
   electron-to-chromium@1.5.138: {}
 
@@ -9763,6 +9784,8 @@ snapshots:
   uuid@11.1.0: {}
 
   uuid@9.0.1: {}
+
+  vanilla-caret-js@1.1.0: {}
 
   vaul@0.9.9(@types/react-dom@18.3.6(@types/react@18.3.20))(@types/react@18.3.20)(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
     dependencies:
