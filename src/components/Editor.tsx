@@ -42,11 +42,12 @@ interface EditorProps {
 
 const Editor: React.FC<EditorProps> = ({ data, onChange }) => {
   const editorRef = useRef<EditorJS | null>(null);
+  const holderRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!editorRef.current) {
+    if (!editorRef.current && holderRef.current) {
       const editor = new EditorJS({
-        holder: "editorjs",
+        holder: holderRef.current,
         autofocus: true,
         tools: {
           title: {
@@ -208,12 +209,13 @@ const Editor: React.FC<EditorProps> = ({ data, onChange }) => {
           },
         },
         data: data || {},
-        onChange: async () => {
-          const content = await editor.saver.save();
-          onChange && onChange(content);
+        onChange: async (api) => {
+          if (onChange) {
+            const content = await api.saver.save();
+            onChange(content);
+          }
         },
       });
-
       editorRef.current = editor;
     }
 
@@ -232,6 +234,7 @@ const Editor: React.FC<EditorProps> = ({ data, onChange }) => {
   return (
     <div className="w-full border rounded-md p-4 bg-white">
       <div
+        ref={holderRef}
         id="editorjs"
         className="
           text-gray-800 leading-none
