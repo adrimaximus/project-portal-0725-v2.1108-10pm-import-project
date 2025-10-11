@@ -1,5 +1,5 @@
 import Header from '@editorjs/header';
-import List from '@editorjs/list';
+import NestedList from '@editorjs/nested-list';
 import Paragraph from '@editorjs/paragraph';
 import SimpleImage from '@editorjs/simple-image';
 import Checklist from '@editorjs/checklist';
@@ -19,7 +19,7 @@ export const EDITOR_JS_TOOLS = {
     inlineToolbar: true,
   },
   header: Header,
-  list: List,
+  list: NestedList,
   checklist: Checklist,
   quote: Quote,
   code: CodeTool,
