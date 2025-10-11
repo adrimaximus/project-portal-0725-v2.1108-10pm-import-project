@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { LexicalComposer } from "@lexical/react/LexicalComposer";
 import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
 import { ContentEditable } from "@lexical/react/LexicalContentEditable";
@@ -90,7 +90,7 @@ function ToolbarPlugin() {
   );
 }
 
-function SlashCommandPlugin({ containerRef }: { containerRef: React.RefObject<HTMLDivElement> }) {
+function SlashCommandPlugin() {
   const [editor] = useLexicalComposerContext();
   const [showMenu, setShowMenu] = useState(false);
   const [position, setPosition] = useState({ top: 0, left: 0 });
@@ -99,41 +99,39 @@ function SlashCommandPlugin({ containerRef }: { containerRef: React.RefObject<HT
     const unregister = editor.registerTextContentListener((text) => {
       if (text.endsWith("/")) {
         const selection = window.getSelection();
-        const range = selection?.getRangeAt(0);
-        const rect = range?.getBoundingClientRect();
-        const containerRect = containerRef.current?.getBoundingClientRect();
-
-        if (rect && containerRect) {
-          setPosition({
-            top: rect.bottom - containerRect.top,
-            left: rect.left - containerRect.left,
-          });
-          setShowMenu(true);
+        const rect = selection?.getRangeAt(0)?.getBoundingClientRect();
+        if (rect) {
+          setPosition({ top: rect.bottom + window.scrollY, left: rect.left });
         }
+        setShowMenu(true);
       } else {
         setShowMenu(false);
       }
     });
-
     return () => unregister();
-  }, [editor, containerRef]);
+  }, [editor]);
 
   const handleCommand = (cmd: string) => {
     editor.update(() => {
       const selection = $getSelection();
-      if ($isRangeSelection(selection)) {
-        const node = selection.anchor.getNode();
-        node.spliceText(selection.anchor.offset - 1, 1, '');
+      if (!$isRangeSelection(selection)) return;
 
-        if (cmd.startsWith("heading")) {
-          $setBlocksType(selection, () => $createHeadingNode(cmd as "h1" | "h2" | "h3"));
-        } else if (cmd === "paragraph") {
-          $setBlocksType(selection, () => $createParagraphNode());
-        }
+      const anchor = selection.anchor;
+      const node = anchor.getNode();
+      if (node && node.getTextContent().endsWith("/")) {
+        node.setTextContent(node.getTextContent().slice(0, -1));
       }
+
+      if (cmd === "h1") $setBlocksType(selection, () => $createHeadingNode("h1"));
+      else if (cmd === "h2") $setBlocksType(selection, () => $createHeadingNode("h2"));
+      else if (cmd === "h3") $setBlocksType(selection, () => $createHeadingNode("h3"));
+      else if (cmd === "paragraph") $setBlocksType(selection, () => $createParagraphNode());
     });
+
     if (cmd === "bullet") editor.dispatchCommand(INSERT_UNORDERED_LIST_COMMAND, undefined);
     if (cmd === "numbered") editor.dispatchCommand(INSERT_ORDERED_LIST_COMMAND, undefined);
+
+    editor.focus();
     setShowMenu(false);
   };
 
@@ -148,7 +146,7 @@ function SlashCommandPlugin({ containerRef }: { containerRef: React.RefObject<HT
   return (
     showMenu && (
       <div
-        style={{ position: "absolute", top: position.top, left: position.left }}
+        style={{ position: "absolute", top: position.top + 6, left: position.left }}
         className="z-50 bg-popover text-popover-foreground border rounded-md shadow-lg p-1 w-48"
       >
         <div className="text-xs text-muted-foreground p-2">Insert block</div>
@@ -177,7 +175,6 @@ interface EditorProps {
 }
 
 export default function Editor({ onChange, initialState }: EditorProps) {
-  const editorContainerRef = useRef<HTMLDivElement>(null);
   const initialConfig = {
     namespace: "BetterworksEditor",
     theme,
@@ -195,14 +192,14 @@ export default function Editor({ onChange, initialState }: EditorProps) {
 
   return (
     <LexicalComposer initialConfig={initialConfig}>
-      <div ref={editorContainerRef} className="relative border rounded-lg p-4 bg-background shadow-sm">
+      <div className="relative border rounded-lg p-4 bg-background shadow-sm">
         <ToolbarPlugin />
         <RichTextPlugin
           contentEditable={<ContentEditable className="min-h-[200px] outline-none prose dark:prose-invert max-w-none" />}
           placeholder={<div className="text-muted-foreground absolute top-[62px] left-4 select-none pointer-events-none">Type “/” for commands…</div>}
           ErrorBoundary={LexicalErrorBoundary}
         />
-        <SlashCommandPlugin containerRef={editorContainerRef} />
+        <SlashCommandPlugin />
         <HistoryPlugin />
         <ListPlugin />
         <LinkPlugin />
