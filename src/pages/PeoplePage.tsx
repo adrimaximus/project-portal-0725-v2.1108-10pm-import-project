@@ -65,7 +65,7 @@ const PeoplePage = () => {
   }, [viewMode, activeTab, setSearchParams]);
 
   const { data: people = [], isLoading } = useQuery({
-    queryKey: ['people'],
+    queryKey: ['people', 'with-slug'],
     queryFn: async () => {
       const { data, error } = await supabase.rpc('get_people_with_details');
       if (error) throw error;
@@ -190,9 +190,9 @@ const PeoplePage = () => {
   const handleDelete = async () => {
     if (!personToDelete) return;
 
-    await queryClient.cancelQueries({ queryKey: ['people'] });
-    const previousPeople = queryClient.getQueryData<Person[]>(['people']);
-    queryClient.setQueryData<Person[]>(['people'], (old) =>
+    await queryClient.cancelQueries({ queryKey: ['people', 'with-slug'] });
+    const previousPeople = queryClient.getQueryData<Person[]>(['people', 'with-slug']);
+    queryClient.setQueryData<Person[]>(['people', 'with-slug'], (old) =>
       old ? old.filter((p) => p.id !== personToDelete.id) : []
     );
     setPersonToDelete(null);
@@ -200,11 +200,11 @@ const PeoplePage = () => {
     const { error } = await supabase.from('people').delete().eq('id', personToDelete.id);
 
     if (error) {
-      queryClient.setQueryData(['people'], previousPeople);
+      queryClient.setQueryData(['people', 'with-slug'], previousPeople);
       toast.error(`Failed to delete ${personToDelete.full_name}.`);
     } else {
       toast.success(`${personToDelete.full_name} has been deleted.`);
-      queryClient.invalidateQueries({ queryKey: ['people'] });
+      queryClient.invalidateQueries({ queryKey: ['people', 'with-slug'] });
     }
   };
 
