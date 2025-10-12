@@ -43,40 +43,40 @@ export const getProjectStatusStyles = (status: string) => {
     case 'Completed':
     case 'Done':
     case 'On Track':
-      return { tw: 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300', hex: '#22c55e', bgHexLight: '#86efac', bgHexDark: '#22c55e' };
+      return { tw: 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300', hex: '#22c55e', bgHexLight: '#22c55e', bgHexDark: '#22c55e' };
     case 'In Progress':
     case 'In Review':
-      return { tw: 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300', hex: '#3b82f6', bgHexLight: '#93c5fd', bgHexDark: '#3b82f6' };
+      return { tw: 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300', hex: '#3b82f6', bgHexLight: '#3b82f6', bgHexDark: '#3b82f6' };
     case 'At Risk':
     case 'On Hold':
-      return { tw: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300', hex: '#f59e0b', bgHexLight: '#fde047', bgHexDark: '#eab308' };
+      return { tw: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300', hex: '#f59e0b', bgHexLight: '#f59e0b', bgHexDark: '#f59e0b' };
     case 'Off Track':
     case 'Cancelled':
-      return { tw: 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300', hex: '#ef4444', bgHexLight: '#fca5a5', bgHexDark: '#ef4444' };
+      return { tw: 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300', hex: '#ef4444', bgHexLight: '#ef4444', bgHexDark: '#ef4444' };
     case 'Requested':
     case 'Idea':
     default:
-      return { tw: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300', hex: '#6b7280', bgHexLight: '#d1d5db', bgHexDark: '#6b7280' };
+      return { tw: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300', hex: '#6b7280', bgHexLight: '#6b7280', bgHexDark: '#6b7280' };
   }
 };
 
 export const getPaymentStatusStyles = (status: string) => {
   switch (status) {
     case 'Paid':
-      return { tw: 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300', hex: '#22c55e', bgHexLight: '#86efac', bgHexDark: '#22c55e' };
+      return { tw: 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300', hex: '#22c55e', bgHexLight: '#22c55e', bgHexDark: '#22c55e' };
     case 'Overdue':
-      return { tw: 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300', hex: '#ef4444', bgHexLight: '#fca5a5', bgHexDark: '#ef4444' };
+      return { tw: 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300', hex: '#ef4444', bgHexLight: '#ef4444', bgHexDark: '#ef4444' };
     case 'Due':
     case 'Unpaid':
-      return { tw: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300', hex: '#f59e0b', bgHexLight: '#fde047', bgHexDark: '#eab308' };
+      return { tw: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300', hex: '#f59e0b', bgHexLight: '#f59e0b', bgHexDark: '#f59e0b' };
     case 'Pending':
     case 'In Process':
-      return { tw: 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300', hex: '#3b82f6', bgHexLight: '#93c5fd', bgHexDark: '#3b82f6' };
+      return { tw: 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300', hex: '#3b82f6', bgHexLight: '#3b82f6', bgHexDark: '#3b82f6' };
     case 'Proposed':
-      return { tw: 'bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300', hex: '#8b5cf6', bgHexLight: '#c4b5fd', bgHexDark: '#8b5cf6' };
+      return { tw: 'bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300', hex: '#8b5cf6', bgHexLight: '#8b5cf6', bgHexDark: '#8b5cf6' };
     case 'Cancelled':
     default:
-      return { tw: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300', hex: '#6b7280', bgHexLight: '#d1d5db', bgHexDark: '#6b7280' };
+      return { tw: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300', hex: '#6b7280', bgHexLight: '#6b7280', bgHexDark: '#6b7280' };
   }
 };
 
