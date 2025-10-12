@@ -65,7 +65,7 @@
     --ring: 212.7 26.8% 83.9%;
   }
 
-  .claude-light {
+  .theme-claude-light {
     --background: 40 14% 96%;
     --foreground: 60 4% 20%;
     --card: 40 14% 96%;
@@ -87,7 +87,7 @@
     --ring: 60 4% 20%;
   }
 
-  .claude {
+  .theme-claude {
     --background: 0 0% 10%;
     --foreground: 0 0% 98%;
     --card: 0 0% 10%;
@@ -109,7 +109,7 @@
     --ring: 0 0% 83.1%;
   }
 
-  .nature-light {
+  .theme-nature-light {
     --background: 33 25% 97%;
     --foreground: 21 20% 21%;
     --card: 33 25% 97%;
@@ -131,7 +131,7 @@
     --ring: 132 24% 39%;
   }
 
-  .nature {
+  .theme-nature {
     --background: 140 5% 12%;
     --foreground: 33 13% 90%;
     --card: 140 5% 12%;
