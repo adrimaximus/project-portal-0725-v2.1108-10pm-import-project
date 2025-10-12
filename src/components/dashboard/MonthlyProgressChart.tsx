@@ -59,6 +59,45 @@ const CustomLegend = ({ payload }: any) => {
   );
 };
 
+const RoundedBar = (props: any) => {
+  const { fill, x, y, width, height, payload, dataKey, options } = props;
+
+  if (height <= 0) {
+    return null;
+  }
+
+  const currentIndex = options.findIndex((opt: any) => opt.value === dataKey);
+  let isTop = true;
+  if (currentIndex < options.length - 1) {
+    for (let i = currentIndex + 1; i < options.length; i++) {
+      const key = options[i].value;
+      if (payload[key] > 0) {
+        isTop = false;
+        break;
+      }
+    }
+  }
+
+  const radius = 4;
+
+  if (isTop) {
+    return (
+      <path
+        d={`M${x},${y + radius} 
+           A${radius},${radius} 0 0 1 ${x + radius},${y} 
+           L${x + width - radius},${y} 
+           A${radius},${radius} 0 0 1 ${x + width},${y + radius} 
+           L${x + width},${y + height} 
+           L${x},${y + height} 
+           Z`}
+        fill={fill}
+      />
+    );
+  } else {
+    return <rect x={x} y={y} width={width} height={height} fill={fill} />;
+  }
+};
+
 const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
   const { hasPermission } = useAuth();
   const canViewValue = hasPermission('projects:view_value');
@@ -166,14 +205,14 @@ const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
             <YAxis tickLine={false} axisLine={false} fontSize={10} />
             <Tooltip content={<CustomTooltip chartType={chartType} />} cursor={{ fill: 'hsl(var(--muted))' }} />
             <Legend content={<CustomLegend />} />
-            {PROJECT_STATUS_OPTIONS.map((status, index) => (
+            {PROJECT_STATUS_OPTIONS.map((status) => (
               <Bar 
                 key={status.value} 
                 dataKey={status.value} 
                 stackId="a" 
                 fill={getProjectStatusStyles(status.value).hex} 
                 name={status.label} 
-                radius={index === PROJECT_STATUS_OPTIONS.length - 1 ? [4, 4, 0, 0] : 0} 
+                shape={<RoundedBar options={PROJECT_STATUS_OPTIONS} />} 
               />
             ))}
           </BarChart>
@@ -186,14 +225,14 @@ const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
             <YAxis tickLine={false} axisLine={false} fontSize={10} />
             <Tooltip content={<CustomTooltip chartType={chartType} />} cursor={{ fill: 'hsl(var(--muted))' }} />
             <Legend content={<CustomLegend />} />
-            {PAYMENT_STATUS_OPTIONS.map((status, index) => (
+            {PAYMENT_STATUS_OPTIONS.map((status) => (
               <Bar 
                 key={status.value} 
                 dataKey={status.value} 
                 stackId="a" 
                 fill={getPaymentStatusStyles(status.value).hex} 
                 name={status.label} 
-                radius={index === PAYMENT_STATUS_OPTIONS.length - 1 ? [4, 4, 0, 0] : 0} 
+                shape={<RoundedBar options={PAYMENT_STATUS_OPTIONS} />} 
               />
             ))}
           </BarChart>
