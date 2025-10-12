@@ -84,19 +84,22 @@ const formatProjectDateRange = (startDateStr: string | null | undefined, dueDate
   return `${formatInJakarta(startDate, 'd')} - ${formatInJakarta(dueDate, 'd MMM yyyy')}`;
 };
 
-const formatVenue = (venue: string | null): string => {
-  if (!venue) return "-";
+const formatVenue = (venue: string | null): { name: string; full: string } => {
+  if (!venue) return { name: "-", full: "-" };
   try {
     const venueObj = JSON.parse(venue);
     const name = venueObj.name || '';
     const address = venueObj.address || '';
     const parts = [name, address].filter(Boolean);
-    if (parts.length > 0) {
-      return parts.join(' - ');
+    const full = parts.join(' - ');
+
+    if (!full && venue) {
+        return { name: venue, full: venue };
     }
-    return venue;
+
+    return { name: name || address || '-', full: full || '-' };
   } catch (e) {
-    return venue;
+    return { name: venue, full: venue };
   }
 };
 
@@ -108,7 +111,7 @@ interface ProjectRowProps {
 
 const ProjectRow = ({ project, onDeleteProject, rowRefs }: ProjectRowProps) => {
   const paymentBadgeColor = getPaymentStatusStyles(project.payment_status).tw;
-  const displayVenue = formatVenue(project.venue);
+  const { name: venueName, full: fullVenue } = formatVenue(project.venue);
 
   return (
     <TableRow 
@@ -144,11 +147,11 @@ const ProjectRow = ({ project, onDeleteProject, rowRefs }: ProjectRowProps) => {
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger>
-              <span className="truncate max-w-[15ch]">{displayVenue}</span>
+              <span className="truncate max-w-[15ch]">{venueName}</span>
             </TooltipTrigger>
-            {displayVenue.length > 15 && (
+            {(fullVenue !== venueName || venueName.length > 15) && fullVenue !== '-' && (
               <TooltipContent>
-                <p>{displayVenue}</p>
+                <p>{fullVenue}</p>
               </TooltipContent>
             )}
           </Tooltip>
