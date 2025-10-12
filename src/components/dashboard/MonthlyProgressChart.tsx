@@ -166,8 +166,15 @@ const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
             <YAxis tickLine={false} axisLine={false} fontSize={10} />
             <Tooltip content={<CustomTooltip chartType={chartType} />} cursor={{ fill: 'hsl(var(--muted))' }} />
             <Legend content={<CustomLegend />} />
-            {PROJECT_STATUS_OPTIONS.map(status => (
-              <Bar key={status.value} dataKey={status.value} stackId="a" fill={getProjectStatusStyles(status.value).hex} name={status.label} radius={[4, 4, 0, 0]} />
+            {PROJECT_STATUS_OPTIONS.map((status, index) => (
+              <Bar 
+                key={status.value} 
+                dataKey={status.value} 
+                stackId="a" 
+                fill={getProjectStatusStyles(status.value).hex} 
+                name={status.label} 
+                radius={index === PROJECT_STATUS_OPTIONS.length - 1 ? [4, 4, 0, 0] : 0} 
+              />
             ))}
           </BarChart>
         );
@@ -179,8 +186,15 @@ const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
             <YAxis tickLine={false} axisLine={false} fontSize={10} />
             <Tooltip content={<CustomTooltip chartType={chartType} />} cursor={{ fill: 'hsl(var(--muted))' }} />
             <Legend content={<CustomLegend />} />
-            {PAYMENT_STATUS_OPTIONS.map(status => (
-              <Bar key={status.value} dataKey={status.value} stackId="a" fill={getPaymentStatusStyles(status.value).hex} name={status.label} radius={[4, 4, 0, 0]} />
+            {PAYMENT_STATUS_OPTIONS.map((status, index) => (
+              <Bar 
+                key={status.value} 
+                dataKey={status.value} 
+                stackId="a" 
+                fill={getPaymentStatusStyles(status.value).hex} 
+                name={status.label} 
+                radius={index === PAYMENT_STATUS_OPTIONS.length - 1 ? [4, 4, 0, 0] : 0} 
+              />
             ))}
           </BarChart>
         );
