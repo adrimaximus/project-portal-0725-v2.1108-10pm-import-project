@@ -7,7 +7,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn, getPaymentStatusStyles } from "@/lib/utils";
-import { format } from "date-fns";
+import { format, isPast } from "date-fns";
 import { Invoice } from "@/types";
 
 interface BillingTableProps {
@@ -85,118 +85,124 @@ const BillingTable = ({ invoices, onEdit, sortColumn, sortDirection, handleSort 
             </TableCell>
           </TableRow>
         ) : (
-          invoices.map((invoice) => (
-            <TableRow key={invoice.id}>
-              <TableCell className="font-medium">{invoice.id}</TableCell>
-              <TableCell>
-                <Link to={`/projects/${invoice.projectId}`} className="font-medium text-primary hover:underline">
-                  {invoice.projectName}
-                </Link>
-              </TableCell>
-              <TableCell>
-                <div className="flex items-center gap-2">
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src={invoice.clientLogo || undefined} alt={invoice.clientName || ''} />
-                    <AvatarFallback>{invoice.clientName?.charAt(0)}</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <div className="font-medium">{invoice.clientName || 'N/A'}</div>
-                    <div className="text-sm text-muted-foreground">{invoice.clientCompanyName || ''}</div>
+          invoices.map((invoice) => {
+            const isOverdue = isPast(new Date(invoice.dueDate)) && invoice.status !== 'Paid';
+            return (
+              <TableRow key={invoice.id}>
+                <TableCell className="font-medium">{invoice.id}</TableCell>
+                <TableCell>
+                  <Link to={`/projects/${invoice.projectId}`} className="font-medium text-primary hover:underline">
+                    {invoice.projectName}
+                  </Link>
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={invoice.clientLogo || undefined} alt={invoice.clientName || ''} />
+                      <AvatarFallback>{invoice.clientName?.charAt(0)}</AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <div className="font-medium">{invoice.clientName || 'N/A'}</div>
+                      <div className="text-sm text-muted-foreground">{invoice.clientCompanyName || ''}</div>
+                    </div>
                   </div>
-                </div>
-              </TableCell>
-              <TableCell>
-                {invoice.projectOwner && (
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Avatar className="h-8 w-8">
-                          <AvatarImage src={invoice.projectOwner.avatar_url} alt={invoice.projectOwner.name} />
-                          <AvatarFallback>{invoice.projectOwner.initials}</AvatarFallback>
-                        </Avatar>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>{invoice.projectOwner.name}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                )}
-              </TableCell>
-              <TableCell>
-                <div className="flex -space-x-2 overflow-hidden">
-                  {invoice.assignedMembers
-                    .filter(member => member.role === 'admin')
-                    .map(admin => (
-                      <TooltipProvider key={admin.id}>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Avatar className="h-8 w-8 border-2 border-background">
-                              <AvatarImage src={admin.avatar_url} alt={admin.name} />
-                              <AvatarFallback>{admin.initials}</AvatarFallback>
-                            </Avatar>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>{admin.name}</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    ))}
-                </div>
-              </TableCell>
-              <TableCell>
-                <Badge variant="outline" className={cn("border-transparent", getPaymentStatusStyles(invoice.status).tw)}>
-                  {invoice.status}
-                </Badge>
-              </TableCell>
-              <TableCell>{invoice.poNumber || 'N/A'}</TableCell>
-              <TableCell>{'Rp ' + invoice.amount.toLocaleString('id-ID')}</TableCell>
-              <TableCell>{format(invoice.dueDate, 'MMM dd, yyyy')}</TableCell>
-              <TableCell>
-                {invoice.invoiceAttachments && invoice.invoiceAttachments.length > 0 ? (
+                </TableCell>
+                <TableCell>
+                  {invoice.projectOwner && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Avatar className="h-8 w-8">
+                            <AvatarImage src={invoice.projectOwner.avatar_url} alt={invoice.projectOwner.name} />
+                            <AvatarFallback>{invoice.projectOwner.initials}</AvatarFallback>
+                          </Avatar>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{invoice.projectOwner.name}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
+                </TableCell>
+                <TableCell>
+                  <div className="flex -space-x-2 overflow-hidden">
+                    {invoice.assignedMembers
+                      .filter(member => member.role === 'admin')
+                      .map(admin => (
+                        <TooltipProvider key={admin.id}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Avatar className="h-8 w-8 border-2 border-background">
+                                <AvatarImage src={admin.avatar_url} alt={admin.name} />
+                                <AvatarFallback>{admin.initials}</AvatarFallback>
+                              </Avatar>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>{admin.name}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      ))}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <Badge variant="outline" className={cn("border-transparent", getPaymentStatusStyles(invoice.status).tw)}>
+                    {invoice.status}
+                  </Badge>
+                </TableCell>
+                <TableCell>{invoice.poNumber || 'N/A'}</TableCell>
+                <TableCell>{'Rp ' + invoice.amount.toLocaleString('id-ID')}</TableCell>
+                <TableCell className={cn(isOverdue && "text-red-500 font-semibold")}>
+                  {format(invoice.dueDate, 'MMM dd, yyyy')}
+                </TableCell>
+                <TableCell>
+                  {invoice.invoiceAttachments && invoice.invoiceAttachments.length > 0 ? (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" className="flex items-center gap-1 text-muted-foreground">
+                          <Paperclip className="h-4 w-4" />
+                          {invoice.invoiceAttachments.length}
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        {invoice.invoiceAttachments.map(att => (
+                          <DropdownMenuItem key={att.id} asChild>
+                            <a
+                              href={att.file_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-2 cursor-pointer"
+                            >
+                              <Download className="h-4 w-4" />
+                              <span className="truncate" title={att.file_name}>{att.file_name}</span>
+                            </a>
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  ) : (
+                    'N/A'
+                  )}
+                </TableCell>
+                <TableCell className="text-right">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm" className="flex items-center gap-1 text-muted-foreground">
-                        <Paperclip className="h-4 w-4" />
-                        {invoice.invoiceAttachments.length}
+                      <Button variant="ghost" size="icon">
+                        <MoreVertical className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      {invoice.invoiceAttachments.map(att => (
-                        <DropdownMenuItem key={att.id} asChild>
-                          <a
-                            href={att.file_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-2 cursor-pointer"
-                          >
-                            <Download className="h-4 w-4" />
-                            <span className="truncate" title={att.file_name}>{att.file_name}</span>
-                          </a>
-                        </DropdownMenuItem>
-                      ))}
+                      <DropdownMenuItem onSelect={() => onEdit(invoice)}>
+                        <Edit className="mr-2 h-4 w-4" />
+                        Edit
+                      </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
-                ) : (
-                  'N/A'
-                )}
-              </TableCell>
-              <TableCell className="text-right">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon">
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onSelect={() => onEdit(invoice)}>
-                      <Edit className="mr-2 h-4 w-4" />
-                      Edit
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
                 </DropdownMenu>
               </TableCell>
             </TableRow>
-          ))
+            )
+          })
         )}
       </TableBody>
     </Table>
