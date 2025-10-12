@@ -180,22 +180,36 @@ const TableView = ({ projects, isLoading, onDeleteProject, sortConfig, requestSo
   const [visibleUpcomingCount, setVisibleUpcomingCount] = useState(10);
   const [visiblePastCount, setVisiblePastCount] = useState(15);
 
+  const sortedProjects = useMemo(() => {
+    if (sortConfig.key === 'venue') {
+      const sorted = [...projects].sort((a, b) => {
+        const nameA = formatVenue(a.venue).name.toLowerCase();
+        const nameB = formatVenue(b.venue).name.toLowerCase();
+        if (nameA < nameB) return sortConfig.direction === 'ascending' ? -1 : 1;
+        if (nameA > nameB) return sortConfig.direction === 'ascending' ? 1 : -1;
+        return 0;
+      });
+      return sorted;
+    }
+    return projects;
+  }, [projects, sortConfig]);
+
   const { upcomingProjects, pastProjects } = useMemo(() => {
     if (sortConfig.key) {
-      return { upcomingProjects: projects, pastProjects: [] };
+      return { upcomingProjects: sortedProjects, pastProjects: [] };
     }
     const today = startOfToday();
-    const firstPastIndex = projects.findIndex(p => p.start_date && isBefore(new Date(p.start_date), today));
+    const firstPastIndex = sortedProjects.findIndex(p => p.start_date && isBefore(new Date(p.start_date), today));
     
     if (firstPastIndex === -1) {
-      return { upcomingProjects: projects, pastProjects: [] };
+      return { upcomingProjects: sortedProjects, pastProjects: [] };
     }
     
     return {
-      upcomingProjects: projects.slice(0, firstPastIndex),
-      pastProjects: projects.slice(firstPastIndex),
+      upcomingProjects: sortedProjects.slice(0, firstPastIndex),
+      pastProjects: sortedProjects.slice(firstPastIndex),
     };
-  }, [projects, sortConfig.key]);
+  }, [sortedProjects, sortConfig.key]);
 
   const visibleUpcomingProjects = upcomingProjects.slice(0, visibleUpcomingCount);
   const hasMoreUpcoming = upcomingProjects.length > visibleUpcomingCount;
@@ -245,7 +259,7 @@ const TableView = ({ projects, isLoading, onDeleteProject, sortConfig, requestSo
           </TableHead>
           <TableHead className="p-2">
             <Button variant="ghost" onClick={() => requestSort('venue')} className="w-full justify-start px-2 group">
-              Venue
+              Lokasi
             </Button>
           </TableHead>
           <TableHead className="w-[50px]"></TableHead>
