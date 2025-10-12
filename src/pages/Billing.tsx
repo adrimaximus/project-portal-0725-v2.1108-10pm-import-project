@@ -55,6 +55,7 @@ const Billing = () => {
         hardcopySendingDate: project.hardcopy_sending_date ? new Date(project.hardcopy_sending_date) : null,
         channel: project.channel || null,
         clientName: project.client_name || null,
+        clientAvatarUrl: project.client_avatar_url || null,
         clientLogo: project.client_company_logo_url || null,
         clientCompanyName: project.client_company_name || null,
         projectOwner: project.created_by as Owner | null,

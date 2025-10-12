@@ -166,6 +166,7 @@ export interface Project {
   channel?: string | null;
   invoice_attachments?: InvoiceAttachment[];
   client_name?: string | null;
+  client_avatar_url?: string | null;
   client_company_logo_url?: string | null;
   client_company_name?: string | null;
   client_company_custom_properties?: any;
@@ -307,6 +308,7 @@ export interface Invoice {
 
 export interface ExtendedProject extends Project {
   client_name?: string;
+  client_avatar_url?: string | null;
   client_company_logo_url?: string;
   client_company_name?: string;
 }
