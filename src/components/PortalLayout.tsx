@@ -34,7 +34,7 @@ export default function PortalLayout({ children, summary, pageHeader, disableMai
   };
 
   return (
-    <div className="flex h-full w-full bg-muted/40">
+    <div className="flex h-screen w-full bg-muted/40">
       {/* Desktop Sidebar: Hidden on small screens */}
       <div className="hidden sm:block">
         <PortalSidebar isCollapsed={isCollapsed} onToggle={toggleSidebar} />
