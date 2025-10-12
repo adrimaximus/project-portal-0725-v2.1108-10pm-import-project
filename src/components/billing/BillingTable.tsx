@@ -96,7 +96,7 @@ const BillingTable = ({ invoices, onEdit, sortColumn, sortDirection, handleSort 
         ) : (
           invoices.map((invoice) => (
             <TableRow key={invoice.id}>
-              <TableCell className={cn("font-medium", invoice.status === 'Overdue' && 'text-destructive font-semibold border-l-4 border-destructive')}>{invoice.id}</TableCell>
+              <TableCell className={cn("font-medium", invoice.status === 'Overdue' && 'text-destructive font-semibold border-l-4 border-destructive', invoice.status === 'Paid' && 'text-green-600 font-semibold border-l-4 border-green-600')}>{invoice.id}</TableCell>
               <TableCell>
                 <Link to={`/projects/${invoice.projectId}`} className="font-medium text-primary hover:underline">
                   {invoice.projectName}
