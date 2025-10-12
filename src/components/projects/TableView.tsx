@@ -123,6 +123,8 @@ const ProjectRow = ({ project, onDeleteProject, rowRefs }: ProjectRowProps) => {
   const paymentBadgeColor = getPaymentStatusStyles(project.payment_status).tw;
   const { name: venueName, full: fullVenue } = formatVenue(project.venue);
 
+  const displayVenueName = venueName.length > 20 ? venueName.substring(0, 20) + '....' : venueName;
+
   return (
     <TableRow 
       ref={el => {
@@ -157,9 +159,9 @@ const ProjectRow = ({ project, onDeleteProject, rowRefs }: ProjectRowProps) => {
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger>
-              <span className="truncate max-w-[15ch]">{venueName}</span>
+              <span>{displayVenueName}</span>
             </TooltipTrigger>
-            {(fullVenue !== venueName || venueName.length > 15) && fullVenue !== '-' && (
+            {(fullVenue !== venueName || venueName.length > 20) && fullVenue !== '-' && (
               <TooltipContent>
                 <p>{fullVenue}</p>
               </TooltipContent>
