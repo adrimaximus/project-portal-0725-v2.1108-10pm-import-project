@@ -208,31 +208,19 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task }: Ta
     let generalTasksProject = projects.find(p => p.slug === 'general-tasks');
     let projectId = values.project_id;
 
-    // If no project is selected, default to 'General Tasks'
     if (!projectId || projectId === '') {
         if (generalTasksProject) {
             projectId = generalTasksProject.id;
         } else {
-            // If 'General Tasks' project doesn't exist, try to create it.
-            const { data: newProject, error } = await supabase
-                .from('projects')
-                .insert({ 
-                    name: 'General Tasks', 
-                    slug: 'general-tasks',
-                    description: 'For general tasks not tied to a specific project.',
-                    category: 'General', 
-                    status: 'On Track' 
-                })
-                .select('id')
-                .single();
+            const { data: generalProjectId, error } = await supabase
+                .rpc('ensure_general_tasks_project_and_membership');
 
             if (error) {
-                toast.error(`Could not create default project: ${error.message}. Please select a project manually.`);
+                toast.error(`Could not access default project: ${error.message}. Please select a project manually.`);
                 return;
             }
             
-            projectId = newProject.id;
-            toast.info("We've created a 'General Tasks' project for you.");
+            projectId = generalProjectId;
         }
     }
 
