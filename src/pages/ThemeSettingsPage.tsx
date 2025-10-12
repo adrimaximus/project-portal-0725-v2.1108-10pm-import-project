@@ -100,10 +100,33 @@ const themeFamilies = [
         </div>
       </div>
     )
+  },
+  { 
+    id: 'ahensi', 
+    name: 'Ahensi', 
+    description: 'A vibrant, modern theme with a pink accent, inspired by the 7i portal logo.',
+    lightThemeId: 'ahensi-light',
+    darkThemeId: 'ahensi',
+    preview: (
+      <div className="flex items-center gap-2">
+        <div className="w-8 h-8 rounded-md bg-white border border-zinc-200 flex items-center justify-center p-1">
+          <div className="w-full space-y-1">
+            <div className="h-1 w-3/4 rounded-full bg-zinc-400/50"></div>
+            <div className="h-1 w-1/2 rounded-full" style={{ backgroundColor: '#fa009f80' }}></div>
+          </div>
+        </div>
+        <div className="w-8 h-8 rounded-md bg-zinc-950 border border-zinc-800 flex items-center justify-center p-1">
+          <div className="w-full space-y-1">
+            <div className="h-1 w-3/4 rounded-full bg-zinc-600"></div>
+            <div className="h-1 w-1/2 rounded-full" style={{ backgroundColor: '#fa009f' }}></div>
+          </div>
+        </div>
+      </div>
+    )
   }
 ];
 
-const getThemeFamily = (theme: Theme): 'default' | 'claude' | 'nature' | 'corporate' => {
+const getThemeFamily = (theme: Theme): 'default' | 'claude' | 'nature' | 'corporate' | 'ahensi' => {
   if (theme === 'claude' || theme === 'claude-light') {
     return 'claude';
   }
@@ -112,6 +135,9 @@ const getThemeFamily = (theme: Theme): 'default' | 'claude' | 'nature' | 'corpor
   }
   if (theme === 'corporate' || theme === 'corporate-light') {
     return 'corporate';
+  }
+  if (theme === 'ahensi' || theme === 'ahensi-light') {
+    return 'ahensi';
   }
   return 'default';
 };
@@ -124,7 +150,7 @@ const ThemeSettingsPage = () => {
   const handleFamilyChange = (familyId: string) => {
     const selectedFamily = themeFamilies.find(f => f.id === familyId);
     if (selectedFamily) {
-      const isCurrentlyDark = ['dark', 'claude', 'nature', 'corporate'].includes(currentTheme) || 
+      const isCurrentlyDark = ['dark', 'claude', 'nature', 'corporate', 'ahensi'].includes(currentTheme) || 
                              (currentTheme === 'system' && window.matchMedia("(prefers-color-scheme: dark)").matches);
       
       const newTheme = isCurrentlyDark ? selectedFamily.darkThemeId : selectedFamily.lightThemeId;
