@@ -84,6 +84,22 @@ const formatProjectDateRange = (startDateStr: string | null | undefined, dueDate
   return `${formatInJakarta(startDate, 'd')} - ${formatInJakarta(dueDate, 'd MMM yyyy')}`;
 };
 
+const formatVenue = (venue: string | null): string => {
+  if (!venue) return "-";
+  try {
+    const venueObj = JSON.parse(venue);
+    const name = venueObj.name || '';
+    const address = venueObj.address || '';
+    const parts = [name, address].filter(Boolean);
+    if (parts.length > 0) {
+      return parts.join(' - ');
+    }
+    return venue;
+  } catch (e) {
+    return venue;
+  }
+};
+
 interface ProjectRowProps {
   project: Project;
   onDeleteProject: (projectId: string) => void;
@@ -92,6 +108,7 @@ interface ProjectRowProps {
 
 const ProjectRow = ({ project, onDeleteProject, rowRefs }: ProjectRowProps) => {
   const paymentBadgeColor = getPaymentStatusStyles(project.payment_status).tw;
+  const displayVenue = formatVenue(project.venue);
 
   return (
     <TableRow 
@@ -127,11 +144,11 @@ const ProjectRow = ({ project, onDeleteProject, rowRefs }: ProjectRowProps) => {
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger>
-              <p className="truncate max-w-[15ch]">{project.venue || '-'}</p>
+              <span className="truncate max-w-[15ch]">{displayVenue}</span>
             </TooltipTrigger>
-            {project.venue && project.venue.length > 15 && (
+            {displayVenue.length > 15 && (
               <TooltipContent>
-                <p>{project.venue}</p>
+                <p>{displayVenue}</p>
               </TooltipContent>
             )}
           </Tooltip>

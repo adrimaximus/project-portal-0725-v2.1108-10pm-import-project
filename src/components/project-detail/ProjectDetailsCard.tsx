@@ -164,12 +164,15 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetail
     let venueName = '';
     let venueAddress = '';
     let fullQuery = project.venue;
+    let displayVenue = project.venue;
 
     try {
       const parsed = JSON.parse(project.venue);
-      if (parsed.name && parsed.address) {
-        venueName = parsed.name;
-        venueAddress = parsed.address;
+      venueName = parsed.name || '';
+      venueAddress = parsed.address || '';
+      const parts = [venueName, venueAddress].filter(Boolean);
+      if (parts.length > 0) {
+        displayVenue = parts.join(' - ');
         fullQuery = `${venueName}, ${venueAddress}`;
       }
     } catch (e) {
@@ -191,7 +194,7 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetail
             <p className="text-muted-foreground">{venueAddress}</p>
           </div>
         ) : (
-          <p className="text-muted-foreground group-hover:text-primary">{project.venue}</p>
+          <p className="text-muted-foreground group-hover:text-primary">{displayVenue}</p>
         )}
       </a>
     );
