@@ -78,23 +78,10 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task }: Ta
   });
 
   const selectedProjectId = useWatch({ control: form.control, name: 'project_id' });
-  const completedValue = useWatch({ control: form.control, name: 'completed' });
   const statusValue = useWatch({ control: form.control, name: 'status' });
 
   useEffect(() => {
-    if (completedValue) {
-      if (form.getValues('status') !== 'Completed') {
-        form.setValue('status', 'Completed');
-      }
-    } else {
-      if (form.getValues('status') === 'Completed') {
-        form.setValue('status', 'To do');
-      }
-    }
-  }, [completedValue, form]);
-
-  useEffect(() => {
-    const isCompleted = statusValue === 'Completed';
+    const isCompleted = statusValue === 'Done';
     if (form.getValues('completed') !== isCompleted) {
       form.setValue('completed', isCompleted);
     }
@@ -133,7 +120,7 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task }: Ta
       if (task) {
         form.reset({
           title: task.title,
-          completed: task.status === 'Completed' || task.completed,
+          completed: task.status === 'Done' || task.completed,
           project_id: task.project_id,
           description: task.description,
           due_date: task.due_date ? new Date(task.due_date) : null,
@@ -273,36 +260,19 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task }: Ta
           </FormItem>
         )}
       />
-      <div className="flex items-center gap-4">
-        <FormField
-          control={form.control}
-          name="completed"
-          render={({ field }) => (
-            <FormItem className="flex items-center pt-6">
-              <FormControl>
-                <Checkbox
-                  checked={field.value}
-                  onCheckedChange={field.onChange}
-                  className="h-6 w-6"
-                />
-              </FormControl>
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="title"
-          render={({ field }) => (
-            <FormItem className="flex-grow">
-              <FormLabel>Title</FormLabel>
-              <FormControl>
-                <Input placeholder="e.g., Design the main page" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-      </div>
+      <FormField
+        control={form.control}
+        name="title"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Title</FormLabel>
+            <FormControl>
+              <Input placeholder="e.g., Design the main page" {...field} />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
       <FormField
         control={form.control}
         name="description"
