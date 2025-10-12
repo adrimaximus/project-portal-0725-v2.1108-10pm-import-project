@@ -97,7 +97,7 @@ const formatVenue = (venue: string | null): { name: string; full: string } => {
         return { name: venue, full: venue };
     }
 
-    return { name: name || address || '-', full: full || '-' };
+    return { name: name || '-', full: full || '-' };
   } catch (e) {
     return { name: venue, full: venue };
   }
