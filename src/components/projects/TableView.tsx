@@ -86,20 +86,31 @@ const formatProjectDateRange = (startDateStr: string | null | undefined, dueDate
 
 const formatVenue = (venue: string | null): { name: string; full: string } => {
   if (!venue) return { name: "-", full: "-" };
+
+  let fullVenueString = venue;
+
+  // Try to parse as JSON to get a clean full string representation
   try {
     const venueObj = JSON.parse(venue);
     const name = venueObj.name || '';
     const address = venueObj.address || '';
-    const parts = [name, address].filter(Boolean);
-    const full = parts.join(' - ');
-    const displayName = name || address || '-';
-    return { name: displayName, full: full || '-' };
+    fullVenueString = [name, address].filter(Boolean).join(' - ');
   } catch (e) {
-    const parts = venue.split(' - ');
-    const name = parts[0].trim();
-    const full = venue;
-    return { name: name || '-', full: full };
+    // It's already a string, do nothing
   }
+
+  if (!fullVenueString) {
+    return { name: "-", full: "-" };
+  }
+
+  const separatorIndex = fullVenueString.indexOf(' - ');
+  
+  let displayName = fullVenueString;
+  if (separatorIndex > 0) {
+    displayName = fullVenueString.substring(0, separatorIndex).trim();
+  }
+
+  return { name: displayName, full: fullVenueString };
 };
 
 interface ProjectRowProps {
