@@ -62,9 +62,9 @@ export function ProjectCombobox({ projects, value, onChange, isLoading }: Projec
       <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
         <Command>
           <CommandInput placeholder="Search project..." />
-          <CommandList className="max-h-72 overflow-y-auto">
+          <CommandList>
             <CommandEmpty>No project found.</CommandEmpty>
-            <CommandGroup>
+            <CommandGroup className="max-h-72 overflow-y-auto">
               {generalTasksProject && (
                 <CommandItem
                   key={generalTasksProject.id}
