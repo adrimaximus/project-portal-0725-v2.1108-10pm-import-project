@@ -85,13 +85,13 @@ const themeFamilies = [
         <div className="w-8 h-8 rounded-md bg-white border border-zinc-200 flex items-center justify-center p-1">
           <div className="w-full space-y-1">
             <div className="h-1 w-3/4 rounded-full bg-zinc-400/50"></div>
-            <div className="h-1 w-1/2 rounded-full bg-zinc-900/50"></div>
+            <div className="h-1 w-1/2 rounded-full" style={{ backgroundColor: '#2563eb80' }}></div>
           </div>
         </div>
         <div className="w-8 h-8 rounded-md bg-zinc-950 border border-zinc-800 flex items-center justify-center p-1">
           <div className="w-full space-y-1">
             <div className="h-1 w-3/4 rounded-full bg-zinc-600"></div>
-            <div className="h-1 w-1/2 rounded-full bg-zinc-50"></div>
+            <div className="h-1 w-1/2 rounded-full" style={{ backgroundColor: '#60a5fa' }}></div>
           </div>
         </div>
       </div>
