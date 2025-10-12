@@ -123,10 +123,33 @@ const themeFamilies = [
         </div>
       </div>
     )
+  },
+  { 
+    id: 'brand-activator', 
+    name: 'Brand Activator', 
+    description: 'A professional theme inspired by the 7inked brand colors.',
+    lightThemeId: 'brand-activator-light',
+    darkThemeId: 'brand-activator',
+    preview: (
+      <div className="flex items-center gap-2">
+        <div className="w-8 h-8 rounded-md bg-white border border-zinc-200 flex items-center justify-center p-1">
+          <div className="w-full space-y-1">
+            <div className="h-1 w-3/4 rounded-full bg-zinc-400/50"></div>
+            <div className="h-1 w-1/2 rounded-full" style={{ backgroundColor: '#008A9E80' }}></div>
+          </div>
+        </div>
+        <div className="w-8 h-8 rounded-md bg-[#17191c] border border-zinc-800 flex items-center justify-center p-1">
+          <div className="w-full space-y-1">
+            <div className="h-1 w-3/4 rounded-full bg-zinc-600"></div>
+            <div className="h-1 w-1/2 rounded-full" style={{ backgroundColor: '#00A9C7' }}></div>
+          </div>
+        </div>
+      </div>
+    )
   }
 ];
 
-const getThemeFamily = (theme: Theme): 'default' | 'claude' | 'nature' | 'corporate' | 'ahensi' => {
+const getThemeFamily = (theme: Theme): 'default' | 'claude' | 'nature' | 'corporate' | 'ahensi' | 'brand-activator' => {
   if (theme === 'claude' || theme === 'claude-light') {
     return 'claude';
   }
@@ -139,6 +162,9 @@ const getThemeFamily = (theme: Theme): 'default' | 'claude' | 'nature' | 'corpor
   if (theme === 'ahensi' || theme === 'ahensi-light') {
     return 'ahensi';
   }
+  if (theme === 'brand-activator' || theme === 'brand-activator-light') {
+    return 'brand-activator';
+  }
   return 'default';
 };
 
@@ -150,7 +176,7 @@ const ThemeSettingsPage = () => {
   const handleFamilyChange = (familyId: string) => {
     const selectedFamily = themeFamilies.find(f => f.id === familyId);
     if (selectedFamily) {
-      const isCurrentlyDark = ['dark', 'claude', 'nature', 'corporate', 'ahensi'].includes(currentTheme) || 
+      const isCurrentlyDark = ['dark', 'claude', 'nature', 'corporate', 'ahensi', 'brand-activator'].includes(currentTheme) || 
                              (currentTheme === 'system' && window.matchMedia("(prefers-color-scheme: dark)").matches);
       
       const newTheme = isCurrentlyDark ? selectedFamily.darkThemeId : selectedFamily.lightThemeId;

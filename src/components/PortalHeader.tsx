@@ -56,6 +56,8 @@ const PortalHeader = ({ summary }: PortalHeaderProps) => {
       setTheme(theme === 'corporate' ? 'corporate-light' : 'corporate');
     } else if (theme === 'ahensi' || theme === 'ahensi-light') {
       setTheme(theme === 'ahensi' ? 'ahensi-light' : 'ahensi');
+    } else if (theme === 'brand-activator' || theme === 'brand-activator-light') {
+      setTheme(theme === 'brand-activator' ? 'brand-activator-light' : 'brand-activator');
     } else {
       if (theme === 'dark') {
         setTheme('light');
@@ -143,8 +145,8 @@ const PortalHeader = ({ summary }: PortalHeaderProps) => {
           </DropdownMenu>
         )}
         <Button variant="outline" size="icon" onClick={toggleTheme} className="h-9 w-9 rounded-full">
-          {(theme === 'light' || theme === 'claude-light' || theme === 'nature-light' || theme === 'corporate-light' || theme === 'ahensi-light') && <Sun className="h-[1.2rem] w-[1.2rem]" />}
-          {(theme === 'dark' || theme === 'claude' || theme === 'nature' || theme === 'corporate' || theme === 'ahensi') && <Moon className="h-[1.2rem] w-[1.2rem]" />}
+          {(theme === 'light' || theme === 'claude-light' || theme === 'nature-light' || theme === 'corporate-light' || theme === 'ahensi-light' || theme === 'brand-activator-light') && <Sun className="h-[1.2rem] w-[1.2rem]" />}
+          {(theme === 'dark' || theme === 'claude' || theme === 'nature' || theme === 'corporate' || theme === 'ahensi' || theme === 'brand-activator') && <Moon className="h-[1.2rem] w-[1.2rem]" />}
           {theme === 'system' && <Laptop className="h-[1.2rem] w-[1.2rem]" />}
           <span className="sr-only">Toggle theme</span>
         </Button>
