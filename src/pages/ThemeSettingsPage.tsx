@@ -125,7 +125,7 @@ const ThemeSettingsPage = () => {
           <CardHeader>
             <CardTitle>Appearance</CardTitle>
             <CardDescription>Select a theme for your workspace. This will only affect your view.</CardDescription>
-          </Header>
+          </CardHeader>
           <CardContent>
             <RadioGroup value={currentFamily} onValueChange={handleFamilyChange} className="space-y-2">
               {themeFamilies.map((family) => (
