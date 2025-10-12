@@ -22,9 +22,16 @@ export const useTaskMutations = () => {
 
   const upsertTaskMutation = useMutation({
     mutationFn: async (taskData: UpsertTaskPayload) => {
-      const { assignee_ids, tag_ids, id, new_files, deleted_files, ...taskFields } = taskData;
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
+
+      const { id, assignee_ids, tag_ids, new_files, deleted_files, ...taskFields } = taskData;
+
+      // Jika ini adalah tugas baru dan tidak ada penerima tugas yang diberikan, tugaskan ke pembuatnya.
+      let finalAssigneeIds = assignee_ids;
+      if (!id && (!finalAssigneeIds || finalAssigneeIds.length === 0)) {
+        finalAssigneeIds = [user.id];
+      }
       
       // 1. Upsert tugas itu sendiri
       const { data: taskResult, error: taskError } = await supabase
@@ -38,8 +45,8 @@ export const useTaskMutations = () => {
 
       const taskId = taskResult.id;
 
-      // 2. Tangani penerima tugas jika disediakan
-      if (assignee_ids !== undefined) {
+      // 2. Tangani penerima tugas jika disediakan atau ditugaskan secara otomatis
+      if (finalAssigneeIds !== undefined) {
         // Hapus penerima tugas yang ada untuk tugas ini
         const { error: deleteError } = await supabase
           .from('task_assignees')
@@ -48,8 +55,8 @@ export const useTaskMutations = () => {
         if (deleteError) throw deleteError;
 
         // Masukkan penerima tugas baru
-        if (assignee_ids.length > 0) {
-          const newAssignees = assignee_ids.map(userId => ({
+        if (finalAssigneeIds.length > 0) {
+          const newAssignees = finalAssigneeIds.map(userId => ({
             task_id: taskId,
             user_id: userId,
           }));
