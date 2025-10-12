@@ -14,6 +14,7 @@ const themeFamilies = [
     name: 'Default', 
     description: 'The standard light and dark themes for your workspace.',
     lightThemeId: 'light',
+    darkThemeId: 'dark',
     preview: (
       <div className="flex items-center gap-2">
         <div className="w-8 h-8 rounded-md border bg-background flex items-center justify-center p-1">
@@ -36,6 +37,7 @@ const themeFamilies = [
     name: 'Claude', 
     description: 'A sleek, modern theme inspired by AI interfaces.',
     lightThemeId: 'claude-light',
+    darkThemeId: 'claude',
     preview: (
       <div className="flex items-center gap-2">
         <div className="w-8 h-8 rounded-md bg-[#F6F5F1] border border-[#EAE8E2] flex items-center justify-center p-1">
@@ -58,6 +60,7 @@ const themeFamilies = [
     name: 'Nature', 
     description: 'Earthy tones and organic green accents for a calming feel.',
     lightThemeId: 'nature-light',
+    darkThemeId: 'nature',
     preview: (
       <div className="flex items-center gap-2">
         <div className="w-8 h-8 rounded-md bg-[#FBF9F6] border border-[#E0DACE] flex items-center justify-center p-1">
@@ -80,6 +83,7 @@ const themeFamilies = [
     name: 'Corporate', 
     description: 'A professional theme with a clean, corporate look.',
     lightThemeId: 'corporate-light',
+    darkThemeId: 'corporate',
     preview: (
       <div className="flex items-center gap-2">
         <div className="w-8 h-8 rounded-md bg-white border border-zinc-200 flex items-center justify-center p-1">
@@ -120,7 +124,11 @@ const ThemeSettingsPage = () => {
   const handleFamilyChange = (familyId: string) => {
     const selectedFamily = themeFamilies.find(f => f.id === familyId);
     if (selectedFamily) {
-      setTheme(selectedFamily.lightThemeId as Theme);
+      const isCurrentlyDark = ['dark', 'claude', 'nature', 'corporate'].includes(currentTheme) || 
+                             (currentTheme === 'system' && window.matchMedia("(prefers-color-scheme: dark)").matches);
+      
+      const newTheme = isCurrentlyDark ? selectedFamily.darkThemeId : selectedFamily.lightThemeId;
+      setTheme(newTheme as Theme);
     }
   };
 
