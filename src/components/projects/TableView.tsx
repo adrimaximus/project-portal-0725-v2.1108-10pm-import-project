@@ -92,14 +92,13 @@ const formatVenue = (venue: string | null): { name: string; full: string } => {
     const address = venueObj.address || '';
     const parts = [name, address].filter(Boolean);
     const full = parts.join(' - ');
-
-    if (!full && venue) {
-        return { name: venue, full: venue };
-    }
-
-    return { name: name || '-', full: full || '-' };
+    const displayName = name || address || '-';
+    return { name: displayName, full: full || '-' };
   } catch (e) {
-    return { name: venue, full: venue };
+    const parts = venue.split(' - ');
+    const name = parts[0].trim();
+    const full = venue;
+    return { name: name || '-', full: full };
   }
 };
 
