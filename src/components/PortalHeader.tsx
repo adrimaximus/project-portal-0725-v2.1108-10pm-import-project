@@ -52,6 +52,8 @@ const PortalHeader = ({ summary }: PortalHeaderProps) => {
       setTheme(theme === 'claude' ? 'claude-light' : 'claude');
     } else if (theme === 'nature' || theme === 'nature-light') {
       setTheme(theme === 'nature' ? 'nature-light' : 'nature');
+    } else if (theme === 'corporate' || theme === 'corporate-light') {
+      setTheme(theme === 'corporate' ? 'corporate-light' : 'corporate');
     } else {
       if (theme === 'dark') {
         setTheme('light');
@@ -139,8 +141,8 @@ const PortalHeader = ({ summary }: PortalHeaderProps) => {
           </DropdownMenu>
         )}
         <Button variant="outline" size="icon" onClick={toggleTheme} className="h-9 w-9 rounded-full">
-          {(theme === 'light' || theme === 'claude-light' || theme === 'nature-light') && <Sun className="h-[1.2rem] w-[1.2rem]" />}
-          {(theme === 'dark' || theme === 'claude' || theme === 'nature') && <Moon className="h-[1.2rem] w-[1.2rem]" />}
+          {(theme === 'light' || theme === 'claude-light' || theme === 'nature-light' || theme === 'corporate-light') && <Sun className="h-[1.2rem] w-[1.2rem]" />}
+          {(theme === 'dark' || theme === 'claude' || theme === 'nature' || theme === 'corporate') && <Moon className="h-[1.2rem] w-[1.2rem]" />}
           {theme === 'system' && <Laptop className="h-[1.2rem] w-[1.2rem]" />}
           <span className="sr-only">Toggle theme</span>
         </Button>

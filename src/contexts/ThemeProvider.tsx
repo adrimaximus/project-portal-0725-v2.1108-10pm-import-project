@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Theme } from "@/types";
 
-const themeClasses = ["light", "dark", "theme-claude", "theme-claude-light", "theme-nature", "theme-nature-light"];
+const themeClasses = ["light", "dark", "theme-claude", "theme-claude-light", "theme-nature", "theme-nature-light", "theme-corporate", "theme-corporate-light"];
 
 interface ThemeProviderState {
   theme: Theme;
@@ -58,6 +58,12 @@ export function ThemeProvider({
         break;
       case 'nature-light':
         root.classList.add('light', 'theme-nature-light');
+        break;
+      case 'corporate':
+        root.classList.add('dark', 'theme-corporate');
+        break;
+      case 'corporate-light':
+        root.classList.add('light', 'theme-corporate-light');
         break;
       case 'dark':
         root.classList.add('dark');

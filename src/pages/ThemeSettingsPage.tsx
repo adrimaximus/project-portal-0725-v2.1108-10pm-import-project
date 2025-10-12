@@ -74,15 +74,40 @@ const themeFamilies = [
         </div>
       </div>
     )
+  },
+  { 
+    id: 'corporate', 
+    name: 'Corporate', 
+    description: 'A professional theme with a clean, corporate look.',
+    lightThemeId: 'corporate-light',
+    preview: (
+      <div className="flex items-center gap-2">
+        <div className="w-8 h-8 rounded-md bg-white border border-zinc-200 flex items-center justify-center p-1">
+          <div className="w-full space-y-1">
+            <div className="h-1 w-3/4 rounded-full bg-zinc-400/50"></div>
+            <div className="h-1 w-1/2 rounded-full bg-zinc-900/50"></div>
+          </div>
+        </div>
+        <div className="w-8 h-8 rounded-md bg-zinc-950 border border-zinc-800 flex items-center justify-center p-1">
+          <div className="w-full space-y-1">
+            <div className="h-1 w-3/4 rounded-full bg-zinc-600"></div>
+            <div className="h-1 w-1/2 rounded-full bg-zinc-50"></div>
+          </div>
+        </div>
+      </div>
+    )
   }
 ];
 
-const getThemeFamily = (theme: Theme): 'default' | 'claude' | 'nature' => {
+const getThemeFamily = (theme: Theme): 'default' | 'claude' | 'nature' | 'corporate' => {
   if (theme === 'claude' || theme === 'claude-light') {
     return 'claude';
   }
   if (theme === 'nature' || theme === 'nature-light') {
     return 'nature';
+  }
+  if (theme === 'corporate' || theme === 'corporate-light') {
+    return 'corporate';
   }
   return 'default';
 };
