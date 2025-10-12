@@ -334,7 +334,9 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetail
                       <SelectContent>
                         {PAYMENT_STATUS_OPTIONS.map(option => (
                           <SelectItem key={option.value} value={option.value}>
-                            {option.label}
+                            <Badge variant="outline" className={cn("border-transparent font-normal", getPaymentStatusStyles(option.value).tw)}>
+                              {option.label}
+                            </Badge>
                           </SelectItem>
                         ))}
                       </SelectContent>
