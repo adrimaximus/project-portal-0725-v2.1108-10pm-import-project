@@ -6,6 +6,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 import { format, getMonth } from 'date-fns';
 import { getProjectStatusStyles, getPaymentStatusStyles } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/contexts/ThemeProvider';
 
 type ChartType = 'quantity' | 'value' | 'project_status' | 'payment_status' | 'company_quantity' | 'company_value';
 
@@ -102,6 +103,17 @@ const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
   const { hasPermission } = useAuth();
   const canViewValue = hasPermission('projects:view_value');
   const [chartType, setChartType] = useState<ChartType>('quantity');
+  const { theme } = useTheme();
+  const [isDarkMode, setIsDarkMode] = useState(false);
+
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+        setIsDarkMode(document.documentElement.classList.contains('dark'));
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    setIsDarkMode(document.documentElement.classList.contains('dark')); // Initial check
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     if (!canViewValue && (chartType === 'value' || chartType === 'company_value')) {
@@ -205,16 +217,19 @@ const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
             <YAxis tickLine={false} axisLine={false} fontSize={10} />
             <Tooltip content={<CustomTooltip chartType={chartType} />} cursor={{ fill: 'hsl(var(--muted))' }} />
             <Legend content={<CustomLegend />} />
-            {PROJECT_STATUS_OPTIONS.map((status) => (
-              <Bar 
-                key={status.value} 
-                dataKey={status.value} 
-                stackId="a" 
-                fill={getProjectStatusStyles(status.value).hex} 
-                name={status.label} 
-                shape={<RoundedBar options={PROJECT_STATUS_OPTIONS} />} 
-              />
-            ))}
+            {PROJECT_STATUS_OPTIONS.map((status) => {
+              const styles = getProjectStatusStyles(status.value);
+              return (
+                <Bar 
+                  key={status.value} 
+                  dataKey={status.value} 
+                  stackId="a" 
+                  fill={isDarkMode ? styles.bgHexDark : styles.bgHexLight} 
+                  name={status.label} 
+                  shape={<RoundedBar options={PROJECT_STATUS_OPTIONS} />} 
+                />
+              )
+            })}
           </BarChart>
         );
       case 'payment_status':
@@ -225,16 +240,19 @@ const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
             <YAxis tickLine={false} axisLine={false} fontSize={10} />
             <Tooltip content={<CustomTooltip chartType={chartType} />} cursor={{ fill: 'hsl(var(--muted))' }} />
             <Legend content={<CustomLegend />} />
-            {PAYMENT_STATUS_OPTIONS.map((status) => (
-              <Bar 
-                key={status.value} 
-                dataKey={status.value} 
-                stackId="a" 
-                fill={getPaymentStatusStyles(status.value).hex} 
-                name={status.label} 
-                shape={<RoundedBar options={PAYMENT_STATUS_OPTIONS} />} 
-              />
-            ))}
+            {PAYMENT_STATUS_OPTIONS.map((status) => {
+              const styles = getPaymentStatusStyles(status.value);
+              return (
+                <Bar 
+                  key={status.value} 
+                  dataKey={status.value} 
+                  stackId="a" 
+                  fill={isDarkMode ? styles.bgHexDark : styles.bgHexLight} 
+                  name={status.label} 
+                  shape={<RoundedBar options={PAYMENT_STATUS_OPTIONS} />} 
+                />
+              )
+            })}
           </BarChart>
         );
     }
