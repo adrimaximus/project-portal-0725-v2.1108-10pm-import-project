@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Project, PaymentStatus, InvoiceAttachment } from '@/types';
+import { Project, PaymentStatus, InvoiceAttachment, PAYMENT_STATUS_OPTIONS } from '@/types';
 import { DatePicker } from '../ui/date-picker';
 import { NumericInput } from '../ui/NumericInput';
 import { Input } from '../ui/input';
@@ -25,7 +25,6 @@ interface EditInvoiceDialogProps {
   onSave: (updatedProjectData: Partial<Project> & { id: string }) => void;
 }
 
-const paymentStatuses: PaymentStatus[] = ['Paid', 'Unpaid', 'Pending', 'Overdue', 'Cancelled', 'In Process', 'Proposed'];
 const channelOptions = ['Email', 'Gojek', 'Grab', 'JNE', 'Lalamove', 'Portal', 'Rex', 'TIKI'].sort();
 
 export const EditInvoiceDialog = ({ isOpen, onClose, invoice, project, onSave }: EditInvoiceDialogProps) => {
@@ -200,9 +199,9 @@ export const EditInvoiceDialog = ({ isOpen, onClose, invoice, project, onSave }:
                 <SelectValue placeholder="Select status" />
               </SelectTrigger>
               <SelectContent>
-                {paymentStatuses.map((s) => (
-                  <SelectItem key={s} value={s}>
-                    {s}
+                {PAYMENT_STATUS_OPTIONS.map((s) => (
+                  <SelectItem key={s.value} value={s.value}>
+                    {s.label}
                   </SelectItem>
                 ))}
               </SelectContent>
