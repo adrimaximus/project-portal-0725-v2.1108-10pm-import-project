@@ -18,6 +18,15 @@ interface BillingTableProps {
   handleSort: (column: keyof Invoice) => void;
 }
 
+const getInitials = (name?: string | null) => {
+  if (!name) return '';
+  const names = name.split(' ').filter(Boolean);
+  if (names.length > 1) {
+    return `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase();
+  }
+  return names[0]?.charAt(0).toUpperCase() || '';
+};
+
 const BillingTable = ({ invoices, onEdit, sortColumn, sortDirection, handleSort }: BillingTableProps) => {
   const renderSortIcon = (column: keyof Invoice) => {
     if (sortColumn !== column) return null;
@@ -96,8 +105,8 @@ const BillingTable = ({ invoices, onEdit, sortColumn, sortDirection, handleSort 
               <TableCell>
                 <div className="flex items-center gap-2">
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src={invoice.clientLogo || undefined} alt={invoice.clientName || ''} />
-                    <AvatarFallback>{invoice.clientName?.charAt(0)}</AvatarFallback>
+                    <AvatarImage src={invoice.clientAvatarUrl || invoice.clientLogo || undefined} alt={invoice.clientName || ''} />
+                    <AvatarFallback>{getInitials(invoice.clientName)}</AvatarFallback>
                   </Avatar>
                   <div>
                     <div className="font-medium">{invoice.clientName || 'N/A'}</div>
@@ -150,7 +159,7 @@ const BillingTable = ({ invoices, onEdit, sortColumn, sortDirection, handleSort 
               </TableCell>
               <TableCell>{invoice.poNumber || 'N/A'}</TableCell>
               <TableCell>{'Rp ' + invoice.amount.toLocaleString('id-ID')}</TableCell>
-              <TableCell>{format(invoice.dueDate, 'MMM dd, yyyy')}</TableCell>
+              <TableCell>{format(new Date(invoice.dueDate), 'MMM dd, yyyy')}</TableCell>
               <TableCell>
                 {invoice.invoiceAttachments && invoice.invoiceAttachments.length > 0 ? (
                   <DropdownMenu>
