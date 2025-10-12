@@ -66,47 +66,47 @@
   }
 
   .theme-claude-light {
-    --background: 40 14% 96%;
-    --foreground: 60 4% 20%;
-    --card: 40 14% 96%;
-    --card-foreground: 60 4% 20%;
-    --popover: 40 14% 96%;
-    --popover-foreground: 60 4% 20%;
-    --primary: 60 4% 20%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 40 6% 92%;
-    --secondary-foreground: 60 4% 20%;
-    --muted: 40 6% 92%;
-    --muted-foreground: 60 2% 45%;
-    --accent: 40 6% 92%;
-    --accent-foreground: 60 4% 20%;
+    --background: 39 17% 95%;
+    --foreground: 21 11% 18%;
+    --card: 39 17% 95%;
+    --card-foreground: 21 11% 18%;
+    --popover: 39 17% 95%;
+    --popover-foreground: 21 11% 18%;
+    --primary: 15 66% 65%;
+    --primary-foreground: 39 17% 95%;
+    --secondary: 28 21% 91%;
+    --secondary-foreground: 15 66% 65%;
+    --muted: 28 21% 91%;
+    --muted-foreground: 21 9% 40%;
+    --accent: 28 21% 91%;
+    --accent-foreground: 15 66% 65%;
     --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 40 6% 90%;
-    --input: 40 6% 90%;
-    --ring: 60 4% 20%;
+    --destructive-foreground: 39 17% 95%;
+    --border: 33 18% 88%;
+    --input: 33 18% 88%;
+    --ring: 15 66% 65%;
   }
 
   .theme-claude {
-    --background: 0 0% 10%;
-    --foreground: 0 0% 98%;
-    --card: 0 0% 10%;
-    --card-foreground: 0 0% 98%;
-    --popover: 0 0% 10%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 0 0% 10%;
-    --secondary: 0 0% 15%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 15%;
-    --muted-foreground: 0 0% 60%;
-    --accent: 0 0% 15%;
-    --accent-foreground: 0 0% 98%;
+    --background: 24 9% 10%;
+    --foreground: 30 18% 90%;
+    --card: 24 9% 10%;
+    --card-foreground: 30 18% 90%;
+    --popover: 24 9% 10%;
+    --popover-foreground: 30 18% 90%;
+    --primary: 15 70% 68%;
+    --primary-foreground: 24 9% 10%;
+    --secondary: 20 6% 15%;
+    --secondary-foreground: 30 18% 90%;
+    --muted: 20 6% 15%;
+    --muted-foreground: 28 6% 65%;
+    --accent: 20 6% 15%;
+    --accent-foreground: 15 70% 68%;
     --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 15%;
-    --input: 0 0% 15%;
-    --ring: 0 0% 83.1%;
+    --destructive-foreground: 30 18% 90%;
+    --border: 20 6% 15%;
+    --input: 20 6% 15%;
+    --ring: 15 70% 68%;
   }
 
   .theme-nature-light {
