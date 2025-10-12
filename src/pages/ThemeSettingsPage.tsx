@@ -52,12 +52,37 @@ const themeFamilies = [
         </div>
       </div>
     )
+  },
+  { 
+    id: 'nature', 
+    name: 'Nature', 
+    description: 'Earthy tones and organic green accents for a calming feel.',
+    lightThemeId: 'nature-light',
+    preview: (
+      <div className="flex items-center gap-2">
+        <div className="w-8 h-8 rounded-md bg-[#FBF9F6] border border-[#E0DACE] flex items-center justify-center p-1">
+          <div className="w-full space-y-1">
+            <div className="h-1 w-3/4 rounded-full bg-[#40332B]/30"></div>
+            <div className="h-1 w-1/2 rounded-full bg-[#4D7C57]/50"></div>
+          </div>
+        </div>
+        <div className="w-8 h-8 rounded-md bg-[#1C1F1D] border border-gray-700 flex items-center justify-center p-1">
+          <div className="w-full space-y-1">
+            <div className="h-1 w-3/4 rounded-full bg-gray-600"></div>
+            <div className="h-1 w-1/2 rounded-full bg-[#7BA083]"></div>
+          </div>
+        </div>
+      </div>
+    )
   }
 ];
 
-const getThemeFamily = (theme: Theme): 'default' | 'claude' => {
+const getThemeFamily = (theme: Theme): 'default' | 'claude' | 'nature' => {
   if (theme === 'claude' || theme === 'claude-light') {
     return 'claude';
+  }
+  if (theme === 'nature' || theme === 'nature-light') {
+    return 'nature';
   }
   return 'default';
 };

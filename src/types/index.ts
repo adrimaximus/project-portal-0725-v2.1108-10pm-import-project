@@ -1,0 +1,1 @@
+export type Theme = "dark" | "light" | "system" | "claude" | "claude-light" | "nature" | "nature-light";
