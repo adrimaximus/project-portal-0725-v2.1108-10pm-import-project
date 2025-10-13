@@ -9,7 +9,32 @@ interface ProjectActivityFeedProps {
 }
 
 const ProjectActivityFeed = ({ activities }: ProjectActivityFeedProps) => {
-  if (!activities || activities.length === 0) {
+  const attachmentsRegex = /\*\*Attachments:\*\*\n((?:\* \[.+\]\(.+\)\n?)+)/;
+
+  const filteredActivities = activities
+    .filter(activity => activity.type !== 'FILE_UPLOADED')
+    .map(activity => {
+      if (activity.type === 'COMMENT_ADDED' && activity.details.description) {
+        const cleanedDescription = activity.details.description.replace(attachmentsRegex, '').trim();
+        // Jika komentar hanya berisi lampiran, deskripsinya bisa menjadi 'commented: ""'
+        // Kita juga bisa memfilternya jika tidak memberikan nilai apa pun.
+        if (cleanedDescription.replace(/commented: /i, '').replace(/\\"/g, '').trim() === '') {
+          return null;
+        }
+        return {
+          ...activity,
+          details: {
+            ...activity.details,
+            description: cleanedDescription,
+          }
+        };
+      }
+      return activity;
+    })
+    .filter(Boolean) as Activity[];
+
+
+  if (!filteredActivities || filteredActivities.length === 0) {
     return (
       <div className="text-center text-muted-foreground py-8">
         <History className="mx-auto h-12 w-12" />
@@ -36,14 +61,14 @@ const ProjectActivityFeed = ({ activities }: ProjectActivityFeedProps) => {
   return (
     <div className="flow-root">
       <ul className="-mb-8">
-        {activities.map((activity, activityIdx) => {
+        {filteredActivities.map((activity, activityIdx) => {
           const userName = activity.user?.name || "System";
           const descriptionHtml = { __html: formatDescription(activity.details.description) };
 
           return (
             <li key={activity.id}>
               <div className="relative pb-8">
-                {activityIdx !== activities.length - 1 ? (
+                {activityIdx !== filteredActivities.length - 1 ? (
                   <span className="absolute left-4 top-4 -ml-px h-full w-0.5 bg-border" aria-hidden="true" />
                 ) : null}
                 <div className="relative flex items-start space-x-4">
