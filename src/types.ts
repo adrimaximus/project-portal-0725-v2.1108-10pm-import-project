@@ -122,6 +122,9 @@ export interface Task {
   attachment_url?: string;
   attachment_name?: string;
   attachments?: TaskAttachment[];
+  project_venue?: string | null;
+  project_owner?: { id: string; name: string; } | null;
+  project_client?: string | null;
 }
 
 export interface Project {
@@ -393,4 +396,19 @@ export interface InvoiceAttachment {
   file_size: number | null;
   storage_path: string;
   created_at: string;
+}
+
+export interface Activity {
+  id: string;
+  type: string;
+  details: {
+    description: string;
+  };
+  timestamp: string;
+  user: {
+    id: string;
+    name: string;
+    avatar_url: string;
+    initials: string;
+  };
 }

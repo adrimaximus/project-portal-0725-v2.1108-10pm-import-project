@@ -50,7 +50,7 @@ export function useTasks(options: UseTasksOptions = {}) {
         name: task.project_name,
         slug: task.project_slug,
         status: task.project_status,
-        created_by: null
+        created_by: task.project_owner?.id || null,
       },
       assignees: task.assignees,
       created_by: task.created_by,
@@ -62,6 +62,9 @@ export function useTasks(options: UseTasksOptions = {}) {
       attachment_url: task.attachment_url,
       attachment_name: task.attachment_name,
       attachments: task.attachments,
+      project_venue: task.project_venue,
+      project_owner: task.project_owner,
+      project_client: task.project_client,
     }));
     
     return formattedTasks || [];
