@@ -170,6 +170,9 @@ export interface Project {
   client_company_logo_url?: string | null;
   client_company_name?: string | null;
   client_company_custom_properties?: any;
+  updated_at?: string;
+  kanban_order?: number;
+  payment_kanban_order?: number;
 }
 
 export interface GoalCompletion {

@@ -66,9 +66,9 @@ const KanbanView = ({ projects, groupBy }: { projects: Project[], groupBy: 'stat
 
     for (const groupKey in groups) {
         groups[groupKey].sort((a, b) => {
-            const dateA = a.updated_at ? new Date(a.updated_at).getTime() : 0;
-            const dateB = b.updated_at ? new Date(b.updated_at).getTime() : 0;
-            return dateB - dateA;
+            const orderA = a.kanban_order ?? 0;
+            const orderB = b.kanban_order ?? 0;
+            return orderA - orderB;
         });
     }
     return groups;
