@@ -106,7 +106,7 @@ const ProjectMainContent = ({ project, isEditing, onFieldChange, mutations, defa
             onDeleteComment={handleDeleteComment}
           />
         </TabsContent>
-        <TabsContent value="activity" className="mt-4">
+        <TabsContent value="activity" className="mt-4 h-[350px] overflow-y-auto pr-4">
           <ProjectActivityFeed activities={project.activities || []} />
         </TabsContent>
       </Tabs>
