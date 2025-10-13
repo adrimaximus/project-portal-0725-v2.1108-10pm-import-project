@@ -65,7 +65,7 @@ const CompanyPropertyFormDialog = ({ open, onOpenChange, onSave, property, isSav
       if (property) {
         reset({
           label: property.label,
-          type: property.type as 'text' | 'textarea' | 'number' | 'date' | 'email' | 'phone' | 'url' | 'image' | 'select',
+          type: property.type,
           options: property.options?.map(o => ({ value: o })) || [{ value: '' }],
         });
       } else {
@@ -81,7 +81,6 @@ const CompanyPropertyFormDialog = ({ open, onOpenChange, onSave, property, isSav
       label: values.label,
       type: values.type,
       options: values.options?.map(o => o.value).filter(Boolean),
-      is_default: false,
     });
   };
 

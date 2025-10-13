@@ -1,4 +1,4 @@
-export type Theme = "dark" | "light" | "system" | "claude" | "claude-light" | "nature" | "nature-light" | "corporate" | "corporate-light" | "ahensi" | "ahensi-light" | "brand-activator" | "brand-activator-light";
+export type Theme = "dark" | "light" | "system" | "claude" | "claude-light" | "nature" | "nature-light" | "corporate" | "corporate-light";
 
 export const PROJECT_STATUS_OPTIONS = [
   { value: 'Requested', label: 'Requested' },
@@ -55,7 +55,6 @@ export interface User {
   permissions?: string[];
   people_kanban_settings?: any;
   theme?: string;
-  notification_preferences?: Record<string, any>;
 }
 
 export type Collaborator = User;
@@ -171,7 +170,6 @@ export interface Project {
   client_company_logo_url?: string | null;
   client_company_name?: string | null;
   client_company_custom_properties?: any;
-  updated_at?: string;
 }
 
 export interface GoalCompletion {
@@ -289,24 +287,23 @@ export interface Invoice {
   id: string;
   projectId: string;
   projectName: string;
-  clientName?: string | null;
-  clientLogo?: string | null;
-  clientAvatarUrl?: string | null;
-  clientCompanyName?: string | null;
-  projectOwner?: Owner;
-  assignedMembers: Member[];
-  status: PaymentStatus;
-  poNumber?: string | null;
   amount: number;
-  dueDate: string | Date;
-  invoiceAttachments?: InvoiceAttachment[];
+  dueDate: Date;
+  status: PaymentStatus;
   rawProjectId: string;
   projectStartDate: Date | null;
   projectEndDate: Date | null;
+  poNumber: string | null;
   paidDate: Date | null;
   emailSendingDate: Date | null;
   hardcopySendingDate: Date | null;
   channel: string | null;
+  clientName: string | null;
+  clientLogo: string | null;
+  clientCompanyName: string | null;
+  projectOwner: Owner | null;
+  assignedMembers: Member[];
+  invoiceAttachments?: InvoiceAttachment[];
 }
 
 export interface ExtendedProject extends Project {
@@ -403,19 +400,4 @@ export interface InvoiceAttachment {
   file_size: number | null;
   storage_path: string;
   created_at: string;
-}
-
-export interface Notification {
-  id: string;
-  type: string;
-  title: string;
-  description: string;
-  timestamp: string;
-  read: boolean;
-  link?: string;
-  actor: {
-    id: string;
-    name: string;
-    avatar: string | null;
-  };
 }

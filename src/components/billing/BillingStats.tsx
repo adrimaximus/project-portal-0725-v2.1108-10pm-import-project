@@ -54,7 +54,7 @@ const BillingStats = ({ invoices }: { invoices: Invoice[] }) => {
 
     const nextDueDate = invoices
       .filter(inv => ['Due', 'Unpaid', 'Pending', 'In Process'].includes(inv.status))
-      .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())[0]?.dueDate;
+      .sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime())[0]?.dueDate;
 
     const overdueInvoicesCount = invoices.filter(inv => inv.status === 'Overdue').length;
 
@@ -92,7 +92,7 @@ const BillingStats = ({ invoices }: { invoices: Invoice[] }) => {
       />
       <StatCard
         title="Next Payment Due"
-        value={stats.nextDueDate ? format(new Date(stats.nextDueDate), 'MMM dd, yyyy') : 'N/A'}
+        value={stats.nextDueDate ? format(stats.nextDueDate, 'MMM dd, yyyy') : 'N/A'}
         icon={<Clock className="h-4 w-4 text-muted-foreground" />}
         description="Date of next invoice payment"
       />

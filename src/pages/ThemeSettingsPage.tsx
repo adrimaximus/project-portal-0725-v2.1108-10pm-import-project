@@ -176,12 +176,8 @@ const ThemeSettingsPage = () => {
   const handleFamilyChange = (familyId: string) => {
     const selectedFamily = themeFamilies.find(f => f.id === familyId);
     if (selectedFamily) {
-      let isCurrentlyDark: boolean;
-      if (currentTheme === 'system') {
-        isCurrentlyDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-      } else {
-        isCurrentlyDark = currentTheme === 'dark' || (!currentTheme.endsWith('-light') && currentTheme !== 'light');
-      }
+      const isCurrentlyDark = ['dark', 'claude', 'nature', 'corporate', 'ahensi', 'brand-activator'].includes(currentTheme) || 
+                             (currentTheme === 'system' && window.matchMedia("(prefers-color-scheme: dark)").matches);
       
       const newTheme = isCurrentlyDark ? selectedFamily.darkThemeId : selectedFamily.lightThemeId;
       setTheme(newTheme as Theme);
