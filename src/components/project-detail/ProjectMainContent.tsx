@@ -36,6 +36,8 @@ const ProjectMainContent = ({ project, isEditing, onFieldChange, mutations, defa
     comment => user && comment.author.id !== user.id && new Date(comment.timestamp) > lastViewedDiscussion
   ) ?? false;
 
+  const uncompletedTasksCount = project.tasks?.filter(task => !task.completed).length ?? 0;
+
   const handleTaskAdd = (title: string, assigneeIds: string[]) => {
     if (!project || !user) return;
     mutations.addTask.mutate({ project, user, title, assigneeIds });
@@ -77,6 +79,11 @@ const ProjectMainContent = ({ project, isEditing, onFieldChange, mutations, defa
           <TabsTrigger value="tasks">
             <ListChecks className="w-4 h-4 mr-2" />
             Tasks
+            {uncompletedTasksCount > 0 && (
+              <span className="ml-2 flex h-5 w-5 items-center justify-center rounded-full bg-muted text-muted-foreground text-xs">
+                {uncompletedTasksCount}
+              </span>
+            )}
           </TabsTrigger>
           <TabsTrigger value="discussion" className="relative">
             <MessageSquare className="w-4 h-4 mr-2" />
