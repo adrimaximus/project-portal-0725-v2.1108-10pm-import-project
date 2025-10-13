@@ -171,6 +171,7 @@ export interface Project {
   client_company_logo_url?: string | null;
   client_company_name?: string | null;
   client_company_custom_properties?: any;
+  updated_at?: string;
 }
 
 export interface GoalCompletion {
@@ -294,11 +295,18 @@ export interface Invoice {
   clientCompanyName?: string | null;
   projectOwner?: Owner;
   assignedMembers: Member[];
-  status: string;
+  status: PaymentStatus;
   poNumber?: string | null;
   amount: number;
   dueDate: string | Date;
-  invoiceAttachments?: Attachment[];
+  invoiceAttachments?: InvoiceAttachment[];
+  rawProjectId: string;
+  projectStartDate: Date | null;
+  projectEndDate: Date | null;
+  paidDate: Date | null;
+  emailSendingDate: Date | null;
+  hardcopySendingDate: Date | null;
+  channel: string | null;
 }
 
 export interface ExtendedProject extends Project {
@@ -395,4 +403,19 @@ export interface InvoiceAttachment {
   file_size: number | null;
   storage_path: string;
   created_at: string;
+}
+
+export interface Notification {
+  id: string;
+  type: string;
+  title: string;
+  description: string;
+  timestamp: string;
+  read: boolean;
+  link?: string;
+  actor: {
+    id: string;
+    name: string;
+    avatar: string | null;
+  };
 }

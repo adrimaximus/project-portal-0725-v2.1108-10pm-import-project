@@ -1,5 +1,5 @@
 import React from "react";
-import { Task, TaskAssignee, TaskAttachment } from "@/types";
+import { Task, TaskAttachment } from "@/types";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -23,7 +23,7 @@ interface TasksViewProps {
   onEdit: (task: Task) => void;
   onDelete: (taskId: string) => void;
   onToggleTaskCompletion: (task: Task, completed: boolean) => void;
-  sortConfig: { key: string; direction: 'asc' | 'desc' };
+  sortConfig: { key: string; direction: 'ascending' | 'descending' };
   requestSort: (key: string) => void;
 }
 

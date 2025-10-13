@@ -8,55 +8,7 @@ import { Toaster } from '@/components/ui/sonner';
 import ProjectsToolbar from '@/components/projects/ProjectsToolbar';
 import TableView from '@/components/projects/TableView';
 import TasksView from '@/components/projects/TasksView';
-
-// Minimal types based on component props
-interface BasicUser {
-  id: string;
-  first_name: string | null;
-  last_name: string | null;
-  email: string | null;
-  avatar_url: string | null;
-}
-
-interface Tag {
-  id: string;
-  name: string;
-  color: string;
-}
-
-export interface Project {
-  id: string;
-  name: string;
-  slug: string;
-  category: string;
-  status: string;
-  payment_status: string;
-  progress: number;
-  start_date: string | null;
-  due_date: string | null;
-  venue: string | null;
-}
-
-export interface Task {
-  id: string;
-  title: string;
-  description: string | null;
-  completed: boolean;
-  due_date: string | null;
-  priority: string;
-  project_id: string;
-  projects: { name: string; slug: string; };
-  assignees: BasicUser[];
-  created_by: BasicUser;
-  created_at: string;
-  updated_at: string | null;
-  status: string;
-  tags: Tag[];
-  originTicketId: string | null;
-  attachment_url?: string;
-  attachment_name?: string;
-  attachments?: any[];
-}
+import { Project, Task } from '@/types';
 
 type ViewMode = 'table' | 'list' | 'kanban' | 'tasks' | 'tasks-kanban';
 type SortConfig<T> = { key: keyof T | string; direction: 'ascending' | 'descending' };
@@ -202,7 +154,6 @@ const Index = () => {
           isLoading={isLoadingTasks}
           onEdit={() => toast.info("Edit not implemented.")}
           onDelete={() => toast.error("Delete not implemented.")}
-          // @ts-ignore
           onToggleTaskCompletion={toggleTaskCompletion}
           sortConfig={taskSortConfig}
           requestSort={(key) => requestSort(key, 'task')}

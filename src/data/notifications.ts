@@ -9,17 +9,7 @@ export const notificationIcons = {
   goal: Target,
 };
 
-export type Notification = {
-  id: string;
-  type: keyof typeof notificationIcons;
-  title: string;
-  description: string;
-  timestamp: string;
-  read: boolean;
-  link?: string;
-};
-
-export const dummyNotifications: Notification[] = [
+export const dummyNotifications = [
   {
     id: "1",
     type: "mention",

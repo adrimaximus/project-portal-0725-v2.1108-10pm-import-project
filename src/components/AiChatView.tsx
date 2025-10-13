@@ -31,6 +31,7 @@ const AiChatView = forwardRef<HTMLTextAreaElement, AiChatViewProps>(({ onBack },
     lastMessage: conversation[conversation.length - 1]?.text || "Ask me anything...",
     lastMessageTimestamp: conversation[conversation.length - 1]?.timestamp || new Date().toISOString(),
     unreadCount: 0,
+    created_by: 'ai-assistant',
   }), [aiUser, conversation, currentUser]);
 
   const handleSendMessage = (text: string, attachmentFile: File | null) => {
