@@ -8,7 +8,7 @@ import { format } from "date-fns";
 import { generatePastelColor, getPriorityStyles, getTaskStatusStyles, isOverdue, cn, getAvatarUrl, getInitials, formatTaskText } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Button } from "@/components/ui/button";
+import { Button } from "../ui/button";
 import { MoreHorizontal, Edit, Trash2, Ticket, Paperclip } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -200,9 +200,9 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
                     </div>
                   </TableCell>
                   <TableCell className="w-[20%]">
-                    {task.projects && task.projects.name !== 'General Tasks' ? (
-                      <Link to={`/projects/${task.projects.slug}`} className="hover:underline text-primary text-xs block max-w-[50ch] break-words">
-                        {task.projects.name}
+                    {task.project_name && task.project_name !== 'General Tasks' ? (
+                      <Link to={`/projects/${task.project_slug}`} className="hover:underline text-primary text-xs block max-w-[50ch] break-words">
+                        {task.project_name}
                       </Link>
                     ) : null}
                   </TableCell>
