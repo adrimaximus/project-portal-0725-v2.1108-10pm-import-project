@@ -76,10 +76,10 @@ export const useProjectMutations = (slug: string) => {
             for (const file of files) {
                 const sanitizedFileName = file.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
                 const filePath = `${project.id}/${Date.now()}-${sanitizedFileName}`;
-                const { error: uploadError } = await supabase.storage.from('project-files').upload(filePath, file);
+                const { error: uploadError } = await supabase.storage.from('task-attachments').upload(filePath, file);
                 if (uploadError) throw new Error(`Failed to upload ${file.name}: ${uploadError.message}`);
                 
-                const { data: urlData } = supabase.storage.from('project-files').getPublicUrl(filePath);
+                const { data: urlData } = supabase.storage.from('task-attachments').getPublicUrl(filePath);
                 
                 const { error: dbError } = await supabase.from('project_files').insert({
                     project_id: project.id, user_id: user.id, name: file.name,
@@ -97,7 +97,7 @@ export const useProjectMutations = (slug: string) => {
 
     const useDeleteFile = () => useMutation({
         mutationFn: async (file: { id: string, storage_path: string }) => {
-            const { error: storageError } = await supabase.storage.from('project-files').remove([file.storage_path]);
+            const { error: storageError } = await supabase.storage.from('task-attachments').remove([file.storage_path]);
             if (storageError) throw new Error(`Failed to delete file from storage: ${storageError.message}`);
             
             const { error: dbError } = await supabase.from('project_files').delete().eq('id', file.id);
@@ -168,10 +168,10 @@ export const useProjectMutations = (slug: string) => {
             if (attachment) {
                 const sanitizedFileName = attachment.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
                 const filePath = `${project.id}/comments/${Date.now()}-${sanitizedFileName}`;
-                const { error: uploadError } = await supabase.storage.from('project-files').upload(filePath, attachment);
+                const { error: uploadError } = await supabase.storage.from('task-attachments').upload(filePath, attachment);
                 if (uploadError) throw new Error(`Failed to upload attachment: ${uploadError.message}`);
                 
-                const { data: urlData } = supabase.storage.from('project-files').getPublicUrl(filePath);
+                const { data: urlData } = supabase.storage.from('task-attachments').getPublicUrl(filePath);
                 attachment_url = urlData.publicUrl;
                 attachment_name = attachment.name;
             }

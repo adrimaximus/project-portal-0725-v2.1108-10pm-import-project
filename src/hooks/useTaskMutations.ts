@@ -66,7 +66,7 @@ export const useTaskMutations = (projectId?: string) => {
           const filePath = `tasks/${taskId}/${Date.now()}-${sanitizedFileName}.${fileExt}`;
           
           const { error: uploadError } = await supabase.storage
-            .from('project_files')
+            .from('task-attachments')
             .upload(filePath, file);
 
           if (uploadError) {
@@ -74,7 +74,7 @@ export const useTaskMutations = (projectId?: string) => {
           }
 
           const { data: { publicUrl } } = supabase.storage
-            .from('project_files')
+            .from('task-attachments')
             .getPublicUrl(filePath);
 
           const { error: insertError } = await supabase
@@ -107,7 +107,7 @@ export const useTaskMutations = (projectId?: string) => {
           const pathsToDelete = attachmentsToDelete.map(f => f.storage_path);
           if (pathsToDelete.length > 0) {
             const { error: deleteStorageError } = await supabase.storage
-              .from('project_files')
+              .from('task-attachments')
               .remove(pathsToDelete);
 
             if (deleteStorageError) {
