@@ -357,8 +357,8 @@ export interface CompanyProperty {
   id: string;
   name: string;
   label: string;
-  type: string;
-  options: any;
+  type: 'text' | 'textarea' | 'number' | 'date' | 'email' | 'phone' | 'url' | 'image' | 'select';
+  options: string[] | null;
   is_default: boolean;
 }
 
