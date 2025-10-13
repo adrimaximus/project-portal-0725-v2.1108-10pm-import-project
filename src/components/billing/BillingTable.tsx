@@ -9,6 +9,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { cn, getPaymentStatusStyles } from "@/lib/utils";
 import { format } from "date-fns";
 import { Invoice } from "@/types";
+import { useMemo } from "react";
 
 interface BillingTableProps {
   invoices: Invoice[];
@@ -32,6 +33,38 @@ const BillingTable = ({ invoices, onEdit, sortColumn, sortDirection, handleSort 
     if (sortColumn !== column) return null;
     return sortDirection === 'asc' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />;
   };
+
+  const sortedInvoices = useMemo(() => {
+    if (!sortColumn) return invoices;
+    return [...invoices].sort((a, b) => {
+      let aValue: any = a[sortColumn];
+      let bValue: any = b[sortColumn];
+      if (sortColumn === 'projectOwner') {
+        aValue = a.projectOwner?.name;
+        bValue = b.projectOwner?.name;
+      } else if (sortColumn === 'assignedMembers') {
+        aValue = a.assignedMembers?.find(m => m.role === 'admin')?.name;
+        bValue = b.assignedMembers?.find(m => m.role === 'admin')?.name;
+      }
+
+      if (aValue instanceof Date && bValue instanceof Date) {
+        return sortDirection === 'asc' ? aValue.getTime() - bValue.getTime() : bValue.getTime() - aValue.getTime();
+      }
+
+      if (aValue === null || aValue === undefined) return 1;
+      if (bValue === null || bValue === undefined) return -1;
+
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
+        return sortDirection === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+      }
+      
+      if (typeof aValue === 'number' && typeof bValue === 'number') {
+        return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
+      }
+
+      return 0;
+    });
+  }, [invoices, sortColumn, sortDirection]);
 
   return (
     <Table>
@@ -87,14 +120,14 @@ const BillingTable = ({ invoices, onEdit, sortColumn, sortDirection, handleSort 
         </TableRow>
       </TableHeader>
       <TableBody>
-        {invoices.length === 0 ? (
+        {sortedInvoices.length === 0 ? (
           <TableRow>
             <TableCell colSpan={11} className="h-24 text-center">
               No invoices found.
             </TableCell>
           </TableRow>
         ) : (
-          invoices.map((invoice) => (
+          sortedInvoices.map((invoice) => (
             <TableRow key={invoice.id}>
               <TableCell className={cn("font-medium", invoice.status === 'Overdue' && 'text-destructive font-semibold border-l-4 border-destructive', invoice.status === 'Paid' && 'text-green-600 font-semibold border-l-4 border-green-600')}>{invoice.id}</TableCell>
               <TableCell>

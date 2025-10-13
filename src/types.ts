@@ -127,6 +127,16 @@ export interface Task {
   project_client?: string | null;
 }
 
+export interface Comment {
+  id: string;
+  text: string;
+  timestamp: string;
+  author: User;
+  isTicket: boolean;
+  attachment_url?: string;
+  attachment_name?: string;
+}
+
 export interface Project {
   id: string;
   name: string;
@@ -283,23 +293,17 @@ export interface Invoice {
   id: string;
   projectId: string;
   projectName: string;
+  clientName?: string | null;
+  clientLogo?: string | null;
+  clientAvatarUrl?: string | null;
+  clientCompanyName?: string | null;
+  projectOwner?: User;
+  assignedMembers: User[];
+  status: string;
+  poNumber?: string | null;
   amount: number;
   dueDate: Date;
-  status: PaymentStatus;
-  rawProjectId: string;
-  projectStartDate: Date | null;
-  projectEndDate: Date | null;
-  poNumber: string | null;
-  paidDate: Date | null;
-  emailSendingDate: Date | null;
-  hardcopySendingDate: Date | null;
-  channel: string | null;
-  clientName: string | null;
-  clientLogo: string | null;
-  clientCompanyName: string | null;
-  projectOwner: Owner | null;
-  assignedMembers: Member[];
-  invoiceAttachments?: InvoiceAttachment[];
+  invoiceAttachments?: Attachment[];
 }
 
 export interface ExtendedProject extends Project {
