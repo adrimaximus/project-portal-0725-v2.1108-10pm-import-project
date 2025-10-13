@@ -26,6 +26,7 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import TaskAttachmentList from "@/components/projects/TaskAttachmentList";
 
 interface ProjectTasksProps {
   project: Project;
@@ -200,19 +201,26 @@ const ProjectTasks = ({
                   </TooltipProvider>
                 )}
                 {task.attachments && task.attachments.length > 0 && (
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <Badge variant="secondary" className="mt-0.5 flex-shrink-0">
-                          <Paperclip className="h-3 w-3 mr-1" />
-                          {task.attachments.length}
-                        </Badge>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>{task.attachments.length} attachment(s)</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                  <Dialog>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <DialogTrigger asChild>
+                            <Badge variant="secondary" className="mt-0.5 flex-shrink-0 cursor-pointer">
+                              <Paperclip className="h-3 w-3 mr-1" />
+                              {task.attachments.length}
+                            </Badge>
+                          </DialogTrigger>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>View {task.attachments.length} attachment(s)</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    <DialogContent>
+                      <TaskAttachmentList attachments={task.attachments} />
+                    </DialogContent>
+                  </Dialog>
                 )}
               </div>
               <div className="flex items-center -space-x-2">
