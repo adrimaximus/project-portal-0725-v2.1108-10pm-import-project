@@ -7,12 +7,9 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { getAvatarUrl, generatePastelColor } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { User } from '@/types';
 
-type UserStatData = {
-  id: string;
-  name: string;
-  avatar_url: string;
-  initials: string;
+type UserStatData = User & {
   projectCount: number;
   totalValue: number;
 };
@@ -54,7 +51,7 @@ const BillingStats = ({ invoices }: { invoices: Invoice[] }) => {
 
     const nextDueDate = invoices
       .filter(inv => ['Due', 'Unpaid', 'Pending', 'In Process'].includes(inv.status))
-      .sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime())[0]?.dueDate;
+      .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())[0]?.dueDate;
 
     const overdueInvoicesCount = invoices.filter(inv => inv.status === 'Overdue').length;
 

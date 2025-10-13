@@ -19,7 +19,7 @@ interface CompanyPropertyFormDialogProps {
   properties: CompanyProperty[];
 }
 
-const propertySchema = z.object({
+const createPropertySchema = (properties: CompanyProperty[], property: CompanyProperty | null) => z.object({
   label: z.string().min(1, 'Label is required'),
   type: z.enum(['text', 'textarea', 'number', 'date', 'email', 'phone', 'url', 'image', 'select']),
   options: z.array(z.object({ value: z.string() })).optional(),
@@ -44,13 +44,13 @@ const propertySchema = z.object({
   }
 });
 
-type PropertyFormValues = z.infer<typeof propertySchema>;
+type PropertyFormValues = z.infer<ReturnType<typeof createPropertySchema>>;
 
 const CompanyPropertyFormDialog = ({ open, onOpenChange, onSave, property, isSaving, properties }: CompanyPropertyFormDialogProps) => {
   const isEditMode = !!property;
 
-  const { register, handleSubmit, control, reset, watch, formState: { errors } } = useForm<PropertyFormValues>({
-    resolver: zodResolver(propertySchema),
+  const form = useForm<PropertyFormValues>({
+    resolver: zodResolver(createPropertySchema(properties, property)),
     defaultValues: {
       label: '',
       type: 'text',
@@ -63,16 +63,16 @@ const CompanyPropertyFormDialog = ({ open, onOpenChange, onSave, property, isSav
   useEffect(() => {
     if (open) {
       if (property) {
-        reset({
+        form.reset({
           label: property.label,
           type: property.type as PropertyFormValues['type'],
           options: property.options?.map(o => ({ value: o })) || [{ value: '' }],
         });
       } else {
-        reset({ label: '', type: 'text', options: [{ value: '' }] });
+        form.reset({ label: '', type: 'text', options: [{ value: '' }] });
       }
     }
-  }, [property, open, reset]);
+  }, [property, open, form]);
 
   const onSubmit = (values: PropertyFormValues) => {
     const slug = values.label.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
@@ -80,7 +80,7 @@ const CompanyPropertyFormDialog = ({ open, onOpenChange, onSave, property, isSav
       name: slug,
       label: values.label,
       type: values.type,
-      options: values.options?.map(o => o.value).filter(Boolean),
+      options: values.options?.map(o => o.value).filter(Boolean) || null,
     });
   };
 

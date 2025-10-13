@@ -298,7 +298,7 @@ export interface Invoice {
   status: string;
   poNumber?: string | null;
   amount: number;
-  dueDate: string | Date;
+  dueDate: Date;
   invoiceAttachments?: InvoiceAttachment[];
   rawProjectId: string;
   projectStartDate: Date | null;
@@ -419,3 +419,18 @@ export interface Activity {
     initials: string;
   };
 }
+
+export interface Notification {
+  id: string;
+  type: string;
+  title: string;
+  description: string;
+  timestamp: string;
+  read: boolean;
+  link?: string;
+  actor?: {
+    id: string;
+    name: string;
+    avatar: string;
+  }
+};

@@ -41,7 +41,7 @@ const CompanyPropertiesPage = () => {
     setIsFormOpen(true);
   };
 
-  const handleSave = async (propertyData: Omit<CompanyProperty, 'id' | 'is_default'> & { name: string }) => {
+  const handleSave = async (propertyData: { name: string; label: string; type: CompanyProperty['type']; options?: string[] | null }) => {
     setIsSaving(true);
     const { id, ...dataToSave } = propertyToEdit || {};
     const upsertData = { ...dataToSave, ...propertyData, is_default: false };

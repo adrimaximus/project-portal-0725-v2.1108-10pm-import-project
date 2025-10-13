@@ -1,7 +1,7 @@
 import { useInfiniteQuery, useMutation, useQueryClient, InfiniteData } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Notification } from '@/data/notifications';
+import { Notification } from '@/types';
 import { toast } from 'sonner';
 import { useEffect } from 'react';
 
