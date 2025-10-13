@@ -463,7 +463,7 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task }: Ta
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)}>
-            <div className="max-h-[60vh] overflow-y-auto p-1 pr-4">
+            <div className="max-h-[60vh] overflow-y-auto pr-4">
               {formContent}
             </div>
             <DialogFooter className="pt-4">
