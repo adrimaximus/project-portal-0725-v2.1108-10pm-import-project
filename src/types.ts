@@ -55,6 +55,7 @@ export interface User {
   permissions?: string[];
   people_kanban_settings?: any;
   theme?: string;
+  notification_preferences?: Record<string, any>;
 }
 
 export type Collaborator = User;
