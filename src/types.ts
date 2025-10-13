@@ -1,4 +1,4 @@
-export type Theme = "dark" | "light" | "system" | "claude" | "claude-light" | "nature" | "nature-light" | "corporate" | "corporate-light";
+export type Theme = "dark" | "light" | "system" | "claude" | "claude-light" | "nature" | "nature-light" | "corporate" | "corporate-light" | "ahensi" | "ahensi-light" | "brand-activator" | "brand-activator-light";
 
 export const PROJECT_STATUS_OPTIONS = [
   { value: 'Requested', label: 'Requested' },
