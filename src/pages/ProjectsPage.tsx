@@ -67,11 +67,11 @@ const ProjectsPage = () => {
 
   const {
     dateRange, setDateRange,
-    sortConfig, requestSort, sortedProjects
+    sortConfig, requestSort: requestProjectSort, sortedProjects
   } = useProjectFilters(projects);
 
   const [taskSearchTerm, setTaskSearchTerm] = useState('');
-  const [taskSortConfig, setTaskSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'updated_at', direction: 'desc' });
+  const [taskSortConfig, setTaskSortConfig] = useState<{ key: string; direction: 'ascending' | 'descending' }>({ key: 'updated_at', direction: 'descending' });
   const [hideCompletedTasks, setHideCompletedTasks] = useState(() => localStorage.getItem('hideCompletedTasks') === 'true');
 
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
@@ -230,9 +230,9 @@ const ProjectsPage = () => {
   };
 
   const requestTaskSort = (key: string) => {
-    let direction: 'asc' | 'desc' = 'asc';
-    if (taskSortConfig.key === key && taskSortConfig.direction === 'asc') {
-      direction = 'desc';
+    let direction: 'ascending' | 'descending' = 'ascending';
+    if (taskSortConfig.key === key && taskSortConfig.direction === 'ascending') {
+      direction = 'descending';
     }
     setTaskSortConfig({ key, direction });
   };
@@ -380,14 +380,15 @@ const ProjectsPage = () => {
               isTasksLoading={tasksLoading}
               onDeleteProject={handleDeleteProject}
               sortConfig={sortConfig}
-              requestSort={(key) => requestSort(key, 'project')}
+              requestSort={requestProjectSort}
               rowRefs={rowRefs}
               kanbanGroupBy={kanbanGroupBy}
               onEditTask={handleEditTask}
               onDeleteTask={handleDeleteTask}
               onToggleTaskCompletion={handleToggleTaskCompletion}
+              isToggling={isToggling}
               taskSortConfig={taskSortConfig}
-              requestTaskSort={(key) => requestSort(key, 'task')}
+              requestTaskSort={requestTaskSort}
               onTaskStatusChange={handleTaskStatusChange}
             />
           </div>

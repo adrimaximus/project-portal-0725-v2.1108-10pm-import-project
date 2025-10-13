@@ -13,41 +13,41 @@ import { Loader2, X } from 'lucide-react';
 interface CompanyPropertyFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: (property: Omit<CompanyProperty, 'id' | 'name'> & { name: string }) => void;
+  onSave: (property: Omit<CompanyProperty, 'id' | 'is_default'> & { name: string }) => void;
   property?: CompanyProperty | null;
   isSaving: boolean;
   properties: CompanyProperty[];
 }
 
-const CompanyPropertyFormDialog = ({ open, onOpenChange, onSave, property, isSaving, properties }: CompanyPropertyFormDialogProps) => {
-  const isEditMode = !!property;
+const propertySchema = z.object({
+  label: z.string().min(1, 'Label is required'),
+  type: z.enum(['text', 'textarea', 'number', 'date', 'email', 'phone', 'url', 'image', 'select']),
+  options: z.array(z.object({ value: z.string() })).optional(),
+}).superRefine((data, ctx) => {
+  const machineName = data.label.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+  if (properties.some(p => p.name === machineName && p.id !== property?.id)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'A property with this name already exists. Please use a different label.',
+      path: ['label'],
+    });
+  }
 
-  const propertySchema = z.object({
-    label: z.string().min(1, 'Label is required'),
-    type: z.enum(['text', 'textarea', 'number', 'date', 'email', 'phone', 'url', 'image', 'select']),
-    options: z.array(z.object({ value: z.string() })).optional(),
-  }).superRefine((data, ctx) => {
-    const machineName = data.label.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
-    if (properties.some(p => p.name === machineName && p.id !== property?.id)) {
+  if (data.type === 'select') {
+    if (!data.options || data.options.length === 0 || data.options.every(opt => opt.value.trim() === '')) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: 'A property with this name already exists. Please use a different label.',
-        path: ['label'],
+        message: 'For "Select" type, at least one option with a value is required.',
+        path: ['options'],
       });
     }
+  }
+});
 
-    if (data.type === 'select') {
-      if (!data.options || data.options.length === 0 || data.options.every(opt => opt.value.trim() === '')) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: 'For "Select" type, at least one option with a value is required.',
-          path: ['options'],
-        });
-      }
-    }
-  });
+type PropertyFormValues = z.infer<typeof propertySchema>;
 
-  type PropertyFormValues = z.infer<typeof propertySchema>;
+const CompanyPropertyFormDialog = ({ open, onOpenChange, onSave, property, isSaving, properties }: CompanyPropertyFormDialogProps) => {
+  const isEditMode = !!property;
 
   const { register, handleSubmit, control, reset, watch, formState: { errors } } = useForm<PropertyFormValues>({
     resolver: zodResolver(propertySchema),
@@ -65,7 +65,7 @@ const CompanyPropertyFormDialog = ({ open, onOpenChange, onSave, property, isSav
       if (property) {
         reset({
           label: property.label,
-          type: property.type,
+          type: property.type as PropertyFormValues['type'],
           options: property.options?.map(o => ({ value: o })) || [{ value: '' }],
         });
       } else {

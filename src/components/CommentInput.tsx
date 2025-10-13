@@ -6,7 +6,7 @@ import { Paperclip, Ticket, Send, X } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { getInitials, generatePastelColor, parseMentions, getAvatarUrl } from '@/lib/utils';
-import { MentionsInput, Mention } from 'react-mentions';
+import { MentionsInput, Mention, SuggestionDataItem } from 'react-mentions';
 import '@/styles/mentions.css';
 
 interface CommentInputProps {
@@ -74,11 +74,11 @@ const CommentInput = ({ project, onAddCommentOrTicket }: CommentInputProps) => {
               trigger="@"
               data={mentionData}
               markup="@[__display__](__id__)"
-              renderSuggestion={(suggestion, search, highlightedDisplay, index, focused) => (
+              renderSuggestion={(suggestion: SuggestionDataItem & { avatar_url?: string, initials?: string, email?: string }, search, highlightedDisplay, index, focused) => (
                 <div className={`mention-suggestion ${focused ? 'focused' : ''}`}>
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src={getAvatarUrl(suggestion.avatar_url, suggestion.id)} />
-                    <AvatarFallback style={generatePastelColor(suggestion.id)}>
+                    <AvatarImage src={getAvatarUrl(suggestion.avatar_url, suggestion.id as string)} />
+                    <AvatarFallback style={generatePastelColor(suggestion.id as string)}>
                       {suggestion.initials}
                     </AvatarFallback>
                   </Avatar>

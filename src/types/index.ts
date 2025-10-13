@@ -299,7 +299,7 @@ export interface Invoice {
   poNumber?: string | null;
   amount: number;
   dueDate: string | Date;
-  invoiceAttachments?: Attachment[];
+  invoiceAttachments?: InvoiceAttachment[];
   rawProjectId: string;
   projectStartDate: Date | null;
   projectEndDate: Date | null;
@@ -359,7 +359,7 @@ export interface CompanyProperty {
   label: string;
   type: 'text' | 'textarea' | 'number' | 'date' | 'email' | 'phone' | 'url' | 'image' | 'select';
   options: string[] | null;
-  is_default: boolean;
+  is_default?: boolean;
 }
 
 export interface Person {

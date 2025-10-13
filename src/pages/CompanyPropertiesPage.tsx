@@ -41,10 +41,10 @@ const CompanyPropertiesPage = () => {
     setIsFormOpen(true);
   };
 
-  const handleSave = async (propertyData: Omit<CompanyProperty, 'id' | 'is_default' | 'company_logo_url'>) => {
+  const handleSave = async (propertyData: Omit<CompanyProperty, 'id' | 'is_default'> & { name: string }) => {
     setIsSaving(true);
-    const { id, is_default, ...dataToSave } = propertyToEdit || {};
-    const upsertData = { ...dataToSave, ...propertyData };
+    const { id, ...dataToSave } = propertyToEdit || {};
+    const upsertData = { ...dataToSave, ...propertyData, is_default: false };
 
     const promise = propertyToEdit?.id
       ? supabase.from('company_properties').update(upsertData).eq('id', propertyToEdit.id)
