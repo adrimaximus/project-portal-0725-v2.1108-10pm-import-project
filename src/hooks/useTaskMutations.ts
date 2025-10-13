@@ -23,9 +23,7 @@ export const useUpsertTask = () => {
 
   return useMutation({
     mutationFn: async (taskData: UpsertTaskPayload) => {
-      // This is a placeholder for more complex file handling logic if needed.
       const { new_files = [], deleted_files = [], ...taskDetails } = taskData;
-
       const payload = {
         p_id: taskDetails.id || null,
         p_project_id: taskDetails.project_id,
@@ -38,25 +36,19 @@ export const useUpsertTask = () => {
         p_assignee_ids: taskDetails.assignee_ids,
         p_tag_ids: taskDetails.tag_ids,
       };
-
       const { data, error } = await supabase.rpc('upsert_task_with_details', payload);
-
-      if (error) {
-        throw new Error(error.message);
-      }
+      if (error) throw new Error(error.message);
       return data;
     },
-    {
-      onSuccess: () => {
-        toast.success('Task saved successfully.');
-        queryClient.invalidateQueries({ queryKey: ['tasks'] });
-        queryClient.invalidateQueries({ queryKey: ['projects'] });
-      },
-      onError: (error: Error) => {
-        toast.error(`Failed to save task: ${error.message}`);
-      },
-    }
-  );
+    onSuccess: () => {
+      toast.success('Task saved successfully.');
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to save task: ${error.message}`);
+    },
+  });
 };
 
 export const useToggleTaskCompletion = () => {
@@ -65,7 +57,6 @@ export const useToggleTaskCompletion = () => {
   return useMutation({
     mutationFn: async ({ task, completed }: { task: Task; completed: boolean }) => {
       const newStatus = completed ? 'Done' : (task.status === 'Done' ? 'To do' : task.status);
-
       const payload = {
         p_id: task.id,
         p_project_id: task.project_id,
@@ -78,35 +69,29 @@ export const useToggleTaskCompletion = () => {
         p_assignee_ids: task.assignees?.map(a => a.id) || [],
         p_tag_ids: task.tags?.map(t => t.id) || [],
       };
-
       const { error } = await supabase.rpc('upsert_task_with_details', payload);
-
-      if (error) {
-        throw new Error(error.message);
-      }
+      if (error) throw new Error(error.message);
     },
-    {
-      onMutate: async ({ task, completed }) => {
-        await queryClient.cancelQueries({ queryKey: ['tasks'] });
-        const previousTasks = queryClient.getQueryData<Task[]>(['tasks']);
-        
-        queryClient.setQueryData<Task[]>(['tasks'], (old) =>
-          old?.map(t => t.id === task.id ? { ...t, completed, status: completed ? 'Done' : (task.status === 'Done' ? 'To do' : task.status) } : t)
-        );
+    onMutate: async ({ task, completed }) => {
+      await queryClient.cancelQueries({ queryKey: ['tasks'] });
+      const previousTasks = queryClient.getQueryData<Task[]>(['tasks']);
+      
+      queryClient.setQueryData<Task[]>(['tasks'], (old) =>
+        old?.map(t => t.id === task.id ? { ...t, completed, status: completed ? 'Done' : (task.status === 'Done' ? 'To do' : task.status) } : t)
+      );
 
-        return { previousTasks };
-      },
-      onError: (err: Error, variables, context) => {
-        if (context?.previousTasks) {
-          queryClient.setQueryData(['tasks'], context.previousTasks);
-        }
-        toast.error(`Failed to update task status: ${err.message}`);
-      },
-      onSettled: () => {
-        queryClient.invalidateQueries({ queryKey: ['tasks'] });
-      },
-    }
-  );
+      return { previousTasks };
+    },
+    onError: (err: Error, variables, context) => {
+      if (context?.previousTasks) {
+        queryClient.setQueryData(['tasks'], context.previousTasks);
+      }
+      toast.error(`Failed to update task status: ${err.message}`);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+    },
+  });
 };
 
 const useDeleteTask = () => {
