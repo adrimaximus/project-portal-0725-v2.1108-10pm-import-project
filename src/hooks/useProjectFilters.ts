@@ -5,7 +5,7 @@ import { isBefore, startOfToday } from 'date-fns';
 
 export const useProjectFilters = (projects: Project[]) => {
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
-  const [sortConfig, setSortConfig] = useState<{ key: keyof Project | null; direction: 'ascending' | 'descending' }>({ key: null, direction: 'ascending' });
+  const [sortConfig, setSortConfig] = useState<{ key: keyof Project | null; direction: 'asc' | 'desc' }>({ key: null, direction: 'asc' });
 
   const filteredProjects = useMemo(() => {
     return projects.filter(project => {
@@ -46,10 +46,10 @@ export const useProjectFilters = (projects: Project[]) => {
         if (bValue === null || bValue === undefined) return -1;
 
         if (aValue < bValue) {
-          return sortConfig.direction === 'ascending' ? -1 : 1;
+          return sortConfig.direction === 'asc' ? -1 : 1;
         }
         if (aValue > bValue) {
-          return sortConfig.direction === 'ascending' ? 1 : -1;
+          return sortConfig.direction === 'asc' ? 1 : -1;
         }
         return 0;
       });
@@ -74,9 +74,9 @@ export const useProjectFilters = (projects: Project[]) => {
   }, [filteredProjects, sortConfig]);
 
   const requestSort = (key: keyof Project) => {
-    let direction: 'ascending' | 'descending' = 'ascending';
-    if (sortConfig.key === key && sortConfig.direction === 'ascending') {
-      direction = 'descending';
+    let direction: 'asc' | 'desc' = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
     }
     setSortConfig({ key, direction });
   };

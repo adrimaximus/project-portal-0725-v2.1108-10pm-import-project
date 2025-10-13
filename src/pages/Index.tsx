@@ -11,7 +11,7 @@ import TasksView from '@/components/projects/TasksView';
 import { Project, Task } from '@/types';
 
 type ViewMode = 'table' | 'list' | 'kanban' | 'tasks' | 'tasks-kanban';
-type SortConfig<T> = { key: keyof T | string; direction: 'ascending' | 'descending' };
+type SortConfig<T> = { key: keyof T | string; direction: 'asc' | 'desc' };
 
 const fetchProjects = async (): Promise<Project[]> => {
   const { data, error } = await supabase.rpc('get_dashboard_projects', { p_limit: 500, p_offset: 0 });
@@ -49,15 +49,15 @@ const Index = () => {
     queryFn: fetchTasks,
   });
 
-  const [projectSortConfig, setProjectSortConfig] = useState<SortConfig<Project>>({ key: 'start_date', direction: 'descending' });
-  const [taskSortConfig, setTaskSortConfig] = useState<SortConfig<Task>>({ key: 'due_date', direction: 'ascending' });
+  const [projectSortConfig, setProjectSortConfig] = useState<SortConfig<Project>>({ key: 'start_date', direction: 'desc' });
+  const [taskSortConfig, setTaskSortConfig] = useState<SortConfig<Task>>({ key: 'due_date', direction: 'asc' });
 
   const requestSort = useCallback((key: any, type: 'project' | 'task') => {
     const config = type === 'project' ? projectSortConfig : taskSortConfig;
     const setConfig = type === 'project' ? setProjectSortConfig : setTaskSortConfig;
-    let direction: 'ascending' | 'descending' = 'ascending';
-    if (config.key === key && config.direction === 'ascending') {
-      direction = 'descending';
+    let direction: 'asc' | 'desc' = 'asc';
+    if (config.key === key && config.direction === 'asc') {
+      direction = 'desc';
     }
     setConfig({ key, direction });
   }, [projectSortConfig, taskSortConfig]);
@@ -75,10 +75,10 @@ const Index = () => {
         if (valA === null) return 1;
         if (valB === null) return -1;
         if (valA < valB) {
-          return projectSortConfig.direction === 'ascending' ? -1 : 1;
+          return projectSortConfig.direction === 'asc' ? -1 : 1;
         }
         if (valA > valB) {
-          return projectSortConfig.direction === 'ascending' ? 1 : -1;
+          return projectSortConfig.direction === 'asc' ? 1 : -1;
         }
         return 0;
       });
@@ -98,11 +98,11 @@ const Index = () => {
             if (b[key] === null) return -1;
             // @ts-ignore
             if (a[key] < b[key]) {
-                return taskSortConfig.direction === 'ascending' ? -1 : 1;
+                return taskSortConfig.direction === 'asc' ? -1 : 1;
             }
             // @ts-ignore
             if (a[key] > b[key]) {
-                return taskSortConfig.direction === 'ascending' ? 1 : -1;
+                return taskSortConfig.direction === 'asc' ? 1 : -1;
             }
             return 0;
         });
