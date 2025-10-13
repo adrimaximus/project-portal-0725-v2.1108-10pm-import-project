@@ -39,7 +39,7 @@ export const TASK_PRIORITY_OPTIONS = [
 export type ProjectStatus = typeof PROJECT_STATUS_OPTIONS[number]['value'];
 export type PaymentStatus = typeof PAYMENT_STATUS_OPTIONS[number]['value'];
 export type TaskStatus = typeof TASK_STATUS_OPTIONS[number]['value'];
-export type TaskPriority = typeof TASK_PRIORITY_OPTIONS[number]['value'];
+export type TaskPriority = string;
 
 export interface User {
   id: string;
