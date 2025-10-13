@@ -169,6 +169,11 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
                           </div>
                           {renderAttachments(task)}
                         </div>
+                        {task.originTicketId && task.created_by && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            From: {task.created_by.email}
+                          </p>
+                        )}
                         {task.description && (
                           <TooltipProvider>
                             <Tooltip>
