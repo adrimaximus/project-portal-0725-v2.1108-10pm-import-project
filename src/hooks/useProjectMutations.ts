@@ -163,24 +163,44 @@ export const useProjectMutations = (slug: string) => {
     });
 
     const useAddComment = () => useMutation({
-        mutationFn: async ({ project, user, text, isTicket, attachment }: { project: Project, user: User, text: string, isTicket: boolean, attachment: File | null }) => {
-            let attachment_url = null, attachment_name = null;
-            if (attachment) {
-                const sanitizedFileName = attachment.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
-                const filePath = `${project.id}/comments/${Date.now()}-${sanitizedFileName}`;
-                const { error: uploadError } = await supabase.storage.from('task-attachments').upload(filePath, attachment);
-                if (uploadError) throw new Error(`Failed to upload attachment: ${uploadError.message}`);
-                
-                const { data: urlData } = supabase.storage.from('task-attachments').getPublicUrl(filePath);
-                attachment_url = urlData.publicUrl;
-                attachment_name = attachment.name;
+        mutationFn: async ({ project, user, text, isTicket, attachments }: { project: Project, user: User, text: string, isTicket: boolean, attachments: File[] | null }) => {
+            let finalCommentText = text;
+            let firstAttachmentUrl: string | null = null;
+            let firstAttachmentName: string | null = null;
+    
+            if (attachments && attachments.length > 0) {
+                const uploadPromises = attachments.map(async (file) => {
+                    const sanitizedFileName = file.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
+                    const filePath = `${project.id}/comments/${Date.now()}-${sanitizedFileName}`;
+                    const { error: uploadError } = await supabase.storage.from('project-files').upload(filePath, file);
+                    if (uploadError) throw new Error(`Failed to upload ${file.name}: ${uploadError.message}`);
+                    
+                    const { data: urlData } = supabase.storage.from('project-files').getPublicUrl(filePath);
+                    return { name: file.name, url: urlData.publicUrl };
+                });
+    
+                const uploadedFiles = await Promise.all(uploadPromises);
+    
+                if (uploadedFiles.length > 0) {
+                    firstAttachmentUrl = uploadedFiles[0].url;
+                    firstAttachmentName = uploadedFiles[0].name;
+    
+                    const markdownLinks = uploadedFiles.map(file => `* [${file.name}](${file.url})`).join('\n');
+                    finalCommentText += `\n\n**Attachments:**\n${markdownLinks}`;
+                }
             }
-
+    
             const { data: commentData, error: commentError } = await supabase.from('comments').insert({
-                project_id: project.id, author_id: user.id, text, is_ticket: isTicket, attachment_url, attachment_name,
+                project_id: project.id, 
+                author_id: user.id, 
+                text: finalCommentText, 
+                is_ticket: isTicket, 
+                attachment_url: firstAttachmentUrl, 
+                attachment_name: firstAttachmentName,
             }).select().single();
+            
             if (commentError) throw commentError;
-
+    
             if (isTicket && commentData) {
                 const mentionRegex = /@\[[^\]]+\]\(([^)]+)\)/g;
                 const mentionedUserIds: string[] = [];
@@ -188,9 +208,9 @@ export const useProjectMutations = (slug: string) => {
                 while ((match = mentionRegex.exec(text)) !== null) {
                     mentionedUserIds.push(match[1]);
                 }
-
+    
                 const cleanTextForTitle = text.replace(/@\[[^\]]+\]\([^)]+\)\s*/g, '').trim();
-
+    
                 const { data: newTask, error: taskError } = await supabase.from('tasks').insert({
                     project_id: project.id, 
                     created_by: user.id, 
@@ -199,7 +219,7 @@ export const useProjectMutations = (slug: string) => {
                 }).select().single();
                 
                 if (taskError) throw new Error(`Ticket created, but failed to create task: ${taskError.message}`);
-
+    
                 if (newTask && mentionedUserIds.length > 0) {
                     const assignments = mentionedUserIds.map(userId => ({
                         task_id: newTask.id,
