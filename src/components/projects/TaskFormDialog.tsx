@@ -61,6 +61,7 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task }: Ta
   const [assignableUsers, setAssignableUsers] = useState<Profile[]>([]);
   const [newFiles, setNewFiles] = useState<File[]>([]);
   const [filesToDelete, setFilesToDelete] = useState<string[]>([]);
+  const [previousStatus, setPreviousStatus] = useState<TaskStatus>('To do');
 
   const form = useForm<TaskFormValues>({
     resolver: zodResolver(taskFormSchema),
@@ -78,14 +79,6 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task }: Ta
   });
 
   const selectedProjectId = useWatch({ control: form.control, name: 'project_id' });
-  const statusValue = useWatch({ control: form.control, name: 'status' });
-
-  useEffect(() => {
-    const isCompleted = statusValue === 'Done';
-    if (form.getValues('completed') !== isCompleted) {
-      form.setValue('completed', isCompleted);
-    }
-  }, [statusValue, form]);
 
   useEffect(() => {
     const getUser = async () => {
@@ -130,6 +123,11 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task }: Ta
           tag_ids: task.tags?.map(t => t.id) || [],
         });
         setSelectedTags(task.tags || []);
+        if (task.status !== 'Done') {
+          setPreviousStatus(task.status);
+        } else {
+          setPreviousStatus('To do');
+        }
       } else {
         const generalTasksProject = projects.find(p => p.slug === 'general-tasks');
         form.reset({
@@ -144,6 +142,7 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task }: Ta
           tag_ids: [],
         });
         setSelectedTags([]);
+        setPreviousStatus('To do');
       }
     }
   }, [task, open, form, projects]);
@@ -275,6 +274,37 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task }: Ta
       />
       <FormField
         control={form.control}
+        name="completed"
+        render={({ field }) => (
+          <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4">
+            <FormControl>
+              <Checkbox
+                checked={field.value}
+                onCheckedChange={(checked) => {
+                  const isChecked = !!checked;
+                  field.onChange(isChecked);
+                  if (isChecked) {
+                    const currentStatus = form.getValues('status');
+                    if (currentStatus !== 'Done') {
+                      setPreviousStatus(currentStatus as TaskStatus);
+                    }
+                    form.setValue('status', 'Done');
+                  } else {
+                    form.setValue('status', previousStatus);
+                  }
+                }}
+              />
+            </FormControl>
+            <div className="space-y-1 leading-none">
+              <FormLabel>
+                Mark as completed
+              </FormLabel>
+            </div>
+          </FormItem>
+        )}
+      />
+      <FormField
+        control={form.control}
         name="description"
         render={({ field }) => (
           <FormItem>
@@ -298,7 +328,18 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task }: Ta
           render={({ field }) => (
             <FormItem>
               <FormLabel>Status</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value}>
+              <Select
+                onValueChange={(value: TaskStatus) => {
+                  field.onChange(value);
+                  if (value === 'Done') {
+                    form.setValue('completed', true);
+                  } else {
+                    form.setValue('completed', false);
+                    setPreviousStatus(value);
+                  }
+                }}
+                value={field.value}
+              >
                 <FormControl>
                   <SelectTrigger>
                     {field.value ? (
