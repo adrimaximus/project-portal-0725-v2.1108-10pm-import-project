@@ -29,7 +29,7 @@ import remarkGfm from "remark-gfm";
 
 interface ProjectTasksProps {
   project: Project;
-  onTaskAdd: (title: string) => void;
+  onTaskAdd: (title: string, assigneeIds: string[]) => void;
   onTaskAssignUsers: (taskId: string, userIds: string[]) => void;
   onTaskStatusChange: (taskId: string, completed: boolean) => void;
   onTaskDelete: (taskId: string) => void;
@@ -53,13 +53,15 @@ const ProjectTasks = ({
   onTaskDelete,
 }: ProjectTasksProps) => {
   const [newTaskTitle, setNewTaskTitle] = useState("");
+  const [newTaskAssigneeIds, setNewTaskAssigneeIds] = useState<string[]>([]);
   const [isAddingTask, setIsAddingTask] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
 
   const handleAddTask = () => {
     if (newTaskTitle.trim() === "") return;
-    onTaskAdd(newTaskTitle.trim());
+    onTaskAdd(newTaskTitle.trim(), newTaskAssigneeIds);
     setNewTaskTitle("");
+    setNewTaskAssigneeIds([]);
     setIsAddingTask(false);
   };
 
@@ -82,7 +84,7 @@ const ProjectTasks = ({
 
       if (Array.isArray(data) && data.every(item => typeof item === 'string')) {
         for (const title of data) {
-          onTaskAdd(title);
+          onTaskAdd(title, []);
         }
         toast.success(`${data.length} new tasks generated!`, { id: toastId });
       } else {
@@ -293,19 +295,31 @@ const ProjectTasks = ({
         })}
       </div>
       {isAddingTask ? (
-        <div className="flex items-center space-x-2">
-          <Checkbox disabled />
-          <Input
-            value={newTaskTitle}
-            onChange={(e) => setNewTaskTitle(e.target.value)}
-            placeholder="What needs to be done?"
-            onKeyDown={(e) => e.key === "Enter" && handleAddTask()}
-            autoFocus
-          />
-          <Button onClick={handleAddTask}>Add</Button>
-          <Button variant="ghost" onClick={() => setIsAddingTask(false)}>
-            Cancel
-          </Button>
+        <div className="space-y-2 rounded-lg border p-3">
+          <div className="flex items-start space-x-3">
+            <Checkbox disabled className="mt-2.5" />
+            <div className="flex-1 space-y-2">
+              <Input
+                value={newTaskTitle}
+                onChange={(e) => setNewTaskTitle(e.target.value)}
+                placeholder="What needs to be done?"
+                onKeyDown={(e) => e.key === "Enter" && handleAddTask()}
+                autoFocus
+              />
+              <MultiSelect
+                options={userOptions}
+                value={newTaskAssigneeIds}
+                onChange={setNewTaskAssigneeIds}
+                placeholder="Assign to..."
+              />
+            </div>
+          </div>
+          <div className="flex justify-end space-x-2 pt-1">
+            <Button variant="ghost" size="sm" onClick={() => setIsAddingTask(false)}>
+              Cancel
+            </Button>
+            <Button size="sm" onClick={handleAddTask}>Add Task</Button>
+          </div>
         </div>
       ) : (
         <Button
