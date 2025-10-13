@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Paperclip, Ticket, Send, X } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-import { getInitials, generatePastelColor, parseMentions } from '@/lib/utils';
+import { getInitials, generatePastelColor, parseMentions, getAvatarUrl } from '@/lib/utils';
 import { MentionsInput, Mention } from 'react-mentions';
 import '@/styles/mentions.css';
 
@@ -50,6 +50,7 @@ const CommentInput = ({ project, onAddCommentOrTicket }: CommentInputProps) => {
   const mentionData = (project.assignedTo || []).map(member => ({
     id: member.id,
     display: member.name,
+    ...member
   }));
 
   return (
@@ -73,6 +74,20 @@ const CommentInput = ({ project, onAddCommentOrTicket }: CommentInputProps) => {
               trigger="@"
               data={mentionData}
               markup="@[__display__](__id__)"
+              renderSuggestion={(suggestion, search, highlightedDisplay, index, focused) => (
+                <div className={`mention-suggestion ${focused ? 'focused' : ''}`}>
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={getAvatarUrl(suggestion.avatar_url, suggestion.id)} />
+                    <AvatarFallback style={generatePastelColor(suggestion.id)}>
+                      {suggestion.initials}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="mention-suggestion-info">
+                    <div className="font-medium">{highlightedDisplay}</div>
+                    <div className="text-xs text-muted-foreground">{suggestion.email}</div>
+                  </div>
+                </div>
+              )}
             />
           </MentionsInput>
           {attachments.length > 0 && (

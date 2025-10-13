@@ -48,15 +48,11 @@
   padding: 0.25rem;
 }
 
+/* Clear default item styles as we are using a custom renderer */
 .mentions-input__suggestions__item {
-  padding: 0.5rem 0.75rem;
-  border-radius: 0.25rem;
-  cursor: pointer;
 }
 
 .mentions-input__suggestions__item--focused {
-  background-color: hsl(var(--accent));
-  color: hsl(var(--accent-foreground));
 }
 
 .mentions-input__mention {
@@ -65,4 +61,21 @@
   font-weight: 500;
   padding: 1px 3px;
   border-radius: 4px;
+}
+
+/* Custom styles for rich suggestions */
+.mention-suggestion {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.25rem;
+  cursor: pointer;
+}
+
+.mention-suggestion.focused {
+  background-color: hsl(var(--accent));
+}
+
+.mention-suggestion-info {
+  margin-left: 0.75rem;
 }
