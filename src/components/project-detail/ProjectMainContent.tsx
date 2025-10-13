@@ -46,6 +46,14 @@ const ProjectMainContent = ({ project, isEditing, onFieldChange, mutations, defa
     mutations.addComment.mutate({ project, user, text, isTicket, attachments });
   };
 
+  const handleUpdateComment = (commentId: string, text: string) => {
+    mutations.updateComment.mutate({ commentId, text });
+  };
+
+  const handleDeleteComment = (commentId: string) => {
+    mutations.deleteComment.mutate(commentId);
+  };
+
   return (
     <div className="p-4">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -94,6 +102,8 @@ const ProjectMainContent = ({ project, isEditing, onFieldChange, mutations, defa
           <ProjectComments
             project={project}
             onAddCommentOrTicket={handleAddCommentOrTicket}
+            onUpdateComment={handleUpdateComment}
+            onDeleteComment={handleDeleteComment}
           />
         </TabsContent>
         <TabsContent value="activity" className="mt-4">

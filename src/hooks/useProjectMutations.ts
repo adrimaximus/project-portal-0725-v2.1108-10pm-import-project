@@ -240,6 +240,30 @@ export const useProjectMutations = (slug: string) => {
         onError: (err: any) => toast.error(err.message),
     });
 
+    const useUpdateComment = () => useMutation({
+        mutationFn: async ({ commentId, text }: { commentId: string, text: string }) => {
+            const { error } = await supabase.from('comments').update({ text }).eq('id', commentId);
+            if (error) throw error;
+        },
+        onSuccess: () => {
+            toast.success("Comment updated.");
+            invalidateProjectQueries();
+        },
+        onError: (err: any) => toast.error("Failed to update comment", { description: err.message }),
+    });
+
+    const useDeleteComment = () => useMutation({
+        mutationFn: async (commentId: string) => {
+            const { error } = await supabase.rpc('delete_comment_and_task', { p_comment_id: commentId });
+            if (error) throw error;
+        },
+        onSuccess: () => {
+            toast.success("Comment deleted.");
+            invalidateProjectQueries();
+        },
+        onError: (err: any) => toast.error("Failed to delete comment", { description: err.message }),
+    });
+
     const useDeleteProject = () => useMutation({
         mutationFn: async (projectId: string) => {
             const { error } = await supabase.from('projects').delete().eq('id', projectId);
@@ -262,6 +286,8 @@ export const useProjectMutations = (slug: string) => {
         assignUsersToTask: useAssignUsersToTask(),
         deleteTask: useDeleteTask(),
         addComment: useAddComment(),
+        updateComment: useUpdateComment(),
+        deleteComment: useDeleteComment(),
         deleteProject: useDeleteProject(),
     };
 };
