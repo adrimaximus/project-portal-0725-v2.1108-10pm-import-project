@@ -104,7 +104,7 @@
     "react-markdown": "^10.1.0",
     "react-mentions": "^4.4.10",
     "react-quill": "^2.0.0",
-    "react-resizable-panels": "2.1.7",
+    "react-resizable-panels": "2.0.19",
     "react-router-dom": "^6.26.2",
     "recharts": "^2.12.7",
     "remark-gfm": "^4.0.1",
