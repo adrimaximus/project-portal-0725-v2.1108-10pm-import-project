@@ -119,10 +119,10 @@ const TasksKanbanCard = ({ task, onEdit, onDelete }: TasksKanbanCardProps) => {
       </CardHeader>
       <CardContent className="p-3 pt-0">
         <div className="space-y-2">
-          {task.projects && task.projects.name !== 'General Tasks' && (
+          {task.project_name && task.project_name !== 'General Tasks' && (
             <div className="text-xs text-muted-foreground">
-              <Link to={`/projects/${task.projects.slug}`} className="hover:underline text-primary break-words">
-                {task.projects.name}
+              <Link to={`/projects/${task.project_slug}`} className="hover:underline text-primary break-words">
+                {task.project_name}
               </Link>
             </div>
           )}
@@ -135,23 +135,26 @@ const TasksKanbanCard = ({ task, onEdit, onDelete }: TasksKanbanCardProps) => {
         <div className="flex items-center justify-between mt-2">
           <div className="flex items-center -space-x-2">
             {(task.assignees && task.assignees.length > 0)
-              ? task.assignees.map((user) => (
-                <TooltipProvider key={user.id}>
-                  <Tooltip>
-                    <TooltipTrigger>
-                      <Avatar className="h-6 w-6 border-2 border-background">
-                        <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
-                        <AvatarFallback style={generatePastelColor(user.id)}>
-                          {getInitials([user.first_name, user.last_name].filter(Boolean).join(' '), user.email || undefined)}
-                        </AvatarFallback>
-                      </Avatar>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{[user.first_name, user.last_name].filter(Boolean).join(' ')}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              ))
+              ? task.assignees.map((user) => {
+                const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email || (user as any).name;
+                return (
+                  <TooltipProvider key={user.id}>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <Avatar className="h-6 w-6 border-2 border-background">
+                          <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
+                          <AvatarFallback style={generatePastelColor(user.id)}>
+                            {getInitials([user.first_name, user.last_name].filter(Boolean).join(' '), user.email || undefined)}
+                          </AvatarFallback>
+                        </Avatar>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{[user.first_name, user.last_name].filter(Boolean).join(' ')}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )
+              })
               : <div className="h-6 w-6" />
             }
           </div>
