@@ -22,7 +22,8 @@ export const PERMISSIONS = [
     permissions: [
       { id: 'projects:create', label: 'Create Projects', description: 'Allow users to create new projects.' },
       { id: 'projects:delete', label: 'Delete Projects', description: 'Allow users to delete projects they own.' },
-      { id: 'projects:edit', label: 'Edit Project Details', description: 'Allow users to edit details of projects they are a member of.' },
+      { id: 'projects:edit', label: 'Edit Own/Member Projects', description: 'Allow users to edit details of projects they own or are a member of.' },
+      { id: 'projects:edit_all', label: 'Edit All Projects', description: 'Allow users to edit all projects, not just those they are a member of.' },
       { id: 'projects:manage_members', label: 'Manage Project Members', description: 'Allow users to add or remove members from projects they own.' },
       { id: 'projects:view_all', label: 'View All Projects', description: 'Allow users to see all projects, not just those they are a member of.' },
       { id: 'projects:view_value', label: 'View Project Value', description: 'Allow users to see the project budget/value. If unchecked, the value will be hidden.' },
