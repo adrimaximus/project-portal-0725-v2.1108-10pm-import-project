@@ -16,7 +16,7 @@ import { cn, getTaskStatusStyles, getPriorityStyles } from '@/lib/utils';
 import { format } from 'date-fns';
 import { useProjects } from '@/hooks/useProjects';
 import { MultiSelect } from '@/components/ui/multi-select';
-import { Task, TASK_PRIORITY_OPTIONS, TASK_STATUS_OPTIONS, Tag, User as Profile, Project } from '@/types';
+import { Task, TaskStatus, TASK_PRIORITY_OPTIONS, TASK_STATUS_OPTIONS, Tag, User as Profile, Project } from '@/types';
 import { UpsertTaskPayload } from '@/hooks/useTaskMutations';
 import { useTags } from '@/hooks/useTags';
 import { TagsMultiselect } from '@/components/ui/TagsMultiselect';
