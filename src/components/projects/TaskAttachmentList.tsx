@@ -3,7 +3,7 @@ import { TaskAttachment } from "@/types";
 import FileIcon from "../FileIcon";
 import { DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "../ui/button";
-import { Download, Loader2 } from "lucide-react";
+import { Download, Loader2, Eye } from "lucide-react";
 import { toast } from 'sonner';
 
 interface TaskAttachmentListProps {
@@ -40,6 +40,12 @@ const TaskAttachmentList = ({ attachments }: TaskAttachmentListProps) => {
     }
   };
 
+  const handleView = (e: React.MouseEvent, file: TaskAttachment) => {
+    e.preventDefault();
+    e.stopPropagation();
+    window.open(file.file_url, '_blank', 'noopener,noreferrer');
+  };
+
   return (
     <>
       <DialogHeader>
@@ -57,19 +63,31 @@ const TaskAttachmentList = ({ attachments }: TaskAttachmentListProps) => {
                 </p>
               </div>
             </div>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-8 w-8 flex-shrink-0"
-              onClick={(e) => handleDownload(e, file)}
-              disabled={downloadingId === file.id}
-            >
-              {downloadingId === file.id ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Download className="h-4 w-4" />
-              )}
-            </Button>
+            <div className="flex items-center gap-1 flex-shrink-0">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={(e) => handleView(e, file)}
+                title="View file"
+              >
+                <Eye className="h-4 w-4" />
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-8 w-8"
+                onClick={(e) => handleDownload(e, file)}
+                disabled={downloadingId === file.id}
+                title="Download file"
+              >
+                {downloadingId === file.id ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Download className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
           </li>
         ))}
       </ul>
