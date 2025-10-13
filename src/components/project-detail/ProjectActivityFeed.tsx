@@ -14,13 +14,19 @@ const ProjectActivityFeed = ({ activities }: ProjectActivityFeedProps) => {
   const filteredActivities = activities
     .filter(activity => activity.type !== 'FILE_UPLOADED')
     .map(activity => {
-      if (activity.type === 'COMMENT_ADDED' && activity.details.description) {
+      const relevantTypes = ['COMMENT_ADDED', 'TICKET_CREATED', 'TASK_CREATED'];
+      if (relevantTypes.includes(activity.type) && activity.details.description) {
         const cleanedDescription = activity.details.description.replace(attachmentsRegex, '').trim();
-        // Jika komentar hanya berisi lampiran, deskripsinya bisa menjadi 'commented: ""'
-        // Kita juga bisa memfilternya jika tidak memberikan nilai apa pun.
-        if (cleanedDescription.replace(/commented: /i, '').replace(/\\"/g, '').trim() === '') {
+        
+        // Regex untuk menghapus berbagai kemungkinan awalan
+        const prefixRegex = /^(commented: |created a new task & ticket: |created a new task: )/i;
+        const content = cleanedDescription.replace(prefixRegex, '').replace(/\\"/g, '').trim();
+
+        // Jika deskripsi menjadi kosong setelah menghapus lampiran dan awalan, jangan tampilkan aktivitas ini.
+        if (content === '') {
           return null;
         }
+
         return {
           ...activity,
           details: {
