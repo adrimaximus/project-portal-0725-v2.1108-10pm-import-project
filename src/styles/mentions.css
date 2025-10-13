@@ -1,0 +1,68 @@
+.mentions-input {
+  width: 100%;
+  font-size: 0.875rem; /* text-sm */
+  line-height: 1.25rem;
+}
+
+.mentions-input__control {
+  /* This will be the main textarea */
+}
+
+.mentions-input__highlighter {
+  padding: 0.75rem; /* p-3 */
+  min-height: 78px; /* approx rows=3 */
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.mentions-input__input {
+  padding: 0.75rem; /* p-3 */
+  min-height: 78px; /* approx rows=3 */
+  outline: 0;
+  border: 0;
+  width: 100%;
+  resize: none;
+  font-size: inherit;
+  font-family: inherit;
+  background-color: transparent;
+  color: hsl(var(--foreground));
+}
+
+.mentions-input__input::placeholder {
+  color: hsl(var(--muted-foreground));
+}
+
+.mentions-input__suggestions {
+  margin-top: 4px;
+  background: hsl(var(--background));
+  border-radius: 0.5rem;
+  border: 1px solid hsl(var(--border));
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  font-size: 0.875rem;
+  max-height: 15rem;
+  overflow-y: auto;
+  z-index: 50;
+}
+
+.mentions-input__suggestions__list {
+  padding: 0.25rem;
+}
+
+.mentions-input__suggestions__item {
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.25rem;
+  cursor: pointer;
+}
+
+.mentions-input__suggestions__item--focused {
+  background-color: hsl(var(--accent));
+  color: hsl(var(--accent-foreground));
+}
+
+.mentions-input__mention {
+  background-color: hsl(var(--primary) / 0.1);
+  color: hsl(var(--primary));
+  font-weight: 500;
+  padding: 1px 3px;
+  border-radius: 4px;
+}

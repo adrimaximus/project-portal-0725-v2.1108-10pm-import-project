@@ -1,19 +1,20 @@
 import { useState, useRef } from 'react';
 import { Project } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
-import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Paperclip, Ticket, Send, X } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { getInitials, generatePastelColor, parseMentions } from '@/lib/utils';
+import { MentionsInput, Mention } from 'react-mentions';
+import '@/styles/mentions.css';
 
 interface CommentInputProps {
   project: Project;
   onAddCommentOrTicket: (text: string, isTicket: boolean, attachments: File[] | null, mentionedUserIds: string[]) => void;
 }
 
-const CommentInput = ({ onAddCommentOrTicket }: CommentInputProps) => {
+const CommentInput = ({ project, onAddCommentOrTicket }: CommentInputProps) => {
   const { user } = useAuth();
   const [text, setText] = useState('');
   const [isTicket, setIsTicket] = useState(false);
@@ -46,6 +47,11 @@ const CommentInput = ({ onAddCommentOrTicket }: CommentInputProps) => {
   
   const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email;
 
+  const mentionData = (project.assignedTo || []).map(member => ({
+    id: member.id,
+    display: member.name,
+  }));
+
   return (
     <div className="flex items-start space-x-4">
       <Avatar>
@@ -56,13 +62,19 @@ const CommentInput = ({ onAddCommentOrTicket }: CommentInputProps) => {
       </Avatar>
       <div className="min-w-0 flex-1">
         <div className="border rounded-lg focus-within:ring-1 focus-within:ring-ring">
-          <Textarea
-            placeholder="Add a comment or create a ticket..."
-            className="w-full border-0 resize-none focus-visible:ring-0 shadow-none p-3"
+          <MentionsInput
             value={text}
-            onChange={(e) => setText(e.target.value)}
-            rows={3}
-          />
+            onChange={(event, newValue) => setText(newValue)}
+            placeholder="Add a comment or create a ticket... Type @ to mention a team member."
+            className="mentions-input"
+            a11ySuggestionsListLabel={"Suggested mentions"}
+          >
+            <Mention
+              trigger="@"
+              data={mentionData}
+              markup="@[__display__](__id__)"
+            />
+          </MentionsInput>
           {attachments.length > 0 && (
             <div className="p-3 border-t">
               <p className="text-sm font-medium mb-2">Attachments</p>
