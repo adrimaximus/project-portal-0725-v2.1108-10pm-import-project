@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../integrations/supabase/client';
 import { toast } from 'sonner';
-import { Task } from '@/types';
+import { Task, TaskStatus } from '@/types';
 
 export interface UpsertTaskPayload {
   id?: string;
@@ -112,10 +112,44 @@ const useDeleteTask = () => {
   });
 };
 
+const useUpdateTaskStatusAndOrder = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ taskId, newStatus, orderedTaskIds }: { taskId: string, newStatus: TaskStatus, orderedTaskIds: string[] }) => {
+      // 1. Update status of the moved task
+      const { error: statusError } = await supabase
+        .from('tasks')
+        .update({ status: newStatus, updated_at: new Date().toISOString() })
+        .eq('id', taskId);
+
+      if (statusError) throw statusError;
+
+      // 2. Update the order of all tasks
+      const { error: orderError } = await supabase.rpc('update_task_kanban_order', {
+        p_task_ids: orderedTaskIds,
+      });
+
+      if (orderError) throw orderError;
+    },
+    onSuccess: () => {
+      // Invalidate queries to refetch the updated state
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['projects'] }); // Invalidate projects too as tasks are nested
+    },
+    onError: (error: any) => {
+      toast.error(`Failed to move task: ${error.message}`);
+      // Revert optimistic update by refetching
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+    },
+  });
+};
+
 export const useTaskMutations = () => {
   const { mutate: upsertTask, isPending: isUpserting } = useUpsertTask();
   const { mutate: toggleTaskCompletion, isPending: isToggling } = useToggleTaskCompletion();
   const { mutate: deleteTask, isPending: isDeleting } = useDeleteTask();
+  const { mutate: updateTaskStatusAndOrder } = useUpdateTaskStatusAndOrder();
 
   return {
     upsertTask,
@@ -124,5 +158,6 @@ export const useTaskMutations = () => {
     isToggling,
     deleteTask,
     isDeleting,
+    updateTaskStatusAndOrder,
   };
 };
