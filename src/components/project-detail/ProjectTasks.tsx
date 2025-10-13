@@ -10,7 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Plus, MoreHorizontal, Trash2, UserPlus, Sparkles, RefreshCw, Ticket } from "lucide-react";
+import { Plus, MoreHorizontal, Trash2, UserPlus, Sparkles, RefreshCw, Ticket, Paperclip } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -195,6 +195,21 @@ const ProjectTasks = ({
                       </TooltipTrigger>
                       <TooltipContent>
                         <p>This task was created from a ticket.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
+                {task.attachments && task.attachments.length > 0 && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <Badge variant="secondary" className="mt-0.5 flex-shrink-0">
+                          <Paperclip className="h-3 w-3 mr-1" />
+                          {task.attachments.length}
+                        </Badge>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{task.attachments.length} attachment(s)</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
