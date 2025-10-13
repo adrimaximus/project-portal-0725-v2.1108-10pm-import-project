@@ -9,7 +9,8 @@ interface ProjectActivityFeedProps {
 }
 
 const ProjectActivityFeed = ({ activities }: ProjectActivityFeedProps) => {
-  const attachmentsRegex = /\*\*Attachments:\*\*\n((?:\* \[.+\]\(.+\)\n?)+)/;
+  // Regex yang lebih kuat untuk menghapus blok lampiran, dari '**Attachments:**' hingga akhir teks.
+  const attachmentsRegex = /\s*\*\*Attachments:\*\*.*$/s;
 
   const filteredActivities = activities
     .filter(activity => activity.type !== 'FILE_UPLOADED')
