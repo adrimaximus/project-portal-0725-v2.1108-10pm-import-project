@@ -57,11 +57,11 @@ export const useTaskMutations = (projectId?: string) => {
         for (const file of new_files) {
           const fileExt = file.name.split('.').pop() || 'bin';
           const sanitizedFileName = file.name
-            .substring(0, file.name.lastIndexOf('.') || file.name.length) // remove extension
+            .substring(0, file.name.lastIndexOf('.') || file.name.length)
             .toLowerCase()
-            .replace(/[^a-z0-9_.\s-]/g, '') // remove invalid chars
-            .replace(/\s+/g, '_') // replace spaces with underscore
-            .substring(0, 50); // truncate to be safe
+            .replace(/[^a-z0-9_.\s-]/g, '')
+            .replace(/\s+/g, '_')
+            .substring(0, 50);
 
           const filePath = `tasks/${taskId}/${Date.now()}-${sanitizedFileName}.${fileExt}`;
           
@@ -70,9 +70,7 @@ export const useTaskMutations = (projectId?: string) => {
             .upload(filePath, file);
 
           if (uploadError) {
-            console.error('Error uploading file:', uploadError);
-            toast.error(`Failed to upload file: ${file.name}`);
-            continue;
+            throw new Error(`Failed to upload file: ${file.name}. ${uploadError.message}`);
           }
 
           const { data: { publicUrl } } = supabase.storage
@@ -83,16 +81,15 @@ export const useTaskMutations = (projectId?: string) => {
             .from('task_attachments')
             .insert({
               task_id: taskId,
-              file_name: file.name, // Store original name
+              file_name: file.name,
               file_url: publicUrl,
-              storage_path: filePath, // Store sanitized path
+              storage_path: filePath,
               file_type: file.type,
               file_size: file.size,
             });
           
           if (insertError) {
-            console.error('Error inserting file attachment record:', insertError);
-            toast.error(`Failed to save attachment record for: ${file.name}`);
+            throw new Error(`Failed to save attachment record for: ${file.name}. ${insertError.message}`);
           }
         }
       }
@@ -105,7 +102,7 @@ export const useTaskMutations = (projectId?: string) => {
           .in('id', deleted_files);
 
         if (fetchError) {
-          console.error('Error fetching attachments to delete:', fetchError);
+          console.warn('Could not fetch attachments to delete:', fetchError.message);
         } else if (attachmentsToDelete) {
           const pathsToDelete = attachmentsToDelete.map(f => f.storage_path);
           if (pathsToDelete.length > 0) {
@@ -126,8 +123,7 @@ export const useTaskMutations = (projectId?: string) => {
           .in('id', deleted_files);
 
         if (deleteDbError) {
-          console.error('Error deleting attachment records:', deleteDbError);
-          toast.error('Failed to delete some attachment records.');
+          throw new Error(`Failed to delete attachment records: ${deleteDbError.message}`);
         }
       }
 
