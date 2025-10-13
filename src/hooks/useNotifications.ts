@@ -74,14 +74,25 @@ export const useNotifications = () => {
           
           if (data) {
             console.log('[Dyad Debug] Fetched notification details:', data);
-            toast.info(data.title, {
-              description: data.body,
-            });
+            const userPreferences = (user as any).notification_preferences || {};
+
+            // Check if toasts are globally enabled
+            const toastsEnabled = userPreferences.toast_enabled !== false; // Default to true
+
+            // Specific check for chat messages
+            let canShowToast = toastsEnabled;
+            if (data.type === 'comment' && window.location.pathname.startsWith('/chat')) {
+              canShowToast = false;
+              console.log('[Dyad Debug] Suppressing chat toast because user is on chat page.');
+            }
+
+            if (canShowToast) {
+              toast.info(data.title, {
+                description: data.body,
+              });
+            }
 
             // Play sound logic
-            const userPreferences = (user as any).notification_preferences;
-            console.log('[Dyad Debug] User preferences:', userPreferences);
-
             const isNotificationTypeEnabled = userPreferences?.[data.type] !== false; // default to true
             const tone = userPreferences?.tone;
             console.log(`[Dyad Debug] Type enabled: ${isNotificationTypeEnabled}, Tone: ${tone}`);

@@ -12,7 +12,7 @@ import TestNotificationToast from "./TestNotificationToast";
 const notificationTypes = [
   { id: 'project_update', label: 'Project Updates', description: 'When you are added to a project, a task is assigned to you, or a project you are in is updated.' },
   { id: 'mention', label: 'Mentions', description: 'When someone @mentions you in a comment.' },
-  { id: 'comment', label: 'New Chat Messages', description: 'When you receive a new message in the chat.' },
+  { id: 'comment', label: 'New Chat Messages', description: 'When you receive a new message and are not on the chat page.' },
   { id: 'goal', label: 'Goal Updates', description: 'When a new goal is created for you.' },
   { id: 'system', label: 'System Notifications', description: 'Important updates and announcements from the system.' },
 ];
@@ -102,6 +102,14 @@ const NotificationPreferencesCard = () => {
     }
   };
 
+  const handleGlobalToastToggle = async (isEnabled: boolean) => {
+    const newPreferences = { ...preferences, toast_enabled: isEnabled };
+    const success = await updatePreferences(newPreferences);
+    if (success) {
+      toast.success("Toast notification setting updated.");
+    }
+  };
+
   if (isLoading) {
     return (
       <Card>
@@ -123,25 +131,40 @@ const NotificationPreferencesCard = () => {
         <CardDescription>Manage how you receive notifications from the platform.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="rounded-lg border p-4">
-            <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                    <Label htmlFor="notification-tone" className="text-base">Notification Tone</Label>
-                    <p className="text-sm text-muted-foreground">Select a sound for incoming notifications.</p>
-                </div>
-                <Select value={preferences.tone || 'none'} onValueChange={handleToneChange}>
-                    <SelectTrigger className="w-[240px]">
-                        <SelectValue placeholder="Select a tone" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {notificationTones.map((tone) => (
-                            <SelectItem key={tone.value} value={tone.value}>
-                                {tone.name}
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-            </div>
+        <div className="space-y-4">
+          <div className="rounded-lg border p-4">
+              <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                      <Label htmlFor="toast-notifications" className="text-base">Enable Toast Notifications</Label>
+                      <p className="text-sm text-muted-foreground">Show pop-up notifications on screen.</p>
+                  </div>
+                  <Switch
+                    id="toast-notifications"
+                    checked={preferences.toast_enabled !== false} // Default to true
+                    onCheckedChange={handleGlobalToastToggle}
+                  />
+              </div>
+          </div>
+          <div className="rounded-lg border p-4">
+              <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                      <Label htmlFor="notification-tone" className="text-base">Notification Tone</Label>
+                      <p className="text-sm text-muted-foreground">Select a sound for incoming notifications.</p>
+                  </div>
+                  <Select value={preferences.tone || 'none'} onValueChange={handleToneChange}>
+                      <SelectTrigger className="w-[240px]">
+                          <SelectValue placeholder="Select a tone" />
+                      </SelectTrigger>
+                      <SelectContent>
+                          {notificationTones.map((tone) => (
+                              <SelectItem key={tone.value} value={tone.value}>
+                                  {tone.name}
+                              </SelectItem>
+                          ))}
+                      </SelectContent>
+                  </Select>
+              </div>
+          </div>
         </div>
         <div className="space-y-4">
             {notificationTypes.map((type) => (
