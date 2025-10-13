@@ -1,4 +1,4 @@
-export type Theme = "dark" | "light" | "system" | "claude" | "claude-light" | "nature" | "nature-light" | "corporate" | "corporate-light";
+export type Theme = "dark" | "light" | "system" | "claude" | "claude-light" | "nature" | "nature-light" | "corporate" | "corporate-light" | "ahensi" | "ahensi-light" | "brand-activator" | "brand-activator-light";
 
 export const PROJECT_STATUS_OPTIONS = [
   { value: 'Requested', label: 'Requested' },
@@ -287,23 +287,17 @@ export interface Invoice {
   id: string;
   projectId: string;
   projectName: string;
-  amount: number;
-  dueDate: Date;
-  status: PaymentStatus;
-  rawProjectId: string;
-  projectStartDate: Date | null;
-  projectEndDate: Date | null;
-  poNumber: string | null;
-  paidDate: Date | null;
-  emailSendingDate: Date | null;
-  hardcopySendingDate: Date | null;
-  channel: string | null;
-  clientName: string | null;
-  clientLogo: string | null;
-  clientCompanyName: string | null;
-  projectOwner: Owner | null;
+  clientName?: string | null;
+  clientLogo?: string | null;
+  clientAvatarUrl?: string | null;
+  clientCompanyName?: string | null;
+  projectOwner?: Owner;
   assignedMembers: Member[];
-  invoiceAttachments?: InvoiceAttachment[];
+  status: string;
+  poNumber?: string | null;
+  amount: number;
+  dueDate: string | Date;
+  invoiceAttachments?: Attachment[];
 }
 
 export interface ExtendedProject extends Project {
