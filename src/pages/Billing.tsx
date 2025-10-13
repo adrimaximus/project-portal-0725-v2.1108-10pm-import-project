@@ -34,7 +34,7 @@ const Billing = () => {
       
       const dueDate = project.payment_due_date ? new Date(project.payment_due_date) : new Date(eventDate);
 
-      let finalStatus = project.payment_status;
+      let finalStatus: PaymentStatus = project.payment_status;
       if (['Unpaid', 'Pending', 'In Process'].includes(finalStatus) && isPast(dueDate)) {
         finalStatus = 'Overdue';
       }
@@ -45,7 +45,7 @@ const Billing = () => {
         projectName: project.name,
         amount: project.budget,
         dueDate: dueDate,
-        status: finalStatus as PaymentStatus,
+        status: finalStatus,
         rawProjectId: project.id,
         projectStartDate: project.start_date ? new Date(project.start_date) : null,
         projectEndDate: project.due_date ? new Date(project.due_date) : null,

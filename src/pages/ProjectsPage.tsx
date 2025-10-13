@@ -379,7 +379,7 @@ const ProjectsPage = () => {
               isLoading={isLoading}
               isTasksLoading={tasksLoading}
               onDeleteProject={handleDeleteProject}
-              sortConfig={projectSortConfig}
+              sortConfig={sortConfig}
               requestSort={requestProjectSort}
               rowRefs={rowRefs}
               kanbanGroupBy={kanbanGroupBy}
