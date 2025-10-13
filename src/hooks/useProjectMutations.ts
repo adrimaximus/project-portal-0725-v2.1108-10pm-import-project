@@ -241,9 +241,74 @@ export const useProjectMutations = (slug: string) => {
     });
 
     const useUpdateComment = () => useMutation({
-        mutationFn: async ({ commentId, text }: { commentId: string, text: string }) => {
-            const { error } = await supabase.from('comments').update({ text }).eq('id', commentId);
-            if (error) throw error;
+        mutationFn: async ({ commentId, text, attachments, isConvertingToTicket }: { commentId: string, text: string, attachments: File[] | null, isConvertingToTicket: boolean }) => {
+            const { data: originalComment, error: fetchError } = await supabase
+                .from('comments')
+                .select('text, is_ticket, project_id, attachment_url, attachment_name')
+                .eq('id', commentId)
+                .single();
+            if (fetchError) throw fetchError;
+
+            let newAttachmentMarkdown = '';
+            let newFirstAttachmentUrl: string | null = null;
+            let newFirstAttachmentName: string | null = null;
+
+            if (attachments && attachments.length > 0) {
+                const uploadPromises = attachments.map(async (file) => {
+                    const sanitizedFileName = file.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
+                    const filePath = `${originalComment.project_id}/comments/${Date.now()}-${sanitizedFileName}`;
+                    const { error: uploadError } = await supabase.storage.from('project-files').upload(filePath, file);
+                    if (uploadError) throw new Error(`Failed to upload ${file.name}: ${uploadError.message}`);
+                    
+                    const { data: urlData } = supabase.storage.from('project-files').getPublicUrl(filePath);
+                    return { name: file.name, url: urlData.publicUrl };
+                });
+                const uploadedFiles = await Promise.all(uploadPromises);
+                
+                if (uploadedFiles.length > 0) {
+                    newAttachmentMarkdown = uploadedFiles.map(file => `* [${file.name}](${file.url})`).join('\n');
+                    if (!originalComment.attachment_url) {
+                        newFirstAttachmentUrl = uploadedFiles[0].url;
+                        newFirstAttachmentName = uploadedFiles[0].name;
+                    }
+                }
+            }
+
+            const attachmentsRegex = /\*\*Attachments:\*\*\n((?:\* \[.+\]\(.+\)\n?)+)/;
+            const existingAttachmentsMatch = originalComment.text.match(attachmentsRegex);
+            let finalCommentText = text;
+
+            if (existingAttachmentsMatch) {
+                finalCommentText += `\n\n${existingAttachmentsMatch[0]}`;
+                if (newAttachmentMarkdown) {
+                    finalCommentText += `\n${newAttachmentMarkdown}`;
+                }
+            } else if (newAttachmentMarkdown) {
+                finalCommentText += `\n\n**Attachments:**\n${newAttachmentMarkdown}`;
+            }
+
+            const updatePayload: any = {
+                text: finalCommentText,
+                is_ticket: isConvertingToTicket || originalComment.is_ticket,
+            };
+            if (newFirstAttachmentUrl) {
+                updatePayload.attachment_url = newFirstAttachmentUrl;
+                updatePayload.attachment_name = newFirstAttachmentName;
+            }
+
+            const { error: updateError } = await supabase.from('comments').update(updatePayload).eq('id', commentId);
+            if (updateError) throw updateError;
+
+            if (isConvertingToTicket && !originalComment.is_ticket) {
+                const { error: taskError } = await supabase.from('tasks').insert({
+                    project_id: originalComment.project_id,
+                    title: text.substring(0, 100),
+                    origin_ticket_id: commentId,
+                });
+                if (taskError) {
+                    toast.warning("Comment updated, but failed to create the associated task.");
+                }
+            }
         },
         onSuccess: () => {
             toast.success("Comment updated.");

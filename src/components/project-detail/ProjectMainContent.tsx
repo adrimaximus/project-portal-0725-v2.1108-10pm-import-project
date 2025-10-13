@@ -46,8 +46,8 @@ const ProjectMainContent = ({ project, isEditing, onFieldChange, mutations, defa
     mutations.addComment.mutate({ project, user, text, isTicket, attachments });
   };
 
-  const handleUpdateComment = (commentId: string, text: string) => {
-    mutations.updateComment.mutate({ commentId, text });
+  const handleUpdateComment = (commentId: string, text: string, attachments: File[] | null, isConvertingToTicket: boolean) => {
+    mutations.updateComment.mutate({ commentId, text, attachments, isConvertingToTicket });
   };
 
   const handleDeleteComment = (commentId: string) => {

@@ -1,8 +1,9 @@
-import { useState } from "react";
-import { Project, Comment as CommentType } from "@/types";
+import { useState, useRef } from 'react';
+import { Project, Comment as CommentType, Task, User } from "@/types";
+import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Ticket, MoreHorizontal, Edit, Trash2, FileText, Eye, Download, Paperclip, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Ticket, MoreHorizontal, Edit, Trash2, FileText, Eye, Download } from "lucide-react";
 import { getInitials, generatePastelColor } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
 import CommentInput from "./CommentInput";
@@ -10,15 +11,15 @@ import ReactMarkdown from "react-markdown";
 import { Link } from "react-router-dom";
 import remarkGfm from "remark-gfm";
 import { useAuth } from "@/contexts/AuthContext";
-import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Textarea } from "@/components/ui/textarea";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 
 interface ProjectCommentsProps {
   project: Project;
   onAddCommentOrTicket: (text: string, isTicket: boolean, attachments: File[] | null) => void;
-  onUpdateComment: (commentId: string, text: string) => void;
+  onUpdateComment: (commentId: string, text: string, attachments: File[] | null, isConvertingToTicket: boolean) => void;
   onDeleteComment: (commentId: string) => void;
 }
 
@@ -51,33 +52,28 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editedText, setEditedText] = useState('');
   const [commentToDelete, setCommentToDelete] = useState<CommentType | null>(null);
-
-  const comments = project.comments || [];
-  const tasks = project.tasks || [];
+  const [newAttachments, setNewAttachments] = useState<File[]>([]);
+  const [isConvertingToTicket, setIsConvertingToTicket] = useState(false);
+  const editFileInputRef = useRef<HTMLInputElement>(null);
 
   const handleEditClick = (comment: CommentType) => {
     const { mainText } = parseComment(comment.text);
     setEditingCommentId(comment.id);
     setEditedText(mainText);
+    setNewAttachments([]);
+    setIsConvertingToTicket(false);
   };
 
   const handleCancelEdit = () => {
     setEditingCommentId(null);
     setEditedText('');
+    setNewAttachments([]);
+    setIsConvertingToTicket(false);
   };
 
   const handleSaveEdit = () => {
     if (editingCommentId) {
-      const originalComment = comments.find(c => c.id === editingCommentId);
-      if (!originalComment) return;
-
-      const match = originalComment.text.match(attachmentsRegex);
-      let finalUpdatedText = editedText.trim();
-      if (match) {
-        finalUpdatedText += `\n\n${match[0]}`;
-      }
-
-      onUpdateComment(editingCommentId, finalUpdatedText);
+      onUpdateComment(editingCommentId, editedText, newAttachments, isConvertingToTicket);
     }
     handleCancelEdit();
   };
@@ -89,11 +85,23 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
     }
   };
 
+  const handleEditFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files) {
+      setNewAttachments(prev => [...prev, ...Array.from(event.target.files!)]);
+    }
+  };
+
+  const removeNewAttachment = (index: number) => {
+    setNewAttachments(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const comments = project.comments || [];
+  const tasks = project.tasks || [];
+
   return (
     <>
       <div className="space-y-6">
         <CommentInput project={project} onAddCommentOrTicket={onAddCommentOrTicket} />
-
         <div className="space-y-4">
           {comments.map((comment) => {
             const author = comment.author;
@@ -140,9 +148,9 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
                   {editingCommentId === comment.id ? (
                     <div className="mt-2 space-y-2">
                       <Textarea value={editedText} onChange={(e) => setEditedText(e.target.value)} autoFocus />
-                      {attachments.length > 0 && (
+                      {(attachments.length > 0 || newAttachments.length > 0) && (
                         <div className="mt-2">
-                            <h4 className="font-semibold text-xs text-muted-foreground mb-2">Files Attached (not editable)</h4>
+                            <h4 className="font-semibold text-xs text-muted-foreground mb-2">Attachments</h4>
                             <div className="space-y-1">
                                 {attachments.map((file, index) => (
                                     <div key={index} className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -150,12 +158,47 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
                                         <span>{file.name}</span>
                                     </div>
                                 ))}
+                                {newAttachments.map((file, index) => (
+                                  <div key={index} className="flex items-center justify-between text-sm bg-muted p-1 rounded-md">
+                                    <span className="truncate">{file.name}</span>
+                                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeNewAttachment(index)}>
+                                      <X className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                ))}
                             </div>
                         </div>
                       )}
-                      <div className="flex justify-end gap-2">
-                        <Button variant="ghost" size="sm" onClick={handleCancelEdit}>Cancel</Button>
-                        <Button size="sm" onClick={handleSaveEdit}>Save</Button>
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-1">
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button variant="ghost" size="icon" onClick={() => editFileInputRef.current?.click()}>
+                                  <Paperclip className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent><p>Attach files</p></TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                          <input type="file" ref={editFileInputRef} multiple onChange={handleEditFileChange} className="hidden" />
+                          {!isTicket && (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button variant="ghost" size="icon" onClick={() => setIsConvertingToTicket(!isConvertingToTicket)} className={isConvertingToTicket ? 'bg-primary/10 text-primary' : ''}>
+                                    <Ticket className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent><p>{isConvertingToTicket ? 'Convert back to comment' : 'Convert to ticket'}</p></TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
+                        </div>
+                        <div className="flex justify-end gap-2">
+                          <Button variant="ghost" size="sm" onClick={handleCancelEdit}>Cancel</Button>
+                          <Button size="sm" onClick={handleSaveEdit}>Save</Button>
+                        </div>
                       </div>
                     </div>
                   ) : (
