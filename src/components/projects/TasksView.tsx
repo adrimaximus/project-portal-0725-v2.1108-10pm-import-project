@@ -16,13 +16,13 @@ import TaskAttachmentList from './TaskAttachmentList';
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { useToggleTaskCompletion } from "@/hooks/useTaskMutations";
 
 interface TasksViewProps {
   tasks: Task[];
   isLoading: boolean;
   onEdit: (task: Task) => void;
   onDelete: (taskId: string) => void;
-  onToggleTaskCompletion: (task: Task, completed: boolean) => void;
   sortConfig: { key: string; direction: 'asc' | 'desc' };
   requestSort: (key: string) => void;
 }
@@ -36,7 +36,13 @@ const processMentions = (text: string | null | undefined) => {
   return processedText;
 };
 
-const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion, sortConfig, requestSort }: TasksViewProps) => {
+const TasksView = ({ tasks, isLoading, onEdit, onDelete, sortConfig, requestSort }: TasksViewProps) => {
+  const { mutate: toggleTaskCompletion, isLoading: isToggling } = useToggleTaskCompletion();
+
+  const handleToggleCompletion = (task: Task, completed: boolean) => {
+    toggleTaskCompletion({ task, completed });
+  };
+
   if (isLoading) {
     return (
       <div className="p-4 md:p-6">
@@ -155,9 +161,10 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
                       <Checkbox
                         id={`task-${task.id}`}
                         checked={task.completed}
-                        onCheckedChange={(checked) => onToggleTaskCompletion(task, !!checked)}
+                        onCheckedChange={(checked) => handleToggleCompletion(task, !!checked)}
                         aria-label={`Mark task ${task.title} as complete`}
                         className="mt-1"
+                        disabled={isToggling}
                       />
                       <div className="flex flex-col">
                         <div className="flex items-center gap-2">
