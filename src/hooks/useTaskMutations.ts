@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { TaskStatus } from '@/types';
 
 export interface UpsertTaskPayload {
   id?: string;
@@ -54,7 +55,16 @@ export const useTaskMutations = (projectId?: string) => {
       // Handle file uploads
       if (new_files && new_files.length > 0) {
         for (const file of new_files) {
-          const filePath = `tasks/${taskId}/${file.name}`;
+          const fileExt = file.name.split('.').pop() || 'bin';
+          const sanitizedFileName = file.name
+            .substring(0, file.name.lastIndexOf('.') || file.name.length) // remove extension
+            .toLowerCase()
+            .replace(/[^a-z0-9_.\s-]/g, '') // remove invalid chars
+            .replace(/\s+/g, '_') // replace spaces with underscore
+            .substring(0, 50); // truncate to be safe
+
+          const filePath = `tasks/${taskId}/${Date.now()}-${sanitizedFileName}.${fileExt}`;
+          
           const { error: uploadError } = await supabase.storage
             .from('project_files')
             .upload(filePath, file);
@@ -73,9 +83,9 @@ export const useTaskMutations = (projectId?: string) => {
             .from('task_attachments')
             .insert({
               task_id: taskId,
-              file_name: file.name,
+              file_name: file.name, // Store original name
               file_url: publicUrl,
-              storage_path: filePath,
+              storage_path: filePath, // Store sanitized path
               file_type: file.type,
               file_size: file.size,
             });
@@ -147,9 +157,27 @@ export const useTaskMutations = (projectId?: string) => {
     },
   });
 
+  const updateTaskStatusAndOrderMutation = useMutation({
+    mutationFn: async ({ taskId, newStatus, orderedTaskIds }: { taskId: string, newStatus: TaskStatus, orderedTaskIds: string[] }) => {
+      const { error: updateStatusError } = await supabase.from('tasks').update({ status: newStatus }).eq('id', taskId);
+      if (updateStatusError) throw updateStatusError;
+
+      const { error: updateOrderError } = await supabase.rpc('update_task_kanban_order', { p_task_ids: orderedTaskIds });
+      if (updateOrderError) throw updateOrderError;
+    },
+    onSuccess: () => {
+      invalidateQueries();
+    },
+    onError: (error: Error) => {
+      toast.error(`Error updating task: ${error.message}`);
+      invalidateQueries(); // Revert optimistic update
+    },
+  });
+
   return {
     upsertTask: upsertTaskMutation.mutate,
     deleteTask: deleteTaskMutation.mutate,
-    isSubmitting: upsertTaskMutation.isPending,
+    updateTaskStatusAndOrder: updateTaskStatusAndOrderMutation.mutate,
+    isUpserting: upsertTaskMutation.isPending,
   };
 };
