@@ -103,7 +103,7 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
     <>
       <div className="space-y-6">
         <CommentInput project={project} onAddCommentOrTicket={onAddCommentOrTicket} />
-        <div className="space-y-4">
+        <div className="space-y-4 h-[300px] overflow-y-auto pr-4">
           {comments.map((comment) => {
             const author = comment.author;
             const fullName = `${author.first_name || ''} ${author.last_name || ''}`.trim() || author.email;
