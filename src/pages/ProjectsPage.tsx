@@ -63,7 +63,7 @@ const ProjectsPage = () => {
 
   const [isTaskFormOpen, setIsTaskFormOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
-  const { upsertTask, isUpserting, deleteTask } = useTaskMutations();
+  const { upsertTask, isUpserting, deleteTask, toggleTaskCompletion, isToggling } = useTaskMutations();
 
   const {
     dateRange, setDateRange,
@@ -291,18 +291,7 @@ const ProjectsPage = () => {
   };
 
   const handleToggleTaskCompletion = (task: Task, completed: boolean) => {
-    upsertTask({
-      id: task.id,
-      project_id: task.project_id,
-      title: task.title,
-      status: completed ? 'Done' : 'To do',
-    }, {
-      onSuccess: () => {
-        toast.success(`Task "${task.title}" marked as ${completed ? 'done' : 'to do'}.`);
-        refetchTasks();
-      },
-      onError: (error) => toast.error(`Failed to update task status: ${error.message}`),
-    });
+    toggleTaskCompletion({ task, completed });
   };
 
   const toggleHideCompleted = () => {
@@ -391,14 +380,14 @@ const ProjectsPage = () => {
               isTasksLoading={tasksLoading}
               onDeleteProject={handleDeleteProject}
               sortConfig={sortConfig}
-              requestSort={requestSort}
+              requestSort={(key) => requestSort(key, 'project')}
               rowRefs={rowRefs}
               kanbanGroupBy={kanbanGroupBy}
               onEditTask={handleEditTask}
               onDeleteTask={handleDeleteTask}
               onToggleTaskCompletion={handleToggleTaskCompletion}
               taskSortConfig={taskSortConfig}
-              requestTaskSort={requestTaskSort}
+              requestTaskSort={(key) => requestSort(key, 'task')}
               onTaskStatusChange={handleTaskStatusChange}
             />
           </div>

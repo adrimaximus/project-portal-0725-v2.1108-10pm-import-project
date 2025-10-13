@@ -23,6 +23,7 @@ interface ProjectViewContainerProps {
   onEditTask: (task: Task) => void;
   onDeleteTask: (taskId: string) => void;
   onToggleTaskCompletion: (task: Task, completed: boolean) => void;
+  isToggling: boolean;
   taskSortConfig: { key: string; direction: 'asc' | 'desc' };
   requestTaskSort: (key: string) => void;
   onTaskStatusChange: (taskId: string, newStatus: any) => void;
@@ -30,7 +31,7 @@ interface ProjectViewContainerProps {
 
 const ProjectViewContainer = ({
   view, projects, tasks, isLoading, isTasksLoading, onDeleteProject, sortConfig, requestSort, rowRefs,
-  kanbanGroupBy, onEditTask, onDeleteTask, onToggleTaskCompletion,
+  kanbanGroupBy, onEditTask, onDeleteTask, onToggleTaskCompletion, isToggling,
   taskSortConfig, requestTaskSort, onTaskStatusChange
 }: ProjectViewContainerProps) => {
   switch (view) {
@@ -47,6 +48,7 @@ const ProjectViewContainer = ({
         onEdit={onEditTask}
         onDelete={onDeleteTask}
         onToggleTaskCompletion={onToggleTaskCompletion}
+        isToggling={isToggling}
         sortConfig={taskSortConfig}
         requestSort={requestTaskSort}
       />;

@@ -21,8 +21,8 @@ export interface UpsertTaskPayload {
 export const useUpsertTask = () => {
   const queryClient = useQueryClient();
 
-  return useMutation(
-    async (taskData: UpsertTaskPayload) => {
+  return useMutation({
+    mutationFn: async (taskData: UpsertTaskPayload) => {
       // This is a placeholder for more complex file handling logic if needed.
       const { new_files = [], deleted_files = [], ...taskDetails } = taskData;
 
@@ -62,8 +62,8 @@ export const useUpsertTask = () => {
 export const useToggleTaskCompletion = () => {
   const queryClient = useQueryClient();
 
-  return useMutation(
-    async ({ task, completed }: { task: Task; completed: boolean }) => {
+  return useMutation({
+    mutationFn: async ({ task, completed }: { task: Task; completed: boolean }) => {
       const newStatus = completed ? 'Done' : (task.status === 'Done' ? 'To do' : task.status);
 
       const payload = {
@@ -107,4 +107,37 @@ export const useToggleTaskCompletion = () => {
       },
     }
   );
+};
+
+const useDeleteTask = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (taskId: string) => {
+      const { error } = await supabase.from('tasks').delete().eq('id', taskId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Task deleted.');
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+    },
+    onError: (error: any) => {
+      toast.error(`Failed to delete task: ${error.message}`);
+    },
+  });
+};
+
+export const useTaskMutations = () => {
+  const { mutate: upsertTask, isPending: isUpserting } = useUpsertTask();
+  const { mutate: toggleTaskCompletion, isPending: isToggling } = useToggleTaskCompletion();
+  const { mutate: deleteTask, isPending: isDeleting } = useDeleteTask();
+
+  return {
+    upsertTask,
+    isUpserting,
+    toggleTaskCompletion,
+    isToggling,
+    deleteTask,
+    isDeleting,
+  };
 };
