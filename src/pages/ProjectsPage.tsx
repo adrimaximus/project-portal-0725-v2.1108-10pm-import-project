@@ -119,7 +119,10 @@ const ProjectsPage = () => {
     return tasksToFilter.filter(task => 
       task.title.toLowerCase().includes(lowercasedFilter) ||
       (task.description && task.description.toLowerCase().includes(lowercasedFilter)) ||
-      (task.projects?.name && task.projects.name.toLowerCase().includes(lowercasedFilter))
+      (task.project_name && task.project_name.toLowerCase().includes(lowercasedFilter)) ||
+      (task.project_venue && task.project_venue.toLowerCase().includes(lowercasedFilter)) ||
+      (task.project_client && task.project_client.toLowerCase().includes(lowercasedFilter)) ||
+      (task.project_owner?.name && task.project_owner.name.toLowerCase().includes(lowercasedFilter))
     );
   }, [tasks, taskSearchTerm, hideCompletedTasks]);
 
