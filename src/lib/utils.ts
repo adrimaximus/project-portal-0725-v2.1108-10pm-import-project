@@ -167,3 +167,13 @@ export const getColorForTag = (tagName: string): string => {
   const index = Math.abs(hash % colors.length);
   return colors[index];
 };
+
+export const parseMentions = (text: string): string[] => {
+  const mentionRegex = /@\[[^\]]+\]\(([^)]+)\)/g;
+  const userIds = new Set<string>();
+  let match;
+  while ((match = mentionRegex.exec(text)) !== null) {
+    userIds.add(match[1]);
+  }
+  return Array.from(userIds);
+};

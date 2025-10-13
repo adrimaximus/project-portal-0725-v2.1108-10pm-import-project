@@ -111,9 +111,18 @@ export const useProjectMutations = (slug: string) => {
     });
 
     const useAddTask = () => useMutation({
-        mutationFn: async ({ project, user, title }: { project: Project, user: User, title: string }) => {
-            const { error } = await supabase.from('tasks').insert({ project_id: project.id, title, created_by: user.id });
+        mutationFn: async ({ project, user, title, assigneeIds }: { project: Project, user: User, title: string, assigneeIds: string[] }) => {
+            const { data: newTask, error } = await supabase.from('tasks').insert({ project_id: project.id, title, created_by: user.id }).select().single();
             if (error) throw error;
+
+            if (newTask && assigneeIds.length > 0) {
+                const assignments = assigneeIds.map(userId => ({ task_id: newTask.id, user_id: userId }));
+                const { error: assignError } = await supabase.from('task_assignees').insert(assignments);
+                if (assignError) {
+                    console.warn('Failed to assign users:', assignError);
+                    toast.warning("Task created, but couldn't assign users automatically.");
+                }
+            }
         },
         onSuccess: () => {
             toast.success("Task added successfully.");
@@ -163,7 +172,7 @@ export const useProjectMutations = (slug: string) => {
     });
 
     const useAddComment = () => useMutation({
-        mutationFn: async ({ project, user, text, isTicket, attachments }: { project: Project, user: User, text: string, isTicket: boolean, attachments: File[] | null }) => {
+        mutationFn: async ({ project, user, text, isTicket, attachments, mentionedUserIds }: { project: Project, user: User, text: string, isTicket: boolean, attachments: File[] | null, mentionedUserIds: string[] }) => {
             let finalCommentText = text;
             let firstAttachmentUrl: string | null = null;
             let firstAttachmentName: string | null = null;
@@ -202,13 +211,6 @@ export const useProjectMutations = (slug: string) => {
             if (commentError) throw commentError;
     
             if (isTicket && commentData) {
-                const mentionRegex = /@\[[^\]]+\]\(([^)]+)\)/g;
-                const mentionedUserIds: string[] = [];
-                let match;
-                while ((match = mentionRegex.exec(text)) !== null) {
-                    mentionedUserIds.push(match[1]);
-                }
-    
                 const cleanTextForTitle = text.replace(/@\[[^\]]+\]\([^)]+\)\s*/g, '').trim();
     
                 const { data: newTask, error: taskError } = await supabase.from('tasks').insert({
@@ -241,7 +243,7 @@ export const useProjectMutations = (slug: string) => {
     });
 
     const useUpdateComment = () => useMutation({
-        mutationFn: async ({ commentId, text, attachments, isConvertingToTicket }: { commentId: string, text: string, attachments: File[] | null, isConvertingToTicket: boolean }) => {
+        mutationFn: async ({ commentId, text, attachments, isConvertingToTicket, mentionedUserIds }: { commentId: string, text: string, attachments: File[] | null, isConvertingToTicket: boolean, mentionedUserIds: string[] }) => {
             const { data: originalComment, error: fetchError } = await supabase
                 .from('comments')
                 .select('text, is_ticket, project_id, attachment_url, attachment_name')
@@ -300,13 +302,26 @@ export const useProjectMutations = (slug: string) => {
             if (updateError) throw updateError;
 
             if (isConvertingToTicket && !originalComment.is_ticket) {
-                const { error: taskError } = await supabase.from('tasks').insert({
+                const cleanTextForTitle = text.replace(/@\[[^\]]+\]\([^)]+\)\s*/g, '').trim();
+                const { data: newTask, error: taskError } = await supabase.from('tasks').insert({
                     project_id: originalComment.project_id,
-                    title: text.substring(0, 100),
+                    title: cleanTextForTitle.substring(0, 100),
                     origin_ticket_id: commentId,
-                });
+                }).select().single();
                 if (taskError) {
                     toast.warning("Comment updated, but failed to create the associated task.");
+                }
+
+                if (newTask && mentionedUserIds.length > 0) {
+                    const assignments = mentionedUserIds.map(userId => ({
+                        task_id: newTask.id,
+                        user_id: userId,
+                    }));
+                    const { error: assignError } = await supabase.from('task_assignees').insert(assignments);
+                    if (assignError) {
+                        console.warn('Failed to assign mentioned users:', assignError);
+                        toast.warning("Ticket created, but couldn't assign mentioned users automatically.");
+                    }
                 }
             }
         },

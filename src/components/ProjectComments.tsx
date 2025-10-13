@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Ticket, MoreHorizontal, Edit, Trash2, FileText, Eye, Download, Paperclip, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { getInitials, generatePastelColor } from "@/lib/utils";
+import { getInitials, generatePastelColor, parseMentions } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
 import CommentInput from "./CommentInput";
 import ReactMarkdown from "react-markdown";
@@ -14,12 +14,12 @@ import { useAuth } from "@/contexts/AuthContext";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Textarea } from "@/components/ui/textarea";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 
 interface ProjectCommentsProps {
   project: Project;
-  onAddCommentOrTicket: (text: string, isTicket: boolean, attachments: File[] | null) => void;
-  onUpdateComment: (commentId: string, text: string, attachments: File[] | null, isConvertingToTicket: boolean) => void;
+  onAddCommentOrTicket: (text: string, isTicket: boolean, attachments: File[] | null, mentionedUserIds: string[]) => void;
+  onUpdateComment: (commentId: string, text: string, attachments: File[] | null, isConvertingToTicket: boolean, mentionedUserIds: string[]) => void;
   onDeleteComment: (commentId: string) => void;
 }
 
@@ -73,7 +73,8 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
 
   const handleSaveEdit = () => {
     if (editingCommentId) {
-      onUpdateComment(editingCommentId, editedText, newAttachments, isConvertingToTicket);
+      const mentionedUserIds = parseMentions(editedText);
+      onUpdateComment(editingCommentId, editedText, newAttachments, isConvertingToTicket, mentionedUserIds);
     }
     handleCancelEdit();
   };
@@ -250,10 +251,19 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
                       )}
                       {isTicket && (
                         <div className="mt-2">
-                          <Badge variant={ticketTask?.completed ? 'default' : 'destructive'} className={ticketTask?.completed ? 'bg-green-600 hover:bg-green-700' : ''}>
-                            <Ticket className="h-3 w-3 mr-1" />
-                            {ticketTask?.completed ? 'Done' : 'Ticket'}
-                          </Badge>
+                          {ticketTask ? (
+                            <Link to={`/projects/${project.slug}?tab=tasks&task=${ticketTask.id}`}>
+                              <Badge variant={ticketTask.completed ? 'default' : 'destructive'} className={ticketTask.completed ? 'bg-green-600 hover:bg-green-700' : ''}>
+                                <Ticket className="h-3 w-3 mr-1" />
+                                {ticketTask.completed ? 'Done' : 'Ticket'}
+                              </Badge>
+                            </Link>
+                          ) : (
+                            <Badge variant="outline">
+                              <Ticket className="h-3 w-3 mr-1" />
+                              Ticket (Task not found)
+                            </Badge>
+                          )}
                         </div>
                       )}
                     </>

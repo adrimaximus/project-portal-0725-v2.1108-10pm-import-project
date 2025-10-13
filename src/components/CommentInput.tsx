@@ -6,11 +6,11 @@ import { Button } from '@/components/ui/button';
 import { Paperclip, Ticket, Send, X } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-import { getInitials, generatePastelColor } from '@/lib/utils';
+import { getInitials, generatePastelColor, parseMentions } from '@/lib/utils';
 
 interface CommentInputProps {
   project: Project;
-  onAddCommentOrTicket: (text: string, isTicket: boolean, attachments: File[] | null) => void;
+  onAddCommentOrTicket: (text: string, isTicket: boolean, attachments: File[] | null, mentionedUserIds: string[]) => void;
 }
 
 const CommentInput = ({ onAddCommentOrTicket }: CommentInputProps) => {
@@ -32,7 +32,8 @@ const CommentInput = ({ onAddCommentOrTicket }: CommentInputProps) => {
 
   const handleSubmit = () => {
     if (!text.trim() && attachments.length === 0) return;
-    onAddCommentOrTicket(text, isTicket, attachments);
+    const mentionedUserIds = parseMentions(text);
+    onAddCommentOrTicket(text, isTicket, attachments, mentionedUserIds);
     setText('');
     setIsTicket(false);
     setAttachments([]);

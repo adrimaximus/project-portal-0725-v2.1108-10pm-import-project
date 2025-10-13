@@ -24,9 +24,9 @@ const ProjectMainContent = ({ project, isEditing, onFieldChange, mutations, defa
     return null;
   }
 
-  const handleTaskAdd = (title: string) => {
+  const handleTaskAdd = (title: string, assigneeIds: string[]) => {
     if (!project || !user) return;
-    mutations.addTask.mutate({ project, user, title });
+    mutations.addTask.mutate({ project, user, title, assigneeIds });
   };
 
   const handleTaskAssignUsers = (taskId: string, userIds: string[]) => {
@@ -41,13 +41,13 @@ const ProjectMainContent = ({ project, isEditing, onFieldChange, mutations, defa
     mutations.deleteTask.mutate(taskId);
   };
 
-  const handleAddCommentOrTicket = async (text: string, isTicket: boolean, attachments: File[] | null) => {
+  const handleAddCommentOrTicket = async (text: string, isTicket: boolean, attachments: File[] | null, mentionedUserIds: string[]) => {
     if (!project || !user) return;
-    mutations.addComment.mutate({ project, user, text, isTicket, attachments });
+    mutations.addComment.mutate({ project, user, text, isTicket, attachments, mentionedUserIds });
   };
 
-  const handleUpdateComment = (commentId: string, text: string, attachments: File[] | null, isConvertingToTicket: boolean) => {
-    mutations.updateComment.mutate({ commentId, text, attachments, isConvertingToTicket });
+  const handleUpdateComment = (commentId: string, text: string, attachments: File[] | null, isConvertingToTicket: boolean, mentionedUserIds: string[]) => {
+    mutations.updateComment.mutate({ commentId, text, attachments, isConvertingToTicket, mentionedUserIds });
   };
 
   const handleDeleteComment = (commentId: string) => {
