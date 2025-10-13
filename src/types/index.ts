@@ -295,7 +295,7 @@ export interface Invoice {
   clientCompanyName?: string | null;
   projectOwner?: User;
   assignedMembers: User[];
-  status: string;
+  status: PaymentStatus;
   poNumber?: string | null;
   amount: number;
   dueDate: Date;

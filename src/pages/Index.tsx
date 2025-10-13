@@ -11,7 +11,7 @@ import TasksView from '@/components/projects/TasksView';
 import { Project, Task } from '@/types';
 
 type ViewMode = 'table' | 'list' | 'kanban' | 'tasks' | 'tasks-kanban';
-type SortConfig<T> = { key: keyof T | string; direction: 'ascending' | 'descending' };
+type SortConfig<T> = { key: keyof T | null; direction: 'ascending' | 'descending' };
 
 const fetchProjects = async (): Promise<Project[]> => {
   const { data, error } = await supabase.rpc('get_dashboard_projects', { p_limit: 500, p_offset: 0 });
@@ -50,17 +50,22 @@ const Index = () => {
   });
 
   const [projectSortConfig, setProjectSortConfig] = useState<SortConfig<Project>>({ key: 'start_date', direction: 'descending' });
-  const [taskSortConfig, setTaskSortConfig] = useState<SortConfig<Task>>({ key: 'due_date', direction: 'ascending' });
+  const [taskSortConfig, setTaskSortConfig] = useState<{ key: keyof Task | string; direction: 'asc' | 'desc' }>({ key: 'due_date', direction: 'asc' });
 
   const requestSort = useCallback((key: any, type: 'project' | 'task') => {
-    const config = type === 'project' ? projectSortConfig : taskSortConfig;
-    const setConfig = type === 'project' ? setProjectSortConfig : setTaskSortConfig;
-    let direction: 'ascending' | 'descending' = 'ascending';
-    if (config.key === key && config.direction === 'ascending') {
-      direction = 'descending';
+    if (type === 'project') {
+      let direction: 'ascending' | 'descending' = 'ascending';
+      if (projectSortConfig.key === key && projectSortConfig.direction === 'ascending') {
+        direction = 'descending';
+      }
+      setProjectSortConfig({ key, direction });
+    } else {
+      let direction: 'asc' | 'desc' = 'asc';
+      if (taskSortConfig.key === key && taskSortConfig.direction === 'asc') {
+        direction = 'desc';
+      }
+      setTaskSortConfig({ key, direction });
     }
-    // @ts-ignore
-    setConfig({ key, direction });
   }, [projectSortConfig, taskSortConfig]);
 
   const sortedProjects = useMemo(() => {
@@ -99,11 +104,11 @@ const Index = () => {
             if (b[key] === null) return -1;
             // @ts-ignore
             if (a[key] < b[key]) {
-                return taskSortConfig.direction === 'ascending' ? -1 : 1;
+                return taskSortConfig.direction === 'asc' ? -1 : 1;
             }
             // @ts-ignore
             if (a[key] > b[key]) {
-                return taskSortConfig.direction === 'ascending' ? 1 : -1;
+                return taskSortConfig.direction === 'asc' ? 1 : -1;
             }
             return 0;
         });

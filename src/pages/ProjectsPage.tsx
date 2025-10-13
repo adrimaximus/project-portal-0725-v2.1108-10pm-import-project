@@ -71,7 +71,7 @@ const ProjectsPage = () => {
   } = useProjectFilters(projects);
 
   const [taskSearchTerm, setTaskSearchTerm] = useState('');
-  const [taskSortConfig, setTaskSortConfig] = useState<{ key: string; direction: 'ascending' | 'descending' }>({ key: 'updated_at', direction: 'descending' });
+  const [taskSortConfig, setTaskSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'updated_at', direction: 'desc' });
   const [hideCompletedTasks, setHideCompletedTasks] = useState(() => localStorage.getItem('hideCompletedTasks') === 'true');
 
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
@@ -230,9 +230,9 @@ const ProjectsPage = () => {
   };
 
   const requestTaskSort = (key: string) => {
-    let direction: 'ascending' | 'descending' = 'ascending';
-    if (taskSortConfig.key === key && taskSortConfig.direction === 'ascending') {
-      direction = 'descending';
+    let direction: 'asc' | 'desc' = 'asc';
+    if (taskSortConfig.key === key && taskSortConfig.direction === 'asc') {
+      direction = 'desc';
     }
     setTaskSortConfig({ key, direction });
   };
@@ -379,7 +379,7 @@ const ProjectsPage = () => {
               isLoading={isLoading}
               isTasksLoading={tasksLoading}
               onDeleteProject={handleDeleteProject}
-              sortConfig={sortConfig}
+              sortConfig={projectSortConfig}
               requestSort={requestProjectSort}
               rowRefs={rowRefs}
               kanbanGroupBy={kanbanGroupBy}
