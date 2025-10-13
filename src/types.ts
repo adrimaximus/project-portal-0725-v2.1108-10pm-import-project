@@ -89,6 +89,14 @@ export interface TaskAttachment {
   created_at: string;
 }
 
+export interface TaskAssignee {
+  id: string;
+  first_name: string | null;
+  last_name: string | null;
+  email: string | null;
+  avatar_url: string | null;
+}
+
 export interface Task {
   id: string;
   title: string;
@@ -104,7 +112,7 @@ export interface Task {
     status: string;
     created_by: string | null;
   };
-  assignees: (User & { first_name?: string, last_name?: string, avatar_url?: string, email?: string })[];
+  assignees: TaskAssignee[];
   created_by: User & { first_name?: string, last_name?: string, avatar_url?: string, email?: string };
   created_at: string;
   updated_at: string | null;
@@ -114,24 +122,6 @@ export interface Task {
   attachment_url?: string;
   attachment_name?: string;
   attachments?: TaskAttachment[];
-}
-
-export interface Comment {
-  id: string;
-  text: string;
-  timestamp: string;
-  author: User & { first_name?: string, last_name?: string, avatar_url?: string, email?: string };
-  isTicket: boolean;
-  attachment_url?: string;
-  attachment_name?: string;
-}
-
-export interface Activity {
-  id: string;
-  type: string;
-  details: { description: string };
-  timestamp: string;
-  user: User;
 }
 
 export interface Project {
