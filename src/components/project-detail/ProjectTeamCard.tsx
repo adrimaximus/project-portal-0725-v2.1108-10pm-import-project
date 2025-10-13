@@ -59,7 +59,9 @@ const ProjectTeamCard = ({ project }: ProjectTeamCardProps) => {
         p_members: newTeam,
         p_name: null, p_description: null, p_category: null, p_status: null, p_budget: null,
         p_start_date: null, p_due_date: null, p_payment_status: null, p_payment_due_date: null,
-        p_venue: null, p_service_titles: null, p_existing_tags: null, p_custom_tags: null
+        p_venue: null, p_service_titles: null, p_existing_tags: null, p_custom_tags: null,
+        p_invoice_number: null, p_po_number: null, p_paid_date: null, p_email_sending_date: null, 
+        p_hardcopy_sending_date: null, p_channel: null
       });
       if (error) throw error;
     },
