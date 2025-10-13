@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Project, Comment as CommentType } from "@/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Ticket, MoreHorizontal, Edit, Trash2 } from "lucide-react";
+import { Ticket, MoreHorizontal, Edit, Trash2, FileText, Eye, Download } from "lucide-react";
 import { getInitials, generatePastelColor } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
 import CommentInput from "./CommentInput";
@@ -27,6 +27,25 @@ const processMentions = (text: string | null | undefined) => {
   return text.replace(/@\[([^\]]+)\]\(([^)]+)\)/g, '**@$1**');
 };
 
+const attachmentsRegex = /\*\*Attachments:\*\*\n((?:\* \[.+\]\(.+\)\n?)+)/;
+
+const parseComment = (text: string) => {
+  const match = text.match(attachmentsRegex);
+  const attachments: { name: string; url: string }[] = [];
+  let mainText = text;
+
+  if (match) {
+    mainText = text.replace(attachmentsRegex, '').trim();
+    const linksMarkdown = match[1];
+    const linkRegex = /\* \[([^\]]+)\]\(([^)]+)\)/g;
+    let linkMatch;
+    while ((linkMatch = linkRegex.exec(linksMarkdown)) !== null) {
+      attachments.push({ name: linkMatch[1], url: linkMatch[2] });
+    }
+  }
+  return { mainText, attachments };
+};
+
 const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDeleteComment }: ProjectCommentsProps) => {
   const { user: currentUser } = useAuth();
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
@@ -37,8 +56,9 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
   const tasks = project.tasks || [];
 
   const handleEditClick = (comment: CommentType) => {
+    const { mainText } = parseComment(comment.text);
     setEditingCommentId(comment.id);
-    setEditedText(comment.text);
+    setEditedText(mainText);
   };
 
   const handleCancelEdit = () => {
@@ -47,8 +67,17 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
   };
 
   const handleSaveEdit = () => {
-    if (editingCommentId && editedText.trim()) {
-      onUpdateComment(editingCommentId, editedText);
+    if (editingCommentId) {
+      const originalComment = comments.find(c => c.id === editingCommentId);
+      if (!originalComment) return;
+
+      const match = originalComment.text.match(attachmentsRegex);
+      let finalUpdatedText = editedText.trim();
+      if (match) {
+        finalUpdatedText += `\n\n${match[0]}`;
+      }
+
+      onUpdateComment(editingCommentId, finalUpdatedText);
     }
     handleCancelEdit();
   };
@@ -72,6 +101,7 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
             const isTicket = comment.isTicket;
             const ticketTask = isTicket ? tasks.find((t) => t.originTicketId === comment.id) : null;
             const canManageComment = currentUser && (comment.author.id === currentUser.id || currentUser.role === 'admin' || currentUser.role === 'master admin');
+            const { mainText, attachments } = parseComment(comment.text);
 
             return (
               <div key={comment.id} className="flex items-start space-x-4">
@@ -110,6 +140,19 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
                   {editingCommentId === comment.id ? (
                     <div className="mt-2 space-y-2">
                       <Textarea value={editedText} onChange={(e) => setEditedText(e.target.value)} autoFocus />
+                      {attachments.length > 0 && (
+                        <div className="mt-2">
+                            <h4 className="font-semibold text-xs text-muted-foreground mb-2">Files Attached (not editable)</h4>
+                            <div className="space-y-1">
+                                {attachments.map((file, index) => (
+                                    <div key={index} className="flex items-center gap-2 text-sm text-muted-foreground">
+                                        <FileText className="h-4 w-4" />
+                                        <span>{file.name}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                      )}
                       <div className="flex justify-end gap-2">
                         <Button variant="ghost" size="sm" onClick={handleCancelEdit}>Cancel</Button>
                         <Button size="sm" onClick={handleSaveEdit}>Save</Button>
@@ -117,22 +160,51 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
                     </div>
                   ) : (
                     <>
-                      <div className="prose prose-sm dark:prose-invert max-w-none mt-1 break-words">
-                        <ReactMarkdown
-                          remarkPlugins={[remarkGfm]}
-                          components={{
-                            a: ({ node, ...props }) => {
-                              const href = props.href || '';
-                              if (href.startsWith('/')) {
-                                return <Link to={href} {...props} className="text-primary hover:underline" />;
+                      {mainText && (
+                        <div className="prose prose-sm dark:prose-invert max-w-none mt-1 break-words">
+                          <ReactMarkdown
+                            remarkPlugins={[remarkGfm]}
+                            components={{
+                              a: ({ node, ...props }) => {
+                                const href = props.href || '';
+                                if (href.startsWith('/')) {
+                                  return <Link to={href} {...props} className="text-primary hover:underline" />;
+                                }
+                                return <a {...props} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline" />;
                               }
-                              return <a {...props} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline" />;
-                            }
-                          }}
-                        >
-                          {processMentions(comment.text)}
-                        </ReactMarkdown>
-                      </div>
+                            }}
+                          >
+                            {processMentions(mainText)}
+                          </ReactMarkdown>
+                        </div>
+                      )}
+                      {attachments.length > 0 && (
+                        <div className="mt-4">
+                          <h4 className="font-semibold text-sm mb-2">Files Attached</h4>
+                          <div className="space-y-2">
+                            {attachments.map((file, index) => (
+                              <div key={index} className="flex items-center justify-between p-2 rounded-md border bg-card">
+                                <div className="flex items-center gap-2 truncate min-w-0">
+                                  <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                                  <span className="text-sm truncate">{file.name}</span>
+                                </div>
+                                <div className="flex items-center gap-1 flex-shrink-0">
+                                  <a href={file.url} target="_blank" rel="noopener noreferrer">
+                                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                                      <Eye className="h-4 w-4" />
+                                    </Button>
+                                  </a>
+                                  <a href={file.url} download={file.name}>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                                      <Download className="h-4 w-4" />
+                                    </Button>
+                                  </a>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                       {isTicket && (
                         <div className="mt-2">
                           <Badge variant={ticketTask?.completed ? 'default' : 'destructive'} className={ticketTask?.completed ? 'bg-green-600 hover:bg-green-700' : ''}>
