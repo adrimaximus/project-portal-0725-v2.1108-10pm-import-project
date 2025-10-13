@@ -16,6 +16,16 @@ export interface Tag {
   user_id?: string;
 }
 
+export interface Attachment {
+  id: string;
+  file_name: string;
+  file_url: string;
+  file_type: string | null;
+  file_size: number | null;
+  storage_path: string;
+  created_at: string;
+}
+
 export interface Task {
   id: string;
   title: string;
@@ -29,6 +39,7 @@ export interface Task {
   due_date?: string;
   tags?: Tag[];
   origin_ticket_id?: string;
+  attachments?: Attachment[];
 }
 
 export interface Project {
