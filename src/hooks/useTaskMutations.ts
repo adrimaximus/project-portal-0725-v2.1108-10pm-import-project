@@ -2,8 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
-// Tipe untuk membuat/memperbarui tugas
-export type UpsertTaskPayload = {
+export interface UpsertTaskPayload {
   id?: string;
   project_id: string;
   title: string;
@@ -11,136 +10,125 @@ export type UpsertTaskPayload = {
   due_date?: string | null;
   priority?: string | null;
   status?: string;
+  completed?: boolean;
   assignee_ids?: string[];
   tag_ids?: string[];
   new_files?: File[];
   deleted_files?: string[];
-};
+}
 
-export const useTaskMutations = () => {
+export const useTaskMutations = (projectId?: string) => {
   const queryClient = useQueryClient();
+
+  const invalidateQueries = () => {
+    queryClient.invalidateQueries({ queryKey: ['tasks'] });
+    queryClient.invalidateQueries({ queryKey: ['projects'] });
+    queryClient.invalidateQueries({ queryKey: ['dashboard-projects'] });
+    if (projectId) {
+      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+    }
+  };
 
   const upsertTaskMutation = useMutation({
     mutationFn: async (taskData: UpsertTaskPayload) => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("User not authenticated");
+      const { new_files, deleted_files, ...taskPayload } = taskData;
 
-      const { id, assignee_ids, tag_ids, new_files, deleted_files, ...taskFields } = taskData;
+      const { data: upsertedTask, error } = await supabase.rpc('upsert_task_with_details', {
+        p_id: taskPayload.id,
+        p_project_id: taskPayload.project_id,
+        p_title: taskPayload.title,
+        p_description: taskPayload.description,
+        p_due_date: taskPayload.due_date,
+        p_priority: taskPayload.priority,
+        p_status: taskPayload.status,
+        p_completed: taskPayload.completed,
+        p_assignee_ids: taskPayload.assignee_ids,
+        p_tag_ids: taskPayload.tag_ids,
+      }).select().single();
 
-      // Jika ini adalah tugas baru dan tidak ada penerima tugas yang diberikan, tugaskan ke pembuatnya.
-      let finalAssigneeIds = assignee_ids;
-      if (!id && (!finalAssigneeIds || finalAssigneeIds.length === 0)) {
-        finalAssigneeIds = [user.id];
-      }
-      
-      // 1. Upsert tugas itu sendiri
-      const { data: taskResult, error: taskError } = await supabase
-        .from('tasks')
-        .upsert({ id, ...taskFields, completed: taskFields.status === 'Done' })
-        .select()
-        .single();
+      if (error) throw error;
+      if (!upsertedTask) throw new Error("Failed to upsert task. No data returned.");
 
-      if (taskError) throw taskError;
-      if (!taskResult) throw new Error('Operasi tugas gagal.');
+      const taskId = upsertedTask.id;
 
-      const taskId = taskResult.id;
-
-      // 2. Tangani penerima tugas jika disediakan atau ditugaskan secara otomatis
-      if (finalAssigneeIds !== undefined) {
-        // Hapus penerima tugas yang ada untuk tugas ini
-        const { error: deleteError } = await supabase
-          .from('task_assignees')
-          .delete()
-          .eq('task_id', taskId);
-        if (deleteError) throw deleteError;
-
-        // Masukkan penerima tugas baru
-        if (finalAssigneeIds.length > 0) {
-          const newAssignees = finalAssigneeIds.map(userId => ({
-            task_id: taskId,
-            user_id: userId,
-          }));
-          const { error: insertError } = await supabase
-            .from('task_assignees')
-            .insert(newAssignees);
-          if (insertError) throw insertError;
-        }
-      }
-
-      // 3. Handle tags if provided
-      if (tag_ids !== undefined) {
-        const { error: deleteTagsError } = await supabase
-          .from('task_tags')
-          .delete()
-          .eq('task_id', taskId);
-        if (deleteTagsError) throw deleteTagsError;
-
-        if (tag_ids.length > 0) {
-          const newTaskTags = tag_ids.map(tagId => ({
-            task_id: taskId,
-            tag_id: tagId,
-          }));
-          const { error: insertTagsError } = await supabase
-            .from('task_tags')
-            .insert(newTaskTags);
-          if (insertTagsError) throw insertTagsError;
-        }
-      }
-
-      // 4. Handle file deletions
-      if (deleted_files && deleted_files.length > 0) {
-        const { data: filesToDeleteData, error: selectError } = await supabase
-            .from('task_attachments')
-            .select('id, storage_path')
-            .in('id', deleted_files);
-        
-        if (selectError) throw new Error(`Could not fetch files to delete: ${selectError.message}`);
-
-        if (filesToDeleteData && filesToDeleteData.length > 0) {
-            const storagePaths = filesToDeleteData.map(f => f.storage_path);
-            await supabase.storage.from('task-attachments').remove(storagePaths);
-            await supabase.from('task_attachments').delete().in('id', deleted_files);
-        }
-      }
-
-      // 5. Handle file uploads
+      // Handle file uploads
       if (new_files && new_files.length > 0) {
-        const uploadPromises = new_files.map(async (file) => {
-            const sanitizedFileName = file.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
-            const filePath = `tasks/${taskId}/${Date.now()}-${sanitizedFileName}`;
-            
-            const { error: uploadError } = await supabase.storage
-                .from('task-attachments')
-                .upload(filePath, file);
-            if (uploadError) throw new Error(`Failed to upload ${file.name}: ${uploadError.message}`);
+        for (const file of new_files) {
+          const filePath = `tasks/${taskId}/${file.name}`;
+          const { error: uploadError } = await supabase.storage
+            .from('project_files')
+            .upload(filePath, file);
 
-            const { data: urlData } = supabase.storage.from('task-attachments').getPublicUrl(filePath);
+          if (uploadError) {
+            console.error('Error uploading file:', uploadError);
+            toast.error(`Failed to upload file: ${file.name}`);
+            continue;
+          }
 
-            return {
-                task_id: taskId,
-                uploaded_by: user.id,
-                file_name: file.name,
-                file_url: urlData.publicUrl,
-                storage_path: filePath,
-                file_type: file.type,
-                file_size: file.size,
-            };
-        });
+          const { data: { publicUrl } } = supabase.storage
+            .from('project_files')
+            .getPublicUrl(filePath);
 
-        const newAttachments = await Promise.all(uploadPromises);
-        const { error: insertAttachmentsError } = await supabase.from('task_attachments').insert(newAttachments);
-        if (insertAttachmentsError) throw insertAttachmentsError;
+          const { error: insertError } = await supabase
+            .from('task_attachments')
+            .insert({
+              task_id: taskId,
+              file_name: file.name,
+              file_url: publicUrl,
+              storage_path: filePath,
+              file_type: file.type,
+              file_size: file.size,
+            });
+          
+          if (insertError) {
+            console.error('Error inserting file attachment record:', insertError);
+            toast.error(`Failed to save attachment record for: ${file.name}`);
+          }
+        }
       }
-      
-      return taskResult;
+
+      // Handle file deletions
+      if (deleted_files && deleted_files.length > 0) {
+        const { data: attachmentsToDelete, error: fetchError } = await supabase
+          .from('task_attachments')
+          .select('storage_path')
+          .in('id', deleted_files);
+
+        if (fetchError) {
+          console.error('Error fetching attachments to delete:', fetchError);
+        } else if (attachmentsToDelete) {
+          const pathsToDelete = attachmentsToDelete.map(f => f.storage_path);
+          if (pathsToDelete.length > 0) {
+            const { error: deleteStorageError } = await supabase.storage
+              .from('project_files')
+              .remove(pathsToDelete);
+
+            if (deleteStorageError) {
+              console.error('Error deleting files from storage:', deleteStorageError);
+              toast.error('Failed to delete some attachments from storage.');
+            }
+          }
+        }
+
+        const { error: deleteDbError } = await supabase
+          .from('task_attachments')
+          .delete()
+          .in('id', deleted_files);
+
+        if (deleteDbError) {
+          console.error('Error deleting attachment records:', deleteDbError);
+          toast.error('Failed to delete some attachment records.');
+        }
+      }
+
+      return upsertedTask;
     },
     onSuccess: (data, variables) => {
-      toast.success(variables.id ? 'Tugas berhasil diperbarui!' : 'Tugas berhasil dibuat!');
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
-      queryClient.invalidateQueries({ queryKey: ['projects'] }); // Juga batalkan validasi proyek karena tugas bersarang
+      toast.success(variables.id ? 'Task updated successfully!' : 'Task created successfully!');
+      invalidateQueries();
     },
-    onError: (error) => {
-      toast.error('Gagal menyimpan tugas', { description: error.message });
+    onError: (error: Error) => {
+      toast.error(`Error: ${error.message}`);
     },
   });
 
@@ -148,48 +136,20 @@ export const useTaskMutations = () => {
     mutationFn: async (taskId: string) => {
       const { error } = await supabase.from('tasks').delete().eq('id', taskId);
       if (error) throw error;
+      return taskId;
     },
     onSuccess: () => {
-      toast.success('Tugas berhasil dihapus!');
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
-      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      toast.success('Task deleted successfully!');
+      invalidateQueries();
     },
-    onError: (error) => {
-      toast.error('Gagal menghapus tugas', { description: error.message });
-    },
-  });
-
-  const updateTaskStatusAndOrderMutation = useMutation({
-    mutationFn: async (data: { taskId: string; newStatus: string; orderedTaskIds: string[] }) => {
-      // Mutasi ini menangani perubahan status dan pengurutan ulang.
-      // Untuk pengurutan ulang di kolom yang sama, newStatus akan sama dengan status lama.
-      const { error: statusError } = await supabase
-        .from('tasks')
-        .update({ status: data.newStatus, completed: data.newStatus === 'Done' })
-        .eq('id', data.taskId);
-
-      if (statusError) throw new Error(`Pembaruan status tugas gagal: ${statusError.message}`);
-
-      const { error: orderError } = await supabase.rpc('update_task_kanban_order', { p_task_ids: data.orderedTaskIds });
-      
-      if (orderError) throw new Error(`Pembaruan urutan tugas gagal: ${orderError.message}`);
-    },
-    onSuccess: () => {
-      toast.success('Posisi tugas berhasil diperbarui');
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
-      queryClient.invalidateQueries({ queryKey: ['projects'] });
-    },
-    onError: (error) => {
-      toast.error('Gagal memindahkan tugas', { description: error.message });
+    onError: (error: Error) => {
+      toast.error(`Error deleting task: ${error.message}`);
     },
   });
 
   return {
     upsertTask: upsertTaskMutation.mutate,
-    isUpserting: upsertTaskMutation.isPending,
     deleteTask: deleteTaskMutation.mutate,
-    isDeleting: deleteTaskMutation.isPending,
-    updateTaskStatusAndOrder: updateTaskStatusAndOrderMutation.mutate,
-    isUpdatingStatusAndOrder: updateTaskStatusAndOrderMutation.isPending,
+    isSubmitting: upsertTaskMutation.isPending,
   };
 };
