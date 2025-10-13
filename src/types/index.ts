@@ -296,7 +296,7 @@ export interface Invoice {
   projectOwner?: User;
   assignedMembers: User[];
   status: PaymentStatus;
-  poNumber?: string | null;
+  poNumber: string | null;
   amount: number;
   dueDate: Date;
   invoiceAttachments?: InvoiceAttachment[];
