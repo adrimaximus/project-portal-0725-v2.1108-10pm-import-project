@@ -97,7 +97,13 @@ export const useNotifications = () => {
             const tone = userPreferences?.tone;
             console.log(`[Dyad Debug] Type enabled: ${isNotificationTypeEnabled}, Tone: ${tone}`);
 
-            if (isNotificationTypeEnabled && tone && tone !== 'none') {
+            let canPlaySound = true;
+            if (data.type === 'comment' && window.location.pathname.startsWith('/chat')) {
+              canPlaySound = false;
+              console.log('[Dyad Debug] Suppressing chat sound because user is on chat page.');
+            }
+
+            if (isNotificationTypeEnabled && tone && tone !== 'none' && canPlaySound) {
               const audioUrl = `${TONE_BASE_URL}${tone}`;
               console.log(`[Dyad Debug] Attempting to play sound: ${audioUrl}`);
               try {

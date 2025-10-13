@@ -75,6 +75,22 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
 
         if (selectedConversationIdRef.current !== newMessage.conversation_id) {
           setUnreadConversationIds(prev => new Set(prev).add(newMessage.conversation_id));
+          
+          // Play notification sound
+          const userPreferences = (currentUser as any).notification_preferences || {};
+          const isChatNotificationEnabled = userPreferences?.comment !== false;
+          const tone = userPreferences?.tone;
+
+          if (isChatNotificationEnabled && tone && tone !== 'none') {
+            const TONE_BASE_URL = `https://quuecudndfztjlxbrvyb.supabase.co/storage/v1/object/public/General/Notification/`;
+            const audioUrl = `${TONE_BASE_URL}${tone}`;
+            try {
+              const audio = new Audio(audioUrl);
+              audio.play().catch(e => console.error("Audio play failed:", e));
+            } catch (e) {
+              console.error("Error creating or playing audio:", e);
+            }
+          }
         }
       }
     };
