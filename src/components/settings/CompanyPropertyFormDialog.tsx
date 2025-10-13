@@ -57,6 +57,8 @@ const CompanyPropertyFormDialog = ({ open, onOpenChange, onSave, property, isSav
       options: [{ value: '' }],
     },
   });
+
+  const { register, handleSubmit, control, watch, formState: { errors } } = form;
   const { fields, append, remove } = useFieldArray({ control, name: 'options' });
   const propertyType = watch('type');
 
