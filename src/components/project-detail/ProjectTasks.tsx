@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Project, Task, User } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,15 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Plus, MoreHorizontal, Trash2, UserPlus, Sparkles, RefreshCw, Ticket } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { MultiSelect } from "@/components/ui/multi-select";
+import { Plus, MoreHorizontal, Trash2, UserPlus, Sparkles, RefreshCw, Ticket, Edit } from "lucide-react";
 import { generatePastelColor, getInitials } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
@@ -26,11 +17,11 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { TaskFormDialog } from "@/components/tasks/TaskFormDialog";
 
 interface ProjectTasksProps {
   project: Project;
-  onTaskAdd: (title: string, assigneeIds: string[]) => void;
-  onTaskAssignUsers: (taskId: string, userIds: string[]) => void;
+  onTaskSave: (taskData: any) => void;
   onTaskStatusChange: (taskId: string, completed: boolean) => void;
   onTaskDelete: (taskId: string) => void;
 }
@@ -40,30 +31,15 @@ const processMentions = (text: string | null | undefined) => {
   return text.replace(/@\[([^\]]+)\]\(([^)]+)\)/g, '**@$1**');
 };
 
-const plainTextMentions = (text: string | null | undefined) => {
-  if (!text) return '';
-  return text.replace(/@\[([^\]]+)\]\(([^)]+)\)/g, '@$1');
-};
-
 const ProjectTasks = ({
   project,
-  onTaskAdd,
-  onTaskAssignUsers,
+  onTaskSave,
   onTaskStatusChange,
   onTaskDelete,
 }: ProjectTasksProps) => {
-  const [newTaskTitle, setNewTaskTitle] = useState("");
-  const [newTaskAssigneeIds, setNewTaskAssigneeIds] = useState<string[]>([]);
-  const [isAddingTask, setIsAddingTask] = useState(false);
+  const [isTaskFormOpen, setIsTaskFormOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
-
-  const handleAddTask = () => {
-    if (newTaskTitle.trim() === "") return;
-    onTaskAdd(newTaskTitle.trim(), newTaskAssigneeIds);
-    setNewTaskTitle("");
-    setNewTaskAssigneeIds([]);
-    setIsAddingTask(false);
-  };
 
   const handleGenerateTasks = async (isInitial: boolean) => {
     setIsGenerating(true);
@@ -84,7 +60,7 @@ const ProjectTasks = ({
 
       if (Array.isArray(data) && data.every(item => typeof item === 'string')) {
         for (const title of data) {
-          onTaskAdd(title, []);
+          onTaskSave({ project_id: project.id, title, status: 'To do', priority: 'normal' });
         }
         toast.success(`${data.length} new tasks generated!`, { id: toastId });
       } else {
@@ -101,10 +77,16 @@ const ProjectTasks = ({
     }
   };
 
-  const userOptions = project.assignedTo.map((user) => ({
-    value: user.id,
-    label: user.name,
-  }));
+  const handleOpenTaskForm = (task: Task | null) => {
+    setEditingTask(task);
+    setIsTaskFormOpen(true);
+  };
+
+  const handleSaveAndClose = (taskData: any) => {
+    onTaskSave(taskData);
+    setIsTaskFormOpen(false);
+    setEditingTask(null);
+  };
 
   const tasks = project.tasks || [];
 
@@ -132,7 +114,7 @@ const ProjectTasks = ({
         )}
       </div>
       
-      {tasks.length === 0 && !isAddingTask && (
+      {tasks.length === 0 && (
         <div className="text-center py-4 border-2 border-dashed rounded-lg">
           <p className="text-sm text-muted-foreground mb-4">No tasks yet. Get started by adding one or let AI help.</p>
           <Button onClick={() => handleGenerateTasks(true)} disabled={isGenerating}>
@@ -158,9 +140,7 @@ const ProjectTasks = ({
           return (
             <div
               key={task.id}
-              className={`flex items-start space-x-3 p-2 rounded-md hover:bg-muted ${
-                (task.priority as string) === 'high' ? 'bg-red-100 border-l-4 border-red-500' : ''
-              }`}
+              className="flex items-start space-x-3 p-2 rounded-md hover:bg-muted"
             >
               <Checkbox
                 id={`task-${task.id}`}
@@ -176,6 +156,7 @@ const ProjectTasks = ({
                   className={`text-sm break-words cursor-pointer w-full ${
                     task.completed ? "text-muted-foreground line-through" : ""
                   }`}
+                  onClick={() => handleOpenTaskForm(task)}
                 >
                   <ReactMarkdown
                     remarkPlugins={[remarkGfm]}
@@ -220,24 +201,7 @@ const ProjectTasks = ({
                       </TooltipProvider>
                     )
                   })
-                  : task.created_by ? (() => {
-                    const createdByFullName = `${task.created_by.first_name || ''} ${task.created_by.last_name || ''}`.trim() || task.created_by.email;
-                    return (
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Avatar key={task.created_by.id} className="h-6 w-6 border-2 border-background opacity-50">
-                              <AvatarImage src={task.created_by.avatar_url} />
-                              <AvatarFallback style={generatePastelColor(task.created_by.id)}>{getInitials(createdByFullName, task.created_by.email)}</AvatarFallback>
-                            </Avatar>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Created by {createdByFullName}</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    )
-                  })() : (
+                  : (
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -253,84 +217,48 @@ const ProjectTasks = ({
                   )
                 }
               </div>
-              <Dialog>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DialogTrigger asChild>
-                      <DropdownMenuItem>
-                        <UserPlus className="mr-2 h-4 w-4" />
-                        Assign
-                      </DropdownMenuItem>
-                    </DialogTrigger>
-                    <DropdownMenuItem
-                      className="text-red-500"
-                      onClick={() => onTaskDelete(task.id)}
-                    >
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Delete
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Assign to: {plainTextMentions(task.title)}</DialogTitle>
-                  </DialogHeader>
-                  <MultiSelect
-                    options={userOptions}
-                    value={assignees.map(u => u.id)}
-                    onChange={(selectedIds) => {
-                      onTaskAssignUsers(task.id, selectedIds);
-                    }}
-                    placeholder="Select team members..."
-                  />
-                </DialogContent>
-              </Dialog>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => handleOpenTaskForm(task)}>
+                    <Edit className="mr-2 h-4 w-4" />
+                    Edit
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="text-red-500"
+                    onClick={() => onTaskDelete(task.id)}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           )
         })}
       </div>
-      {isAddingTask ? (
-        <div className="space-y-2 rounded-lg border p-3">
-          <div className="flex items-start space-x-3">
-            <Checkbox disabled className="mt-2.5" />
-            <div className="flex-1 space-y-2">
-              <Input
-                value={newTaskTitle}
-                onChange={(e) => setNewTaskTitle(e.target.value)}
-                placeholder="What needs to be done?"
-                onKeyDown={(e) => e.key === "Enter" && handleAddTask()}
-                autoFocus
-              />
-              <MultiSelect
-                options={userOptions}
-                value={newTaskAssigneeIds}
-                onChange={setNewTaskAssigneeIds}
-                placeholder="Assign to..."
-              />
-            </div>
-          </div>
-          <div className="flex justify-end space-x-2 pt-1">
-            <Button variant="ghost" size="sm" onClick={() => setIsAddingTask(false)}>
-              Cancel
-            </Button>
-            <Button size="sm" onClick={handleAddTask}>Add Task</Button>
-          </div>
-        </div>
-      ) : (
-        <Button
-          variant="ghost"
-          className="w-full justify-start"
-          onClick={() => setIsAddingTask(true)}
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          Add task
-        </Button>
-      )}
+      
+      <Button
+        variant="ghost"
+        className="w-full justify-start"
+        onClick={() => handleOpenTaskForm(null)}
+      >
+        <Plus className="mr-2 h-4 w-4" />
+        Add task
+      </Button>
+
+      <TaskFormDialog
+        isOpen={isTaskFormOpen}
+        onOpenChange={setIsTaskFormOpen}
+        project={project}
+        taskToEdit={editingTask}
+        onSave={handleSaveAndClose}
+        users={project.assignedTo}
+      />
     </div>
   );
 };

@@ -1,30 +1,45 @@
 export interface User {
   id: string;
   name: string;
-  avatar_url: string;
-  initials: string;
+  email: string;
+  avatar_url?: string;
+  first_name?: string;
+  last_name?: string;
+  initials?: string;
   role?: string;
 }
 
-export interface Attachment {
+export interface Tag {
   id: string;
-  file_url: string;
-  file_name: string;
+  name: string;
+  color: string;
+  user_id?: string;
 }
 
-export interface Invoice {
+export interface Task {
   id: string;
-  projectId: string;
-  projectName: string;
-  clientName?: string | null;
-  clientLogo?: string | null;
-  clientAvatarUrl?: string | null;
-  clientCompanyName?: string | null;
-  projectOwner?: User;
-  assignedMembers: User[];
+  title: string;
+  completed: boolean;
+  project_id: string;
+  created_by: User;
+  assignees: User[];
+  description?: string;
+  status?: string;
+  priority?: string;
+  due_date?: string;
+  tags?: Tag[];
+  origin_ticket_id?: string;
+}
+
+export interface Project {
+  id: string;
+  name: string;
+  description: string;
   status: string;
-  poNumber?: string | null;
-  amount: number;
-  dueDate: string | Date;
-  invoiceAttachments?: Attachment[];
+  progress: number;
+  created_by: User;
+  assignedTo: User[];
+  tasks?: Task[];
+  services?: string[];
+  venue?: string;
 }

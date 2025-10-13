@@ -15,11 +15,10 @@ import {
 
 interface DatePickerProps {
   date: Date | undefined;
-  onDateChange: (date: Date | undefined) => void;
-  placeholder?: string;
+  setDate: (date: Date | undefined) => void;
 }
 
-export function DatePicker({ date, onDateChange, placeholder = "Pick a date" }: DatePickerProps) {
+export function DatePicker({ date, setDate }: DatePickerProps) {
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -31,14 +30,14 @@ export function DatePicker({ date, onDateChange, placeholder = "Pick a date" }: 
           )}
         >
           <CalendarIcon className="mr-2 h-4 w-4" />
-          {date ? format(date, "PPP") : <span>{placeholder}</span>}
+          {date ? format(date, "PPP") : <span>Pick a date</span>}
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0">
         <Calendar
           mode="single"
           selected={date}
-          onSelect={onDateChange}
+          onSelect={setDate}
           initialFocus
         />
       </PopoverContent>
