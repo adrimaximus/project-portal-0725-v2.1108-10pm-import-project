@@ -21,7 +21,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useProject } from "@/hooks/useProject";
 import { useProjectMutations } from "@/hooks/useProjectMutations";
 import { toast } from "sonner";
-import { Project } from "@/types";
+import { Project, Task } from "@/types";
+import TaskFormDialog from "@/components/projects/TaskFormDialog";
+import { useTaskMutations, UpsertTaskPayload } from "@/hooks/useTaskMutations";
 
 const ProjectDetailSkeleton = () => (
   <PortalLayout>
@@ -51,8 +53,13 @@ const ProjectDetail = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const mainContentRef = useRef<HTMLDivElement>(null);
 
+  const [isTaskFormOpen, setIsTaskFormOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
+
   const { data: project, isLoading, error } = useProject(slug!);
   const mutations = useProjectMutations(slug!);
+  const { upsertTask, deleteTask, toggleTaskCompletion, isUpserting } = useTaskMutations();
 
   const defaultTab = searchParams.get('tab') || 'overview';
 
@@ -83,11 +90,7 @@ const ProjectDetail = () => {
     }
   }, [isLoading, error, project, navigate]);
 
-  if (authLoading || isLoading || !project || !editedProject) {
-    return <ProjectDetailSkeleton />;
-  }
-
-  const canEdit = user && (user.id === project.created_by.id || user.role === 'admin' || user.role === 'master admin');
+  const canEdit = user && (user.id === project?.created_by.id || user.role === 'admin' || user.role === 'master admin');
 
   const handleFieldChange = (field: keyof Project, value: any) => {
     setEditedProject(prev => prev ? { ...prev, [field]: value } : null);
@@ -106,16 +109,58 @@ const ProjectDetail = () => {
   };
 
   const handleToggleComplete = () => {
-    const newStatus = project.status === 'Completed' ? 'In Progress' : 'Completed';
-    if (editedProject) {
-      mutations.updateProject.mutate({ ...editedProject, status: newStatus });
-    }
+    if (!editedProject) return;
+    const newStatus = project?.status === 'Completed' ? 'In Progress' : 'Completed';
+    mutations.updateProject.mutate({ ...editedProject, status: newStatus });
   };
 
   const handleDeleteProject = () => {
+    if (!project) return;
     mutations.deleteProject.mutate(project.id);
     setIsDeleteDialogOpen(false);
   };
+
+  const handleCreateTask = () => {
+    setEditingTask(null);
+    setIsTaskFormOpen(true);
+  };
+
+  const handleEditTask = (task: Task) => {
+    setEditingTask(task);
+    setIsTaskFormOpen(true);
+  };
+
+  const handleDeleteTask = (task: Task) => {
+    setTaskToDelete(task);
+  };
+
+  const confirmDeleteTask = () => {
+    if (taskToDelete) {
+      deleteTask(taskToDelete.id, {
+        onSuccess: () => {
+          toast.success(`Task "${taskToDelete.title}" deleted.`);
+        },
+      });
+      setTaskToDelete(null);
+    }
+  };
+
+  const handleTaskFormSubmit = (data: UpsertTaskPayload) => {
+    upsertTask(data, {
+      onSuccess: () => {
+        setIsTaskFormOpen(false);
+        setEditingTask(null);
+      },
+    });
+  };
+
+  const handleToggleTaskCompletion = (task: Task, completed: boolean) => {
+    toggleTaskCompletion({ task, completed });
+  };
+
+  if (authLoading || isLoading || !project || !editedProject) {
+    return <ProjectDetailSkeleton />;
+  }
 
   return (
     <PortalLayout>
@@ -146,6 +191,10 @@ const ProjectDetail = () => {
                 onFieldChange={handleFieldChange}
                 mutations={mutations}
                 defaultTab={defaultTab}
+                onAddTask={handleCreateTask}
+                onEditTask={handleEditTask}
+                onDeleteTask={handleDeleteTask}
+                onToggleTaskCompletion={handleToggleTaskCompletion}
               />
             </div>
           </div>
@@ -168,6 +217,29 @@ const ProjectDetail = () => {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteProject}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <TaskFormDialog
+        open={isTaskFormOpen}
+        onOpenChange={setIsTaskFormOpen}
+        onSubmit={handleTaskFormSubmit}
+        isSubmitting={isUpserting}
+        task={editingTask}
+      />
+
+      <AlertDialog open={!!taskToDelete} onOpenChange={() => setTaskToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the task "{taskToDelete?.title}". This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteTask}>Delete</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

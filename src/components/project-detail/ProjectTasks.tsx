@@ -1,60 +1,48 @@
 import { Task } from "@/types";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
-import { ListChecks } from "lucide-react";
+import { ListChecks, Plus, MoreHorizontal, Edit, Trash2 } from "lucide-react";
+import { Button } from "../ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 interface ProjectTasksProps {
   tasks: Task[];
   projectId: string;
+  onAddTask: () => void;
+  onEditTask: (task: Task) => void;
+  onDeleteTask: (task: Task) => void;
+  onToggleTaskCompletion: (task: Task, completed: boolean) => void;
 }
 
-const ProjectTasks = ({ tasks, projectId }: ProjectTasksProps) => {
-  const queryClient = useQueryClient();
-
-  const updateTaskMutation = useMutation({
-    mutationFn: async ({ taskId, completed }: { taskId: string; completed: boolean }) => {
-      const { error } = await supabase
-        .from('tasks')
-        .update({ completed, status: completed ? 'Done' : 'To do' })
-        .eq('id', taskId);
-
-      if (error) {
-        throw new Error(error.message);
-      }
-    },
-    onSuccess: () => {
-      // The real-time subscription will handle invalidation,
-      // but we can show a toast here for immediate feedback.
-      toast.success("Task status updated.");
-    },
-    onError: (error) => {
-      toast.error("Failed to update task.", { description: error.message });
-    },
-  });
-
-  const handleTaskCompletion = (taskId: string, completed: boolean) => {
-    updateTaskMutation.mutate({ taskId, completed });
-  };
-
+const ProjectTasks = ({ tasks, onAddTask, onEditTask, onDeleteTask, onToggleTaskCompletion }: ProjectTasksProps) => {
+  
   if (!tasks || tasks.length === 0) {
     return (
       <div className="text-center text-muted-foreground py-8">
         <ListChecks className="mx-auto h-12 w-12" />
         <p className="mt-4">No tasks for this project yet.</p>
+        <Button onClick={onAddTask} className="mt-4">
+          <Plus className="mr-2 h-4 w-4" />
+          Add First Task
+        </Button>
       </div>
     );
   }
 
   return (
     <div className="space-y-2">
+      <div className="flex justify-end mb-4">
+        <Button onClick={onAddTask}>
+          <Plus className="mr-2 h-4 w-4" />
+          New Task
+        </Button>
+      </div>
       {tasks.map((task) => (
-        <div key={task.id} className="flex items-center space-x-3 p-2 rounded-md hover:bg-muted">
+        <div key={task.id} className="flex items-center space-x-3 p-2 rounded-md hover:bg-muted group">
           <Checkbox
             id={`task-${task.id}`}
             checked={task.completed}
-            onCheckedChange={(checked) => handleTaskCompletion(task.id, !!checked)}
+            onCheckedChange={(checked) => onToggleTaskCompletion(task, !!checked)}
+            className="mt-1"
           />
           <label
             htmlFor={`task-${task.id}`}
@@ -62,6 +50,23 @@ const ProjectTasks = ({ tasks, projectId }: ProjectTasksProps) => {
           >
             {task.title}
           </label>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100">
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onSelect={() => onEditTask(task)}>
+                <Edit className="mr-2 h-4 w-4" />
+                Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => onDeleteTask(task)} className="text-destructive">
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       ))}
     </div>

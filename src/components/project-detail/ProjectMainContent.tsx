@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Project } from '@/types';
+import { Project, Task } from "@/types";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ProjectComments from '@/components/ProjectComments';
 import { useAuth } from '@/contexts/AuthContext';
@@ -14,9 +14,23 @@ interface ProjectMainContentProps {
   onFieldChange: (field: keyof Project, value: any) => void;
   mutations: any; // Simplified for brevity, contains all mutation functions
   defaultTab: string;
+  onAddTask: () => void;
+  onEditTask: (task: Task) => void;
+  onDeleteTask: (task: Task) => void;
+  onToggleTaskCompletion: (task: Task, completed: boolean) => void;
 }
 
-const ProjectMainContent = ({ project, isEditing, onFieldChange, mutations, defaultTab }: ProjectMainContentProps) => {
+const ProjectMainContent = ({ 
+  project, 
+  isEditing, 
+  onFieldChange, 
+  mutations, 
+  defaultTab,
+  onAddTask,
+  onEditTask,
+  onDeleteTask,
+  onToggleTaskCompletion,
+}: ProjectMainContentProps) => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState(defaultTab);
   const [lastViewedDiscussion, setLastViewedDiscussion] = useState(() => new Date());
@@ -100,6 +114,10 @@ const ProjectMainContent = ({ project, isEditing, onFieldChange, mutations, defa
           <ProjectTasks
             tasks={project.tasks || []}
             projectId={project.id}
+            onAddTask={onAddTask}
+            onEditTask={onEditTask}
+            onDeleteTask={onDeleteTask}
+            onToggleTaskCompletion={onToggleTaskCompletion}
           />
         </TabsContent>
         <TabsContent value="discussion" className="mt-4">
