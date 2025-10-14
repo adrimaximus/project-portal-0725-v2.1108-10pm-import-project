@@ -120,7 +120,7 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task, proj
           due_date: task.due_date ? new Date(task.due_date) : null,
           priority: task.priority || 'Normal',
           status: task.status,
-          assignee_ids: task.assignees?.map(a => a.id) || [],
+          assignee_ids: task.assignedTo?.map(a => a.id) || [],
           tag_ids: task.tags?.map(t => t.id) || [],
         });
         setSelectedTags(task.tags || []);
@@ -383,20 +383,29 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task, proj
       <FormField
         control={form.control}
         name="assignee_ids"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>Assignees</FormLabel>
-            <FormControl>
-              <AssigneeCombobox
-                users={assignableUsers}
-                selectedUserIds={field.value || []}
-                onChange={field.onChange}
-                disabled={isLoadingProfiles || !selectedProjectId}
-              />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
+        render={({ field }) => {
+          const selectedUsers = useMemo(() => 
+            assignableUsers.filter(user => (field.value || []).includes(user.id)),
+            [field.value, assignableUsers]
+          );
+
+          return (
+            <FormItem>
+              <FormLabel>Assignees</FormLabel>
+              <FormControl>
+                <AssigneeCombobox
+                  users={assignableUsers}
+                  selectedUsers={selectedUsers}
+                  onChange={(newSelectedUsers: Profile[]) => {
+                    field.onChange(newSelectedUsers.map(u => u.id));
+                  }}
+                  disabled={isLoadingProfiles || !selectedProjectId}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          );
+        }}
       />
       <FormItem>
         <FormLabel>Tags</FormLabel>

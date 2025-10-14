@@ -22,22 +22,27 @@ import { generatePastelColor, getAvatarUrl } from "@/lib/utils"
 
 interface AssigneeComboboxProps {
   users: User[];
-  selectedUserIds: string[];
-  onChange: (userIds: string[]) => void;
+  selectedUsers: User[];
+  onChange: (users: User[]) => void;
   disabled?: boolean;
 }
 
-export function AssigneeCombobox({ users, selectedUserIds, onChange, disabled }: AssigneeComboboxProps) {
+export function AssigneeCombobox({ users, selectedUsers, onChange, disabled }: AssigneeComboboxProps) {
   const [open, setOpen] = React.useState(false)
 
-  const handleToggleSelection = (userId: string) => {
-    const newSelection = selectedUserIds.includes(userId)
-      ? selectedUserIds.filter(id => id !== userId)
-      : [...selectedUserIds, userId];
+  const handleToggleSelection = (userToToggle: User) => {
+    const isSelected = selectedUsers.some(u => u.id === userToToggle.id);
+    const newSelection = isSelected
+      ? selectedUsers.filter(u => u.id !== userToToggle.id)
+      : [...selectedUsers, userToToggle];
     onChange(newSelection);
   };
 
-  const selectedUsers = users.filter(user => selectedUserIds.includes(user.id));
+  const handleUnselectBadge = (e: React.MouseEvent, user: User) => {
+    e.preventDefault();
+    e.stopPropagation();
+    handleToggleSelection(user);
+  };
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -59,11 +64,7 @@ export function AssigneeCombobox({ users, selectedUserIds, onChange, disabled }:
                 >
                   {user.name}
                   <button
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      handleToggleSelection(user.id);
-                    }}
+                    onClick={(e) => handleUnselectBadge(e, user)}
                     className="ml-1 rounded-full outline-none ring-offset-background focus:ring-2 focus:ring-ring focus:ring-offset-2"
                   >
                     <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
@@ -87,14 +88,14 @@ export function AssigneeCombobox({ users, selectedUserIds, onChange, disabled }:
                 <CommandItem
                   key={user.id}
                   onSelect={() => {
-                    handleToggleSelection(user.id);
+                    handleToggleSelection(user);
                   }}
                   value={`${user.name} ${user.email}`}
                 >
                   <Check
                     className={cn(
                       "mr-2 h-4 w-4",
-                      selectedUserIds.includes(user.id)
+                      selectedUsers.some((su) => su.id === user.id)
                         ? "opacity-100"
                         : "opacity-0"
                     )}
