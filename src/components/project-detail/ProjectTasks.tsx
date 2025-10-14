@@ -1,4 +1,4 @@
-import { Task, UserProfile } from "@/types";
+import { Task, User } from "@/types";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ListChecks, Plus, MoreHorizontal, Edit, Trash2 } from "lucide-react";
 import { Button } from "../ui/button";
@@ -55,7 +55,7 @@ const ProjectTasks = ({ tasks, onAddTask, onEditTask, onDeleteTask, onToggleTask
             </label>
 
             <div className="flex items-center -space-x-2 ml-auto pr-2">
-              {task.assignedTo?.map((assignee: UserProfile) => (
+              {task.assignedTo?.map((assignee: User) => (
                 <Tooltip key={assignee.id}>
                   <TooltipTrigger asChild>
                     <Avatar className="h-6 w-6 border-2 border-background">
