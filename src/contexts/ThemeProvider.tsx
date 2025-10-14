@@ -39,11 +39,13 @@ export function ThemeProvider({
     const root = window.document.documentElement;
     root.classList.remove(...themeClasses);
 
-    let effectiveTheme: Omit<Theme, "system"> = theme as Omit<Theme, "system">;
+    let effectiveTheme: Exclude<Theme, "system">;
     if (theme === "system") {
       effectiveTheme = window.matchMedia("(prefers-color-scheme: dark)").matches
         ? "dark"
         : "light";
+    } else {
+      effectiveTheme = theme;
     }
 
     switch (effectiveTheme) {
