@@ -44,11 +44,8 @@ import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
 import TermsOfServicePage from "./pages/TermsOfServicePage";
 import NotFound from "./pages/NotFound";
 import ThemeSettingsPage from "./pages/ThemeSettingsPage";
-import { useCheckAudioPermission } from "./hooks/useCheckAudioPermission";
 
 function App() {
-  useCheckAudioPermission();
-
   useEffect(() => {
     const unlockAudio = () => {
       // Create a silent audio element to unlock audio context

@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Notification } from '@/types';
 import { toast } from 'sonner';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 const NOTIFICATIONS_PER_PAGE = 20;
 const TONE_BASE_URL = `https://quuecudndfztjlxbrvyb.supabase.co/storage/v1/object/public/General/Notification/`;
@@ -37,6 +37,14 @@ export const useNotifications = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const queryKey = ['notifications', user?.id];
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    if (!audioRef.current) {
+      audioRef.current = new Audio();
+      audioRef.current.volume = 0.5;
+    }
+  }, []);
 
   const {
     data,
@@ -76,10 +84,8 @@ export const useNotifications = () => {
             console.log('[Dyad Debug] Fetched notification details:', data);
             const userPreferences = (user as any).notification_preferences || {};
 
-            // Check if toasts are globally enabled
-            const toastsEnabled = userPreferences.toast_enabled !== false; // Default to true
+            const toastsEnabled = userPreferences.toast_enabled !== false;
 
-            // Specific check for chat messages
             let canShowToast = toastsEnabled;
             if (data.type === 'comment' && window.location.pathname.startsWith('/chat')) {
               canShowToast = false;
@@ -92,9 +98,8 @@ export const useNotifications = () => {
               });
             }
 
-            // Play sound logic
-            const isNotificationTypeEnabled = userPreferences?.[data.type] !== false; // default to true
-            const tone = userPreferences?.tone || 'digital-bell-fx.mp3'; // Default tone
+            const isNotificationTypeEnabled = userPreferences?.[data.type] !== false;
+            const tone = userPreferences?.tone || 'digital-bell-fx.mp3';
             console.log(`[Dyad Debug] Type enabled: ${isNotificationTypeEnabled}, Tone: ${tone}`);
 
             let canPlaySound = true;
@@ -103,22 +108,24 @@ export const useNotifications = () => {
               console.log('[Dyad Debug] Suppressing chat sound because user is on chat page.');
             }
 
-            if (isNotificationTypeEnabled && tone && tone !== 'none' && canPlaySound) {
+            if (isNotificationTypeEnabled && tone && tone !== 'none' && canPlaySound && audioRef.current) {
               const audioUrl = `${TONE_BASE_URL}${tone}`;
               console.log(`[Dyad Debug] Attempting to play sound: ${audioUrl}`);
+              audioRef.current.src = audioUrl;
               try {
-                const audio = new Audio(audioUrl);
-                await audio.play();
+                await audioRef.current.play();
                 console.log('[Dyad Debug] Sound played successfully.');
               } catch (e: any) {
                 console.error("[Dyad Debug] Error playing notification sound:", e);
                 if (e.name === 'NotAllowedError') {
                   toast.error("Could not play notification sound.", {
-                    description: "Browser security may have blocked it. Please click anywhere on the page to enable sound for notifications.",
+                    description: "Browser security blocked it. Please click anywhere on the page to enable sound.",
                     duration: 10000,
                   });
                 } else {
-                  toast.error("An error occurred while trying to play the notification sound.");
+                  toast.error("An error occurred while playing the notification sound.", {
+                    description: e.message
+                  });
                 }
               }
             }
