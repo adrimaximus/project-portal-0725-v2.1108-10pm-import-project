@@ -49,6 +49,32 @@ const TeamMembersCard = ({
     setLocalMembers(members);
   }, [members]);
 
+  const capitalizeWords = (str: string) => {
+    if (!str) return '';
+    if (str === str.toUpperCase()) {
+      return str;
+    }
+    return str
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+  };
+
+  const processedRoles = useMemo(() => {
+    return [...roles]
+      .map(role => ({
+        ...role,
+        displayName: capitalizeWords(role.name),
+      }))
+      .sort((a, b) => {
+        if (a.name === 'master admin') return -1;
+        if (b.name === 'master admin') return 1;
+        if (a.is_predefined && !b.is_predefined) return -1;
+        if (!a.is_predefined && b.is_predefined) return 1;
+        return a.displayName.localeCompare(b.displayName);
+      });
+  }, [roles]);
+
   const handleRoleChange = (memberId: string, newRole: string) => {
     setLocalMembers(prevMembers =>
       prevMembers.map(member =>
@@ -133,7 +159,7 @@ const TeamMembersCard = ({
                     <TableRow><TableCell colSpan={4} className="text-center">Loading members...</TableCell></TableRow>
                   ) : filteredMembers.map((member) => {
                     const isRoleChangeDisabled = !isAdmin || member.id === currentUser?.id || (member.role === 'master admin' && !isMasterAdmin);
-                    const availableRolesForMember = roles.filter(role => isMasterAdmin || role.name !== 'master admin');
+                    const availableRolesForMember = processedRoles.filter(r => isMasterAdmin || r.name !== 'master admin');
                     const tooltipMessage = getDisabledTooltipMessage(member, currentUser);
 
                     return (
@@ -167,7 +193,7 @@ const TeamMembersCard = ({
                                   <Select value={member.role || undefined} disabled>
                                     <SelectTrigger className="w-full h-9 border-none focus:ring-0 focus:ring-offset-0 shadow-none bg-transparent disabled:cursor-not-allowed disabled:opacity-50">
                                       <SelectValue placeholder="No role assigned">
-                                        {roles.find(r => r.name === member.role)?.name || member.role}
+                                        {processedRoles.find(r => r.name === member.role)?.displayName || member.role}
                                       </SelectValue>
                                     </SelectTrigger>
                                   </Select>
@@ -178,7 +204,7 @@ const TeamMembersCard = ({
                             <SelectTrigger className="w-full h-9 border-none focus:ring-0 focus:ring-offset-0 shadow-none bg-transparent"><SelectValue placeholder="Select a role" /></SelectTrigger>
                             <SelectContent>
                               {availableRolesForMember.map(role => (
-                                <SelectItem key={role.id} value={role.name}>{role.name}</SelectItem>
+                                <SelectItem key={role.id} value={role.name}>{role.displayName}</SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
