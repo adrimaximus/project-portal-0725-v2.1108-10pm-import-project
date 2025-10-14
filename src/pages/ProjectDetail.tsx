@@ -24,6 +24,7 @@ import { toast } from "sonner";
 import { Project, Task } from "@/types";
 import TaskFormDialog from "@/components/projects/TaskFormDialog";
 import { useTaskMutations, UpsertTaskPayload } from "@/hooks/useTaskMutations";
+import { useTasks } from "@/hooks/useTasks";
 
 const ProjectDetailSkeleton = () => (
   <PortalLayout>
@@ -58,6 +59,10 @@ const ProjectDetail = () => {
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
 
   const { data: project, isLoading, error } = useProject(slug!);
+  const { tasks, isLoading: isLoadingTasks } = useTasks({
+    projectIds: project ? [project.id] : [],
+    enabled: !!project,
+  });
   const mutations = useProjectMutations(slug!);
   const { upsertTask, deleteTask, toggleTaskCompletion, isUpserting } = useTaskMutations();
 
@@ -65,9 +70,9 @@ const ProjectDetail = () => {
 
   useEffect(() => {
     if (project) {
-      setEditedProject(project);
+      setEditedProject({ ...project, tasks });
     }
-  }, [project]);
+  }, [project, tasks]);
 
   useEffect(() => {
     const taskParam = searchParams.get('task');
@@ -104,7 +109,7 @@ const ProjectDetail = () => {
   };
 
   const handleCancelChanges = () => {
-    setEditedProject(project);
+    setEditedProject(project ? { ...project, tasks } : null);
     setIsEditing(false);
   };
 
@@ -158,7 +163,7 @@ const ProjectDetail = () => {
     toggleTaskCompletion({ task, completed });
   };
 
-  if (authLoading || isLoading || !project || !editedProject) {
+  if (authLoading || isLoading || isLoadingTasks || !project || !editedProject) {
     return <ProjectDetailSkeleton />;
   }
 
@@ -227,6 +232,7 @@ const ProjectDetail = () => {
         onSubmit={handleTaskFormSubmit}
         isSubmitting={isUpserting}
         task={editingTask}
+        project={project}
       />
 
       <AlertDialog open={!!taskToDelete} onOpenChange={() => setTaskToDelete(null)}>
