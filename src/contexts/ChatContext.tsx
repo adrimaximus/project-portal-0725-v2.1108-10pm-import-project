@@ -253,10 +253,6 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     const unsubscribe = chatRealtime.subscribeToConversation({
       conversationId: selectedConversationId,
       onNewMessage: (newMessagePayload) => {
-        if (newMessagePayload.is_broadcast && newMessagePayload.sender_id === currentUser.id) {
-          return;
-        }
-
         const currentConversation = conversations.find(c => c.id === selectedConversationId);
         if (!currentConversation) {
           queryClient.invalidateQueries({ queryKey: ['conversations', currentUser.id] });
