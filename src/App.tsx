@@ -6,7 +6,7 @@ import { Route, BrowserRouter as Router, Routes } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ChatProvider } from "./contexts/ChatContext";
 import Index from "./pages/Index";
-import ChatPage from "./pages/Chat";
+import ChatPage from "./pages/ChatPage";
 import ProjectDetailPage from "./pages/projects/[slug]";
 
 const queryClient = new QueryClient();
