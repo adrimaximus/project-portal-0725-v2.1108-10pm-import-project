@@ -38,23 +38,6 @@ const ProjectMainContent = ({ project, isEditing, onFieldChange, mutations, defa
 
   const uncompletedTasksCount = project.tasks?.filter(task => !task.completed).length ?? 0;
 
-  const handleTaskAdd = (title: string, assigneeIds: string[]) => {
-    if (!project || !user) return;
-    mutations.addTask.mutate({ project, user, title, assigneeIds });
-  };
-
-  const handleTaskAssignUsers = (taskId: string, userIds: string[]) => {
-    mutations.assignUsersToTask.mutate({ taskId, userIds });
-  };
-
-  const handleTaskStatusChange = (taskId: string, completed: boolean) => {
-    mutations.updateTask.mutate({ taskId, updates: { completed } });
-  };
-
-  const handleTaskDelete = (taskId: string) => {
-    mutations.deleteTask.mutate(taskId);
-  };
-
   const handleAddCommentOrTicket = async (text: string, isTicket: boolean, attachments: File[] | null, mentionedUserIds: string[]) => {
     if (!project || !user) return;
     mutations.addComment.mutate({ project, user, text, isTicket, attachments, mentionedUserIds });
@@ -116,11 +99,8 @@ const ProjectMainContent = ({ project, isEditing, onFieldChange, mutations, defa
         </TabsContent>
         <TabsContent value="tasks" className="mt-4">
           <ProjectTasks
-            project={project}
-            onTaskAdd={handleTaskAdd}
-            onTaskAssignUsers={handleTaskAssignUsers}
-            onTaskStatusChange={handleTaskStatusChange}
-            onTaskDelete={handleTaskDelete}
+            tasks={project.tasks || []}
+            projectId={project.id}
           />
         </TabsContent>
         <TabsContent value="discussion" className="mt-4">
