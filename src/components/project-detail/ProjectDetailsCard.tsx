@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Project as BaseProject, PROJECT_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS, Person } from "@/types";
+import { Project as BaseProject, PROJECT_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS, Person, Company } from "@/types";
 import { Calendar, Wallet, Briefcase, MapPin, ListTodo, CreditCard, User, Building, ChevronsUpDown } from "lucide-react";
 import { isSameDay, subDays } from "date-fns";
 import { DateRangePicker } from "../DateRangePicker";
@@ -7,7 +7,7 @@ import { DateRange } from "react-day-picker";
 import { CurrencyInput } from "../ui/currency-input";
 import ProjectServices from "./ProjectServices";
 import { formatInJakarta, cn, getPaymentStatusStyles } from "@/lib/utils";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import StatusBadge from "../StatusBadge";
 import { Badge } from "@/components/ui/badge";
 import AddressAutocompleteInput from '../AddressAutocompleteInput';
@@ -17,6 +17,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useMemo } from "react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 // Extend types to include the new optional company_id field for a robust relationship.
 type LocalPerson = Person & { company_id?: string | null };
@@ -98,7 +99,17 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetail
   const { data: allPeople, isLoading: isLoadingPeople } = useQuery<LocalPerson[]>({
     queryKey: ['allPeople'],
     queryFn: async () => {
-        const { data, error } = await supabase.from('people').select('*');
+        const { data, error } = await supabase.from('people').select('*').order('full_name', { ascending: true });
+        if (error) throw error;
+        return data;
+    },
+    enabled: isEditing,
+  });
+
+  const { data: allCompanies, isLoading: isLoadingCompanies } = useQuery<Company[]>({
+    queryKey: ['allCompanies'],
+    queryFn: async () => {
+        const { data, error } = await supabase.from('companies').select('*').order('name', { ascending: true });
         if (error) throw error;
         return data;
     },
@@ -118,14 +129,37 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetail
     onFieldChange('budget', value || 0);
   };
 
-  const handleClientChange = (personId: string) => {
-    const selectedPerson = allPeople?.find(p => p.id === personId);
-    if (selectedPerson) {
-        onFieldChange('people', [selectedPerson]);
-        onFieldChange('person_ids', [personId]);
-    } else {
+  const handleClientChange = async (value: string) => {
+    if (value.startsWith('company-')) {
+      const companyId = value.replace('company-', '');
+      const { data: peopleInCompany, error } = await supabase
+        .from('people')
+        .select('*')
+        .eq('company_id', companyId)
+        .limit(1);
+
+      if (error) {
+        toast.error("Could not fetch a contact for the selected company.");
+        return;
+      }
+
+      if (peopleInCompany && peopleInCompany.length > 0) {
+        const person = peopleInCompany[0];
+        onFieldChange('people', [person]);
+        onFieldChange('person_ids', [person.id]);
+        toast.info(`Assigned ${person.full_name} as the client for this project.`);
+      } else {
+        toast.warning("No contacts are associated with this company. Please add a contact to this company first, or select a person directly.");
         onFieldChange('people', []);
         onFieldChange('person_ids', []);
+      }
+    } else {
+      const personId = value;
+      const selectedPerson = allPeople?.find(p => p.id === personId);
+      if (selectedPerson) {
+        onFieldChange('people', [selectedPerson]);
+        onFieldChange('person_ids', [personId]);
+      }
     }
   };
 
@@ -370,20 +404,37 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetail
                     <Select
                       value={client?.id}
                       onValueChange={handleClientChange}
-                      disabled={isLoadingPeople}
+                      disabled={isLoadingPeople || isLoadingCompanies}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select a client" />
+                        <SelectValue placeholder="Select a client or company..." />
                       </SelectTrigger>
                       <SelectContent>
-                        {isLoadingPeople ? (
+                        {isLoadingPeople || isLoadingCompanies ? (
                           <SelectItem value="loading" disabled>Loading...</SelectItem>
                         ) : (
-                          allPeople?.map(person => (
-                            <SelectItem key={person.id} value={person.id}>
-                              {person.full_name} {person.company && `(${person.company})`}
-                            </SelectItem>
-                          ))
+                          <>
+                            {allCompanies && allCompanies.length > 0 && (
+                              <SelectGroup>
+                                <SelectLabel>Companies</SelectLabel>
+                                {allCompanies.map(company => (
+                                  <SelectItem key={`company-${company.id}`} value={`company-${company.id}`}>
+                                    {company.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectGroup>
+                            )}
+                            {allPeople && allPeople.length > 0 && (
+                              <SelectGroup>
+                                <SelectLabel>People</SelectLabel>
+                                {allPeople.map(person => (
+                                  <SelectItem key={person.id} value={person.id}>
+                                    {person.full_name} {person.company && `(${person.company})`}
+                                  </SelectItem>
+                                ))}
+                              </SelectGroup>
+                            )}
+                          </>
                         )}
                       </SelectContent>
                     </Select>
