@@ -32,9 +32,9 @@ const ProjectMainContent = ({ project, isEditing, onFieldChange, mutations, defa
     }
   };
 
-  const hasNewComments = project.comments?.some(
+  const newCommentsCount = project.comments?.filter(
     comment => user && comment.author.id !== user.id && new Date(comment.timestamp) > lastViewedDiscussion
-  ) ?? false;
+  ).length ?? 0;
 
   const uncompletedTasksCount = project.tasks?.filter(task => !task.completed).length ?? 0;
 
@@ -68,13 +68,12 @@ const ProjectMainContent = ({ project, isEditing, onFieldChange, mutations, defa
               </span>
             )}
           </TabsTrigger>
-          <TabsTrigger value="discussion" className="relative">
+          <TabsTrigger value="discussion">
             <MessageSquare className="w-4 h-4 mr-2" />
             Discussion
-            {hasNewComments && (
-              <span className="absolute top-1.5 right-1.5 flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+            {newCommentsCount > 0 && (
+              <span className="ml-2 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white text-xs">
+                {newCommentsCount}
               </span>
             )}
           </TabsTrigger>
