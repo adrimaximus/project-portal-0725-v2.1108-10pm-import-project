@@ -11,13 +11,15 @@ export const getProjectBySlug = async (slug: string): Promise<Project> => {
     throw new Error(error.message);
   }
 
+  const projectData = data as any;
+
   // The RPC returns JSON strings for nested arrays, so we need to parse them.
   return {
-    ...data,
-    assignedTo: typeof data.assignedTo === 'string' ? JSON.parse(data.assignedTo) : data.assignedTo,
-    tasks: typeof data.tasks === 'string' ? JSON.parse(data.tasks) : data.tasks,
-    comments: typeof data.comments === 'string' ? JSON.parse(data.comments) : data.comments,
-    briefFiles: typeof data.briefFiles === 'string' ? JSON.parse(data.briefFiles) : data.briefFiles,
-    activities: typeof data.activities === 'string' ? JSON.parse(data.activities) : data.activities,
+    ...projectData,
+    assignedTo: typeof projectData.assignedTo === 'string' ? JSON.parse(projectData.assignedTo) : projectData.assignedTo,
+    tasks: typeof projectData.tasks === 'string' ? JSON.parse(projectData.tasks) : projectData.tasks,
+    comments: typeof projectData.comments === 'string' ? JSON.parse(projectData.comments) : projectData.comments,
+    briefFiles: typeof projectData.briefFiles === 'string' ? JSON.parse(projectData.briefFiles) : projectData.briefFiles,
+    activities: typeof projectData.activities === 'string' ? JSON.parse(projectData.activities) : projectData.activities,
   } as Project;
 };
