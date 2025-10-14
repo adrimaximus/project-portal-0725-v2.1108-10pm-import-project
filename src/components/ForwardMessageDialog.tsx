@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useChatContext } from '@/contexts/ChatContext';
 import { Message } from '@/types';
 import { generatePastelColor } from '@/lib/utils';
@@ -58,7 +58,7 @@ export const ForwardMessageDialog = ({ message, isOpen, onClose }: ForwardMessag
                   onCheckedChange={() => handleSelectConversation(convo.id)}
                 />
                 <Avatar className="h-9 w-9">
-                  <AvatarImage src={convo.avatarUrl} />
+                  <AvatarImage src={convo.userAvatar} />
                   <AvatarFallback style={generatePastelColor(convo.id)}>
                     {convo.userName.substring(0, 2).toUpperCase()}
                   </AvatarFallback>
