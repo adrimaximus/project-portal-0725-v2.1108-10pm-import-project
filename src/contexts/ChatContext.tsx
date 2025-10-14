@@ -5,9 +5,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useAuth } from './AuthContext';
 import * as chatApi from '@/lib/chatApi';
+import * as chatRealtime from '@/lib/chatRealtime';
 import { Conversation, Message, Collaborator, Attachment, Reaction } from '@/types';
 import debounce from 'lodash.debounce';
-import { v4 as uuidv4 } from 'uuid';
 
 interface ChatContextType {
   conversations: Omit<Conversation, 'messages'>[];
@@ -63,6 +63,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     enabled: !!selectedConversationId && selectedConversationId !== 'ai-assistant',
   });
 
+  // Centralized real-time subscription for all messages
   useEffect(() => {
     if (!currentUser) return;
 
@@ -74,6 +75,22 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
 
         if (selectedConversationIdRef.current !== newMessage.conversation_id) {
           setUnreadConversationIds(prev => new Set(prev).add(newMessage.conversation_id));
+          
+          // Play notification sound
+          const userPreferences = (currentUser as any).notification_preferences || {};
+          const isChatNotificationEnabled = userPreferences?.comment !== false;
+          const tone = userPreferences?.tone;
+
+          if (isChatNotificationEnabled && tone && tone !== 'none') {
+            const TONE_BASE_URL = `https://quuecudndfztjlxbrvyb.supabase.co/storage/v1/object/public/General/Notification/`;
+            const audioUrl = `${TONE_BASE_URL}${tone}`;
+            try {
+              const audio = new Audio(audioUrl);
+              audio.play().catch(e => console.error("Audio play failed:", e));
+            } catch (e) {
+              console.error("Error creating or playing audio:", e);
+            }
+          }
         }
       }
     };
@@ -125,7 +142,9 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
 
   const sendMessageMutation = useMutation({
     mutationFn: async (variables: { text: string, attachmentFile: File | null, replyToMessageId?: string | null }) => {
-      let attachment: Attachment | null = null;
+      let attachmentUrl: string | null = null;
+      let attachmentName: string | null = null;
+      let attachmentType: string | null = null;
 
       if (variables.attachmentFile && currentUser && selectedConversationId) {
         const file = variables.attachmentFile;
@@ -135,61 +154,22 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         if (uploadError) throw new Error(`Failed to upload attachment: ${uploadError.message}`);
         
         const { data: urlData } = supabase.storage.from('chat-attachments').getPublicUrl(filePath);
-        attachment = {
-          url: urlData.publicUrl,
-          name: file.name,
-          type: file.type,
-        };
+        attachmentUrl = urlData.publicUrl;
+        attachmentName = file.name;
+        attachmentType = file.type;
       }
       
-      return chatApi.sendMessage({ 
+      return chatRealtime.sendHybridMessage({ 
         conversationId: selectedConversationId!, 
         senderId: currentUser!.id, 
         text: variables.text, 
-        attachment,
+        attachmentUrl,
+        attachmentName,
+        attachmentType,
         replyToMessageId: variables.replyToMessageId,
       });
     },
-    onMutate: async (variables) => {
-      await queryClient.cancelQueries({ queryKey: ['messages', selectedConversationId] });
-      const previousMessages = queryClient.getQueryData<Message[]>(['messages', selectedConversationId]);
-
-      const optimisticMessage: Message = {
-        id: `temp-${uuidv4()}`,
-        text: variables.text,
-        timestamp: new Date().toISOString(),
-        sender: currentUser!,
-        attachment: variables.attachmentFile ? { name: variables.attachmentFile.name, url: URL.createObjectURL(variables.attachmentFile), type: variables.attachmentFile.type } : undefined,
-        reply_to_message_id: variables.replyToMessageId,
-      };
-
-      queryClient.setQueryData<Message[]>(['messages', selectedConversationId], (old) => [...(old || []), optimisticMessage]);
-
-      return { previousMessages, optimisticMessageId: optimisticMessage.id };
-    },
-    onSuccess: (newMessage, _variables, context) => {
-      queryClient.setQueryData<Message[]>(['messages', selectedConversationId], (old) => {
-        if (!old) return [];
-        const sender = selectedConversation?.members.find(m => m.id === newMessage.sender_id);
-        const formattedMessage: Message = {
-            id: newMessage.id,
-            text: newMessage.content,
-            timestamp: newMessage.created_at,
-            sender: sender || currentUser!,
-            attachment: newMessage.attachment_url ? { name: newMessage.attachment_name, url: newMessage.attachment_url, type: newMessage.attachment_type } : undefined,
-            reply_to_message_id: newMessage.reply_to_message_id,
-            reactions: [],
-        };
-        return old.map(msg => msg.id === context?.optimisticMessageId ? formattedMessage : msg);
-      });
-      queryClient.invalidateQueries({ queryKey: ['conversations', currentUser?.id] });
-    },
-    onError: (err, _variables, context) => {
-      if (context?.previousMessages) {
-        queryClient.setQueryData(['messages', selectedConversationId], context.previousMessages);
-      }
-      toast.error("Failed to send message.", { description: (err as Error).message });
-    },
+    onError: (error: any) => toast.error("Failed to send message.", { description: error.message }),
   });
 
   const startNewChatMutation = useMutation({
@@ -270,45 +250,52 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     if (!currentUser || !selectedConversationId || selectedConversationId === 'ai-assistant') return;
 
-    const channel = supabase.channel(`conversation:${selectedConversationId}`)
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'messages', filter: `conversation_id=eq.${selectedConversationId}` },
-        (payload) => {
-          const newMessagePayload = payload.new;
-          const currentConversation = conversations.find(c => c.id === selectedConversationId);
-          if (!currentConversation) return;
-
-          const sender = currentConversation.members.find(m => m.id === newMessagePayload.sender_id);
-          if (!sender) return;
-
-          const formattedMessage: Message = {
-              id: newMessagePayload.id,
-              text: newMessagePayload.content,
-              timestamp: newMessagePayload.created_at,
-              sender: sender,
-              attachment: newMessagePayload.attachment_url ? {
-                  name: newMessagePayload.attachment_name,
-                  url: newMessagePayload.attachment_url,
-                  type: newMessagePayload.attachment_type,
-              } : undefined,
-              reply_to_message_id: newMessagePayload.reply_to_message_id,
-              reactions: [],
-          };
-
-          queryClient.setQueryData<Message[]>(['messages', selectedConversationId], (oldMessages) => {
-            if (!oldMessages || oldMessages.some(m => m.id === formattedMessage.id)) {
-              return oldMessages;
-            }
-            return [...oldMessages, formattedMessage];
-          });
+    const unsubscribe = chatRealtime.subscribeToConversation({
+      conversationId: selectedConversationId,
+      onNewMessage: (newMessagePayload) => {
+        if (newMessagePayload.is_broadcast && newMessagePayload.sender_id === currentUser.id) {
+          return;
         }
-      )
-      .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
+        const currentConversation = conversations.find(c => c.id === selectedConversationId);
+        if (!currentConversation) {
+          queryClient.invalidateQueries({ queryKey: ['conversations', currentUser.id] });
+          return;
+        };
+
+        const sender = currentConversation.members.find(m => m.id === newMessagePayload.sender_id);
+        if (!sender) {
+            console.warn("Received a message from an unknown sender. Refetching messages for consistency.", newMessagePayload.sender_id);
+            queryClient.invalidateQueries({ queryKey: ['messages', selectedConversationId] });
+            return;
+        }
+
+        const formattedMessage: Message = {
+            id: newMessagePayload.id,
+            text: newMessagePayload.content,
+            timestamp: newMessagePayload.created_at,
+            sender: sender,
+            attachment: newMessagePayload.attachment_url ? {
+                name: newMessagePayload.attachment_name,
+                url: newMessagePayload.attachment_url,
+                type: newMessagePayload.attachment_type,
+            } : undefined,
+            reply_to_message_id: newMessagePayload.reply_to_message_id,
+            reactions: [],
+        };
+
+        queryClient.setQueryData<Message[]>(['messages', selectedConversationId], (oldMessages) => {
+          if (!oldMessages) return [formattedMessage];
+          if (oldMessages.some(m => m.id === formattedMessage.id)) {
+            return oldMessages;
+          }
+          return [...oldMessages, formattedMessage];
+        });
+        queryClient.invalidateQueries({ queryKey: ['conversations', currentUser.id] });
+      },
+    });
+
+    return () => unsubscribe();
   }, [currentUser, selectedConversationId, queryClient, conversations]);
 
   useEffect(() => {
