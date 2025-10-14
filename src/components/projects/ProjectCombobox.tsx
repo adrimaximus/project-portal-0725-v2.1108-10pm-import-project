@@ -24,9 +24,10 @@ interface ProjectComboboxProps {
   value: string;
   onChange: (value: string) => void;
   isLoading: boolean;
+  disabled?: boolean;
 }
 
-export function ProjectCombobox({ projects, value, onChange, isLoading }: ProjectComboboxProps) {
+export function ProjectCombobox({ projects, value, onChange, isLoading, disabled }: ProjectComboboxProps) {
   const [open, setOpen] = React.useState(false)
 
   const { generalTasksProject, sortedProjects } = React.useMemo(() => {
@@ -49,7 +50,7 @@ export function ProjectCombobox({ projects, value, onChange, isLoading }: Projec
           role="combobox"
           aria-expanded={open}
           className="w-full justify-between"
-          disabled={isLoading}
+          disabled={isLoading || disabled}
         >
           {isLoading ? "Loading projects..." : (
             value && selectedProject

@@ -15,7 +15,6 @@ import { CalendarIcon, Loader2 } from 'lucide-react';
 import { cn, getTaskStatusStyles, getPriorityStyles } from '@/lib/utils';
 import { format } from 'date-fns';
 import { useProjects } from '@/hooks/useProjects';
-import { MultiSelect } from '@/components/ui/multi-select';
 import { Task, TaskStatus, TASK_PRIORITY_OPTIONS, TASK_STATUS_OPTIONS, Tag, User as Profile, Project } from '@/types';
 import { UpsertTaskPayload } from '@/hooks/useTaskMutations';
 import { useTags } from '@/hooks/useTags';
@@ -28,6 +27,7 @@ import TaskFileUpload from './TaskFileUpload';
 import { Badge } from '@/components/ui/badge';
 import { ProjectCombobox } from './ProjectCombobox';
 import { Checkbox } from '@/components/ui/checkbox';
+import { AssigneeCombobox } from './AssigneeCombobox';
 
 interface TaskFormDialogProps {
   open: boolean;
@@ -35,6 +35,7 @@ interface TaskFormDialogProps {
   onSubmit: (data: UpsertTaskPayload) => void;
   isSubmitting: boolean;
   task?: Task | null;
+  project?: Project | null;
 }
 
 const taskFormSchema = z.object({
@@ -51,7 +52,7 @@ const taskFormSchema = z.object({
 
 type TaskFormValues = z.infer<typeof taskFormSchema>;
 
-const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task }: TaskFormDialogProps) => {
+const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task, project }: TaskFormDialogProps) => {
   const isMobile = useIsMobile();
   const { data: projects = [], isLoading: isLoadingProjects } = useProjects();
   const { data: allTags = [], refetch: refetchTags } = useTags();
@@ -133,7 +134,7 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task }: Ta
         form.reset({
           title: '',
           completed: false,
-          project_id: generalTasksProject?.id || '',
+          project_id: project?.id || generalTasksProject?.id || '',
           description: '',
           due_date: null,
           priority: 'Normal',
@@ -145,7 +146,7 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task }: Ta
         setPreviousStatus('To do');
       }
     }
-  }, [task, open, form, projects]);
+  }, [task, open, form, projects, project]);
 
   const handleTagsChange = (newTags: Tag[]) => {
     setSelectedTags(newTags);
@@ -233,14 +234,6 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task }: Ta
     onSubmit(payload);
   };
 
-  const userOptions = useMemo(() => assignableUsers.map(member => {
-    const fullName = [member.first_name, member.last_name].filter(Boolean).join(' ').trim();
-    return {
-      value: member.id,
-      label: fullName || (member.email ? member.email.split('@')[0] : 'Unknown User'),
-    };
-  }), [assignableUsers]);
-
   const formContent = (
     <div className="space-y-4">
       <FormField
@@ -254,6 +247,7 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task }: Ta
               value={field.value || ''}
               onChange={field.onChange}
               isLoading={isLoadingProjects}
+              disabled={!!project}
             />
             <FormMessage />
           </FormItem>
@@ -393,11 +387,10 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task }: Ta
           <FormItem>
             <FormLabel>Assignees</FormLabel>
             <FormControl>
-              <MultiSelect
-                options={userOptions}
-                value={field.value || []}
+              <AssigneeCombobox
+                users={assignableUsers}
+                selectedUserIds={field.value || []}
                 onChange={field.onChange}
-                placeholder="Select team members..."
                 disabled={isLoadingProfiles || !selectedProjectId}
               />
             </FormControl>
