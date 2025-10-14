@@ -1,13 +1,14 @@
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, BellRing } from "lucide-react";
 import TestNotificationToast from "./TestNotificationToast";
+import { Button } from "@/components/ui/button";
 
 const notificationTypes = [
   { id: 'project_update', label: 'Project Updates', description: 'When you are added to a project, a task is assigned to you, or a project you are in is updated.' },
@@ -33,6 +34,7 @@ const NotificationPreferencesCard = () => {
   const { user, refreshUser } = useAuth();
   const [preferences, setPreferences] = useState<Record<string, any>>({});
   const [isLoading, setIsLoading] = useState(true);
+  const [isTesting, setIsTesting] = useState(false);
 
   useEffect(() => {
     if (user?.id) {
@@ -110,6 +112,19 @@ const NotificationPreferencesCard = () => {
     }
   };
 
+  const handleSendTest = async () => {
+    if (!user) return;
+    setIsTesting(true);
+    const toastId = toast.loading("Sending test notification...");
+    const { error } = await supabase.rpc('send_test_notification');
+    setIsTesting(false);
+    if (error) {
+        toast.error("Failed to send test notification.", { id: toastId, description: error.message });
+    } else {
+        toast.success("Test notification sent!", { id: toastId, description: "You should see it and hear a sound if enabled." });
+    }
+  };
+
   if (isLoading) {
     return (
       <Card>
@@ -182,6 +197,12 @@ const NotificationPreferencesCard = () => {
             ))}
         </div>
       </CardContent>
+      <CardFooter>
+        <Button variant="outline" onClick={handleSendTest} disabled={isTesting}>
+          {isTesting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <BellRing className="mr-2 h-4 w-4" />}
+          Send Test Notification
+        </Button>
+      </CardFooter>
     </Card>
   );
 };
