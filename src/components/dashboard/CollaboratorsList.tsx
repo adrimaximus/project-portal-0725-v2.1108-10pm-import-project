@@ -114,9 +114,9 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
         });
     });
 
-    tasks.forEach(task => {
+    (tasks || []).forEach(task => {
         if (!task.completed) {
-            task.assignees.forEach((assignee: User) => {
+            (task.assignedTo || []).forEach((assignee: User) => {
                 const userStat = ensureUser(assignee);
                 userStat.activeTaskCount++;
                 if (task.origin_ticket_id) {
