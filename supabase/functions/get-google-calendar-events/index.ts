@@ -81,7 +81,12 @@ serve(async (req) => {
     });
     const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
 
-    // 5. Fetch events from each selected calendar
+    // 5. Fetch calendar list to map IDs to names
+    const calendarListRes = await calendar.calendarList.list();
+    const calendarList = calendarListRes.data.items || [];
+    const calendarMap = new Map(calendarList.map(cal => [cal.id, cal.summary]));
+
+    // 6. Fetch events from each selected calendar
     const allEvents = [];
     for (const calendarId of selectedCalendarIds) {
       const res = await calendar.events.list({
@@ -94,7 +99,13 @@ serve(async (req) => {
       if (res.data.items) {
         const events = res.data.items
           .filter(event => event.status !== 'cancelled' && !existingEventIds.has(event.id))
-          .map(event => ({ ...event, calendarId })); // Add calendarId for context
+          .map(event => ({ 
+            ...event, 
+            calendar: {
+              id: calendarId,
+              summary: calendarMap.get(calendarId) || calendarId
+            }
+          }));
         allEvents.push(...events);
       }
     }
