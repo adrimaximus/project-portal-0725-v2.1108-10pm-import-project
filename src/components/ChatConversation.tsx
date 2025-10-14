@@ -1,4 +1,4 @@
-import { Message, Collaborator, User } from "@/types";
+import { Message, Collaborator } from "@/types";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import MessageAttachment from "./MessageAttachment";
 import { useAuth } from "@/contexts/AuthContext";
@@ -7,13 +7,12 @@ import { useEffect, useRef } from "react";
 import { format, isToday, isYesterday, isSameDay, parseISO } from 'date-fns';
 import ReactMarkdown from 'react-markdown';
 import { Link } from 'react-router-dom';
-import { Loader2, CornerUpLeft, Download, Trash2 } from "lucide-react";
+import { Loader2, Download } from "lucide-react";
 import { Button } from "./ui/button";
 import VoiceMessagePlayer from "./VoiceMessagePlayer";
 import MessageReactions from "./MessageReactions";
-import EmojiReactionPicker from "./EmojiReactionPicker";
 import { useChatContext } from "@/contexts/ChatContext";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { ChatMessageActions } from "./ChatMessageActions";
 
 interface ChatConversationProps {
   messages: Message[];
@@ -45,7 +44,7 @@ const formatDateSeparator = (timestamp: string) => {
 
 export const ChatConversation = ({ messages, members, isLoading, onReply }: ChatConversationProps) => {
   const { user: currentUser } = useAuth();
-  const { toggleReaction, deleteMessage } = useChatContext();
+  const { toggleReaction } = useChatContext();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -102,41 +101,12 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
               )}
               <div
                 className={cn(
-                  "flex items-end gap-2 group",
+                  "flex items-end gap-2",
                   isCurrentUser ? "justify-end" : "justify-start",
                   isSameSenderAsPrevious ? "mt-1" : "mt-4"
                 )}
               >
                 <div className={cn("flex items-center gap-1", isCurrentUser ? "flex-row-reverse" : "flex-row")}>
-                  <div className="invisible group-hover:visible flex items-center">
-                    {!isAiChat && <EmojiReactionPicker onSelect={(emoji) => toggleReaction(message.id, emoji)} />}
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onReply(message)}>
-                      <CornerUpLeft className="h-4 w-4" />
-                    </Button>
-                    {isCurrentUser && !message.is_deleted && (
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive/70 hover:text-destructive" onClick={(e) => e.stopPropagation()}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent onClick={(e) => e.stopPropagation()}>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Delete Message?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              This will permanently delete this message for everyone. This action cannot be undone.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => deleteMessage(message.id)}>
-                              Delete
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    )}
-                  </div>
                   {!isCurrentUser && !isSameSenderAsPrevious && (
                     <Avatar className="h-8 w-8 self-end">
                       <AvatarImage src={sender.avatar_url} />
@@ -145,7 +115,7 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                   )}
                   <div
                     className={cn(
-                      "max-w-xs md:max-w-md lg:max-w-lg rounded-lg relative",
+                      "max-w-xs md:max-w-md lg:max-w-lg rounded-lg relative group",
                       isCurrentUser
                         ? "bg-primary text-primary-foreground"
                         : "bg-muted",
@@ -160,7 +130,7 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                     
                     {message.is_deleted ? (
                       <div className="flex items-end gap-2 px-3 py-2">
-                        <p className="text-sm italic text-muted-foreground">
+                        <p className="text-sm italic text-muted-foreground flex-grow">
                           {isCurrentUser ? "You deleted this message" : `${message.sender.name} deleted this message`}
                         </p>
                         <span className={cn(
@@ -201,24 +171,32 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                                 </Button>
                               </a>
                             </div>
-                            <div className="absolute bottom-1 right-1 flex items-end gap-2 w-full p-1 justify-end pointer-events-none">
+                            <div className="absolute bottom-1 right-1 flex items-end gap-2 w-full p-1 justify-end">
                               <div className="flex-grow min-w-0">
                                 {message.text && <p className="text-white text-sm break-words bg-black/40 rounded-md px-2 py-1 inline-block">{message.text}</p>}
                               </div>
-                              <span className="text-xs text-white/90 bg-black/40 rounded-full px-1.5 py-0.5 flex-shrink-0">
-                                {formatTimestamp(message.timestamp)}
-                              </span>
+                              <div className="flex-shrink-0 self-end flex items-center gap-0 bg-black/40 rounded-full pl-1.5">
+                                <span className="text-xs text-white/90 py-0.5">
+                                  {formatTimestamp(message.timestamp)}
+                                </span>
+                                <ChatMessageActions message={message} isCurrentUser={isCurrentUser} onReply={onReply} className="text-white/90 hover:bg-white/20" />
+                              </div>
                             </div>
                           </div>
                         ) : isAudioAttachment ? (
-                          <VoiceMessagePlayer 
-                            src={message.attachment!.url} 
-                            sender={message.sender} 
-                            isCurrentUser={isCurrentUser}
-                          />
+                          <div className="flex items-center">
+                            <VoiceMessagePlayer 
+                              src={message.attachment!.url} 
+                              sender={message.sender} 
+                              isCurrentUser={isCurrentUser}
+                            />
+                            <div className="pl-1">
+                               <ChatMessageActions message={message} isCurrentUser={isCurrentUser} onReply={onReply} />
+                            </div>
+                          </div>
                         ) : (
                           <div className="flex items-end gap-2">
-                            <div className="min-w-0">
+                            <div className="min-w-0 flex-grow">
                               {message.text && (
                                 <div className={cn(
                                   "text-sm whitespace-pre-wrap break-words prose prose-sm dark:prose-invert max-w-none",
@@ -244,12 +222,15 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                                 <MessageAttachment attachment={message.attachment} />
                               )}
                             </div>
-                            <span className={cn(
-                                "text-xs self-end flex-shrink-0",
-                                isCurrentUser ? "text-primary-foreground/70" : "text-muted-foreground"
-                            )}>
-                                {formatTimestamp(message.timestamp)}
-                            </span>
+                            <div className="flex-shrink-0 self-end flex items-center gap-0">
+                                <span className={cn(
+                                    "text-xs",
+                                    isCurrentUser ? "text-primary-foreground/70" : "text-muted-foreground"
+                                )}>
+                                    {formatTimestamp(message.timestamp)}
+                                </span>
+                                <ChatMessageActions message={message} isCurrentUser={isCurrentUser} onReply={onReply} />
+                            </div>
                           </div>
                         )}
                       </>
