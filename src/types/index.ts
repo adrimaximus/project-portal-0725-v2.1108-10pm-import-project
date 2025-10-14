@@ -253,6 +253,14 @@ export interface Project {
   venue?: string | null;
   invoice_attachments?: InvoiceAttachment[];
   kanban_order?: number;
+  payment_kanban_order?: number;
+  origin_event_id?: string | null;
+  client_name?: string | null;
+  client_avatar_url?: string | null;
+  client_company_logo_url?: string | null;
+  client_company_name?: string | null;
+  client_company_custom_properties?: any;
+  client_company_id?: string | null;
 }
 
 export interface InvoiceAttachment {
@@ -263,6 +271,11 @@ export interface InvoiceAttachment {
   file_size: number | null;
   storage_path: string;
   created_at: string;
+}
+
+export interface Owner extends User {}
+export interface Member extends User {
+  role: string;
 }
 
 export interface Invoice {
@@ -287,18 +300,6 @@ export interface Invoice {
   projectOwner: Owner | null;
   assignedMembers: Member[];
   invoiceAttachments: InvoiceAttachment[];
-}
-
-export interface Owner extends User {}
-export interface Member extends User {
-  role: string;
-}
-
-export interface ExtendedProject extends Project {
-  client_name: string | null;
-  client_avatar_url: string | null;
-  client_company_logo_url: string | null;
-  client_company_name: string | null;
 }
 
 export type GoalType = 'frequency' | 'quantity' | 'value';

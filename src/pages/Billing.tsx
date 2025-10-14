@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import PortalLayout from "@/components/PortalLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useProjects } from "@/hooks/useProjects";
-import { PaymentStatus, Project, Invoice, ExtendedProject, Member, Owner } from "@/types";
+import { PaymentStatus, Project, Invoice, Member, Owner } from "@/types";
 import { isPast } from "date-fns";
 import { Loader2 } from "lucide-react";
 import { EditInvoiceDialog } from "@/components/billing/EditInvoiceDialog";
@@ -25,7 +25,7 @@ const Billing = () => {
   
   const { updateProject } = useProjectMutations(selectedInvoice?.projectId || '');
 
-  const invoices: Invoice[] = useMemo(() => (projects as ExtendedProject[])
+  const invoices: Invoice[] = useMemo(() => projects
     .map(project => {
       const eventDate = project.due_date || project.start_date;
       if (!project.payment_status || !project.budget || !eventDate) {
