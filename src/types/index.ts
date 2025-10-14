@@ -145,7 +145,6 @@ export interface Task {
   completed: boolean;
   originTicketId?: string | null;
   assignedTo?: User[];
-  assignees?: User[];
   attachments?: TaskAttachment[];
   createdBy?: User;
   created_by?: any;

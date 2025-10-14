@@ -134,8 +134,8 @@ const TasksKanbanCard = ({ task, onEdit, onDelete }: TasksKanbanCardProps) => {
         </div>
         <div className="flex items-center justify-between mt-2">
           <div className="flex items-center -space-x-2">
-            {(task.assignees && task.assignees.length > 0)
-              ? task.assignees.map((user) => {
+            {(task.assignedTo && task.assignedTo.length > 0)
+              ? task.assignedTo.map((user) => {
                 const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email || (user as any).name;
                 return (
                   <TooltipProvider key={user.id}>

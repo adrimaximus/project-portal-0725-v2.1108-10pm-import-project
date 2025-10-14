@@ -228,8 +228,8 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center -space-x-2">
-                      {(task.assignees && task.assignees.length > 0)
-                        ? task.assignees.map((user) => (
+                      {(task.assignedTo && task.assignedTo.length > 0)
+                        ? task.assignedTo.map((user) => (
                           <TooltipProvider key={user.id}>
                             <Tooltip>
                               <TooltipTrigger>

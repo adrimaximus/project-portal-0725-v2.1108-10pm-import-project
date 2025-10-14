@@ -48,7 +48,7 @@ export function useTasks(options: UseTasksOptions = {}) {
       project_name: task.project_name,
       project_slug: task.project_slug,
       project_status: task.project_status,
-      assignees: task.assignees,
+      assignedTo: task.assignedTo,
       created_by: task.created_by,
       created_at: task.created_at,
       updated_at: task.updated_at,
