@@ -304,3 +304,17 @@
     @apply bg-background text-foreground;
   }
 }
+
+.pac-container {
+  z-index: 9999 !important;
+}
+
+/* Custom Quill styles for display-only content */
+.ql-snow.ql-container.display-only {
+  border: none;
+}
+.ql-snow .ql-editor.display-only {
+  padding: 0;
+  overflow-y: visible;
+  max-height: none;
+}
