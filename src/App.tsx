@@ -44,34 +44,30 @@ import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
 import TermsOfServicePage from "./pages/TermsOfServicePage";
 import NotFound from "./pages/NotFound";
 import ThemeSettingsPage from "./pages/ThemeSettingsPage";
+import { useAudio } from "./contexts/AudioContext";
 
 function App() {
+  const { unlockAudio } = useAudio();
+
   useEffect(() => {
-    const unlockAudio = () => {
-      // Create a silent audio element to unlock audio context
-      const sound = new Audio("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA");
-      sound.volume = 0;
-      sound.play().catch(() => {
-        // Autoplay was prevented, but this is expected and fine.
-        // The user interaction gesture is now "consumed" by the browser for audio.
-      });
-      
+    const handleInteraction = () => {
+      unlockAudio();
       // Remove the event listener after the first interaction
-      document.removeEventListener('click', unlockAudio);
-      document.removeEventListener('keydown', unlockAudio);
-      document.removeEventListener('touchstart', unlockAudio);
+      document.removeEventListener('click', handleInteraction);
+      document.removeEventListener('keydown', handleInteraction);
+      document.removeEventListener('touchstart', handleInteraction);
     };
 
-    document.addEventListener('click', unlockAudio);
-    document.addEventListener('keydown', unlockAudio);
-    document.addEventListener('touchstart', unlockAudio); // For mobile
+    document.addEventListener('click', handleInteraction);
+    document.addEventListener('keydown', handleInteraction);
+    document.addEventListener('touchstart', handleInteraction); // For mobile
 
     return () => {
-      document.removeEventListener('click', unlockAudio);
-      document.removeEventListener('keydown', unlockAudio);
-      document.removeEventListener('touchstart', unlockAudio);
+      document.removeEventListener('click', handleInteraction);
+      document.removeEventListener('keydown', handleInteraction);
+      document.removeEventListener('touchstart', handleInteraction);
     };
-  }, []);
+  }, [unlockAudio]);
 
   return (
     <Routes>

@@ -9,6 +9,7 @@ import { Toaster } from "@/components/ui/sonner"
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ThemeProvider } from './contexts/ThemeProvider'
 import { ConfigProvider } from 'antd';
+import { AudioProvider } from './contexts/AudioContext'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -49,17 +50,19 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         <AuthProvider>
           <FeaturesProvider>
             <ThemeProvider defaultTheme="system">
-              <ConfigProvider
-                theme={{
-                  token: {
-                    colorPrimary: '#1E293B', // slate-800
-                    colorInfo: '#1E293B',
-                  },
-                }}
-              >
-                <App />
-              </ConfigProvider>
-              <Toaster />
+              <AudioProvider>
+                <ConfigProvider
+                  theme={{
+                    token: {
+                      colorPrimary: '#1E293B', // slate-800
+                      colorInfo: '#1E293B',
+                    },
+                  }}
+                >
+                  <App />
+                </ConfigProvider>
+                <Toaster />
+              </AudioProvider>
             </ThemeProvider>
           </FeaturesProvider>
         </AuthProvider>

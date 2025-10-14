@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { Loader2, BellRing } from "lucide-react";
 import TestNotificationToast from "./TestNotificationToast";
 import { Button } from "@/components/ui/button";
+import { useAudio } from "@/contexts/AudioContext";
 
 const notificationTypes = [
   { id: 'project_update', label: 'Project Updates', description: 'When you are added to a project, a task is assigned to you, or a project you are in is updated.' },
@@ -32,6 +33,7 @@ const TONE_BASE_URL = `https://quuecudndfztjlxbrvyb.supabase.co/storage/v1/objec
 
 const NotificationPreferencesCard = () => {
   const { user, refreshUser } = useAuth();
+  const { play: playSound } = useAudio();
   const [preferences, setPreferences] = useState<Record<string, any>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [isTesting, setIsTesting] = useState(false);
@@ -93,8 +95,7 @@ const NotificationPreferencesCard = () => {
 
   const handleToneChange = async (toneValue: string) => {
     if (toneValue !== 'none') {
-      const audio = new Audio(`${TONE_BASE_URL}${toneValue}`);
-      audio.play().catch(e => console.error("Error playing audio preview:", e));
+      playSound(`${TONE_BASE_URL}${toneValue}`);
     }
     
     const newPreferences = { ...preferences, tone: toneValue };
