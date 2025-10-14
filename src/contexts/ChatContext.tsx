@@ -21,6 +21,7 @@ interface ChatContextType {
   startNewChat: (collaborator: Collaborator) => void;
   startNewGroupChat: (collaborators: Collaborator[], groupName: string) => void;
   deleteConversation: (conversationId: string) => void;
+  deleteMessage: (messageId: string) => void;
   leaveGroup: (conversationId: string) => void;
   searchTerm: string;
   setSearchTerm: (term: string) => void;
@@ -63,32 +64,34 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     enabled: !!selectedConversationId && selectedConversationId !== 'ai-assistant',
   });
 
-  // Centralized real-time subscription for all messages
   useEffect(() => {
     if (!currentUser) return;
 
-    const handleNewMessage = (newMessage: any) => {
-      const isRelevant = conversations.some(c => c.id === newMessage.conversation_id);
-      
-      if (isRelevant && newMessage.sender_id !== currentUser.id) {
+    const handlePostgresChange = (payload: any) => {
+      const conversationId = payload.new.conversation_id;
+      const isRelevant = conversations.some(c => c.id === conversationId);
+
+      if (isRelevant) {
         queryClient.invalidateQueries({ queryKey: ['conversations', currentUser.id] });
+        queryClient.invalidateQueries({ queryKey: ['messages', conversationId] });
 
-        if (selectedConversationIdRef.current !== newMessage.conversation_id) {
-          setUnreadConversationIds(prev => new Set(prev).add(newMessage.conversation_id));
-          
-          // Play notification sound
-          const userPreferences = (currentUser as any).notification_preferences || {};
-          const isChatNotificationEnabled = userPreferences?.comment !== false;
-          const tone = userPreferences?.tone;
+        if (payload.eventType === 'INSERT' && payload.new.sender_id !== currentUser.id) {
+          if (selectedConversationIdRef.current !== conversationId) {
+            setUnreadConversationIds(prev => new Set(prev).add(conversationId));
+            
+            const userPreferences = (currentUser as any).notification_preferences || {};
+            const isChatNotificationEnabled = userPreferences?.comment !== false;
+            const tone = userPreferences?.tone;
 
-          if (isChatNotificationEnabled && tone && tone !== 'none') {
-            const TONE_BASE_URL = `https://quuecudndfztjlxbrvyb.supabase.co/storage/v1/object/public/General/Notification/`;
-            const audioUrl = `${TONE_BASE_URL}${tone}`;
-            try {
-              const audio = new Audio(audioUrl);
-              audio.play().catch(e => console.error("Audio play failed:", e));
-            } catch (e) {
-              console.error("Error creating or playing audio:", e);
+            if (isChatNotificationEnabled && tone && tone !== 'none') {
+              const TONE_BASE_URL = `https://quuecudndfztjlxbrvyb.supabase.co/storage/v1/object/public/General/Notification/`;
+              const audioUrl = `${TONE_BASE_URL}${tone}`;
+              try {
+                const audio = new Audio(audioUrl);
+                audio.play().catch(e => console.error("Audio play failed:", e));
+              } catch (e) {
+                console.error("Error creating or playing audio:", e);
+              }
             }
           }
         }
@@ -99,8 +102,8 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
       .channel('public:messages')
       .on(
         'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'messages' },
-        (payload) => handleNewMessage(payload.new)
+        { event: '*', schema: 'public', table: 'messages' },
+        handlePostgresChange
       )
       .subscribe();
 
@@ -197,6 +200,21 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
       queryClient.invalidateQueries({ queryKey: ['conversations', currentUser?.id] });
     },
     onError: (error: any) => toast.error("Failed to delete chat.", { description: error.message }),
+  });
+
+  const deleteMessageMutation = useMutation({
+    mutationFn: async (messageId: string) => {
+      const { error } = await supabase.rpc('soft_delete_message', { p_message_id: messageId });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Message deleted.");
+      queryClient.invalidateQueries({ queryKey: ['messages', selectedConversationId] });
+      queryClient.invalidateQueries({ queryKey: ['conversations', currentUser?.id] });
+    },
+    onError: (error: any) => {
+      toast.error("Failed to delete message.", { description: error.message });
+    }
   });
 
   const leaveGroupMutation = useMutation({
@@ -348,6 +366,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     startNewChat: startNewChatMutation.mutate,
     startNewGroupChat: (collaborators: Collaborator[], groupName: string) => startNewGroupChatMutation.mutate({ members: collaborators, groupName }),
     deleteConversation: deleteConversationMutation.mutate,
+    deleteMessage: deleteMessageMutation.mutate,
     leaveGroup: leaveGroupMutation.mutate,
     searchTerm,
     setSearchTerm,
