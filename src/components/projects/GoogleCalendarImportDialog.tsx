@@ -135,7 +135,15 @@ export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImp
                       />
                       <label htmlFor={event.id} className="flex-grow cursor-pointer">
                         <p className="font-medium">{event.summary || "No Title"}</p>
-                        <p className="text-sm text-muted-foreground">{formatEventDate(event)}</p>
+                        <div className="flex items-center text-sm text-muted-foreground">
+                          <span>{formatEventDate(event)}</span>
+                          {event.calendar?.summary && (
+                            <>
+                              <span className="mx-2">|</span>
+                              <span className="truncate">{event.calendar.summary}</span>
+                            </>
+                          )}
+                        </div>
                       </label>
                     </div>
                   ))}
