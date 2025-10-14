@@ -228,42 +228,23 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center -space-x-2">
-                      {(task.assignedTo && task.assignedTo.length > 0)
-                        ? task.assignedTo.map((user) => (
-                          <TooltipProvider key={user.id}>
-                            <Tooltip>
-                              <TooltipTrigger>
-                                <Avatar className="h-8 w-8 border-2 border-background">
-                                  <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
-                                  <AvatarFallback style={generatePastelColor(user.id)}>
-                                    {getInitials([user.first_name, user.last_name].filter(Boolean).join(' '), user.email || undefined)}
-                                  </AvatarFallback>
-                                </Avatar>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>{[user.first_name, user.last_name].filter(Boolean).join(' ')}</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        ))
-                        : task.created_by && (
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger>
-                                <Avatar key={task.created_by.id} className="h-8 w-8 border-2 border-background opacity-50">
-                                  <AvatarImage src={getAvatarUrl(task.created_by.avatar_url, task.created_by.id)} />
-                                  <AvatarFallback style={generatePastelColor(task.created_by.id)}>
-                                    {getInitials([task.created_by.first_name, task.created_by.last_name].filter(Boolean).join(' '), task.created_by.email || undefined)}
-                                  </AvatarFallback>
-                                </Avatar>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Created by {[task.created_by.first_name, task.created_by.last_name].filter(Boolean).join(' ')}</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        )
-                      }
+                      {task.assignedTo?.map((user) => (
+                        <TooltipProvider key={user.id}>
+                          <Tooltip>
+                            <TooltipTrigger>
+                              <Avatar className="h-8 w-8 border-2 border-background">
+                                <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
+                                <AvatarFallback style={generatePastelColor(user.id)}>
+                                  {getInitials([user.first_name, user.last_name].filter(Boolean).join(' '), user.email || undefined)}
+                                </AvatarFallback>
+                              </Avatar>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>{[user.first_name, user.last_name].filter(Boolean).join(' ')}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      ))}
                     </div>
                   </TableCell>
                   <TableCell className="text-right">
