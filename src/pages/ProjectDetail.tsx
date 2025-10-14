@@ -59,7 +59,7 @@ const ProjectDetail = () => {
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
 
   const { data: project, isLoading, error } = useProject(slug!);
-  const { tasks, isLoading: isLoadingTasks } = useTasks({
+  const { tasks, loading: isLoadingTasks } = useTasks({
     projectIds: project ? [project.id] : [],
     enabled: !!project,
   });
