@@ -1,5 +1,5 @@
 import React from "react";
-import { Task, TaskAssignee, TaskAttachment } from "@/types";
+import { Task, TaskAttachment } from "@/types";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
