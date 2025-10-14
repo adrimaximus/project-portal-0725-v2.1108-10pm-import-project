@@ -94,7 +94,7 @@ export const useNotifications = () => {
 
             // Play sound logic
             const isNotificationTypeEnabled = userPreferences?.[data.type] !== false; // default to true
-            const tone = userPreferences?.tone;
+            const tone = userPreferences?.tone || 'digital-bell-fx.mp3'; // Default tone
             console.log(`[Dyad Debug] Type enabled: ${isNotificationTypeEnabled}, Tone: ${tone}`);
 
             let canPlaySound = true;
