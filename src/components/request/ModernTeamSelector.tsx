@@ -18,20 +18,20 @@ import {
 } from "@/components/ui/popover"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { AssignedUser } from "@/types"
+import { User } from "@/types"
 import { generatePastelColor } from "@/lib/utils"
 
 interface ModernTeamSelectorProps {
-  users: AssignedUser[];
-  selectedUsers: AssignedUser[];
-  onSelectionChange: (user: AssignedUser) => void;
+  users: User[];
+  selectedUsers: User[];
+  onSelectionChange: (user: User) => void;
 }
 
 const ModernTeamSelector = ({ users, selectedUsers, onSelectionChange }: ModernTeamSelectorProps) => {
   const [open, setOpen] = React.useState(false)
 
   // This function ensures we always pass a consistent user object to the parent
-  const handleToggleSelection = (userToToggle: AssignedUser) => {
+  const handleToggleSelection = (userToToggle: User) => {
     // Find the original user object from the main list to ensure we don't pass stale role data
     const pristineUser = users.find(u => u.id === userToToggle.id);
     if (pristineUser) {
@@ -39,7 +39,7 @@ const ModernTeamSelector = ({ users, selectedUsers, onSelectionChange }: ModernT
     }
   };
 
-  const handleUnselectBadge = (e: React.MouseEvent, user: AssignedUser) => {
+  const handleUnselectBadge = (e: React.MouseEvent, user: User) => {
     e.preventDefault();
     e.stopPropagation();
     handleToggleSelection(user);

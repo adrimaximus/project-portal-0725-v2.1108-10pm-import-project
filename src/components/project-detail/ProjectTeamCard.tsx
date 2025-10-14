@@ -43,6 +43,7 @@ const ProjectTeamCard = ({ project }: ProjectTeamCardProps) => {
               initials: getInitials(fullName, profile.email) || 'NN',
               first_name: profile.first_name,
               last_name: profile.last_name,
+              role: profile.role,
             }
           });
           setAllUsers(users);
