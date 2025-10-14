@@ -7,7 +7,7 @@ import { useEffect, useRef } from "react";
 import { format, isToday, isYesterday, isSameDay, parseISO } from 'date-fns';
 import ReactMarkdown from 'react-markdown';
 import { Link } from 'react-router-dom';
-import { Loader2, Download } from "lucide-react";
+import { Loader2, Download, Share } from "lucide-react";
 import { Button } from "./ui/button";
 import VoiceMessagePlayer from "./VoiceMessagePlayer";
 import MessageReactions from "./MessageReactions";
@@ -142,6 +142,15 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                       </div>
                     ) : (
                       <>
+                        {message.is_forwarded && (
+                          <div className={cn(
+                            "flex items-center gap-1 text-xs mb-1",
+                            isCurrentUser ? "text-primary-foreground/80" : "text-muted-foreground"
+                          )}>
+                            <Share className="h-3 w-3" />
+                            <span>Forwarded</span>
+                          </div>
+                        )}
                         {message.repliedMessage && message.reply_to_message_id && (
                           <button 
                             onClick={() => handleScrollToMessage(message.reply_to_message_id!)}

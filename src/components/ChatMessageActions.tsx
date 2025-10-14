@@ -41,7 +41,7 @@ export const ChatMessageActions = ({
   onReply,
   className,
 }: ChatMessageActionsProps) => {
-  const { deleteMessage, toggleReaction } = useChatContext();
+  const { deleteMessage, toggleReaction, openForwardDialog } = useChatContext();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const handleCopy = () => {
@@ -49,10 +49,6 @@ export const ChatMessageActions = ({
       navigator.clipboard.writeText(message.text);
       toast.success("Message copied to clipboard.");
     }
-  };
-
-  const handleForward = () => {
-    toast.info("Forwarding messages is not yet implemented.");
   };
 
   const handleEdit = () => {
@@ -100,7 +96,7 @@ export const ChatMessageActions = ({
             </DropdownMenuPortal>
           </DropdownMenuSub>
 
-          <DropdownMenuItem onClick={handleForward}>
+          <DropdownMenuItem onClick={() => openForwardDialog(message)}>
             <Share className="mr-2 h-4 w-4" />
             <span>Forward</span>
           </DropdownMenuItem>

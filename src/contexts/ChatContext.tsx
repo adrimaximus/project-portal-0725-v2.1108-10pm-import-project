@@ -6,8 +6,9 @@ import { toast } from 'sonner';
 import { useAuth } from './AuthContext';
 import * as chatApi from '@/lib/chatApi';
 import * as chatRealtime from '@/lib/chatRealtime';
-import { Conversation, Message, Collaborator, Attachment, Reaction } from '@/types';
+import { Conversation, Message, Collaborator, Reaction } from '@/types';
 import debounce from 'lodash.debounce';
+import { ForwardMessageDialog } from '@/components/ForwardMessageDialog';
 
 interface ChatContextType {
   conversations: Omit<Conversation, 'messages'>[];
@@ -30,6 +31,9 @@ interface ChatContextType {
   refetchConversations: () => void;
   toggleReaction: (messageId: string, emoji: string) => void;
   unreadConversationIds: Set<string>;
+  openForwardDialog: (message: Message) => void;
+  forwardMessage: (args: { message: Message; targetConversationIds: string[] }) => void;
+  isForwarding: boolean;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -41,12 +45,12 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [messageSearchResults, setMessageSearchResults] = useState<string[]>([]);
   const [unreadConversationIds, setUnreadConversationIds] = useState(new Set<string>());
+  const [messageToForward, setMessageToForward] = useState<Message | null>(null);
   
   const { user: currentUser } = useAuth();
   const queryClient = useQueryClient();
   const location = useLocation();
   const navigate = useNavigate();
-  const typingTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     selectedConversationIdRef.current = selectedConversationId;
@@ -58,7 +62,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     enabled: !!currentUser,
   });
 
-  const { data: messages = [], isLoading: isLoadingMessages, refetch: refetchMessages } = useQuery({
+  const { data: messages = [], isLoading: isLoadingMessages } = useQuery({
     queryKey: ['messages', selectedConversationId],
     queryFn: () => chatApi.fetchMessages(selectedConversationId!),
     enabled: !!selectedConversationId && selectedConversationId !== 'ai-assistant',
@@ -78,21 +82,6 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         if (payload.eventType === 'INSERT' && payload.new.sender_id !== currentUser.id) {
           if (selectedConversationIdRef.current !== conversationId) {
             setUnreadConversationIds(prev => new Set(prev).add(conversationId));
-            
-            const userPreferences = (currentUser as any).notification_preferences || {};
-            const isChatNotificationEnabled = userPreferences?.comment !== false;
-            const tone = userPreferences?.tone;
-
-            if (isChatNotificationEnabled && tone && tone !== 'none') {
-              const TONE_BASE_URL = `https://quuecudndfztjlxbrvyb.supabase.co/storage/v1/object/public/General/Notification/`;
-              const audioUrl = `${TONE_BASE_URL}${tone}`;
-              try {
-                const audio = new Audio(audioUrl);
-                audio.play().catch(e => console.error("Audio play failed:", e));
-              } catch (e) {
-                console.error("Error creating or playing audio:", e);
-              }
-            }
           }
         }
       }
@@ -162,17 +151,50 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         attachmentType = file.type;
       }
       
-      return chatRealtime.sendHybridMessage({ 
-        conversationId: selectedConversationId!, 
-        senderId: currentUser!.id, 
-        text: variables.text, 
-        attachmentUrl,
-        attachmentName,
-        attachmentType,
-        replyToMessageId: variables.replyToMessageId,
+      const { error } = await supabase.from('messages').insert({
+        conversation_id: selectedConversationId!,
+        sender_id: currentUser!.id,
+        content: variables.text,
+        attachment_url: attachmentUrl,
+        attachment_name: attachmentName,
+        attachment_type: attachmentType,
+        reply_to_message_id: variables.replyToMessageId,
       });
+      if (error) throw error;
     },
     onError: (error: any) => toast.error("Failed to send message.", { description: error.message }),
+  });
+
+  const forwardMessageMutation = useMutation({
+    mutationFn: async ({ message, targetConversationIds }: { message: Message, targetConversationIds: string[] }) => {
+      if (!currentUser) throw new Error("User not authenticated");
+
+      const messagesToInsert = targetConversationIds.map(conversationId => ({
+        conversation_id: conversationId,
+        sender_id: currentUser.id,
+        content: message.text,
+        attachment_url: message.attachment?.url,
+        attachment_name: message.attachment?.name,
+        attachment_type: message.attachment?.type,
+        is_forwarded: true,
+      }));
+
+      const { error } = await supabase.from('messages').insert(messagesToInsert);
+      if (error) throw error;
+
+      return { targetConversationIds };
+    },
+    onSuccess: ({ targetConversationIds }) => {
+      toast.success(`Message forwarded to ${targetConversationIds.length} chat(s).`);
+      queryClient.invalidateQueries({ queryKey: ['conversations', currentUser?.id] });
+      targetConversationIds.forEach(id => {
+        queryClient.invalidateQueries({ queryKey: ['messages', id] });
+      });
+      setMessageToForward(null);
+    },
+    onError: (error: any) => {
+      toast.error("Failed to forward message.", { description: error.message });
+    },
   });
 
   const startNewChatMutation = useMutation({
@@ -245,7 +267,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
             if (existingReactionIndex > -1) {
               newReactions = (message.reactions || []).filter((_, index) => index !== existingReactionIndex);
             } else {
-              newReactions = [...(message.reactions || []), { emoji, user_id: currentUser!.id, user_name: currentUser!.name }];
+              newReactions = [...(message.reactions || []), { emoji, user_id: currentUser!.id, user_name: currentUser!.name || '' }];
             }
             return { ...message, reactions: newReactions };
           }
@@ -264,53 +286,6 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
       queryClient.invalidateQueries({ queryKey: ['messages', selectedConversationId] });
     },
   });
-
-  useEffect(() => {
-    if (!currentUser || !selectedConversationId || selectedConversationId === 'ai-assistant') return;
-
-    const unsubscribe = chatRealtime.subscribeToConversation({
-      conversationId: selectedConversationId,
-      onNewMessage: (newMessagePayload) => {
-        const currentConversation = conversations.find(c => c.id === selectedConversationId);
-        if (!currentConversation) {
-          queryClient.invalidateQueries({ queryKey: ['conversations', currentUser.id] });
-          return;
-        };
-
-        const sender = currentConversation.members.find(m => m.id === newMessagePayload.sender_id);
-        if (!sender) {
-            console.warn("Received a message from an unknown sender. Refetching messages for consistency.", newMessagePayload.sender_id);
-            queryClient.invalidateQueries({ queryKey: ['messages', selectedConversationId] });
-            return;
-        }
-
-        const formattedMessage: Message = {
-            id: newMessagePayload.id,
-            text: newMessagePayload.content,
-            timestamp: newMessagePayload.created_at,
-            sender: sender,
-            attachment: newMessagePayload.attachment_url ? {
-                name: newMessagePayload.attachment_name,
-                url: newMessagePayload.attachment_url,
-                type: newMessagePayload.attachment_type,
-            } : undefined,
-            reply_to_message_id: newMessagePayload.reply_to_message_id,
-            reactions: [],
-        };
-
-        queryClient.setQueryData<Message[]>(['messages', selectedConversationId], (oldMessages) => {
-          if (!oldMessages) return [formattedMessage];
-          if (oldMessages.some(m => m.id === formattedMessage.id)) {
-            return oldMessages;
-          }
-          return [...oldMessages, formattedMessage];
-        });
-        queryClient.invalidateQueries({ queryKey: ['conversations', currentUser.id] });
-      },
-    });
-
-    return () => unsubscribe();
-  }, [currentUser, selectedConversationId, queryClient, conversations]);
 
   useEffect(() => {
     const collaboratorToChat = (location.state as any)?.selectedCollaborator as Collaborator | undefined;
@@ -375,9 +350,21 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     refetchConversations,
     toggleReaction,
     unreadConversationIds,
+    openForwardDialog: setMessageToForward,
+    forwardMessage: forwardMessageMutation.mutate,
+    isForwarding: forwardMessageMutation.isPending,
   };
 
-  return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;
+  return (
+    <ChatContext.Provider value={value}>
+      {children}
+      <ForwardMessageDialog
+        message={messageToForward}
+        isOpen={!!messageToForward}
+        onClose={() => setMessageToForward(null)}
+      />
+    </ChatContext.Provider>
+  );
 };
 
 export const useChatContext = () => {
