@@ -50,12 +50,26 @@ const ProjectActivityFeed = ({ activities }: ProjectActivityFeedProps) => {
     );
   }
 
-  const formatDescription = (text: string) => {
+  const formatDescription = (text: string, type: string) => {
     if (!text) return "";
+
+    // Specific override for VENUE_UPDATED as requested
+    if (type === 'VENUE_UPDATED') {
+      const venueMatch = text.match(/updated the venue to "(.*)"/s);
+      if (venueMatch && venueMatch[1]) {
+        const venueText = venueMatch[1].replace(/\n/g, ', ');
+        return `updated venue: <strong class="font-semibold text-card-foreground">${venueText}</strong>`;
+      }
+    }
+
     const urlRegex = /(https?:\/\/[^\s]+|www\.[^\s]+)/g;
     const mentionRegex = /@\[([^\]]+)\]\(([^)]+)\)/g;
-    return text
-      .replace(/\\"/g, "") // Remove escaped quotes
+
+    // General improvement for other activities: remove quotes and bold the value.
+    let formattedText = text.replace(/ to "(.*?)"$/, ' to <strong class="font-semibold text-card-foreground">$1</strong>');
+
+    return formattedText
+      .replace(/\\"/g, "") // Remove any remaining escaped quotes
       .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-card-foreground">$1</strong>')
       .replace(/`(.*?)`/g, '<code class="bg-muted text-muted-foreground font-mono text-xs px-1 py-0.5 rounded">$1</code>')
       .replace(urlRegex, (url) => {
@@ -70,7 +84,7 @@ const ProjectActivityFeed = ({ activities }: ProjectActivityFeedProps) => {
       <ul className="-mb-8">
         {filteredActivities.map((activity, activityIdx) => {
           const userName = activity.user?.name || "System";
-          const descriptionHtml = { __html: formatDescription(activity.details.description) };
+          const descriptionHtml = { __html: formatDescription(activity.details.description, activity.type) };
 
           return (
             <li key={activity.id}>
