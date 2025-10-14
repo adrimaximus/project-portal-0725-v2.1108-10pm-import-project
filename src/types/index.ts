@@ -152,6 +152,7 @@ export interface Task {
   project_id: string;
   project_name?: string;
   project_slug?: string;
+  project_status?: string;
   description?: string | null;
   due_date?: string | null;
   priority?: string | null;
@@ -402,6 +403,23 @@ export interface Company {
   updated_at: string;
   user_id: string | null;
   custom_properties: Record<string, any> | null;
+}
+
+export type NotificationType = 'comment' | 'mention' | 'project' | 'project_update' | 'system' | 'goal';
+
+export interface Notification {
+  id: string;
+  type: NotificationType;
+  title: string;
+  description: string;
+  timestamp: string;
+  read: boolean;
+  link?: string;
+  actor?: {
+    id: string;
+    name: string;
+    avatar: string;
+  };
 }
 
 export type Theme = "light" | "dark" | "system" | "claude" | "claude-light" | "nature" | "nature-light" | "corporate" | "corporate-light" | "ahensi" | "ahensi-light" | "brand-activator" | "brand-activator-light";

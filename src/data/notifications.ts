@@ -1,4 +1,5 @@
 import { MessageSquare, AtSign, FolderKanban, Info, Target } from "lucide-react";
+import { Notification } from '@/types';
 
 export const notificationIcons = {
   comment: MessageSquare,
@@ -7,16 +8,6 @@ export const notificationIcons = {
   project_update: FolderKanban,
   system: Info,
   goal: Target,
-};
-
-export type Notification = {
-  id: string;
-  type: keyof typeof notificationIcons;
-  title: string;
-  description: string;
-  timestamp: string;
-  read: boolean;
-  link?: string;
 };
 
 export const dummyNotifications: Notification[] = [
