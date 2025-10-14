@@ -207,7 +207,7 @@ export interface Person {
   address?: {
     formatted_address?: string;
     name?: string;
-  } | string | null;
+  } | null;
   projects?: { id: string; name: string; slug: string }[];
   tags?: Tag[];
   updated_at: string;
@@ -218,6 +218,7 @@ export interface Person {
   custom_properties?: Record<string, any> | null;
   user_id?: string | null;
   slug: string;
+  kanban_order?: number;
 }
 
 export interface Project {
