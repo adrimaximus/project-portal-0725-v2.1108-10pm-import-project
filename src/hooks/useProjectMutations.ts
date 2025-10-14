@@ -15,24 +15,32 @@ export const useProjectMutations = (slug: string) => {
 
     const useUpdateProject = () => useMutation({
         mutationFn: async (editedProject: Project) => {
-            const { id, name, description, category, status, budget, start_date, due_date, payment_status, payment_due_date, services, assignedTo, venue, tags, person_ids, invoice_number, po_number, paid_date, email_sending_date, hardcopy_sending_date, channel } = editedProject;
+            const { id, person_ids, ...projectDetails } = editedProject as any;
+            
             const { data, error } = await supabase
                 .rpc('update_project_details', {
-                    p_project_id: id, p_name: name, p_description: description || null,
-                    p_category: category || null, p_status: status, p_budget: budget || null,
-                    p_start_date: start_date || null, p_due_date: due_date || null,
-                    p_payment_status: payment_status, p_payment_due_date: payment_due_date || null,
-                    p_members: assignedTo,
-                    p_service_titles: services || [],
-                    p_venue: venue || null,
-                    p_existing_tags: (tags || []).filter(t => !t.isNew).map(t => t.id),
-                    p_custom_tags: (tags || []).filter(t => t.isNew).map(({ name, color }) => ({ name, color })),
-                    p_invoice_number: invoice_number || null,
-                    p_po_number: po_number || null,
-                    p_paid_date: paid_date || null,
-                    p_email_sending_date: email_sending_date || null,
-                    p_hardcopy_sending_date: hardcopy_sending_date || null,
-                    p_channel: channel || null,
+                    p_project_id: id,
+                    p_name: projectDetails.name,
+                    p_description: projectDetails.description || null,
+                    p_category: projectDetails.category || null,
+                    p_status: projectDetails.status,
+                    p_budget: projectDetails.budget || null,
+                    p_start_date: projectDetails.start_date || null,
+                    p_due_date: projectDetails.due_date || null,
+                    p_payment_status: projectDetails.payment_status,
+                    p_payment_due_date: projectDetails.payment_due_date || null,
+                    p_members: projectDetails.assignedTo,
+                    p_service_titles: projectDetails.services || [],
+                    p_venue: projectDetails.venue || null,
+                    p_existing_tags: (projectDetails.tags || []).filter((t: any) => !t.isNew).map((t: any) => t.id),
+                    p_custom_tags: (projectDetails.tags || []).filter((t: any) => t.isNew).map(({ name, color }: any) => ({ name, color })),
+                    p_invoice_number: projectDetails.invoice_number || null,
+                    p_po_number: projectDetails.po_number || null,
+                    p_paid_date: projectDetails.paid_date || null,
+                    p_email_sending_date: projectDetails.email_sending_date || null,
+                    p_hardcopy_sending_date: projectDetails.hardcopy_sending_date || null,
+                    p_channel: projectDetails.channel || null,
+                    p_client_company_id: projectDetails.client_company_id || null,
                 })
                 .single();
             if (error) throw error;
@@ -45,7 +53,7 @@ export const useProjectMutations = (slug: string) => {
                 if (deleteError) throw new Error(`Failed to update client link (delete step): ${deleteError.message}`);
 
                 if (person_ids.length > 0) {
-                    const linksToInsert = person_ids.map(personId => ({
+                    const linksToInsert = person_ids.map((personId: string) => ({
                         project_id: id,
                         person_id: personId,
                     }));

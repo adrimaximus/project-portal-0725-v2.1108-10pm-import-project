@@ -24,6 +24,7 @@ type LocalPerson = Person & { company_id?: string | null };
 type Project = BaseProject & {
   people?: LocalPerson[];
   person_ids?: string[];
+  client_company_id?: string | null;
 };
 
 interface ProjectDetailsCardProps {
@@ -38,6 +39,17 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetail
 
   const client = project.people?.[0];
 
+  const { data: directCompany } = useQuery({
+    queryKey: ['company_details', project.client_company_id],
+    queryFn: async () => {
+      if (!project.client_company_id) return null;
+      const { data, error } = await supabase.from('companies').select('*').eq('id', project.client_company_id).single();
+      if (error) throw error;
+      return data as Company;
+    },
+    enabled: !!project.client_company_id && !client,
+  });
+
   const { data: companyProperties = [] } = useQuery({
     queryKey: ['company_properties'],
     queryFn: async () => {
@@ -47,43 +59,23 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetail
     }
   });
 
+  const companyIdForLogo = client?.company_id || project.client_company_id;
+
   const { data: company } = useQuery({
-    queryKey: ['company_logo', client?.id],
+    queryKey: ['company_logo', companyIdForLogo],
     queryFn: async () => {
-      if (!client) return null;
-
-      // 1. Prioritize fetching by company_id for a reliable link
-      if (client.company_id) {
-        const { data, error } = await supabase
-          .from('companies')
-          .select('logo_url, custom_properties')
-          .eq('id', client.company_id)
-          .single();
-        if (!error && data) {
-          return data;
-        }
-        if (error) {
-           console.warn(`Could not fetch company by ID "${client.company_id}":`, error.message);
-        }
+      if (!companyIdForLogo) return null;
+      const { data, error } = await supabase
+        .from('companies')
+        .select('logo_url, custom_properties')
+        .eq('id', companyIdForLogo)
+        .single();
+      if (error && error.code !== 'PGRST116') {
+        console.warn(`Could not fetch company by ID "${companyIdForLogo}":`, error.message);
       }
-
-      // 2. Fallback to fetching by company name (case-insensitive)
-      if (client.company) {
-        const { data, error } = await supabase
-          .from('companies')
-          .select('logo_url, custom_properties')
-          .ilike('name', client.company)
-          .single();
-        
-        if (error && error.code !== 'PGRST116') { // PGRST116: "single row not found"
-          console.warn(`Could not fetch logo for company name "${client.company}":`, error.message);
-        }
-        return data;
-      }
-      
-      return null;
+      return data;
     },
-    enabled: !!client,
+    enabled: !!companyIdForLogo,
   });
 
   const companyLogoUrl = useMemo(() => {
@@ -132,33 +124,16 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetail
   const handleClientChange = async (value: string) => {
     if (value.startsWith('company-')) {
       const companyId = value.replace('company-', '');
-      const { data: peopleInCompany, error } = await supabase
-        .from('people')
-        .select('*')
-        .eq('company_id', companyId)
-        .limit(1);
-
-      if (error) {
-        toast.error("Could not fetch a contact for the selected company.");
-        return;
-      }
-
-      if (peopleInCompany && peopleInCompany.length > 0) {
-        const person = peopleInCompany[0];
-        onFieldChange('people', [person]);
-        onFieldChange('person_ids', [person.id]);
-        toast.info(`Assigned ${person.full_name} as the client for this project.`);
-      } else {
-        toast.warning("No contacts are associated with this company. Please add a contact to this company first, or select a person directly.");
-        onFieldChange('people', []);
-        onFieldChange('person_ids', []);
-      }
+      onFieldChange('person_ids', []);
+      onFieldChange('people', []);
+      onFieldChange('client_company_id', companyId);
     } else {
       const personId = value;
       const selectedPerson = allPeople?.find(p => p.id === personId);
       if (selectedPerson) {
-        onFieldChange('people', [selectedPerson]);
         onFieldChange('person_ids', [personId]);
+        onFieldChange('people', [selectedPerson]);
+        onFieldChange('client_company_id', null);
       }
     }
   };
@@ -236,6 +211,7 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetail
 
   const paymentBadgeColor = getPaymentStatusStyles(project.payment_status).tw;
   const hasOpenTasks = project.tasks?.some(task => !task.completed);
+  const selectedValue = project.person_ids?.[0] || (project.client_company_id ? `company-${project.client_company_id}` : '');
 
   return (
     <Card>
@@ -402,7 +378,7 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetail
                   <p className="font-medium">Client</p>
                   {isEditing ? (
                     <Select
-                      value={client?.id}
+                      value={selectedValue}
                       onValueChange={handleClientChange}
                       disabled={isLoadingPeople || isLoadingCompanies}
                     >
@@ -452,6 +428,20 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetail
                           <div>
                             <p className="text-foreground font-semibold">{client.full_name}</p>
                             <p className="text-muted-foreground text-xs">{client.company}</p>
+                          </div>
+                        </div>
+                      ) : directCompany ? (
+                        <div className="flex items-center gap-3">
+                          {companyLogoUrl ? (
+                            <img src={companyLogoUrl} alt={directCompany.name || ''} className="h-8 w-8 object-contain rounded-md bg-muted p-1" />
+                          ) : (
+                            <div className="h-8 w-8 rounded-md bg-muted flex items-center justify-center">
+                              <Building className="h-4 w-4 text-muted-foreground" />
+                            </div>
+                          )}
+                          <div>
+                            <p className="text-foreground font-semibold">{directCompany.name}</p>
+                            <p className="text-muted-foreground text-xs">Company</p>
                           </div>
                         </div>
                       ) : (
