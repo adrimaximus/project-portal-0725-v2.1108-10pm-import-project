@@ -66,7 +66,7 @@ export const useToggleTaskCompletion = () => {
         p_priority: task.priority,
         p_status: newStatus,
         p_completed: completed,
-        p_assignee_ids: task.assignees?.map(a => a.id) || [],
+        p_assignee_ids: task.assignedTo?.map(a => a.id) || [],
         p_tag_ids: task.tags?.map(t => t.id) || [],
       };
       const { error } = await supabase.rpc('upsert_task_with_details', payload);
