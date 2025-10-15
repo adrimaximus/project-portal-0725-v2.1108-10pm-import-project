@@ -60,7 +60,7 @@ serve(async (req) => {
 
     // 4. Fetch all necessary data in parallel
     const [messageRes, conversationRes, wbizConfigRes] = await Promise.all([
-        supabaseAdmin.from('messages').select('content, sender_id').eq('id', message_id).single(),
+        supabaseAdmin.from('messages').select('content, sender_id, attachment_url, attachment_name').eq('id', message_id).single(),
         supabaseAdmin.from('conversations').select('is_group, group_name').eq('id', conversation_id).single(),
         supabaseAdmin.from('app_config').select('key, value').in('key', ['WBIZTOOL_CLIENT_ID', 'WBIZTOOL_API_KEY'])
     ]);
@@ -69,7 +69,7 @@ serve(async (req) => {
     if (conversationRes.error) throw new Error(`Conversation not found: ${conversationRes.error.message}`);
     if (wbizConfigRes.error) throw new Error(`Failed to fetch WBIZTOOL config: ${wbizConfigRes.error.message}`);
 
-    const { content: messageContent, sender_id } = messageRes.data;
+    const { content: messageContent, sender_id, attachment_url, attachment_name } = messageRes.data;
     const { is_group, group_name } = conversationRes.data;
 
     // Verify the caller is the sender
@@ -148,8 +148,21 @@ serve(async (req) => {
           actionText = `Balas di sini: ${chatLink}`;
         }
 
-        const messageBody = `_"${messageContent}"_`;
-        const finalMessage = `${intro}\n\n${messageBody}\n\n${actionText}`;
+        const messageBody = messageContent ? `_"${messageContent}"_` : '';
+        const finalMessage = `${intro}\n\n${messageBody}\n\n${actionText}`.trim();
+
+        const wbizPayload: any = {
+            client_id: parseInt(clientId, 10),
+            api_key: apiKey,
+            whatsapp_client: parseInt(whatsappClientId, 10),
+            phone: formattedPhone,
+            message: finalMessage,
+        };
+
+        if (attachment_url) {
+            wbizPayload.url = attachment_url;
+            wbizPayload.filename = attachment_name || 'attachment';
+        }
 
         console.log(`[WBIZTOOL_DEBUG] Preparing to send WA to ${formattedPhone}.`);
 
@@ -160,13 +173,7 @@ serve(async (req) => {
             'X-Client-ID': clientId,
             'X-Api-Key': apiKey,
           },
-          body: JSON.stringify({
-            client_id: parseInt(clientId, 10),
-            api_key: apiKey,
-            whatsapp_client: parseInt(whatsappClientId, 10),
-            phone: formattedPhone,
-            message: finalMessage,
-          }),
+          body: JSON.stringify(wbizPayload),
         });
 
         const responseData = await response.json().catch(() => ({}));
