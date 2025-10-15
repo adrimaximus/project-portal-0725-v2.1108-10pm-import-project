@@ -117,7 +117,8 @@ serve(async (req) => {
       throw new Error("WBIZTOOL credentials not configured.");
     }
 
-    const finalMessage = `${aiMessage}\n\nBalas di sini: https://7inked.ahensi.xyz/chat`;
+    const siteUrl = Deno.env.get('SITE_URL') || 'https://7inked.ahensi.xyz';
+    const finalMessage = `${aiMessage}\n\nBalas di sini: ${siteUrl}/chat`;
 
     const wbizResponse = await fetch("https://wbiztool.com/api/v1/send_msg/", {
       method: 'POST',
