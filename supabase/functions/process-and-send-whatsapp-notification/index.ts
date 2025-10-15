@@ -89,7 +89,6 @@ serve(async (req) => {
     const recipientPhone = formatPhoneNumberForApi(recipientRes.data.phone);
 
     if (!recipientPhone) {
-      // Gracefully handle missing phone number
       const errorMessage = `Recipient ${recipientRes.data.id} does not have a valid phone number.`;
       await supabaseAdmin.from('pending_whatsapp_notifications').update({ status: 'failed', error_message: errorMessage }).eq('id', pending_notification_id);
       console.log(`[process-and-send] [${pending_notification_id}] Failed: ${errorMessage}. Function complete.`);
