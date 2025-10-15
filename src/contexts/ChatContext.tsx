@@ -156,6 +156,15 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
       });
       return data;
     },
+    onSuccess: (data) => {
+      // Fire and forget the WhatsApp notification
+      supabase.functions.invoke('send-wbiztool-message', {
+        body: JSON.stringify({ 
+          conversation_id: selectedConversationId,
+          message_id: data.id
+        })
+      }).catch(err => console.error("Failed to trigger WhatsApp notification:", err));
+    },
     onError: (error: any) => toast.error("Failed to send message.", { description: error.message }),
   });
 
