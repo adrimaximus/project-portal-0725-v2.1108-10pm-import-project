@@ -15,7 +15,6 @@ import {
   Sparkles,
   Projector,
   Gamepad2,
-  Users,
   PenTool,
   Monitor,
   Lightbulb,
@@ -40,6 +39,9 @@ import {
   Zap,
   Briefcase,
   Presentation,
+  Store,
+  Tent,
+  Users,
 } from "lucide-react";
 
 export type Service = {
@@ -119,7 +121,7 @@ export const services: Service[] = [
   {
     title: "Exhibition Booth",
     description: "Complete booth design and setup",
-    icon: Users,
+    icon: Store,
     iconColor: "text-green-600 bg-green-100",
   },
   {
@@ -187,6 +189,12 @@ export const services: Service[] = [
     description: "Professional event photo documentation",
     icon: Camera,
     iconColor: "text-orange-600 bg-orange-100",
+  },
+  {
+    title: "Pop up Booth",
+    description: "Portable booths for smaller events and promotions.",
+    icon: Tent,
+    iconColor: "text-yellow-600 bg-yellow-100",
   },
   {
     title: "Plaque & Trophy",
