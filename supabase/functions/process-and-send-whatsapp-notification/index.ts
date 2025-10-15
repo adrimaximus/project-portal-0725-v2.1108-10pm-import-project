@@ -74,7 +74,7 @@ serve(async (req) => {
     const [conversationRes, senderRes, recipientRes] = await Promise.all([
       supabaseAdmin.from('conversations').select('is_group, group_name').eq('id', pendingNotification.conversation_id).single(),
       supabaseAdmin.from('profiles').select('first_name, last_name, email').eq('id', messageData.sender_id).single(),
-      supabaseAdmin.from('profiles').select('first_name, last_name, email, phone').eq('id', pendingNotification.recipient_id).single(),
+      supabaseAdmin.from('profiles').select('id, first_name, last_name, email, phone').eq('id', pendingNotification.recipient_id).single(),
     ]);
 
     if (conversationRes.error || senderRes.error || recipientRes.error) {
@@ -89,7 +89,11 @@ serve(async (req) => {
     const recipientPhone = formatPhoneNumberForApi(recipientRes.data.phone);
 
     if (!recipientPhone) {
-      throw new Error(`Recipient ${recipientRes.data.id} does not have a valid phone number.`);
+      // Gracefully handle missing phone number
+      const errorMessage = `Recipient ${recipientRes.data.id} does not have a valid phone number.`;
+      await supabaseAdmin.from('pending_whatsapp_notifications').update({ status: 'failed', error_message: errorMessage }).eq('id', pending_notification_id);
+      console.log(`[process-and-send] [${pending_notification_id}] Failed: ${errorMessage}. Function complete.`);
+      return new Response(JSON.stringify({ success: false, message: errorMessage }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
     }
 
     // 3. Generate AI message
