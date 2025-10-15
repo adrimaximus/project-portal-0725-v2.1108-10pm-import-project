@@ -141,9 +141,12 @@ serve(async (req) => {
             message: finalMessage,
           }),
         });
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          console.error(`[WBIZTOOL_DEBUG] Failed to send WA to ${profile.phone}: ${response.statusText}`, errorData);
+
+        const responseData = await response.json().catch(() => ({}));
+        console.log('[WBIZTOOL_DEBUG] Response from WBIZTOOL API:', JSON.stringify(responseData));
+
+        if (!response.ok || responseData.status === 'error' || responseData.message?.includes('error')) {
+          console.error(`[WBIZTOOL_DEBUG] Failed to send WA to ${profile.phone}: ${response.statusText}`, responseData);
         } else {
           console.log(`[WBIZTOOL_DEBUG] Successfully sent WA to ${profile.phone}`);
         }
