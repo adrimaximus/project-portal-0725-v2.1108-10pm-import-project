@@ -10,40 +10,31 @@ const corsHeaders = {
 
 const formatPhoneNumberForApi = (phone: string): string | null => {
   if (!phone) return null;
-  // 1. Hapus semua karakter non-digit
   let cleaned = phone.trim().replace(/\D/g, '');
-  
-  // 2. Normalisasi berdasarkan awalan
   if (cleaned.startsWith('0')) {
-    // Ganti '0' di depan dengan '62'
     return '62' + cleaned.substring(1);
   }
   if (cleaned.startsWith('62')) {
-    // Sudah dalam format yang benar
     return cleaned;
   }
   if (cleaned.length > 8 && cleaned.startsWith('8')) {
-    // Diasumsikan nomor Indonesia tanpa '0' di depan
     return '62' + cleaned;
   }
-  
-  // Kembalikan nomor yang sudah dibersihkan jika tidak cocok dengan pola umum Indonesia
   return cleaned;
 };
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { status: 204, headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    // 1. Authenticate the request (must be from a trusted source, like another function with service_role)
+    // 1. Authenticate the request
     const authHeader = req.headers.get('Authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
         throw new Error("Unauthorized: Missing or invalid Authorization header.");
     }
     
-    // Create a Supabase client with the user's auth token to validate the user
     const supabaseUser = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -60,66 +51,77 @@ serve(async (req) => {
       throw new Error("Missing required parameters: conversation_id, message_id.");
     }
 
-    // 3. Create admin client for elevated privileges
+    // 3. Create admin client
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // 4. Verify the caller is the sender of the message
-    const { data: messageData, error: messageError } = await supabaseAdmin
-      .from('messages')
-      .select('sender_id')
-      .eq('id', message_id)
-      .single();
+    // 4. Fetch all necessary data in parallel
+    const [messageRes, conversationRes, wbizConfigRes] = await Promise.all([
+        supabaseAdmin.from('messages').select('content, sender_id').eq('id', message_id).single(),
+        supabaseAdmin.from('conversations').select('is_group, group_name').eq('id', conversation_id).single(),
+        supabaseAdmin.from('app_config').select('key, value').in('key', ['WBIZTOOL_CLIENT_ID', 'WBIZTOOL_API_KEY'])
+    ]);
 
-    if (messageError || !messageData) {
-      throw new Error("Message not found or access denied.");
-    }
-    if (messageData.sender_id !== user.id) {
+    if (messageRes.error || !messageRes.data) throw new Error("Message not found or access denied.");
+    if (conversationRes.error) throw new Error(`Conversation not found: ${conversationRes.error.message}`);
+    if (wbizConfigRes.error) throw new Error(`Failed to fetch WBIZTOOL config: ${wbizConfigRes.error.message}`);
+
+    const { content: messageContent, sender_id } = messageRes.data;
+    const { is_group, group_name } = conversationRes.data;
+
+    // Verify the caller is the sender
+    if (sender_id !== user.id) {
       throw new Error("Forbidden: You can only trigger notifications for messages you sent.");
     }
-    const sender_id = user.id;
-    const { data: senderProfile } = await supabaseAdmin.from('profiles').select('first_name, last_name, email').eq('id', sender_id).single();
-    const sender_name = `${senderProfile.first_name || ''} ${senderProfile.last_name || ''}`.trim() || senderProfile.email;
 
     // 5. Get WBIZTOOL credentials
-    const { data: wbizConfig, error: configError } = await supabaseAdmin
-      .from('app_config')
-      .select('key, value')
-      .in('key', ['WBIZTOOL_CLIENT_ID', 'WBIZTOOL_API_KEY']);
-
-    if (configError) throw configError;
+    const wbizConfig = wbizConfigRes.data;
     if (!wbizConfig || wbizConfig.length < 2) {
       console.warn("WBIZTOOL credentials not fully configured. Skipping WhatsApp notification.");
       return new Response(JSON.stringify({ message: "WBIZTOOL not configured." }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
-
     const clientId = wbizConfig.find(c => c.key === 'WBIZTOOL_CLIENT_ID')?.value;
     const apiKey = wbizConfig.find(c => c.key === 'WBIZTOOL_API_KEY')?.value;
     const whatsappClientId = Deno.env.get('WBIZTOOL_WHATSAPP_CLIENT_ID');
-
     if (!clientId || !apiKey || !whatsappClientId) {
       console.warn("WBIZTOOL credentials missing. Skipping WhatsApp notification.");
       return new Response(JSON.stringify({ message: "WBIZTOOL credentials missing." }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    // 6. Get recipients and send messages
+    // 6. Get sender and recipients details
+    const { data: senderProfile } = await supabaseAdmin.from('profiles').select('first_name, last_name, email').eq('id', sender_id).single();
+    const sender_name = `${senderProfile.first_name || ''} ${senderProfile.last_name || ''}`.trim() || senderProfile.email;
+
     const { data: recipients, error: recipientsError } = await supabaseAdmin
       .from('conversation_participants')
-      .select('profiles (id, phone, first_name, email, notification_preferences)')
+      .select('profiles (id, phone, first_name, last_name, email, notification_preferences)')
       .eq('conversation_id', conversation_id)
       .neq('user_id', sender_id);
-
     if (recipientsError) throw recipientsError;
 
+    // 7. Construct and send messages
     const sendPromises = recipients.map(async (recipient) => {
       const profile = recipient.profiles;
       const formattedPhone = formatPhoneNumberForApi(profile.phone);
 
       if (profile && formattedPhone && (profile.notification_preferences?.whatsapp_chat !== false)) {
-        const message = `Hi ${profile.first_name || profile.email} 👋\nAda pesan baru di Chat Portal untuk kamu dari ${sender_name}.\n\nBuka di sini: https://7inked.ahensi.xyz/chat`;
+        const recipientName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email;
         
+        let intro;
+        if (is_group) {
+          intro = `Hi *${recipientName}* 👋 Pesan baru dari *${sender_name}* di grup *${group_name || 'Grup'}*:`;
+        } else {
+          intro = `Hi *${recipientName}* 👋 Pesan baru dari *${sender_name}*:`;
+        }
+
+        const messageBody = `_"${messageContent}"_`;
+        const link = `Balas di sini: https://7inked.ahensi.xyz/chat`;
+        const finalMessage = `${intro}\n\n${messageBody}\n\n${link}`;
+
+        console.log(`Sending WA to ${formattedPhone}: ${finalMessage}`);
+
         const response = await fetch("https://wbiztool.com/api/v1/send_msg/", {
           method: 'POST',
           headers: {
@@ -132,11 +134,14 @@ serve(async (req) => {
             api_key: apiKey,
             whatsapp_client: parseInt(whatsappClientId, 10),
             phone: formattedPhone,
-            message: message,
+            message: finalMessage,
           }),
         });
         if (!response.ok) {
-          console.error(`Failed to send WA to ${profile.phone}: ${response.statusText}`);
+          const errorData = await response.json().catch(() => ({}));
+          console.error(`Failed to send WA to ${profile.phone}: ${response.statusText}`, errorData);
+        } else {
+          console.log(`Successfully sent WA to ${profile.phone}`);
         }
       }
     });
