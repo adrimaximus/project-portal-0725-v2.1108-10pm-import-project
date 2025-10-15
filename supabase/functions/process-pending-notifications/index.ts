@@ -83,7 +83,16 @@ serve(async (req) => {
         if (conversationRes.error || senderRes.error || recipientRes.error) throw new Error("Failed to fetch full notification context.");
         
         const recipientPhone = formatPhoneNumberForApi(recipientRes.data.phone);
-        if (!recipientPhone) throw new Error(`Recipient ${recipientRes.data.id} does not have a valid phone number.`);
+        if (!recipientPhone) {
+            const errorMessage = `Recipient ${recipientRes.data.id} does not have a valid phone number.`;
+            console.warn(`[process-and-send] [${notificationId}] Skipping notification: ${errorMessage}`);
+            await supabaseAdmin.from('pending_whatsapp_notifications').update({ 
+                status: 'failed', 
+                error_message: 'Recipient does not have a valid phone number.' 
+            }).eq('id', notificationId);
+            failureCount++;
+            continue; // Skip to the next notification
+        }
 
         const senderName = `${senderRes.data.first_name || ''} ${senderRes.data.last_name || ''}`.trim() || senderRes.data.email;
         const recipientName = `${recipientRes.data.first_name || ''} ${recipientRes.data.last_name || ''}`.trim() || recipientRes.data.email;
