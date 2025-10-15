@@ -65,7 +65,7 @@ serve(async (req) => {
     }
 
     // 2. Fetch all context data
-    const { data: messageData, error: messageError } = await supabaseAdmin.from('messages').select('content, sender_id').eq('id', pendingNotification.message_id).single();
+    const { data: messageData, error: messageError } = await supabaseAdmin.from('messages').select('content, sender_id, attachment_url, attachment_name').eq('id', pendingNotification.message_id).single();
     if (messageError) throw new Error(`Failed to fetch message: ${messageError.message}`);
 
     const [conversationRes, senderRes, recipientRes] = await Promise.all([
@@ -119,16 +119,23 @@ serve(async (req) => {
 
     const finalMessage = `${aiMessage}\n\nBalas di sini: https://7inked.ahensi.xyz/chat`;
 
-    const wbizResponse = await fetch("https://wbiztool.com/api/v1/send_msg/", {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Client-ID': clientId, 'X-Api-Key': apiKey },
-      body: JSON.stringify({
+    const wbizPayload: any = {
         client_id: parseInt(clientId, 10),
         api_key: apiKey,
         whatsapp_client: parseInt(whatsappClientId, 10),
         phone: recipientPhone,
         message: finalMessage,
-      }),
+    };
+
+    if (messageData.attachment_url) {
+        wbizPayload.url = messageData.attachment_url;
+        wbizPayload.filename = messageData.attachment_name || 'attachment';
+    }
+
+    const wbizResponse = await fetch("https://wbiztool.com/api/v1/send_msg/", {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Client-ID': clientId, 'X-Api-Key': apiKey },
+      body: JSON.stringify(wbizPayload),
     });
 
     if (!wbizResponse.ok) {
