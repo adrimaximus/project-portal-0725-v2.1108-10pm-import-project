@@ -15,6 +15,7 @@ interface ChatContextType {
   conversations: Omit<Conversation, 'messages'>[];
   isLoadingConversations: boolean;
   selectedConversation: Conversation | null;
+  selectedConversationId: string | null; // Ditambahkan
   selectConversation: (id: string | null) => void;
   messages: Message[];
   isLoadingMessages: boolean;
@@ -330,6 +331,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     conversations: filteredConversations,
     isLoadingConversations,
     selectedConversation,
+    selectedConversationId,
     selectConversation,
     messages,
     isLoadingMessages,

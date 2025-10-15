@@ -3,7 +3,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Notification } from '@/types';
 import { toast } from 'sonner';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
+import { useChatContext } from '@/contexts/ChatContext';
 
 const NOTIFICATIONS_PER_PAGE = 20;
 const TONE_BASE_URL = `https://quuecudndfztjlxbrvyb.supabase.co/storage/v1/object/public/General/Notification/`;
@@ -43,7 +44,13 @@ audio.onended = () => {
 export const useNotifications = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { selectedConversationId } = useChatContext();
+  const selectedConversationIdRef = useRef(selectedConversationId);
   const queryKey = ['notifications', user?.id];
+
+  useEffect(() => {
+    selectedConversationIdRef.current = selectedConversationId;
+  }, [selectedConversationId]);
 
   const {
     data,
@@ -78,7 +85,6 @@ export const useNotifications = () => {
         async (payload) => {
           console.log('[Dyad Debug] Notification received:', payload);
           
-          // 1. Fetch latest user preferences to avoid stale data
           const { data: profileData, error: profileError } = await supabase
             .from('profiles')
             .select('notification_preferences')
@@ -93,14 +99,12 @@ export const useNotifications = () => {
           
           const userPreferences = profileData.notification_preferences || {};
 
-          // 2. Fetch notification details
           const newNotificationId = payload.new.notification_id;
-          const { data: notificationData } = await supabase.from('notifications').select('title, body, type').eq('id', newNotificationId).single();
+          const { data: notificationData } = await supabase.from('notifications').select('title, body, type, resource_id').eq('id', newNotificationId).single();
           
           if (notificationData) {
             console.log('[Dyad Debug] Fetched notification details:', notificationData);
 
-            // 3. Handle Toast Notification
             const toastsEnabled = userPreferences.toast_enabled !== false;
             let canShowToast = toastsEnabled;
             if (notificationData.type === 'comment' && window.location.pathname.startsWith('/chat')) {
@@ -114,15 +118,14 @@ export const useNotifications = () => {
               });
             }
 
-            // 4. Handle Sound Notification with Lock
             const isNotificationTypeEnabled = userPreferences?.[notificationData.type] !== false;
             const tone = userPreferences?.tone;
             console.log(`[Dyad Debug] Type enabled: ${isNotificationTypeEnabled}, Tone: ${tone}`);
 
             let canPlaySound = true;
-            if (notificationData.type === 'comment' && window.location.pathname.startsWith('/chat')) {
+            if (notificationData.type === 'comment' && notificationData.resource_id === selectedConversationIdRef.current) {
               canPlaySound = false;
-              console.log('[Dyad Debug] Suppressing chat sound because user is on chat page.');
+              console.log('[Dyad Debug] Suppressing chat sound because user is viewing the relevant conversation.');
             }
 
             if (isNotificationTypeEnabled && tone && tone !== 'none' && canPlaySound) {
@@ -133,7 +136,7 @@ export const useNotifications = () => {
                 audio.src = audioUrl;
                 audio.play().catch(e => {
                   console.error("[Dyad Debug] Error playing notification sound:", e);
-                  isSoundPlaying = false; // Release lock on error
+                  isSoundPlaying = false;
                   if (e.name === 'NotAllowedError') {
                     toast.error("Could not play notification sound.", {
                       description: "Browser security may have blocked it. Please click anywhere on the page to enable sound for notifications.",
