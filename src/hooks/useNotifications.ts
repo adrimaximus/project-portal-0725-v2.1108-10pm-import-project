@@ -3,8 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Notification } from '@/types';
 import { toast } from 'sonner';
-import { useEffect, useRef } from 'react';
-import { useChatContext } from '@/contexts/ChatContext';
+import { useEffect } from 'react';
 
 const NOTIFICATIONS_PER_PAGE = 20;
 const TONE_BASE_URL = `https://quuecudndfztjlxbrvyb.supabase.co/storage/v1/object/public/General/Notification/`;
@@ -49,13 +48,7 @@ audio.onerror = () => {
 export const useNotifications = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const { selectedConversationId } = useChatContext();
-  const selectedConversationIdRef = useRef(selectedConversationId);
   const queryKey = ['notifications', user?.id];
-
-  useEffect(() => {
-    selectedConversationIdRef.current = selectedConversationId;
-  }, [selectedConversationId]);
 
   const {
     data,
@@ -127,13 +120,7 @@ export const useNotifications = () => {
             const tone = userPreferences?.tone;
             console.log(`[Dyad Debug] Type enabled: ${isNotificationTypeEnabled}, Tone: ${tone}`);
 
-            let canPlaySound = true;
-            if (notificationData.type === 'comment' && notificationData.resource_id === selectedConversationIdRef.current) {
-              canPlaySound = false;
-              console.log('[Dyad Debug] Suppressing chat sound because user is viewing the relevant conversation.');
-            }
-
-            if (isNotificationTypeEnabled && tone && tone !== 'none' && canPlaySound) {
+            if (isNotificationTypeEnabled && tone && tone !== 'none') {
               if (!isSoundPlaying) {
                 isSoundPlaying = true;
                 // Cache-busting by adding a timestamp
