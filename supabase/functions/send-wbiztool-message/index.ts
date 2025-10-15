@@ -4,7 +4,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-internal-secret',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
@@ -30,17 +30,23 @@ serve(async (req) => {
   }
 
   try {
-    // 1. Authenticate user
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
-    );
+    const internalSecret = req.headers.get('X-Internal-Secret');
+    const expectedInternalSecret = Deno.env.get('INTERNAL_SECRET');
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error("User not authenticated.");
+    if (internalSecret && expectedInternalSecret && internalSecret === expectedInternalSecret) {
+      // Panggilan internal, lewati autentikasi pengguna
+    } else {
+      // Panggilan eksternal, periksa autentikasi pengguna
+      const supabase = createClient(
+        Deno.env.get('SUPABASE_URL') ?? '',
+        Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+        { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
+      );
 
-    // 2. Get request body
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated.");
+    }
+
     const { phone, message } = await req.json();
     if (!phone || !message) {
       throw new Error("Phone number and message are required.");
@@ -48,7 +54,6 @@ serve(async (req) => {
     
     const formattedPhone = formatPhoneNumber(phone);
 
-    // 3. Retrieve credentials using admin client
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -80,7 +85,6 @@ serve(async (req) => {
       throw new Error("WBIZTOOL WhatsApp Client ID is not a valid number.");
     }
 
-    // 4. Make the API call to WBIZTOOL
     const response = await fetch("https://wbiztool.com/api/v1/send_msg/", {
       method: 'POST',
       headers: {
@@ -103,7 +107,6 @@ serve(async (req) => {
       throw new Error(responseData.message || `WBIZTOOL API Error: ${response.statusText}`);
     }
 
-    // 5. Return success response
     return new Response(JSON.stringify({ message: "Message sent successfully via WBIZTOOL.", details: responseData }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
