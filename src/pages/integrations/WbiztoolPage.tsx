@@ -11,7 +11,6 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
-import { formatPhoneNumberForApi } from "@/lib/utils";
 
 const WbiztoolPage = () => {
   const [clientId, setClientId] = useState("");
@@ -85,11 +84,11 @@ const WbiztoolPage = () => {
     }
     setIsSendingTest(true);
     try {
-      const formattedPhone = formatPhoneNumberForApi(testPhone);
-      const { data, error } = await supabase.functions.invoke('send-wbiztool-message', {
-        body: { phone: formattedPhone, message: testMessage },
+      const { data, error } = await supabase.functions.invoke('test-wbiztool-message', {
+        body: { phone: testPhone, message: testMessage },
       });
       if (error) throw error;
+      if (data.error) throw new Error(data.error);
       toast.success("Test message sent successfully!", { description: data.message });
       setTestPhone("");
       setTestMessage("");
