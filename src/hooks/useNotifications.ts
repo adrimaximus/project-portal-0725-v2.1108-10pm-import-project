@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Notification } from '@/types';
 import { toast } from 'sonner';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 const NOTIFICATIONS_PER_PAGE = 20;
 const TONE_BASE_URL = `https://quuecudndfztjlxbrvyb.supabase.co/storage/v1/object/public/General/Notification/`;
@@ -37,10 +37,11 @@ const fetchNotifications = async (pageParam: number = 0): Promise<Notification[]
 let isSoundPlaying = false;
 const audio = new Audio();
 audio.onended = () => {
+  console.log('[Dyad Debug] Audio finished, releasing lock.');
   isSoundPlaying = false;
 };
-audio.onerror = () => {
-  console.error("[Dyad Debug] Audio playback error.");
+audio.onerror = (e) => {
+  console.error("[Dyad Debug] Audio playback error, releasing lock:", e);
   isSoundPlaying = false; // Release lock on error
 };
 
@@ -96,6 +97,7 @@ export const useNotifications = () => {
           }
           
           const userPreferences = profileData.notification_preferences || {};
+          console.log('[Dyad Debug] User Preferences:', userPreferences);
 
           const newNotificationId = payload.new.notification_id;
           const { data: notificationData } = await supabase.from('notifications').select('title, body, type, resource_id').eq('id', newNotificationId).single();
@@ -118,19 +120,20 @@ export const useNotifications = () => {
 
             const isNotificationTypeEnabled = userPreferences?.[notificationData.type] !== false;
             const tone = userPreferences?.tone;
-            console.log(`[Dyad Debug] Type enabled: ${isNotificationTypeEnabled}, Tone: ${tone}`);
+            console.log(`[Dyad Debug] isNotificationTypeEnabled for '${notificationData.type}': ${isNotificationTypeEnabled}`);
+            console.log(`[Dyad Debug] Tone selected: ${tone}`);
 
             if (isNotificationTypeEnabled && tone && tone !== 'none') {
+              console.log(`[Dyad Debug] isSoundPlaying lock: ${isSoundPlaying}`);
               if (!isSoundPlaying) {
                 isSoundPlaying = true;
-                // Cache-busting by adding a timestamp
                 const audioUrl = `${TONE_BASE_URL}${tone}?t=${new Date().getTime()}`;
                 console.log(`[Dyad Debug] Attempting to play sound: ${audioUrl}`);
                 audio.src = audioUrl;
-                audio.load(); // Explicitly load the new source
+                audio.load();
                 audio.play().catch(e => {
                   console.error("[Dyad Debug] Error playing notification sound:", e);
-                  isSoundPlaying = false; // Release lock on error
+                  isSoundPlaying = false;
                   if (e.name === 'NotAllowedError') {
                     toast.error("Could not play notification sound.", {
                       description: "Browser security may have blocked it. Please click anywhere on the page to enable sound for notifications.",
