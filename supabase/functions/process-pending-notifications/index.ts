@@ -31,8 +31,8 @@ const getSystemPrompt = () => `Anda adalah asisten notifikasi yang ramah dan sup
 2.  **Sertakan Emoji:** Tambahkan satu atau dua emoji yang relevan dan sopan di akhir pesan untuk memberikan sentuhan visual.
 3.  **Beri Semangat:** Sertakan satu kalimat penyemangat yang singkat, sopan, dan relevan dengan konteks kerja.
 4.  **Jaga Profesionalisme:** Pastikan nada tetap profesional namun ramah.
-5.  **Format:** Gunakan format tebal WhatsApp (*kata*) untuk nama orang dan nama grup.
-6.  **Konteks Pesan:** Jika isi pesan disediakan, kutip sebagian kecil saja (misalnya, 5-7 kata pertama) menggunakan format miring (_"kutipan..."_). Jangan kutip seluruh pesan.
+5.  **Format:** Gunakan format tebal WhatsApp (*kata*) untuk nama orang, nama proyek, nama tugas, dll.
+6.  **Konteks Pesan:** Jika isi pesan/komentar disediakan, kutip sebagian kecil saja (misalnya, 5-7 kata pertama) menggunakan format miring (_"kutipan..."_). Jangan kutip seluruh pesan.
 7.  **Singkat:** Jaga agar keseluruhan pesan notifikasi tetap singkat dan langsung ke intinya.`;
 
 serve(async (req) => {
@@ -69,36 +69,103 @@ serve(async (req) => {
       const notificationId = notification.id;
       try {
         await supabaseAdmin.from('pending_whatsapp_notifications').update({ status: 'processing', processed_at: new Date().toISOString() }).eq('id', notificationId);
-        console.log(`[process-and-send] [${notificationId}] Fetching context data.`);
+        console.log(`[process-and-send] [${notificationId}] Processing notification of type: ${notification.notification_type}`);
         
-        const { data: messageData, error: messageError } = await supabaseAdmin.from('messages').select('content, sender_id, attachment_url, attachment_name').eq('id', notification.message_id).single();
-        if (messageError) throw new Error(`Failed to fetch message: ${messageError.message}`);
-
-        const [conversationRes, senderRes, recipientRes] = await Promise.all([
-          supabaseAdmin.from('conversations').select('is_group, group_name').eq('id', notification.conversation_id).single(),
-          supabaseAdmin.from('profiles').select('first_name, last_name, email').eq('id', messageData.sender_id).single(),
-          supabaseAdmin.from('profiles').select('id, first_name, last_name, email, phone').eq('id', notification.recipient_id).single(),
-        ]);
-
-        if (conversationRes.error || senderRes.error || recipientRes.error) throw new Error("Failed to fetch full notification context.");
+        const { data: recipientData, error: recipientError } = await supabaseAdmin.from('profiles').select('id, first_name, last_name, email, phone').eq('id', notification.recipient_id).single();
+        if (recipientError) throw new Error(`Failed to fetch recipient profile: ${recipientError.message}`);
         
-        const recipientPhone = formatPhoneNumberForApi(recipientRes.data.phone);
+        const recipientPhone = formatPhoneNumberForApi(recipientData.phone);
         if (!recipientPhone) {
-            const errorMessage = `Recipient ${recipientRes.data.id} does not have a valid phone number.`;
+            const errorMessage = `Recipient ${recipientData.id} does not have a valid phone number.`;
             console.warn(`[process-and-send] [${notificationId}] Skipping notification: ${errorMessage}`);
-            await supabaseAdmin.from('pending_whatsapp_notifications').update({ 
-                status: 'failed', 
-                error_message: 'Recipient does not have a valid phone number.' 
-            }).eq('id', notificationId);
+            await supabaseAdmin.from('pending_whatsapp_notifications').update({ status: 'failed', error_message: 'Recipient does not have a valid phone number.' }).eq('id', notificationId);
             failureCount++;
-            continue; // Skip to the next notification
+            continue;
         }
 
-        const senderName = `${senderRes.data.first_name || ''} ${senderRes.data.last_name || ''}`.trim() || senderRes.data.email;
-        const recipientName = `${recipientRes.data.first_name || ''} ${recipientRes.data.last_name || ''}`.trim() || recipientRes.data.email;
-        
-        const userPrompt = `**Konteks:**\n- **Pengirim:** ${senderName}\n- **Penerima:** ${recipientName}\n- **Grup:** ${conversationRes.data.is_group ? (conversationRes.data.group_name || 'Grup') : 'Percakapan pribadi'}\n- **Isi Pesan:** ${messageData.content || '(Pesan tidak berisi teks)'}\n\nBuat pesan notifikasi yang sesuai.`;
-        
+        let userPrompt = '';
+        let attachmentPayload = {};
+        const recipientName = `${recipientData.first_name || ''} ${recipientData.last_name || ''}`.trim() || recipientData.email;
+        const notificationType = notification.notification_type || 'new_chat_message';
+
+        switch (notificationType) {
+          case 'new_chat_message': {
+            const { data: msg, error: msgErr } = await supabaseAdmin.from('messages').select('content, sender_id, attachment_url, attachment_name').eq('id', notification.message_id).single();
+            if (msgErr) throw new Error(`Failed to fetch message: ${msgErr.message}`);
+            const [convoRes, senderRes] = await Promise.all([
+              supabaseAdmin.from('conversations').select('is_group, group_name').eq('id', notification.conversation_id).single(),
+              supabaseAdmin.from('profiles').select('first_name, last_name, email').eq('id', msg.sender_id).single(),
+            ]);
+            if (convoRes.error || senderRes.error) throw new Error("Failed to fetch chat context.");
+            const senderName = `${senderRes.data.first_name || ''} ${senderRes.data.last_name || ''}`.trim() || senderRes.data.email;
+            userPrompt = `**Konteks:**\n- **Jenis:** Pesan Obrolan Baru\n- **Pengirim:** ${senderName}\n- **Penerima:** ${recipientName}\n- **Grup:** ${convoRes.data.is_group ? (convoRes.data.group_name || 'Grup') : 'Percakapan pribadi'}\n- **Isi Pesan:** ${msg.content || '(Pesan tidak berisi teks)'}\n\nBuat pesan notifikasi yang sesuai.`;
+            if (msg.attachment_url) {
+                attachmentPayload = { url: msg.attachment_url, filename: msg.attachment_name || 'attachment' };
+            }
+            break;
+          }
+          case 'project_invite': {
+            const { project_id, inviter_id } = notification.context_data;
+            const [projRes, inviterRes] = await Promise.all([
+              supabaseAdmin.from('projects').select('name').eq('id', project_id).single(),
+              supabaseAdmin.from('profiles').select('first_name, last_name, email').eq('id', inviter_id).single(),
+            ]);
+            if (projRes.error || inviterRes.error) throw new Error("Failed to fetch project invite context.");
+            const inviterName = `${inviterRes.data.first_name || ''} ${inviterRes.data.last_name || ''}`.trim() || inviterRes.data.email;
+            userPrompt = `**Konteks:**\n- **Jenis:** Undangan Proyek\n- **Pengundang:** ${inviterName}\n- **Penerima:** ${recipientName}\n- **Proyek:** ${projRes.data.name}\n\nBuat pesan notifikasi yang sesuai.`;
+            break;
+          }
+          case 'discussion_mention': {
+            const { project_id, comment_id, mentioner_id } = notification.context_data;
+            const [projRes, commentRes, mentionerRes] = await Promise.all([
+              supabaseAdmin.from('projects').select('name').eq('id', project_id).single(),
+              supabaseAdmin.from('comments').select('text').eq('id', comment_id).single(),
+              supabaseAdmin.from('profiles').select('first_name, last_name, email').eq('id', mentioner_id).single(),
+            ]);
+            if (projRes.error || commentRes.error || mentionerRes.error) throw new Error("Failed to fetch mention context.");
+            const mentionerName = `${mentionerRes.data.first_name || ''} ${mentionerRes.data.last_name || ''}`.trim() || mentionerRes.data.email;
+            userPrompt = `**Konteks:**\n- **Jenis:** Mention di Diskusi\n- **Penyebut:** ${mentionerName}\n- **Penerima:** ${recipientName}\n- **Proyek:** ${projRes.data.name}\n- **Isi Komentar:** ${commentRes.data.text}\n\nBuat pesan notifikasi yang sesuai.`;
+            break;
+          }
+          case 'task_assignment': {
+            const { task_id, assigner_id } = notification.context_data;
+            const [taskRes, assignerRes] = await Promise.all([
+              supabaseAdmin.from('tasks').select('title, project_id').eq('id', task_id).single(),
+              supabaseAdmin.from('profiles').select('first_name, last_name, email').eq('id', assigner_id).single(),
+            ]);
+            if (taskRes.error || assignerRes.error) throw new Error("Failed to fetch task assignment context.");
+            const { data: projRes, error: projErr } = await supabaseAdmin.from('projects').select('name').eq('id', taskRes.data.project_id).single();
+            if (projErr) throw new Error("Failed to fetch project name for task.");
+            const assignerName = `${assignerRes.data.first_name || ''} ${assignerRes.data.last_name || ''}`.trim() || assignerRes.data.email;
+            userPrompt = `**Konteks:**\n- **Jenis:** Penugasan Tugas\n- **Pemberi Tugas:** ${assignerName}\n- **Penerima:** ${recipientName}\n- **Proyek:** ${projRes.name}\n- **Tugas:** ${taskRes.data.title}\n\nBuat pesan notifikasi yang sesuai.`;
+            break;
+          }
+          case 'goal_invite': {
+            const { goal_id, inviter_id } = notification.context_data;
+            const [goalRes, inviterRes] = await Promise.all([
+              supabaseAdmin.from('goals').select('title').eq('id', goal_id).single(),
+              supabaseAdmin.from('profiles').select('first_name, last_name, email').eq('id', inviter_id).single(),
+            ]);
+            if (goalRes.error || inviterRes.error) throw new Error("Failed to fetch goal invite context.");
+            const inviterName = `${inviterRes.data.first_name || ''} ${inviterRes.data.last_name || ''}`.trim() || inviterRes.data.email;
+            userPrompt = `**Konteks:**\n- **Jenis:** Undangan Kolaborasi Goal\n- **Pengundang:** ${inviterName}\n- **Penerima:** ${recipientName}\n- **Goal:** ${goalRes.data.title}\n\nBuat pesan notifikasi yang sesuai.`;
+            break;
+          }
+          case 'kb_invite': {
+            const { folder_id, inviter_id } = notification.context_data;
+            const [folderRes, inviterRes] = await Promise.all([
+              supabaseAdmin.from('kb_folders').select('name').eq('id', folder_id).single(),
+              supabaseAdmin.from('profiles').select('first_name, last_name, email').eq('id', inviter_id).single(),
+            ]);
+            if (folderRes.error || inviterRes.error) throw new Error("Failed to fetch knowledge base invite context.");
+            const inviterName = `${inviterRes.data.first_name || ''} ${inviterRes.data.last_name || ''}`.trim() || inviterRes.data.email;
+            userPrompt = `**Konteks:**\n- **Jenis:** Undangan Kolaborasi Knowledge Base\n- **Pengundang:** ${inviterName}\n- **Penerima:** ${recipientName}\n- **Folder:** ${folderRes.data.name}\n\nBuat pesan notifikasi yang sesuai.`;
+            break;
+          }
+          default:
+            throw new Error(`Unknown notification type: ${notificationType}`);
+        }
+
         const anthropic = new Anthropic({ apiKey: Deno.env.get('ANTHROPIC_API_KEY') });
         const aiResponse = await anthropic.messages.create({ model: "claude-3-haiku-20240307", max_tokens: 150, system: getSystemPrompt(), messages: [{ role: "user", content: userPrompt }] });
         const aiMessage = aiResponse.content[0].text;
@@ -110,11 +177,7 @@ serve(async (req) => {
         if (!clientId || !apiKey || !whatsappClientId) throw new Error("WBIZTOOL credentials not configured.");
 
         const finalMessage = `${aiMessage}\n\nBalas di sini: https://7inked.ahensi.xyz/chat`;
-        const wbizPayload: any = { client_id: parseInt(clientId, 10), api_key: apiKey, whatsapp_client: parseInt(whatsappClientId, 10), phone: recipientPhone, message: finalMessage };
-        if (messageData.attachment_url) {
-            wbizPayload.url = messageData.attachment_url;
-            wbizPayload.filename = messageData.attachment_name || 'attachment';
-        }
+        const wbizPayload: any = { client_id: parseInt(clientId, 10), api_key: apiKey, whatsapp_client: parseInt(whatsappClientId, 10), phone: recipientPhone, message: finalMessage, ...attachmentPayload };
 
         const wbizResponse = await fetch("https://wbiztool.com/api/v1/send_msg/", { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Client-ID': clientId, 'X-Api-Key': apiKey }, body: JSON.stringify(wbizPayload) });
         if (!wbizResponse.ok) {
