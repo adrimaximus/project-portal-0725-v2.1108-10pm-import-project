@@ -122,8 +122,7 @@ serve(async (req) => {
         }
 
         const messageBody = `_"${messageContent}"_`;
-        const link = `Balas di sini: https://7inked.ahensi.xyz/chat`;
-        const finalMessage = `${intro}\n\n${messageBody}\n\n${link}`;
+        const finalMessage = `${intro}\n\n${messageBody}`;
 
         console.log(`[WBIZTOOL_DEBUG] Preparing to send WA to ${formattedPhone}.`);
 
