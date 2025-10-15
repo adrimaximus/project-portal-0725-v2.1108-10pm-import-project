@@ -45,7 +45,6 @@ import CompaniesPage from "./pages/CompaniesPage";
 import CompanyPropertiesPage from "./pages/CompanyPropertiesPage";
 import NotificationsPage from "./pages/Notifications";
 import { useCheckAudioPermission } from "./hooks/useCheckAudioPermission";
-import DekkerPage from "./pages/DekkerPage";
 
 const App = () => {
   useCheckAudioPermission();
@@ -100,7 +99,6 @@ const App = () => {
         <Route path="/embed" element={<EmbedPage />} />
         <Route path="/companies" element={<CompaniesPage />} />
         <Route path="/notifications" element={<NotificationsPage />} />
-        <Route path="/dekker" element={<DekkerPage />} />
       </Route>
       
       <Route path="*" element={<NotFound />} />
