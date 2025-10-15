@@ -41,6 +41,7 @@ export const useNotifications = () => {
   const {
     data,
     isLoading,
+    error,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
@@ -239,6 +240,7 @@ export const useNotifications = () => {
   return {
     notifications,
     isLoading,
+    error,
     unreadCount,
     markAsRead: markAsReadMutation.mutate,
     markAsUnread: markAsUnreadMutation.mutate,

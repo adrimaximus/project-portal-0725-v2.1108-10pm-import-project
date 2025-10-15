@@ -5,7 +5,7 @@ import { notificationIcons } from "@/data/notifications";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from 'date-fns';
 import { Link } from "react-router-dom";
-import { Bell, CheckCheck, Loader2 } from "lucide-react";
+import { Bell, CheckCheck, Loader2, AlertTriangle } from "lucide-react";
 import { useNotifications } from "@/hooks/useNotifications";
 import { id } from 'date-fns/locale';
 import { Skeleton } from "@/components/ui/skeleton";
@@ -25,6 +25,7 @@ const NotificationsPage = () => {
   const { 
     notifications, 
     isLoading, 
+    error,
     unreadCount, 
     markAsRead,
     markAsUnread,
@@ -33,6 +34,19 @@ const NotificationsPage = () => {
     hasNextPage,
     isFetchingNextPage,
   } = useNotifications();
+
+  if (error) {
+    return (
+      <PortalLayout>
+        <div className="flex flex-col items-center justify-center h-full text-center text-destructive p-8">
+          <AlertTriangle className="h-12 w-12 mb-4" />
+          <h2 className="text-2xl font-bold">Error Loading Notifications</h2>
+          <p className="mt-2 max-w-md">{error.message}</p>
+          <p className="mt-4 text-sm text-muted-foreground">There might be an issue with the database connection or a recent change. Please try again later or contact support.</p>
+        </div>
+      </PortalLayout>
+    );
+  }
 
   return (
     <PortalLayout>
