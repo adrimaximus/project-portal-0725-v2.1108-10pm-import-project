@@ -106,23 +106,50 @@ serve(async (req) => {
     // 7. Construct and send messages
     const sendPromises = recipients.map(async (recipient) => {
       const profile = recipient.profiles;
+      if (!profile) {
+        console.log(`[WBIZTOOL_DEBUG] Skipping recipient because profile is null.`);
+        return;
+      }
       console.log(`[WBIZTOOL_DEBUG] Processing recipient: ${profile.id}`);
-      const formattedPhone = formatPhoneNumberForApi(profile.phone);
-      console.log(`[WBIZTOOL_DEBUG] Recipient phone: ${profile.phone}, Formatted: ${formattedPhone}`);
+      
+      let phone = profile.phone;
+      if (!phone) {
+        console.log(`[WBIZTOOL_DEBUG] Phone not in profile for ${profile.id}, checking people table.`);
+        const { data: personData, error: personError } = await supabaseAdmin
+            .from('people')
+            .select('contact')
+            .eq('user_id', profile.id)
+            .single();
+        
+        if (personError && personError.code !== 'PGRST116') {
+            console.error(`[WBIZTOOL_DEBUG] Error fetching person for ${profile.id}:`, personError);
+        } else if (personData && personData.contact?.phones?.length > 0) {
+            phone = personData.contact.phones[0];
+            console.log(`[WBIZTOOL_DEBUG] Found phone for ${profile.id} in people table: ${phone}`);
+        }
+      }
+
+      const formattedPhone = formatPhoneNumberForApi(phone);
+      console.log(`[WBIZTOOL_DEBUG] Recipient phone: ${phone}, Formatted: ${formattedPhone}`);
       console.log(`[WBIZTOOL_DEBUG] Recipient notification preferences:`, profile.notification_preferences);
 
       if (profile && formattedPhone && (profile.notification_preferences?.whatsapp_chat !== false)) {
         const recipientName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email;
         
+        const chatLink = "https://7inked.ahensi.xyz/chat";
         let intro;
+        let actionText;
+
         if (is_group) {
           intro = `Hi *${recipientName}* 👋 Pesan baru dari *${sender_name}* di grup *${group_name || 'Grup'}*:`;
+          actionText = `Lihat di sini: ${chatLink}`;
         } else {
           intro = `Hi *${recipientName}* 👋 Pesan baru dari *${sender_name}*:`;
+          actionText = `Balas di sini: ${chatLink}`;
         }
 
         const messageBody = `_"${messageContent}"_`;
-        const finalMessage = `${intro}\n\n${messageBody}`;
+        const finalMessage = `${intro}\n\n${messageBody}\n\n${actionText}`;
 
         console.log(`[WBIZTOOL_DEBUG] Preparing to send WA to ${formattedPhone}.`);
 
