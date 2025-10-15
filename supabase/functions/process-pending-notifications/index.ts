@@ -8,6 +8,7 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  console.log("[process-pending-notifications] Function invoked.");
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -26,6 +27,9 @@ serve(async (req) => {
       .limit(10);
 
     if (error) throw error;
+    
+    console.log(`[process-pending-notifications] Found ${pendingNotifications?.length || 0} pending notifications.`);
+
     if (!pendingNotifications || pendingNotifications.length === 0) {
       return new Response(JSON.stringify({ message: "No pending notifications to process." }), { headers: corsHeaders });
     }
@@ -41,20 +45,25 @@ serve(async (req) => {
     const successCount = results.filter(r => r.status === 'fulfilled' && !r.value.error).length;
     const failureCount = results.length - successCount;
 
-    results.forEach(result => {
+    results.forEach((result, index) => {
         if (result.status === 'rejected' || (result.status === 'fulfilled' && result.value.error)) {
-            console.error("Error processing notification:", result.status === 'rejected' ? result.reason : result.value.error);
+            const notificationId = pendingNotifications[index].id;
+            const reason = result.status === 'rejected' ? result.reason : result.value.error;
+            console.error(`[process-pending-notifications] Error processing notification ${notificationId}:`, reason);
         }
     });
 
+    const responseMessage = `Processed ${results.length} notifications. Success: ${successCount}, Failures: ${failureCount}.`;
+    console.log(`[process-pending-notifications] ${responseMessage}`);
+
     return new Response(JSON.stringify({
-      message: `Processed ${results.length} notifications.`,
+      message: responseMessage,
       success: successCount,
       failures: failureCount,
     }), { headers: corsHeaders });
 
   } catch (error) {
-    console.error('Cron handler error:', error.message);
+    console.error('[process-pending-notifications] Cron handler error:', error.message);
     return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: corsHeaders });
   }
 });

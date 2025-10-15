@@ -46,6 +46,7 @@ serve(async (req) => {
   );
 
   const { pending_notification_id } = await req.json();
+  console.log(`[process-and-send] Function invoked for notification ID: ${pending_notification_id}`);
 
   try {
     if (!pending_notification_id) {
@@ -53,6 +54,7 @@ serve(async (req) => {
     }
 
     // 1. Update status to 'processing' to prevent re-runs
+    console.log(`[process-and-send] [${pending_notification_id}] Updating status to 'processing'.`);
     const { data: pendingNotification, error: updateError } = await supabaseAdmin
       .from('pending_whatsapp_notifications')
       .update({ status: 'processing', processed_at: new Date().toISOString() })
@@ -65,6 +67,7 @@ serve(async (req) => {
     }
 
     // 2. Fetch all context data
+    console.log(`[process-and-send] [${pending_notification_id}] Fetching context data.`);
     const { data: messageData, error: messageError } = await supabaseAdmin.from('messages').select('content, sender_id, attachment_url, attachment_name').eq('id', pendingNotification.message_id).single();
     if (messageError) throw new Error(`Failed to fetch message: ${messageError.message}`);
 
@@ -77,6 +80,7 @@ serve(async (req) => {
     if (conversationRes.error || senderRes.error || recipientRes.error) {
       throw new Error("Failed to fetch full notification context.");
     }
+    console.log(`[process-and-send] [${pending_notification_id}] Context data fetched successfully.`);
 
     const messageContent = messageData.content;
     const { is_group, group_name } = conversationRes.data;
@@ -89,6 +93,7 @@ serve(async (req) => {
     }
 
     // 3. Generate AI message
+    console.log(`[process-and-send] [${pending_notification_id}] Generating AI message.`);
     const anthropic = new Anthropic({ apiKey: Deno.env.get('ANTHROPIC_API_KEY') });
     const userPrompt = `
       **Konteks:**
@@ -106,6 +111,7 @@ serve(async (req) => {
       messages: [{ role: "user", content: userPrompt }],
     });
     const aiMessage = aiResponse.content[0].text;
+    console.log(`[process-and-send] [${pending_notification_id}] AI message generated.`);
 
     // 4. Send WhatsApp message via WBIZTOOL
     const { data: wbizConfig } = await supabaseAdmin.from('app_config').select('key, value').in('key', ['WBIZTOOL_CLIENT_ID', 'WBIZTOOL_API_KEY']);
@@ -132,6 +138,7 @@ serve(async (req) => {
         wbizPayload.filename = messageData.attachment_name || 'attachment';
     }
 
+    console.log(`[process-and-send] [${pending_notification_id}] Sending message to ${recipientPhone} via WBIZTOOL.`);
     const wbizResponse = await fetch("https://wbiztool.com/api/v1/send_msg/", {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Client-ID': clientId, 'X-Api-Key': apiKey },
@@ -142,9 +149,11 @@ serve(async (req) => {
       const errorData = await wbizResponse.json().catch(() => ({}));
       throw new Error(`WBIZTOOL API Error (${wbizResponse.status}): ${errorData.message || 'Unknown error'}`);
     }
+    console.log(`[process-and-send] [${pending_notification_id}] WBIZTOOL call successful.`);
 
     // 5. Update notification status to 'sent'
     await supabaseAdmin.from('pending_whatsapp_notifications').update({ status: 'sent' }).eq('id', pending_notification_id);
+    console.log(`[process-and-send] [${pending_notification_id}] Status updated to 'sent'. Function complete.`);
 
     return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
@@ -152,7 +161,7 @@ serve(async (req) => {
     if (pending_notification_id) {
       await supabaseAdmin.from('pending_whatsapp_notifications').update({ status: 'failed', error_message: error.message }).eq('id', pending_notification_id);
     }
-    console.error('Function error:', error.message);
+    console.error(`[process-and-send] [${pending_notification_id}] Function error:`, error.message);
     return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
 });
