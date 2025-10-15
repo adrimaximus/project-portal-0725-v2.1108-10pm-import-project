@@ -150,7 +150,7 @@ export const formatPhoneNumberForApi = (phone: string): string => {
   if (cleaned.startsWith('0')) {
     return '62' + cleaned.substring(1);
   }
-  if (cleaned.length > 8 && cleaned.startsWith('8')) {
+  if (cleaned.length > 8 && cleaned.startsWith('8')) { // Common Indonesian mobile format
     return '62' + cleaned;
   }
   return cleaned;

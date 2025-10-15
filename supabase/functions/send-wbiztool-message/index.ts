@@ -8,6 +8,29 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
+const formatPhoneNumberForApi = (phone: string): string | null => {
+  if (!phone) return null;
+  // 1. Hapus semua karakter non-digit
+  let cleaned = phone.trim().replace(/\D/g, '');
+  
+  // 2. Normalisasi berdasarkan awalan
+  if (cleaned.startsWith('0')) {
+    // Ganti '0' di depan dengan '62'
+    return '62' + cleaned.substring(1);
+  }
+  if (cleaned.startsWith('62')) {
+    // Sudah dalam format yang benar
+    return cleaned;
+  }
+  if (cleaned.length > 8 && cleaned.startsWith('8')) {
+    // Diasumsikan nomor Indonesia tanpa '0' di depan
+    return '62' + cleaned;
+  }
+  
+  // Kembalikan nomor yang sudah dibersihkan jika tidak cocok dengan pola umum Indonesia
+  return cleaned;
+};
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { status: 204, headers: corsHeaders });
@@ -92,7 +115,9 @@ serve(async (req) => {
 
     const sendPromises = recipients.map(async (recipient) => {
       const profile = recipient.profiles;
-      if (profile && profile.phone && (profile.notification_preferences?.whatsapp_chat !== false)) {
+      const formattedPhone = formatPhoneNumberForApi(profile.phone);
+
+      if (profile && formattedPhone && (profile.notification_preferences?.whatsapp_chat !== false)) {
         const message = `Hi ${profile.first_name || profile.email} 👋\nAda pesan baru di Chat Portal untuk kamu dari ${sender_name}.\n\nBuka di sini: https://7inked.ahensi.xyz/chat`;
         
         const response = await fetch("https://wbiztool.com/api/v1/send_msg/", {
@@ -106,7 +131,7 @@ serve(async (req) => {
             client_id: parseInt(clientId, 10),
             api_key: apiKey,
             whatsapp_client: parseInt(whatsappClientId, 10),
-            phone: profile.phone,
+            phone: formattedPhone,
             message: message,
           }),
         });
