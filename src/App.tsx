@@ -43,6 +43,7 @@ import StorageSettingsPage from "./pages/StorageSettingsPage";
 import ContactPropertiesPage from "./pages/ContactPropertiesPage";
 import CompaniesPage from "./pages/CompaniesPage";
 import CompanyPropertiesPage from "./pages/CompanyPropertiesPage";
+import NotificationsPage from "./pages/Notifications";
 
 const App = () => {
   return (
@@ -94,6 +95,7 @@ const App = () => {
         <Route path="/multipage/:slug/:itemSlug" element={<MultiEmbedItemPage />} />
         <Route path="/embed" element={<EmbedPage />} />
         <Route path="/companies" element={<CompaniesPage />} />
+        <Route path="/notifications" element={<NotificationsPage />} />
       </Route>
       
       <Route path="*" element={<NotFound />} />
