@@ -50,6 +50,7 @@ serve(async (req) => {
     if (!conversation_id || !message_id) {
       throw new Error("Missing required parameters: conversation_id, message_id.");
     }
+    console.log(`[WBIZTOOL_DEBUG] Received request for conversation: ${conversation_id}, message: ${message_id}`);
 
     // 3. Create admin client
     const supabaseAdmin = createClient(
@@ -79,14 +80,14 @@ serve(async (req) => {
     // 5. Get WBIZTOOL credentials
     const wbizConfig = wbizConfigRes.data;
     if (!wbizConfig || wbizConfig.length < 2) {
-      console.warn("WBIZTOOL credentials not fully configured. Skipping WhatsApp notification.");
+      console.warn("[WBIZTOOL_DEBUG] WBIZTOOL credentials not fully configured. Skipping WhatsApp notification.");
       return new Response(JSON.stringify({ message: "WBIZTOOL not configured." }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
     const clientId = wbizConfig.find(c => c.key === 'WBIZTOOL_CLIENT_ID')?.value;
     const apiKey = wbizConfig.find(c => c.key === 'WBIZTOOL_API_KEY')?.value;
     const whatsappClientId = Deno.env.get('WBIZTOOL_WHATSAPP_CLIENT_ID');
     if (!clientId || !apiKey || !whatsappClientId) {
-      console.warn("WBIZTOOL credentials missing. Skipping WhatsApp notification.");
+      console.warn("[WBIZTOOL_DEBUG] WBIZTOOL credentials missing. Skipping WhatsApp notification.");
       return new Response(JSON.stringify({ message: "WBIZTOOL credentials missing." }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
@@ -100,11 +101,15 @@ serve(async (req) => {
       .eq('conversation_id', conversation_id)
       .neq('user_id', sender_id);
     if (recipientsError) throw recipientsError;
+    console.log(`[WBIZTOOL_DEBUG] Found ${recipients.length} recipients for conversation ${conversation_id}.`);
 
     // 7. Construct and send messages
     const sendPromises = recipients.map(async (recipient) => {
       const profile = recipient.profiles;
+      console.log(`[WBIZTOOL_DEBUG] Processing recipient: ${profile.id}`);
       const formattedPhone = formatPhoneNumberForApi(profile.phone);
+      console.log(`[WBIZTOOL_DEBUG] Recipient phone: ${profile.phone}, Formatted: ${formattedPhone}`);
+      console.log(`[WBIZTOOL_DEBUG] Recipient notification preferences:`, profile.notification_preferences);
 
       if (profile && formattedPhone && (profile.notification_preferences?.whatsapp_chat !== false)) {
         const recipientName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email;
@@ -120,7 +125,7 @@ serve(async (req) => {
         const link = `Balas di sini: https://7inked.ahensi.xyz/chat`;
         const finalMessage = `${intro}\n\n${messageBody}\n\n${link}`;
 
-        console.log(`Sending WA to ${formattedPhone}: ${finalMessage}`);
+        console.log(`[WBIZTOOL_DEBUG] Preparing to send WA to ${formattedPhone}.`);
 
         const response = await fetch("https://wbiztool.com/api/v1/send_msg/", {
           method: 'POST',
@@ -139,10 +144,12 @@ serve(async (req) => {
         });
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
-          console.error(`Failed to send WA to ${profile.phone}: ${response.statusText}`, errorData);
+          console.error(`[WBIZTOOL_DEBUG] Failed to send WA to ${profile.phone}: ${response.statusText}`, errorData);
         } else {
-          console.log(`Successfully sent WA to ${profile.phone}`);
+          console.log(`[WBIZTOOL_DEBUG] Successfully sent WA to ${profile.phone}`);
         }
+      } else {
+        console.log(`[WBIZTOOL_DEBUG] Skipping recipient ${profile.id} due to missing phone or disabled preference.`);
       }
     });
 
@@ -154,6 +161,7 @@ serve(async (req) => {
     });
 
   } catch (error) {
+    console.error('[WBIZTOOL_DEBUG] Function error:', error.message);
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 400,
