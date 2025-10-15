@@ -40,6 +40,11 @@ const audio = new Audio();
 audio.onended = () => {
   isSoundPlaying = false;
 };
+audio.onerror = () => {
+  console.error("[Dyad Debug] Audio playback error.");
+  isSoundPlaying = false; // Release lock on error
+};
+
 
 export const useNotifications = () => {
   const { user } = useAuth();
@@ -131,12 +136,14 @@ export const useNotifications = () => {
             if (isNotificationTypeEnabled && tone && tone !== 'none' && canPlaySound) {
               if (!isSoundPlaying) {
                 isSoundPlaying = true;
-                const audioUrl = `${TONE_BASE_URL}${tone}`;
+                // Cache-busting by adding a timestamp
+                const audioUrl = `${TONE_BASE_URL}${tone}?t=${new Date().getTime()}`;
                 console.log(`[Dyad Debug] Attempting to play sound: ${audioUrl}`);
                 audio.src = audioUrl;
+                audio.load(); // Explicitly load the new source
                 audio.play().catch(e => {
                   console.error("[Dyad Debug] Error playing notification sound:", e);
-                  isSoundPlaying = false;
+                  isSoundPlaying = false; // Release lock on error
                   if (e.name === 'NotAllowedError') {
                     toast.error("Could not play notification sound.", {
                       description: "Browser security may have blocked it. Please click anywhere on the page to enable sound for notifications.",
