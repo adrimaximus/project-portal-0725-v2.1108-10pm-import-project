@@ -9,6 +9,7 @@ import * as chatRealtime from '@/lib/chatRealtime';
 import { Conversation, Message, Collaborator, Reaction } from '@/types';
 import debounce from 'lodash.debounce';
 import { ForwardMessageDialog } from '@/components/ForwardMessageDialog';
+import { v4 as uuidv4 } from 'uuid';
 
 interface ChatContextType {
   conversations: Omit<Conversation, 'messages'>[];
@@ -135,11 +136,12 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
   const sendMessageMutation = useMutation({
     mutationFn: async (variables: { text: string, attachmentFile: File | null, replyToMessageId?: string | null }) => {
       let attachment: { url: string, name: string, type: string } | null = null;
+      const messageId = uuidv4();
 
       if (variables.attachmentFile && currentUser && selectedConversationId) {
         const file = variables.attachmentFile;
         const sanitizedFileName = file.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
-        const filePath = `chat-uploads/${currentUser.id}/${selectedConversationId}/${Date.now()}-${sanitizedFileName}`;
+        const filePath = `${selectedConversationId}/${messageId}-${sanitizedFileName}`;
         const { error: uploadError } = await supabase.storage.from('chat-attachments').upload(filePath, file);
         if (uploadError) throw new Error(`Failed to upload attachment: ${uploadError.message}`);
         
@@ -148,6 +150,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
       }
       
       const data = await chatApi.sendMessage({
+        messageId,
         conversationId: selectedConversationId!,
         senderId: currentUser!.id,
         text: variables.text,

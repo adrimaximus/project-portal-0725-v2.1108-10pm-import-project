@@ -62,10 +62,11 @@ export const fetchMessages = async (conversationId: string): Promise<Message[]> 
   });
 };
 
-export const sendMessage = async ({ conversationId, senderId, text, attachment, replyToMessageId }: { conversationId: string, senderId: string, text: string, attachment: Attachment | null, replyToMessageId?: string | null }) => {
+export const sendMessage = async ({ messageId, conversationId, senderId, text, attachment, replyToMessageId }: { messageId: string, conversationId: string, senderId: string, text: string, attachment: Attachment | null, replyToMessageId?: string | null }) => {
   const { data, error } = await supabase
     .from('messages')
     .insert({
+      id: messageId,
       conversation_id: conversationId,
       sender_id: senderId,
       content: text,
