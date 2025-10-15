@@ -63,7 +63,7 @@ export const fetchMessages = async (conversationId: string): Promise<Message[]> 
 };
 
 export const sendMessage = async ({ conversationId, senderId, text, attachment, replyToMessageId }: { conversationId: string, senderId: string, text: string, attachment: Attachment | null, replyToMessageId?: string | null }) => {
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('messages')
     .insert({
       conversation_id: conversationId,
@@ -73,8 +73,12 @@ export const sendMessage = async ({ conversationId, senderId, text, attachment, 
       attachment_name: attachment?.name,
       attachment_type: attachment?.type,
       reply_to_message_id: replyToMessageId,
-    });
+    })
+    .select()
+    .single();
+    
   if (error) throw error;
+  return data;
 };
 
 export const createOrGetConversation = async (otherUserId: string) => {

@@ -13,6 +13,7 @@ const notificationTypes = [
   { id: 'project_update', label: 'Project Updates', description: 'When you are added to a project, a task is assigned to you, or a project you are in is updated.' },
   { id: 'mention', label: 'Mentions', description: 'When someone @mentions you in a comment.' },
   { id: 'comment', label: 'New Chat Messages', description: 'When you receive a new message and are not on the chat page.' },
+  { id: 'whatsapp_chat', label: 'WhatsApp Chat Messages', description: 'Receive a WhatsApp notification for new chat messages.' },
   { id: 'goal', label: 'Goal Updates', description: 'When a new goal is created for you.' },
   { id: 'system', label: 'System Notifications', description: 'Important updates and announcements from the system.' },
 ];

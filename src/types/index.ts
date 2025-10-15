@@ -12,6 +12,7 @@ export interface User {
   permissions?: string[];
   people_kanban_settings?: any;
   theme?: string;
+  phone?: string | null;
 }
 
 export interface Collaborator extends User {}

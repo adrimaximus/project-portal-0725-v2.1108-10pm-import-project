@@ -134,9 +134,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
 
   const sendMessageMutation = useMutation({
     mutationFn: async (variables: { text: string, attachmentFile: File | null, replyToMessageId?: string | null }) => {
-      let attachmentUrl: string | null = null;
-      let attachmentName: string | null = null;
-      let attachmentType: string | null = null;
+      let attachment: { url: string, name: string, type: string } | null = null;
 
       if (variables.attachmentFile && currentUser && selectedConversationId) {
         const file = variables.attachmentFile;
@@ -146,21 +144,26 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         if (uploadError) throw new Error(`Failed to upload attachment: ${uploadError.message}`);
         
         const { data: urlData } = supabase.storage.from('chat-attachments').getPublicUrl(filePath);
-        attachmentUrl = urlData.publicUrl;
-        attachmentName = file.name;
-        attachmentType = file.type;
+        attachment = { url: urlData.publicUrl, name: file.name, type: file.type };
       }
       
-      const { error } = await supabase.from('messages').insert({
-        conversation_id: selectedConversationId!,
-        sender_id: currentUser!.id,
-        content: variables.text,
-        attachment_url: attachmentUrl,
-        attachment_name: attachmentName,
-        attachment_type: attachmentType,
-        reply_to_message_id: variables.replyToMessageId,
+      const data = await chatApi.sendMessage({
+        conversationId: selectedConversationId!,
+        senderId: currentUser!.id,
+        text: variables.text,
+        attachment,
+        replyToMessageId: variables.replyToMessageId,
       });
-      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      // Fire and forget the WhatsApp notification
+      supabase.functions.invoke('send-wbiztool-message', {
+        body: { 
+          conversation_id: selectedConversationId,
+          message_id: data.id
+        }
+      }).catch(err => console.error("Failed to trigger WhatsApp notification:", err));
     },
     onError: (error: any) => toast.error("Failed to send message.", { description: error.message }),
   });

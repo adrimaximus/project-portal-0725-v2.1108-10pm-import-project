@@ -14,6 +14,7 @@ import { generatePastelColor, getAvatarUrl, getInitials } from "@/lib/utils";
 import NotificationPreferencesCard from "@/components/settings/NotificationPreferencesCard";
 import { useQueryClient } from "@tanstack/react-query";
 import AvatarCropper from "@/components/settings/AvatarCropper";
+import PhoneNumberInput from "@/components/PhoneNumberInput";
 
 const Profile = () => {
   const { user, session, refreshUser, logout } = useAuth();
@@ -21,6 +22,7 @@ const Profile = () => {
   
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [phone, setPhone] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showNewPassword, setShowNewPassword] = useState(false);
@@ -34,6 +36,7 @@ const Profile = () => {
     if (user) {
       setFirstName(user.first_name || "");
       setLastName(user.last_name || "");
+      setPhone(user.phone || "");
     }
   }, [user]);
 
@@ -128,6 +131,7 @@ const Profile = () => {
         .update({ 
           first_name: firstName, 
           last_name: lastName,
+          phone: phone,
           updated_at: new Date().toISOString(),
         })
         .eq('id', user.id);
@@ -237,9 +241,13 @@ const Profile = () => {
                 <Label htmlFor="last-name">Last Name</Label>
                 <Input id="last-name" value={lastName} onChange={(e) => setLastName(e.target.value)} />
               </div>
-              <div className="space-y-2 md:col-span-2">
+              <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input id="email" type="email" value={user.email || ''} disabled />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="phone">Phone Number (for WhatsApp)</Label>
+                <PhoneNumberInput value={phone} onChange={setPhone} />
               </div>
             </div>
             <Button onClick={handleSaveChanges} disabled={isSaving}>
