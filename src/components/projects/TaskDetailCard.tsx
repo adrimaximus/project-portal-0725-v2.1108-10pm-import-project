@@ -70,35 +70,35 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
         )}
 
         <div className="grid grid-cols-2 gap-4 text-sm">
-          <div>
-            <h4 className="font-semibold mb-2 flex items-center gap-2"><Briefcase className="h-4 w-4" /> Project</h4>
+          <div className="flex items-center gap-2">
+            <h4 className="font-semibold flex items-center gap-2 flex-shrink-0"><Briefcase className="h-4 w-4" /> Project</h4>
             {task.project_name && task.project_name !== 'General Tasks' ? (
-              <Link to={`/projects/${task.project_slug}`} className="hover:underline text-primary block max-w-[50ch] break-words" onClick={onClose}>
+              <Link to={`/projects/${task.project_slug}`} className="hover:underline text-primary break-words" onClick={onClose}>
                 {task.project_name}
               </Link>
             ) : <span className="text-muted-foreground">General Tasks</span>}
           </div>
-          <div>
-            <h4 className="font-semibold mb-2 flex items-center gap-2"><Calendar className="h-4 w-4" /> Due Date</h4>
+          <div className="flex items-center gap-2">
+            <h4 className="font-semibold flex items-center gap-2 flex-shrink-0"><Calendar className="h-4 w-4" /> Due Date</h4>
             {task.due_date ? (
               <span className={cn(isOverdue(task.due_date) && "text-red-600 font-bold")}>
                 {format(new Date(task.due_date), "MMM d, yyyy")}
               </span>
             ) : <span className="text-muted-foreground">No due date</span>}
           </div>
-          <div>
-            <h4 className="font-semibold mb-2">Status</h4>
+          <div className="flex items-center gap-2">
+            <h4 className="font-semibold">Status</h4>
             <Badge className={cn(statusStyle.tw, 'border-transparent')}>{task.status}</Badge>
           </div>
-          <div>
-            <h4 className="font-semibold mb-2">Priority</h4>
+          <div className="flex items-center gap-2">
+            <h4 className="font-semibold">Priority</h4>
             <Badge className={priorityStyle.tw}>{task.priority || 'Low'}</Badge>
           </div>
         </div>
 
         {task.tags && task.tags.length > 0 && (
-          <div>
-            <h4 className="font-semibold mb-2 flex items-center gap-2"><Tag className="h-4 w-4" /> Tags</h4>
+          <div className="flex items-start gap-2">
+            <h4 className="font-semibold flex items-center gap-2 flex-shrink-0"><Tag className="h-4 w-4" /> Tags</h4>
             <div className="flex gap-1 flex-wrap">
               {task.tags.map(tag => (
                 <Badge key={tag.id} variant="outline" style={{ borderColor: tag.color, color: tag.color }}>{tag.name}</Badge>
@@ -108,8 +108,8 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
         )}
 
         {task.assignedTo && task.assignedTo.length > 0 && (
-          <div>
-            <h4 className="font-semibold mb-2 flex items-center gap-2"><UserIcon className="h-4 w-4" /> Assignees</h4>
+          <div className="flex items-start gap-2">
+            <h4 className="font-semibold flex items-center gap-2 flex-shrink-0"><UserIcon className="h-4 w-4" /> Assignees</h4>
             <div className="flex flex-wrap gap-2">
               {task.assignedTo.map((user) => (
                 <TooltipProvider key={user.id}>
