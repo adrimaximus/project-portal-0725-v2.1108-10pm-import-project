@@ -74,7 +74,7 @@ const CommentInput = ({ project, onAddCommentOrTicket }: CommentInputProps) => {
               trigger="@"
               data={mentionData}
               markup="@[__display__](__id__)"
-              displayTransform={(id, display) => `@'${display}'`}
+              displayTransform={(id, display) => `@${display}`}
               renderSuggestion={(suggestion: SuggestionDataItem & { avatar_url?: string, initials?: string, email?: string }, search, highlightedDisplay, index, focused) => (
                 <div className={`mention-suggestion ${focused ? 'focused' : ''}`}>
                   <Avatar className="h-8 w-8">

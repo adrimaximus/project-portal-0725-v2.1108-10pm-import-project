@@ -169,7 +169,7 @@ export const getColorForTag = (tagName: string): string => {
 };
 
 export const parseMentions = (text: string): string[] => {
-  const mentionRegex = /@\[[^\]]+\]\(([^)]+)\)/g;
+  const mentionRegex = /@\[([^\]]+)\]\(([^)]+)\)/g;
   const userIds = new Set<string>();
   let match;
   while ((match = mentionRegex.exec(text)) !== null) {
@@ -180,6 +180,6 @@ export const parseMentions = (text: string): string[] => {
 
 export const formatMentionsForDisplay = (text: string | null | undefined): string => {
   if (!text) return '';
-  // Replaces @[Display Name](user-id) with @'Display Name'
-  return text.replace(/@\[([^\]]+)\]\(([^)]+)\)/g, "@'$1'");
+  // Replaces @[Display Name](user-id) with @Display Name
+  return text.replace(/@\[([^\]]+)\]\(([^)]+)\)/g, "@$1");
 };
