@@ -1,8 +1,21 @@
+import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import { services, Service } from "@/data/services";
 import { Search } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import Icon from "@/components/Icon";
+import { Skeleton } from "@/components/ui/skeleton";
+
+export interface Service {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  icon_color: string;
+  is_featured: boolean;
+}
 
 interface ServiceSelectionProps {
   searchTerm: string;
@@ -17,12 +30,26 @@ const ServiceSelection = ({
   selectedServices,
   onServiceSelect,
 }: ServiceSelectionProps) => {
-  const featuredService = services.find(
-    (s) => s.title === "End to End Services"
-  );
-  const otherServices = services.filter(
-    (s) => s.title !== "End to End Services"
-  );
+  const [services, setServices] = useState<Service[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchServices = async () => {
+      setLoading(true);
+      const { data, error } = await supabase.from('services').select('*');
+      if (error) {
+        toast.error('Failed to load services.');
+        console.error(error);
+      } else {
+        setServices(data as Service[]);
+      }
+      setLoading(false);
+    };
+    fetchServices();
+  }, []);
+
+  const featuredService = services.find((s) => s.is_featured);
+  const otherServices = services.filter((s) => !s.is_featured);
 
   const filteredServices = otherServices.filter(
     (service) =>
@@ -33,6 +60,20 @@ const ServiceSelection = ({
   const isSelected = (service: Service) => {
     return selectedServices.some((s) => s.title === service.title);
   };
+
+  if (loading) {
+    return (
+      <div className="space-y-4 pb-40">
+        <Skeleton className="h-10 w-1/2" />
+        <Skeleton className="h-6 w-3/4" />
+        <Skeleton className="h-10 w-full mt-4" />
+        <Skeleton className="h-40 w-full mt-4" />
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 mt-4">
+          {[...Array(8)].map((_, i) => <Skeleton key={i} className="h-32 w-full" />)}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4 pb-40">
@@ -65,10 +106,10 @@ const ServiceSelection = ({
             <div
               className={cn(
                 "p-3 rounded-lg",
-                featuredService.iconColor
+                featuredService.icon_color
               )}
             >
-              <featuredService.icon className="h-8 w-8" />
+              <Icon name={featuredService.icon as any} className="h-8 w-8" />
             </div>
             <div>
               <h2 className="font-semibold text-lg">
@@ -94,9 +135,9 @@ const ServiceSelection = ({
           >
             <CardContent className="p-4 flex items-start gap-4">
               <div
-                className={cn("p-2 rounded-lg", service.iconColor)}
+                className={cn("p-2 rounded-lg", service.icon_color)}
               >
-                <service.icon className="h-6 w-6" />
+                <Icon name={service.icon as any} className="h-6 w-6" />
               </div>
               <div>
                 <h3 className="font-semibold">{service.title}</h3>
