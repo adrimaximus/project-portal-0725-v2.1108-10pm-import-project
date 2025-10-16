@@ -79,7 +79,7 @@ const ProjectsPage = () => {
   
   const {
     dateRange, setDateRange,
-    sortConfig, requestSort: requestProjectSort, sortedProjects
+    sortConfig: projectSortConfig, requestSort: requestProjectSort, sortedProjects
   } = useProjectFilters(projectsData);
 
   const [taskSearchTerm, setTaskSearchTerm] = useState('');
