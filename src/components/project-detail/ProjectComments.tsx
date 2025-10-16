@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import { Project, Comment as CommentType, Task, User } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Ticket, MoreHorizontal, Edit, Trash2, FileText, Eye, Download, Paperclip, X } from "lucide-react";
+import { Ticket, MoreHorizontal, Edit, Trash2, FileText, Eye, Download, Paperclip, X, AlertTriangle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { getInitials, generatePastelColor, parseMentions, formatMentionsForDisplay } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
@@ -254,10 +254,13 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
                               </Badge>
                             </Link>
                           ) : (
-                            <Badge variant="outline">
-                              <Ticket className="h-3 w-3 mr-1" />
-                              Ticket (Task not found)
-                            </Badge>
+                            <div className="mt-2 p-2 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md text-xs text-yellow-800 dark:text-yellow-300 flex items-start gap-2">
+                              <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                              <div>
+                                <p className="font-semibold">Associated task not found.</p>
+                                <p>This ticket's task may have been deleted.</p>
+                              </div>
+                            </div>
                           )}
                         </div>
                       )}
