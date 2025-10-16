@@ -171,6 +171,19 @@ serve(async (req) => {
             userPrompt = `**Konteks:**\n- **Jenis:** Pembaruan Status Pembayaran\n- **Pengubah Status:** ${updaterName}\n- **Penerima:** ${recipientName}\n- **Proyek:** ${projRes.data.name}\n- **Status Baru:** ${new_status}\n- **URL:** https://7inked.ahensi.xyz/billing\n\nBuat pesan notifikasi yang sesuai dan sertakan URL di akhir. Beri tahu penerima tentang pembaruan status pembayaran.`;
             break;
           }
+          case 'project_status_updated': {
+            const { project_id, project_slug, updater_id, old_status, new_status } = notification.context_data;
+            const [projRes, updaterRes] = await Promise.all([
+                supabaseAdmin.from('projects').select('name').eq('id', project_id).single(),
+                supabaseAdmin.from('profiles').select('first_name, last_name, email').eq('id', updater_id).single(),
+            ]);
+            if (projRes.error || updaterRes.error) throw new Error("Failed to fetch project status update context.");
+            
+            const updaterName = `${updaterRes.data.first_name || ''} ${updaterRes.data.last_name || ''}`.trim() || updaterRes.data.email;
+            
+            userPrompt = `**Konteks:**\n- **Jenis:** Pembaruan Status Proyek\n- **Pengubah Status:** ${updaterName}\n- **Penerima:** ${recipientName}\n- **Proyek:** ${projRes.data.name}\n- **Status Lama:** ${old_status}\n- **Status Baru:** ${new_status}\n- **URL:** https://7inked.ahensi.xyz/projects/${project_slug}\n\nBuat pesan notifikasi yang sesuai dan sertakan URL di akhir. Beri tahu penerima tentang pembaruan status proyek.`;
+            break;
+          }
           case 'goal_invite': {
             const { goal_id, inviter_id } = notification.context_data;
             const [goalRes, inviterRes] = await Promise.all([
