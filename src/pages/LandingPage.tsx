@@ -2,8 +2,36 @@ import { useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from "@/components/ui/button";
-import { Package, BarChart, Users, ListChecks, ArrowRight, BrainCircuit } from 'lucide-react';
+import { BarChart, Users, ListChecks, ArrowRight, BrainCircuit } from 'lucide-react';
 import LoadingSpinner from '@/components/LoadingSpinner';
+
+const DashboardPreview = () => (
+  <div className="relative mt-12 lg:mt-16">
+    <div className="absolute -bottom-8 left-0 right-0 h-48 bg-gradient-to-t from-background to-transparent z-10"></div>
+    <div className="bg-muted/50 p-2 sm:p-4 rounded-xl shadow-2xl ring-1 ring-black/5 backdrop-blur-sm">
+      <div className="bg-background/80 p-2 rounded-lg">
+        <div className="flex items-center justify-between px-2 py-1 border-b">
+          <div className="flex items-center gap-1.5">
+            <div className="w-2.5 h-2.5 rounded-full bg-red-500"></div>
+            <div className="w-2.5 h-2.5 rounded-full bg-yellow-500"></div>
+            <div className="w-2.5 h-2.5 rounded-full bg-green-500"></div>
+          </div>
+          <div className="w-1/2 h-4 bg-muted rounded-md"></div>
+        </div>
+        <div className="p-2 sm:p-4 grid grid-cols-3 gap-2 sm:gap-4">
+          <div className="col-span-1 space-y-2 sm:space-y-4">
+            <div className="h-16 sm:h-20 bg-muted rounded-lg"></div>
+            <div className="h-24 sm:h-32 bg-muted rounded-lg"></div>
+          </div>
+          <div className="col-span-2 space-y-2 sm:space-y-4">
+            <div className="h-24 sm:h-32 bg-muted rounded-lg"></div>
+            <div className="h-16 sm:h-20 bg-muted rounded-lg"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+);
 
 const LandingPage = () => {
   const { session, isLoading } = useAuth();
@@ -46,8 +74,8 @@ const LandingPage = () => {
     <div className="flex flex-col min-h-screen bg-background">
       <header className="container mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2">
-          <Package className="h-7 w-7 text-primary" />
-          <span className="text-xl font-bold">Client Portal</span>
+          <img src="https://quuecudndfztjlxbrvyb.supabase.co/storage/v1/object/public/General/logo.png" alt="7i Portal Logo" className="h-8 w-8" />
+          <span className="text-xl font-bold">7i Portal</span>
         </Link>
         <Button asChild>
           <Link to="/login">Access Portal</Link>
@@ -56,7 +84,8 @@ const LandingPage = () => {
 
       <main className="flex-grow">
         {/* Hero Section */}
-        <section className="py-20 md:py-32">
+        <section className="relative py-20 md:py-24 overflow-hidden">
+          <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(120,119,198,0.3),rgba(255,255,255,0))]"></div>
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <h1 className="text-4xl md:text-6xl font-extrabold tracking-tighter mb-6">
               Your Projects, Simplified.
@@ -69,6 +98,7 @@ const LandingPage = () => {
                 Get Started <ArrowRight className="ml-2 h-5 w-5" />
               </Link>
             </Button>
+            <DashboardPreview />
           </div>
         </section>
 
@@ -97,8 +127,8 @@ const LandingPage = () => {
       <footer className="bg-background border-t">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col sm:flex-row items-center justify-between">
           <div className="flex items-center gap-2">
-            <Package className="h-6 w-6" />
-            <span className="text-md font-semibold">Client Portal © {new Date().getFullYear()}</span>
+            <img src="https://quuecudndfztjlxbrvyb.supabase.co/storage/v1/object/public/General/logo.png" alt="7i Portal Logo" className="h-6 w-6" />
+            <span className="text-md font-semibold">7i Portal © {new Date().getFullYear()}</span>
           </div>
           <div className="flex gap-4 mt-4 sm:mt-0">
             <Link to="/terms-of-service" className="text-sm text-muted-foreground hover:text-primary">
