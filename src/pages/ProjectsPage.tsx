@@ -63,7 +63,7 @@ const ProjectsPage = () => {
 
   const [isTaskFormOpen, setIsTaskFormOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
-  const { upsertTask, isUpserting, deleteTask, toggleTaskCompletion, isToggling } = useTaskMutations();
+  const { upsertTask, deleteTask, toggleTaskCompletion, isUpserting, toggleTaskReaction } = useTaskMutations();
 
   const {
     dateRange, setDateRange,
@@ -326,6 +326,7 @@ const ProjectsPage = () => {
         onSubmit={handleTaskFormSubmit}
         isSubmitting={isUpserting}
         task={editingTask}
+        project={null}
       />
 
       <GoogleCalendarImportDialog
@@ -379,7 +380,7 @@ const ProjectsPage = () => {
               isLoading={isLoading}
               isTasksLoading={tasksLoading}
               onDeleteProject={handleDeleteProject}
-              sortConfig={sortConfig}
+              sortConfig={projectSortConfig}
               requestSort={requestProjectSort}
               rowRefs={rowRefs}
               kanbanGroupBy={kanbanGroupBy}
@@ -390,6 +391,7 @@ const ProjectsPage = () => {
               taskSortConfig={taskSortConfig}
               requestTaskSort={requestTaskSort}
               onTaskStatusChange={handleTaskStatusChange}
+              onToggleTaskReaction={toggleTaskReaction}
             />
           </div>
         </div>

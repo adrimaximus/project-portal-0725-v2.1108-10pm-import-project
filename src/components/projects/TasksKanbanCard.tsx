@@ -6,7 +6,7 @@ import { generatePastelColor, getPriorityStyles, isOverdue, cn, getAvatarUrl, ge
 import { Link } from 'react-router-dom';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { CheckCircle, Ticket, MoreHorizontal, Edit, Trash2, Paperclip } from 'lucide-react';
+import { CheckCircle, Ticket, MoreHorizontal, Edit, Trash2, Paperclip, SmilePlus } from 'lucide-react';
 import { format } from 'date-fns';
 import { Button } from '../ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
@@ -14,15 +14,21 @@ import TaskAttachmentList from './TaskAttachmentList';
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import MessageReactions from '../MessageReactions';
+import EmojiReactionPicker from '../EmojiReactionPicker';
+import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
+import { useState } from 'react';
 
 interface TasksKanbanCardProps {
   task: Task;
   onEdit: (task: Task) => void;
   onDelete: (taskId: string) => void;
+  onToggleTaskReaction: (variables: { taskId: string, emoji: string }) => void;
 }
 
-const TasksKanbanCard = ({ task, onEdit, onDelete }: TasksKanbanCardProps) => {
+const TasksKanbanCard = ({ task, onEdit, onDelete, onToggleTaskReaction }: TasksKanbanCardProps) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id });
+  const [popoverOpen, setPopoverOpen] = useState(false);
 
   const priorityStyle = getPriorityStyles(task.priority);
 
@@ -35,6 +41,11 @@ const TasksKanbanCard = ({ task, onEdit, onDelete }: TasksKanbanCardProps) => {
 
   const handleDropdownClick = (e: React.MouseEvent) => {
     e.stopPropagation();
+  };
+
+  const handleReactionSelect = (emoji: string) => {
+    onToggleTaskReaction({ taskId: task.id, emoji });
+    setPopoverOpen(false);
   };
 
   const renderAttachments = () => {
@@ -84,7 +95,7 @@ const TasksKanbanCard = ({ task, onEdit, onDelete }: TasksKanbanCardProps) => {
       style={style} 
       {...attributes} 
       {...listeners}
-      className="mb-4 bg-card border-l-4 cursor-grab active:cursor-grabbing"
+      className="mb-4 bg-card border-l-4 cursor-grab active:cursor-grabbing group"
     >
       <CardHeader className="p-3">
         <div className="flex justify-between items-start">
@@ -132,6 +143,9 @@ const TasksKanbanCard = ({ task, onEdit, onDelete }: TasksKanbanCardProps) => {
             </p>
           )}
         </div>
+        <div className="mt-2">
+          <MessageReactions reactions={task.reactions || []} onToggleReaction={(emoji) => onToggleTaskReaction({ taskId: task.id, emoji })} />
+        </div>
         <div className="flex items-center justify-between mt-2">
           <div className="flex items-center -space-x-2">
             {(task.assignedTo && task.assignedTo.length > 0)
@@ -159,6 +173,16 @@ const TasksKanbanCard = ({ task, onEdit, onDelete }: TasksKanbanCardProps) => {
             }
           </div>
           <div className="flex items-center gap-2">
+            <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+              <PopoverTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full opacity-50 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                  <SmilePlus className="h-4 w-4" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0 border-none" onClick={(e) => e.stopPropagation()}>
+                <EmojiReactionPicker onSelect={handleReactionSelect} />
+              </PopoverContent>
+            </Popover>
             {renderAttachments()}
             {task.due_date && (
               <div className={cn("text-xs text-muted-foreground", isOverdue(task.due_date) && "text-red-600 font-bold")}>
