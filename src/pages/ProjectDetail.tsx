@@ -25,6 +25,7 @@ import { Project, Task } from "@/types";
 import TaskFormDialog from "@/components/projects/TaskFormDialog";
 import { useTaskMutations, UpsertTaskPayload } from "@/hooks/useTaskMutations";
 import { useTasks } from "@/hooks/useTasks";
+import { useQueryClient } from "@tanstack/react-query";
 
 const ProjectDetailSkeleton = () => (
   <PortalLayout>
@@ -65,6 +66,7 @@ const ProjectDetail = () => {
   });
   const mutations = useProjectMutations(slug!);
   const { upsertTask, deleteTask, toggleTaskCompletion, isUpserting } = useTaskMutations();
+  const queryClient = useQueryClient();
 
   const defaultTab = searchParams.get('tab') || 'overview';
 
@@ -163,6 +165,10 @@ const ProjectDetail = () => {
     toggleTaskCompletion({ task, completed });
   };
 
+  const handleTasksUpdate = () => {
+    queryClient.invalidateQueries({ queryKey: ['project', slug] });
+  };
+
   if (authLoading || isLoading || isLoadingTasks || !project || !editedProject) {
     return <ProjectDetailSkeleton />;
   }
@@ -200,6 +206,7 @@ const ProjectDetail = () => {
                 onEditTask={handleEditTask}
                 onDeleteTask={handleDeleteTask}
                 onToggleTaskCompletion={handleToggleTaskCompletion}
+                onTasksUpdate={handleTasksUpdate}
               />
             </div>
           </div>
