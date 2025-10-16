@@ -378,4 +378,4 @@ const ProjectsPage = () => {
   );
 };
 
-export default Index;
+export default ProjectsPage;
