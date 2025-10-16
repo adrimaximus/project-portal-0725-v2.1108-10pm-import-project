@@ -61,7 +61,8 @@ const GroupSettingsDialog = ({ open, onOpenChange, conversation, onUpdate }: Gro
     let newAvatarUrl: string | null = conversation.userAvatar || null;
 
     if (avatarFile) {
-      const filePath = `group-avatars/${conversation.id}/${Date.now()}-${avatarFile.name}`;
+      const sanitizedFileName = avatarFile.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
+      const filePath = `group-avatars/${conversation.id}/${Date.now()}-${sanitizedFileName}`;
       const { error: uploadError } = await supabase.storage.from('chat-attachments').upload(filePath, avatarFile);
       if (uploadError) {
         toast.error("Failed to upload group image.");
