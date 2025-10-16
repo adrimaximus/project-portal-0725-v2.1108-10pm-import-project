@@ -48,7 +48,7 @@ export function ClientSelector({ people, companies, selectedClient, onSelectClie
   const selectedAvatar = selectedClient 
     ? (selectedClient.type === 'person' 
         ? (selectedClient.data as Person).avatar_url 
-        : (selectedClient.data as Company).logo_url || (selectedClient.data as Company).custom_properties?.image_logo) 
+        : (selectedClient.data as Company).logo_url || (selectedClient.data as Company).custom_properties?.logo_image) 
     : '';
   const selectedInitials = selectedClient ? (selectedClient.type === 'person' ? getInitials((selectedClient.data as Person).full_name) : getInitials(selectedClient.data.name)) : '';
 
@@ -104,7 +104,7 @@ export function ClientSelector({ people, companies, selectedClient, onSelectClie
                     />
                      <div className="flex items-center gap-2">
                         <Avatar className="h-6 w-6">
-                          <AvatarImage src={company.logo_url || company.custom_properties?.image_logo || ''} alt={company.name} />
+                          <AvatarImage src={company.logo_url || company.custom_properties?.logo_image || ''} alt={company.name} />
                           <AvatarFallback><Building className="h-4 w-4" /></AvatarFallback>
                         </Avatar>
                         <span>{company.name}</span>
