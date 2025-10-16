@@ -42,7 +42,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
   }
 
   return (
-    <DialogContent className="sm:max-w-[350px] max-h-[200px] overflow-y-auto">
+    <DialogContent className="sm:max-w-[650px] max-h-[350px] overflow-y-auto">
       <DialogHeader>
         <DialogTitle className="flex items-center gap-2">
           {task.originTicketId && <Ticket className={`h-5 w-5 flex-shrink-0 ${task.completed ? 'text-green-500' : 'text-red-500'}`} />}
