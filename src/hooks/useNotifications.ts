@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Notification } from '@/types';
 import { toast } from 'sonner';
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 
 const NOTIFICATIONS_PER_PAGE = 20;
 const TONE_BASE_URL = `https://quuecudndfztjlxbrvyb.supabase.co/storage/v1/object/public/General/Notification/`;
@@ -32,19 +32,6 @@ const fetchNotifications = async (pageParam: number = 0): Promise<Notification[]
     }
   }));
 };
-
-// A simple lock to prevent multiple sounds from playing at once.
-let isSoundPlaying = false;
-const audio = new Audio();
-audio.onended = () => {
-  console.log('[Dyad Debug] Audio finished, releasing lock.');
-  isSoundPlaying = false;
-};
-audio.onerror = (e) => {
-  console.error("[Dyad Debug] Audio playback error, releasing lock:", e);
-  isSoundPlaying = false; // Release lock on error
-};
-
 
 export const useNotifications = () => {
   const { user } = useAuth();
@@ -82,8 +69,6 @@ export const useNotifications = () => {
           filter: `user_id=eq.${user.id}`,
         },
         async (payload) => {
-          console.log('[Dyad Debug] Notification received:', payload);
-          
           const { data: profileData, error: profileError } = await supabase
             .from('profiles')
             .select('notification_preferences')
@@ -91,25 +76,21 @@ export const useNotifications = () => {
             .single();
 
           if (profileError) {
-            console.error('[Dyad Debug] Could not fetch latest profile for notification sound.', profileError);
+            console.error('Could not fetch latest profile for notification sound.', profileError);
             queryClient.invalidateQueries({ queryKey: ['notifications', user.id] });
             return;
           }
           
           const userPreferences = profileData.notification_preferences || {};
-          console.log('[Dyad Debug] User Preferences:', userPreferences);
 
           const newNotificationId = payload.new.notification_id;
-          const { data: notificationData } = await supabase.from('notifications').select('title, body, type, resource_id').eq('id', newNotificationId).single();
+          const { data: notificationData } = await supabase.from('notifications').select('title, body, type').eq('id', newNotificationId).single();
           
           if (notificationData) {
-            console.log('[Dyad Debug] Fetched notification details:', notificationData);
-
             const toastsEnabled = userPreferences.toast_enabled !== false;
             let canShowToast = toastsEnabled;
             if (notificationData.type === 'comment' && window.location.pathname.startsWith('/chat')) {
               canShowToast = false;
-              console.log('[Dyad Debug] Suppressing chat toast because user is on chat page.');
             }
 
             if (canShowToast) {
@@ -120,29 +101,19 @@ export const useNotifications = () => {
 
             const isNotificationTypeEnabled = userPreferences?.[notificationData.type] !== false;
             const tone = userPreferences?.tone;
-            console.log(`[Dyad Debug] isNotificationTypeEnabled for '${notificationData.type}': ${isNotificationTypeEnabled}`);
-            console.log(`[Dyad Debug] Tone selected: ${tone}`);
 
             if (isNotificationTypeEnabled && tone && tone !== 'none') {
-              console.log(`[Dyad Debug] isSoundPlaying lock: ${isSoundPlaying}`);
-              if (!isSoundPlaying) {
-                isSoundPlaying = true;
-                const audioUrl = `${TONE_BASE_URL}${tone}?t=${new Date().getTime()}`;
-                console.log(`[Dyad Debug] Attempting to play sound: ${audioUrl}`);
-                audio.src = audioUrl;
-                audio.load();
-                audio.play().catch(e => {
-                  console.error("[Dyad Debug] Error playing notification sound:", e);
-                  isSoundPlaying = false;
-                  if (e.name === 'NotAllowedError') {
-                    toast.error("Could not play notification sound.", {
-                      description: "Browser security may have blocked it. Please click anywhere on the page to enable sound for notifications.",
-                      duration: 10000,
-                    });
-                  }
-                });
-              } else {
-                console.log('[Dyad Debug] Sound playback skipped, another sound is already playing.');
+              try {
+                const audio = new Audio(`${TONE_BASE_URL}${tone}`);
+                await audio.play();
+              } catch (e) {
+                console.error("Error playing notification sound:", e);
+                if ((e as Error).name === 'NotAllowedError') {
+                  toast.error("Could not play notification sound.", {
+                    description: "Browser security may have blocked it. Please click anywhere on the page to enable sound for notifications.",
+                    duration: 10000,
+                  });
+                }
               }
             }
           }
