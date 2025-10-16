@@ -100,30 +100,10 @@ export const useTaskMutations = (refetch?: () => void) => {
 
       if (orderError) throw orderError;
     },
-    onMutate: async ({ taskId, newStatus, orderedTaskIds }) => {
+    onMutate: async ({ newTasks }: { newTasks: Task[] }) => {
       await queryClient.cancelQueries({ queryKey: ['tasks'] });
       const previousTasks = queryClient.getQueryData<Task[]>(['tasks']);
-
-      queryClient.setQueryData<Task[]>(['tasks'], (oldTasks) => {
-        if (!oldTasks) return [];
-        
-        const newTasks = [...oldTasks];
-        const movedTaskIndex = newTasks.findIndex(t => t.id === taskId);
-        if (movedTaskIndex === -1) return oldTasks;
-
-        newTasks[movedTaskIndex] = { ...newTasks[movedTaskIndex], status: newStatus, completed: newStatus === 'Done' };
-
-        const reorderedTasks = orderedTaskIds.map(id => {
-          const task = newTasks.find(t => t.id === id);
-          if (task) {
-            return { ...task, kanban_order: orderedTaskIds.indexOf(id) };
-          }
-          return null;
-        }).filter(Boolean) as Task[];
-
-        return reorderedTasks;
-      });
-
+      queryClient.setQueryData<Task[]>(['tasks'], newTasks);
       return { previousTasks };
     },
     onError: (err: any, variables, context) => {

@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState } from 'react';
 import { Task, TaskStatus, TASK_STATUS_OPTIONS } from '@/types';
 import TasksKanbanColumn from './TasksKanbanColumn';
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, MouseSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core';
@@ -89,19 +89,18 @@ const TasksKanbanView = ({ tasks, onEdit, onDelete, refetch }: TasksKanbanViewPr
 
     if (!activeContainer || !overContainer) return;
 
-    const currentTasks = [...tasks];
-    const activeIndex = currentTasks.findIndex(t => t.id === activeId);
+    const activeIndex = tasks.findIndex(t => t.id === activeId);
     if (activeIndex === -1) return;
 
     let newTasks: Task[];
 
     if (activeContainer === overContainer) {
-      const overIndex = currentTasks.findIndex(t => t.id === overId);
+      const overIndex = tasks.findIndex(t => t.id === overId);
       if (overIndex === -1) return;
-      newTasks = arrayMove(currentTasks, activeIndex, overIndex);
+      newTasks = arrayMove(tasks, activeIndex, overIndex);
     } else {
-      const movedItem = { ...currentTasks[activeIndex], status: overContainer };
-      const remainingItems = currentTasks.filter(t => t.id !== activeId);
+      const movedItem = { ...tasks[activeIndex], status: overContainer, completed: overContainer === 'Done' };
+      const remainingItems = tasks.filter(t => t.id !== activeId);
       
       const overIndex = overIsItem ? remainingItems.findIndex(t => t.id === overId) : -1;
       
@@ -125,7 +124,8 @@ const TasksKanbanView = ({ tasks, onEdit, onDelete, refetch }: TasksKanbanViewPr
     updateTaskStatusAndOrder({ 
         taskId: activeId, 
         newStatus: overContainer, 
-        orderedTaskIds: orderedTaskIds 
+        orderedTaskIds: orderedTaskIds,
+        newTasks: newTasks,
     });
   };
 
