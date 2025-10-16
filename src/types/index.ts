@@ -276,6 +276,7 @@ export interface CompanyProperty {
 }
 
 export interface Reaction {
+  id: string;
   emoji: string;
   user_id: string;
   user_name: string;
