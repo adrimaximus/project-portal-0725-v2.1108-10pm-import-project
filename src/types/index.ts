@@ -405,3 +405,12 @@ export interface Message {
   is_deleted?: boolean;
   is_forwarded?: boolean;
 }
+
+export interface Service {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  icon_color: string;
+  is_featured: boolean;
+}

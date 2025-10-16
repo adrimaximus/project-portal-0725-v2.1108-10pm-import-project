@@ -7,15 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import Icon from "@/components/Icon";
 import { Skeleton } from "@/components/ui/skeleton";
-
-export interface Service {
-  id: string;
-  title: string;
-  description: string;
-  icon: string;
-  icon_color: string;
-  is_featured: boolean;
-}
+import { Service } from "@/types";
 
 interface ServiceSelectionProps {
   searchTerm: string;

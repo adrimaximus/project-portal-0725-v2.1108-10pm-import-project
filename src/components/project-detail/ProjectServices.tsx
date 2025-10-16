@@ -2,10 +2,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { services as allServices, Service } from "@/data/services";
 import { cn } from "@/lib/utils";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { useState } from "react";
+import { useServices } from "@/hooks/useServices";
+import { Service } from "@/types";
+import Icon from "@/components/Icon";
 
 interface ProjectServicesProps {
   selectedServices: string[];
@@ -15,6 +17,7 @@ interface ProjectServicesProps {
 
 const ProjectServices = ({ selectedServices = [], isEditing, onServicesChange }: ProjectServicesProps) => {
   const [open, setOpen] = useState(false);
+  const { data: allServices = [], isLoading } = useServices();
 
   const serviceDetails = selectedServices
     .map((serviceName) => allServices.find((s) => s.title === serviceName))
@@ -38,10 +41,10 @@ const ProjectServices = ({ selectedServices = [], isEditing, onServicesChange }:
             variant="secondary"
             className="flex items-center gap-2"
           >
-            <service.icon className={cn("h-4 w-4", service.iconColor)} />
+            <Icon name={service.icon as any} className={cn("h-4 w-4", service.icon_color)} />
             <span>{service.title}</span>
           </Badge>
-        )) : <p>No services selected.</p>}
+        )) : <p className="text-sm text-muted-foreground">No services selected.</p>}
       </div>
     );
   }
@@ -54,9 +57,10 @@ const ProjectServices = ({ selectedServices = [], isEditing, onServicesChange }:
           role="combobox"
           aria-expanded={open}
           className="w-full justify-between"
+          disabled={isLoading}
         >
           <span className="truncate">
-            {selectedServices.length > 0 ? `${selectedServices.length} service(s) selected` : "Select services..."}
+            {isLoading ? "Loading services..." : selectedServices.length > 0 ? `${selectedServices.length} service(s) selected` : "Select services..."}
           </span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
@@ -80,7 +84,7 @@ const ProjectServices = ({ selectedServices = [], isEditing, onServicesChange }:
                       selectedServices.includes(service.title) ? "opacity-100" : "opacity-0"
                     )}
                   />
-                  <service.icon className={cn("mr-2 h-4 w-4", service.iconColor)} />
+                  <Icon name={service.icon as any} className={cn("mr-2 h-4 w-4", service.icon_color)} />
                   {service.title}
                 </CommandItem>
               ))}
