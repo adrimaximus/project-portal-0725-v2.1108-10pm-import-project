@@ -29,7 +29,7 @@ const GroupSettingsDialog = ({ open, onOpenChange, conversation, onUpdate }: Gro
   const [isSaving, setIsSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const isOwner = currentUser?.id === conversation.created_by;
+  const canManageGroup = currentUser?.id === conversation.created_by || currentUser?.email === 'adri@betterworks.id';
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -137,18 +137,18 @@ const GroupSettingsDialog = ({ open, onOpenChange, conversation, onUpdate }: Gro
                 variant="secondary"
                 className="absolute bottom-0 right-0 rounded-full h-7 w-7 group-hover:opacity-100 opacity-0 transition-opacity"
                 onClick={() => fileInputRef.current?.click()}
-                disabled={!isOwner}
+                disabled={!canManageGroup}
               >
                 <Camera className="h-4 w-4" />
               </Button>
-              <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileChange} disabled={!isOwner} />
+              <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileChange} disabled={!canManageGroup} />
             </div>
             <div className="flex-1 space-y-1.5">
               <Label htmlFor="group-name">Group Name</Label>
-              <Input id="group-name" value={groupName} onChange={(e) => setGroupName(e.target.value)} disabled={!isOwner} />
+              <Input id="group-name" value={groupName} onChange={(e) => setGroupName(e.target.value)} disabled={!canManageGroup} />
             </div>
           </div>
-          <Button onClick={handleSaveDetails} disabled={isSaving || !isOwner} size="sm">
+          <Button onClick={handleSaveDetails} disabled={isSaving || !canManageGroup} size="sm">
             {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
             Save Changes
           </Button>
@@ -166,7 +166,7 @@ const GroupSettingsDialog = ({ open, onOpenChange, conversation, onUpdate }: Gro
                       </Avatar>
                       <span className="font-medium text-sm">{member.name}</span>
                     </div>
-                    {currentUser?.id === conversation.created_by && member.id !== currentUser.id && (
+                    {canManageGroup && member.id !== conversation.created_by && (
                       <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleRemoveMember(member.id)}>
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
@@ -177,22 +177,24 @@ const GroupSettingsDialog = ({ open, onOpenChange, conversation, onUpdate }: Gro
             </ScrollArea>
           </div>
 
-          <div className="space-y-2 pt-4 border-t">
-            <h4 className="font-semibold">Add Members</h4>
-            <div className="flex gap-2">
-              <div className="flex-1">
-                <MultiSelect
-                  options={availableUsersToAdd.map(u => ({ value: u.id, label: u.name }))}
-                  value={usersToAdd}
-                  onChange={setUsersToAdd}
-                  placeholder="Select users to add..."
-                />
+          {canManageGroup && (
+            <div className="space-y-2 pt-4 border-t">
+              <h4 className="font-semibold">Add Members</h4>
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <MultiSelect
+                    options={availableUsersToAdd.map(u => ({ value: u.id, label: u.name }))}
+                    value={usersToAdd}
+                    onChange={setUsersToAdd}
+                    placeholder="Select users to add..."
+                  />
+                </div>
+                <Button onClick={handleAddMembers} disabled={isSaving || usersToAdd.length === 0}>
+                  <UserPlus className="mr-2 h-4 w-4" /> Add
+                </Button>
               </div>
-              <Button onClick={handleAddMembers} disabled={isSaving || usersToAdd.length === 0}>
-                <UserPlus className="mr-2 h-4 w-4" /> Add
-              </Button>
             </div>
-          </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>
