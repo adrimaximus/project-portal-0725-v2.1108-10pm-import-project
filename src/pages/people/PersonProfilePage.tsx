@@ -299,7 +299,7 @@ const PersonProfilePage = () => {
               <CardContent className="space-y-4 text-sm">
                 <div className="flex items-start gap-4">
                   {companyLogoUrl ? (
-                    <img src={companyLogoUrl} alt={`${person.company || ''} logo`} className="h-10 w-10 object-contain rounded-md flex-shrink-0" />
+                    <img src={companyLogoUrl} alt={`${person.company || ''} logo`} className="h-10 w-10 object-contain rounded-md bg-muted p-1" />
                   ) : (
                     <Briefcase className="h-5 w-5 text-muted-foreground mt-1 flex-shrink-0" />
                   )}

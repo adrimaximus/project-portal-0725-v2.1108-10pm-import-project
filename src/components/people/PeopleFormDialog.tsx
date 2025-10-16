@@ -8,11 +8,12 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { ContactProperty, Person } from '@/types';
 import { getErrorMessage } from '@/lib/utils';
+import AddressAutocompleteInput from '../AddressAutocompleteInput';
 
 interface PeopleFormDialogProps {
   open: boolean;
@@ -41,6 +42,7 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
     job_title: z.string().optional(),
     avatar_url: z.string().url().optional().or(z.literal('')),
     notes: z.string().optional(),
+    address: z.string().optional(),
   });
 
   const [dynamicSchema, setDynamicSchema] = React.useState<z.AnyZodObject>(baseSchema);
@@ -65,7 +67,7 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
     }
   }, [properties, baseSchema]);
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm({
+  const { register, handleSubmit, reset, formState: { errors }, control } = useForm({
     resolver: zodResolver(dynamicSchema),
   });
 
@@ -76,14 +78,14 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
         reset({ ...personData, ...custom_properties });
       } else {
         const defaultValues = properties.reduce((acc, prop) => ({ ...acc, [prop.name]: '' }), {});
-        reset({ full_name: '', email: '', phone: '', company: '', job_title: '', avatar_url: '', notes: '', ...defaultValues });
+        reset({ full_name: '', email: '', phone: '', company: '', job_title: '', avatar_url: '', notes: '', address: '', ...defaultValues });
       }
     }
   }, [person, open, reset, properties]);
 
   const mutation = useMutation({
     mutationFn: async (values: any) => {
-      const standardFields = ['full_name', 'email', 'phone', 'company', 'job_title', 'avatar_url', 'notes'];
+      const standardFields = ['full_name', 'email', 'phone', 'company', 'job_title', 'avatar_url', 'notes', 'address'];
       const personData: Partial<Person> = {};
       const custom_properties: Record<string, any> = {};
 
@@ -163,6 +165,19 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
           <div className="px-6">
             <Label htmlFor="job_title">Job Title</Label>
             <Input id="job_title" {...register('job_title')} />
+          </div>
+          <div className="px-6">
+            <Label htmlFor="address">Address</Label>
+            <Controller
+              name="address"
+              control={control}
+              render={({ field }) => (
+                <AddressAutocompleteInput
+                  value={field.value || ''}
+                  onChange={field.onChange}
+                />
+              )}
+            />
           </div>
           <div className="px-6">
             <Label htmlFor="avatar_url">Avatar URL</Label>

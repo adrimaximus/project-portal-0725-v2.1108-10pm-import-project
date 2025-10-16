@@ -11,8 +11,9 @@ import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { Company, CompanyProperty } from '@/types';
 import { ScrollArea } from '../ui/scroll-area';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Building } from "lucide-react";
 import ImageUploader from '../ui/ImageUploader';
+import AddressAutocompleteInput from '../AddressAutocompleteInput';
 
 interface CompanyFormDialogProps {
     open: boolean;
@@ -159,7 +160,7 @@ const CompanyFormDialog: React.FC<CompanyFormDialogProps> = ({ open, onOpenChang
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>Address</FormLabel>
-                                            <FormControl><Input placeholder="123 Main St, Anytown, USA" {...field} value={field.value ?? ''} /></FormControl>
+                                            <FormControl><AddressAutocompleteInput value={field.value || ''} onChange={field.onChange} /></FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     )}

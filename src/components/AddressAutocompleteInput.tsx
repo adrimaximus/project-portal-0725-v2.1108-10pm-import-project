@@ -1,10 +1,11 @@
-import React, { useEffect, useRef, useState } from "react";
-import { Input } from "@/components/ui/input";
+import React, { useRef, useEffect, useState } from 'react';
+import { Input } from '@/components/ui/input';
 import { useJsApiLoader } from "@react-google-maps/api";
 import { MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { Command, CommandGroup, CommandItem, CommandList } from "@/components/ui/command";
 import { Skeleton } from "./ui/skeleton";
+import { supabase } from '@/integrations/supabase/client';
 
 const libraries: ("places")[] = ["places"];
 
@@ -16,12 +17,36 @@ interface Props {
 }
 
 const AddressAutocompleteInput: React.FC<Props> = ({ value = "", onChange, disabled, className }) => {
-  const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string;
+  const [googleMapsApiKey, setGoogleMapsApiKey] = useState<string | null>(null);
+  const [keyLoading, setKeyLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchKey = async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke('get-google-maps-key');
+        if (error) throw error;
+        if (data.apiKey) {
+          setGoogleMapsApiKey(data.apiKey);
+        } else {
+          throw new Error("API key not returned from function.");
+        }
+      } catch (error: any) {
+        console.error("Failed to fetch Google Maps API key:", error.message);
+        toast.error("Could not load map service.", { description: "API key configuration is missing." });
+      } finally {
+        setKeyLoading(false);
+      }
+    };
+    fetchKey();
+  }, []);
 
   const { isLoaded, loadError } = useJsApiLoader({
-    googleMapsApiKey,
+    googleMapsApiKey: googleMapsApiKey || '',
     libraries,
     preventGoogleFontsLoading: true,
+    id: 'google-maps-script',
+    // Only load if we have a key
+    googleMapsClientId: googleMapsApiKey ? undefined : 'dummy-id-to-prevent-loading',
   });
 
   const [service, setService] = useState<google.maps.places.AutocompleteService | null>(null);
@@ -30,13 +55,6 @@ const AddressAutocompleteInput: React.FC<Props> = ({ value = "", onChange, disab
   const [inputValue, setInputValue] = useState("");
   const [showPredictions, setShowPredictions] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (isLoaded && !service) {
-      setService(new window.google.maps.places.AutocompleteService());
-      setPlacesService(new window.google.maps.places.PlacesService(document.createElement("div")));
-    }
-  }, [isLoaded, service]);
 
   useEffect(() => {
     if (value) {
@@ -51,6 +69,13 @@ const AddressAutocompleteInput: React.FC<Props> = ({ value = "", onChange, disab
       setInputValue("");
     }
   }, [value]);
+
+  useEffect(() => {
+    if (isLoaded && !service) {
+      setService(new window.google.maps.places.AutocompleteService());
+      setPlacesService(new window.google.maps.places.PlacesService(document.createElement("div")));
+    }
+  }, [isLoaded, service]);
 
   const fetchPredictions = (query: string) => {
     if (service && query.length > 2) {
@@ -121,6 +146,10 @@ const AddressAutocompleteInput: React.FC<Props> = ({ value = "", onChange, disab
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  if (keyLoading) {
+    return <Skeleton className={`h-10 w-full ${className}`} />;
+  }
 
   if (!googleMapsApiKey) {
     return <Input type="text" disabled value="Google Maps API Key is missing" className={className} />;
