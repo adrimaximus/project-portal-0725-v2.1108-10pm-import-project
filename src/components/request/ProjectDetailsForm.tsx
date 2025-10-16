@@ -88,7 +88,7 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
     };
 
     const fetchCompanies = async () => {
-      const { data, error } = await supabase.from('companies').select('*');
+      const { data, error } = await supabase.from('companies').select('id, name, logo_url, custom_properties');
       if (error) {
         toast.error("Failed to fetch companies.");
         console.error('Error fetching companies:', error);
