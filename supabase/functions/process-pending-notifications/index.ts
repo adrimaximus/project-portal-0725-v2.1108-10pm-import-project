@@ -144,6 +144,20 @@ serve(async (req) => {
             userPrompt = `**Konteks:**\n- **Jenis:** Penugasan Tugas\n- **Pemberi Tugas:** ${assignerName}\n- **Penerima:** ${recipientName}\n- **Proyek:** ${projRes.name}\n- **Tugas:** ${taskRes.data.title}\n- **URL:** https://7inked.ahensi.xyz/projects/${projRes.slug}?tab=tasks&task=${task_id}\n\nBuat pesan notifikasi yang sesuai dan sertakan URL di akhir.`;
             break;
           }
+          case 'task_completed': {
+            const { task_id, completer_id, project_id } = notification.context_data;
+            const [taskRes, completerRes, projRes] = await Promise.all([
+                supabaseAdmin.from('tasks').select('title').eq('id', task_id).single(),
+                supabaseAdmin.from('profiles').select('first_name, last_name, email').eq('id', completer_id).single(),
+                supabaseAdmin.from('projects').select('name, slug').eq('id', project_id).single(),
+            ]);
+            if (taskRes.error || completerRes.error || projRes.error) throw new Error("Failed to fetch task completion context.");
+            
+            const completerName = `${completerRes.data.first_name || ''} ${completerRes.data.last_name || ''}`.trim() || completerRes.data.email;
+            
+            userPrompt = `**Konteks:**\n- **Jenis:** Tugas Selesai\n- **Penyelesai Tugas:** ${completerName}\n- **Penerima:** ${recipientName}\n- **Proyek:** ${projRes.data.name}\n- **Tugas:** ${taskRes.data.title}\n- **URL:** https://7inked.ahensi.xyz/projects/${projRes.data.slug}?tab=tasks&task=${task_id}\n\nBuat pesan notifikasi yang sesuai dan sertakan URL di akhir. Beri tahu penerima bahwa tugas telah selesai.`;
+            break;
+          }
           case 'goal_invite': {
             const { goal_id, inviter_id } = notification.context_data;
             const [goalRes, inviterRes] = await Promise.all([
