@@ -24,7 +24,7 @@ interface ServiceSelectorProps {
 }
 
 export default function ServiceSelector({ selectedServices, onSelectServices }: ServiceSelectorProps) {
-  const [open, React.useState(false)
+  const [open, setOpen] = React.useState(false);
   const { data: allServices = [], isLoading } = useServices();
 
   const handleSelect = (serviceTitle: string) => {
