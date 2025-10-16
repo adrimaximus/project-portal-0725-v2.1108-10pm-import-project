@@ -15,13 +15,8 @@ interface TasksKanbanViewProps {
 
 const TasksKanbanView = ({ tasks, onEdit, onDelete, refetch }: TasksKanbanViewProps) => {
   const [collapsedColumns, setCollapsedColumns] = useState<Set<TaskStatus>>(new Set());
-  const [internalTasks, setInternalTasks] = useState<Task[]>(tasks);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const { updateTaskStatusAndOrder } = useTaskMutations(refetch);
-
-  useEffect(() => {
-    setInternalTasks(tasks);
-  }, [tasks]);
 
   const toggleColumnCollapse = (status: TaskStatus) => {
     setCollapsedColumns(prev => {
@@ -41,7 +36,7 @@ const TasksKanbanView = ({ tasks, onEdit, onDelete, refetch }: TasksKanbanViewPr
       return acc;
     }, {} as { [key in TaskStatus]: Task[] });
 
-    internalTasks.forEach(task => {
+    tasks.forEach(task => {
       const status = task.status || 'To do';
       if (grouped[status]) {
         grouped[status].push(task);
@@ -50,13 +45,12 @@ const TasksKanbanView = ({ tasks, onEdit, onDelete, refetch }: TasksKanbanViewPr
       }
     });
 
-    // Sort tasks in each column by their kanban_order
     for (const status in grouped) {
       grouped[status as TaskStatus].sort((a, b) => (a.kanban_order || 0) - (b.kanban_order || 0));
     }
 
     return grouped;
-  }, [internalTasks]);
+  }, [tasks]);
 
   const sensors = useSensors(
     useSensor(MouseSensor, {
@@ -74,7 +68,7 @@ const TasksKanbanView = ({ tasks, onEdit, onDelete, refetch }: TasksKanbanViewPr
 
   const handleDragStart = (event: DragStartEvent) => {
     const { active } = event;
-    const task = internalTasks.find(t => t.id === active.id);
+    const task = tasks.find(t => t.id === active.id);
     if (task) {
       setActiveTask(task);
     }
@@ -84,12 +78,10 @@ const TasksKanbanView = ({ tasks, onEdit, onDelete, refetch }: TasksKanbanViewPr
     setActiveTask(null);
     const { active, over } = event;
 
-    if (!over) return;
+    if (!over || active.id === over.id) return;
 
     const activeId = String(active.id);
     const overId = String(over.id);
-
-    if (activeId === overId) return;
 
     const activeContainer = active.data.current?.sortable.containerId as TaskStatus;
     const overIsItem = !!over.data.current?.sortable;
@@ -97,38 +89,43 @@ const TasksKanbanView = ({ tasks, onEdit, onDelete, refetch }: TasksKanbanViewPr
 
     if (!activeContainer || !overContainer) return;
 
-    // Create a mutable copy of the grouped tasks
-    const newGroups = { ...tasksByStatus };
-    const sourceItems = [...(newGroups[activeContainer] || [])];
-    const activeIndex = sourceItems.findIndex(t => t.id === activeId);
+    const currentTasks = [...tasks];
+    const activeIndex = currentTasks.findIndex(t => t.id === activeId);
     if (activeIndex === -1) return;
 
-    const [movedItem] = sourceItems.splice(activeIndex, 1);
-    newGroups[activeContainer] = sourceItems;
+    let newTasks: Task[];
 
     if (activeContainer === overContainer) {
-      const overIndex = sourceItems.findIndex(t => t.id === overId);
-      sourceItems.splice(overIndex, 0, movedItem);
+      const overIndex = currentTasks.findIndex(t => t.id === overId);
+      if (overIndex === -1) return;
+      newTasks = arrayMove(currentTasks, activeIndex, overIndex);
     } else {
-      movedItem.status = overContainer;
-      const destItems = [...(newGroups[overContainer] || [])];
-      const overIndex = overIsItem ? destItems.findIndex(t => t.id === overId) : destItems.length;
-      destItems.splice(overIndex, 0, movedItem);
-      newGroups[overContainer] = destItems;
+      const movedItem = { ...currentTasks[activeIndex], status: overContainer };
+      const remainingItems = currentTasks.filter(t => t.id !== activeId);
+      
+      const overIndex = overIsItem ? remainingItems.findIndex(t => t.id === overId) : -1;
+      
+      if (overIndex !== -1) {
+        remainingItems.splice(overIndex, 0, movedItem);
+      } else {
+        const itemsInDest = remainingItems.filter(t => t.status === overContainer);
+        if (itemsInDest.length > 0) {
+          const lastItem = itemsInDest.sort((a, b) => (a.kanban_order || 0) - (b.kanban_order || 0)).pop();
+          const lastItemIndex = remainingItems.findIndex(t => t.id === lastItem!.id);
+          remainingItems.splice(lastItemIndex + 1, 0, movedItem);
+        } else {
+          remainingItems.push(movedItem);
+        }
+      }
+      newTasks = remainingItems;
     }
 
-    // Flatten the new groups back into a single array for state and API
-    const newFlatTasks = TASK_STATUS_OPTIONS.flatMap(opt => newGroups[opt.value] || []);
-    
-    // Optimistic UI update
-    setInternalTasks(newFlatTasks);
+    const orderedTaskIds = newTasks.map(t => t.id);
 
-    // Call mutation
-    const finalTaskIds = newFlatTasks.map(t => t.id);
     updateTaskStatusAndOrder({ 
         taskId: activeId, 
         newStatus: overContainer, 
-        orderedTaskIds: finalTaskIds 
+        orderedTaskIds: orderedTaskIds 
     });
   };
 
