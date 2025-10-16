@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { generatePastelColor, getPriorityStyles, getTaskStatusStyles, isOverdue, cn, getAvatarUrl, getInitials, formatTaskText } from '@/lib/utils';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Edit, Trash2, Ticket, Paperclip, User as UserIcon, Calendar, Tag, Briefcase } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -43,7 +42,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
 
   return (
     <DialogContent className="sm:max-w-[650px] max-h-[350px] overflow-y-auto">
-      <DialogHeader>
+      <DialogHeader className="border-b pb-4">
         <div className="flex justify-between items-start gap-4">
           <div className="flex-1 min-w-0">
             <DialogTitle className="flex items-center gap-2">
@@ -59,37 +58,19 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
             </DialogDescription>
           </div>
           <div className="flex items-center gap-1 flex-shrink-0">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon" onClick={() => { onEdit(task); onClose(); }}>
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Edit Task</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" onClick={() => { onDelete(task.id); onClose(); }}>
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Delete Task</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <Button variant="ghost" size="icon" onClick={() => { onEdit(task); onClose(); }}>
+              <Edit className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" onClick={() => { onDelete(task.id); onClose(); }}>
+              <Trash2 className="h-4 w-4" />
+            </Button>
           </div>
         </div>
       </DialogHeader>
       
-      <div className="grid gap-4 py-4">
+      <div className="grid gap-4 pt-4">
         {task.description && (
-          <div>
+          <div className="border-b pb-4">
             <h4 className="font-semibold mb-2 text-sm">Description</h4>
             <div className="prose prose-sm dark:prose-invert max-w-none text-muted-foreground break-all">
               <ReactMarkdown remarkPlugins={[remarkGfm]}>
@@ -158,22 +139,12 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
                 <h4 className="font-semibold flex items-center gap-2 flex-shrink-0"><UserIcon className="h-4 w-4" /> Assignees</h4>
                 <div className="flex -space-x-2">
                   {task.assignedTo.map((user) => (
-                    <TooltipProvider key={user.id}>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Avatar className="h-8 w-8 border-2 border-background">
-                            <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
-                            <AvatarFallback style={generatePastelColor(user.id)}>
-                              {getInitials([user.first_name, user.last_name].filter(Boolean).join(' '), user.email || undefined)}
-                            </AvatarFallback>
-                          </Avatar>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>{[user.first_name, user.last_name].filter(Boolean).join(' ')}</p>
-                          <p className="text-xs text-muted-foreground">{user.email}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
+                    <Avatar key={user.id} className="h-8 w-8 border-2 border-background">
+                      <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
+                      <AvatarFallback style={generatePastelColor(user.id)}>
+                        {getInitials([user.first_name, user.last_name].filter(Boolean).join(' '), user.email || undefined)}
+                      </AvatarFallback>
+                    </Avatar>
                   ))}
                 </div>
               </div>
