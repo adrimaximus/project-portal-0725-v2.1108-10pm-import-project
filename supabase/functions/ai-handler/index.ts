@@ -60,6 +60,44 @@ const tools = [
   },
 ];
 
+async function createKbArticle({ title, content_html, supabaseAdmin, user }) {
+  try {
+    // Step 1: Ensure a default folder exists for the user and get its ID.
+    const { data: folderId, error: folderError } = await supabaseAdmin.rpc('create_default_kb_folder', { p_user_id: user.id });
+    if (folderError) throw new Error(`Failed to get default folder: ${folderError.message}`);
+
+    // Step 2: Call the correct RPC to create the article, passing the user ID.
+    // This RPC returns the new article's ID (UUID).
+    const { data: newArticleId, error: articleError } = await supabaseAdmin
+      .rpc('upsert_article_with_tags', {
+        p_id: null,
+        p_title: title,
+        p_content: { html: content_html },
+        p_folder_id: folderId,
+        p_tags: null,
+        p_custom_tags: null,
+        p_user_id: user.id, // Explicitly pass the user ID
+      });
+
+    if (articleError) throw new Error(`Failed to create article in DB: ${articleError.message}`);
+    if (!newArticleId) throw new Error('Article creation did not return an ID.');
+
+    // Step 3: Fetch the newly created article to get its slug.
+    const { data: articleDetails, error: fetchError } = await supabaseAdmin
+      .from('kb_articles')
+      .select('slug')
+      .eq('id', newArticleId)
+      .single();
+    
+    if (fetchError) throw new Error(`Failed to retrieve new article details: ${fetchError.message}`);
+    if (!articleDetails) throw new Error('Could not find the newly created article.');
+
+    return { success: true, id: newArticleId, slug: articleDetails.slug };
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -152,29 +190,3 @@ Deno.serve(async (req) => {
     });
   }
 });
-
-async function createKbArticle({ title, content_html, supabaseAdmin, user }) {
-  try {
-    const { data: folderId, error: folderError } = await supabaseAdmin.rpc('create_default_kb_folder', { p_user_id: user.id });
-    if (folderError) throw new Error(`Failed to get default folder: ${folderError.message}`);
-
-    const { data: newArticle, error: articleError } = await supabaseAdmin
-      .rpc('upsert_article_with_tags', {
-        p_id: null,
-        p_title: title,
-        p_content: { html: content_html },
-        p_folder_id: folderId,
-        p_header_image_url: null,
-        p_tags: null,
-        p_custom_tags: null,
-      })
-      .select('id, slug')
-      .single();
-
-    if (articleError) throw new Error(`Failed to create article in DB: ${articleError.message}`);
-    
-    return { success: true, id: newArticle.id, slug: newArticle.slug };
-  } catch (e) {
-    return { success: false, error: e.message };
-  }
-}
