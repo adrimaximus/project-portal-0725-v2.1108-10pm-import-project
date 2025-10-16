@@ -1,76 +1,28 @@
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '../integrations/supabase/client';
-import { Task } from '../types';
+import { supabase } from '@/integrations/supabase/client';
+import { Task } from '@/types';
 
-interface UseTasksOptions {
-  projectIds?: string[];
-  completed?: boolean;
-  limit?: number;
-  page?: number;
-  orderBy?: string;
-  orderDirection?: 'asc' | 'desc';
-  enabled?: boolean;
-}
+type UseTasksProps = {
+  hideCompleted?: boolean;
+  sortConfig: { key: string; direction: 'asc' | 'desc' };
+};
 
-export function useTasks(options: UseTasksOptions = {}) {
-  const {
-    projectIds,
-    completed,
-    limit = 100,
-    page = 0,
-    orderBy = 'kanban_order',
-    orderDirection = 'asc',
-    enabled = true,
-  } = options;
-  
-  const queryKey = ['tasks', { projectIds, completed, limit, page, orderBy, orderDirection }];
+export const useTasks = ({ hideCompleted, sortConfig }: UseTasksProps) => {
+  return useQuery<Task[], Error>({
+    queryKey: ['tasks', { hideCompleted, sortConfig }],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('get_project_tasks', {
+        p_completed: hideCompleted ? false : undefined,
+        p_order_by: sortConfig.key,
+        p_order_direction: sortConfig.direction,
+        p_limit: 1000, // A reasonable limit for tasks display
+        p_offset: 0,
+      });
 
-  const fetchTasks = async () => {
-    const { data, error } = await supabase.rpc('get_project_tasks', {
-      p_project_ids: projectIds || null,
-      p_completed: completed === undefined ? null : completed,
-      p_limit: limit,
-      p_offset: page * limit,
-      p_order_by: orderBy,
-      p_order_direction: orderDirection
-    });
-    
-    if (error) throw new Error(error.message);
-    
-    const formattedTasks: Task[] = data?.map((task: any) => ({
-      id: task.id,
-      title: task.title,
-      description: task.description,
-      completed: task.completed,
-      due_date: task.due_date,
-      priority: task.priority,
-      project_id: task.project_id,
-      project_name: task.project_name,
-      project_slug: task.project_slug,
-      project_status: task.project_status,
-      assignedTo: task.assignedTo,
-      created_by: task.created_by,
-      created_at: task.created_at,
-      updated_at: task.updated_at,
-      status: task.status,
-      tags: task.tags,
-      originTicketId: task.origin_ticket_id,
-      attachment_url: task.attachment_url,
-      attachment_name: task.attachment_name,
-      attachments: task.attachments,
-      project_venue: task.project_venue,
-      project_owner: task.project_owner,
-      project_client: task.project_client,
-    }));
-    
-    return formattedTasks || [];
-  };
-
-  const { data, isLoading, error, refetch, isFetching } = useQuery<Task[], Error>({
-    queryKey,
-    queryFn: fetchTasks,
-    enabled,
+      if (error) {
+        throw new Error(`Failed to fetch tasks: ${error.message}`);
+      }
+      return data || [];
+    },
   });
-
-  return { tasks: data ?? [], loading: isLoading, error, refetch, isFetching };
-}
+};

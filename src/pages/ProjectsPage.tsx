@@ -5,6 +5,7 @@ import PortalLayout from "@/components/PortalLayout";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, RefreshCw, Search, Download } from "lucide-react";
 import { useProjects } from "@/hooks/useProjects";
+import { useTasks } from "@/hooks/useTasks";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import {
@@ -38,7 +39,6 @@ const ProjectsPage = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [searchTerm, setSearchTerm] = useState("");
-  const { data: projectsData = [], isLoading: isLoadingProjects, refetch } = useProjects({ searchTerm });
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const viewFromUrl = searchParams.get('view') as ViewMode;
@@ -48,6 +48,10 @@ const ProjectsPage = () => {
     }
     return 'list';
   }, [viewFromUrl]);
+  
+  const isTaskView = view === 'tasks' || view === 'tasks-kanban';
+
+  const { data: projectsData = [], isLoading: isLoadingProjects, refetch: refetchProjects } = useProjects({ searchTerm });
 
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
   const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
@@ -61,8 +65,7 @@ const ProjectsPage = () => {
 
   const [isTaskFormOpen, setIsTaskFormOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
-  const { upsertTask, isUpserting, deleteTask, toggleTaskCompletion, isToggling } = useTaskMutations();
-
+  
   const {
     dateRange, setDateRange,
     sortConfig, requestSort: requestProjectSort, sortedProjects
@@ -71,6 +74,21 @@ const ProjectsPage = () => {
   const [taskSearchTerm, setTaskSearchTerm] = useState('');
   const [taskSortConfig, setTaskSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'updated_at', direction: 'desc' });
   const [hideCompletedTasks, setHideCompletedTasks] = useState(() => localStorage.getItem('hideCompletedTasks') === 'true');
+
+  const { data: tasksData = [], isLoading: isLoadingTasks, refetch: refetchTasks } = useTasks({
+    hideCompleted: hideCompletedTasks,
+    sortConfig: taskSortConfig,
+  });
+
+  const refetch = useCallback(() => {
+    if (isTaskView) {
+      refetchTasks();
+    } else {
+      refetchProjects();
+    }
+  }, [isTaskView, refetchTasks, refetchProjects]);
+
+  const { upsertTask, isUpserting, deleteTask, toggleTaskCompletion, isToggling } = useTaskMutations(refetch);
 
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
 
@@ -102,39 +120,15 @@ const ProjectsPage = () => {
   });
 
   const allTasks = useMemo(() => {
+    if (isTaskView) {
+      return tasksData || [];
+    }
     if (!projectsData) return [];
     return projectsData.flatMap(p => p.tasks || []);
-  }, [projectsData]);
-
-  const sortedTasks = useMemo(() => {
-    if (!allTasks) return [];
-    const sortableItems = [...allTasks];
-    if (taskSortConfig.key !== null) {
-        sortableItems.sort((a, b) => {
-            const key = taskSortConfig.key as keyof Task;
-            // @ts-ignore
-            if (a[key] === null) return 1;
-            // @ts-ignore
-            if (b[key] === null) return -1;
-            // @ts-ignore
-            if (a[key] < b[key]) {
-                return taskSortConfig.direction === 'asc' ? -1 : 1;
-            }
-            // @ts-ignore
-            if (a[key] > b[key]) {
-                return taskSortConfig.direction === 'asc' ? 1 : -1;
-            }
-            return 0;
-        });
-    }
-    return sortableItems;
-  }, [allTasks, taskSortConfig]);
+  }, [projectsData, tasksData, isTaskView]);
 
   const filteredTasks = useMemo(() => {
-    let tasksToFilter = sortedTasks;
-    if (hideCompletedTasks) {
-      tasksToFilter = tasksToFilter.filter(task => task.status !== 'Done');
-    }
+    let tasksToFilter = allTasks;
     if (!taskSearchTerm) return tasksToFilter;
     const lowercasedFilter = taskSearchTerm.toLowerCase();
     return tasksToFilter.filter(task => 
@@ -145,7 +139,7 @@ const ProjectsPage = () => {
       (task.project_client && task.project_client.toLowerCase().includes(lowercasedFilter)) ||
       (task.project_owner?.name && task.project_owner.name.toLowerCase().includes(lowercasedFilter))
     );
-  }, [sortedTasks, taskSearchTerm, hideCompletedTasks]);
+  }, [allTasks, taskSearchTerm]);
 
   useEffect(() => {
     if (view === 'table' && !initialTableScrollDone.current && sortedProjects.length > 0) {
@@ -228,7 +222,6 @@ const ProjectsPage = () => {
         }, {
             onSuccess: () => {
                 toast.success(`Task "${task.title}" moved to ${newStatus}.`);
-                refetch();
             },
             onError: (error) => toast.error(`Failed to update task status: ${error.message}`),
         });
@@ -253,7 +246,6 @@ const ProjectsPage = () => {
     if (taskToDelete) {
       deleteTask(taskToDelete, {
         onSuccess: () => {
-          refetch();
           setTaskToDelete(null);
         }
       });
@@ -265,7 +257,6 @@ const ProjectsPage = () => {
       onSuccess: () => {
         setIsTaskFormOpen(false);
         setEditingTask(null);
-        refetch();
       },
     });
   };
@@ -281,8 +272,6 @@ const ProjectsPage = () => {
       return newState;
     });
   };
-
-  const isTaskView = view === 'tasks' || view === 'tasks-kanban';
 
   return (
     <PortalLayout disableMainScroll noPadding>
@@ -357,7 +346,7 @@ const ProjectsPage = () => {
               projects={sortedProjects}
               tasks={filteredTasks}
               isLoading={isLoadingProjects}
-              isTasksLoading={isLoadingProjects}
+              isTasksLoading={isLoadingTasks}
               onDeleteProject={handleDeleteProject}
               sortConfig={sortConfig}
               requestSort={requestProjectSort}
