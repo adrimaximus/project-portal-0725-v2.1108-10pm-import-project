@@ -63,13 +63,19 @@ const GroupSettingsDialog = ({ open, onOpenChange, conversation, onUpdate }: Gro
     if (avatarFile) {
       const sanitizedFileName = avatarFile.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
       const filePath = `group-avatars/${conversation.id}/${Date.now()}-${sanitizedFileName}`;
-      const { error: uploadError } = await supabase.storage.from('chat-attachments').upload(filePath, avatarFile);
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, avatarFile, {
+          cacheControl: '3600',
+          upsert: true,
+        });
+
       if (uploadError) {
         toast.error("Failed to upload group image.");
         setIsSaving(false);
         return;
       }
-      const { data: urlData } = supabase.storage.from('chat-attachments').getPublicUrl(filePath);
+      const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(filePath);
       newAvatarUrl = urlData.publicUrl;
     }
 
