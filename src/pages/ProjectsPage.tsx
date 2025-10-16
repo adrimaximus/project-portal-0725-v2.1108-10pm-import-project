@@ -16,8 +16,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useCreateProject } from "@/hooks/useCreateProject";
-import { format } from "date-fns";
 import { formatInJakarta } from "@/lib/utils";
 import { useProjectFilters } from "@/hooks/useProjectFilters";
 import ProjectsToolbar from "@/components/projects/ProjectsToolbar";
@@ -33,6 +31,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { GoogleCalendarImportDialog } from "@/components/projects/GoogleCalendarImportDialog";
 import { Card } from '@/components/ui/card';
 import { startOfToday, isBefore } from 'date-fns';
+import { useProjects } from "@/hooks/useProjects";
 
 type ViewMode = 'table' | 'list' | 'kanban' | 'tasks' | 'tasks-kanban';
 
