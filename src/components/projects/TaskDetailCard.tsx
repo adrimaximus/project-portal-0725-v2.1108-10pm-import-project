@@ -153,7 +153,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
         </div>
 
         {allAttachments.length > 0 && (
-          <div>
+          <div className="border-t pt-4">
             <h4 className="font-semibold mb-2 flex items-center gap-2"><Paperclip className="h-4 w-4" /> Attachments</h4>
             <TaskAttachmentList attachments={allAttachments} />
           </div>
