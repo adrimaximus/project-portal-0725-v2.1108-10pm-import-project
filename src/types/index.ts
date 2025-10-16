@@ -1,44 +1,14 @@
-// General
-export interface User {
-  id: string;
-  name: string;
-  first_name?: string | null;
-  last_name?: string | null;
-  avatar_url: string;
-  initials: string;
-  email?: string;
-  role?: string;
-  status?: string;
-  updated_at?: string;
-  people_kanban_settings?: any;
-  permissions?: string[];
-  phone?: string | null;
-}
-
-export type Collaborator = User;
-export type AssignedUser = User & { role: string };
-export type Owner = User;
-
-export interface Tag {
-  id: string;
-  name: string;
-  color: string;
-  user_id?: string;
-  isNew?: boolean;
-  type?: string;
-}
-
-// Projects
 export const PROJECT_STATUS_OPTIONS = [
   { value: 'On Track', label: 'On Track' },
   { value: 'In Progress', label: 'In Progress' },
   { value: 'Completed', label: 'Completed' },
   { value: 'On Hold', label: 'On Hold' },
+  { value: 'At Risk', label: 'At Risk' },
+  { value: 'Off Track', label: 'Off Track' },
   { value: 'Cancelled', label: 'Cancelled' },
   { value: 'Requested', label: 'Requested' },
+  { value: 'Idea', label: 'Idea' },
 ] as const;
-
-export type ProjectStatus = typeof PROJECT_STATUS_OPTIONS[number]['value'];
 
 export const PAYMENT_STATUS_OPTIONS = [
   { value: 'Paid', label: 'Paid' },
@@ -50,7 +20,94 @@ export const PAYMENT_STATUS_OPTIONS = [
   { value: 'Cancelled', label: 'Cancelled' },
 ] as const;
 
+export type ProjectStatus = typeof PROJECT_STATUS_OPTIONS[number]['value'];
 export type PaymentStatus = typeof PAYMENT_STATUS_OPTIONS[number]['value'];
+
+export const TASK_STATUS_OPTIONS = [
+  { value: 'To do', label: 'To do' },
+  { value: 'In Progress', label: 'In Progress' },
+  { value: 'Done', label: 'Done' },
+  { value: 'Cancelled', label: 'Cancelled' },
+] as const;
+
+export type TaskStatus = typeof TASK_STATUS_OPTIONS[number]['value'];
+
+export const TASK_PRIORITY_OPTIONS = [
+  { value: 'Urgent', label: 'Urgent' },
+  { value: 'High', label: 'High' },
+  { value: 'Normal', label: 'Normal' },
+  { value: 'Low', label: 'Low' },
+] as const;
+
+export type TaskPriority = typeof TASK_PRIORITY_OPTIONS[number]['value'];
+
+export interface User {
+  id: string;
+  name: string;
+  avatar_url: string | null;
+  email: string;
+  initials: string;
+  first_name: string | null;
+  last_name: string | null;
+  role?: string;
+  status?: string;
+  updated_at?: string;
+  permissions?: string[];
+  people_kanban_settings?: any;
+  theme?: string;
+  phone?: string;
+}
+
+export interface Person {
+  id: string;
+  full_name: string;
+  contact?: { emails?: string[], phones?: string[] };
+  company?: string;
+  job_title?: string;
+  department?: string;
+  social_media?: any;
+  birthday?: string;
+  notes?: string;
+  created_at?: string;
+  updated_at?: string;
+  avatar_url?: string;
+  user_id?: string;
+  address?: any;
+  company_id?: string;
+  slug?: string;
+  projects?: { id: string, name: string, slug: string }[];
+  tags?: Tag[];
+  custom_properties?: Record<string, any>;
+  kanban_order?: number;
+  email?: string;
+  phone?: string;
+}
+
+export interface Company {
+    id: string;
+    name: string;
+    legal_name?: string | null;
+    address?: string | null;
+    billing_address?: string | null;
+    logo_url?: string | null;
+    created_at?: string;
+    updated_at?: string;
+    user_id?: string | null;
+    custom_properties?: Record<string, any> | null;
+}
+
+export interface Tag {
+  id: string;
+  name: string;
+  color: string;
+  user_id?: string;
+  isNew?: boolean;
+  type?: string;
+}
+
+export interface AssignedUser extends User {
+  role: 'owner' | 'admin' | 'editor' | 'member';
+}
 
 export interface ProjectFile {
   id: string;
@@ -60,6 +117,52 @@ export interface ProjectFile {
   url: string;
   storage_path: string;
   created_at: string;
+}
+
+export interface TaskAttachment {
+  id: string;
+  file_name: string;
+  file_url: string;
+  storage_path: string;
+  file_type: string | null;
+  file_size: number | null;
+  created_at: string;
+}
+
+export interface Task {
+  id: string;
+  title: string;
+  description: string | null;
+  completed: boolean;
+  due_date: string | null;
+  priority: string;
+  project_id: string;
+  project_name: string;
+  project_slug: string;
+  project_status: string;
+  assignedTo: User[];
+  created_by: User;
+  created_at: string;
+  updated_at: string;
+  status: TaskStatus;
+  tags: Tag[];
+  originTicketId?: string;
+  attachment_url?: string;
+  attachment_name?: string;
+  attachments?: TaskAttachment[];
+  project_venue?: string;
+  project_owner?: { id: string, name: string };
+  project_client?: string;
+}
+
+export interface Comment {
+  id: string;
+  text: string;
+  timestamp: string;
+  author: User;
+  isTicket: boolean;
+  attachment_url?: string;
+  attachment_name?: string;
 }
 
 export interface Activity {
@@ -85,106 +188,42 @@ export interface Project {
   payment_due_date: string;
   origin_event_id: string;
   venue: string;
-  created_by: Owner;
-  assignedTo: AssignedUser[];
-  tasks: Task[];
-  comments: Comment[];
-  services: string[];
-  briefFiles: ProjectFile[];
-  activities: Activity[];
-  tags: Tag[];
-  invoice_number?: string;
-  po_number?: string;
-  paid_date?: string;
-  email_sending_date?: string;
-  hardcopy_sending_date?: string;
-  channel?: string;
-  invoice_attachments?: InvoiceAttachment[];
-  client_name?: string;
-  client_avatar_url?: string;
-  client_company_logo_url?: string;
-  client_company_name?: string;
-  client_company_custom_properties?: any;
-  client_company_id?: string;
-  kanban_order?: number;
-  payment_kanban_order?: number;
-  people?: Person[];
-}
-
-// Tasks
-export const TASK_STATUS_OPTIONS = [
-  { value: 'To do', label: 'To do' },
-  { value: 'In Progress', label: 'In Progress' },
-  { value: 'Done', label: 'Done' },
-] as const;
-
-export type TaskStatus = typeof TASK_STATUS_OPTIONS[number]['value'];
-
-export const TASK_PRIORITY_OPTIONS = [
-  { value: 'Urgent', label: 'Urgent' },
-  { value: 'High', label: 'High' },
-  { value: 'Normal', label: 'Normal' },
-  { value: 'Low', label: 'Low' },
-] as const;
-
-export type TaskPriority = typeof TASK_PRIORITY_OPTIONS[number]['value'];
-
-export interface Reaction {
-  id: string;
-  emoji: string;
-  user_id: string;
-  user_name: string;
-}
-
-export interface TaskAttachment {
-  id: string;
-  file_name: string;
-  file_url: string;
-  file_type: string | null;
-  file_size: number | null;
-  storage_path: string;
-  created_at: string;
-}
-
-export interface Task {
-  id: string;
-  title: string;
-  description: string | null;
-  completed: boolean;
-  due_date: string | null;
-  priority: TaskPriority;
-  project_id: string;
-  project_name: string;
-  project_slug: string;
-  project_status: string;
-  assignedTo: User[];
   created_by: User;
-  created_at: string;
-  updated_at: string;
-  status: TaskStatus;
+  assignedTo: AssignedUser[];
+  services: string[];
   tags: Tag[];
-  originTicketId: string | null;
-  attachment_url?: string | null;
-  attachment_name?: string | null;
-  attachments?: TaskAttachment[];
-  reactions?: Reaction[];
-  project_venue?: string;
-  project_owner?: { id: string; name: string };
-  project_client?: string;
+  kanban_order: number;
+  payment_kanban_order: number;
+  invoice_number: string;
+  po_number: string;
+  paid_date: string;
+  email_sending_date: string;
+  hardcopy_sending_date: string;
+  channel: string;
+  invoice_attachments: InvoiceAttachment[];
+  client_name: string;
+  client_avatar_url: string;
+  client_company_logo_url: string;
+  client_company_name: string;
+  client_company_custom_properties: any;
+  client_company_id: string;
+  tasks?: Task[];
+  comments?: Comment[];
+  briefFiles: ProjectFile[];
+  activities?: Activity[];
+  people?: Person[];
+  person_ids?: string[];
 }
 
-// Comments
-export interface Comment {
-  id: string;
-  text: string;
-  timestamp: string;
-  author: User;
-  isTicket: boolean;
-  attachment_url?: string;
-  attachment_name?: string;
+export interface Collaborator extends User {
+  online?: boolean;
 }
 
-// Billing
+export interface Owner extends User {}
+export interface Member extends User {
+  role: string;
+}
+
 export interface Invoice {
   id: string;
   projectId: string;
@@ -213,47 +252,10 @@ export interface InvoiceAttachment {
   id: string;
   file_name: string;
   file_url: string;
+  storage_path: string;
   file_type: string | null;
   file_size: number | null;
-  storage_path: string;
   created_at: string;
-}
-
-export type Member = User & { role: string };
-
-// People
-export interface Person {
-  id: string;
-  full_name: string;
-  email: string | null;
-  phone: string | null;
-  company: string | null;
-  job_title: string | null;
-  notes: string | null;
-  avatar_url: string | null;
-  created_at: string;
-  updated_at: string;
-  projects?: { id: string; name: string; slug: string }[];
-  tags?: Tag[];
-  user_id?: string | null;
-  address?: any;
-  contact?: { emails?: string[]; phones?: string[] };
-  social_media?: { [key: string]: string };
-  birthday?: string;
-  department?: string;
-  custom_properties?: Record<string, any>;
-  kanban_order?: number;
-  slug: string;
-}
-
-export interface Company {
-  id: string;
-  name: string;
-  legal_name?: string | null;
-  address?: string | null;
-  billing_address?: string | null;
-  logo_url?: string | null;
-  custom_properties?: Record<string, any> | null;
 }
 
 export interface ContactProperty {
@@ -273,25 +275,59 @@ export interface CompanyProperty {
   options?: string[] | null;
 }
 
-// Goals
+export interface Reaction {
+  emoji: string;
+  user_id: string;
+  user_name: string;
+}
+
+export interface Attachment {
+  name: string;
+  url: string;
+  type: string;
+}
+
+export interface AppNotification {
+  id: string;
+  type: string;
+  title: string;
+  description: string;
+  timestamp: string;
+  read: boolean;
+  link: string;
+  actor: {
+    id: string;
+    name: string;
+    avatar_url: string;
+  };
+}
+
 export type GoalType = 'frequency' | 'quantity' | 'value';
 export type GoalPeriod = 'Weekly' | 'Monthly';
+
+export interface GoalCompletion {
+  id: string;
+  date: string;
+  value: number;
+  notes?: string;
+  userId: string;
+}
 
 export interface Goal {
   id: string;
   user_id: string;
   title: string;
-  description: string | null;
+  description: string;
   icon: string;
-  icon_url?: string | null;
+  icon_url?: string;
   color: string;
   type: GoalType;
-  target_quantity: number | null;
-  target_value: number | null;
-  frequency: 'Daily' | 'Weekly' | null;
-  target_period: GoalPeriod | null;
-  unit: string | null;
-  specific_days: string[] | null;
+  target_quantity?: number;
+  target_value?: number;
+  frequency: 'Daily' | 'Weekly';
+  target_period?: GoalPeriod;
+  unit?: string;
+  specific_days?: string[];
   created_at: string;
   updated_at: string;
   slug: string;
@@ -300,25 +336,19 @@ export interface Goal {
   completions: GoalCompletion[];
 }
 
-export interface GoalCompletion {
-  id: string;
-  date: string;
-  value: number;
-  notes: string | null;
-  userId: string;
-}
-
-// Knowledge Base
 export interface KbFolder {
   id: string;
+  user_id: string;
   name: string;
   description: string | null;
+  created_at: string;
+  updated_at: string;
   slug: string;
   icon: string | null;
   color: string | null;
   category: string | null;
   access_level: FolderAccessLevel;
-  updated_at: string;
+  last_modified_by: string | null;
 }
 
 export type FolderAccessLevel = 'private' | 'public_view' | 'public_edit';
@@ -331,7 +361,10 @@ export interface KbArticle {
   folder_id: string;
   updated_at: string;
   header_image_url: string | null;
-  kb_folders: { name: string; slug: string };
+  kb_folders: {
+    name: string;
+    slug: string;
+  };
   tags: Tag[];
   creator: {
     id: string;
@@ -341,11 +374,19 @@ export interface KbArticle {
   };
 }
 
-// Chat
-export interface Attachment {
-  name: string;
-  url: string;
-  type: string;
+export type Theme = "light" | "dark" | "system" | "claude" | "claude-light" | "nature" | "nature-light" | "corporate" | "corporate-light" | "ahensi" | "ahensi-light" | "brand-activator" | "brand-activator-light";
+
+export interface Conversation {
+  id: string;
+  userName: string;
+  userAvatar: string;
+  lastMessage: string;
+  lastMessageTimestamp: string;
+  unreadCount: number;
+  isGroup: boolean;
+  members: Collaborator[];
+  messages: Message[];
+  created_by: string;
 }
 
 export interface Message {
@@ -364,35 +405,3 @@ export interface Message {
   is_deleted?: boolean;
   is_forwarded?: boolean;
 }
-
-export interface Conversation {
-  id: string;
-  userName: string;
-  userAvatar: string;
-  lastMessage: string;
-  lastMessageTimestamp: string;
-  unreadCount: number;
-  isGroup: boolean;
-  members: Collaborator[];
-  messages: Message[];
-  created_by: string;
-}
-
-// Notifications
-export interface AppNotification {
-  id: string;
-  type: string;
-  title: string;
-  description: string;
-  timestamp: string;
-  read: boolean;
-  link: string;
-  actor: {
-    id: string;
-    name: string;
-    avatar_url: string;
-  };
-}
-
-// Theme
-export type Theme = "light" | "dark" | "system" | "claude" | "claude-light" | "nature" | "nature-light" | "corporate" | "corporate-light" | "ahensi" | "ahensi-light" | "brand-activator" | "brand-activator-light";
