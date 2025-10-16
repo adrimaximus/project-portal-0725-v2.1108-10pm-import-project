@@ -13,7 +13,6 @@ export interface User {
   people_kanban_settings?: any;
   permissions?: string[];
   phone?: string | null;
-  theme?: Theme | null;
 }
 
 export type Collaborator = User;
