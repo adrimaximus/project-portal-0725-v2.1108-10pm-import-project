@@ -17,11 +17,13 @@ import { Calendar as CalendarIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { User } from "@/types";
+import { User, Person } from "@/types";
 import { toast } from "sonner";
 import { useCreateProject } from "@/hooks/useCreateProject";
 import { getInitials } from "@/lib/utils";
 import AddressAutocompleteInput from "../AddressAutocompleteInput";
+import { ClientSelector } from "./ClientSelector";
+import PersonFormDialog from "../people/PersonFormDialog";
 
 interface ProjectDetailsFormProps {
   selectedServices: Service[];
@@ -38,6 +40,9 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
   const [team, setTeam] = useState<User[]>([]);
   const [files, setFiles] = useState<File[]>([]);
   const [venue, setVenue] = useState<string>("");
+  const [allPeople, setAllPeople] = useState<Person[]>([]);
+  const [selectedClient, setSelectedClient] = useState<Person | null>(null);
+  const [isPersonFormOpen, setIsPersonFormOpen] = useState(false);
   const navigate = useNavigate();
   const createProjectMutation = useCreateProject();
 
@@ -71,7 +76,18 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
       }
     };
 
+    const fetchPeople = async () => {
+      const { data, error } = await supabase.from('people').select('*');
+      if (error) {
+        toast.error("Failed to fetch clients.");
+        console.error('Error fetching people:', error);
+      } else {
+        setAllPeople(data as Person[]);
+      }
+    };
+
     fetchUsers();
+    fetchPeople();
   }, []);
 
   const handleBudgetChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -90,6 +106,11 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
         ? currentTeam.filter((user) => user.id !== userToToggle.id)
         : [...currentTeam, userToToggle]
     );
+  };
+
+  const handlePersonCreated = (newPerson: Person) => {
+    setAllPeople(prev => [...prev, newPerson]);
+    setSelectedClient(newPerson);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -118,6 +139,17 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
       onSuccess: async (newProject) => {
         const newProjectId = newProject.id;
         const newProjectSlug = newProject.slug;
+
+        if (selectedClient) {
+          const { error: clientLinkError } = await supabase.from('people_projects').insert({
+            person_id: selectedClient.id,
+            project_id: newProjectId,
+          });
+          if (clientLinkError) {
+            toast.error("Failed to link client to the project.");
+            console.error('Error linking client:', clientLinkError);
+          }
+        }
 
         if (selectedServices.length > 0) {
           const servicesToInsert = selectedServices.map(service => ({
@@ -183,118 +215,134 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
   const assignableUsers = allUsers.filter(user => user.id !== currentUser?.id);
 
   return (
-    <form onSubmit={handleSubmit}>
-      <Card>
-        <CardHeader>
-          <CardTitle>Create New Project</CardTitle>
-          <CardDescription>Fill out the form below to create a new project.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6 max-h-[60vh] overflow-y-auto">
-          <div className="space-y-2">
-            <Label htmlFor="project-name">Project Name</Label>
-            <Input
-              id="project-name"
-              placeholder="e.g., New Marketing Website"
-              value={projectName}
-              onChange={(e) => setProjectName(e.target.value)}
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Selected Services</Label>
-            <div className="flex flex-wrap gap-2 rounded-md border p-3 bg-muted/50 min-h-[40px]">
-              {serviceDetails.length > 0 ? serviceDetails.map((service) => (
-                <Badge key={service.title} variant="secondary" className="flex items-center gap-2">
-                  <service.icon className={cn("h-4 w-4", service.iconColor)} />
-                  <span>{service.title}</span>
-                </Badge>
-              )) : <p className="text-sm text-muted-foreground">No services selected. Go back to select services.</p>}
-            </div>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <>
+      <form onSubmit={handleSubmit}>
+        <Card>
+          <CardHeader>
+            <CardTitle>Create New Project</CardTitle>
+            <CardDescription>Fill out the form below to create a new project.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6 max-h-[60vh] overflow-y-auto p-6">
             <div className="space-y-2">
-              <Label htmlFor="date-range">Project Timeline</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    id="date-range"
-                    variant={"outline"}
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !date && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {date?.from ? (
-                      date.to ? (
-                        <>
-                          {format(date.from, "LLL dd, y")} -{" "}
-                          {format(date.to, "LLL dd, y")}
-                        </>
-                      ) : (
-                        format(date.from, "LLL dd, y")
-                      )
-                    ) : (
-                      <span>Pick a date range</span>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    initialFocus
-                    mode="range"
-                    defaultMonth={date?.from}
-                    selected={date}
-                    onSelect={setDate}
-                    numberOfMonths={2}
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="budget">Project Budget</Label>
+              <Label htmlFor="project-name">Project Name</Label>
               <Input
-                id="budget"
-                placeholder="e.g., Rp 10.000.000"
-                value={budget}
-                onChange={handleBudgetChange}
+                id="project-name"
+                placeholder="e.g., New Marketing Website"
+                value={projectName}
+                onChange={(e) => setProjectName(e.target.value)}
+                required
               />
             </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="venue">Venue</Label>
-            <AddressAutocompleteInput
-              value={venue}
-              onChange={setVenue}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="description">Project Description</Label>
-            <Textarea
-              id="description"
-              placeholder="Provide a detailed description of the project requirements..."
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={5}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Assign Team</Label>
-            <ModernTeamSelector users={assignableUsers} selectedUsers={team} onSelectionChange={handleTeamChange} />
-          </div>
-          <div className="space-y-2">
-            <Label>Attach Files</Label>
-            <FileUploader onFilesChange={setFiles} />
-          </div>
-        </CardContent>
-        <CardFooter className="flex justify-end gap-2">
-          <Button type="button" variant="outline" onClick={onBack} disabled={createProjectMutation.isPending}>Back</Button>
-          <Button type="submit" disabled={createProjectMutation.isPending}>
-            {createProjectMutation.isPending ? "Creating..." : "Create Project"}
-          </Button>
-        </CardFooter>
-      </Card>
-    </form>
+            <div className="space-y-2">
+              <Label>Client</Label>
+              <ClientSelector
+                people={allPeople}
+                selectedPerson={selectedClient}
+                onSelectPerson={setSelectedClient}
+                onAddNewClient={() => setIsPersonFormOpen(true)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Selected Services</Label>
+              <div className="flex flex-wrap gap-2 rounded-md border p-3 bg-muted/50 min-h-[40px]">
+                {serviceDetails.length > 0 ? serviceDetails.map((service) => (
+                  <Badge key={service.title} variant="secondary" className="flex items-center gap-2">
+                    <service.icon className={cn("h-4 w-4", service.iconColor)} />
+                    <span>{service.title}</span>
+                  </Badge>
+                )) : <p className="text-sm text-muted-foreground">No services selected. Go back to select services.</p>}
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="date-range">Project Timeline</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      id="date-range"
+                      variant={"outline"}
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !date && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {date?.from ? (
+                        date.to ? (
+                          <>
+                            {format(date.from, "LLL dd, y")} -{" "}
+                            {format(date.to, "LLL dd, y")}
+                          </>
+                        ) : (
+                          format(date.from, "LLL dd, y")
+                        )
+                      ) : (
+                        <span>Pick a date range</span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      initialFocus
+                      mode="range"
+                      defaultMonth={date?.from}
+                      selected={date}
+                      onSelect={setDate}
+                      numberOfMonths={2}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="budget">Project Budget</Label>
+                <Input
+                  id="budget"
+                  placeholder="e.g., Rp 10.000.000"
+                  value={budget}
+                  onChange={handleBudgetChange}
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="venue">Venue</Label>
+              <AddressAutocompleteInput
+                value={venue}
+                onChange={setVenue}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="description">Project Description</Label>
+              <Textarea
+                id="description"
+                placeholder="Provide a detailed description of the project requirements..."
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={5}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Assign Team</Label>
+              <ModernTeamSelector users={assignableUsers} selectedUsers={team} onSelectionChange={handleTeamChange} />
+            </div>
+            <div className="space-y-2">
+              <Label>Attach Files</Label>
+              <FileUploader onFilesChange={setFiles} />
+            </div>
+          </CardContent>
+          <CardFooter className="flex justify-end gap-2">
+            <Button type="button" variant="outline" onClick={onBack} disabled={createProjectMutation.isPending}>Back</Button>
+            <Button type="submit" disabled={createProjectMutation.isPending}>
+              {createProjectMutation.isPending ? "Creating..." : "Create Project"}
+            </Button>
+          </CardFooter>
+        </Card>
+      </form>
+      <PersonFormDialog
+        open={isPersonFormOpen}
+        onOpenChange={setIsPersonFormOpen}
+        onPersonCreated={handlePersonCreated}
+      />
+    </>
   );
 };
 
