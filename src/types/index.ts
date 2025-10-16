@@ -409,7 +409,7 @@ export interface Company {
 
 export type NotificationType = 'comment' | 'mention' | 'project' | 'project_update' | 'system' | 'goal';
 
-export interface Notification {
+export interface AppNotification {
   id: string;
   type: NotificationType;
   title: string;
@@ -420,7 +420,7 @@ export interface Notification {
   actor?: {
     id: string;
     name: string;
-    avatar: string;
+    avatar_url: string;
   };
 }
 

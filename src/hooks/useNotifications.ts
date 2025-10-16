@@ -1,14 +1,14 @@
 import { useInfiniteQuery, useMutation, useQueryClient, InfiniteData } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Notification } from '@/types';
+import { AppNotification } from '@/types';
 import { toast } from 'sonner';
 import { useEffect } from 'react';
 
 const NOTIFICATIONS_PER_PAGE = 20;
 const TONE_BASE_URL = `https://quuecudndfztjlxbrvyb.supabase.co/storage/v1/object/public/General/Notification/`;
 
-const fetchNotifications = async (pageParam: number = 0): Promise<Notification[]> => {
+const fetchNotifications = async (pageParam: number = 0): Promise<AppNotification[]> => {
   const { data, error } = await supabase
     .rpc('get_user_notifications', { p_limit: NOTIFICATIONS_PER_PAGE, p_offset: pageParam * NOTIFICATIONS_PER_PAGE });
 
@@ -28,7 +28,7 @@ const fetchNotifications = async (pageParam: number = 0): Promise<Notification[]
     actor: {
       id: n.actor.id,
       name: n.actor.name,
-      avatar: n.actor.avatar_url,
+      avatar_url: n.actor.avatar_url,
     }
   }));
 };
@@ -45,7 +45,7 @@ export const useNotifications = () => {
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
-  } = useInfiniteQuery<Notification[], Error, InfiniteData<Notification[]>, (string | undefined)[] | undefined, number>({
+  } = useInfiniteQuery<AppNotification[], Error, InfiniteData<AppNotification[]>, (string | undefined)[] | undefined, number>({
     queryKey,
     queryFn: ({ pageParam }) => fetchNotifications(pageParam),
     initialPageParam: 0,
@@ -139,7 +139,7 @@ export const useNotifications = () => {
   const unreadCount = notifications.filter(n => !n.read).length;
 
   const updateNotificationStatus = (notificationId: string, read: boolean) => {
-    queryClient.setQueryData<InfiniteData<Notification[]>>(queryKey, (oldData) => {
+    queryClient.setQueryData<InfiniteData<AppNotification[]>>(queryKey, (oldData) => {
       if (!oldData) return undefined;
       return {
         ...oldData,
@@ -164,7 +164,7 @@ export const useNotifications = () => {
     },
     onMutate: async (notificationId: string) => {
       await queryClient.cancelQueries({ queryKey });
-      const previousNotifications = queryClient.getQueryData<InfiniteData<Notification[]>>(queryKey);
+      const previousNotifications = queryClient.getQueryData<InfiniteData<AppNotification[]>>(queryKey);
       updateNotificationStatus(notificationId, true);
       return { previousNotifications };
     },
@@ -189,7 +189,7 @@ export const useNotifications = () => {
     },
     onMutate: async (notificationId: string) => {
       await queryClient.cancelQueries({ queryKey });
-      const previousNotifications = queryClient.getQueryData<InfiniteData<Notification[]>>(queryKey);
+      const previousNotifications = queryClient.getQueryData<InfiniteData<AppNotification[]>>(queryKey);
       updateNotificationStatus(notificationId, false);
       return { previousNotifications };
     },
@@ -212,8 +212,8 @@ export const useNotifications = () => {
     },
     onMutate: async () => {
       await queryClient.cancelQueries({ queryKey });
-      const previousNotifications = queryClient.getQueryData<InfiniteData<Notification[]>>(queryKey);
-      queryClient.setQueryData<InfiniteData<Notification[]>>(queryKey, (oldData) => {
+      const previousNotifications = queryClient.getQueryData<InfiniteData<AppNotification[]>>(queryKey);
+      queryClient.setQueryData<InfiniteData<AppNotification[]>>(queryKey, (oldData) => {
         if (!oldData) return undefined;
         return {
           ...oldData,

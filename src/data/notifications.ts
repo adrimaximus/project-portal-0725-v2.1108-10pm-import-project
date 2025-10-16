@@ -1,5 +1,5 @@
 import { MessageSquare, AtSign, FolderKanban, Info, Target } from "lucide-react";
-import { Notification } from '@/types';
+import { AppNotification } from '@/types';
 
 export const notificationIcons = {
   comment: MessageSquare,
@@ -10,7 +10,7 @@ export const notificationIcons = {
   goal: Target,
 };
 
-export const dummyNotifications: Notification[] = [
+export const dummyNotifications: AppNotification[] = [
   {
     id: "1",
     type: "mention",
