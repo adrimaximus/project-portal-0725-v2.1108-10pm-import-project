@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Task, TaskAttachment } from "@/types";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +16,7 @@ import TaskAttachmentList from './TaskAttachmentList';
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import TaskDetailCard from './TaskDetailCard';
 
 interface TasksViewProps {
   tasks: Task[];
@@ -38,6 +39,7 @@ const processMentions = (text: string | null | undefined) => {
 };
 
 const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion, isToggling, sortConfig, requestSort }: TasksViewProps) => {
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
   if (isLoading) {
     return (
@@ -107,174 +109,192 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
 
   return (
     <div className="w-full overflow-x-auto">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="w-[40%] sm:w-[30%] cursor-pointer hover:bg-muted/50 sticky left-0 bg-background z-10" onClick={() => requestSort('title')}>
-              Task
-            </TableHead>
-            <TableHead className="w-[20%]">Project</TableHead>
-            <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => requestSort('status')}>
-              Status
-            </TableHead>
-            <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => requestSort('priority')}>
-              Priority
-            </TableHead>
-            <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => requestSort('due_date')}>
-              Due Date
-            </TableHead>
-            <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => requestSort('updated_at')}>
-              Last Updated
-            </TableHead>
-            <TableHead>Assignees</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {tasks.map(task => {
-            const statusStyle = getTaskStatusStyles(task.status);
-            const priorityStyle = getPriorityStyles(task.priority);
+      <Dialog open={!!selectedTask} onOpenChange={(isOpen) => !isOpen && setSelectedTask(null)}>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-[40%] sm:w-[30%] cursor-pointer hover:bg-muted/50 sticky left-0 bg-background z-10" onClick={() => requestSort('title')}>
+                Task
+              </TableHead>
+              <TableHead className="w-[20%]">Project</TableHead>
+              <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => requestSort('status')}>
+                Status
+              </TableHead>
+              <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => requestSort('priority')}>
+                Priority
+              </TableHead>
+              <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => requestSort('due_date')}>
+                Due Date
+              </TableHead>
+              <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => requestSort('updated_at')}>
+                Last Updated
+              </TableHead>
+              <TableHead>Assignees</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {tasks.map(task => {
+              const statusStyle = getTaskStatusStyles(task.status);
+              const priorityStyle = getPriorityStyles(task.priority);
 
-            const taskMonthYear = task.due_date ? format(new Date(task.due_date), 'MMMM yyyy') : 'No Due Date';
-            let showMonthSeparator = false;
-            if (isDateSorted && taskMonthYear !== lastMonthYear) {
-              showMonthSeparator = true;
-              lastMonthYear = taskMonthYear;
-            }
+              const taskMonthYear = task.due_date ? format(new Date(task.due_date), 'MMMM yyyy') : 'No Due Date';
+              let showMonthSeparator = false;
+              if (isDateSorted && taskMonthYear !== lastMonthYear) {
+                showMonthSeparator = true;
+                lastMonthYear = taskMonthYear;
+              }
 
-            return (
-              <React.Fragment key={task.id}>
-                {showMonthSeparator && (
-                  <TableRow className="border-none hover:bg-transparent">
-                    <TableCell colSpan={8} className="pt-6 pb-2 px-4 text-sm font-semibold text-foreground">
-                      {taskMonthYear}
-                    </TableCell>
-                  </TableRow>
-                )}
-                <TableRow data-state={task.completed ? "completed" : ""}>
-                  <TableCell className="font-medium sticky left-0 bg-background z-10 w-[40%] sm:w-[30%]">
-                    <div className="flex items-start gap-3">
-                      <Checkbox
-                        id={`task-${task.id}`}
-                        checked={task.completed}
-                        onCheckedChange={(checked) => onToggleTaskCompletion(task, !!checked)}
-                        aria-label={`Mark task ${task.title} as complete`}
-                        className="mt-1"
-                        disabled={isToggling}
-                      />
-                      <div className="flex flex-col">
-                        <div className="flex items-center gap-2">
-                          {task.originTicketId && <Ticket className={`h-4 w-4 flex-shrink-0 ${task.completed ? 'text-green-500' : 'text-red-500'}`} />}
-                          <div className={`${task.completed ? 'line-through text-muted-foreground' : ''}`}>
-                            <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ p: 'span' }}>
-                              {formatTaskText(task.title)}
-                            </ReactMarkdown>
-                          </div>
-                          {renderAttachments(task)}
+              return (
+                <React.Fragment key={task.id}>
+                  {showMonthSeparator && (
+                    <TableRow className="border-none hover:bg-transparent">
+                      <TableCell colSpan={8} className="pt-6 pb-2 px-4 text-sm font-semibold text-foreground">
+                        {taskMonthYear}
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  <TableRow data-state={task.completed ? "completed" : ""}>
+                    <TableCell className="font-medium sticky left-0 bg-background z-10 w-[40%] sm:w-[30%]">
+                      <div className="flex items-start gap-3">
+                        <div onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            id={`task-${task.id}`}
+                            checked={task.completed}
+                            onCheckedChange={(checked) => onToggleTaskCompletion(task, !!checked)}
+                            aria-label={`Mark task ${task.title} as complete`}
+                            className="mt-1"
+                            disabled={isToggling}
+                          />
                         </div>
-                        {task.originTicketId && task.created_by && (
-                          <p className="text-xs text-muted-foreground mt-1">
-                            From: {task.created_by.email}
-                          </p>
-                        )}
-                        {task.description && (
-                          <TooltipProvider>
+                        <DialogTrigger asChild>
+                          <div className="flex flex-col cursor-pointer" onClick={() => setSelectedTask(task)}>
+                            <div className="flex items-center gap-2">
+                              {task.originTicketId && <Ticket className={`h-4 w-4 flex-shrink-0 ${task.completed ? 'text-green-500' : 'text-red-500'}`} />}
+                              <div className={`${task.completed ? 'line-through text-muted-foreground' : ''}`}>
+                                <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ p: 'span' }}>
+                                  {formatTaskText(task.title)}
+                                </ReactMarkdown>
+                              </div>
+                              <div onClick={(e) => e.stopPropagation()}>
+                                {renderAttachments(task)}
+                              </div>
+                            </div>
+                            {task.originTicketId && task.created_by && (
+                              <p className="text-xs text-muted-foreground mt-1">
+                                From: {task.created_by.email}
+                              </p>
+                            )}
+                            {task.description && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                      {formatTaskText(task.description, 50)}
+                                    </p>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p className="max-w-xs">{formatTaskText(task.description)}</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
+                            <div className="flex gap-1 flex-wrap mt-2">
+                              {task.tags?.map(tag => (
+                                <Badge key={tag.id} variant="outline" style={{ borderColor: tag.color, color: tag.color }}>{tag.name}</Badge>
+                              ))}
+                            </div>
+                          </div>
+                        </DialogTrigger>
+                      </div>
+                    </TableCell>
+                    <TableCell className="w-[20%]">
+                      {task.project_name && task.project_name !== 'General Tasks' ? (
+                        <Link to={`/projects/${task.project_slug}`} className="hover:underline text-primary text-xs block max-w-[50ch] break-words">
+                          {task.project_name}
+                        </Link>
+                      ) : null}
+                    </TableCell>
+                    <TableCell>
+                      <Badge className={cn(statusStyle.tw, 'border-transparent')}>{task.status}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge className={priorityStyle.tw}>{task.priority || 'Low'}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      {task.due_date ? (
+                        <span className={cn(isOverdue(task.due_date) && "text-red-600 font-bold")}>
+                          {format(new Date(task.due_date), "MMM d, yyyy")}
+                        </span>
+                      ) : <span className="text-muted-foreground text-xs">No due date</span>}
+                    </TableCell>
+                    <TableCell>
+                      {task.updated_at ? (
+                        <span className="text-muted-foreground text-xs">
+                          {format(new Date(task.updated_at), "MMM d, yyyy")}
+                        </span>
+                      ) : <span className="text-muted-foreground text-xs">-</span>}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center -space-x-2">
+                        {task.assignedTo?.map((user) => (
+                          <TooltipProvider key={user.id}>
                             <Tooltip>
-                              <TooltipTrigger asChild>
-                                <p className="text-xs text-muted-foreground mt-1">
-                                  {formatTaskText(task.description, 50)}
-                                </p>
+                              <TooltipTrigger>
+                                <Avatar className="h-8 w-8 border-2 border-background">
+                                  <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
+                                  <AvatarFallback style={generatePastelColor(user.id)}>
+                                    {getInitials([user.first_name, user.last_name].filter(Boolean).join(' '), user.email || undefined)}
+                                  </AvatarFallback>
+                                </Avatar>
                               </TooltipTrigger>
                               <TooltipContent>
-                                <p className="max-w-xs">{formatTaskText(task.description)}</p>
+                                <p>{[user.first_name, user.last_name].filter(Boolean).join(' ')}</p>
                               </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
-                        )}
-                        <div className="flex gap-1 flex-wrap mt-2">
-                          {task.tags?.map(tag => (
-                            <Badge key={tag.id} variant="outline" style={{ borderColor: tag.color, color: tag.color }}>{tag.name}</Badge>
-                          ))}
-                        </div>
+                        ))}
                       </div>
-                    </div>
-                  </TableCell>
-                  <TableCell className="w-[20%]">
-                    {task.project_name && task.project_name !== 'General Tasks' ? (
-                      <Link to={`/projects/${task.project_slug}`} className="hover:underline text-primary text-xs block max-w-[50ch] break-words">
-                        {task.project_name}
-                      </Link>
-                    ) : null}
-                  </TableCell>
-                  <TableCell>
-                    <Badge className={cn(statusStyle.tw, 'border-transparent')}>{task.status}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge className={priorityStyle.tw}>{task.priority || 'Low'}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    {task.due_date ? (
-                      <span className={cn(isOverdue(task.due_date) && "text-red-600 font-bold")}>
-                        {format(new Date(task.due_date), "MMM d, yyyy")}
-                      </span>
-                    ) : <span className="text-muted-foreground text-xs">No due date</span>}
-                  </TableCell>
-                  <TableCell>
-                    {task.updated_at ? (
-                      <span className="text-muted-foreground text-xs">
-                        {format(new Date(task.updated_at), "MMM d, yyyy")}
-                      </span>
-                    ) : <span className="text-muted-foreground text-xs">-</span>}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center -space-x-2">
-                      {task.assignedTo?.map((user) => (
-                        <TooltipProvider key={user.id}>
-                          <Tooltip>
-                            <TooltipTrigger>
-                              <Avatar className="h-8 w-8 border-2 border-background">
-                                <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
-                                <AvatarFallback style={generatePastelColor(user.id)}>
-                                  {getInitials([user.first_name, user.last_name].filter(Boolean).join(' '), user.email || undefined)}
-                                </AvatarFallback>
-                              </Avatar>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>{[user.first_name, user.last_name].filter(Boolean).join(' ')}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      ))}
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => onEdit(task)}>
-                          <Edit className="mr-2 h-4 w-4" />
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          className="text-red-500"
-                          onClick={() => onDelete(task.id)}
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              </React.Fragment>
-            )
-          })}
-        </TableBody>
-      </Table>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div onClick={(e) => e.stopPropagation()}>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => onEdit(task)}>
+                              <Edit className="mr-2 h-4 w-4" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="text-red-500"
+                              onClick={() => onDelete(task.id)}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                </React.Fragment>
+              )
+            })}
+          </TableBody>
+        </Table>
+        {selectedTask && (
+          <TaskDetailCard
+            task={selectedTask}
+            onClose={() => setSelectedTask(null)}
+            onEdit={onEdit}
+            onDelete={onDelete}
+          />
+        )}
+      </Dialog>
     </div>
   );
 };
