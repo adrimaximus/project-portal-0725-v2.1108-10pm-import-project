@@ -103,15 +103,15 @@ const ServicesSettingsPage = () => {
               </Button>
             </div>
           </CardHeader>
-          <CardContent className="flex-1 flex flex-col">
-            <div className="border rounded-md overflow-y-auto flex-1">
+          <CardContent className="flex-1 flex flex-col p-0">
+            <div className="flex-1 overflow-y-auto border-t">
               <Table>
                 <TableHeader className="sticky top-0 bg-background z-10">
                   <TableRow>
-                    <TableHead>Service</TableHead>
+                    <TableHead className="pl-6">Service</TableHead>
                     <TableHead>Description</TableHead>
                     <TableHead>Featured</TableHead>
-                    <TableHead className="w-[50px]"></TableHead>
+                    <TableHead className="w-[50px] pr-6"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -122,7 +122,7 @@ const ServicesSettingsPage = () => {
                   ) : services.length > 0 ? (
                     services.map((service) => (
                       <TableRow key={service.id}>
-                        <TableCell className="font-medium">
+                        <TableCell className="font-medium pl-6">
                           <div className="flex items-center gap-3">
                             <div className={cn("p-2 rounded-lg", service.icon_color)}>
                               <Icon name={service.icon as any} className="h-5 w-5" />
@@ -132,7 +132,7 @@ const ServicesSettingsPage = () => {
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">{service.description}</TableCell>
                         <TableCell>{service.is_featured ? 'Yes' : 'No'}</TableCell>
-                        <TableCell>
+                        <TableCell className="pr-6">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" className="h-8 w-8 p-0">
