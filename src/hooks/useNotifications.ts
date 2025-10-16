@@ -3,7 +3,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { AppNotification } from '@/types';
 import { toast } from 'sonner';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
+import { useChatContext } from '@/contexts/ChatContext';
 
 const NOTIFICATIONS_PER_PAGE = 20;
 const TONE_BASE_URL = `https://quuecudndfztjlxbrvyb.supabase.co/storage/v1/object/public/General/Notification/`;
@@ -36,6 +37,13 @@ const fetchNotifications = async (pageParam: number = 0): Promise<AppNotificatio
 export const useNotifications = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { selectedConversationId } = useChatContext();
+  const selectedConversationIdRef = useRef(selectedConversationId);
+
+  useEffect(() => {
+    selectedConversationIdRef.current = selectedConversationId;
+  }, [selectedConversationId]);
+
   const queryKey = ['notifications', user?.id];
 
   const {
@@ -84,22 +92,24 @@ export const useNotifications = () => {
           const userPreferences = profileData.notification_preferences || {};
 
           const newNotificationId = payload.new.notification_id;
-          const { data: notificationData } = await supabase.from('notifications').select('title, body, type').eq('id', newNotificationId).single();
+          const { data: notificationData } = await supabase.from('notifications').select('title, body, type, resource_id').eq('id', newNotificationId).single();
           
           if (notificationData) {
-            const toastsEnabled = userPreferences.toast_enabled !== false;
-            let canShowToast = toastsEnabled;
-            if (notificationData.type === 'comment' && window.location.pathname.startsWith('/chat')) {
-              canShowToast = false;
-            }
+            const isChatNotification = notificationData.type === 'comment';
+            const conversationIdOfNotification = notificationData.resource_id;
+            
+            const isChatActiveAndVisible = isChatNotification &&
+                                           window.location.pathname.startsWith('/chat') &&
+                                           selectedConversationIdRef.current === conversationIdOfNotification;
 
-            if (canShowToast) {
+            const toastsEnabled = userPreferences.toast_enabled !== false;
+            
+            if (toastsEnabled && !isChatActiveAndVisible) {
               toast.info(notificationData.title, {
                 description: notificationData.body,
               });
             }
 
-            // Show desktop notification if permission is granted and tab is not active
             if (Notification.permission === 'granted' && document.hidden) {
               new Notification(notificationData.title, {
                 body: notificationData.body,
@@ -110,7 +120,7 @@ export const useNotifications = () => {
             const isNotificationTypeEnabled = userPreferences?.[notificationData.type] !== false;
             const tone = userPreferences?.tone;
 
-            if (isNotificationTypeEnabled && tone && tone !== 'none') {
+            if (isNotificationTypeEnabled && tone && tone !== 'none' && !isChatActiveAndVisible) {
               try {
                 const audio = new Audio(`${TONE_BASE_URL}${tone}`);
                 await audio.play();

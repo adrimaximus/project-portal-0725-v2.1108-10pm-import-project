@@ -3,39 +3,50 @@ import { toast } from "sonner";
 
 export function useCheckAudioPermission() {
   useEffect(() => {
+    const unlockAudio = async () => {
+      try {
+        const testAudio = new Audio("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA");
+        testAudio.volume = 0;
+        await testAudio.play();
+        // If successful, we can remove the listener
+        document.removeEventListener('click', unlockAudio);
+        document.removeEventListener('touchend', unlockAudio);
+        return true;
+      } catch (err) {
+        // It will fail if not allowed, that's expected.
+        return false;
+      }
+    };
+
     const checkAudio = async () => {
-      // Kami hanya ingin memeriksa ini sekali per sesi agar tidak mengganggu pengguna.
       if (sessionStorage.getItem('audioPermissionChecked')) {
         return;
       }
       sessionStorage.setItem('audioPermissionChecked', 'true');
 
-      try {
-        // Kami akan mencoba memutar file audio kecil yang senyap.
-        // Ini adalah cara standar untuk memeriksa apakah browser mengizinkan pemutaran audio.
-        const testAudio = new Audio("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA");
-        testAudio.volume = 0;
-        await testAudio.play();
-      } catch (err: any) {
-        // Jika gagal dengan 'NotAllowedError', berarti browser memblokirnya.
-        if (err.name === 'NotAllowedError') {
-          toast.warning(
-            "🔇 Suara notifikasi mungkin diblokir.",
-            {
-              description: "Silakan klik di mana saja pada halaman untuk mengaktifkan audio untuk notifikasi.",
-              duration: 10000,
-            }
-          );
-        } else {
-          // Catat error lain untuk debugging, tetapi jangan ganggu pengguna.
-          console.warn("Pemeriksaan izin audio gagal:", err);
-        }
+      const unlocked = await unlockAudio();
+
+      if (!unlocked) {
+        toast.warning(
+          "🔇 Suara notifikasi mungkin diblokir.",
+          {
+            description: "Silakan klik di mana saja pada halaman untuk mengaktifkan audio untuk notifikasi.",
+            duration: 10000,
+          }
+        );
+        // Add listeners to try unlocking on the first user interaction
+        document.addEventListener('click', unlockAudio, { once: true });
+        document.addEventListener('touchend', unlockAudio, { once: true });
       }
     };
 
-    // Kami akan menunggu beberapa detik sebelum memeriksa, agar tidak terlalu mengganggu saat halaman dimuat.
     const timer = setTimeout(checkAudio, 2000);
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      // Clean up listeners on component unmount, just in case
+      document.removeEventListener('click', unlockAudio);
+      document.removeEventListener('touchend', unlockAudio);
+    };
   }, []);
 }
