@@ -7,7 +7,6 @@ import { Label } from "@/components/ui/label";
 import ModernTeamSelector from "./ModernTeamSelector";
 import FileUploader from "./FileUploader";
 import { useNavigate } from "react-router-dom";
-import { Service } from "./ServiceSelection";
 import { DateRange } from "react-day-picker";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
@@ -17,7 +16,7 @@ import { Calendar as CalendarIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { User, Person, Company } from "@/types";
+import { User, Person, Company, Service } from "@/types";
 import { toast } from "sonner";
 import { useCreateProject } from "@/hooks/useCreateProject";
 import { getInitials } from "@/lib/utils";
@@ -25,6 +24,7 @@ import AddressAutocompleteInput from "../AddressAutocompleteInput";
 import { ClientSelector } from "./ClientSelector";
 import PersonFormDialog from "../people/PersonFormDialog";
 import Icon from "@/components/Icon";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 interface ProjectDetailsFormProps {
   selectedServices: Service[];
@@ -33,7 +33,10 @@ interface ProjectDetailsFormProps {
 
 const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProps) => {
   const { user: currentUser } = useAuth();
-  const [allUsers, setAllUsers] = useState<User[]>([]);
+  const navigate = useNavigate();
+  const createProjectMutation = useCreateProject();
+  const queryClient = useQueryClient();
+
   const [projectName, setProjectName] = useState("");
   const [date, setDate] = useState<DateRange | undefined>();
   const [budget, setBudget] = useState("");
@@ -41,67 +44,55 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
   const [team, setTeam] = useState<User[]>([]);
   const [files, setFiles] = useState<File[]>([]);
   const [venue, setVenue] = useState<string>("");
-  const [allPeople, setAllPeople] = useState<Person[]>([]);
-  const [allCompanies, setAllCompanies] = useState<Company[]>([]);
   const [selectedClient, setSelectedClient] = useState<{ type: 'person' | 'company', data: Person | Company } | null>(null);
   const [isPersonFormOpen, setIsPersonFormOpen] = useState(false);
-  const navigate = useNavigate();
-  const createProjectMutation = useCreateProject();
 
-  useEffect(() => {
-    const fetchUsers = async () => {
-      const { data, error } = await supabase.from('profiles').select(`
-        id,
-        first_name,
-        last_name,
-        avatar_url,
-        email
-      `);
-
+  const { data: allUsers = [] } = useQuery<User[]>({
+    queryKey: ['allUsersForRequestForm'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('profiles').select('id, first_name, last_name, avatar_url, email');
       if (error) {
         toast.error("Failed to fetch users.");
-        console.error('Error fetching users:', error);
-      } else {
-        const users: User[] = data.map(profile => {
-          const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
-          return {
-            id: profile.id,
-            name: fullName || profile.email || 'No name',
-            avatar_url: profile.avatar_url,
-            email: profile.email,
-            initials: getInitials(fullName, profile.email) || 'NN',
-            first_name: profile.first_name,
-            last_name: profile.last_name,
-          }
-        });
-        setAllUsers(users);
+        throw error;
       }
-    };
+      return data.map(profile => {
+        const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
+        return {
+          id: profile.id,
+          name: fullName || profile.email || 'No name',
+          avatar_url: profile.avatar_url,
+          email: profile.email,
+          initials: getInitials(fullName, profile.email) || 'NN',
+          first_name: profile.first_name,
+          last_name: profile.last_name,
+        };
+      });
+    }
+  });
 
-    const fetchPeople = async () => {
+  const { data: allPeople = [] } = useQuery<Person[]>({
+    queryKey: ['allPeopleForRequestForm'],
+    queryFn: async () => {
       const { data, error } = await supabase.from('people').select('*');
       if (error) {
         toast.error("Failed to fetch clients.");
-        console.error('Error fetching people:', error);
-      } else {
-        setAllPeople(data as Person[]);
+        throw error;
       }
-    };
+      return data;
+    }
+  });
 
-    const fetchCompanies = async () => {
+  const { data: allCompanies = [] } = useQuery<Company[]>({
+    queryKey: ['allCompaniesForRequestForm'],
+    queryFn: async () => {
       const { data, error } = await supabase.from('companies').select('id, name, logo_url, custom_properties');
       if (error) {
         toast.error("Failed to fetch companies.");
-        console.error('Error fetching companies:', error);
-      } else {
-        setAllCompanies(data as Company[]);
+        throw error;
       }
-    };
-
-    fetchUsers();
-    fetchPeople();
-    fetchCompanies();
-  }, []);
+      return data;
+    }
+  });
 
   const handleBudgetChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const rawValue = e.target.value.replace(/[^0-9]/g, '');
@@ -122,8 +113,9 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
   };
 
   const handlePersonCreated = (newPerson: Person) => {
-    setAllPeople(prev => [...prev, newPerson]);
-    setSelectedClient({ type: 'person', data: newPerson });
+    queryClient.invalidateQueries({ queryKey: ['allPeopleForRequestForm'] }).then(() => {
+      setSelectedClient({ type: 'person', data: newPerson });
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -352,7 +344,8 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
       <PersonFormDialog
         open={isPersonFormOpen}
         onOpenChange={setIsPersonFormOpen}
-        onPersonCreated={handlePersonCreated}
+        onSuccess={handlePersonCreated}
+        person={null}
       />
     </>
   );
