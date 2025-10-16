@@ -103,7 +103,7 @@ export const useNotifications = () => {
             const tone = userPreferences?.tone;
 
             // **Pencegahan Suara Ganda:** Jangan putar suara untuk pesan obrolan.
-            // `ChatContext` akan menanganinya di semua halaman.
+            // `ChatContext` akan menanganinya.
             if (notificationData.type === 'comment') {
               console.log("[useNotifications] Suppressing chat sound because ChatContext handles it.");
             } else if (isNotificationTypeEnabled && tone && tone !== 'none') {

@@ -105,9 +105,10 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
 
       // Sound and unread logic
       if (payload.eventType === 'INSERT' && payload.new.sender_id !== currentUser.id) {
+        // If the message is for a conversation that is NOT currently selected
         if (selectedConversationIdRef.current !== conversationId) {
           setUnreadConversationIds(prev => new Set(prev).add(conversationId));
-          playSound(); // Play sound regardless of the page, as long as the conversation is not active.
+          playSound(); // Play sound for any inactive conversation
         }
       }
     };
