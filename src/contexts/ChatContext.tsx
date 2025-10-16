@@ -89,37 +89,34 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         if (isCommentEnabled && tone && tone !== 'none') {
           const audio = new Audio(`${TONE_BASE_URL}${tone}`);
           await audio.play();
+          console.log("🔔 Chat notification sound played via ChatContext.");
         }
       } catch (err) {
-        console.warn("Could not play chat notification sound:", err);
+        console.warn("🔇 Chat sound blocked or failed to play:", err);
       }
     };
 
     const handlePostgresChange = (payload: any) => {
       const conversationId = payload.new.conversation_id;
-      const isRelevant = conversations.some(c => c.id === conversationId);
+      
+      // Invalidate queries to keep UI fresh
+      queryClient.invalidateQueries({ queryKey: ['conversations', currentUser.id] });
+      queryClient.invalidateQueries({ queryKey: ['messages', conversationId] });
 
-      if (isRelevant) {
-        queryClient.invalidateQueries({ queryKey: ['conversations', currentUser.id] });
-        queryClient.invalidateQueries({ queryKey: ['messages', conversationId] });
-
-        if (payload.eventType === 'INSERT' && payload.new.sender_id !== currentUser.id) {
-          if (selectedConversationIdRef.current !== conversationId) {
-            setUnreadConversationIds(prev => new Set(prev).add(conversationId));
-            // Play sound only if the user is not on the chat page
-            if (!window.location.pathname.startsWith('/chat')) {
-              playSound();
-            }
-          }
+      // Sound and unread logic
+      if (payload.eventType === 'INSERT' && payload.new.sender_id !== currentUser.id) {
+        if (selectedConversationIdRef.current !== conversationId) {
+          setUnreadConversationIds(prev => new Set(prev).add(conversationId));
+          playSound(); // Play sound regardless of the page, as long as the conversation is not active.
         }
       }
     };
 
     const messagesChannel = supabase
-      .channel('public:messages')
+      .channel('public:messages:chat-context')
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'messages' },
+        { event: 'INSERT', schema: 'public', table: 'messages' },
         handlePostgresChange
       )
       .subscribe();
@@ -127,7 +124,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     return () => {
       supabase.removeChannel(messagesChannel);
     };
-  }, [currentUser, conversations, queryClient]);
+  }, [currentUser, queryClient]);
 
   const debouncedSearchMessages = useCallback(
     debounce(async (term: string) => {
