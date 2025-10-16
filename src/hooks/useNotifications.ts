@@ -102,7 +102,11 @@ export const useNotifications = () => {
             const isNotificationTypeEnabled = userPreferences?.[notificationData.type] !== false;
             const tone = userPreferences?.tone;
 
-            if (isNotificationTypeEnabled && tone && tone !== 'none') {
+            // **Pencegahan Suara Ganda:** Jangan putar suara untuk pesan obrolan jika pengguna berada di halaman obrolan.
+            // `ChatContext` akan menanganinya.
+            if (notificationData.type === 'comment' && window.location.pathname.startsWith('/chat')) {
+              console.log("[useNotifications] Suppressing chat sound because user is on chat page.");
+            } else if (isNotificationTypeEnabled && tone && tone !== 'none') {
               try {
                 const audio = new Audio(`${TONE_BASE_URL}${tone}`);
                 await audio.play();

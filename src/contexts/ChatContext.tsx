@@ -5,17 +5,18 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useAuth } from './AuthContext';
 import * as chatApi from '@/lib/chatApi';
-import * as chatRealtime from '@/lib/chatRealtime';
 import { Conversation, Message, Collaborator, Reaction } from '@/types';
 import debounce from 'lodash.debounce';
 import { ForwardMessageDialog } from '@/components/ForwardMessageDialog';
 import { v4 as uuidv4 } from 'uuid';
 
+const TONE_BASE_URL = `https://quuecudndfztjlxbrvyb.supabase.co/storage/v1/object/public/General/Notification/`;
+
 interface ChatContextType {
   conversations: Omit<Conversation, 'messages'>[];
   isLoadingConversations: boolean;
   selectedConversation: Conversation | null;
-  selectedConversationId: string | null; // Ditambahkan
+  selectedConversationId: string | null;
   selectConversation: (id: string | null) => void;
   messages: Message[];
   isLoadingMessages: boolean;
@@ -73,6 +74,27 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     if (!currentUser) return;
 
+    const playSound = async () => {
+      try {
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('notification_preferences')
+          .eq('id', currentUser.id)
+          .single();
+        
+        const prefs = profileData?.notification_preferences || {};
+        const isCommentEnabled = prefs.comment !== false;
+        const tone = prefs.tone;
+
+        if (isCommentEnabled && tone && tone !== 'none') {
+          const audio = new Audio(`${TONE_BASE_URL}${tone}`);
+          await audio.play();
+        }
+      } catch (err) {
+        console.warn("Could not play chat notification sound:", err);
+      }
+    };
+
     const handlePostgresChange = (payload: any) => {
       const conversationId = payload.new.conversation_id;
       const isRelevant = conversations.some(c => c.id === conversationId);
@@ -84,6 +106,10 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         if (payload.eventType === 'INSERT' && payload.new.sender_id !== currentUser.id) {
           if (selectedConversationIdRef.current !== conversationId) {
             setUnreadConversationIds(prev => new Set(prev).add(conversationId));
+            // Play sound only if the user is not on the chat page
+            if (!window.location.pathname.startsWith('/chat')) {
+              playSound();
+            }
           }
         }
       }
