@@ -11,10 +11,9 @@ interface TasksKanbanViewProps {
   onStatusChange: (taskId: string, newStatus: TaskStatus) => void;
   onEdit: (task: Task) => void;
   onDelete: (taskId: string) => void;
-  onToggleTaskReaction: (variables: { taskId: string, emoji: string }) => void;
 }
 
-const TasksKanbanView = ({ tasks, onStatusChange, onEdit, onDelete, onToggleTaskReaction }: TasksKanbanViewProps) => {
+const TasksKanbanView = ({ tasks, onStatusChange, onEdit, onDelete }: TasksKanbanViewProps) => {
   const [collapsedColumns, setCollapsedColumns] = useState<Set<TaskStatus>>(new Set());
   const [internalTasks, setInternalTasks] = useState<Task[]>(tasks);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
@@ -160,7 +159,7 @@ const TasksKanbanView = ({ tasks, onStatusChange, onEdit, onDelete, onToggleTask
         ))}
       </div>
       <DragOverlay>
-        {activeTask ? <TasksKanbanCard task={activeTask} onEdit={onEdit} onDelete={onDelete} onToggleTaskReaction={onToggleTaskReaction} /> : null}
+        {activeTask ? <TasksKanbanCard task={activeTask} onEdit={onEdit} onDelete={onDelete} /> : null}
       </DragOverlay>
     </DndContext>
   );

@@ -27,13 +27,12 @@ interface ProjectViewContainerProps {
   taskSortConfig: { key: string; direction: 'asc' | 'desc' };
   requestTaskSort: (key: string) => void;
   onTaskStatusChange: (taskId: string, newStatus: any) => void;
-  onToggleTaskReaction: (variables: { taskId: string, emoji: string }) => void;
 }
 
 const ProjectViewContainer = ({
   view, projects, tasks, isLoading, isTasksLoading, onDeleteProject, sortConfig, requestSort, rowRefs,
   kanbanGroupBy, onEditTask, onDeleteTask, onToggleTaskCompletion, isToggling,
-  taskSortConfig, requestTaskSort, onTaskStatusChange, onToggleTaskReaction
+  taskSortConfig, requestTaskSort, onTaskStatusChange
 }: ProjectViewContainerProps) => {
   switch (view) {
     case 'table':
@@ -59,7 +58,6 @@ const ProjectViewContainer = ({
         onStatusChange={onTaskStatusChange} 
         onEdit={onEditTask}
         onDelete={onDeleteTask}
-        onToggleTaskReaction={onToggleTaskReaction}
       />;
     default:
       return null;
