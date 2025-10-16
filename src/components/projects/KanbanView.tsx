@@ -1,17 +1,21 @@
-import React, { useMemo, useState, useEffect } from 'react';
-import { DndContext, DragOverlay } from '@dnd-kit/core';
-import { Project, PROJECT_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS } from '@/types';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
+import { DndContext, DragOverlay, DragStartEvent, DragEndEvent, MouseSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { arrayMove } from '@dnd-kit/sortable';
+import { Project, PROJECT_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS, ProjectStatus, PaymentStatus } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { formatInJakarta, generatePastelColor, getAvatarUrl } from '@/lib/utils';
 import { Badge } from '../ui/badge';
 import { CheckCircle } from 'lucide-react';
 import KanbanColumn from './KanbanColumn';
-import { useKanbanDnd } from '@/hooks/useKanbanDnd';
+import { useProjectKanbanMutations } from '@/hooks/useProjectKanbanMutations';
 import { isSameDay, subDays } from 'date-fns';
 
 const KanbanView = ({ projects, groupBy }: { projects: Project[], groupBy: 'status' | 'payment_status' }) => {
   const [collapsedColumns, setCollapsedColumns] = useState<string[]>([]);
+  const [activeProject, setActiveProject] = useState<Project | null>(null);
+  const dragHappened = useRef(false);
+  const { updateProjectOrder } = useProjectKanbanMutations();
 
   useEffect(() => {
     const savedState = localStorage.getItem('projectKanbanCollapsedColumns');
@@ -61,13 +65,94 @@ const KanbanView = ({ projects, groupBy }: { projects: Project[], groupBy: 'stat
     return groups;
   }, [projects, columns, groupBy]);
 
-  const { 
-    activeProject, 
-    dragHappened, 
-    handleDragStart, 
-    handleDragEnd, 
-    handleDragCancel 
-  } = useKanbanDnd(projects, groupBy, columns);
+  const sensors = useSensors(
+    useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } })
+  );
+
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveProject(projects.find(p => p.id === event.active.id) || null);
+    dragHappened.current = true;
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveProject(null);
+    setTimeout(() => { dragHappened.current = false; }, 0);
+
+    if (!over) return;
+
+    const activeId = String(active.id);
+    const overId = String(over.id);
+
+    const activeContainer = active.data.current?.sortable.containerId as string;
+    let overContainer = over.data.current?.sortable.containerId as string;
+    if (!overContainer) overContainer = overId;
+    
+    const activeProjectInstance = projects.find(p => p.id === activeId);
+    if (!activeProjectInstance || !activeContainer || !overContainer) return;
+
+    let newProjectsState = [...projects];
+    const activeIndex = newProjectsState.findIndex(p => p.id === activeId);
+
+    if (activeIndex === -1) return;
+
+    if (activeContainer === overContainer) {
+      const overIndex = newProjectsState.findIndex(p => p.id === overId);
+      if (overIndex !== -1) {
+        newProjectsState = arrayMove(newProjectsState, activeIndex, overIndex);
+      }
+    } else {
+      const [movedItem] = newProjectsState.splice(activeIndex, 1);
+      movedItem[groupBy] = overContainer as ProjectStatus | PaymentStatus;
+
+      const overIsItem = !!over.data.current?.sortable;
+      const overIndex = overIsItem ? newProjectsState.findIndex(p => p.id === overId) : -1;
+      
+      if (overIndex !== -1) {
+        newProjectsState.splice(overIndex, 0, movedItem);
+      } else {
+        const itemsInDest = newProjectsState.filter(p => p[groupBy] === overContainer);
+        if (itemsInDest.length > 0) {
+          const lastItem = itemsInDest[itemsInDest.length - 1];
+          const lastItemIndex = newProjectsState.findIndex(p => p.id === lastItem.id);
+          newProjectsState.splice(lastItemIndex + 1, 0, movedItem);
+        } else {
+          newProjectsState.push(movedItem);
+        }
+      }
+    }
+
+    const finalUpdates: any[] = [];
+    const finalProjectGroups = newProjectsState.reduce((acc, p) => {
+        const key = p[groupBy] as string;
+        if (!acc[key]) acc[key] = [];
+        acc[key].push(p);
+        return acc;
+    }, {} as Record<string, Project[]>);
+
+    for (const groupKey in finalProjectGroups) {
+        finalProjectGroups[groupKey].forEach((project, index) => {
+            finalUpdates.push({
+                project_id: project.id,
+                kanban_order: index,
+                [groupBy]: groupKey,
+            });
+        });
+    }
+
+    if (finalUpdates.length > 0) {
+        const newStatusLabel = columns.find(opt => opt.value === overContainer)?.label || overContainer;
+        updateProjectOrder({
+            newProjects: newProjectsState,
+            finalUpdates,
+            groupBy,
+            activeProjectName: activeProjectInstance.name,
+            newStatusLabel,
+            movedColumns: activeContainer !== overContainer,
+        });
+    }
+  };
 
   const renderDateBadgeForOverlay = (project: Project) => {
     const { start_date, due_date } = project;
@@ -93,7 +178,7 @@ const KanbanView = ({ projects, groupBy }: { projects: Project[], groupBy: 'stat
   };
 
   return (
-    <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragCancel={handleDragCancel}>
+    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragCancel={() => setActiveProject(null)}>
       <div className="flex flex-row gap-4 overflow-x-auto pb-4 h-full">
         {columns.map(statusOption => {
           const projectsInColumn = projectGroups[statusOption.value] || [];
