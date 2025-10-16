@@ -9,6 +9,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { supabase } from "@/integrations/supabase/client";
 import { Session } from "@supabase/supabase-js";
+import toast from 'react-hot-toast';
 
 interface ProjectTasksProps {
   tasks: Task[];
@@ -47,6 +48,7 @@ const ProjectTasks = ({ tasks, onAddTask, onEditTask, onDeleteTask, onToggleTask
         .eq('id', existingReaction.id);
       if (error) {
         console.error("Error removing reaction", error);
+        toast.error("Gagal menghapus reaksi.");
       } else {
         onTasksUpdate();
       }
@@ -60,6 +62,7 @@ const ProjectTasks = ({ tasks, onAddTask, onEditTask, onDeleteTask, onToggleTask
         });
       if (error) {
         console.error("Error adding reaction", error);
+        toast.error("Gagal menambahkan reaksi. Periksa izin basis data.");
       } else {
         onTasksUpdate();
       }
