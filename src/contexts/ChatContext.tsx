@@ -37,6 +37,8 @@ interface ChatContextType {
   openForwardDialog: (message: Message) => void;
   forwardMessage: (args: { message: Message; targetConversationIds: string[] }) => void;
   isForwarding: boolean;
+  isChatPageActive: boolean;
+  setIsChatPageActive: (isActive: boolean) => void;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -49,6 +51,8 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
   const [messageSearchResults, setMessageSearchResults] = useState<string[]>([]);
   const [unreadConversationIds, setUnreadConversationIds] = useState(new Set<string>());
   const [messageToForward, setMessageToForward] = useState<Message | null>(null);
+  const [isChatPageActive, setIsChatPageActive] = useState(false);
+  const isChatPageActiveRef = useRef(isChatPageActive);
   
   const { user: currentUser } = useAuth();
   const queryClient = useQueryClient();
@@ -58,6 +62,10 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     selectedConversationIdRef.current = selectedConversationId;
   }, [selectedConversationId]);
+
+  useEffect(() => {
+    isChatPageActiveRef.current = isChatPageActive;
+  }, [isChatPageActive]);
 
   const { data: conversations = [], isLoading: isLoadingConversations, refetch: refetchConversations } = useQuery({
     queryKey: ['conversations', currentUser?.id],
@@ -104,12 +112,10 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         queryClient.invalidateQueries({ queryKey: ['messages', conversationId] });
 
         if (payload.eventType === 'INSERT' && payload.new.sender_id !== currentUser.id) {
-          if (selectedConversationIdRef.current !== conversationId) {
+          const isChatActiveAndVisible = isChatPageActiveRef.current && selectedConversationIdRef.current === conversationId;
+          
+          if (!isChatActiveAndVisible) {
             setUnreadConversationIds(prev => new Set(prev).add(conversationId));
-            // Play sound only if the user is not on the chat page
-            if (!window.location.pathname.startsWith('/chat')) {
-              playSound();
-            }
           }
         }
       }
@@ -378,6 +384,8 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     openForwardDialog: setMessageToForward,
     forwardMessage: forwardMessageMutation.mutate,
     isForwarding: forwardMessageMutation.isPending,
+    isChatPageActive,
+    setIsChatPageActive,
   };
 
   return (

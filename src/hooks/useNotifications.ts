@@ -37,12 +37,12 @@ const fetchNotifications = async (pageParam: number = 0): Promise<AppNotificatio
 export const useNotifications = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const { selectedConversationId } = useChatContext();
-  const selectedConversationIdRef = useRef(selectedConversationId);
+  const { selectedConversationId, isChatPageActive } = useChatContext();
+  const chatStateRef = useRef({ selectedConversationId, isChatPageActive });
 
   useEffect(() => {
-    selectedConversationIdRef.current = selectedConversationId;
-  }, [selectedConversationId]);
+    chatStateRef.current = { selectedConversationId, isChatPageActive };
+  }, [selectedConversationId, isChatPageActive]);
 
   const queryKey = ['notifications', user?.id];
 
@@ -99,8 +99,8 @@ export const useNotifications = () => {
             const conversationIdOfNotification = notificationData.resource_id;
             
             const isChatActiveAndVisible = isChatNotification &&
-                                           window.location.pathname.startsWith('/chat') &&
-                                           selectedConversationIdRef.current === conversationIdOfNotification;
+                                           chatStateRef.current.isChatPageActive &&
+                                           chatStateRef.current.selectedConversationId === conversationIdOfNotification;
 
             const toastsEnabled = userPreferences.toast_enabled !== false;
             

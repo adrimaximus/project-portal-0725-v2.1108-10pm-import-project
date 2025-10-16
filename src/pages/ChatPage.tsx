@@ -12,8 +12,15 @@ import {
 
 const ChatPageContent = () => {
   const isMobile = useIsMobile();
-  const { selectedConversation, selectConversation } = useChatContext();
+  const { selectedConversation, selectConversation, setIsChatPageActive } = useChatContext();
   const chatInputRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    setIsChatPageActive(true);
+    return () => {
+      setIsChatPageActive(false);
+    };
+  }, [setIsChatPageActive]);
 
   useEffect(() => {
     if (selectedConversation && chatInputRef.current) {
