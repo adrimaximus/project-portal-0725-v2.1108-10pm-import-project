@@ -19,12 +19,15 @@ import {
   Copy,
   Pencil,
   Trash2,
+  MoreHorizontal,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useChatContext } from "@/contexts/ChatContext";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import EmojiPicker, { EmojiClickData } from 'emoji-picker-react';
 
 interface ChatMessageActionsProps {
   message: Message;
@@ -43,6 +46,7 @@ export const ChatMessageActions = ({
 }: ChatMessageActionsProps) => {
   const { deleteMessage, toggleReaction, openForwardDialog } = useChatContext();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
 
   const handleCopy = () => {
     if (message.text) {
@@ -76,7 +80,7 @@ export const ChatMessageActions = ({
             </DropdownMenuSubTrigger>
             <DropdownMenuPortal>
               <DropdownMenuSubContent>
-                <div className="flex p-1">
+                <div className="flex p-1 items-center">
                   {QUICK_REACTIONS.map(emoji => (
                     <Button
                       key={emoji}
@@ -91,6 +95,24 @@ export const ChatMessageActions = ({
                       {emoji}
                     </Button>
                   ))}
+                  <Popover open={emojiPickerOpen} onOpenChange={setEmojiPickerOpen}>
+                    <PopoverTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="p-0 w-auto border-none" onClick={(e) => e.stopPropagation()}>
+                      <EmojiPicker
+                        onEmojiClick={(emojiData: EmojiClickData) => {
+                          toggleReaction(message.id, emojiData.emoji);
+                          setEmojiPickerOpen(false);
+                        }}
+                        searchDisabled
+                        previewConfig={{ showPreview: false }}
+                        height={300}
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
               </DropdownMenuSubContent>
             </DropdownMenuPortal>
