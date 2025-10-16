@@ -223,28 +223,6 @@ serve(async (req) => {
             userPrompt = `**Konteks:**\n- **Jenis:** Undangan Kolaborasi Goal\n- **Pengundang:** ${inviterName}\n- **Penerima:** ${recipientName}\n- **Goal:** ${goalRes.data.title}\n- **URL:** https://7inked.ahensi.xyz/goals/${goalRes.data.slug}\n\nBuat pesan notifikasi yang sesuai dan sertakan URL di akhir.`;
             break;
           }
-          case 'goal_progress_update': {
-            const { goal_id, actor_id, value, quantity, notes } = notification.context_data;
-            const [goalRes, actorRes] = await Promise.all([
-              supabaseAdmin.from('goals').select('title, slug, type, unit').eq('id', goal_id).single(),
-              supabaseAdmin.from('profiles').select('first_name, last_name, email').eq('id', actor_id).single(),
-            ]);
-            if (goalRes.error || actorRes.error) throw new Error("Failed to fetch goal progress context.");
-            const actorName = `${actorRes.data.first_name || ''} ${actorRes.data.last_name || ''}`.trim() || actorRes.data.email;
-            let progressText = '';
-            if (goalRes.data.type === 'value' && value) {
-              progressText = `mencatat progres sebesar *${new Intl.NumberFormat('id-ID').format(value)} ${goalRes.data.unit || ''}*`;
-            } else if (goalRes.data.type === 'quantity' && quantity) {
-              progressText = `mencatat progres sebanyak *${quantity}*`;
-            } else {
-              progressText = 'baru saja mencatat progres';
-            }
-            if (notes) {
-              progressText += ` dengan catatan: _"${notes}"_`;
-            }
-            userPrompt = `**Konteks:**\n- **Jenis:** Pembaruan Progres Goal\n- **Pelaku Aksi:** ${actorName}\n- **Penerima:** ${recipientName}\n- **Goal:** ${goalRes.data.title}\n- **Detail Progres:** ${actorName} ${progressText}.\n- **URL:** https://7inked.ahensi.xyz/goals/${goalRes.data.slug}\n\nBuat pesan notifikasi yang sesuai dan sertakan URL di akhir.`;
-            break;
-          }
           case 'kb_invite': {
             const { folder_id, inviter_id } = notification.context_data;
             const [folderRes, inviterRes] = await Promise.all([
