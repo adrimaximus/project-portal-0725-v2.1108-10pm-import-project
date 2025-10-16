@@ -42,7 +42,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
   }
 
   return (
-    <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+    <DialogContent className="sm:max-w-[350px] max-h-[200px] overflow-y-auto">
       <DialogHeader>
         <DialogTitle className="flex items-center gap-2">
           {task.originTicketId && <Ticket className={`h-5 w-5 flex-shrink-0 ${task.completed ? 'text-green-500' : 'text-red-500'}`} />}
@@ -61,7 +61,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
         {task.description && (
           <div>
             <h4 className="font-semibold mb-2 text-sm">Description</h4>
-            <div className="prose prose-sm dark:prose-invert max-w-none text-muted-foreground">
+            <div className="prose prose-sm dark:prose-invert max-w-none text-muted-foreground break-words">
               <ReactMarkdown remarkPlugins={[remarkGfm]}>
                 {formatTaskText(task.description)}
               </ReactMarkdown>
