@@ -67,9 +67,11 @@ const GoalCollaborationManager = ({ goal, onCollaboratorsUpdate }: GoalCollabora
             return {
               id: profile.id,
               name: fullName || profile.email || 'No name',
-              avatar_url: profile.avatar_url,
+              avatar_url: getAvatarUrl(profile.avatar_url, profile.id),
               email: profile.email,
               initials: getInitials(fullName, profile.email) || 'NN',
+              first_name: profile.first_name,
+              last_name: profile.last_name,
             }
           });
           setAvailableUsers(users);
