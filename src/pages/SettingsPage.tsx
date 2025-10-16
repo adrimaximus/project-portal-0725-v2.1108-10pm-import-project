@@ -9,6 +9,7 @@ import { ChevronRight } from "lucide-react";
 import { useFeatures } from "@/contexts/FeaturesContext";
 import TagsCard from "@/components/settings/TagsCard";
 import ThemeCard from "@/components/settings/ThemeCard";
+import ServicesCard from "@/components/settings/ServicesCard";
 
 const WorkspaceSettingsCard = () => {
   const navigate = useNavigate();
@@ -52,7 +53,12 @@ const SettingsPage = () => {
           {isFeatureEnabled('integrations') && hasPermission('settings:manage_integrations') && <IntegrationCard />}
           
           {/* Role-based */}
-          {isAdmin && <TeamCard />}
+          {isAdmin && (
+            <>
+              <TeamCard />
+              <ServicesCard />
+            </>
+          )}
           {isMasterAdmin && <WorkspaceSettingsCard />}
         </div>
       </div>
