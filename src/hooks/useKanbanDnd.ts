@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useState, useRef } from 'react';
+import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { DragEndEvent, DragStartEvent } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
 import { toast } from 'sonner';
@@ -8,24 +8,59 @@ import { Project, ProjectStatus, PaymentStatus } from '@/types';
 
 type GroupBy = 'status' | 'payment_status';
 
+type UpdateProjectOrderPayload = {
+    newProjects: Project[];
+    finalUpdates: any[];
+    groupBy: GroupBy;
+    activeProjectName: string;
+    newStatusLabel: string;
+    movedColumns: boolean;
+};
+
 export const useKanbanDnd = (
     projects: Project[],
     groupBy: GroupBy,
-    projectGroups: Record<string, Project[]>,
     columns: readonly { value: string; label: string }[]
 ) => {
     const queryClient = useQueryClient();
     const [activeProject, setActiveProject] = useState<Project | null>(null);
     const dragHappened = useRef(false);
 
-    useEffect(() => {
-        if (activeProject) {
-            dragHappened.current = true;
-        }
-    }, [activeProject]);
+    const { mutate: updateProjectOrder } = useMutation({
+        mutationFn: async ({ finalUpdates, groupBy }: UpdateProjectOrderPayload) => {
+            const { error } = await supabase.rpc('update_project_kanban_order', {
+                updates: finalUpdates,
+                group_by_key: groupBy,
+            });
+            if (error) throw error;
+        },
+        onMutate: async ({ newProjects }) => {
+            await queryClient.cancelQueries({ queryKey: ['projects'] });
+            const previousProjects = queryClient.getQueryData<Project[]>(['projects']);
+            queryClient.setQueryData(['projects'], newProjects);
+            return { previousProjects };
+        },
+        onError: (err: any, variables, context) => {
+            if (context?.previousProjects) {
+                queryClient.setQueryData(['projects'], context.previousProjects);
+            }
+            toast.error(`Failed to move project: ${err.message}`);
+        },
+        onSuccess: (_, { activeProjectName, newStatusLabel, movedColumns }) => {
+            if (movedColumns) {
+                toast.success(`Project "${activeProjectName}" moved to ${newStatusLabel}.`);
+            } else {
+                toast.success(`Project order updated in ${newStatusLabel}.`);
+            }
+        },
+        onSettled: () => {
+            queryClient.invalidateQueries({ queryKey: ['projects'] });
+        },
+    });
 
     const handleDragStart = (event: DragStartEvent) => {
         setActiveProject(projects.find(p => p.id === event.active.id) || null);
+        dragHappened.current = true;
     };
 
     const resetDragState = () => {
@@ -39,7 +74,7 @@ export const useKanbanDnd = (
         resetDragState();
     };
 
-    const handleDragEnd = async (event: DragEndEvent) => {
+    const handleDragEnd = (event: DragEndEvent) => {
         const { active, over } = event;
         resetDragState();
 
@@ -57,22 +92,24 @@ export const useKanbanDnd = (
         const activeProjectInstance = projects.find(p => p.id === activeId);
         if (!activeProjectInstance || !activeContainer || !overContainer) return;
 
-        const originalProjects = [...projects];
-        const newProjectGroups = JSON.parse(JSON.stringify(projectGroups));
+        const projectGroups = columns.reduce((acc, opt) => {
+            acc[opt.value] = projects.filter(p => p[groupBy] === opt.value);
+            return acc;
+        }, {} as Record<string, Project[]>);
 
         if (activeContainer === overContainer) {
             if (activeId === overId) return;
 
-            const items = newProjectGroups[activeContainer];
+            const items = projectGroups[activeContainer];
             const oldIndex = items.findIndex((p: Project) => p.id === activeId);
             const newIndex = items.findIndex((p: Project) => p.id === overId);
 
             if (oldIndex !== -1 && newIndex !== -1) {
-                newProjectGroups[activeContainer] = arrayMove(items, oldIndex, newIndex);
+                projectGroups[activeContainer] = arrayMove(items, oldIndex, newIndex);
             }
         } else {
-            const sourceItems = newProjectGroups[activeContainer];
-            const destinationItems = newProjectGroups[overContainer];
+            const sourceItems = projectGroups[activeContainer];
+            const destinationItems = projectGroups[overContainer];
             
             const activeIndex = sourceItems.findIndex((p: Project) => p.id === activeId);
             if (activeIndex === -1) return;
@@ -96,42 +133,32 @@ export const useKanbanDnd = (
             destinationItems.splice(newIndex, 0, movedItem);
         }
 
-        const optimisticallyUpdatedProjects = Object.values(newProjectGroups).flat();
-        queryClient.setQueryData(['projects'], optimisticallyUpdatedProjects);
-
+        const optimisticallyUpdatedProjects = Object.values(projectGroups).flat();
+        
         const affectedGroups = new Set([activeContainer, overContainer]);
-        const finalUpdates = [];
-        const orderKey = groupBy === 'status' ? 'kanban_order' : 'payment_kanban_order';
+        const finalUpdates: any[] = [];
 
         for (const groupKey of affectedGroups) {
-            const items = newProjectGroups[groupKey] || [];
+            const items = projectGroups[groupKey] || [];
             items.forEach((project: Project, index: number) => {
                 finalUpdates.push({
                     project_id: project.id,
-                    kanban_order: index, // This key is now generic for the RPC payload
+                    kanban_order: index,
                     [groupBy]: groupKey,
                 });
             });
         }
 
-        if (finalUpdates.length === 0) return;
-
-        const { error } = await supabase.rpc('update_project_kanban_order', {
-            updates: finalUpdates,
-            group_by_key: groupBy,
-        });
-
-        if (error) {
-            toast.error(`Failed to move project: ${error.message}`);
-            queryClient.setQueryData(['projects'], originalProjects);
-        } else {
+        if (finalUpdates.length > 0) {
             const newStatusLabel = columns.find(opt => opt.value === overContainer)?.label || overContainer;
-            if (activeContainer === overContainer) {
-                toast.success(`Project order updated in ${newStatusLabel}.`);
-            } else {
-                toast.success(`Project "${activeProjectInstance.name}" moved to ${newStatusLabel}.`);
-            }
-            await queryClient.invalidateQueries({ queryKey: ['projects'] });
+            updateProjectOrder({
+                newProjects: optimisticallyUpdatedProjects,
+                finalUpdates,
+                groupBy,
+                activeProjectName: activeProjectInstance.name,
+                newStatusLabel,
+                movedColumns: activeContainer !== overContainer,
+            });
         }
     };
 

@@ -9,6 +9,7 @@ import PeopleKanbanCard from './PeopleKanbanCard';
 import KanbanColumnEditor from './KanbanColumnEditor';
 import { arrayMove, SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useAuth } from '@/contexts/AuthContext';
+import { usePeopleKanbanMutations } from '@/hooks/usePeopleKanbanMutations';
 
 type PeopleKanbanViewProps = {
   people: Person[];
@@ -45,6 +46,7 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
   const [columnOrder, setColumnOrder] = useState<string[]>([]);
   const [visibleColumnIds, setVisibleColumnIds] = useState<string[]>([]);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const { updatePeopleOrder } = usePeopleKanbanMutations();
 
   const uncategorizedTag: Tag = { id: 'uncategorized', name: 'Uncategorized', color: '#9ca3af' };
 
@@ -66,11 +68,7 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
       }
     });
     for (const groupId in groups) {
-      groups[groupId].sort((a, b) => {
-        const dateA = a.updated_at ? new Date(a.updated_at).getTime() : 0;
-        const dateB = b.updated_at ? new Date(b.updated_at).getTime() : 0;
-        return dateB - dateA;
-      });
+      groups[groupId].sort((a, b) => (a.kanban_order ?? 0) - (b.kanban_order ?? 0));
     }
     return groups;
   }, [people, tags, visibleColumnIds]);
@@ -160,7 +158,7 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
     setActivePerson(people.find(p => p.id === active.id) || null);
   };
 
-  const handleDragEnd = async (event: DragEndEvent) => {
+  const handleDragEnd = (event: DragEndEvent) => {
     setActivePerson(null);
     setTimeout(() => { dragHappened.current = false; }, 0);
 
@@ -176,9 +174,7 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
 
     if (!sourceContainerId || !destContainerId) return;
 
-    const previousPeople = queryClient.getQueryData<Person[]>(['people', 'with-slug']) || [];
-    
-    let newPeopleState: Person[] = JSON.parse(JSON.stringify(previousPeople));
+    let newPeopleState: Person[] = JSON.parse(JSON.stringify(people));
     const activeIndex = newPeopleState.findIndex(p => p.id === activeId);
     if (activeIndex === -1) return;
 
@@ -224,37 +220,17 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
       });
     }
 
-    queryClient.setQueryData(['people', 'with-slug'], newPeopleState);
+    const sourceColumnIds = (finalGroups[sourceContainerId] || []).map(p => p.id);
+    const destColumnIds = (finalGroups[destContainerId] || []).map(p => p.id);
 
-    try {
-      if (sourceContainerId !== destContainerId) {
-        const { error: tagError } = await supabase.rpc('update_person_tags', {
-          p_person_id: activeId,
-          p_tag_to_remove_id: sourceContainerId === 'uncategorized' ? null : sourceContainerId,
-          p_tag_to_add_id: destContainerId === 'uncategorized' ? null : destContainerId,
-        });
-        if (tagError) throw tagError;
-      }
-
-      const sourceColumnIds = (finalGroups[sourceContainerId] || []).map(p => p.id);
-      const destColumnIds = (finalGroups[destContainerId] || []).map(p => p.id);
-
-      const promises = [];
-      if (sourceContainerId !== destContainerId && sourceColumnIds.length > 0) {
-        promises.push(supabase.rpc('update_person_kanban_order', { p_person_ids: sourceColumnIds }));
-      }
-      if (destColumnIds.length > 0) {
-        promises.push(supabase.rpc('update_person_kanban_order', { p_person_ids: destColumnIds }));
-      }
-      
-      const results = await Promise.all(promises);
-      for (const result of results) {
-        if (result.error) throw result.error;
-      }
-    } catch (error: any) {
-      toast.error(`Failed to move person: ${error.message}`);
-      queryClient.setQueryData(['people', 'with-slug'], previousPeople);
-    }
+    updatePeopleOrder({
+      newPeopleState,
+      activeId,
+      sourceContainerId,
+      destContainerId,
+      sourceColumnIds,
+      destColumnIds,
+    });
   };
 
   const allTagsForEditor = [uncategorizedTag, ...tags];

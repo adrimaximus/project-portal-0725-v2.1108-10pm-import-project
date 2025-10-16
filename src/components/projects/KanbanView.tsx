@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { DndContext, MouseSensor, TouchSensor, useSensor, useSensors, DragOverlay } from '@dnd-kit/core';
+import { DndContext, DragOverlay } from '@dnd-kit/core';
 import { Project, PROJECT_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -11,20 +11,6 @@ import { useKanbanDnd } from '@/hooks/useKanbanDnd';
 import { isSameDay, subDays } from 'date-fns';
 
 const KanbanView = ({ projects, groupBy }: { projects: Project[], groupBy: 'status' | 'payment_status' }) => {
-  const sensors = useSensors(
-    useSensor(MouseSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    }),
-    useSensor(TouchSensor, {
-      activationConstraint: {
-        delay: 250,
-        tolerance: 5,
-      },
-    })
-  );
-  
   const [collapsedColumns, setCollapsedColumns] = useState<string[]>([]);
 
   useEffect(() => {
@@ -81,7 +67,7 @@ const KanbanView = ({ projects, groupBy }: { projects: Project[], groupBy: 'stat
     handleDragStart, 
     handleDragEnd, 
     handleDragCancel 
-  } = useKanbanDnd(projects, groupBy, projectGroups, columns);
+  } = useKanbanDnd(projects, groupBy, columns);
 
   const renderDateBadgeForOverlay = (project: Project) => {
     const { start_date, due_date } = project;
@@ -107,7 +93,7 @@ const KanbanView = ({ projects, groupBy }: { projects: Project[], groupBy: 'stat
   };
 
   return (
-    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragCancel={handleDragCancel}>
+    <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragCancel={handleDragCancel}>
       <div className="flex flex-row gap-4 overflow-x-auto pb-4 h-full">
         {columns.map(statusOption => {
           const projectsInColumn = projectGroups[statusOption.value] || [];
