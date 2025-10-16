@@ -154,25 +154,23 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
           </div>
           <div>
             {task.assignedTo && task.assignedTo.length > 0 && (
-              <div className="flex items-start gap-2">
+              <div className="flex items-center gap-2">
                 <h4 className="font-semibold flex items-center gap-2 flex-shrink-0"><UserIcon className="h-4 w-4" /> Assignees</h4>
-                <div className="flex flex-col gap-2">
+                <div className="flex -space-x-2">
                   {task.assignedTo.map((user) => (
                     <TooltipProvider key={user.id}>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <div className="flex items-center gap-2">
-                            <Avatar className="h-8 w-8">
-                              <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
-                              <AvatarFallback style={generatePastelColor(user.id)}>
-                                {getInitials([user.first_name, user.last_name].filter(Boolean).join(' '), user.email || undefined)}
-                              </AvatarFallback>
-                            </Avatar>
-                            <span>{[user.first_name, user.last_name].filter(Boolean).join(' ')}</span>
-                          </div>
+                          <Avatar className="h-8 w-8 border-2 border-background">
+                            <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
+                            <AvatarFallback style={generatePastelColor(user.id)}>
+                              {getInitials([user.first_name, user.last_name].filter(Boolean).join(' '), user.email || undefined)}
+                            </AvatarFallback>
+                          </Avatar>
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p>{user.email}</p>
+                          <p>{[user.first_name, user.last_name].filter(Boolean).join(' ')}</p>
+                          <p className="text-xs text-muted-foreground">{user.email}</p>
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
