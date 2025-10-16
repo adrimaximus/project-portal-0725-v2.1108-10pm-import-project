@@ -297,7 +297,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
             if (existingReactionIndex > -1) {
               newReactions = (message.reactions || []).filter((_, index) => index !== existingReactionIndex);
             } else {
-              newReactions = [...(message.reactions || []), { id: uuidv4(), emoji, user_id: currentUser!.id, user_name: currentUser!.name || '' }];
+              newReactions = [...(message.reactions || []), { emoji, user_id: currentUser!.id, user_name: currentUser!.name || '' }];
             }
             return { ...message, reactions: newReactions };
           }

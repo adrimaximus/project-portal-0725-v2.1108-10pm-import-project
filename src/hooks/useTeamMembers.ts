@@ -19,8 +19,6 @@ const fetchTeamMembers = async (): Promise<User[]> => {
       status: profile.status,
       initials: getInitials(fullName, profile.email) || 'NN',
       updated_at: profile.updated_at,
-      first_name: profile.first_name,
-      last_name: profile.last_name,
     };
   });
 };

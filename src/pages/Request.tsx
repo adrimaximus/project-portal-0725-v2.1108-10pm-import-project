@@ -1,7 +1,8 @@
 import { useState } from "react";
 import PortalLayout from "@/components/PortalLayout";
+import { Service } from "@/data/services";
 import SelectedServicesSummary from "@/components/SelectedServicesSummary";
-import ServiceSelection, { Service } from "@/components/request/ServiceSelection";
+import ServiceSelection from "@/components/request/ServiceSelection";
 import ProjectDetailsForm from "@/components/request/ProjectDetailsForm";
 
 const RequestPage = () => {
@@ -10,25 +11,22 @@ const RequestPage = () => {
   const [selectedServices, setSelectedServices] = useState<Service[]>([]);
 
   const handleServiceSelect = (service: Service) => {
-    const isFeatured = service.is_featured;
+    const isFeatured = service.title === "End to End Services";
     const isAlreadySelected = selectedServices.some(
-      (s) => s.id === service.id
+      (s) => s.title === service.title
     );
 
     if (isFeatured) {
       setSelectedServices(isAlreadySelected ? [] : [service]);
     } else {
-      // Filter out any featured services first
       let newSelectedServices = selectedServices.filter(
-        (s) => !s.is_featured
+        (s) => s.title !== "End to End Services"
       );
       if (isAlreadySelected) {
-        // If it's already selected, remove it
         newSelectedServices = newSelectedServices.filter(
-          (s) => s.id !== service.id
+          (s) => s.title !== service.title
         );
       } else {
-        // If it's not selected, add it
         newSelectedServices.push(service);
       }
       setSelectedServices(newSelectedServices);

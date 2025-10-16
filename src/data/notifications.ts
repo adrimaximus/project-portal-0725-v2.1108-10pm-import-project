@@ -10,18 +10,6 @@ export const notificationIcons = {
   goal: Target,
 };
 
-const dummyActor1 = {
-  id: 'user-1',
-  name: 'Alex Smith',
-  avatar_url: 'https://i.pravatar.cc/150?u=alexsmith'
-};
-
-const dummyActor2 = {
-  id: 'user-2',
-  name: 'Jane Doe',
-  avatar_url: 'https://i.pravatar.cc/150?u=janedoe'
-};
-
 export const dummyNotifications: AppNotification[] = [
   {
     id: "1",
@@ -31,7 +19,6 @@ export const dummyNotifications: AppNotification[] = [
     timestamp: new Date(Date.now() - 1000 * 60 * 5).toISOString(),
     read: false,
     link: "/projects/proj-1",
-    actor: dummyActor1,
   },
   {
     id: "2",
@@ -41,7 +28,6 @@ export const dummyNotifications: AppNotification[] = [
     timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
     read: false,
     link: "#",
-    actor: dummyActor2,
   },
   {
     id: "3",
@@ -51,7 +37,6 @@ export const dummyNotifications: AppNotification[] = [
     timestamp: new Date(Date.now() - 1000 * 60 * 60 * 8).toISOString(),
     read: true,
     link: "#",
-    actor: dummyActor2,
   },
   {
     id: "4",
@@ -61,11 +46,6 @@ export const dummyNotifications: AppNotification[] = [
     timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
     read: true,
     link: "#",
-    actor: {
-      id: 'system',
-      name: 'System',
-      avatar_url: ''
-    },
   },
   {
     id: "5",
@@ -75,6 +55,5 @@ export const dummyNotifications: AppNotification[] = [
     timestamp: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString(),
     read: false,
     link: "#",
-    actor: dummyActor1,
   },
 ];

@@ -44,13 +44,13 @@ export function ClientSelector({ people, companies, selectedClient, onSelectClie
     setOpen(false);
   };
 
-  const selectedName = selectedClient ? (selectedClient.type === 'person' ? (selectedClient.data as Person).full_name : (selectedClient.data as Company).name) : "Select a client...";
+  const selectedName = selectedClient ? (selectedClient.type === 'person' ? (selectedClient.data as Person).full_name : selectedClient.data.name) : "Select a client...";
   const selectedAvatar = selectedClient 
     ? (selectedClient.type === 'person' 
         ? (selectedClient.data as Person).avatar_url 
         : (selectedClient.data as Company).logo_url || (selectedClient.data as Company).custom_properties?.logo_image) 
     : '';
-  const selectedInitials = selectedClient ? (selectedClient.type === 'person' ? getInitials((selectedClient.data as Person).full_name) : getInitials((selectedClient.data as Company).name)) : '';
+  const selectedInitials = selectedClient ? (selectedClient.type === 'person' ? getInitials((selectedClient.data as Person).full_name) : getInitials(selectedClient.data.name)) : '';
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
