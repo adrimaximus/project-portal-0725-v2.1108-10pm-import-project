@@ -253,7 +253,7 @@ const LoginPage = () => {
             
             <div className="my-6"></div>
 
-            <Button variant="outline" className="w-full h-12 text-base bg-transparent border-gray-700 text-white hover:bg-gray-800/50 hover:text-white" onClick={handleGoogleLogin} disabled={googleLoading}>
+            <Button variant="outline" className="w-full h-12 text-base bg-transparent border-gray-700 text-white hover:bg-gray-800/50 hover:text-white" onClick={handleGoogleLogin}>
               {googleLoading ? (
                 <Loader2 className="h-5 w-5 animate-spin" />
               ) : (
