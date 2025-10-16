@@ -390,6 +390,7 @@ const ProjectsPage = () => {
               taskSortConfig={taskSortConfig}
               requestTaskSort={requestTaskSort}
               onTaskStatusChange={handleTaskStatusChange}
+              hideCompletedTasks={hideCompletedTasks}
             />
           </div>
         </div>
