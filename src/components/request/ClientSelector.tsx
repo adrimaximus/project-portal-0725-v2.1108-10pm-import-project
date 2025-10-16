@@ -31,6 +31,25 @@ interface ClientSelectorProps {
 export function ClientSelector({ people, selectedPerson, onSelectPerson, onAddNewClient }: ClientSelectorProps) {
   const [open, setOpen] = React.useState(false)
 
+  const { companyClients, inPersonClients } = React.useMemo(() => {
+    const company: Person[] = [];
+    const inPerson: Person[] = [];
+
+    people.forEach(person => {
+      if (person.company) {
+        company.push(person);
+      } else {
+        inPerson.push(person);
+      }
+    });
+
+    const sortByName = (a: Person, b: Person) => a.full_name.localeCompare(b.full_name);
+    company.sort(sortByName);
+    inPerson.sort(sortByName);
+
+    return { companyClients: company, inPersonClients: inPerson };
+  }, [people]);
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -59,32 +78,68 @@ export function ClientSelector({ people, selectedPerson, onSelectPerson, onAddNe
           <CommandInput placeholder="Search client..." />
           <CommandList>
             <CommandEmpty>No client found.</CommandEmpty>
-            <CommandGroup>
-              {people.map((person) => (
-                <CommandItem
-                  key={person.id}
-                  value={person.full_name}
-                  onSelect={() => {
-                    onSelectPerson(person.id === selectedPerson?.id ? null : person)
-                    setOpen(false)
-                  }}
-                >
-                  <Check
-                    className={cn(
-                      "mr-2 h-4 w-4",
-                      selectedPerson?.id === person.id ? "opacity-100" : "opacity-0"
-                    )}
-                  />
-                   <div className="flex items-center gap-2">
-                      <Avatar className="h-6 w-6">
-                        <AvatarImage src={person.avatar_url || ''} alt={person.full_name} />
-                        <AvatarFallback>{getInitials(person.full_name)}</AvatarFallback>
-                      </Avatar>
-                      <span>{person.full_name}</span>
-                    </div>
-                </CommandItem>
-              ))}
-            </CommandGroup>
+            
+            {companyClients.length > 0 && (
+              <CommandGroup heading="Client Company">
+                {companyClients.map((person) => (
+                  <CommandItem
+                    key={person.id}
+                    value={person.full_name}
+                    onSelect={() => {
+                      onSelectPerson(person.id === selectedPerson?.id ? null : person)
+                      setOpen(false)
+                    }}
+                  >
+                    <Check
+                      className={cn(
+                        "mr-2 h-4 w-4",
+                        selectedPerson?.id === person.id ? "opacity-100" : "opacity-0"
+                      )}
+                    />
+                     <div className="flex items-center gap-2">
+                        <Avatar className="h-6 w-6">
+                          <AvatarImage src={person.avatar_url || ''} alt={person.full_name} />
+                          <AvatarFallback>{getInitials(person.full_name)}</AvatarFallback>
+                        </Avatar>
+                        <div className="flex flex-col">
+                          <span>{person.full_name}</span>
+                          {person.company && <span className="text-xs text-muted-foreground">{person.company}</span>}
+                        </div>
+                      </div>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            )}
+
+            {inPersonClients.length > 0 && (
+              <CommandGroup heading="Client In Person">
+                {inPersonClients.map((person) => (
+                  <CommandItem
+                    key={person.id}
+                    value={person.full_name}
+                    onSelect={() => {
+                      onSelectPerson(person.id === selectedPerson?.id ? null : person)
+                      setOpen(false)
+                    }}
+                  >
+                    <Check
+                      className={cn(
+                        "mr-2 h-4 w-4",
+                        selectedPerson?.id === person.id ? "opacity-100" : "opacity-0"
+                      )}
+                    />
+                     <div className="flex items-center gap-2">
+                        <Avatar className="h-6 w-6">
+                          <AvatarImage src={person.avatar_url || ''} alt={person.full_name} />
+                          <AvatarFallback>{getInitials(person.full_name)}</AvatarFallback>
+                        </Avatar>
+                        <span>{person.full_name}</span>
+                      </div>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            )}
+
             <CommandSeparator />
             <CommandGroup>
                 <CommandItem onSelect={() => {
