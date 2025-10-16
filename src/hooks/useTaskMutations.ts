@@ -95,18 +95,12 @@ export const useTaskMutations = (refetch?: () => void) => {
 
   const { mutate: updateTaskStatusAndOrder } = useMutation<void, Error, UpdateTaskOrderPayload>({
     mutationFn: async ({ taskId, newStatus, orderedTaskIds }) => {
-      const { error: statusError } = await supabase
-        .from('tasks')
-        .update({ status: newStatus, completed: newStatus === 'Done' })
-        .eq('id', taskId);
-      
-      if (statusError) throw statusError;
-
-      const { error: orderError } = await supabase.rpc('update_task_kanban_order', {
-        p_task_ids: orderedTaskIds,
+      const { error } = await supabase.rpc('update_task_status_and_order', {
+        p_task_id: taskId,
+        p_new_status: newStatus,
+        p_ordered_task_ids: orderedTaskIds,
       });
-
-      if (orderError) throw orderError;
+      if (error) throw error;
     },
     onMutate: async ({ newTasks, queryKey }) => {
       await queryClient.cancelQueries({ queryKey });
