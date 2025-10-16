@@ -13,7 +13,7 @@ import { Loader2, X } from 'lucide-react';
 interface CompanyPropertyFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: (property: Omit<CompanyProperty, 'id' | 'is_default'> & { name: string }) => void;
+  onSave: (property: Omit<CompanyProperty, 'id'> & { name: string }) => void;
   property?: CompanyProperty | null;
   isSaving: boolean;
   properties: CompanyProperty[];

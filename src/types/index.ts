@@ -391,7 +391,6 @@ export interface CompanyProperty {
   label: string;
   type: 'text' | 'textarea' | 'number' | 'date' | 'email' | 'phone' | 'url' | 'image' | 'select';
   options?: string[] | null;
-  is_default: boolean;
 }
 
 export interface Company {
