@@ -1,26 +1,34 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
-import { Project, Task } from "@/types";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { Project, Task } from '@/types';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import PortalLayout from "@/components/PortalLayout";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, RefreshCw, Search, Download } from "lucide-react";
-import { useProjects } from "@/hooks/useProjects";
-import { useTasks } from "@/hooks/useTasks";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { toast } from "sonner";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { Input } from "@/components/ui/input";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { MoreHorizontal, PlusCircle, Search, Trash2, Edit, User as UserIcon, Linkedin, Twitter, Instagram, GitMerge, Loader2, Kanban, LayoutGrid, Table as TableIcon, Settings, Building } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useCreateProject } from "@/hooks/useCreateProject";
-import { formatInJakarta } from "@/lib/utils";
+import { toast } from "sonner";
+import { formatDistanceToNow } from "date-fns";
+import { id } from "date-fns/locale";
+import { generatePastelColor, getAvatarUrl, getErrorMessage, getInitials } from "@/lib/utils";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import PersonFormDialog from "@/components/people/PersonFormDialog";
+import { Badge } from "@/components/ui/badge";
+import WhatsappIcon from "@/components/icons/WhatsappIcon";
+import { DuplicatePair } from "@/components/people/DuplicateContactsCard";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import PeopleKanbanView from "@/components/people/PeopleKanbanView";
+import PeopleGridView from "@/components/people/PeopleGridView";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import DuplicateSummaryDialog from "@/components/people/DuplicateSummaryDialog";
+import MergeDialog from "@/components/people/MergeDialog";
+import CompaniesView from "@/components/people/CompaniesView";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useIsMobile } from "@/hooks/use-mobile";
+import PersonListCard from "@/components/people/PersonListCard";
 import { useProjectFilters } from "@/hooks/useProjectFilters";
 import ProjectsToolbar from "@/components/projects/ProjectsToolbar";
 import ProjectViewContainer from "@/components/projects/ProjectViewContainer";
@@ -28,10 +36,9 @@ import { useTaskMutations, UpsertTaskPayload } from "@/hooks/useTaskMutations";
 import TaskFormDialog from "@/components/projects/TaskFormDialog";
 import { TaskStatus } from "@/types";
 import { DatePickerWithRange } from "@/components/ui/date-picker-with-range";
-import { Input } from "@/components/ui/input";
-import { useQueryClient, useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { GoogleCalendarImportDialog } from "@/components/projects/GoogleCalendarImportDialog";
+import { useTasks } from "@/hooks/useTasks";
 
 type ViewMode = 'table' | 'list' | 'kanban' | 'tasks' | 'tasks-kanban';
 type SortConfig<T> = { key: keyof T | null; direction: 'ascending' | 'descending' };
@@ -334,7 +341,7 @@ const ProjectsPage = () => {
               isLoading={isLoadingProjects}
               isTasksLoading={isLoadingTasks}
               onDeleteProject={handleDeleteProject}
-              sortConfig={projectSortConfig}
+              sortConfig={sortConfig}
               requestSort={(key) => requestProjectSort(key as keyof Project)}
               rowRefs={rowRefs}
               kanbanGroupBy={kanbanGroupBy}
