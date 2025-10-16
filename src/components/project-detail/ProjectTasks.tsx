@@ -24,6 +24,7 @@ const EMOJIS = ['👍', '❤️', '🎉', '😂', '😮', '😢', '🤔'];
 
 const ProjectTasks = ({ tasks, onAddTask, onEditTask, onDeleteTask, onToggleTaskCompletion, onTasksUpdate }: ProjectTasksProps) => {
   const [session, setSession] = useState<Session | null>(null);
+  const [openPopoverId, setOpenPopoverId] = useState<string | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -32,6 +33,7 @@ const ProjectTasks = ({ tasks, onAddTask, onEditTask, onDeleteTask, onToggleTask
   }, []);
 
   const handleReactionClick = async (task: Task, emoji: string) => {
+    setOpenPopoverId(null); // Close popover immediately
     if (!session?.user) return;
 
     const existingReaction = task.reactions?.find(
@@ -104,15 +106,17 @@ const ProjectTasks = ({ tasks, onAddTask, onEditTask, onDeleteTask, onToggleTask
                   onCheckedChange={(checked) => onToggleTaskCompletion(task, !!checked)}
                   className="mt-1"
                 />
-                <div className="flex-1 space-y-1">
+                <div className="flex-1 space-y-1 min-w-0">
                   <label
                     htmlFor={`task-${task.id}`}
-                    className={`text-sm ${task.completed ? 'text-muted-foreground line-through' : 'text-card-foreground'}`}
+                    className={`text-sm break-words ${task.completed ? 'text-muted-foreground line-through' : 'text-card-foreground'}`}
                   >
                     {task.title}
                   </label>
-                  
-                  <div className="flex items-center space-x-1 flex-wrap pt-1">
+                </div>
+
+                <div className="flex items-center gap-2 ml-auto pl-2 flex-shrink-0">
+                  <div className="flex items-center space-x-1 flex-wrap">
                     {groupedReactions && Object.entries(groupedReactions).map(([emoji, reactions]) => {
                       const userHasReacted = reactions.some(r => r.user_id === session?.user?.id);
                       return (
@@ -134,7 +138,7 @@ const ProjectTasks = ({ tasks, onAddTask, onEditTask, onDeleteTask, onToggleTask
                         </Tooltip>
                       )
                     })}
-                    <Popover>
+                    <Popover open={openPopoverId === task.id} onOpenChange={(isOpen) => setOpenPopoverId(isOpen ? task.id : null)}>
                       <PopoverTrigger asChild>
                         <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full opacity-50 group-hover:opacity-100 transition-opacity">
                           <SmilePlus className="h-4 w-4" />
@@ -157,42 +161,42 @@ const ProjectTasks = ({ tasks, onAddTask, onEditTask, onDeleteTask, onToggleTask
                       </PopoverContent>
                     </Popover>
                   </div>
-                </div>
 
-                <div className="flex items-center -space-x-2 ml-auto pl-2 flex-shrink-0">
-                  {task.assignedTo?.map((assignee: User) => (
-                    <Tooltip key={assignee.id}>
-                      <TooltipTrigger asChild>
-                        <Avatar className="h-6 w-6 border-2 border-background">
-                          <AvatarImage src={assignee.avatar_url} alt={assignee.name} />
-                          <AvatarFallback>{assignee.initials}</AvatarFallback>
-                        </Avatar>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>{assignee.name}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  ))}
-                </div>
+                  <div className="flex items-center -space-x-2">
+                    {task.assignedTo?.map((assignee: User) => (
+                      <Tooltip key={assignee.id}>
+                        <TooltipTrigger asChild>
+                          <Avatar className="h-6 w-6 border-2 border-background">
+                            <AvatarImage src={assignee.avatar_url} alt={assignee.name} />
+                            <AvatarFallback>{assignee.initials}</AvatarFallback>
+                          </Avatar>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{assignee.name}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    ))}
+                  </div>
 
-                <div className="flex-shrink-0">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onSelect={() => onEditTask(task)}>
-                        <Edit className="mr-2 h-4 w-4" />
-                        Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onSelect={() => onDeleteTask(task)} className="text-destructive">
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <div className="flex-shrink-0">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onSelect={() => onEditTask(task)}>
+                          <Edit className="mr-2 h-4 w-4" />
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => onDeleteTask(task)} className="text-destructive">
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 </div>
               </div>
             </div>
