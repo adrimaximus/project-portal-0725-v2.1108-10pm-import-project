@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import PortalLayout from "@/components/PortalLayout";
 import ProjectHeader from "@/components/project-detail/ProjectHeader";
@@ -59,9 +59,10 @@ const ProjectDetail = () => {
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
 
   const { data: project, isLoading, error } = useProject(slug!);
-  const { tasks, loading: isLoadingTasks } = useTasks({
+  const { data: tasks, isLoading: isLoadingTasks } = useTasks({
     projectIds: project ? [project.id] : [],
     enabled: !!project,
+    sortConfig: { key: 'created_at', direction: 'asc' }
   });
   const mutations = useProjectMutations(slug!);
   const { upsertTask, deleteTask, toggleTaskCompletion, isUpserting } = useTaskMutations();
@@ -70,7 +71,7 @@ const ProjectDetail = () => {
 
   useEffect(() => {
     if (project) {
-      setEditedProject({ ...project, tasks });
+      setEditedProject({ ...project, tasks: tasks || [] });
     }
   }, [project, tasks]);
 
@@ -109,7 +110,7 @@ const ProjectDetail = () => {
   };
 
   const handleCancelChanges = () => {
-    setEditedProject(project ? { ...project, tasks } : null);
+    setEditedProject(project ? { ...project, tasks: tasks || [] } : null);
     setIsEditing(false);
   };
 

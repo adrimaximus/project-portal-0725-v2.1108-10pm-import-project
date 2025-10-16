@@ -3,15 +3,18 @@ import { supabase } from '@/integrations/supabase/client';
 import { Task } from '@/types';
 
 type UseTasksProps = {
+  projectIds?: string[];
   hideCompleted?: boolean;
   sortConfig: { key: string; direction: 'asc' | 'desc' };
+  enabled?: boolean;
 };
 
-export const useTasks = ({ hideCompleted, sortConfig }: UseTasksProps) => {
+export const useTasks = ({ projectIds, hideCompleted, sortConfig, enabled = true }: UseTasksProps) => {
   return useQuery<Task[], Error>({
-    queryKey: ['tasks', { hideCompleted, sortConfig }],
+    queryKey: ['tasks', { projectIds, hideCompleted, sortConfig }],
     queryFn: async () => {
       const { data, error } = await supabase.rpc('get_project_tasks', {
+        p_project_ids: projectIds,
         p_completed: hideCompleted ? false : undefined,
         p_order_by: sortConfig.key,
         p_order_direction: sortConfig.direction,
@@ -24,5 +27,6 @@ export const useTasks = ({ hideCompleted, sortConfig }: UseTasksProps) => {
       }
       return data || [];
     },
+    enabled,
   });
 };
