@@ -211,23 +211,6 @@ const ProjectsPage = () => {
     setTaskSortConfig({ key, direction });
   };
 
-  const handleTaskStatusChange = (taskId: string, newStatus: TaskStatus) => {
-    const task = allTasks.find(t => t.id === taskId);
-    if (task) {
-        upsertTask({
-            id: task.id,
-            project_id: task.project_id,
-            title: task.title,
-            status: newStatus,
-        }, {
-            onSuccess: () => {
-                toast.success(`Task "${task.title}" moved to ${newStatus}.`);
-            },
-            onError: (error) => toast.error(`Failed to update task status: ${error.message}`),
-        });
-    }
-  };
-
   const handleCreateTask = () => {
     setEditingTask(null);
     setIsTaskFormOpen(true);
@@ -358,7 +341,7 @@ const ProjectsPage = () => {
               isToggling={isToggling}
               taskSortConfig={taskSortConfig}
               requestTaskSort={requestTaskSort}
-              onTaskStatusChange={handleTaskStatusChange}
+              refetch={refetch}
             />
           </div>
         </div>

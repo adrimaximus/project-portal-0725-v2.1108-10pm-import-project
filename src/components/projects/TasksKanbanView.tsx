@@ -8,16 +8,16 @@ import { useTaskMutations } from '@/hooks/useTaskMutations';
 
 interface TasksKanbanViewProps {
   tasks: Task[];
-  onStatusChange: (taskId: string, newStatus: TaskStatus) => void;
   onEdit: (task: Task) => void;
   onDelete: (taskId: string) => void;
+  refetch: () => void;
 }
 
-const TasksKanbanView = ({ tasks, onStatusChange, onEdit, onDelete }: TasksKanbanViewProps) => {
+const TasksKanbanView = ({ tasks, onEdit, onDelete, refetch }: TasksKanbanViewProps) => {
   const [collapsedColumns, setCollapsedColumns] = useState<Set<TaskStatus>>(new Set());
   const [internalTasks, setInternalTasks] = useState<Task[]>(tasks);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
-  const { updateTaskStatusAndOrder } = useTaskMutations();
+  const { updateTaskStatusAndOrder } = useTaskMutations(refetch);
 
   useEffect(() => {
     setInternalTasks(tasks);
