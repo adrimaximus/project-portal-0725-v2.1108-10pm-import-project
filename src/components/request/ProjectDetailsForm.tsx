@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import ModernTeamSelector from "./ModernTeamSelector";
 import FileUploader from "./FileUploader";
 import { useNavigate } from "react-router-dom";
-import { Service, services as allServicesData } from "@/data/services";
+import { Service } from "./ServiceSelection";
 import { DateRange } from "react-day-picker";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
@@ -24,6 +24,7 @@ import { getInitials } from "@/lib/utils";
 import AddressAutocompleteInput from "../AddressAutocompleteInput";
 import { ClientSelector } from "./ClientSelector";
 import PersonFormDialog from "../people/PersonFormDialog";
+import { getIcon } from "@/lib/icon-map";
 
 interface ProjectDetailsFormProps {
   selectedServices: Service[];
@@ -208,10 +209,6 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
     });
   };
 
-  const serviceDetails = selectedServices
-    .map((service) => allServicesData.find((s) => s.title === service.title))
-    .filter((s): s is Service => s !== undefined);
-
   const assignableUsers = allUsers.filter(user => user.id !== currentUser?.id);
 
   return (
@@ -245,12 +242,15 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
             <div className="space-y-2">
               <Label>Selected Services</Label>
               <div className="flex flex-wrap gap-2 rounded-md border p-3 bg-muted/50 min-h-[40px]">
-                {serviceDetails.length > 0 ? serviceDetails.map((service) => (
-                  <Badge key={service.title} variant="secondary" className="flex items-center gap-2">
-                    <service.icon className={cn("h-4 w-4", service.iconColor)} />
-                    <span>{service.title}</span>
-                  </Badge>
-                )) : <p className="text-sm text-muted-foreground">No services selected. Go back to select services.</p>}
+                {selectedServices.length > 0 ? selectedServices.map((service) => {
+                  const IconComponent = getIcon(service.icon);
+                  return (
+                    <Badge key={service.title} variant="secondary" className="flex items-center gap-2">
+                      <IconComponent className={cn("h-4 w-4", service.icon_color)} />
+                      <span>{service.title}</span>
+                    </Badge>
+                  )
+                }) : <p className="text-sm text-muted-foreground">No services selected. Go back to select services.</p>}
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
