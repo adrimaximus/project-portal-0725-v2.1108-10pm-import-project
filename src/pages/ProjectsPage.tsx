@@ -34,6 +34,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { GoogleCalendarImportDialog } from "@/components/projects/GoogleCalendarImportDialog";
 
 type ViewMode = 'table' | 'list' | 'kanban' | 'tasks' | 'tasks-kanban';
+type SortConfig<T> = { key: keyof T | null; direction: 'ascending' | 'descending' };
 
 const ProjectsPage = () => {
   const navigate = useNavigate();
@@ -75,9 +76,11 @@ const ProjectsPage = () => {
   const [taskSortConfig, setTaskSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'updated_at', direction: 'desc' });
   const [hideCompletedTasks, setHideCompletedTasks] = useState(() => localStorage.getItem('hideCompletedTasks') === 'true');
 
+  const finalTaskSortConfig = view === 'tasks-kanban' ? { key: 'kanban_order', direction: 'asc' as const } : taskSortConfig;
+
   const { data: tasksData = [], isLoading: isLoadingTasks, refetch: refetchTasks } = useTasks({
     hideCompleted: hideCompletedTasks,
-    sortConfig: taskSortConfig,
+    sortConfig: finalTaskSortConfig,
   });
 
   const refetch = useCallback(() => {
@@ -331,8 +334,8 @@ const ProjectsPage = () => {
               isLoading={isLoadingProjects}
               isTasksLoading={isLoadingTasks}
               onDeleteProject={handleDeleteProject}
-              sortConfig={sortConfig}
-              requestSort={requestProjectSort}
+              sortConfig={projectSortConfig}
+              requestSort={(key) => requestProjectSort(key as keyof Project)}
               rowRefs={rowRefs}
               kanbanGroupBy={kanbanGroupBy}
               onEditTask={handleEditTask}

@@ -50,13 +50,9 @@ const TasksKanbanView = ({ tasks, onEdit, onDelete, refetch }: TasksKanbanViewPr
       }
     });
 
-    // Sort tasks in each column by last updated date
+    // Sort tasks in each column by their kanban_order
     for (const status in grouped) {
-      grouped[status as TaskStatus].sort((a, b) => {
-        const dateA = a.updated_at ? new Date(a.updated_at).getTime() : 0;
-        const dateB = b.updated_at ? new Date(b.updated_at).getTime() : 0;
-        return dateB - dateA;
-      });
+      grouped[status as TaskStatus].sort((a, b) => (a.kanban_order || 0) - (b.kanban_order || 0));
     }
 
     return grouped;
@@ -88,57 +84,50 @@ const TasksKanbanView = ({ tasks, onEdit, onDelete, refetch }: TasksKanbanViewPr
     setActiveTask(null);
     const { active, over } = event;
 
-    if (!over || active.id === over.id) return;
+    if (!over) return;
 
     const activeId = String(active.id);
     const overId = String(over.id);
 
-    const oldTasks = [...internalTasks];
-    const activeIndex = oldTasks.findIndex(t => t.id === activeId);
-    let overIndex = oldTasks.findIndex(t => t.id === overId);
+    if (activeId === overId) return;
 
+    const activeContainer = active.data.current?.sortable.containerId as TaskStatus;
+    const overIsItem = !!over.data.current?.sortable;
+    const overContainer = overIsItem ? (over.data.current?.sortable.containerId as TaskStatus) : (over.id as TaskStatus);
+
+    if (!activeContainer || !overContainer) return;
+
+    // Create a mutable copy of the grouped tasks
+    const newGroups = { ...tasksByStatus };
+    const sourceItems = [...(newGroups[activeContainer] || [])];
+    const activeIndex = sourceItems.findIndex(t => t.id === activeId);
     if (activeIndex === -1) return;
 
-    const activeTask = oldTasks[activeIndex];
-    const overTask = overIndex !== -1 ? oldTasks[overIndex] : null;
+    const [movedItem] = sourceItems.splice(activeIndex, 1);
+    newGroups[activeContainer] = sourceItems;
+
+    if (activeContainer === overContainer) {
+      const overIndex = sourceItems.findIndex(t => t.id === overId);
+      sourceItems.splice(overIndex, 0, movedItem);
+    } else {
+      movedItem.status = overContainer;
+      const destItems = [...(newGroups[overContainer] || [])];
+      const overIndex = overIsItem ? destItems.findIndex(t => t.id === overId) : destItems.length;
+      destItems.splice(overIndex, 0, movedItem);
+      newGroups[overContainer] = destItems;
+    }
+
+    // Flatten the new groups back into a single array for state and API
+    const newFlatTasks = TASK_STATUS_OPTIONS.flatMap(opt => newGroups[opt.value] || []);
     
-    const newStatus = overTask ? overTask.status : (overId as TaskStatus);
-
-    if (overIndex === -1) { // Dropped on a column, not a task
-        const tasksInTargetColumn = oldTasks.filter(t => t.status === newStatus);
-        if (tasksInTargetColumn.length > 0) {
-            overIndex = oldTasks.findIndex(t => t.id === tasksInTargetColumn[0].id);
-        } else {
-            const columnOrder = TASK_STATUS_OPTIONS.map(o => o.value);
-            const newStatusIndex = columnOrder.indexOf(newStatus);
-            let nextTask: Task | undefined;
-            for (let i = newStatusIndex + 1; i < columnOrder.length; i++) {
-                nextTask = oldTasks.find(t => t.status === columnOrder[i]);
-                if (nextTask) break;
-            }
-            
-            if (nextTask) {
-                overIndex = oldTasks.findIndex(t => t.id === nextTask!.id);
-            } else {
-                overIndex = oldTasks.length;
-            }
-        }
-    }
-
-    // Optimistic update
-    const newTasksOptimistic = arrayMove(oldTasks, activeIndex, overIndex);
-    const movedItemIndexInNew = newTasksOptimistic.findIndex(t => t.id === activeId);
-    if (movedItemIndexInNew !== -1) {
-      newTasksOptimistic[movedItemIndexInNew] = { ...newTasksOptimistic[movedItemIndexInNew], status: newStatus };
-    }
-
-    setInternalTasks(newTasksOptimistic);
+    // Optimistic UI update
+    setInternalTasks(newFlatTasks);
 
     // Call mutation
-    const finalTaskIds = newTasksOptimistic.map(t => t.id);
+    const finalTaskIds = newFlatTasks.map(t => t.id);
     updateTaskStatusAndOrder({ 
         taskId: activeId, 
-        newStatus, 
+        newStatus: overContainer, 
         orderedTaskIds: finalTaskIds 
     });
   };
