@@ -258,20 +258,24 @@ export interface InvoiceAttachment {
   created_at: string;
 }
 
+export type ContactPropertyType = 'text' | 'textarea' | 'number' | 'date' | 'email' | 'phone' | 'url' | 'image' | 'select' | 'multi-select' | 'checkbox';
+
 export interface ContactProperty {
   id: string;
   name: string;
   label: string;
-  type: string;
+  type: ContactPropertyType;
   is_default: boolean;
   options?: string[];
 }
+
+export type CompanyPropertyType = 'text' | 'textarea' | 'number' | 'date' | 'email' | 'phone' | 'url' | 'image' | 'select';
 
 export interface CompanyProperty {
   id: string;
   name: string;
   label: string;
-  type: string;
+  type: CompanyPropertyType;
   options?: string[] | null;
 }
 

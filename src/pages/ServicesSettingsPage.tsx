@@ -24,7 +24,7 @@ import {
 import ServiceFormDialog from '@/components/settings/ServiceFormDialog';
 import Icon from '@/components/Icon';
 import { cn } from '@/lib/utils';
-import { Service } from '@/components/request/ServiceSelection';
+import { Service } from '@/types';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 const ServicesSettingsPage = () => {

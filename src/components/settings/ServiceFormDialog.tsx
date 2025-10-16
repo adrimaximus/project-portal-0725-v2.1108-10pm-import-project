@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
-import { Service } from '@/components/request/ServiceSelection';
+import { Service } from '@/types';
 import { toast } from "sonner";
 import { icons } from 'lucide-react';
 import {

@@ -16,7 +16,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
-import { services as allServices } from "@/data/services"
+import { useServices } from "@/hooks/useServices"
 
 interface ServiceSelectorProps {
   selectedServices: string[];
@@ -24,7 +24,8 @@ interface ServiceSelectorProps {
 }
 
 export default function ServiceSelector({ selectedServices, onSelectServices }: ServiceSelectorProps) {
-  const [open, setOpen] = React.useState(false)
+  const [open, React.useState(false)
+  const { data: allServices = [], isLoading } = useServices();
 
   const handleSelect = (serviceTitle: string) => {
     const isSelected = selectedServices.includes(serviceTitle);
@@ -56,7 +57,7 @@ export default function ServiceSelector({ selectedServices, onSelectServices }: 
         <Command>
           <CommandInput placeholder="Search services..." />
           <CommandList>
-            <CommandEmpty>No service found.</CommandEmpty>
+            <CommandEmpty>{isLoading ? "Loading..." : "No service found."}</CommandEmpty>
             <CommandGroup>
               {allServices.map((service) => (
                 <CommandItem
