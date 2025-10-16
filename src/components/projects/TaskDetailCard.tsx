@@ -46,7 +46,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
       <DialogHeader>
         <DialogTitle className="flex items-center gap-2">
           {task.originTicketId && <Ticket className={`h-5 w-5 flex-shrink-0 ${task.completed ? 'text-green-500' : 'text-red-500'}`} />}
-          <span className={cn(task.completed && 'line-through text-muted-foreground')}>
+          <span className={cn("min-w-0 break-words", task.completed && 'line-through text-muted-foreground')}>
             <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ p: 'span' }}>
               {formatTaskText(task.title)}
             </ReactMarkdown>
@@ -61,7 +61,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
         {task.description && (
           <div>
             <h4 className="font-semibold mb-2 text-sm">Description</h4>
-            <div className="prose prose-sm dark:prose-invert max-w-none text-muted-foreground break-words">
+            <div className="prose prose-sm dark:prose-invert max-w-none text-muted-foreground break-all">
               <ReactMarkdown remarkPlugins={[remarkGfm]}>
                 {formatTaskText(task.description)}
               </ReactMarkdown>
