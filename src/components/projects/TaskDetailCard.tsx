@@ -107,45 +107,50 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
           </div>
         )}
 
-        {task.assignedTo && task.assignedTo.length > 0 && (
-          <div className="flex items-start gap-2">
-            <h4 className="font-semibold flex items-center gap-2 flex-shrink-0"><UserIcon className="h-4 w-4" /> Assignees</h4>
-            <div className="flex flex-wrap gap-2">
-              {task.assignedTo.map((user) => (
-                <TooltipProvider key={user.id}>
-                  <Tooltip>
-                    <TooltipTrigger>
-                      <div className="flex items-center gap-2">
-                        <Avatar className="h-8 w-8">
-                          <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
-                          <AvatarFallback style={generatePastelColor(user.id)}>
-                            {getInitials([user.first_name, user.last_name].filter(Boolean).join(' '), user.email || undefined)}
-                          </AvatarFallback>
-                        </Avatar>
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{[user.first_name, user.last_name].filter(Boolean).join(' ')}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              ))}
-            </div>
+        <div className="grid grid-cols-2 gap-4 text-sm">
+          <div>
+            {task.assignedTo && task.assignedTo.length > 0 && (
+              <div className="flex items-start gap-2">
+                <h4 className="font-semibold flex items-center gap-2 flex-shrink-0"><UserIcon className="h-4 w-4" /> Assignees</h4>
+                <div className="flex flex-wrap gap-2">
+                  {task.assignedTo.map((user) => (
+                    <TooltipProvider key={user.id}>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <div className="flex items-center gap-2">
+                            <Avatar className="h-8 w-8">
+                              <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
+                              <AvatarFallback style={generatePastelColor(user.id)}>
+                                {getInitials([user.first_name, user.last_name].filter(Boolean).join(' '), user.email || undefined)}
+                              </AvatarFallback>
+                            </Avatar>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{[user.first_name, user.last_name].filter(Boolean).join(' ')}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
-        )}
-
-        {task.created_by && (
-          <div className="flex items-center gap-2 text-sm">
-            <h4 className="font-semibold">Created By</h4>
-            <Avatar className="h-8 w-8">
-              <AvatarImage src={getAvatarUrl(task.created_by.avatar_url, task.created_by.id)} />
-              <AvatarFallback style={generatePastelColor(task.created_by.id)}>
-                {getInitials([task.created_by.first_name, task.created_by.last_name].filter(Boolean).join(' '), task.created_by.email || undefined)}
-              </AvatarFallback>
-            </Avatar>
-            <span>{[task.created_by.first_name, task.created_by.last_name].filter(Boolean).join(' ')}</span>
+          <div>
+            {task.created_by && (
+              <div className="flex items-center gap-2 text-sm">
+                <h4 className="font-semibold">Created By</h4>
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src={getAvatarUrl(task.created_by.avatar_url, task.created_by.id)} />
+                  <AvatarFallback style={generatePastelColor(task.created_by.id)}>
+                    {getInitials([task.created_by.first_name, task.created_by.last_name].filter(Boolean).join(' '), task.created_by.email || undefined)}
+                  </AvatarFallback>
+                </Avatar>
+                <span>{[task.created_by.first_name, task.created_by.last_name].filter(Boolean).join(' ')}</span>
+              </div>
+            )}
           </div>
-        )}
+        </div>
 
         {allAttachments.length > 0 && (
           <div>
