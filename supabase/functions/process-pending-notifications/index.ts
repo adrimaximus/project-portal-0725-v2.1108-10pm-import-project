@@ -94,17 +94,45 @@ serve(async (req) => {
 
         switch (notificationType) {
           case 'new_chat_message': {
-            const { data: msg, error: msgErr } = await supabaseAdmin.from('messages').select('content, sender_id, attachment_url, attachment_name').eq('id', notification.message_id).single();
-            if (msgErr) throw new Error(`Failed to fetch message: ${msgErr.message}`);
-            const [convoRes, senderRes] = await Promise.all([
-              supabaseAdmin.from('conversations').select('is_group, group_name').eq('id', notification.conversation_id).single(),
-              supabaseAdmin.from('profiles').select('first_name, last_name, email').eq('id', msg.sender_id).single(),
-            ]);
-            if (convoRes.error || senderRes.error) throw new Error("Failed to fetch chat context.");
-            const senderName = `${senderRes.data.first_name || ''} ${senderRes.data.last_name || ''}`.trim() || senderRes.data.email;
-            userPrompt = `**Konteks:**\n- **Jenis:** Pesan Obrolan Baru\n- **Pengirim:** ${senderName}\n- **Penerima:** ${recipientName}\n- **Grup:** ${convoRes.data.is_group ? (convoRes.data.group_name || 'Grup') : 'Percakapan pribadi'}\n- **Isi Pesan:** ${msg.content || '(Pesan tidak berisi teks)'}\n- **URL:** https://7inked.ahensi.xyz/chat\n\nBuat pesan notifikasi yang sesuai dan sertakan URL di akhir.`;
-            if (msg.attachment_url) {
-                attachmentPayload = { url: msg.attachment_url, filename: msg.attachment_name || 'attachment' };
+            const { data: participantData, error: participantError } = await supabaseAdmin
+              .from('conversation_participants')
+              .select('read_at')
+              .eq('conversation_id', notification.conversation_id)
+              .eq('user_id', notification.recipient_id)
+              .single();
+            if (participantError) throw new Error(`Failed to fetch participant data: ${participantError.message}`);
+
+            const { data: unreadMessages, error: unreadError } = await supabaseAdmin
+              .from('messages')
+              .select('content, sender_id, attachment_url, attachment_name')
+              .eq('conversation_id', notification.conversation_id)
+              .neq('sender_id', notification.recipient_id)
+              .gt('created_at', participantData.read_at || new Date(0).toISOString())
+              .order('created_at', { ascending: true });
+            if (unreadError) throw new Error(`Failed to fetch unread messages: ${unreadError.message}`);
+            if (!unreadMessages || unreadMessages.length === 0) {
+              await supabaseAdmin.from('pending_whatsapp_notifications').update({ status: 'sent', error_message: 'No unread messages found to send.' }).eq('id', notificationId);
+              successCount++;
+              continue;
+            }
+
+            const senderId = unreadMessages[0].sender_id;
+            const { data: senderData, error: senderError } = await supabaseAdmin.from('profiles').select('first_name, last_name, email').eq('id', senderId).single();
+            if (senderError) throw new Error(`Failed to fetch sender profile: ${senderError.message}`);
+            const senderName = `${senderData.first_name || ''} ${senderData.last_name || ''}`.trim() || senderData.email;
+
+            const { data: convoData, error: convoError } = await supabaseAdmin.from('conversations').select('is_group, group_name').eq('id', notification.conversation_id).single();
+            if (convoError) throw new Error(`Failed to fetch conversation data: ${convoError.message}`);
+
+            if (unreadMessages.length === 1) {
+              const msg = unreadMessages[0];
+              userPrompt = `**Konteks:**\n- **Jenis:** Pesan Obrolan Baru\n- **Pengirim:** ${senderName}\n- **Penerima:** ${recipientName}\n- **Grup:** ${convoData.is_group ? (convoData.group_name || 'Grup') : 'Percakapan pribadi'}\n- **Isi Pesan:** ${msg.content || '(Pesan tidak berisi teks)'}\n- **URL:** https://7inked.ahensi.xyz/chat\n\nBuat pesan notifikasi yang sesuai dan sertakan URL di akhir.`;
+              if (msg.attachment_url) {
+                  attachmentPayload = { url: msg.attachment_url, filename: msg.attachment_name || 'attachment' };
+              }
+            } else {
+              const messageContents = unreadMessages.map(m => `- ${m.content || '(Lampiran)'}`).join('\n');
+              userPrompt = `**Konteks:**\n- **Jenis:** Beberapa Pesan Obrolan Baru\n- **Pengirim:** ${senderName}\n- **Penerima:** ${recipientName}\n- **Grup:** ${convoData.is_group ? (convoData.group_name || 'Grup') : 'Percakapan pribadi'}\n- **Jumlah Pesan:** ${unreadMessages.length}\n- **Isi Pesan:**\n${messageContents}\n- **URL:** https://7inked.ahensi.xyz/chat\n\nBuat pesan notifikasi yang MERANGKUM semua pesan baru ini menjadi satu notifikasi singkat dan sertakan URL di akhir.`;
             }
             break;
           }
