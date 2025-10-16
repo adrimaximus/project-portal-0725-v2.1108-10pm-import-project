@@ -14,6 +14,7 @@ import TaskAttachmentList from './TaskAttachmentList';
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import TaskDetailCard from './TaskDetailCard';
 
 interface TasksKanbanCardProps {
   task: Task;
