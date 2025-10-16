@@ -1,6 +1,6 @@
 import React from 'react';
 import { Task, TaskAttachment } from '@/types';
-import { DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -44,17 +44,47 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
   return (
     <DialogContent className="sm:max-w-[650px] max-h-[350px] overflow-y-auto">
       <DialogHeader>
-        <DialogTitle className="flex items-center gap-2">
-          {task.originTicketId && <Ticket className={`h-5 w-5 flex-shrink-0 ${task.completed ? 'text-green-500' : 'text-red-500'}`} />}
-          <span className={cn("min-w-0 break-words", task.completed && 'line-through text-muted-foreground')}>
-            <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ p: 'span' }}>
-              {formatTaskText(task.title)}
-            </ReactMarkdown>
-          </span>
-        </DialogTitle>
-        <DialogDescription>
-          Created on {format(new Date(task.created_at), "MMM d, yyyy")}
-        </DialogDescription>
+        <div className="flex justify-between items-start gap-4">
+          <div className="flex-1 min-w-0">
+            <DialogTitle className="flex items-center gap-2">
+              {task.originTicketId && <Ticket className={`h-5 w-5 flex-shrink-0 ${task.completed ? 'text-green-500' : 'text-red-500'}`} />}
+              <span className={cn("min-w-0 break-words", task.completed && 'line-through text-muted-foreground')}>
+                <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ p: 'span' }}>
+                  {formatTaskText(task.title)}
+                </ReactMarkdown>
+              </span>
+            </DialogTitle>
+            <DialogDescription>
+              Created on {format(new Date(task.created_at), "MMM d, yyyy")}
+            </DialogDescription>
+          </div>
+          <div className="flex items-center gap-1 flex-shrink-0">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" onClick={() => { onEdit(task); onClose(); }}>
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Edit Task</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" onClick={() => { onDelete(task.id); onClose(); }}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Delete Task</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+        </div>
       </DialogHeader>
       
       <div className="grid gap-4 py-4">
@@ -160,17 +190,6 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
           </div>
         )}
       </div>
-
-      <DialogFooter>
-        <Button variant="outline" onClick={() => { onEdit(task); onClose(); }}>
-          <Edit className="mr-2 h-4 w-4" />
-          Edit
-        </Button>
-        <Button variant="destructive" onClick={() => { onDelete(task.id); onClose(); }}>
-          <Trash2 className="mr-2 h-4 w-4" />
-          Delete
-        </Button>
-      </DialogFooter>
     </DialogContent>
   );
 };
