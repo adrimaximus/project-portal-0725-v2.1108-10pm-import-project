@@ -99,14 +99,18 @@ export const useNotifications = () => {
               });
             }
 
+            // Show desktop notification if permission is granted and tab is not active
+            if (Notification.permission === 'granted' && document.hidden) {
+              new Notification(notificationData.title, {
+                body: notificationData.body,
+                icon: '/favicon.ico',
+              });
+            }
+
             const isNotificationTypeEnabled = userPreferences?.[notificationData.type] !== false;
             const tone = userPreferences?.tone;
 
-            // **Pencegahan Suara Ganda:** Jangan putar suara untuk pesan obrolan jika pengguna berada di halaman obrolan.
-            // `ChatContext` akan menanganinya.
-            if (notificationData.type === 'comment' && window.location.pathname.startsWith('/chat')) {
-              console.log("[useNotifications] Suppressing chat sound because user is on chat page.");
-            } else if (isNotificationTypeEnabled && tone && tone !== 'none') {
+            if (isNotificationTypeEnabled && tone && tone !== 'none') {
               try {
                 const audio = new Audio(`${TONE_BASE_URL}${tone}`);
                 await audio.play();

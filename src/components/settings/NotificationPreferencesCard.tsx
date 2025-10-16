@@ -6,8 +6,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, BellRing } from "lucide-react";
 import TestNotificationToast from "./TestNotificationToast";
+import { Button } from "../ui/button";
 
 const notificationTypes = [
   { id: 'project_update', label: 'Project Updates', description: 'When you are added to a project, a task is assigned to you, or a project you are in is updated.' },
@@ -34,6 +35,7 @@ const NotificationPreferencesCard = () => {
   const { user, refreshUser } = useAuth();
   const [preferences, setPreferences] = useState<Record<string, any>>({});
   const [isLoading, setIsLoading] = useState(true);
+  const [notificationPermission, setNotificationPermission] = useState(Notification.permission);
 
   useEffect(() => {
     if (user?.id) {
@@ -55,6 +57,23 @@ const NotificationPreferencesCard = () => {
       fetchPreferences();
     }
   }, [user?.id]);
+
+  const handleRequestPermission = () => {
+    Notification.requestPermission().then((permission) => {
+      setNotificationPermission(permission);
+      if (permission === "granted") {
+        toast.success("Desktop notifications enabled!");
+        new Notification("Notifications Enabled", {
+          body: "You will now receive desktop notifications.",
+          icon: "/favicon.ico",
+        });
+      } else if (permission === "denied") {
+        toast.error("Desktop notifications blocked.", {
+          description: "You'll need to change this in your browser settings.",
+        });
+      }
+    });
+  };
 
   const updatePreferences = async (newPreferences: Record<string, any>) => {
     if (!user) return;
@@ -136,8 +155,24 @@ const NotificationPreferencesCard = () => {
           <div className="rounded-lg border p-4">
               <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
-                      <Label htmlFor="toast-notifications" className="text-base">Enable Toast Notifications</Label>
-                      <p className="text-sm text-muted-foreground">Show pop-up notifications on screen.</p>
+                      <Label htmlFor="desktop-notifications" className="text-base">Enable Desktop Notifications</Label>
+                      <p className="text-sm text-muted-foreground">Receive notifications even when the app is in the background.</p>
+                  </div>
+                  {notificationPermission === 'granted' ? (
+                    <span className="text-sm font-medium text-green-600">Enabled</span>
+                  ) : (
+                    <Button onClick={handleRequestPermission} size="sm">
+                      <BellRing className="mr-2 h-4 w-4" />
+                      Enable
+                    </Button>
+                  )}
+              </div>
+          </div>
+          <div className="rounded-lg border p-4">
+              <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                      <Label htmlFor="toast-notifications" className="text-base">Enable In-App Notifications</Label>
+                      <p className="text-sm text-muted-foreground">Show pop-up notifications on screen while using the app.</p>
                   </div>
                   <Switch
                     id="toast-notifications"
