@@ -65,9 +65,10 @@ const KanbanView = ({ projects, groupBy }: { projects: Project[], groupBy: 'stat
     });
 
     for (const groupKey in groups) {
+        const orderKey = groupBy === 'status' ? 'kanban_order' : 'payment_kanban_order';
         groups[groupKey].sort((a, b) => {
-            const orderA = a.kanban_order ?? 0;
-            const orderB = b.kanban_order ?? 0;
+            const orderA = a[orderKey] ?? 0;
+            const orderB = b[orderKey] ?? 0;
             return orderA - orderB;
         });
     }

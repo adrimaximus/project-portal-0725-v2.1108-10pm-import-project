@@ -176,7 +176,7 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
 
     if (!sourceContainerId || !destContainerId) return;
 
-    const previousPeople = queryClient.getQueryData<Person[]>(['people']) || [];
+    const previousPeople = queryClient.getQueryData<Person[]>(['people', 'with-slug']) || [];
     
     let newPeopleState: Person[] = JSON.parse(JSON.stringify(previousPeople));
     const activeIndex = newPeopleState.findIndex(p => p.id === activeId);
@@ -224,7 +224,7 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
       });
     }
 
-    queryClient.setQueryData(['people'], newPeopleState);
+    queryClient.setQueryData(['people', 'with-slug'], newPeopleState);
 
     try {
       if (sourceContainerId !== destContainerId) {
@@ -253,7 +253,7 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
       }
     } catch (error: any) {
       toast.error(`Failed to move person: ${error.message}`);
-      queryClient.setQueryData(['people'], previousPeople);
+      queryClient.setQueryData(['people', 'with-slug'], previousPeople);
     }
   };
 
