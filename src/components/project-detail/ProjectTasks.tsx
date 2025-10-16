@@ -37,11 +37,7 @@ const ProjectTasks = ({ tasks, onAddTask, onEditTask, onDeleteTask, onToggleTask
     setOpenPopoverId(null); // Close popover immediately
     if (!session?.user) return;
 
-    // Optimistically update UI before calling the server
-    // This makes the UI feel faster.
-    // The onTasksUpdate() will fetch the true state from the server.
-    onTasksUpdate(); 
-
+    // Call the database function first
     const { error } = await supabase.rpc('toggle_task_reaction', {
       p_task_id: task.id,
       p_emoji: emoji,
@@ -50,7 +46,8 @@ const ProjectTasks = ({ tasks, onAddTask, onEditTask, onDeleteTask, onToggleTask
     if (error) {
       console.error("Error toggling reaction:", error);
       toast.error("Gagal memperbarui reaksi.", { description: error.message });
-      // Revert optimistic update by fetching again
+    } else {
+      // After the database is updated, refetch the data to update the UI
       onTasksUpdate();
     }
   };
