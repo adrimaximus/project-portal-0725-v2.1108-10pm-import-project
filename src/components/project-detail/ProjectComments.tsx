@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Ticket, MoreHorizontal, Edit, Trash2, FileText, Eye, Download, Paperclip, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { getInitials, generatePastelColor } from "@/lib/utils";
+import { getInitials, generatePastelColor, parseMentions, formatMentionsForDisplay } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
 import CommentInput from "../CommentInput";
 import ReactMarkdown from "react-markdown";
@@ -18,15 +18,10 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/
 
 interface ProjectCommentsProps {
   project: Project;
-  onAddCommentOrTicket: (text: string, isTicket: boolean, attachments: File[] | null) => void;
-  onUpdateComment: (commentId: string, text: string, attachments: File[] | null, isConvertingToTicket: boolean) => void;
+  onAddCommentOrTicket: (text: string, isTicket: boolean, attachments: File[] | null, mentionedUserIds: string[]) => void;
+  onUpdateComment: (commentId: string, text: string, attachments: File[] | null, isConvertingToTicket: boolean, mentionedUserIds: string[]) => void;
   onDeleteComment: (commentId: string) => void;
 }
-
-const processMentions = (text: string | null | undefined) => {
-  if (!text) return '';
-  return text.replace(/@\[([^\]]+)\]\(([^)]+)\)/g, '**@$1**');
-};
 
 const attachmentsRegex = /\*\*Attachments:\*\*\n((?:\* \[.+\]\(.+\)\n?)+)/;
 
@@ -73,7 +68,8 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
 
   const handleSaveEdit = () => {
     if (editingCommentId) {
-      onUpdateComment(editingCommentId, editedText, newAttachments, isConvertingToTicket);
+      const mentionedUserIds = parseMentions(editedText);
+      onUpdateComment(editingCommentId, editedText, newAttachments, isConvertingToTicket, mentionedUserIds);
     }
     handleCancelEdit();
   };
@@ -102,7 +98,7 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
     <>
       <div className="space-y-6">
         <CommentInput project={project} onAddCommentOrTicket={onAddCommentOrTicket} />
-        <div className="space-y-4">
+        <div className="space-y-4 h-[300px] overflow-y-auto pr-4">
           {comments.map((comment) => {
             const author = comment.author;
             const fullName = `${author.first_name || ''} ${author.last_name || ''}`.trim() || author.email;
@@ -217,7 +213,7 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
                               }
                             }}
                           >
-                            {processMentions(mainText)}
+                            {formatMentionsForDisplay(mainText)}
                           </ReactMarkdown>
                         </div>
                       )}

@@ -173,7 +173,13 @@ export const parseMentions = (text: string): string[] => {
   const userIds = new Set<string>();
   let match;
   while ((match = mentionRegex.exec(text)) !== null) {
-    userIds.add(match[1]);
+    userIds.add(match[2]);
   }
   return Array.from(userIds);
+};
+
+export const formatMentionsForDisplay = (text: string | null | undefined): string => {
+  if (!text) return '';
+  // Replaces @[Display Name](user-id) with @'Display Name'
+  return text.replace(/@\[([^\]]+)\]\(([^)]+)\)/g, "@'$1'");
 };

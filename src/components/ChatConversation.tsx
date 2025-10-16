@@ -2,7 +2,7 @@ import { Message, Collaborator } from "@/types";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import MessageAttachment from "./MessageAttachment";
 import { useAuth } from "@/contexts/AuthContext";
-import { cn, generatePastelColor } from "@/lib/utils";
+import { cn, generatePastelColor, formatMentionsForDisplay } from "@/lib/utils";
 import { useEffect, useRef } from "react";
 import { format, isToday, isYesterday, isSameDay, parseISO } from 'date-fns';
 import ReactMarkdown from 'react-markdown';
@@ -158,7 +158,7 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                           >
                             <p className="font-semibold">{message.repliedMessage.senderName}</p>
                             <p className="text-xs line-clamp-2 opacity-80">
-                              {message.repliedMessage.isDeleted ? "This message was deleted." : message.repliedMessage.content}
+                              {message.repliedMessage.isDeleted ? "This message was deleted." : formatMentionsForDisplay(message.repliedMessage.content)}
                             </p>
                           </button>
                         )}
