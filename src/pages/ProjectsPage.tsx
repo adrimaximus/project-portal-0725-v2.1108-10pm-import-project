@@ -3,10 +3,7 @@ import { Project } from "@/types";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import PortalLayout from "@/components/PortalLayout";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, RefreshCw, Search, Download } from "lucide-react";
-import { useProjects } from "@/hooks/useProjects";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { toast } from "sonner";
+import { Input } from "@/components/ui/input";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,6 +15,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import { useCreateProject } from "@/hooks/useCreateProject";
 import { format } from "date-fns";
 import { formatInJakarta } from "@/lib/utils";
@@ -29,18 +27,20 @@ import { useTaskMutations, UpsertTaskPayload } from "@/hooks/useTaskMutations";
 import TaskFormDialog from "@/components/projects/TaskFormDialog";
 import { Task, TaskStatus } from "@/types";
 import { DatePickerWithRange } from "@/components/ui/date-picker-with-range";
-import { Input } from "@/components/ui/input";
+import { Search, PlusCircle, RefreshCw, Download } from "lucide-react";
 import { useQueryClient, useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { GoogleCalendarImportDialog } from "@/components/projects/GoogleCalendarImportDialog";
+import { Card } from '@/components/ui/card';
+import { startOfToday, isBefore } from 'date-fns';
 
 type ViewMode = 'table' | 'list' | 'kanban' | 'tasks' | 'tasks-kanban';
 
 const ProjectsPage = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [searchTerm, setSearchTerm] = useState(""); // Moved from useProjectFilters
-  const { data: projects = [], isLoading, refetch } = useProjects({ searchTerm }); // Pass searchTerm
+  const [searchTerm, setSearchTerm] = useState("");
+  const { data: projects = [], isLoading, refetch } = useProjects({ searchTerm });
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const viewFromUrl = searchParams.get('view') as ViewMode;
@@ -54,7 +54,6 @@ const ProjectsPage = () => {
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
   const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
   const [kanbanGroupBy, setKanbanGroupBy] = useState<'status' | 'payment_status'>('status');
-  const createProjectMutation = useCreateProject();
   const rowRefs = useRef(new Map<string, HTMLTableRowElement>());
   const [scrollToProjectId, setScrollToProjectId] = useState<string | null>(null);
   const initialTableScrollDone = useRef(false);
@@ -67,7 +66,9 @@ const ProjectsPage = () => {
 
   const {
     dateRange, setDateRange,
-    sortConfig, requestSort: requestProjectSort, sortedProjects
+    sortConfig: projectSortConfig,
+    requestSort: requestProjectSort,
+    sortedProjects
   } = useProjectFilters(projects);
 
   const [taskSearchTerm, setTaskSearchTerm] = useState('');
