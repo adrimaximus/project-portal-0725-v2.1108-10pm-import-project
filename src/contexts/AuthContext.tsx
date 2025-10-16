@@ -58,10 +58,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (error) {
       console.error('Error fetching user profile with permissions:', error);
       if (error.code === 'PGRST116') {
-        toast.error("Your user profile could not be found. Please contact support.", {
-          description: "Signing you out for security."
-        });
-        await supabase.auth.signOut();
+        console.warn("User profile not found, this might be a new user. The app will keep trying to fetch it.");
       }
       return null;
     }
