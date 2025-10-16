@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Task, User, Reaction } from "@/types";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ListChecks, Plus, MoreHorizontal, Edit, Trash2, SmilePlus } from "lucide-react";
@@ -7,9 +7,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { supabase } from "@/integrations/supabase/client";
-import { Session } from "@supabase/supabase-js";
-import toast from 'react-hot-toast';
+import { useAuth } from "@/contexts/AuthContext";
 
 interface ProjectTasksProps {
   tasks: Task[];
@@ -19,37 +17,18 @@ interface ProjectTasksProps {
   onDeleteTask: (task: Task) => void;
   onToggleTaskCompletion: (task: Task, completed: boolean) => void;
   onTasksUpdate: () => void;
+  onToggleTaskReaction: (variables: { taskId: string, emoji: string }) => void;
 }
 
 const EMOJIS = ['👍', '❤️', '🎉', '😂', '😮', '😢', '🤔'];
 
-const ProjectTasks = ({ tasks, onAddTask, onEditTask, onDeleteTask, onToggleTaskCompletion, onTasksUpdate }: ProjectTasksProps) => {
-  const [session, setSession] = useState<Session | null>(null);
+const ProjectTasks = ({ tasks, onAddTask, onEditTask, onDeleteTask, onToggleTaskCompletion, onToggleTaskReaction }: ProjectTasksProps) => {
+  const { user } = useAuth();
   const [openPopoverId, setOpenPopoverId] = useState<string | null>(null);
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-    });
-  }, []);
-
-  const handleReactionClick = async (task: Task, emoji: string) => {
-    setOpenPopoverId(null); // Close popover immediately
-    if (!session?.user) return;
-
-    // Call the database function first
-    const { error } = await supabase.rpc('toggle_task_reaction', {
-      p_task_id: task.id,
-      p_emoji: emoji,
-    });
-
-    if (error) {
-      console.error("Error toggling reaction:", error);
-      toast.error("Gagal memperbarui reaksi.", { description: error.message });
-    } else {
-      // After the database is updated, refetch the data to update the UI
-      onTasksUpdate();
-    }
+  const handleReactionClick = (task: Task, emoji: string) => {
+    setOpenPopoverId(null);
+    onToggleTaskReaction({ taskId: task.id, emoji });
   };
 
   if (!tasks || tasks.length === 0) {
@@ -104,7 +83,7 @@ const ProjectTasks = ({ tasks, onAddTask, onEditTask, onDeleteTask, onToggleTask
                 <div className="flex items-center gap-2 ml-auto pl-2 flex-shrink-0">
                   <div className="flex items-center space-x-1 flex-wrap">
                     {groupedReactions && Object.entries(groupedReactions).map(([emoji, reactions]) => {
-                      const userHasReacted = reactions.some(r => r.user_id === session?.user?.id);
+                      const userHasReacted = reactions.some(r => r.user_id === user?.id);
                       return (
                         <Tooltip key={emoji}>
                           <TooltipTrigger asChild>
