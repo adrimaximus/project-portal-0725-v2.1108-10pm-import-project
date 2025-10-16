@@ -37,35 +37,21 @@ const ProjectTasks = ({ tasks, onAddTask, onEditTask, onDeleteTask, onToggleTask
     setOpenPopoverId(null); // Close popover immediately
     if (!session?.user) return;
 
-    const existingReaction = task.reactions?.find(
-      (r) => r.emoji === emoji && r.user_id === session.user.id
-    );
+    // Optimistically update UI before calling the server
+    // This makes the UI feel faster.
+    // The onTasksUpdate() will fetch the true state from the server.
+    onTasksUpdate(); 
 
-    if (existingReaction) {
-      const { error } = await supabase
-        .from('task_reactions')
-        .delete()
-        .eq('id', existingReaction.id);
-      if (error) {
-        console.error("Error removing reaction", error);
-        toast.error("Gagal menghapus reaksi.");
-      } else {
-        onTasksUpdate();
-      }
-    } else {
-      const { error } = await supabase
-        .from('task_reactions')
-        .insert({
-          task_id: task.id,
-          user_id: session.user.id,
-          emoji: emoji,
-        });
-      if (error) {
-        console.error("Error adding reaction", error);
-        toast.error("Gagal menambahkan reaksi. Periksa izin basis data.");
-      } else {
-        onTasksUpdate();
-      }
+    const { error } = await supabase.rpc('toggle_task_reaction', {
+      p_task_id: task.id,
+      p_emoji: emoji,
+    });
+
+    if (error) {
+      console.error("Error toggling reaction:", error);
+      toast.error("Gagal memperbarui reaksi.", { description: error.message });
+      // Revert optimistic update by fetching again
+      onTasksUpdate();
     }
   };
 
