@@ -223,6 +223,18 @@ serve(async (req) => {
             userPrompt = `**Konteks:**\n- **Jenis:** Undangan Kolaborasi Goal\n- **Pengundang:** ${inviterName}\n- **Penerima:** ${recipientName}\n- **Goal:** ${goalRes.data.title}\n- **URL:** https://7inked.ahensi.xyz/goals/${goalRes.data.slug}\n\nBuat pesan notifikasi yang sesuai dan sertakan URL di akhir.`;
             break;
           }
+          case 'goal_progress_update': {
+            const { goal_id, updater_id, value_logged } = notification.context_data;
+            const [goalRes, updaterRes] = await Promise.all([
+              supabaseAdmin.from('goals').select('title, slug, unit').eq('id', goal_id).single(),
+              supabaseAdmin.from('profiles').select('first_name, last_name, email').eq('id', updater_id).single(),
+            ]);
+            if (goalRes.error || updaterRes.error) throw new Error("Failed to fetch goal progress context.");
+            const updaterName = `${updaterRes.data.first_name || ''} ${updaterRes.data.last_name || ''}`.trim() || updaterRes.data.email;
+            const unit = goalRes.data.unit ? ` ${goalRes.data.unit}` : '';
+            userPrompt = `**Konteks:**\n- **Jenis:** Pembaruan Progres Goal\n- **Pelaku Update:** ${updaterName}\n- **Penerima:** ${recipientName}\n- **Goal:** ${goalRes.data.title}\n- **Progres yang Dicatat:** ${value_logged}${unit}\n- **URL:** https://7inked.ahensi.xyz/goals/${goalRes.data.slug}\n\nBuat pesan notifikasi yang sesuai dan sertakan URL di akhir.`;
+            break;
+          }
           case 'kb_invite': {
             const { folder_id, inviter_id } = notification.context_data;
             const [folderRes, inviterRes] = await Promise.all([
