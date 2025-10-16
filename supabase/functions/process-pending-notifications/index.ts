@@ -116,23 +116,54 @@ serve(async (req) => {
               continue;
             }
 
-            const senderId = unreadMessages[0].sender_id;
-            const { data: senderData, error: senderError } = await supabaseAdmin.from('profiles').select('first_name, last_name, email').eq('id', senderId).single();
-            if (senderError) throw new Error(`Failed to fetch sender profile: ${senderError.message}`);
-            const senderName = `${senderData.first_name || ''} ${senderData.last_name || ''}`.trim() || senderData.email;
-
             const { data: convoData, error: convoError } = await supabaseAdmin.from('conversations').select('is_group, group_name').eq('id', notification.conversation_id).single();
             if (convoError) throw new Error(`Failed to fetch conversation data: ${convoError.message}`);
 
             if (unreadMessages.length === 1) {
               const msg = unreadMessages[0];
-              userPrompt = `**Konteks:**\n- **Jenis:** Pesan Obrolan Baru\n- **Pengirim:** ${senderName}\n- **Penerima:** ${recipientName}\n- **Grup:** ${convoData.is_group ? (convoData.group_name || 'Grup') : 'Percakapan pribadi'}\n- **Isi Pesan:** ${msg.content || '(Pesan tidak berisi teks)'}\n- **URL:** https://7inked.ahensi.xyz/chat\n\nBuat pesan notifikasi yang sesuai dan sertakan URL di akhir.`;
+              const { data: senderData, error: senderError } = await supabaseAdmin.from('profiles').select('first_name, last_name, email').eq('id', msg.sender_id).single();
+              if (senderError) throw new Error(`Failed to fetch sender profile: ${senderError.message}`);
+              const senderName = `${senderData.first_name || ''} ${senderData.last_name || ''}`.trim() || senderData.email;
+              
+              userPrompt = `**Konteks:**
+- **Jenis:** Pesan Obrolan Baru
+- **Pengirim:** ${senderName}
+- **Penerima:** ${recipientName}
+- **Grup:** ${convoData.is_group ? (convoData.group_name || 'Grup') : 'Percakapan pribadi'}
+- **Isi Pesan:** ${msg.content || '(Pesan tidak berisi teks)'}
+- **URL:** https://7inked.ahensi.xyz/chat
+
+**Tugas:** Buat pesan notifikasi WhatsApp untuk pesan baru ini. Kutip sebagian kecil dari pesan jika relevan. Buatlah terdengar alami dan sertakan URL di akhir.`;
               if (msg.attachment_url) {
                   attachmentPayload = { url: msg.attachment_url, filename: msg.attachment_name || 'attachment' };
               }
             } else {
-              const messageContents = unreadMessages.map(m => `- ${m.content || '(Lampiran)'}`).join('\n');
-              userPrompt = `**Konteks:**\n- **Jenis:** Beberapa Pesan Obrolan Baru\n- **Pengirim:** ${senderName}\n- **Penerima:** ${recipientName}\n- **Grup:** ${convoData.is_group ? (convoData.group_name || 'Grup') : 'Percakapan pribadi'}\n- **Jumlah Pesan:** ${unreadMessages.length}\n- **Isi Pesan:**\n${messageContents}\n- **URL:** https://7inked.ahensi.xyz/chat\n\nBuat pesan notifikasi yang MERANGKUM semua pesan baru ini menjadi satu notifikasi singkat dan sertakan URL di akhir.`;
+              const senderIds = [...new Set(unreadMessages.map(m => m.sender_id))];
+              const { data: sendersData, error: sendersError } = await supabaseAdmin
+                .from('profiles')
+                .select('id, first_name, last_name, email')
+                .in('id', senderIds);
+              if (sendersError) throw new Error(`Failed to fetch sender profiles: ${sendersError.message}`);
+              
+              const senderMap = new Map(sendersData.map(s => [s.id, `${s.first_name || ''} ${s.last_name || ''}`.trim() || s.email]));
+
+              const messageContents = unreadMessages.map(m => {
+                const senderName = senderMap.get(m.sender_id) || 'Unknown';
+                return `${senderName}: ${m.content || '(Lampiran)'}`;
+              }).join('\n');
+              
+              const participants = Array.from(senderMap.values()).join(', ');
+
+              userPrompt = `**Konteks:**
+- **Jenis:** Beberapa Pesan Obrolan Baru
+- **Penerima:** ${recipientName}
+- **Grup:** ${convoData.is_group ? (convoData.group_name || 'Grup') : 'Percakapan pribadi'}
+- **Partisipan dalam pesan baru:** ${participants}
+- **Transkrip Percakapan:**
+${messageContents}
+- **URL:** https://7inked.ahensi.xyz/chat
+
+**Tugas:** Buat pesan notifikasi WhatsApp yang merangkum *inti* dari percakapan baru di atas. Jangan hanya menghitung jumlah pesan. Sebutkan siapa saja yang berbicara jika ada lebih dari satu pengirim. Buatlah terdengar alami dan sertakan URL di akhir.`;
             }
             break;
           }
