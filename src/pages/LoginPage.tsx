@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { Package, Mail, Lock, Eye, EyeOff, Loader2, User as UserIcon } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, Loader2, User as UserIcon } from 'lucide-react';
 import MagicLinkForm from '@/components/MagicLinkForm';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,9 +16,29 @@ const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
     </svg>
 );
 
+const quotes = [
+  {
+    title: "Get Everything You Want",
+    text: "You can get everything you want if you work hard, trust the process, and stick to the plan."
+  },
+  {
+    title: "The Secret of Getting Ahead",
+    text: "The secret of getting ahead is getting started."
+  },
+  {
+    title: "The Best Way to Predict the Future",
+    text: "The best way to predict the future is to create it."
+  },
+  {
+    title: "Success is Not Final",
+    text: "Success is not final, failure is not fatal: it is the courage to continue that counts."
+  }
+];
+
 const LoginPage = () => {
   const { isLoading: authContextLoading } = useAuth();
   const [lastUserName, setLastUserName] = useState<string | null>(null);
+  const [currentQuote, setCurrentQuote] = useState(quotes[0]);
 
   // Login state
   const [email, setEmail] = useState('');
@@ -42,6 +62,7 @@ const LoginPage = () => {
     if (storedName) {
       setLastUserName(storedName);
     }
+    setCurrentQuote(quotes[Math.floor(Math.random() * quotes.length)]);
   }, []);
 
   const handlePasswordLogin = async (e: React.FormEvent) => {
@@ -130,8 +151,8 @@ const LoginPage = () => {
             <div className="w-16 h-px bg-white/50 mt-2"></div>
           </div>
           <div className="space-y-4">
-            <h2 className="text-5xl font-serif font-bold">Get Everything You Want</h2>
-            <p className="text-white/80">You can get everything you want if you work hard, trust the process, and stick to the plan.</p>
+            <h2 className="text-5xl font-serif font-bold">{currentQuote.title}</h2>
+            <p className="text-white/80">{currentQuote.text}</p>
           </div>
         </div>
 
@@ -139,8 +160,8 @@ const LoginPage = () => {
         <div className="bg-black/50 backdrop-blur-md p-8 sm:p-12 flex flex-col justify-center">
           <div className="w-full max-w-md mx-auto">
             <div className="flex items-center gap-2 mb-8">
-              <Package className="h-7 w-7 text-white" />
-              <span className="text-xl font-bold text-white">Client Portal</span>
+              <img src="https://quuecudndfztjlxbrvyb.supabase.co/storage/v1/object/public/General/logo.png" alt="7i Portal Logo" className="h-8 w-8" />
+              <span className="text-xl font-bold text-white">7i Portal</span>
             </div>
             <h1 className="text-3xl font-serif font-bold mb-2 text-white">
               Welcome Back{lastUserName ? `, ${lastUserName}` : ''}!👋
