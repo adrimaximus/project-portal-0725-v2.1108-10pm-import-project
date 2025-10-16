@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Task } from '@/types';
+import { Task, TaskStatus } from '@/types';
 
 export type UpsertTaskPayload = {
   id?: string;
@@ -14,6 +14,8 @@ export type UpsertTaskPayload = {
   completed?: boolean;
   assignee_ids?: string[];
   tag_ids?: string[];
+  new_files?: File[];
+  deleted_files?: string[];
 };
 
 export const useTaskMutations = (refetch?: () => void) => {
@@ -83,5 +85,32 @@ export const useTaskMutations = (refetch?: () => void) => {
     },
   });
 
-  return { upsertTask, isUpserting, deleteTask, toggleTaskCompletion, isToggling };
+  const { mutate: updateTaskStatusAndOrder } = useMutation({
+    mutationFn: async ({ taskId, newStatus, orderedTaskIds }: { taskId: string, newStatus: TaskStatus, orderedTaskIds: string[] }) => {
+      // 1. Update the status of the moved task
+      const { error: statusError } = await supabase
+        .from('tasks')
+        .update({ status: newStatus, completed: newStatus === 'Done' })
+        .eq('id', taskId);
+      
+      if (statusError) throw statusError;
+
+      // 2. Update the order of all tasks
+      const { error: orderError } = await supabase.rpc('update_task_kanban_order', {
+        p_task_ids: orderedTaskIds,
+      });
+
+      if (orderError) throw orderError;
+    },
+    onSuccess: () => {
+      toast.success('Task position updated.');
+      invalidateQueries();
+    },
+    onError: (error: any) => {
+      toast.error('Failed to update task position.', { description: error.message });
+      invalidateQueries();
+    },
+  });
+
+  return { upsertTask, isUpserting, deleteTask, toggleTaskCompletion, isToggling, updateTaskStatusAndOrder };
 };
