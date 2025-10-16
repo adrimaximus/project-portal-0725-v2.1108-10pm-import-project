@@ -29,6 +29,8 @@ const GroupSettingsDialog = ({ open, onOpenChange, conversation, onUpdate }: Gro
   const [isSaving, setIsSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const isOwner = currentUser?.id === conversation.created_by;
+
   useEffect(() => {
     const fetchUsers = async () => {
       const { data, error } = await supabase.from('profiles').select('*');
@@ -135,17 +137,18 @@ const GroupSettingsDialog = ({ open, onOpenChange, conversation, onUpdate }: Gro
                 variant="secondary"
                 className="absolute bottom-0 right-0 rounded-full h-7 w-7 group-hover:opacity-100 opacity-0 transition-opacity"
                 onClick={() => fileInputRef.current?.click()}
+                disabled={!isOwner}
               >
                 <Camera className="h-4 w-4" />
               </Button>
-              <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileChange} />
+              <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileChange} disabled={!isOwner} />
             </div>
             <div className="flex-1 space-y-1.5">
               <Label htmlFor="group-name">Group Name</Label>
-              <Input id="group-name" value={groupName} onChange={(e) => setGroupName(e.target.value)} />
+              <Input id="group-name" value={groupName} onChange={(e) => setGroupName(e.target.value)} disabled={!isOwner} />
             </div>
           </div>
-          <Button onClick={handleSaveDetails} disabled={isSaving} size="sm">
+          <Button onClick={handleSaveDetails} disabled={isSaving || !isOwner} size="sm">
             {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
             Save Changes
           </Button>
