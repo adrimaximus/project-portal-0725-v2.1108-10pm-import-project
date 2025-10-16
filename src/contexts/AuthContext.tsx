@@ -27,6 +27,7 @@ const ORIGINAL_SESSION_KEY = 'original_session';
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [onlineCollaborators, setOnlineCollaborators] = useState<Collaborator[]>([]);
   const [channel, setChannel] = useState<RealtimeChannel | null>(null);
   const [isImpersonating, setIsImpersonating] = useState(false);
@@ -87,6 +88,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
+      setIsLoading(false);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -97,21 +99,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
       setSession(session);
       checkImpersonation();
+      setIsLoading(false);
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
   useEffect(() => {
-    // This effect handles navigation after a successful login.
-    // It waits until the user profile is loaded before redirecting.
-    if (!isUserLoading && user && session) {
+    if (!isLoading && !isUserLoading && user && session) {
       const from = (location.state as any)?.from?.pathname || '/dashboard';
-      if (location.pathname === '/login' || location.pathname === '/') {
+      if (location.pathname === '/login' || location.pathname === '/' || location.pathname === '/auth/callback') {
         navigate(from, { replace: true });
       }
     }
-  }, [user, isUserLoading, session, navigate, location]);
+  }, [user, isLoading, isUserLoading, session, navigate, location]);
 
   useEffect(() => {
     if (user && !channel) {
@@ -218,7 +219,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     <AuthContext.Provider value={{ 
       user: user || null, 
       session, 
-      isLoading: isUserLoading, 
+      isLoading: isLoading || isUserLoading, 
       onlineCollaborators,
       logout,
       refreshUser: async () => { await refreshUser() },
