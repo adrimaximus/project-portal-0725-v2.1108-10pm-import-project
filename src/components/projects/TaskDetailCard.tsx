@@ -135,17 +135,15 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
         )}
 
         {task.created_by && (
-          <div>
-            <h4 className="font-semibold mb-2">Created By</h4>
-            <div className="flex items-center gap-2 text-sm">
-              <Avatar className="h-8 w-8">
-                <AvatarImage src={getAvatarUrl(task.created_by.avatar_url, task.created_by.id)} />
-                <AvatarFallback style={generatePastelColor(task.created_by.id)}>
-                  {getInitials([task.created_by.first_name, task.created_by.last_name].filter(Boolean).join(' '), task.created_by.email || undefined)}
-                </AvatarFallback>
-              </Avatar>
-              <span>{[task.created_by.first_name, task.created_by.last_name].filter(Boolean).join(' ')}</span>
-            </div>
+          <div className="flex items-center gap-2 text-sm">
+            <h4 className="font-semibold">Created By</h4>
+            <Avatar className="h-8 w-8">
+              <AvatarImage src={getAvatarUrl(task.created_by.avatar_url, task.created_by.id)} />
+              <AvatarFallback style={generatePastelColor(task.created_by.id)}>
+                {getInitials([task.created_by.first_name, task.created_by.last_name].filter(Boolean).join(' '), task.created_by.email || undefined)}
+              </AvatarFallback>
+            </Avatar>
+            <span>{[task.created_by.first_name, task.created_by.last_name].filter(Boolean).join(' ')}</span>
           </div>
         )}
 
