@@ -62,7 +62,7 @@ const GoalCollaborationManager = ({ goal, onCollaboratorsUpdate }: GoalCollabora
       const fetchUsers = async () => {
         const { data, error } = await supabase.from('profiles').select('*');
         if (data) {
-          const users = data.map(profile => {
+          const users: User[] = data.map(profile => {
             const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
             return {
               id: profile.id,
