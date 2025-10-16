@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft, Briefcase, Cake, Edit, Instagram, Linkedin, Mail, MapPin, MoreVertical, Phone, Twitter, User as UserIcon, Users, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { formatInJakarta, generatePastelColor, getInitials, getAvatarUrl, formatPhoneNumberForApi } from '@/lib/utils';
-import PersonFormDialog from '@/components/people/PersonFormDialog';
+import PeopleFormDialog from '@/components/people/PeopleFormDialog';
 import { Person as BasePerson, ContactProperty, User } from '@/types';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -53,6 +53,8 @@ const fetchUserProfile = async (userId: string): Promise<User | null> => {
     avatar_url: getAvatarUrl(data.avatar_url, data.id),
     initials: getInitials(fullName, data.email) || 'NN',
     role: data.role,
+    first_name: data.first_name,
+    last_name: data.last_name,
   };
 };
 
@@ -367,10 +369,13 @@ const PersonProfilePage = () => {
           </div>
         </div>
       </div>
-      <PersonFormDialog
+      <PeopleFormDialog
         open={isFormOpen}
         onOpenChange={setIsFormOpen}
         person={person}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['person', slug] });
+        }}
       />
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>

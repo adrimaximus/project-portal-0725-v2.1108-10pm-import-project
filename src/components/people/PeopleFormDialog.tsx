@@ -6,15 +6,21 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { ContactProperty, Person } from '@/types';
 
-const PeopleFormDialog = ({ open, onOpenChange, person }: { open: boolean, onOpenChange: (open: boolean) => void, person: Person | null }) => {
+interface PeopleFormDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  person: Person | null;
+  onSuccess?: (person: Person) => void;
+}
+
+const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormDialogProps) => {
   const queryClient = useQueryClient();
 
   const { data: properties = [], isLoading: isLoadingProperties } = useQuery<ContactProperty[]>({
@@ -58,7 +64,7 @@ const PeopleFormDialog = ({ open, onOpenChange, person }: { open: boolean, onOpe
     }
   }, [properties, baseSchema]);
 
-  const { register, handleSubmit, control, reset, formState: { errors } } = useForm({
+  const { register, handleSubmit, reset, formState: { errors } } = useForm({
     resolver: zodResolver(dynamicSchema),
   });
 
@@ -89,17 +95,21 @@ const PeopleFormDialog = ({ open, onOpenChange, person }: { open: boolean, onOpe
       }
       personData.custom_properties = custom_properties;
 
+      let data, error;
       if (person) {
-        const { error } = await supabase.from('people').update(personData).eq('id', person.id);
-        if (error) throw error;
+        ({ data, error } = await supabase.from('people').update(personData).eq('id', person.id).select().single());
       } else {
-        const { error } = await supabase.from('people').insert(personData as any);
-        if (error) throw error;
+        ({ data, error } = await supabase.from('people').insert(personData as any).select().single());
       }
+      if (error) throw error;
+      return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       toast.success(`Person ${person ? 'updated' : 'created'} successfully.`);
       queryClient.invalidateQueries({ queryKey: ['people'] });
+      if (onSuccess) {
+        onSuccess(data as Person);
+      }
       onOpenChange(false);
     },
     onError: (error: any) => {
