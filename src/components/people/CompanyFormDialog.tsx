@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { Company, CompanyProperty } from '@/types';
 import { ScrollArea } from '../ui/scroll-area';
 import { Loader2 } from 'lucide-react';
+import ImageUploader from '../ui/ImageUploader';
 
 interface CompanyFormDialogProps {
     open: boolean;
@@ -168,8 +169,14 @@ const CompanyFormDialog: React.FC<CompanyFormDialogProps> = ({ open, onOpenChang
                                     name="logo_url"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Logo URL</FormLabel>
-                                            <FormControl><Input placeholder="https://example.com/logo.png" {...field} value={field.value ?? ''} /></FormControl>
+                                            <FormControl>
+                                                <ImageUploader
+                                                    value={field.value}
+                                                    onChange={field.onChange}
+                                                    bucket="company-logos"
+                                                    label="Company Logo"
+                                                />
+                                            </FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     )}
