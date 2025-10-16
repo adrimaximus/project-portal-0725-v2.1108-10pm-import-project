@@ -41,6 +41,7 @@ import { GoogleCalendarImportDialog } from "@/components/projects/GoogleCalendar
 import { useTasks } from "@/hooks/useTasks";
 import { useProjects } from "@/hooks/useProjects";
 import { useCreateProject } from "@/hooks/useCreateProject";
+import { Card, CardTitle } from "@/components/ui/card";
 
 type ViewMode = 'table' | 'list' | 'kanban' | 'tasks' | 'tasks-kanban';
 type SortConfig<T> = { key: keyof T | null; direction: 'ascending' | 'descending' };
