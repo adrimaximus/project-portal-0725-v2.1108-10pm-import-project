@@ -28,6 +28,7 @@ import { Badge } from '@/components/ui/badge';
 import { ProjectCombobox } from './ProjectCombobox';
 import { Checkbox } from '@/components/ui/checkbox';
 import { AssigneeCombobox } from './AssigneeCombobox';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface TaskFormDialogProps {
   open: boolean;
@@ -58,7 +59,7 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task, proj
   const { data: allTags = [], refetch: refetchTags } = useTags();
   const { data: allProfiles = [], isLoading: isLoadingProfiles } = useProfiles();
   const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const { user: currentUser } = useAuth();
   const [assignableUsers, setAssignableUsers] = useState<Profile[]>([]);
   const [newFiles, setNewFiles] = useState<File[]>([]);
   const [filesToDelete, setFilesToDelete] = useState<string[]>([]);
@@ -80,15 +81,6 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task, proj
   });
 
   const selectedProjectId = useWatch({ control: form.control, name: 'project_id' });
-
-  useEffect(() => {
-    const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      const { data: profile } = await supabase.from('profiles').select('*').eq('id', user!.id).single();
-      setCurrentUser(profile);
-    }
-    getUser();
-  }, []);
 
   useEffect(() => {
     if (selectedProjectId && projects.length > 0 && allProfiles.length > 0) {
@@ -363,7 +355,7 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task, proj
                 <FormControl>
                   <SelectTrigger>
                     {field.value ? (
-                      <Badge variant="outline" className={cn(getPriorityStyles(field.value).tw, 'border-0 font-normal')}>
+                      <Badge variant="outline" className={cn(getPriorityStyles(field.value).tw, 'text-xs')}>
                         {TASK_PRIORITY_OPTIONS.find(opt => opt.value === field.value)?.label}
                       </Badge>
                     ) : (
