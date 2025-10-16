@@ -1,6 +1,7 @@
-import { Service } from "@/data/services";
+import { Service } from "@/components/request/ServiceSelection";
 import { cn } from "@/lib/utils";
 import { Button } from "./ui/button";
+import Icon from "@/components/Icon";
 
 interface SelectedServicesSummaryProps {
   selectedServices: Service[];
@@ -22,9 +23,9 @@ const SelectedServicesSummary = ({ selectedServices, onContinue }: SelectedServi
                     className="flex items-center gap-2 bg-muted p-2 rounded-lg"
                   >
                     <div
-                      className={cn("p-1 rounded-md", service.iconColor)}
+                      className={cn("p-1 rounded-md", service.icon_color)}
                     >
-                      <service.icon className="h-4 w-4" />
+                      <Icon name={service.icon as any} className="h-4 w-4" />
                     </div>
                     <span className="text-sm font-medium">
                       {service.title}
