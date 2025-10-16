@@ -43,7 +43,6 @@ export const useUpsertTask = () => {
     },
     onSuccess: () => {
       toast.success('Task saved successfully.');
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
       queryClient.invalidateQueries({ queryKey: ['projects'] });
     },
     onError: (error: Error) => {
@@ -74,23 +73,27 @@ export const useToggleTaskCompletion = () => {
       if (error) throw new Error(error.message);
     },
     onMutate: async ({ task, completed }) => {
-      await queryClient.cancelQueries({ queryKey: ['tasks'] });
-      const previousTasks = queryClient.getQueryData<Task[]>(['tasks']);
+      await queryClient.cancelQueries({ queryKey: ['projects'] });
+      const previousProjects = queryClient.getQueryData<Project[]>(['projects']);
       
-      queryClient.setQueryData<Task[]>(['tasks'], (old) =>
-        old?.map(t => t.id === task.id ? { ...t, completed, status: completed ? 'Done' : (task.status === 'Done' ? 'To do' : task.status) } : t)
+      queryClient.setQueryData<Project[]>(['projects'], (old) =>
+        old?.map(p => 
+          p.id === task.project_id 
+            ? { ...p, tasks: p.tasks?.map(t => t.id === task.id ? { ...t, completed, status: completed ? 'Done' : (task.status === 'Done' ? 'To do' : task.status) } : t) } 
+            : p
+        )
       );
 
-      return { previousTasks };
+      return { previousProjects };
     },
     onError: (err: Error, variables, context) => {
-      if (context?.previousTasks) {
-        queryClient.setQueryData(['tasks'], context.previousTasks);
+      if (context?.previousProjects) {
+        queryClient.setQueryData(['projects'], context.previousProjects);
       }
       toast.error(`Failed to update task status: ${getErrorMessage(err)}`);
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
     },
   });
 };
@@ -104,7 +107,6 @@ const useDeleteTask = () => {
     },
     onSuccess: () => {
       toast.success('Task deleted.');
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
       queryClient.invalidateQueries({ queryKey: ['projects'] });
     },
     onError: (error: any) => {
@@ -134,14 +136,11 @@ const useUpdateTaskStatusAndOrder = () => {
       if (orderError) throw orderError;
     },
     onSuccess: () => {
-      // Invalidate queries to refetch the updated state
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
-      queryClient.invalidateQueries({ queryKey: ['projects'] }); // Invalidate projects too as tasks are nested
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
     },
     onError: (error: any) => {
       toast.error(`Failed to move task: ${getErrorMessage(error)}`);
-      // Revert optimistic update by refetching
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
     },
   });
 };

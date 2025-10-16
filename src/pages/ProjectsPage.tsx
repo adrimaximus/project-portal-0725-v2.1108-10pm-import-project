@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo, useRef } from "react";
-import { Project } from "@/types";
+import { useState, useMemo, useCallback, useRef, useEffect } from "react";
+import { Project, Task } from "@/types";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import PortalLayout from "@/components/PortalLayout";
 import { Button } from "@/components/ui/button";
@@ -19,15 +19,13 @@ import {
 } from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useCreateProject } from "@/hooks/useCreateProject";
-import { format } from "date-fns";
 import { formatInJakarta } from "@/lib/utils";
 import { useProjectFilters } from "@/hooks/useProjectFilters";
 import ProjectsToolbar from "@/components/projects/ProjectsToolbar";
 import ProjectViewContainer from "@/components/projects/ProjectViewContainer";
-import { useTasks } from "@/hooks/useTasks";
 import { useTaskMutations, UpsertTaskPayload } from "@/hooks/useTaskMutations";
 import TaskFormDialog from "@/components/projects/TaskFormDialog";
-import { Task, TaskStatus } from "@/types";
+import { TaskStatus } from "@/types";
 import { DatePickerWithRange } from "@/components/ui/date-picker-with-range";
 import { Input } from "@/components/ui/input";
 import { useQueryClient, useQuery, useMutation } from "@tanstack/react-query";
@@ -39,8 +37,8 @@ type ViewMode = 'table' | 'list' | 'kanban' | 'tasks' | 'tasks-kanban';
 const ProjectsPage = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [searchTerm, setSearchTerm] = useState(""); // Moved from useProjectFilters
-  const { data: projects = [], isLoading, refetch } = useProjects({ searchTerm }); // Pass searchTerm
+  const [searchTerm, setSearchTerm] = useState("");
+  const { data: projectsData = [], isLoading: isLoadingProjects, refetch } = useProjects({ searchTerm });
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const viewFromUrl = searchParams.get('view') as ViewMode;
@@ -68,7 +66,7 @@ const ProjectsPage = () => {
   const {
     dateRange, setDateRange,
     sortConfig, requestSort: requestProjectSort, sortedProjects
-  } = useProjectFilters(projects);
+  } = useProjectFilters(projectsData);
 
   const [taskSearchTerm, setTaskSearchTerm] = useState('');
   const [taskSortConfig, setTaskSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'updated_at', direction: 'desc' });
@@ -103,14 +101,37 @@ const ProjectsPage = () => {
     }
   });
 
-  const { tasks, loading: tasksLoading, refetch: refetchTasks } = useTasks({ 
-    enabled: view === 'tasks' || view === 'tasks-kanban',
-    orderBy: view === 'tasks-kanban' ? 'kanban_order' : taskSortConfig.key,
-    orderDirection: view === 'tasks-kanban' ? 'asc' : taskSortConfig.direction,
-  });
+  const allTasks = useMemo(() => {
+    if (!projectsData) return [];
+    return projectsData.flatMap(p => p.tasks || []);
+  }, [projectsData]);
+
+  const sortedTasks = useMemo(() => {
+    if (!allTasks) return [];
+    const sortableItems = [...allTasks];
+    if (taskSortConfig.key !== null) {
+        sortableItems.sort((a, b) => {
+            const key = taskSortConfig.key as keyof Task;
+            // @ts-ignore
+            if (a[key] === null) return 1;
+            // @ts-ignore
+            if (b[key] === null) return -1;
+            // @ts-ignore
+            if (a[key] < b[key]) {
+                return taskSortConfig.direction === 'asc' ? -1 : 1;
+            }
+            // @ts-ignore
+            if (a[key] > b[key]) {
+                return taskSortConfig.direction === 'asc' ? 1 : -1;
+            }
+            return 0;
+        });
+    }
+    return sortableItems;
+  }, [allTasks, taskSortConfig]);
 
   const filteredTasks = useMemo(() => {
-    let tasksToFilter = tasks;
+    let tasksToFilter = sortedTasks;
     if (hideCompletedTasks) {
       tasksToFilter = tasksToFilter.filter(task => task.status !== 'Done');
     }
@@ -124,40 +145,7 @@ const ProjectsPage = () => {
       (task.project_client && task.project_client.toLowerCase().includes(lowercasedFilter)) ||
       (task.project_owner?.name && task.project_owner.name.toLowerCase().includes(lowercasedFilter))
     );
-  }, [tasks, taskSearchTerm, hideCompletedTasks]);
-
-  useEffect(() => {
-    if (!user) return;
-
-    const channel = supabase
-      .channel('realtime-tasks-page-channel')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'tasks' },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ['tasks'] });
-        }
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'task_assignees' },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ['tasks'] });
-        }
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'task_tags' },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ['tasks'] });
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user, queryClient]);
+  }, [sortedTasks, taskSearchTerm, hideCompletedTasks]);
 
   useEffect(() => {
     if (view === 'table' && !initialTableScrollDone.current && sortedProjects.length > 0) {
@@ -200,7 +188,7 @@ const ProjectsPage = () => {
   };
 
   const handleDeleteProject = (projectId: string) => {
-    const project = projects.find(p => p.id === projectId);
+    const project = projectsData.find(p => p.id === projectId);
     if (project) setProjectToDelete(project);
   };
 
@@ -217,16 +205,8 @@ const ProjectsPage = () => {
   };
 
   const handleRefresh = () => {
-    switch (view) {
-      case 'tasks':
-      case 'tasks-kanban':
-        refetchTasks();
-        break;
-      default:
-        refetch();
-        break;
-    }
-    toast.success("Data diperbarui.");
+    toast.info("Refreshing data...");
+    refetch();
   };
 
   const requestTaskSort = (key: string) => {
@@ -238,7 +218,7 @@ const ProjectsPage = () => {
   };
 
   const handleTaskStatusChange = (taskId: string, newStatus: TaskStatus) => {
-    const task = tasks.find(t => t.id === taskId);
+    const task = allTasks.find(t => t.id === taskId);
     if (task) {
         upsertTask({
             id: task.id,
@@ -248,7 +228,7 @@ const ProjectsPage = () => {
         }, {
             onSuccess: () => {
                 toast.success(`Task "${task.title}" moved to ${newStatus}.`);
-                refetchTasks();
+                refetch();
             },
             onError: (error) => toast.error(`Failed to update task status: ${error.message}`),
         });
@@ -273,7 +253,7 @@ const ProjectsPage = () => {
     if (taskToDelete) {
       deleteTask(taskToDelete, {
         onSuccess: () => {
-          refetchTasks();
+          refetch();
           setTaskToDelete(null);
         }
       });
@@ -285,7 +265,7 @@ const ProjectsPage = () => {
       onSuccess: () => {
         setIsTaskFormOpen(false);
         setEditingTask(null);
-        refetchTasks();
+        refetch();
       },
     });
   };
@@ -376,8 +356,8 @@ const ProjectsPage = () => {
               view={view}
               projects={sortedProjects}
               tasks={filteredTasks}
-              isLoading={isLoading}
-              isTasksLoading={tasksLoading}
+              isLoading={isLoadingProjects}
+              isTasksLoading={isLoadingProjects}
               onDeleteProject={handleDeleteProject}
               sortConfig={sortConfig}
               requestSort={requestProjectSort}
@@ -398,4 +378,4 @@ const ProjectsPage = () => {
   );
 };
 
-export default ProjectsPage;
+export default Index;
