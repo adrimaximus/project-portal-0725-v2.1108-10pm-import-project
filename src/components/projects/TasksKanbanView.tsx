@@ -11,10 +11,9 @@ interface TasksKanbanViewProps {
   onStatusChange: (taskId: string, newStatus: TaskStatus) => void;
   onEdit: (task: Task) => void;
   onDelete: (taskId: string) => void;
-  hideCompletedTasks: boolean;
 }
 
-const TasksKanbanView = ({ tasks, onStatusChange, onEdit, onDelete, hideCompletedTasks }: TasksKanbanViewProps) => {
+const TasksKanbanView = ({ tasks, onStatusChange, onEdit, onDelete }: TasksKanbanViewProps) => {
   const [collapsedColumns, setCollapsedColumns] = useState<Set<TaskStatus>>(new Set());
   const [internalTasks, setInternalTasks] = useState<Task[]>(tasks);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
@@ -23,13 +22,6 @@ const TasksKanbanView = ({ tasks, onStatusChange, onEdit, onDelete, hideComplete
   useEffect(() => {
     setInternalTasks(tasks);
   }, [tasks]);
-
-  const columnsToRender = useMemo(() => {
-    if (hideCompletedTasks) {
-      return TASK_STATUS_OPTIONS.filter(opt => opt.value !== 'Done');
-    }
-    return TASK_STATUS_OPTIONS;
-  }, [hideCompletedTasks]);
 
   const toggleColumnCollapse = (status: TaskStatus) => {
     setCollapsedColumns(prev => {
@@ -154,7 +146,7 @@ const TasksKanbanView = ({ tasks, onStatusChange, onEdit, onDelete, hideComplete
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <div className="flex gap-4 overflow-x-auto p-2 sm:p-4 h-full">
-        {columnsToRender.map(option => (
+        {TASK_STATUS_OPTIONS.map(option => (
           <TasksKanbanColumn
             key={option.value}
             status={option.value}

@@ -3,7 +3,7 @@ import { Project, Task } from "@/types";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import PortalLayout from "@/components/PortalLayout";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, RefreshCw, Search, Download, User } from "lucide-react";
+import { PlusCircle, RefreshCw, Search, Download } from "lucide-react";
 import { useProjects } from "@/hooks/useProjects";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
@@ -31,7 +31,6 @@ import { Input } from "@/components/ui/input";
 import { useQueryClient, useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { GoogleCalendarImportDialog } from "@/components/projects/GoogleCalendarImportDialog";
-import { Toggle } from "@/components/ui/toggle";
 
 type ViewMode = 'table' | 'list' | 'kanban' | 'tasks' | 'tasks-kanban';
 
@@ -72,7 +71,6 @@ const ProjectsPage = () => {
   const [taskSearchTerm, setTaskSearchTerm] = useState('');
   const [taskSortConfig, setTaskSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'updated_at', direction: 'desc' });
   const [hideCompletedTasks, setHideCompletedTasks] = useState(() => localStorage.getItem('hideCompletedTasks') === 'true');
-  const [showMyTasks, setShowMyTasks] = useState(false);
 
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
 
@@ -137,24 +135,17 @@ const ProjectsPage = () => {
     if (hideCompletedTasks) {
       tasksToFilter = tasksToFilter.filter(task => task.status !== 'Done');
     }
-
-    if (showMyTasks && user) {
-      tasksToFilter = tasksToFilter.filter(task => 
-        (task as any).assignedTo?.some((assignee: any) => assignee.id === user.id)
-      );
-    }
-
     if (!taskSearchTerm) return tasksToFilter;
     const lowercasedFilter = taskSearchTerm.toLowerCase();
     return tasksToFilter.filter(task => 
       task.title.toLowerCase().includes(lowercasedFilter) ||
       (task.description && task.description.toLowerCase().includes(lowercasedFilter)) ||
-      ((task as any).project_name && (task as any).project_name.toLowerCase().includes(lowercasedFilter)) ||
-      ((task as any).project_venue && (task as any).project_venue.toLowerCase().includes(lowercasedFilter)) ||
-      ((task as any).project_client && (task as any).project_client.toLowerCase().includes(lowercasedFilter)) ||
-      ((task as any).project_owner?.name && (task as any).project_owner.name.toLowerCase().includes(lowercasedFilter))
+      (task.project_name && task.project_name.toLowerCase().includes(lowercasedFilter)) ||
+      (task.project_venue && task.project_venue.toLowerCase().includes(lowercasedFilter)) ||
+      (task.project_client && task.project_client.toLowerCase().includes(lowercasedFilter)) ||
+      (task.project_owner?.name && task.project_owner.name.toLowerCase().includes(lowercasedFilter))
     );
-  }, [sortedTasks, taskSearchTerm, hideCompletedTasks, showMyTasks, user]);
+  }, [sortedTasks, taskSearchTerm, hideCompletedTasks]);
 
   useEffect(() => {
     if (view === 'table' && !initialTableScrollDone.current && sortedProjects.length > 0) {
@@ -231,7 +222,7 @@ const ProjectsPage = () => {
     if (task) {
         upsertTask({
             id: task.id,
-            project_id: (task as any).project_id,
+            project_id: task.project_id,
             title: task.title,
             status: newStatus,
         }, {
@@ -344,17 +335,6 @@ const ProjectsPage = () => {
                   className="pl-9 w-full"
                 />
               </div>
-              {isTaskView && (
-                <Toggle
-                  pressed={showMyTasks}
-                  onPressedChange={setShowMyTasks}
-                  aria-label="Toggle my tasks"
-                  variant="outline"
-                >
-                  <User className="h-4 w-4 mr-2" />
-                  My Tasks
-                </Toggle>
-              )}
             </div>
           </div>
           <ProjectsToolbar
@@ -390,7 +370,6 @@ const ProjectsPage = () => {
               taskSortConfig={taskSortConfig}
               requestTaskSort={requestTaskSort}
               onTaskStatusChange={handleTaskStatusChange}
-              hideCompletedTasks={hideCompletedTasks}
             />
           </div>
         </div>
