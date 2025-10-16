@@ -73,22 +73,24 @@ const ServicesSettingsPage = () => {
 
   return (
     <PortalLayout>
-      <div className="space-y-6">
-        <Breadcrumb>
-          <BreadcrumbList>
-            <BreadcrumbItem>
-              <BreadcrumbLink asChild>
-                <Link to="/settings">Settings</Link>
-              </BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              <BreadcrumbPage>Services</BreadcrumbPage>
-            </BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
+      <div className="flex flex-col h-full">
+        <div className="flex-shrink-0">
+          <Breadcrumb>
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink asChild>
+                  <Link to="/settings">Settings</Link>
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbPage>Services</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+        </div>
         
-        <Card>
+        <Card className="mt-6 flex-1 flex flex-col overflow-hidden">
           <CardHeader>
             <div className="flex justify-between items-center">
               <div>
@@ -101,10 +103,10 @@ const ServicesSettingsPage = () => {
               </Button>
             </div>
           </CardHeader>
-          <CardContent>
-            <div className="border rounded-md">
+          <CardContent className="flex-1 flex flex-col">
+            <div className="border rounded-md overflow-y-auto flex-1">
               <Table>
-                <TableHeader>
+                <TableHeader className="sticky top-0 bg-background z-10">
                   <TableRow>
                     <TableHead>Service</TableHead>
                     <TableHead>Description</TableHead>
