@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import { Label } from './ui/label';
 import { Camera, Loader2, Plus, Trash2, UserPlus, X } from 'lucide-react';
 import { MultiSelect } from './ui/multi-select';
+import { getInitials } from '@/lib/utils';
 
 interface GroupSettingsDialogProps {
   open: boolean;
@@ -33,13 +34,18 @@ const GroupSettingsDialog = ({ open, onOpenChange, conversation, onUpdate }: Gro
     const fetchUsers = async () => {
       const { data, error } = await supabase.from('profiles').select('*');
       if (data) {
-        const mappedUsers: Collaborator[] = data.map(p => ({
-          id: p.id,
-          name: `${p.first_name || ''} ${p.last_name || ''}`.trim() || p.email || 'Unnamed User',
-          avatar_url: p.avatar_url,
-          initials: `${p.first_name?.[0] || ''}${p.last_name?.[0] || ''}`.toUpperCase() || 'NN',
-          email: p.email || '',
-        }));
+        const mappedUsers: Collaborator[] = data.map(p => {
+          const fullName = `${p.first_name || ''} ${p.last_name || ''}`.trim();
+          return {
+            id: p.id,
+            name: fullName || p.email || 'Unnamed User',
+            avatar_url: p.avatar_url,
+            initials: getInitials(fullName, p.email) || 'NN',
+            email: p.email || '',
+            first_name: p.first_name,
+            last_name: p.last_name,
+          };
+        });
         setAllUsers(mappedUsers);
       }
     };

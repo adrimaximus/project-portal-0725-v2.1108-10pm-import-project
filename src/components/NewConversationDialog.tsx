@@ -50,6 +50,8 @@ const NewConversationDialog = ({
         const fullName = `${p.first_name || ''} ${p.last_name || ''}`.trim();
         return {
           id: p.id,
+          first_name: p.first_name,
+          last_name: p.last_name,
           name: fullName || p.email || 'Unnamed User',
           avatar_url: getAvatarUrl(p.avatar_url, p.id),
           initials: getInitials(fullName, p.email) || 'NN',
