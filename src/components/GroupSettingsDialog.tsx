@@ -29,8 +29,6 @@ const GroupSettingsDialog = ({ open, onOpenChange, conversation, onUpdate }: Gro
   const [isSaving, setIsSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const canManageGroup = currentUser?.id === conversation.created_by || currentUser?.email === 'adri@betterworks.id';
-
   useEffect(() => {
     const fetchUsers = async () => {
       const { data, error } = await supabase.from('profiles').select('*');
@@ -61,21 +59,14 @@ const GroupSettingsDialog = ({ open, onOpenChange, conversation, onUpdate }: Gro
     let newAvatarUrl: string | null = conversation.userAvatar || null;
 
     if (avatarFile) {
-      const sanitizedFileName = avatarFile.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
-      const filePath = `group-avatars/${conversation.id}/${Date.now()}-${sanitizedFileName}`;
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, avatarFile, {
-          cacheControl: '3600',
-          upsert: true,
-        });
-
+      const filePath = `group-avatars/${conversation.id}/${Date.now()}-${avatarFile.name}`;
+      const { error: uploadError } = await supabase.storage.from('chat-attachments').upload(filePath, avatarFile);
       if (uploadError) {
         toast.error("Failed to upload group image.");
         setIsSaving(false);
         return;
       }
-      const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(filePath);
+      const { data: urlData } = supabase.storage.from('chat-attachments').getPublicUrl(filePath);
       newAvatarUrl = urlData.publicUrl;
     }
 
@@ -144,18 +135,17 @@ const GroupSettingsDialog = ({ open, onOpenChange, conversation, onUpdate }: Gro
                 variant="secondary"
                 className="absolute bottom-0 right-0 rounded-full h-7 w-7 group-hover:opacity-100 opacity-0 transition-opacity"
                 onClick={() => fileInputRef.current?.click()}
-                disabled={!canManageGroup}
               >
                 <Camera className="h-4 w-4" />
               </Button>
-              <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileChange} disabled={!canManageGroup} />
+              <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileChange} />
             </div>
             <div className="flex-1 space-y-1.5">
               <Label htmlFor="group-name">Group Name</Label>
-              <Input id="group-name" value={groupName} onChange={(e) => setGroupName(e.target.value)} disabled={!canManageGroup} />
+              <Input id="group-name" value={groupName} onChange={(e) => setGroupName(e.target.value)} />
             </div>
           </div>
-          <Button onClick={handleSaveDetails} disabled={isSaving || !canManageGroup} size="sm">
+          <Button onClick={handleSaveDetails} disabled={isSaving} size="sm">
             {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
             Save Changes
           </Button>
@@ -173,7 +163,7 @@ const GroupSettingsDialog = ({ open, onOpenChange, conversation, onUpdate }: Gro
                       </Avatar>
                       <span className="font-medium text-sm">{member.name}</span>
                     </div>
-                    {canManageGroup && member.id !== conversation.created_by && (
+                    {currentUser?.id === conversation.created_by && member.id !== currentUser.id && (
                       <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleRemoveMember(member.id)}>
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
@@ -184,24 +174,22 @@ const GroupSettingsDialog = ({ open, onOpenChange, conversation, onUpdate }: Gro
             </ScrollArea>
           </div>
 
-          {canManageGroup && (
-            <div className="space-y-2 pt-4 border-t">
-              <h4 className="font-semibold">Add Members</h4>
-              <div className="flex gap-2">
-                <div className="flex-1">
-                  <MultiSelect
-                    options={availableUsersToAdd.map(u => ({ value: u.id, label: u.name }))}
-                    value={usersToAdd}
-                    onChange={setUsersToAdd}
-                    placeholder="Select users to add..."
-                  />
-                </div>
-                <Button onClick={handleAddMembers} disabled={isSaving || usersToAdd.length === 0}>
-                  <UserPlus className="mr-2 h-4 w-4" /> Add
-                </Button>
+          <div className="space-y-2 pt-4 border-t">
+            <h4 className="font-semibold">Add Members</h4>
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <MultiSelect
+                  options={availableUsersToAdd.map(u => ({ value: u.id, label: u.name }))}
+                  value={usersToAdd}
+                  onChange={setUsersToAdd}
+                  placeholder="Select users to add..."
+                />
               </div>
+              <Button onClick={handleAddMembers} disabled={isSaving || usersToAdd.length === 0}>
+                <UserPlus className="mr-2 h-4 w-4" /> Add
+              </Button>
             </div>
-          )}
+          </div>
         </div>
       </DialogContent>
     </Dialog>
