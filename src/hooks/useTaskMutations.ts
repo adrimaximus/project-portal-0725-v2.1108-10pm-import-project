@@ -18,6 +18,14 @@ export type UpsertTaskPayload = {
   deleted_files?: string[];
 };
 
+type UpdateTaskOrderPayload = {
+  taskId: string;
+  newStatus: TaskStatus;
+  orderedTaskIds: string[];
+  newTasks: Task[]; // For optimistic update
+  queryKey: any[]; // For optimistic update
+};
+
 export const useTaskMutations = (refetch?: () => void) => {
   const queryClient = useQueryClient();
 
@@ -85,8 +93,8 @@ export const useTaskMutations = (refetch?: () => void) => {
     },
   });
 
-  const { mutate: updateTaskStatusAndOrder } = useMutation({
-    mutationFn: async ({ taskId, newStatus, orderedTaskIds }: { taskId: string, newStatus: TaskStatus, orderedTaskIds: string[] }) => {
+  const { mutate: updateTaskStatusAndOrder } = useMutation<void, Error, UpdateTaskOrderPayload>({
+    mutationFn: async ({ taskId, newStatus, orderedTaskIds }) => {
       const { error: statusError } = await supabase
         .from('tasks')
         .update({ status: newStatus, completed: newStatus === 'Done' })
@@ -100,20 +108,20 @@ export const useTaskMutations = (refetch?: () => void) => {
 
       if (orderError) throw orderError;
     },
-    onMutate: async ({ newTasks }: { newTasks: Task[] }) => {
-      await queryClient.cancelQueries({ queryKey: ['tasks'] });
-      const previousTasks = queryClient.getQueryData<Task[]>(['tasks']);
-      queryClient.setQueryData<Task[]>(['tasks'], newTasks);
+    onMutate: async ({ newTasks, queryKey }) => {
+      await queryClient.cancelQueries({ queryKey });
+      const previousTasks = queryClient.getQueryData<Task[]>(queryKey);
+      queryClient.setQueryData<Task[]>(queryKey, newTasks);
       return { previousTasks };
     },
     onError: (err: any, variables, context) => {
       if (context?.previousTasks) {
-        queryClient.setQueryData(['tasks'], context.previousTasks);
+        queryClient.setQueryData(variables.queryKey, context.previousTasks);
       }
       toast.error('Failed to update task position.', { description: err.message });
     },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+    onSettled: (data, error, variables) => {
+      queryClient.invalidateQueries({ queryKey: variables.queryKey });
       queryClient.invalidateQueries({ queryKey: ['projects'] });
     },
   });

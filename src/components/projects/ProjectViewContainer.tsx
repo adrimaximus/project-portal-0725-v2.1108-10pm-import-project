@@ -27,12 +27,13 @@ interface ProjectViewContainerProps {
   taskSortConfig: { key: string; direction: 'asc' | 'desc' };
   requestTaskSort: (key: string) => void;
   refetch: () => void;
+  tasksQueryKey: any[];
 }
 
 const ProjectViewContainer = ({
   view, projects, tasks, isLoading, isTasksLoading, onDeleteProject, sortConfig, requestSort, rowRefs,
   kanbanGroupBy, onEditTask, onDeleteTask, onToggleTaskCompletion, isToggling,
-  taskSortConfig, requestTaskSort, refetch
+  taskSortConfig, requestTaskSort, refetch, tasksQueryKey
 }: ProjectViewContainerProps) => {
   switch (view) {
     case 'table':
@@ -58,6 +59,7 @@ const ProjectViewContainer = ({
         onEdit={onEditTask}
         onDelete={onDeleteTask}
         refetch={refetch}
+        tasksQueryKey={tasksQueryKey}
       />;
     default:
       return null;

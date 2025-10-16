@@ -27,7 +27,7 @@ import DuplicateSummaryDialog from "@/components/people/DuplicateSummaryDialog";
 import MergeDialog from "@/components/people/MergeDialog";
 import CompaniesView from "@/components/people/CompaniesView";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { useIsMobile } from "@/hooks/use-is-mobile";
 import PersonListCard from "@/components/people/PersonListCard";
 import { useProjectFilters } from "@/hooks/useProjectFilters";
 import ProjectsToolbar from "@/components/projects/ProjectsToolbar";
@@ -92,6 +92,12 @@ const ProjectsPage = () => {
     hideCompleted: hideCompletedTasks,
     sortConfig: finalTaskSortConfig,
   });
+
+  const tasksQueryKey = ['tasks', { 
+    projectIds: undefined, 
+    hideCompleted: hideCompletedTasks, 
+    sortConfig: finalTaskSortConfig 
+  }];
 
   const refetch = useCallback(() => {
     if (isTaskView) {
@@ -344,7 +350,7 @@ const ProjectsPage = () => {
               isLoading={isLoadingProjects}
               isTasksLoading={isLoadingTasks}
               onDeleteProject={handleDeleteProject}
-              sortConfig={sortConfig}
+              sortConfig={projectSortConfig}
               requestSort={(key) => requestProjectSort(key as keyof Project)}
               rowRefs={rowRefs}
               kanbanGroupBy={kanbanGroupBy}
@@ -355,6 +361,7 @@ const ProjectsPage = () => {
               taskSortConfig={taskSortConfig}
               requestTaskSort={requestTaskSort}
               refetch={refetch}
+              tasksQueryKey={tasksQueryKey}
             />
           </div>
         </div>

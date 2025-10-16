@@ -11,9 +11,10 @@ interface TasksKanbanViewProps {
   onEdit: (task: Task) => void;
   onDelete: (taskId: string) => void;
   refetch: () => void;
+  tasksQueryKey: any[];
 }
 
-const TasksKanbanView = ({ tasks, onEdit, onDelete, refetch }: TasksKanbanViewProps) => {
+const TasksKanbanView = ({ tasks, onEdit, onDelete, refetch, tasksQueryKey }: TasksKanbanViewProps) => {
   const [collapsedColumns, setCollapsedColumns] = useState<Set<TaskStatus>>(new Set());
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const { updateTaskStatusAndOrder } = useTaskMutations(refetch);
@@ -119,13 +120,19 @@ const TasksKanbanView = ({ tasks, onEdit, onDelete, refetch }: TasksKanbanViewPr
       newTasks = remainingItems;
     }
 
-    const orderedTaskIds = newTasks.map(t => t.id);
+    const newTasksWithOrder = newTasks.map((task, index) => ({
+      ...task,
+      kanban_order: index,
+    }));
+
+    const orderedTaskIds = newTasksWithOrder.map(t => t.id);
 
     updateTaskStatusAndOrder({ 
         taskId: activeId, 
         newStatus: overContainer, 
         orderedTaskIds: orderedTaskIds,
-        newTasks: newTasks,
+        newTasks: newTasksWithOrder,
+        queryKey: tasksQueryKey,
     });
   };
 
