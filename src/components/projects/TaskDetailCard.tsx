@@ -41,8 +41,8 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
   }
 
   return (
-    <DialogContent className="sm:max-w-[650px] max-h-[350px] overflow-y-auto">
-      <DialogHeader className="border-b pb-4">
+    <DialogContent className="sm:max-w-[650px] max-h-[350px] overflow-y-auto p-0">
+      <DialogHeader className="bg-muted p-4 border-b">
         <div className="flex justify-between items-start gap-4">
           <div className="flex-1 min-w-0">
             <DialogTitle className="flex items-center gap-2">
@@ -68,7 +68,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
         </div>
       </DialogHeader>
       
-      <div className="grid gap-4 pt-4">
+      <div className="grid gap-4 p-4">
         {task.description && (
           <div className="border-b pb-4">
             <h4 className="font-semibold mb-2 text-sm">Description</h4>
