@@ -207,7 +207,6 @@ const ProjectDetail = () => {
                 onDeleteTask={handleDeleteTask}
                 onToggleTaskCompletion={handleToggleTaskCompletion}
                 onTasksUpdate={handleTasksUpdate}
-                onToggleTaskReaction={mutations.toggleTaskReaction.mutate}
               />
             </div>
           </div>

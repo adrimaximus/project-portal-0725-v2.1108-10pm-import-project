@@ -19,7 +19,6 @@ interface ProjectMainContentProps {
   onDeleteTask: (task: Task) => void;
   onToggleTaskCompletion: (task: Task, completed: boolean) => void;
   onTasksUpdate: () => void;
-  onToggleTaskReaction: (variables: { taskId: string, emoji: string }) => void;
 }
 
 const ProjectMainContent = ({ 
@@ -33,7 +32,6 @@ const ProjectMainContent = ({
   onDeleteTask,
   onToggleTaskCompletion,
   onTasksUpdate,
-  onToggleTaskReaction,
 }: ProjectMainContentProps) => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState(defaultTab);
@@ -123,7 +121,6 @@ const ProjectMainContent = ({
             onDeleteTask={onDeleteTask}
             onToggleTaskCompletion={onToggleTaskCompletion}
             onTasksUpdate={onTasksUpdate}
-            onToggleTaskReaction={onToggleTaskReaction}
           />
         </TabsContent>
         <TabsContent value="discussion" className="mt-4">

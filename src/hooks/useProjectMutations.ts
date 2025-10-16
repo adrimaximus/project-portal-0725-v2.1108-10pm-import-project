@@ -1,14 +1,12 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Project, User, Reaction } from '@/types';
+import { Project, User } from '@/types';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
 
 export const useProjectMutations = (slug: string) => {
     const queryClient = useQueryClient();
     const navigate = useNavigate();
-    const { user } = useAuth();
 
     const invalidateProjectQueries = () => {
         queryClient.invalidateQueries({ queryKey: ['project', slug] });
@@ -367,57 +365,6 @@ export const useProjectMutations = (slug: string) => {
         onError: (err: any) => toast.error("Failed to delete project.", { description: err.message }),
     });
 
-    const useToggleTaskReaction = () => useMutation({
-        mutationFn: async ({ taskId, emoji }: { taskId: string, emoji: string }) => {
-          if (!user) throw new Error("User not authenticated");
-          const { error } = await supabase.rpc('toggle_task_reaction', {
-            p_task_id: taskId,
-            p_emoji: emoji,
-          });
-          if (error) throw error;
-        },
-        onMutate: async ({ taskId, emoji }) => {
-          if (!user) return;
-    
-          const queryKey = ['project', slug];
-          await queryClient.cancelQueries({ queryKey });
-          const previousProject = queryClient.getQueryData<Project>(queryKey);
-    
-          if (previousProject) {
-            const updatedTasks = previousProject.tasks.map(task => {
-              if (task.id === taskId) {
-                const reactions = task.reactions || [];
-                const existingReactionIndex = reactions.findIndex(r => r.emoji === emoji && r.user_id === user.id);
-                let newReactions: Reaction[];
-    
-                if (existingReactionIndex > -1) {
-                  newReactions = reactions.filter((_, index) => index !== existingReactionIndex);
-                } else {
-                  newReactions = [...reactions, { id: `temp-${Date.now()}`, emoji, user_id: user.id, user_name: user.name }];
-                }
-                return { ...task, reactions: newReactions };
-              }
-              return task;
-            });
-    
-            queryClient.setQueryData<Project>(queryKey, {
-              ...previousProject,
-              tasks: updatedTasks,
-            });
-          }
-          return { previousProject };
-        },
-        onError: (err, variables, context: any) => {
-          if (context?.previousProject) {
-            queryClient.setQueryData(['project', slug], context.previousProject);
-          }
-          toast.error("Failed to update reaction.", { description: (err as Error).message });
-        },
-        onSettled: () => {
-          queryClient.invalidateQueries({ queryKey: ['project', slug] });
-        },
-    });
-
     return {
         updateProject: useUpdateProject(),
         addFiles: useAddFiles(),
@@ -430,6 +377,5 @@ export const useProjectMutations = (slug: string) => {
         updateComment: useUpdateComment(),
         deleteComment: useDeleteComment(),
         deleteProject: useDeleteProject(),
-        toggleTaskReaction: useToggleTaskReaction(),
     };
 };

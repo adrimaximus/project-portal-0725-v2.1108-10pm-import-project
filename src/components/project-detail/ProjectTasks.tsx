@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Task, User, Reaction } from "@/types";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ListChecks, Plus, MoreHorizontal, Edit, Trash2, SmilePlus } from "lucide-react";
@@ -7,7 +7,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { Session } from "@supabase/supabase-js";
 
 interface ProjectTasksProps {
   tasks: Task[];
@@ -17,18 +18,52 @@ interface ProjectTasksProps {
   onDeleteTask: (task: Task) => void;
   onToggleTaskCompletion: (task: Task, completed: boolean) => void;
   onTasksUpdate: () => void;
-  onToggleTaskReaction: (variables: { taskId: string, emoji: string }) => void;
 }
 
 const EMOJIS = ['👍', '❤️', '🎉', '😂', '😮', '😢', '🤔'];
 
-const ProjectTasks = ({ tasks, onAddTask, onEditTask, onDeleteTask, onToggleTaskCompletion, onToggleTaskReaction }: ProjectTasksProps) => {
-  const { user } = useAuth();
+const ProjectTasks = ({ tasks, onAddTask, onEditTask, onDeleteTask, onToggleTaskCompletion, onTasksUpdate }: ProjectTasksProps) => {
+  const [session, setSession] = useState<Session | null>(null);
   const [openPopoverId, setOpenPopoverId] = useState<string | null>(null);
 
-  const handleReactionClick = (task: Task, emoji: string) => {
-    setOpenPopoverId(null);
-    onToggleTaskReaction({ taskId: task.id, emoji });
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    });
+  }, []);
+
+  const handleReactionClick = async (task: Task, emoji: string) => {
+    setOpenPopoverId(null); // Close popover immediately
+    if (!session?.user) return;
+
+    const existingReaction = task.reactions?.find(
+      (r) => r.emoji === emoji && r.user_id === session.user.id
+    );
+
+    if (existingReaction) {
+      const { error } = await supabase
+        .from('task_reactions')
+        .delete()
+        .eq('id', existingReaction.id);
+      if (error) {
+        console.error("Error removing reaction", error);
+      } else {
+        onTasksUpdate();
+      }
+    } else {
+      const { error } = await supabase
+        .from('task_reactions')
+        .insert({
+          task_id: task.id,
+          user_id: session.user.id,
+          emoji: emoji,
+        });
+      if (error) {
+        console.error("Error adding reaction", error);
+      } else {
+        onTasksUpdate();
+      }
+    }
   };
 
   if (!tasks || tasks.length === 0) {
@@ -83,7 +118,7 @@ const ProjectTasks = ({ tasks, onAddTask, onEditTask, onDeleteTask, onToggleTask
                 <div className="flex items-center gap-2 ml-auto pl-2 flex-shrink-0">
                   <div className="flex items-center space-x-1 flex-wrap">
                     {groupedReactions && Object.entries(groupedReactions).map(([emoji, reactions]) => {
-                      const userHasReacted = reactions.some(r => r.user_id === user?.id);
+                      const userHasReacted = reactions.some(r => r.user_id === session?.user?.id);
                       return (
                         <Tooltip key={emoji}>
                           <TooltipTrigger asChild>
