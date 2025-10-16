@@ -104,9 +104,11 @@ const Profile = () => {
             throw new Error("Could not get public URL for avatar.");
         }
 
+        const avatar_url = `${publicUrlData.publicUrl}?t=${new Date().getTime()}`;
+
         const { error: updateError } = await supabase
             .from('profiles')
-            .update({ avatar_url: publicUrlData.publicUrl, updated_at: new Date().toISOString() })
+            .update({ avatar_url: avatar_url, updated_at: new Date().toISOString() })
             .eq('id', user.id);
 
         if (updateError) throw updateError;
