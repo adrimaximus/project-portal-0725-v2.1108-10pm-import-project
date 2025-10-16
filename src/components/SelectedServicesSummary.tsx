@@ -1,4 +1,4 @@
-import { Service } from "@/components/request/ServiceSelection";
+import { Service } from "@/types";
 import { cn } from "@/lib/utils";
 import { Button } from "./ui/button";
 import Icon from "@/components/Icon";
