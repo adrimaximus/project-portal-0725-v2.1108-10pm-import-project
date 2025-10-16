@@ -42,23 +42,23 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
 
   return (
     <DialogContent className="sm:max-w-[650px] max-h-[400px] overflow-y-auto p-0">
-      <DialogHeader className="bg-primary text-primary-foreground p-4 border-b">
+      <DialogHeader className="p-4 border-b-2 border-primary">
         <div className="flex justify-between items-start gap-4">
           <div className="flex-1 min-w-0">
             <DialogTitle className="flex items-center gap-2">
               {task.originTicketId && <Ticket className="h-5 w-5 flex-shrink-0" />}
-              <span className={cn("min-w-0 break-words", task.completed && 'line-through text-primary-foreground/70')}>
+              <span className={cn("min-w-0 break-words", task.completed && 'line-through text-muted-foreground')}>
                 <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ p: 'span' }}>
                   {formatTaskText(task.title)}
                 </ReactMarkdown>
               </span>
             </DialogTitle>
-            <DialogDescription className="text-primary-foreground/80">
+            <DialogDescription className="text-muted-foreground">
               Created on {format(new Date(task.created_at), "MMM d, yyyy")}
             </DialogDescription>
           </div>
           <div className="flex items-center gap-1 flex-shrink-0">
-            <Button variant="ghost" size="icon" className="hover:bg-primary-foreground/10" onClick={() => { onEdit(task); onClose(); }}>
+            <Button variant="ghost" size="icon" className="hover:bg-accent" onClick={() => { onEdit(task); onClose(); }}>
               <Edit className="h-4 w-4" />
             </Button>
             <Button variant="ghost" size="icon" className="hover:bg-destructive hover:text-destructive-foreground" onClick={() => { onDelete(task.id); onClose(); }}>
