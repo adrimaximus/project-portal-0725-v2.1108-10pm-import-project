@@ -1,5 +1,5 @@
 import * as React from "react"
-import { Check, ChevronsUpDown, PlusCircle } from "lucide-react"
+import { Check, ChevronsUpDown, PlusCircle, Building } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -17,38 +17,36 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
-import { Person } from "@/types"
+import { Person, Company } from "@/types"
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar"
 import { getInitials } from "@/lib/utils"
 
 interface ClientSelectorProps {
   people: Person[];
-  selectedPerson: Person | null;
-  onSelectPerson: (person: Person | null) => void;
+  companies: Company[];
+  selectedClient: { type: 'person' | 'company', data: Person | Company } | null;
+  onSelectClient: (client: { type: 'person' | 'company', data: Person | Company } | null) => void;
   onAddNewClient: () => void;
 }
 
-export function ClientSelector({ people, selectedPerson, onSelectPerson, onAddNewClient }: ClientSelectorProps) {
+export function ClientSelector({ people, companies, selectedClient, onSelectClient, onAddNewClient }: ClientSelectorProps) {
   const [open, setOpen] = React.useState(false)
 
-  const { companyClients, inPersonClients } = React.useMemo(() => {
-    const company: Person[] = [];
-    const inPerson: Person[] = [];
+  const sortedCompanies = React.useMemo(() => [...companies].sort((a, b) => a.name.localeCompare(b.name)), [companies]);
+  const sortedPeople = React.useMemo(() => [...people].sort((a, b) => a.full_name.localeCompare(b.full_name)), [people]);
 
-    people.forEach(person => {
-      if (person.company) {
-        company.push(person);
-      } else {
-        inPerson.push(person);
-      }
-    });
+  const handleSelect = (type: 'person' | 'company', item: Person | Company) => {
+    if (selectedClient?.data.id === item.id && selectedClient?.type === type) {
+      onSelectClient(null);
+    } else {
+      onSelectClient({ type, data: item });
+    }
+    setOpen(false);
+  };
 
-    const sortByName = (a: Person, b: Person) => a.full_name.localeCompare(b.full_name);
-    company.sort(sortByName);
-    inPerson.sort(sortByName);
-
-    return { companyClients: company, inPersonClients: inPerson };
-  }, [people]);
+  const selectedName = selectedClient ? (selectedClient.type === 'person' ? (selectedClient.data as Person).full_name : selectedClient.data.name) : "Select a client...";
+  const selectedAvatar = selectedClient ? (selectedClient.type === 'person' ? (selectedClient.data as Person).avatar_url : (selectedClient.data as Company).logo_url) : '';
+  const selectedInitials = selectedClient ? (selectedClient.type === 'person' ? getInitials((selectedClient.data as Person).full_name) : getInitials(selectedClient.data.name)) : '';
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -59,13 +57,20 @@ export function ClientSelector({ people, selectedPerson, onSelectPerson, onAddNe
           aria-expanded={open}
           className="w-full justify-between"
         >
-          {selectedPerson ? (
+          {selectedClient ? (
             <div className="flex items-center gap-2">
-              <Avatar className="h-6 w-6">
-                <AvatarImage src={selectedPerson.avatar_url || ''} alt={selectedPerson.full_name} />
-                <AvatarFallback>{getInitials(selectedPerson.full_name)}</AvatarFallback>
-              </Avatar>
-              <span>{selectedPerson.full_name}</span>
+              {selectedClient.type === 'person' ? (
+                <Avatar className="h-6 w-6">
+                  <AvatarImage src={selectedAvatar || ''} alt={selectedName} />
+                  <AvatarFallback>{selectedInitials}</AvatarFallback>
+                </Avatar>
+              ) : (
+                <Avatar className="h-6 w-6">
+                  <AvatarImage src={selectedAvatar || ''} alt={selectedName} />
+                  <AvatarFallback><Building className="h-4 w-4" /></AvatarFallback>
+                </Avatar>
+              )}
+              <span>{selectedName}</span>
             </div>
           ) : (
             "Select a client..."
@@ -79,21 +84,44 @@ export function ClientSelector({ people, selectedPerson, onSelectPerson, onAddNe
           <CommandList>
             <CommandEmpty>No client found.</CommandEmpty>
             
-            {companyClients.length > 0 && (
-              <CommandGroup heading="Client Company">
-                {companyClients.map((person) => (
+            {sortedCompanies.length > 0 && (
+              <CommandGroup heading="Companies">
+                {sortedCompanies.map((company) => (
                   <CommandItem
-                    key={person.id}
-                    value={person.full_name}
-                    onSelect={() => {
-                      onSelectPerson(person.id === selectedPerson?.id ? null : person)
-                      setOpen(false)
-                    }}
+                    key={company.id}
+                    value={company.name}
+                    onSelect={() => handleSelect('company', company)}
                   >
                     <Check
                       className={cn(
                         "mr-2 h-4 w-4",
-                        selectedPerson?.id === person.id ? "opacity-100" : "opacity-0"
+                        selectedClient?.data.id === company.id && selectedClient.type === 'company' ? "opacity-100" : "opacity-0"
+                      )}
+                    />
+                     <div className="flex items-center gap-2">
+                        <Avatar className="h-6 w-6">
+                          <AvatarImage src={company.logo_url || ''} alt={company.name} />
+                          <AvatarFallback><Building className="h-4 w-4" /></AvatarFallback>
+                        </Avatar>
+                        <span>{company.name}</span>
+                      </div>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            )}
+
+            {sortedPeople.length > 0 && (
+              <CommandGroup heading="People">
+                {sortedPeople.map((person) => (
+                  <CommandItem
+                    key={person.id}
+                    value={person.full_name}
+                    onSelect={() => handleSelect('person', person)}
+                  >
+                    <Check
+                      className={cn(
+                        "mr-2 h-4 w-4",
+                        selectedClient?.data.id === person.id && selectedClient.type === 'person' ? "opacity-100" : "opacity-0"
                       )}
                     />
                      <div className="flex items-center gap-2">
@@ -111,35 +139,6 @@ export function ClientSelector({ people, selectedPerson, onSelectPerson, onAddNe
               </CommandGroup>
             )}
 
-            {inPersonClients.length > 0 && (
-              <CommandGroup heading="Client In Person">
-                {inPersonClients.map((person) => (
-                  <CommandItem
-                    key={person.id}
-                    value={person.full_name}
-                    onSelect={() => {
-                      onSelectPerson(person.id === selectedPerson?.id ? null : person)
-                      setOpen(false)
-                    }}
-                  >
-                    <Check
-                      className={cn(
-                        "mr-2 h-4 w-4",
-                        selectedPerson?.id === person.id ? "opacity-100" : "opacity-0"
-                      )}
-                    />
-                     <div className="flex items-center gap-2">
-                        <Avatar className="h-6 w-6">
-                          <AvatarImage src={person.avatar_url || ''} alt={person.full_name} />
-                          <AvatarFallback>{getInitials(person.full_name)}</AvatarFallback>
-                        </Avatar>
-                        <span>{person.full_name}</span>
-                      </div>
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            )}
-
             <CommandSeparator />
             <CommandGroup>
                 <CommandItem onSelect={() => {
@@ -147,7 +146,7 @@ export function ClientSelector({ people, selectedPerson, onSelectPerson, onAddNe
                     setOpen(false);
                 }}>
                     <PlusCircle className="mr-2 h-4 w-4" />
-                    <span>Add New Client</span>
+                    <span>Add New Person</span>
                 </CommandItem>
             </CommandGroup>
           </CommandList>

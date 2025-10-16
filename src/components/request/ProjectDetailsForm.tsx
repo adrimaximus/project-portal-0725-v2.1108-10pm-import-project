@@ -17,7 +17,7 @@ import { Calendar as CalendarIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { User, Person } from "@/types";
+import { User, Person, Company } from "@/types";
 import { toast } from "sonner";
 import { useCreateProject } from "@/hooks/useCreateProject";
 import { getInitials } from "@/lib/utils";
@@ -41,7 +41,8 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
   const [files, setFiles] = useState<File[]>([]);
   const [venue, setVenue] = useState<string>("");
   const [allPeople, setAllPeople] = useState<Person[]>([]);
-  const [selectedClient, setSelectedClient] = useState<Person | null>(null);
+  const [allCompanies, setAllCompanies] = useState<Company[]>([]);
+  const [selectedClient, setSelectedClient] = useState<{ type: 'person' | 'company', data: Person | Company } | null>(null);
   const [isPersonFormOpen, setIsPersonFormOpen] = useState(false);
   const navigate = useNavigate();
   const createProjectMutation = useCreateProject();
@@ -86,8 +87,19 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
       }
     };
 
+    const fetchCompanies = async () => {
+      const { data, error } = await supabase.from('companies').select('*');
+      if (error) {
+        toast.error("Failed to fetch companies.");
+        console.error('Error fetching companies:', error);
+      } else {
+        setAllCompanies(data as Company[]);
+      }
+    };
+
     fetchUsers();
     fetchPeople();
+    fetchCompanies();
   }, []);
 
   const handleBudgetChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -110,7 +122,7 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
 
   const handlePersonCreated = (newPerson: Person) => {
     setAllPeople(prev => [...prev, newPerson]);
-    setSelectedClient(newPerson);
+    setSelectedClient({ type: 'person', data: newPerson });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -125,6 +137,7 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
     }
 
     const numericBudget = parseInt(budget.replace(/[^0-9]/g, ''), 10) || 0;
+    const clientCompanyId = selectedClient?.type === 'company' ? selectedClient.data.id : null;
 
     createProjectMutation.mutate({
       name: projectName,
@@ -135,14 +148,15 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
       dueDate: date?.to?.toISOString(),
       venue: venue,
       created_by: currentUser.id,
+      client_company_id: clientCompanyId,
     }, {
       onSuccess: async (newProject) => {
         const newProjectId = newProject.id;
         const newProjectSlug = newProject.slug;
 
-        if (selectedClient) {
+        if (selectedClient?.type === 'person') {
           const { error: clientLinkError } = await supabase.from('people_projects').insert({
-            person_id: selectedClient.id,
+            person_id: selectedClient.data.id,
             project_id: newProjectId,
           });
           if (clientLinkError) {
@@ -237,8 +251,9 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
               <Label>Client</Label>
               <ClientSelector
                 people={allPeople}
-                selectedPerson={selectedClient}
-                onSelectPerson={setSelectedClient}
+                companies={allCompanies}
+                selectedClient={selectedClient}
+                onSelectClient={setSelectedClient}
                 onAddNewClient={() => setIsPersonFormOpen(true)}
               />
             </div>
