@@ -43,7 +43,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
 
   return (
     <DialogContent className="w-[80vw] sm:w-full sm:max-w-[650px] max-h-[80vh] overflow-y-auto p-0 rounded-lg">
-      <DialogHeader className="p-3 sm:p-4 border-b">
+      <DialogHeader className="p-3 sm:p-4 border-b-[3px] border-primary">
         <div className="flex justify-between items-start gap-2 sm:gap-4">
           <div className="flex-1 min-w-0">
             <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
