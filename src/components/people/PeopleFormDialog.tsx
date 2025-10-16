@@ -12,6 +12,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { ContactProperty, Person } from '@/types';
+import { getErrorMessage } from '@/lib/utils';
 
 interface PeopleFormDialogProps {
   open: boolean;
@@ -113,7 +114,7 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
       onOpenChange(false);
     },
     onError: (error: any) => {
-      toast.error('Failed to save person.', { description: error.message });
+      toast.error('Failed to save person.', { description: getErrorMessage(error) });
     },
   });
 

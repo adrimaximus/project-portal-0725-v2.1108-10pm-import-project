@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../integrations/supabase/client';
 import { toast } from 'sonner';
 import { Task, TaskStatus } from '@/types';
+import { getErrorMessage } from '@/lib/utils';
 
 export interface UpsertTaskPayload {
   id?: string;
@@ -46,7 +47,7 @@ export const useUpsertTask = () => {
       queryClient.invalidateQueries({ queryKey: ['projects'] });
     },
     onError: (error: Error) => {
-      toast.error(`Failed to save task: ${error.message}`);
+      toast.error(`Failed to save task: ${getErrorMessage(error)}`);
     },
   });
 };
@@ -86,7 +87,7 @@ export const useToggleTaskCompletion = () => {
       if (context?.previousTasks) {
         queryClient.setQueryData(['tasks'], context.previousTasks);
       }
-      toast.error(`Failed to update task status: ${err.message}`);
+      toast.error(`Failed to update task status: ${getErrorMessage(err)}`);
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
@@ -107,7 +108,7 @@ const useDeleteTask = () => {
       queryClient.invalidateQueries({ queryKey: ['projects'] });
     },
     onError: (error: any) => {
-      toast.error(`Failed to delete task: ${error.message}`);
+      toast.error(`Failed to delete task: ${getErrorMessage(error)}`);
     },
   });
 };
@@ -138,7 +139,7 @@ const useUpdateTaskStatusAndOrder = () => {
       queryClient.invalidateQueries({ queryKey: ['projects'] }); // Invalidate projects too as tasks are nested
     },
     onError: (error: any) => {
-      toast.error(`Failed to move task: ${error.message}`);
+      toast.error(`Failed to move task: ${getErrorMessage(error)}`);
       // Revert optimistic update by refetching
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
     },

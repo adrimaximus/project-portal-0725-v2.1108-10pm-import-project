@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { User } from '@/types';
 import { Role } from '@/components/settings/RoleManagerDialog';
 import { Invite } from '@/components/settings/InviteCard';
+import { getErrorMessage } from '@/lib/utils';
 
 const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -24,7 +25,7 @@ export const useTeamSettingsMutations = (fetchData: () => void) => {
         });
 
         if (error) {
-          toast.error(`Failed to send invite to ${invite.email}: ${error.message}`);
+          toast.error(`Failed to send invite to ${invite.email}: ${getErrorMessage(error)}`);
         } else {
           successCount++;
         }
@@ -41,7 +42,7 @@ export const useTeamSettingsMutations = (fetchData: () => void) => {
       }
     },
     onError: (error: Error) => {
-      toast.error(error.message);
+      toast.error(getErrorMessage(error));
     }
   });
 
@@ -55,7 +56,7 @@ export const useTeamSettingsMutations = (fetchData: () => void) => {
       fetchData();
     },
     onError: (error: any) => {
-      toast.error(`Failed to update role: ${error.message}`);
+      toast.error(`Failed to update role: ${getErrorMessage(error)}`);
     }
   });
 
@@ -72,7 +73,7 @@ export const useTeamSettingsMutations = (fetchData: () => void) => {
       fetchData();
     },
     onError: (error: any) => {
-      toast.error(`Failed to update member status: ${error.message}`);
+      toast.error(`Failed to update member status: ${getErrorMessage(error)}`);
     }
   });
 
@@ -89,7 +90,7 @@ export const useTeamSettingsMutations = (fetchData: () => void) => {
       fetchData();
     },
     onError: (error: any) => {
-      toast.error(`Failed to delete member: ${error.message}`);
+      toast.error(`Failed to delete member: ${getErrorMessage(error)}`);
     }
   });
 
@@ -108,7 +109,7 @@ export const useTeamSettingsMutations = (fetchData: () => void) => {
       fetchData();
     },
     onError: (error: any) => {
-      toast.error(`Failed to save role: ${error.message}`);
+      toast.error(`Failed to save role: ${getErrorMessage(error)}`);
     }
   });
 
@@ -123,7 +124,7 @@ export const useTeamSettingsMutations = (fetchData: () => void) => {
       fetchData();
     },
     onError: (error: any) => {
-      toast.error(`Failed to delete role: ${error.message}`);
+      toast.error(`Failed to delete role: ${getErrorMessage(error)}`);
     }
   });
 
@@ -147,7 +148,7 @@ export const useTeamSettingsMutations = (fetchData: () => void) => {
       fetchData();
     },
     onError: (error: Error) => {
-      toast.error(error.message);
+      toast.error(getErrorMessage(error));
     }
   });
 

@@ -13,7 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { id } from "date-fns/locale";
-import { generatePastelColor, getAvatarUrl } from "@/lib/utils";
+import { generatePastelColor, getAvatarUrl, getErrorMessage, getInitials } from "@/lib/utils";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import PersonFormDialog from "@/components/people/PersonFormDialog";
 import { Badge } from "@/components/ui/badge";
@@ -201,7 +201,7 @@ const PeoplePage = () => {
 
     if (error) {
       queryClient.setQueryData(['people', 'with-slug'], previousPeople);
-      toast.error(`Failed to delete ${personToDelete.full_name}.`);
+      toast.error(`Failed to delete ${personToDelete.full_name}.`, { description: getErrorMessage(error) });
     } else {
       toast.success(`${personToDelete.full_name} has been deleted.`);
       queryClient.invalidateQueries({ queryKey: ['people', 'with-slug'] });

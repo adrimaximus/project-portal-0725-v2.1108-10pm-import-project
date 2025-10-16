@@ -183,3 +183,25 @@ export const formatMentionsForDisplay = (text: string | null | undefined): strin
   // Replaces @[Display Name](user-id) with @Display Name
   return text.replace(/@\[([^\]]+)\]\(([^)]+)\)/g, "@$1");
 };
+
+export const getErrorMessage = (error: any, defaultMessage: string = "An unknown error occurred"): string => {
+  if (!error) return defaultMessage;
+
+  let message = error.message || JSON.stringify(error);
+
+  // Prettify common Supabase errors
+  if (message.includes('violates row-level security policy')) {
+    return "Permission Denied: You do not have the required permissions for this action.";
+  }
+  if (message.includes('permission denied for table')) {
+    return "Permission Denied: You are not authorized to access this data.";
+  }
+  if (message.includes('duplicate key value violates unique constraint')) {
+    return "This item already exists or conflicts with an existing one.";
+  }
+  if (message.includes('NetworkError when attempting to fetch resource')) {
+    return "Network error. Please check your internet connection and try again.";
+  }
+
+  return message;
+};

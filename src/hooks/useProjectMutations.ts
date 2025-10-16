@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Project, User } from '@/types';
 import { useNavigate } from 'react-router-dom';
+import { getErrorMessage } from '@/lib/utils';
 
 export const useProjectMutations = (slug: string) => {
     const queryClient = useQueryClient();
@@ -75,7 +76,7 @@ export const useProjectMutations = (slug: string) => {
                 invalidateProjectQueries();
             }
         },
-        onError: (err: any) => toast.error("Failed to save project", { description: err.message }),
+        onError: (err: any) => toast.error("Failed to save project", { description: getErrorMessage(err) }),
     });
 
     const useAddFiles = () => useMutation({
@@ -83,11 +84,11 @@ export const useProjectMutations = (slug: string) => {
             toast.info(`Uploading ${files.length} file(s)...`);
             for (const file of files) {
                 const sanitizedFileName = file.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
-                const filePath = `${project.id}/${Date.now()}-${sanitizedFileName}`;
-                const { error: uploadError } = await supabase.storage.from('task-attachments').upload(filePath, file);
+                const filePath = `${project.id}/comments/${Date.now()}-${sanitizedFileName}`;
+                const { error: uploadError } = await supabase.storage.from('project-files').upload(filePath, file);
                 if (uploadError) throw new Error(`Failed to upload ${file.name}: ${uploadError.message}`);
                 
-                const { data: urlData } = supabase.storage.from('task-attachments').getPublicUrl(filePath);
+                const { data: urlData } = supabase.storage.from('project-files').getPublicUrl(filePath);
                 
                 const { error: dbError } = await supabase.from('project_files').insert({
                     project_id: project.id, user_id: user.id, name: file.name,
@@ -100,7 +101,7 @@ export const useProjectMutations = (slug: string) => {
             toast.success("File upload complete!");
             invalidateProjectQueries();
         },
-        onError: (err: any) => toast.error(err.message),
+        onError: (err: any) => toast.error(getErrorMessage(err, "File upload failed.")),
     });
 
     const useDeleteFile = () => useMutation({
@@ -115,7 +116,7 @@ export const useProjectMutations = (slug: string) => {
             toast.success("File deleted successfully");
             invalidateProjectQueries();
         },
-        onError: (err: any) => toast.error(err.message),
+        onError: (err: any) => toast.error(getErrorMessage(err)),
     });
 
     const useAddTask = () => useMutation({
@@ -136,7 +137,7 @@ export const useProjectMutations = (slug: string) => {
             toast.success("Task added successfully.");
             invalidateProjectQueries();
         },
-        onError: (err: any) => toast.error("Failed to add task", { description: err.message }),
+        onError: (err: any) => toast.error("Failed to add task", { description: getErrorMessage(err) }),
     });
 
     const useUpdateTask = () => useMutation({
@@ -148,7 +149,7 @@ export const useProjectMutations = (slug: string) => {
             toast.success("Task updated.");
             invalidateProjectQueries();
         },
-        onError: (err: any) => toast.error("Failed to update task", { description: err.message }),
+        onError: (err: any) => toast.error("Failed to update task", { description: getErrorMessage(err) }),
     });
 
     const useAssignUsersToTask = () => useMutation({
@@ -164,7 +165,7 @@ export const useProjectMutations = (slug: string) => {
             toast.success("Task assignments updated.");
             invalidateProjectQueries();
         },
-        onError: (err: any) => toast.error("Failed to assign users", { description: err.message }),
+        onError: (err: any) => toast.error("Failed to assign users", { description: getErrorMessage(err) }),
     });
 
     const useDeleteTask = () => useMutation({
@@ -176,7 +177,7 @@ export const useProjectMutations = (slug: string) => {
             toast.success("Task deleted.");
             invalidateProjectQueries();
         },
-        onError: (err: any) => toast.error("Failed to delete task", { description: err.message }),
+        onError: (err: any) => toast.error("Failed to delete task", { description: getErrorMessage(err) }),
     });
 
     const useAddComment = () => useMutation({
@@ -247,7 +248,7 @@ export const useProjectMutations = (slug: string) => {
             toast.success(variables.isTicket ? "Ticket created and added to tasks." : "Comment posted.");
             invalidateProjectQueries();
         },
-        onError: (err: any) => toast.error(err.message),
+        onError: (err: any) => toast.error(getErrorMessage(err)),
     });
 
     const useUpdateComment = () => useMutation({
@@ -337,7 +338,7 @@ export const useProjectMutations = (slug: string) => {
             toast.success("Comment updated.");
             invalidateProjectQueries();
         },
-        onError: (err: any) => toast.error("Failed to update comment", { description: err.message }),
+        onError: (err: any) => toast.error("Failed to update comment", { description: getErrorMessage(err) }),
     });
 
     const useDeleteComment = () => useMutation({
@@ -349,7 +350,7 @@ export const useProjectMutations = (slug: string) => {
             toast.success("Comment deleted.");
             invalidateProjectQueries();
         },
-        onError: (err: any) => toast.error("Failed to delete comment", { description: err.message }),
+        onError: (err: any) => toast.error("Failed to delete comment", { description: getErrorMessage(err) }),
     });
 
     const useDeleteProject = () => useMutation({
@@ -362,7 +363,7 @@ export const useProjectMutations = (slug: string) => {
             invalidateProjectQueries();
             navigate('/projects');
         },
-        onError: (err: any) => toast.error("Failed to delete project.", { description: err.message }),
+        onError: (err: any) => toast.error("Failed to delete project.", { description: getErrorMessage(err) }),
     });
 
     return {
