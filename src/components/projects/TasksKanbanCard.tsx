@@ -47,7 +47,7 @@ const TasksKanbanCard = ({ task, onEdit, onDelete }: TasksKanbanCardProps) => {
           id: `origin-${task.originTicketId}`,
           file_name: task.attachment_name || 'Ticket Attachment',
           file_url: task.attachment_url,
-          file_type: '',
+          file_type: null,
           file_size: 0,
           storage_path: '',
           created_at: task.created_at,
