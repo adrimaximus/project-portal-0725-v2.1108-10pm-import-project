@@ -123,10 +123,7 @@ const ServicesSettingsPage = () => {
                     <TableRow key={service.id}>
                       <TableCell className="font-medium pl-6">
                         <div className="flex items-center gap-3">
-                          <div 
-                            className="h-10 w-10 flex items-center justify-center rounded-lg"
-                            style={{ backgroundColor: service.icon_color }}
-                          >
+                          <div className={cn("h-10 w-10 flex items-center justify-center rounded-lg", service.icon_color)}>
                             <Icon name={service.icon as any} className="h-5 w-5" />
                           </div>
                           {service.title}
