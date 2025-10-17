@@ -180,9 +180,6 @@ const ProjectAdvancedFilters = ({ filters, onFiltersChange, allPeople }: Project
           <div className="grid gap-4">
             <div className="space-y-2">
               <h4 className="font-medium leading-none">Advanced Filters</h4>
-              <p className="text-sm text-muted-foreground">
-                Refine your project view.
-              </p>
             </div>
             {filterContent}
           </div>
