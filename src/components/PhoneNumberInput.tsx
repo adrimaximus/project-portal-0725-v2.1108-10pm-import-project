@@ -21,31 +21,32 @@ const PhoneNumberInput: React.FC<PhoneNumberInputProps> = ({ value = '', onChang
   const [number, setNumber] = useState('');
 
   useEffect(() => {
-    if (value) {
-      const foundCode = countryCodes.find(c => value.startsWith(c.code));
-      if (foundCode) {
-        setCountryCode(foundCode.code);
-        setNumber(value.substring(foundCode.code.length));
+    const rawValue = value || '';
+    
+    const foundCode = countryCodes.find(c => rawValue.startsWith(c.code));
+
+    if (foundCode) {
+      setCountryCode(foundCode.code);
+      const numberPart = rawValue.substring(foundCode.code.length);
+      if (foundCode.code === '+62' && numberPart.length > 0 && !numberPart.startsWith('0')) {
+        setNumber('0' + numberPart);
       } else {
-        let numberPart = value.replace(/\D/g, '');
-        if (numberPart.startsWith('62')) {
-            setCountryCode('+62');
-            // Prepend '0' for display consistency with local format
-            setNumber('0' + numberPart.substring(2));
-        } else {
-            // For other formats or direct number input, just display it
-            setCountryCode('+62'); // Default to Indonesia if not specified
-            setNumber(numberPart);
-        }
+        setNumber(numberPart);
       }
     } else {
-      setCountryCode('+62');
-      setNumber('');
+      const digitsOnly = rawValue.replace(/\D/g, '');
+      if (digitsOnly.startsWith('62')) {
+        setCountryCode('+62');
+        setNumber('0' + digitsOnly.substring(2));
+      } else {
+        setCountryCode('+62');
+        setNumber(digitsOnly);
+      }
     }
   }, [value]);
 
   const handleNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newNumber = e.target.value.replace(/\D/g, ''); // Allow only digits
+    const newNumber = e.target.value.replace(/\D/g, '');
     setNumber(newNumber);
     
     let numberToEmit = newNumber;
