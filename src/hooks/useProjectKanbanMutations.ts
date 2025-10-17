@@ -17,15 +17,20 @@ type UpdateProjectOrderPayload = {
 export const useProjectKanbanMutations = () => {
     const queryClient = useQueryClient();
 
-    const { mutate: updateProjectOrder } = useMutation({
-        mutationFn: async ({ finalUpdates, groupBy }: Omit<UpdateProjectOrderPayload, 'newProjects' | 'activeProjectName' | 'newStatusLabel' | 'movedColumns'>) => {
+    const { mutate: updateProjectOrder } = useMutation<
+        void,
+        Error,
+        UpdateProjectOrderPayload,
+        { previousProjects: Project[] | undefined }
+    >({
+        mutationFn: async ({ finalUpdates, groupBy }) => {
             const { error } = await supabase.rpc('update_project_kanban_order', {
                 updates: finalUpdates,
                 group_by_key: groupBy,
             });
             if (error) throw error;
         },
-        onMutate: async ({ newProjects }: { newProjects: Project[] }) => {
+        onMutate: async ({ newProjects }) => {
             await queryClient.cancelQueries({ queryKey: ['projects'] });
             const previousProjects = queryClient.getQueryData<Project[]>(['projects']);
             queryClient.setQueryData(['projects'], newProjects);
