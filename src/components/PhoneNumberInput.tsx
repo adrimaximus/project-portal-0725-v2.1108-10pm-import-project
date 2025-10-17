@@ -30,12 +30,11 @@ const PhoneNumberInput: React.FC<PhoneNumberInputProps> = ({ value = '', onChang
         let numberPart = value.replace(/\D/g, '');
         if (numberPart.startsWith('62')) {
             setCountryCode('+62');
-            setNumber(numberPart.substring(2));
-        } else if (numberPart.startsWith('0')) {
-            setCountryCode('+62');
-            setNumber(numberPart.substring(1));
+            // Prepend '0' for display consistency with local format
+            setNumber('0' + numberPart.substring(2));
         } else {
-            setCountryCode('+62');
+            // For other formats or direct number input, just display it
+            setCountryCode('+62'); // Default to Indonesia if not specified
             setNumber(numberPart);
         }
       }
@@ -46,17 +45,24 @@ const PhoneNumberInput: React.FC<PhoneNumberInputProps> = ({ value = '', onChang
   }, [value]);
 
   const handleNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let newNumber = e.target.value.replace(/\D/g, '');
-    if (newNumber.startsWith('0') && countryCode === '+62') {
-      newNumber = newNumber.substring(1);
-    }
+    const newNumber = e.target.value.replace(/\D/g, ''); // Allow only digits
     setNumber(newNumber);
-    onChange(`${countryCode}${newNumber}`);
+    
+    let numberToEmit = newNumber;
+    if (newNumber.startsWith('0') && countryCode === '+62') {
+      numberToEmit = newNumber.substring(1);
+    }
+    onChange(`${countryCode}${numberToEmit}`);
   };
 
   const handleCodeChange = (newCode: string) => {
     setCountryCode(newCode);
-    onChange(`${newCode}${number}`);
+    
+    let numberToEmit = number;
+    if (number.startsWith('0') && newCode === '+62') {
+      numberToEmit = number.substring(1);
+    }
+    onChange(`${newCode}${numberToEmit}`);
   };
 
   return (
