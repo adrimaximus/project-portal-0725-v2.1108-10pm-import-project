@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import Icon from "@/components/Icon";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Service } from "@/types";
+import { Badge } from "@/components/ui/badge";
 
 interface ServiceSelectionProps {
   searchTerm: string;
@@ -28,7 +29,7 @@ const ServiceSelection = ({
   useEffect(() => {
     const fetchServices = async () => {
       setLoading(true);
-      const { data, error } = await supabase.from('services').select('*');
+      const { data, error } = await supabase.from('services').select('*').order('is_featured', { ascending: false }).order('title');
       if (error) {
         toast.error('Failed to load services.');
         console.error(error);
@@ -40,10 +41,7 @@ const ServiceSelection = ({
     fetchServices();
   }, []);
 
-  const featuredService = services.find((s) => s.is_featured);
-  const otherServices = services.filter((s) => !s.is_featured);
-
-  const filteredServices = otherServices.filter(
+  const filteredServices = services.filter(
     (service) =>
       service.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       service.description.toLowerCase().includes(searchTerm.toLowerCase())
@@ -59,7 +57,6 @@ const ServiceSelection = ({
         <Skeleton className="h-10 w-1/2" />
         <Skeleton className="h-6 w-3/4" />
         <Skeleton className="h-10 w-full mt-4" />
-        <Skeleton className="h-40 w-full mt-4" />
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 mt-4">
           {[...Array(8)].map((_, i) => <Skeleton key={i} className="h-32 w-full" />)}
         </div>
@@ -74,7 +71,7 @@ const ServiceSelection = ({
       </h1>
       <p className="text-muted-foreground">
         Select the services you need for your project. You can select
-        multiple services, or choose our end-to-end package.
+        multiple services.
       </p>
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -86,54 +83,28 @@ const ServiceSelection = ({
         />
       </div>
 
-      {featuredService && (
-        <Card
-          className={cn(
-            "w-full hover:bg-muted/50 transition-colors cursor-pointer",
-            isSelected(featuredService) && "ring-2 ring-primary"
-          )}
-          onClick={() => onServiceSelect(featuredService)}
-        >
-          <CardContent className="p-6 flex items-center gap-6">
-            <div
-              className={cn(
-                "p-3 rounded-lg",
-                featuredService.icon_color
-              )}
-            >
-              <Icon name={featuredService.icon as any} className="h-8 w-8" />
-            </div>
-            <div>
-              <h2 className="font-semibold text-lg">
-                {featuredService.title}
-              </h2>
-              <p className="text-muted-foreground">
-                {featuredService.description}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {filteredServices.map((service) => (
           <Card
             key={service.title}
             className={cn(
-              "hover:bg-muted/50 transition-colors cursor-pointer h-full",
+              "hover:bg-muted/50 transition-colors cursor-pointer h-full flex flex-col",
               isSelected(service) && "ring-2 ring-primary"
             )}
             onClick={() => onServiceSelect(service)}
           >
-            <CardContent className="p-4 flex items-start gap-4">
-              <div
-                className={cn("p-2 rounded-lg", service.icon_color)}
-              >
-                <Icon name={service.icon as any} className="h-6 w-6" />
+            <CardContent className="p-4 flex flex-col items-start gap-4 flex-grow">
+              <div className="flex justify-between items-start w-full">
+                <div
+                  className={cn("p-2 rounded-lg", service.icon_color)}
+                >
+                  <Icon name={service.icon as any} className="h-6 w-6" />
+                </div>
+                {service.is_featured && <Badge>Featured</Badge>}
               </div>
-              <div>
+              <div className="flex-grow">
                 <h3 className="font-semibold">{service.title}</h3>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-muted-foreground mt-1">
                   {service.description}
                 </p>
               </div>
