@@ -20,7 +20,7 @@ import { toast } from "sonner";
 import ColorThemePicker from './ColorThemePicker';
 import IconPicker from '../IconPicker';
 import { Sparkles, Loader2 } from 'lucide-react';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 
 const serviceSchema = z.object({
   title: z.string().min(1, "Title is required"),
