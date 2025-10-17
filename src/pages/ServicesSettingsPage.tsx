@@ -71,6 +71,21 @@ const ServicesSettingsPage = () => {
     setServiceToDelete(null);
   };
 
+  const handleSuccess = (updatedService: Service) => {
+    setServices(prevServices => {
+      const index = prevServices.findIndex(s => s.id === updatedService.id);
+      let newServices;
+      if (index !== -1) {
+        newServices = [...prevServices];
+        newServices[index] = updatedService;
+      } else {
+        newServices = [...prevServices, updatedService];
+      }
+      return newServices.sort((a, b) => a.title.localeCompare(b.title));
+    });
+    setIsFormDialogOpen(false);
+  };
+
   return (
     <PortalLayout>
       <div className="flex flex-col h-full">
@@ -166,10 +181,7 @@ const ServicesSettingsPage = () => {
       <ServiceFormDialog
         open={isFormDialogOpen}
         onOpenChange={setIsFormDialogOpen}
-        onSuccess={() => {
-          fetchServices();
-          setIsFormDialogOpen(false);
-        }}
+        onSuccess={handleSuccess}
         service={selectedService}
       />
       <AlertDialog open={!!serviceToDelete} onOpenChange={(open) => !open && setServiceToDelete(null)}>

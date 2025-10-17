@@ -21,7 +21,7 @@ import IconPicker from '../IconPicker';
 interface ServiceFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSuccess: () => void;
+  onSuccess: (service: Service) => void;
   service: Service | null;
 }
 
@@ -61,23 +61,27 @@ const ServiceFormDialog = ({ open, onOpenChange, onSuccess, service }: ServiceFo
       is_featured: isFeatured,
     };
 
+    let data: Service | null = null;
     let error;
+
     if (service) {
       // Update
-      const { error: updateError } = await supabase.from('services').update(serviceData).eq('id', service.id);
+      const { data: updateData, error: updateError } = await supabase.from('services').update(serviceData).eq('id', service.id).select().single();
+      data = updateData;
       error = updateError;
     } else {
       // Insert
-      const { error: insertError } = await supabase.from('services').insert(serviceData);
+      const { data: insertData, error: insertError } = await supabase.from('services').insert(serviceData).select().single();
+      data = insertData;
       error = insertError;
     }
 
     if (error) {
       toast.error(`Failed to ${service ? 'update' : 'create'} service.`);
       console.error(error);
-    } else {
+    } else if (data) {
       toast.success(`Service ${service ? 'updated' : 'created'} successfully.`);
-      onSuccess();
+      onSuccess(data);
     }
     setIsSubmitting(false);
   };
