@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { CalendarIcon, Loader2 } from 'lucide-react';
 import { cn, getTaskStatusStyles, getPriorityStyles } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -41,7 +41,6 @@ interface TaskFormDialogProps {
 
 const taskFormSchema = z.object({
   title: z.string().min(1, 'Title is required'),
-  completed: z.boolean().optional(),
   project_id: z.string().optional().nullable(),
   description: z.string().optional().nullable(),
   due_date: z.date().optional().nullable(),
@@ -64,12 +63,12 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task, proj
   const [newFiles, setNewFiles] = useState<File[]>([]);
   const [filesToDelete, setFilesToDelete] = useState<string[]>([]);
   const [previousStatus, setPreviousStatus] = useState<TaskStatus>('To do');
+  const TICKET_TAG_NAME = 'Ticket';
 
   const form = useForm<TaskFormValues>({
     resolver: zodResolver(taskFormSchema),
     defaultValues: {
       title: '',
-      completed: false,
       project_id: '',
       description: '',
       due_date: null,
@@ -106,7 +105,6 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task, proj
       if (task) {
         form.reset({
           title: task.title,
-          completed: task.status === 'Done' || task.completed,
           project_id: task.project_id,
           description: task.description,
           due_date: task.due_date ? new Date(task.due_date) : null,
@@ -125,7 +123,6 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task, proj
         const generalTasksProject = projects.find(p => p.slug === 'general-tasks');
         form.reset({
           title: '',
-          completed: false,
           project_id: project?.id || generalTasksProject?.id || '',
           description: '',
           due_date: null,
@@ -149,12 +146,25 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task, proj
     const newTag = {
       id: `new-${tagName}-${Date.now()}`,
       name: tagName,
-      color: '#808080',
+      color: tagName === TICKET_TAG_NAME ? '#DB2777' : '#808080',
       isNew: true,
       user_id: currentUser?.id,
     };
     toast.info(`New tag "${tagName}" will be created upon saving.`);
     return newTag;
+  };
+
+  const handleIsTicketChange = (checked: boolean) => {
+    const ticketTagInOptions = allTags.find(t => t.name === TICKET_TAG_NAME);
+    
+    if (checked) {
+      const tagToAdd = ticketTagInOptions || handleCreateTag(TICKET_TAG_NAME);
+      if (!selectedTags.some(st => st.name === TICKET_TAG_NAME)) {
+        handleTagsChange([...selectedTags, tagToAdd]);
+      }
+    } else {
+      handleTagsChange(selectedTags.filter(t => t.name !== TICKET_TAG_NAME));
+    }
   };
 
   const handleExistingFileDelete = (fileId: string) => {
@@ -210,7 +220,7 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task, proj
 
     const payload: UpsertTaskPayload = {
       id: task?.id,
-      completed: values.completed,
+      completed: values.status === 'Done',
       project_id: projectId,
       title: values.title,
       description: values.description,
@@ -225,6 +235,11 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task, proj
 
     onSubmit(payload);
   };
+
+  const isTicketChecked = useMemo(() => 
+    selectedTags.some(t => t.name === TICKET_TAG_NAME),
+    [selectedTags, TICKET_TAG_NAME]
+  );
 
   const formContent = (
     <div className="space-y-4">
@@ -258,37 +273,22 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task, proj
           </FormItem>
         )}
       />
-      <FormField
-        control={form.control}
-        name="completed"
-        render={({ field }) => (
-          <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4">
-            <FormControl>
-              <Checkbox
-                checked={field.value}
-                onCheckedChange={(checked) => {
-                  const isChecked = !!checked;
-                  field.onChange(isChecked);
-                  if (isChecked) {
-                    const currentStatus = form.getValues('status');
-                    if (currentStatus !== 'Done') {
-                      setPreviousStatus(currentStatus as TaskStatus);
-                    }
-                    form.setValue('status', 'Done');
-                  } else {
-                    form.setValue('status', previousStatus);
-                  }
-                }}
-              />
-            </FormControl>
-            <div className="space-y-1 leading-none">
-              <FormLabel>
-                Mark as completed
-              </FormLabel>
-            </div>
-          </FormItem>
-        )}
-      />
+      <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+        <FormControl>
+          <Checkbox
+            checked={isTicketChecked}
+            onCheckedChange={handleIsTicketChange}
+          />
+        </FormControl>
+        <div className="space-y-1 leading-none">
+          <FormLabel>
+            Is Ticket
+          </FormLabel>
+          <FormDescription>
+            Marking this task as a ticket will help in filtering and reporting.
+          </FormDescription>
+        </div>
+      </FormItem>
       <FormField
         control={form.control}
         name="description"
@@ -317,10 +317,7 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task, proj
               <Select
                 onValueChange={(value: TaskStatus) => {
                   field.onChange(value);
-                  if (value === 'Done') {
-                    form.setValue('completed', true);
-                  } else {
-                    form.setValue('completed', false);
+                  if (value !== 'Done') {
                     setPreviousStatus(value);
                   }
                 }}
