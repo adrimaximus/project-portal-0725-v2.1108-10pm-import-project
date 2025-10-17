@@ -9,6 +9,11 @@ import ProjectAdvancedFilters, { AdvancedFiltersState } from './ProjectAdvancedF
 
 type ViewMode = 'table' | 'list' | 'kanban' | 'tasks' | 'tasks-kanban';
 
+interface Person {
+  id: string;
+  name: string;
+}
+
 type ProjectsToolbarProps = {
   view: ViewMode;
   onViewChange: (view: ViewMode | null) => void;
@@ -24,6 +29,7 @@ type ProjectsToolbarProps = {
   onRefreshClick: () => void;
   advancedFilters: AdvancedFiltersState;
   onAdvancedFiltersChange: (filters: AdvancedFiltersState) => void;
+  allPeople: Person[];
 };
 
 const ProjectsToolbar = ({
@@ -41,6 +47,7 @@ const ProjectsToolbar = ({
   onRefreshClick,
   advancedFilters,
   onAdvancedFiltersChange,
+  allPeople,
 }: ProjectsToolbarProps) => {
   return (
     <div className="p-4 border-t flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -68,7 +75,7 @@ const ProjectsToolbar = ({
             <Label htmlFor="hide-completed" className="text-sm">Hide Done</Label>
           </div>
         )}
-        <ProjectAdvancedFilters filters={advancedFilters} onFiltersChange={onAdvancedFiltersChange} />
+        <ProjectAdvancedFilters filters={advancedFilters} onFiltersChange={onAdvancedFiltersChange} allPeople={allPeople} />
       </div>
 
       {/* Desktop Action Buttons */}

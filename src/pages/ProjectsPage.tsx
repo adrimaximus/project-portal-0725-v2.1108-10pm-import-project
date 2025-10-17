@@ -81,7 +81,21 @@ const ProjectsPage = () => {
   const [advancedFilters, setAdvancedFilters] = useState<AdvancedFiltersState>({
     showOnlyMultiPerson: false,
     hiddenStatuses: [],
+    selectedPeopleIds: [],
   });
+
+  const allPeople = useMemo(() => {
+    if (!projectsData) return [];
+    const peopleMap = new Map<string, { id: string; name: string }>();
+    projectsData.forEach(project => {
+      project.assignedTo?.forEach(person => {
+        if (!peopleMap.has(person.id)) {
+          peopleMap.set(person.id, { id: person.id, name: person.name });
+        }
+      });
+    });
+    return Array.from(peopleMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [projectsData]);
 
   const {
     dateRange, setDateRange,
@@ -347,6 +361,7 @@ const ProjectsPage = () => {
             onRefreshClick={handleRefresh}
             advancedFilters={advancedFilters}
             onAdvancedFiltersChange={setAdvancedFilters}
+            allPeople={allPeople}
           />
         </div>
         <div ref={scrollContainerRef} className="flex-grow min-h-0 overflow-y-auto">

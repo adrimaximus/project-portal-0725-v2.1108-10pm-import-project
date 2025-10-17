@@ -9,34 +9,51 @@ import { Badge } from "@/components/ui/badge";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
 
+interface Person {
+  id: string;
+  name: string;
+}
+
 export interface AdvancedFiltersState {
   showOnlyMultiPerson: boolean;
   hiddenStatuses: string[];
+  selectedPeopleIds: string[];
 }
 
 interface ProjectAdvancedFiltersProps {
   filters: AdvancedFiltersState;
   onFiltersChange: (filters: AdvancedFiltersState) => void;
+  allPeople: Person[];
 }
 
-const ProjectAdvancedFilters = ({ filters, onFiltersChange }: ProjectAdvancedFiltersProps) => {
-  const [open, setOpen] = useState(false);
+const ProjectAdvancedFilters = ({ filters, onFiltersChange, allPeople }: ProjectAdvancedFiltersProps) => {
+  const [statusPopoverOpen, setStatusPopoverOpen] = useState(false);
+  const [peoplePopoverOpen, setPeoplePopoverOpen] = useState(false);
 
   const handleMultiPersonToggle = (checked: boolean) => {
     onFiltersChange({ ...filters, showOnlyMultiPerson: checked });
   };
 
-  const handleStatusToggle = (statusValue: string, checked: boolean) => {
-    const newHiddenStatuses = checked
-      ? [...filters.hiddenStatuses, statusValue]
-      : filters.hiddenStatuses.filter(s => s !== statusValue);
+  const handleStatusToggle = (statusValue: string) => {
+    const isSelected = filters.hiddenStatuses.includes(statusValue);
+    const newHiddenStatuses = isSelected
+      ? filters.hiddenStatuses.filter(s => s !== statusValue)
+      : [...filters.hiddenStatuses, statusValue];
     onFiltersChange({ ...filters, hiddenStatuses: newHiddenStatuses });
   };
 
-  const activeFilterCount = (filters.showOnlyMultiPerson ? 1 : 0) + filters.hiddenStatuses.length;
+  const handlePersonToggle = (personId: string) => {
+    const isSelected = filters.selectedPeopleIds.includes(personId);
+    const newSelectedPeopleIds = isSelected
+      ? filters.selectedPeopleIds.filter(id => id !== personId)
+      : [...filters.selectedPeopleIds, personId];
+    onFiltersChange({ ...filters, selectedPeopleIds: newSelectedPeopleIds });
+  };
+
+  const activeFilterCount = (filters.showOnlyMultiPerson ? 1 : 0) + filters.hiddenStatuses.length + filters.selectedPeopleIds.length;
 
   const clearFilters = () => {
-    onFiltersChange({ showOnlyMultiPerson: false, hiddenStatuses: [] });
+    onFiltersChange({ showOnlyMultiPerson: false, hiddenStatuses: [], selectedPeopleIds: [] });
   };
 
   return (
@@ -72,14 +89,58 @@ const ProjectAdvancedFilters = ({ filters, onFiltersChange }: ProjectAdvancedFil
                 onCheckedChange={handleMultiPersonToggle}
               />
             </div>
+
             <div className="space-y-2">
-              <Label>Hide Statuses</Label>
-              <Popover open={open} onOpenChange={setOpen}>
+              <Label>Filter by Person</Label>
+              <Popover open={peoplePopoverOpen} onOpenChange={setPeoplePopoverOpen}>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
                     role="combobox"
-                    aria-expanded={open}
+                    aria-expanded={peoplePopoverOpen}
+                    className="w-full justify-between font-normal"
+                  >
+                    {filters.selectedPeopleIds.length > 0
+                      ? `${filters.selectedPeopleIds.length} people selected`
+                      : "Select people..."}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                  <Command>
+                    <CommandInput placeholder="Search person..." />
+                    <CommandList>
+                      <CommandEmpty>No person found.</CommandEmpty>
+                      <CommandGroup>
+                        {allPeople.map((person) => (
+                          <CommandItem
+                            key={person.id}
+                            onSelect={() => handlePersonToggle(person.id)}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                filters.selectedPeopleIds.includes(person.id) ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            {person.name}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Hide Statuses</Label>
+              <Popover open={statusPopoverOpen} onOpenChange={setStatusPopoverOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={statusPopoverOpen}
                     className="w-full justify-between font-normal"
                   >
                     {filters.hiddenStatuses.length > 0
@@ -97,10 +158,7 @@ const ProjectAdvancedFilters = ({ filters, onFiltersChange }: ProjectAdvancedFil
                         {PROJECT_STATUS_OPTIONS.map((status) => (
                           <CommandItem
                             key={status.value}
-                            onSelect={() => {
-                              const isSelected = filters.hiddenStatuses.includes(status.value);
-                              handleStatusToggle(status.value, !isSelected);
-                            }}
+                            onSelect={() => handleStatusToggle(status.value)}
                           >
                             <Check
                               className={cn(
