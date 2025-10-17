@@ -11,30 +11,25 @@ const RequestPage = () => {
   const [selectedServices, setSelectedServices] = useState<Service[]>([]);
 
   const handleServiceSelect = (service: Service) => {
-    const isEndToEnd = service.title === 'End-to-End Services';
-    const isAlreadySelected = selectedServices.some((s) => s.id === service.id);
-    const isEndToEndCurrentlySelected = selectedServices.some(
-      (s) => s.title === 'End-to-End Services'
+    const isFeatured = service.is_featured;
+    const isAlreadySelected = selectedServices.some(
+      (s) => s.title === service.title
     );
 
-    if (isAlreadySelected) {
-      // Jika layanan yang diklik sudah dipilih, batalkan pilihan.
-      setSelectedServices((prev) => prev.filter((s) => s.id !== service.id));
+    if (isFeatured) {
+      setSelectedServices(isAlreadySelected ? [] : [service]);
     } else {
-      // Jika layanan yang diklik belum dipilih.
-      if (isEndToEnd) {
-        // Jika pengguna mengklik "End-to-End", pilih hanya itu.
-        setSelectedServices([service]);
+      let newSelectedServices = selectedServices.filter(
+        (s) => !s.is_featured
+      );
+      if (isAlreadySelected) {
+        newSelectedServices = newSelectedServices.filter(
+          (s) => s.title !== service.title
+        );
       } else {
-        // Jika pengguna mengklik layanan lain
-        if (isEndToEndCurrentlySelected) {
-          // dan "End-to-End" sedang dipilih, ganti dengan layanan baru.
-          setSelectedServices([service]);
-        } else {
-          // dan "End-to-End" tidak dipilih, tambahkan layanan baru ke daftar.
-          setSelectedServices((prev) => [...prev, service]);
-        }
+        newSelectedServices.push(service);
       }
+      setSelectedServices(newSelectedServices);
     }
   };
 
