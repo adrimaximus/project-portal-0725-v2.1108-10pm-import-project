@@ -79,7 +79,6 @@ const ProjectsPage = () => {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   
   const [advancedFilters, setAdvancedFilters] = useState<AdvancedFiltersState>({
-    showOnlyMultiPerson: false,
     hiddenStatuses: [],
     selectedPeopleIds: [],
   });

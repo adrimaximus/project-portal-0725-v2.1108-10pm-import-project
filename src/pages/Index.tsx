@@ -63,7 +63,6 @@ const Index = () => {
   const { data: tasksData = [], isLoading: isLoadingTasks, refetch: refetchTasks } = useTasks({ hideCompleted: hideCompletedTasks, sortConfig: { key: 'due_date', direction: 'asc' } });
 
   const [advancedFilters, setAdvancedFilters] = useState<AdvancedFiltersState>({
-    showOnlyMultiPerson: false,
     hiddenStatuses: [],
     selectedPeopleIds: [],
   });

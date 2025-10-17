@@ -1,9 +1,8 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Filter, Users, X, ChevronsUpDown, Check } from "lucide-react";
+import { Filter, X, ChevronsUpDown, Check } from "lucide-react";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { PROJECT_STATUS_OPTIONS } from "@/types";
 import { Badge } from "@/components/ui/badge";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -15,7 +14,6 @@ interface Person {
 }
 
 export interface AdvancedFiltersState {
-  showOnlyMultiPerson: boolean;
   hiddenStatuses: string[];
   selectedPeopleIds: string[];
 }
@@ -29,10 +27,6 @@ interface ProjectAdvancedFiltersProps {
 const ProjectAdvancedFilters = ({ filters, onFiltersChange, allPeople }: ProjectAdvancedFiltersProps) => {
   const [statusPopoverOpen, setStatusPopoverOpen] = useState(false);
   const [peoplePopoverOpen, setPeoplePopoverOpen] = useState(false);
-
-  const handleMultiPersonToggle = (checked: boolean) => {
-    onFiltersChange({ ...filters, showOnlyMultiPerson: checked });
-  };
 
   const handleStatusToggle = (statusValue: string) => {
     const isSelected = filters.hiddenStatuses.includes(statusValue);
@@ -50,10 +44,10 @@ const ProjectAdvancedFilters = ({ filters, onFiltersChange, allPeople }: Project
     onFiltersChange({ ...filters, selectedPeopleIds: newSelectedPeopleIds });
   };
 
-  const activeFilterCount = (filters.showOnlyMultiPerson ? 1 : 0) + filters.hiddenStatuses.length + filters.selectedPeopleIds.length;
+  const activeFilterCount = filters.hiddenStatuses.length + filters.selectedPeopleIds.length;
 
   const clearFilters = () => {
-    onFiltersChange({ showOnlyMultiPerson: false, hiddenStatuses: [], selectedPeopleIds: [] });
+    onFiltersChange({ hiddenStatuses: [], selectedPeopleIds: [] });
   };
 
   return (
@@ -78,18 +72,6 @@ const ProjectAdvancedFilters = ({ filters, onFiltersChange, allPeople }: Project
             </p>
           </div>
           <div className="grid gap-4">
-            <div className="flex items-center justify-between space-x-2">
-              <Label htmlFor="multi-person-filter" className="flex items-center gap-2">
-                <Users className="h-4 w-4" />
-                <span>Multi-person projects only</span>
-              </Label>
-              <Switch
-                id="multi-person-filter"
-                checked={filters.showOnlyMultiPerson}
-                onCheckedChange={handleMultiPersonToggle}
-              />
-            </div>
-
             <div className="space-y-2">
               <Label>Filter by Person</Label>
               <Popover open={peoplePopoverOpen} onOpenChange={setPeoplePopoverOpen}>

@@ -32,12 +32,11 @@ export const useProjectFilters = (projects: Project[], advancedFilters: Advanced
         return projectStart <= filterEnd && effectiveProjectEnd >= filterStart;
       })();
 
-      const matchesMultiPerson = !advancedFilters.showOnlyMultiPerson || (project.assignedTo && project.assignedTo.length > 1);
       const isHiddenByStatus = advancedFilters.hiddenStatuses.includes(project.status);
       const matchesPerson = advancedFilters.selectedPeopleIds.length === 0 ||
         (project.assignedTo && project.assignedTo.some(person => advancedFilters.selectedPeopleIds.includes(person.id)));
 
-      return matchesDate && matchesMultiPerson && !isHiddenByStatus && matchesPerson;
+      return matchesDate && !isHiddenByStatus && matchesPerson;
     });
   }, [projects, dateRange, advancedFilters]);
 
