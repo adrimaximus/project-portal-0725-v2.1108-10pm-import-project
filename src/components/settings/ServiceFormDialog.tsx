@@ -23,6 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import ColorThemePicker from './ColorThemePicker';
 
 interface ServiceFormDialogProps {
   open: boolean;
@@ -37,7 +38,7 @@ const ServiceFormDialog = ({ open, onOpenChange, onSuccess, service }: ServiceFo
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [icon, setIcon] = useState('');
-  const [iconColor, setIconColor] = useState('');
+  const [iconColor, setIconColor] = useState('bg-gray-100 text-gray-600');
   const [isFeatured, setIsFeatured] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -52,7 +53,7 @@ const ServiceFormDialog = ({ open, onOpenChange, onSuccess, service }: ServiceFo
       setTitle('');
       setDescription('');
       setIcon('');
-      setIconColor('');
+      setIconColor('bg-gray-100 text-gray-600');
       setIsFeatured(false);
     }
   }, [service, open]);
@@ -128,11 +129,13 @@ const ServiceFormDialog = ({ open, onOpenChange, onSuccess, service }: ServiceFo
                 </SelectContent>
               </Select>
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="icon-color" className="text-right">
-                Icon Color
+            <div className="grid grid-cols-4 items-start gap-4">
+              <Label className="text-right pt-2">
+                Color
               </Label>
-              <Input id="icon-color" value={iconColor} onChange={(e) => setIconColor(e.target.value)} className="col-span-3" placeholder="e.g., bg-blue-100 text-blue-600" />
+              <div className="col-span-3">
+                <ColorThemePicker value={iconColor} onChange={setIconColor} />
+              </div>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="is-featured" className="text-right">
