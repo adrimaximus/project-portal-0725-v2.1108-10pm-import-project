@@ -65,6 +65,9 @@ const ProjectMainContent = ({
     mutations.deleteComment.mutate(commentId);
   };
 
+  const { isPending: isUpdatingComment, variables: updatedCommentVariables } = mutations.updateComment;
+  const updatedCommentId = (updatedCommentVariables as any)?.commentId;
+
   return (
     <div className="p-4">
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
@@ -126,6 +129,8 @@ const ProjectMainContent = ({
             onAddCommentOrTicket={handleAddCommentOrTicket}
             onUpdateComment={handleUpdateComment}
             onDeleteComment={handleDeleteComment}
+            isUpdatingComment={isUpdatingComment}
+            updatedCommentId={updatedCommentId}
           />
         </TabsContent>
         <TabsContent value="activity" className="mt-4 h-[350px] overflow-y-auto pr-4">

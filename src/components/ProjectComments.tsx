@@ -2,9 +2,9 @@ import { useState, useRef } from 'react';
 import { Project, Comment as CommentType, Task, User } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Ticket, MoreHorizontal, Edit, Trash2, FileText, Eye, Download, Paperclip, X } from "lucide-react";
+import { Ticket, MoreHorizontal, Edit, Trash2, FileText, Eye, Download, Paperclip, X, AlertTriangle, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { getInitials, generatePastelColor, parseMentions } from "@/lib/utils";
+import { getInitials, generatePastelColor, parseMentions, formatMentionsForDisplay } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
 import CommentInput from "./CommentInput";
 import ReactMarkdown from "react-markdown";
@@ -14,19 +14,16 @@ import { useAuth } from "@/contexts/AuthContext";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Textarea } from "@/components/ui/textarea";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 
 interface ProjectCommentsProps {
   project: Project;
   onAddCommentOrTicket: (text: string, isTicket: boolean, attachments: File[] | null, mentionedUserIds: string[]) => void;
   onUpdateComment: (commentId: string, text: string, attachments: File[] | null, isConvertingToTicket: boolean, mentionedUserIds: string[]) => void;
   onDeleteComment: (commentId: string) => void;
+  isUpdatingComment?: boolean;
+  updatedCommentId?: string;
 }
-
-const processMentions = (text: string | null | undefined) => {
-  if (!text) return '';
-  return text.replace(/@\[([^\]]+)\]\(([^)]+)\)/g, '**@$1**');
-};
 
 const attachmentsRegex = /\*\*Attachments:\*\*\n((?:\* \[.+\]\(.+\)\n?)+)/;
 
@@ -47,7 +44,7 @@ const parseComment = (text: string) => {
   return { mainText, attachments };
 };
 
-const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDeleteComment }: ProjectCommentsProps) => {
+const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDeleteComment, isUpdatingComment, updatedCommentId }: ProjectCommentsProps) => {
   const { user: currentUser } = useAuth();
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editedText, setEditedText] = useState('');
@@ -111,6 +108,7 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
             const ticketTask = isTicket ? tasks.find((t) => t.originTicketId === comment.id) : null;
             const canManageComment = currentUser && (comment.author.id === currentUser.id || currentUser.role === 'admin' || currentUser.role === 'master admin');
             const { mainText, attachments } = parseComment(comment.text);
+            const isThisCommentBeingUpdated = isUpdatingComment && updatedCommentId === comment.id;
 
             return (
               <div key={comment.id} className="flex items-start space-x-4">
@@ -218,7 +216,7 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
                               }
                             }}
                           >
-                            {processMentions(mainText)}
+                            {formatMentionsForDisplay(mainText)}
                           </ReactMarkdown>
                         </div>
                       )}
@@ -258,11 +256,19 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
                                 {ticketTask.completed ? 'Done' : 'Ticket'}
                               </Badge>
                             </Link>
-                          ) : (
+                          ) : isThisCommentBeingUpdated ? (
                             <Badge variant="outline">
-                              <Ticket className="h-3 w-3 mr-1" />
-                              Ticket (Task not found)
+                              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                              Creating task...
                             </Badge>
+                          ) : (
+                            <div className="mt-2 p-2 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md text-xs text-yellow-800 dark:text-yellow-300 flex items-start gap-2">
+                              <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                              <div>
+                                <p className="font-semibold">Associated task not found.</p>
+                                <p>This ticket's task may have been deleted.</p>
+                              </div>
+                            </div>
                           )}
                         </div>
                       )}
