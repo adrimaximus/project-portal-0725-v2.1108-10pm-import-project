@@ -15,15 +15,8 @@ import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { Service } from '@/types';
 import { toast } from "sonner";
-import { icons } from 'lucide-react';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import ColorThemePicker from './ColorThemePicker';
+import IconPicker from '../IconPicker';
 
 interface ServiceFormDialogProps {
   open: boolean;
@@ -31,8 +24,6 @@ interface ServiceFormDialogProps {
   onSuccess: () => void;
   service: Service | null;
 }
-
-const iconNames = Object.keys(icons) as (keyof typeof icons)[];
 
 const ServiceFormDialog = ({ open, onOpenChange, onSuccess, service }: ServiceFormDialogProps) => {
   const [title, setTitle] = useState('');
@@ -118,16 +109,9 @@ const ServiceFormDialog = ({ open, onOpenChange, onSuccess, service }: ServiceFo
               <Label htmlFor="icon" className="text-right">
                 Icon
               </Label>
-              <Select value={icon} onValueChange={setIcon}>
-                <SelectTrigger className="col-span-3">
-                  <SelectValue placeholder="Select an icon" />
-                </SelectTrigger>
-                <SelectContent>
-                  {iconNames.map(iconName => (
-                    <SelectItem key={iconName} value={iconName}>{iconName}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="col-span-3">
+                <IconPicker value={icon} onChange={setIcon} />
+              </div>
             </div>
             <div className="grid grid-cols-4 items-start gap-4">
               <Label className="text-right pt-2">
