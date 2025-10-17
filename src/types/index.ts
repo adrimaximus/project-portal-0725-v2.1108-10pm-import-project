@@ -153,6 +153,8 @@ export interface Task {
   project_venue?: string;
   project_owner?: { id: string, name: string };
   project_client?: string;
+  reactions?: Reaction[];
+  kanban_order?: number;
 }
 
 export interface Comment {
