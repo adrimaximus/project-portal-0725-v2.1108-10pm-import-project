@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useRef } from 'react';
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -9,6 +9,23 @@ import ProjectsToolbar from '@/components/projects/ProjectsToolbar';
 import TableView from '@/components/projects/TableView';
 import TasksView from '@/components/projects/TasksView';
 import { Project, Task } from '@/types';
+import { AdvancedFiltersState } from '@/components/projects/ProjectAdvancedFilters';
+import { useProjectFilters } from '@/hooks/useProjectFilters';
+import { DatePickerWithRange } from '@/components/ui/date-picker-with-range';
+import { Search } from 'lucide-react';
+import { Card, CardTitle } from '@/components/ui/card';
+import ProjectViewContainer from '@/components/projects/ProjectViewContainer';
+import TaskFormDialog from '@/components/projects/TaskFormDialog';
+import { GoogleCalendarImportDialog } from '@/components/projects/GoogleCalendarImportDialog';
+import { useAuth } from '@/contexts/AuthContext';
+import { useTasks } from '@/hooks/useTasks';
+import { useProjects } from '@/hooks/useProjects';
+import { useCreateProject } from '@/hooks/useCreateProject';
+import { useTaskMutations, UpsertTaskPayload } from '@/hooks/useTaskMutations';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { useNavigate } from 'react-router-dom';
+import { Input } from '@/components/ui/input';
+import PortalLayout from '@/components/PortalLayout';
 
 type ViewMode = 'table' | 'list' | 'kanban' | 'tasks' | 'tasks-kanban';
 type SortConfig<T> = { key: keyof T | null; direction: 'ascending' | 'descending' };
@@ -35,95 +52,43 @@ const Index = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const rowRefs = useRef(new Map<string, HTMLTableRowElement>());
+  const navigate = useNavigate();
 
   const view = (searchParams.get('view') as ViewMode) || 'table';
   const [kanbanGroupBy, setKanbanGroupBy] = useState<'status' | 'payment_status'>('status');
   const [hideCompletedTasks, setHideCompletedTasks] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
 
-  const { data: projectsData, isLoading: isLoadingProjects } = useQuery<Project[]>({
-    queryKey: ['projects'],
-    queryFn: fetchProjects,
-  });
-  const { data: tasksData, isLoading: isLoadingTasks } = useQuery<Task[]>({
-    queryKey: ['tasks'],
-    queryFn: fetchTasks,
+  const { data: projectsData = [], isLoading: isLoadingProjects, refetch: refetchProjects } = useProjects({ searchTerm });
+  const { data: tasksData = [], isLoading: isLoadingTasks, refetch: refetchTasks } = useTasks({ hideCompleted: hideCompletedTasks, sortConfig: { key: 'due_date', direction: 'asc' } });
+
+  const [advancedFilters, setAdvancedFilters] = useState<AdvancedFiltersState>({
+    showOnlyMultiPerson: false,
+    hiddenStatuses: [],
+    selectedPeopleIds: [],
   });
 
-  const [projectSortConfig, setProjectSortConfig] = useState<SortConfig<Project>>({ key: 'start_date', direction: 'descending' });
+  const allPeople = useMemo(() => {
+    if (!projectsData) return [];
+    const peopleMap = new Map<string, { id: string; name: string }>();
+    projectsData.forEach(project => {
+      project.assignedTo?.forEach(person => {
+        if (!peopleMap.has(person.id)) {
+          peopleMap.set(person.id, { id: person.id, name: person.name });
+        }
+      });
+    });
+    return Array.from(peopleMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [projectsData]);
+
+  const {
+    dateRange, setDateRange,
+    sortConfig: projectSortConfig, requestSort: requestProjectSort, sortedProjects
+  } = useProjectFilters(projectsData, advancedFilters);
+
   const [taskSortConfig, setTaskSortConfig] = useState<{ key: keyof Task | string; direction: 'asc' | 'desc' }>({ key: 'due_date', direction: 'asc' });
 
-  const requestSort = useCallback((key: any, type: 'project' | 'task') => {
-    if (type === 'project') {
-      let direction: 'ascending' | 'descending' = 'ascending';
-      if (projectSortConfig.key === key && projectSortConfig.direction === 'ascending') {
-        direction = 'descending';
-      }
-      setProjectSortConfig({ key, direction });
-    } else {
-      let direction: 'asc' | 'desc' = 'asc';
-      if (taskSortConfig.key === key && taskSortConfig.direction === 'asc') {
-        direction = 'desc';
-      }
-      setTaskSortConfig({ key, direction });
-    }
-  }, [projectSortConfig, taskSortConfig]);
-
-  const sortedProjects = useMemo(() => {
-    if (!projectsData) return [];
-    const sortableItems = [...projectsData];
-    if (projectSortConfig.key !== null) {
-      sortableItems.sort((a, b) => {
-        const key = projectSortConfig.key as keyof Project;
-        // @ts-ignore
-        const valA = a[key];
-        // @ts-ignore
-        const valB = b[key];
-        if (valA === null) return 1;
-        if (valB === null) return -1;
-        if (valA < valB) {
-          return projectSortConfig.direction === 'ascending' ? -1 : 1;
-        }
-        if (valA > valB) {
-          return projectSortConfig.direction === 'ascending' ? 1 : -1;
-        }
-        return 0;
-      });
-    }
-    return sortableItems;
-  }, [projectsData, projectSortConfig]);
-
-  const sortedTasks = useMemo(() => {
-    if (!tasksData) return [];
-    const sortableItems = [...tasksData];
-    if (taskSortConfig.key !== null) {
-        sortableItems.sort((a, b) => {
-            const key = taskSortConfig.key as keyof Task;
-            // @ts-ignore
-            if (a[key] === null) return 1;
-            // @ts-ignore
-            if (b[key] === null) return -1;
-            // @ts-ignore
-            if (a[key] < b[key]) {
-                return taskSortConfig.direction === 'asc' ? -1 : 1;
-            }
-            // @ts-ignore
-            if (a[key] > b[key]) {
-                return taskSortConfig.direction === 'asc' ? 1 : -1;
-            }
-            return 0;
-        });
-    }
-    return sortableItems;
-  }, [tasksData, taskSortConfig]);
-
-  const filteredAndSortedTasks = useMemo(() => {
-    if (hideCompletedTasks) {
-      return sortedTasks.filter(task => !task.completed);
-    }
-    return sortedTasks;
-  }, [sortedTasks, hideCompletedTasks]);
-
-  const { mutate: toggleTaskCompletion } = useMutation({
+  const { mutate: toggleTaskCompletion, isPending: isToggling } = useMutation({
     mutationFn: async ({ task, completed }: { task: Task, completed: boolean }) => {
       const { error } = await supabase.from('tasks').update({ completed }).eq('id', task.id);
       if (error) throw error;
@@ -151,19 +116,19 @@ const Index = () => {
           isLoading={isLoadingProjects}
           onDeleteProject={() => toast.error("Delete not implemented.")}
           sortConfig={projectSortConfig}
-          requestSort={(key) => requestSort(key, 'project')}
+          requestSort={(key) => requestProjectSort(key as keyof Project)}
           rowRefs={rowRefs}
         />;
       case 'tasks':
         return <TasksView 
-          tasks={filteredAndSortedTasks} 
+          tasks={tasksData} 
           isLoading={isLoadingTasks}
           onEdit={() => toast.info("Edit not implemented.")}
           onDelete={() => toast.error("Delete not implemented.")}
-          // @ts-ignore
           onToggleTaskCompletion={toggleTaskCompletion}
+          isToggling={isToggling}
           sortConfig={taskSortConfig}
-          requestSort={(key) => requestSort(key, 'task')}
+          requestSort={(key) => requestProjectSort(key as keyof Project)}
         />;
       default:
         return (
@@ -198,6 +163,9 @@ const Index = () => {
             queryClient.invalidateQueries({ queryKey: ['projects'] });
             queryClient.invalidateQueries({ queryKey: ['tasks'] });
           }}
+          advancedFilters={advancedFilters}
+          onAdvancedFiltersChange={setAdvancedFilters}
+          allPeople={allPeople}
         />
       </main>
       <Toaster />

@@ -27,7 +27,7 @@ import DuplicateSummaryDialog from "@/components/people/DuplicateSummaryDialog";
 import MergeDialog from "@/components/people/MergeDialog";
 import CompaniesView from "@/components/people/CompaniesView";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useIsMobile } from "@/hooks/use-is-mobile";
+import { useIsMobile } from "@/hooks/use-mobile";
 import PersonListCard from "@/components/people/PersonListCard";
 import { useProjectFilters } from "@/hooks/useProjectFilters";
 import ProjectsToolbar from "@/components/projects/ProjectsToolbar";
