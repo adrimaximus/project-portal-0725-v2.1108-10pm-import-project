@@ -4,6 +4,8 @@ import { List, LayoutGrid, KanbanSquare, ListChecks, CheckSquare, PlusCircle, Do
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { DateRange } from "react-day-picker";
+import ProjectAdvancedFilters, { AdvancedFiltersState } from './ProjectAdvancedFilters';
 
 type ViewMode = 'table' | 'list' | 'kanban' | 'tasks' | 'tasks-kanban';
 
@@ -20,6 +22,8 @@ type ProjectsToolbarProps = {
   isGCalConnected: boolean | undefined;
   onImportClick: () => void;
   onRefreshClick: () => void;
+  advancedFilters: AdvancedFiltersState;
+  onAdvancedFiltersChange: (filters: AdvancedFiltersState) => void;
 };
 
 const ProjectsToolbar = ({
@@ -35,6 +39,8 @@ const ProjectsToolbar = ({
   isGCalConnected,
   onImportClick,
   onRefreshClick,
+  advancedFilters,
+  onAdvancedFiltersChange,
 }: ProjectsToolbarProps) => {
   return (
     <div className="p-4 border-t flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -62,6 +68,7 @@ const ProjectsToolbar = ({
             <Label htmlFor="hide-completed" className="text-sm">Hide Done</Label>
           </div>
         )}
+        <ProjectAdvancedFilters filters={advancedFilters} onFiltersChange={onAdvancedFiltersChange} />
       </div>
 
       {/* Desktop Action Buttons */}

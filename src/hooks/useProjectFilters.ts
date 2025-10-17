@@ -2,8 +2,9 @@ import { useState, useMemo } from 'react';
 import { Project } from '@/types';
 import { DateRange } from 'react-day-picker';
 import { isBefore, startOfToday } from 'date-fns';
+import { AdvancedFiltersState } from '@/components/projects/ProjectAdvancedFilters';
 
-export const useProjectFilters = (projects: Project[]) => {
+export const useProjectFilters = (projects: Project[], advancedFilters: AdvancedFiltersState) => {
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [sortConfig, setSortConfig] = useState<{ key: keyof Project | null; direction: 'ascending' | 'descending' }>({ key: null, direction: 'ascending' });
 
@@ -31,9 +32,12 @@ export const useProjectFilters = (projects: Project[]) => {
         return projectStart <= filterEnd && effectiveProjectEnd >= filterStart;
       })();
 
-      return matchesDate;
+      const matchesMultiPerson = !advancedFilters.showOnlyMultiPerson || (project.assignedTo && project.assignedTo.length > 1);
+      const isHiddenByStatus = advancedFilters.hiddenStatuses.includes(project.status);
+
+      return matchesDate && matchesMultiPerson && !isHiddenByStatus;
     });
-  }, [projects, dateRange]);
+  }, [projects, dateRange, advancedFilters]);
 
   const sortedProjects = useMemo(() => {
     let sortableItems = [...filteredProjects];

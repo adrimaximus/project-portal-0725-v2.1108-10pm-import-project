@@ -27,7 +27,7 @@ import DuplicateSummaryDialog from "@/components/people/DuplicateSummaryDialog";
 import MergeDialog from "@/components/people/MergeDialog";
 import CompaniesView from "@/components/people/CompaniesView";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { useIsMobile } from "@/hooks/use-is-mobile";
 import PersonListCard from "@/components/people/PersonListCard";
 import { useProjectFilters } from "@/hooks/useProjectFilters";
 import ProjectsToolbar from "@/components/projects/ProjectsToolbar";
@@ -42,6 +42,7 @@ import { useTasks } from "@/hooks/useTasks";
 import { useProjects } from "@/hooks/useProjects";
 import { useCreateProject } from "@/hooks/useCreateProject";
 import { Card, CardTitle } from "@/components/ui/card";
+import { AdvancedFiltersState } from "@/components/projects/ProjectAdvancedFilters";
 
 type ViewMode = 'table' | 'list' | 'kanban' | 'tasks' | 'tasks-kanban';
 type SortConfig<T> = { key: keyof T | null; direction: 'ascending' | 'descending' };
@@ -77,10 +78,15 @@ const ProjectsPage = () => {
   const [isTaskFormOpen, setIsTaskFormOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   
+  const [advancedFilters, setAdvancedFilters] = useState<AdvancedFiltersState>({
+    showOnlyMultiPerson: false,
+    hiddenStatuses: [],
+  });
+
   const {
     dateRange, setDateRange,
     sortConfig: projectSortConfig, requestSort: requestProjectSort, sortedProjects
-  } = useProjectFilters(projectsData);
+  } = useProjectFilters(projectsData, advancedFilters);
 
   const [taskSearchTerm, setTaskSearchTerm] = useState('');
   const [taskSortConfig, setTaskSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'updated_at', direction: 'desc' });
@@ -339,6 +345,8 @@ const ProjectsPage = () => {
             isGCalConnected={isGCalConnected}
             onImportClick={() => setIsImportDialogOpen(true)}
             onRefreshClick={handleRefresh}
+            advancedFilters={advancedFilters}
+            onAdvancedFiltersChange={setAdvancedFilters}
           />
         </div>
         <div ref={scrollContainerRef} className="flex-grow min-h-0 overflow-y-auto">
