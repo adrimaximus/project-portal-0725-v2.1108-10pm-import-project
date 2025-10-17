@@ -101,43 +101,66 @@ const TasksKanbanView = ({ tasks, onEdit, onDelete, refetch, tasksQueryKey }: Ta
       newTasks = arrayMove(tasks, activeIndex, overIndex);
     } else {
       const movedItem = { ...tasks[activeIndex], status: overContainer, completed: overContainer === 'Done' };
-      const remainingItems = tasks.filter(t => t.id !== activeId);
+      let remainingItems = tasks.filter(t => t.id !== activeId);
       
       const overIndex = overIsItem ? remainingItems.findIndex(t => t.id === overId) : -1;
       
-      if (overIndex !== -1) {
+      if (overIsItem && overIndex !== -1) {
         remainingItems.splice(overIndex, 0, movedItem);
       } else {
         const itemsInDest = remainingItems.filter(t => t.status === overContainer);
         if (itemsInDest.length > 0) {
-          const lastItem = itemsInDest.sort((a, b) => (a.kanban_order || 0) - (b.kanban_order || 0)).pop();
-          const lastItemIndex = remainingItems.findIndex(t => t.id === lastItem!.id);
+          const lastItem = itemsInDest[itemsInDest.length - 1];
+          const lastItemIndex = remainingItems.findIndex(t => t.id === lastItem.id);
           remainingItems.splice(lastItemIndex + 1, 0, movedItem);
         } else {
-          remainingItems.push(movedItem);
+          const columnOrder = TASK_STATUS_OPTIONS.map(opt => opt.value);
+          const destColumnIndex = columnOrder.indexOf(overContainer);
+          let insertionIndex = -1;
+
+          for (let i = destColumnIndex - 1; i >= 0; i--) {
+            const prevColumnId = columnOrder[i];
+            const lastItemOfPrevColumn = [...remainingItems].reverse().find(t => t.status === prevColumnId);
+            if (lastItemOfPrevColumn) {
+              insertionIndex = remainingItems.findIndex(t => t.id === lastItemOfPrevColumn.id) + 1;
+              break;
+            }
+          }
+          
+          if (insertionIndex === -1) {
+            for (let i = destColumnIndex + 1; i < columnOrder.length; i++) {
+              const nextColumnId = columnOrder[i];
+              const firstItemOfNextColumn = remainingItems.find(t => t.status === nextColumnId);
+              if (firstItemOfNextColumn) {
+                insertionIndex = remainingItems.findIndex(t => t.id === firstItemOfNextColumn.id);
+                break;
+              }
+            }
+          }
+
+          if (insertionIndex !== -1) {
+            remainingItems.splice(insertionIndex, 0, movedItem);
+          } else {
+            remainingItems.push(movedItem);
+          }
         }
       }
       newTasks = remainingItems;
     }
 
-    const newTasksWithOrder = newTasks.map((task, index) => ({
-      ...task,
-      kanban_order: index,
-    }));
-
-    const orderedTaskIds = newTasksWithOrder.map(t => t.id);
+    const orderedTaskIds = newTasks.map(t => t.id);
 
     updateTaskStatusAndOrder({ 
         taskId: activeId, 
         newStatus: overContainer, 
         orderedTaskIds: orderedTaskIds,
-        newTasks: newTasksWithOrder,
+        newTasks: newTasks,
         queryKey: tasksQueryKey,
     });
   };
 
   return (
-    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragCancel={() => setActiveTask(null)}>
       <div className="flex gap-4 overflow-x-auto p-2 sm:p-4 h-full">
         {TASK_STATUS_OPTIONS.map(option => (
           <TasksKanbanColumn
