@@ -124,7 +124,7 @@ const ServicesSettingsPage = () => {
                       <TableCell className="font-medium pl-6">
                         <div className="flex items-center gap-3">
                           <div className={cn("h-10 w-10 flex items-center justify-center rounded-lg", service.icon_color)}>
-                            <Icon name={(service.icon || 'Package') as any} className="h-5 w-5" />
+                            <Icon name={(service.icon || 'Package') as any} className={cn("h-5 w-5", service.icon_color.split(' ').find(c => c.startsWith('text-')))} />
                           </div>
                           {service.title}
                         </div>
