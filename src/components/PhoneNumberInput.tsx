@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
@@ -18,52 +18,57 @@ const countryCodes = [
 
 const PhoneNumberInput: React.FC<PhoneNumberInputProps> = ({ value = '', onChange, disabled }) => {
   const [countryCode, setCountryCode] = useState('+62');
-  const [number, setNumber] = useState('');
+  const [localNumber, setLocalNumber] = useState('');
+  const isInternalChange = useRef(false);
 
   useEffect(() => {
+    if (isInternalChange.current) {
+      isInternalChange.current = false;
+      return;
+    }
+
     const rawValue = value || '';
-    
     const foundCode = countryCodes.find(c => rawValue.startsWith(c.code));
 
     if (foundCode) {
       setCountryCode(foundCode.code);
       const numberPart = rawValue.substring(foundCode.code.length);
       if (foundCode.code === '+62' && numberPart.length > 0 && !numberPart.startsWith('0')) {
-        setNumber('0' + numberPart);
+        setLocalNumber('0' + numberPart);
       } else {
-        setNumber(numberPart);
+        setLocalNumber(numberPart);
       }
     } else {
       const digitsOnly = rawValue.replace(/\D/g, '');
       if (digitsOnly.startsWith('62')) {
         setCountryCode('+62');
-        setNumber('0' + digitsOnly.substring(2));
+        setLocalNumber('0' + digitsOnly.substring(2));
       } else {
         setCountryCode('+62');
-        setNumber(digitsOnly);
+        setLocalNumber(digitsOnly);
       }
     }
   }, [value]);
 
+  const triggerChange = (code: string, num: string) => {
+    let numberToEmit = num;
+    if (code === '+62' && num.startsWith('0')) {
+      numberToEmit = num.substring(1);
+    }
+    
+    isInternalChange.current = true;
+    onChange(`${code}${numberToEmit}`);
+  };
+
   const handleNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newNumber = e.target.value.replace(/\D/g, '');
-    setNumber(newNumber);
-    
-    let numberToEmit = newNumber;
-    if (newNumber.startsWith('0') && countryCode === '+62') {
-      numberToEmit = newNumber.substring(1);
-    }
-    onChange(`${countryCode}${numberToEmit}`);
+    setLocalNumber(newNumber);
+    triggerChange(countryCode, newNumber);
   };
 
   const handleCodeChange = (newCode: string) => {
     setCountryCode(newCode);
-    
-    let numberToEmit = number;
-    if (number.startsWith('0') && newCode === '+62') {
-      numberToEmit = number.substring(1);
-    }
-    onChange(`${newCode}${numberToEmit}`);
+    triggerChange(newCode, localNumber);
   };
 
   return (
@@ -80,7 +85,7 @@ const PhoneNumberInput: React.FC<PhoneNumberInputProps> = ({ value = '', onChang
       </Select>
       <Input
         type="tel"
-        value={number}
+        value={localNumber}
         onChange={handleNumberChange}
         placeholder="812 3456 7890"
         disabled={disabled}
