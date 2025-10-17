@@ -185,7 +185,7 @@ const LoadedAutocomplete: React.FC<AutocompleteProps & { apiKey: string }> = (pr
   return <Autocomplete {...props} />;
 };
 
-const AddressAutocompleteInput: React.FC<Props> = (props) => {
+const AddressAutocompleteInput: React.FC<AutocompleteProps> = (props) => {
   const [googleMapsApiKey, setGoogleMapsApiKey] = useState<string | null>(null);
   const [keyLoading, setKeyLoading] = useState(true);
 
