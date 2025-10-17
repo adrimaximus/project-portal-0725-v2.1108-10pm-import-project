@@ -48,7 +48,7 @@ const IconPicker = ({ value, onChange }: { value?: string; onChange: (icon: stri
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
-          <ScrollArea className="h-64">
+          <ScrollArea className="h-64" onWheel={(e) => e.stopPropagation()}>
             <div className="grid grid-cols-6 gap-2 p-2">
               {filteredIcons.map(name => {
                 const IconComponent = Icons[name];
