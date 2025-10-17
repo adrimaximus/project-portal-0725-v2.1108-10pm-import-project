@@ -6,21 +6,7 @@ import { Input } from "./ui/input";
 import { ScrollArea } from "./ui/scroll-area";
 
 const iconNames = [
-  "Activity", "Airplay", "AlarmClock", "AlertCircle", "Archive", "ArrowDown", "ArrowUp", "ArrowLeft", "ArrowRight",
-  "Award", "BarChart", "Battery", "Bell", "Book", "Bookmark", "Briefcase", "Building", "Calendar", "Camera",
-  "CheckCircle", "ChevronDown", "ChevronUp", "ChevronLeft", "ChevronRight", "Clipboard", "Clock", "Cloud",
-  "Code", "Command", "Compass", "Copy", "CreditCard", "Database", "Delete", "Disc", "DollarSign", "Download",
-  "Edit", "ExternalLink", "Eye", "Facebook", "File", "Filter", "Flag", "Folder", "Gift", "Github", "Globe",
-  "Grid", "HardDrive", "Hash", "Heart", "HelpCircle", "Home", "Image", "Inbox", "Info", "Instagram", "Key",
-  "Layout", "LifeBuoy", "Link", "Linkedin", "List", "Lock", "LogIn", "LogOut", "Mail", "Map", "MapPin",
-  "Maximize", "Menu", "MessageCircle", "Mic", "Minimize", "Minus", "Monitor", "Moon", "MoreHorizontal",
-  "MoreVertical", "MousePointer", "Move", "Music", "Package", "Paperclip", "Pause", "PenTool", "Percent",
-  "Phone", "PieChart", "Play", "Plus", "Power", "Printer", "Radio", "RefreshCcw", "Repeat", "RotateCcw",
-  "Save", "Scissors", "Search", "Send", "Server", "Settings", "Share2", "Shield", "ShoppingBag", "ShoppingCart",
-  "Sidebar", "Sliders", "Smartphone", "Speaker", "Star", "Sun", "Sunrise", "Sunset", "Table", "Tag", "Target",
-  "Terminal", "ThumbsDown", "ThumbsUp", "ToggleLeft", "ToggleRight", "Tool", "Trash2", "TrendingUp", "Truck",
-  "Twitter", "Type", "Umbrella", "Unlock", "Upload", "User", "UserCheck", "UserMinus", "UserPlus", "Users",
-  "Video", "Voicemail", "Volume2", "Watch", "Wifi", "Wind", "X", "Youtube", "Zap"
+  'Activity', 'Anchor', 'Aperture', 'Award', 'BarChart', 'Bike', 'BookOpen', 'Briefcase', 'Brush', 'Calendar', 'Camera', 'Car', 'CheckCircle', 'ClipboardCheck', 'Cloud', 'Code', 'Coffee', 'Compass', 'Cpu', 'CreditCard', 'Crown', 'Database', 'Diamond', 'DollarSign', 'Dumbbell', 'Feather', 'FileText', 'Film', 'Flag', 'Flame', 'Flower', 'Gamepad2', 'Gift', 'Globe', 'GraduationCap', 'Guitar', 'HardDrive', 'Headphones', 'Heart', 'Home', 'ImageIcon', 'Key', 'Laptop', 'Leaf', 'Lightbulb', 'Link', 'Map', 'Medal', 'Mic', 'Moon', 'MountainSnow', 'MousePointer', 'Music', 'Paintbrush', 'Palette', 'PenTool', 'Phone', 'PieChart', 'Plane', 'Puzzle', 'Rocket', 'Save', 'Scale', 'Scissors', 'Settings', 'Shield', 'Ship', 'ShoppingBag', 'Smile', 'Speaker', 'Sprout', 'Star', 'Sun', 'Sunrise', 'Sunset', 'Sword', 'Tag', 'Target', 'Tent', 'TrainFront', 'TreePine', 'TrendingUp', 'Trophy', 'Truck', 'Umbrella', 'Users', 'Utensils', 'Video', 'Volleyball', 'Wallet', 'Watch', 'Waves', 'Wind', 'Wine', 'Wrench', 'Zap'
 ];
 
 const Icons = LucideIcons as unknown as { [key: string]: LucideIcons.LucideIcon };
@@ -31,7 +17,7 @@ const IconPicker = ({ value, onChange }: { value?: string; onChange: (icon: stri
 
   const filteredIcons = iconNames.filter(name => name.toLowerCase().includes(search.toLowerCase()));
 
-  const SelectedIcon = value ? Icons[value] : Icons["Link"];
+  const SelectedIcon = value ? Icons[value === 'ImageIcon' ? 'Image' : value] : Icons["Link"];
 
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
@@ -49,9 +35,9 @@ const IconPicker = ({ value, onChange }: { value?: string; onChange: (icon: stri
             onChange={(e) => setSearch(e.target.value)}
           />
           <ScrollArea className="h-64" onWheel={(e) => e.stopPropagation()}>
-            <div className="grid grid-cols-6 gap-2 p-2">
+            <div className="grid grid-cols-8 gap-2 p-2">
               {filteredIcons.map(name => {
-                const IconComponent = Icons[name];
+                const IconComponent = Icons[name === 'ImageIcon' ? 'Image' : name];
                 if (!IconComponent) return null;
                 return (
                   <Button
