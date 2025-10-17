@@ -170,7 +170,7 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
                         <DialogTrigger asChild>
                           <div className="flex flex-col cursor-pointer" onClick={() => setSelectedTask(task)}>
                             <div className="flex items-center gap-2">
-                              {task.originTicketId && <Ticket className={`h-4 w-4 flex-shrink-0 ${task.completed ? 'text-green-500' : 'text-red-500'}`} />}
+                              {(task.originTicketId || task.tags?.some(t => t.name === 'Ticket')) && <Ticket className={`h-4 w-4 flex-shrink-0 ${task.completed ? 'text-green-500' : 'text-red-500'}`} />}
                               <div className={`${task.completed ? 'line-through text-muted-foreground' : ''}`}>
                                 <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ p: 'span' }}>
                                   {formatTaskText(task.title)}

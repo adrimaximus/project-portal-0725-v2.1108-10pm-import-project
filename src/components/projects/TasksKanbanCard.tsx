@@ -91,7 +91,7 @@ const TasksKanbanCard = ({ task, onEdit, onDelete }: TasksKanbanCardProps) => {
         <div className="flex justify-between items-start">
           <CardTitle className="text-sm leading-snug flex items-center gap-1.5 pr-2">
             {task.status === 'Done' && <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />}
-            {task.originTicketId && <Ticket className={cn("h-4 w-4 flex-shrink-0", task.status === 'Done' ? 'text-green-500' : 'text-red-500')} />}
+            {(task.originTicketId || task.tags?.some(t => t.name === 'Ticket')) && <Ticket className={cn("h-4 w-4 flex-shrink-0", task.status === 'Done' ? 'text-green-500' : 'text-red-500')} />}
             <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ p: 'span' }}>
               {formatTaskText(task.title)}
             </ReactMarkdown>
