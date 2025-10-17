@@ -1,11 +1,13 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Filter, Users, X } from "lucide-react";
+import { Filter, Users, X, ChevronsUpDown, Check } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Checkbox } from "@/components/ui/checkbox";
 import { PROJECT_STATUS_OPTIONS } from "@/types";
 import { Badge } from "@/components/ui/badge";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { cn } from "@/lib/utils";
 
 export interface AdvancedFiltersState {
   showOnlyMultiPerson: boolean;
@@ -18,6 +20,8 @@ interface ProjectAdvancedFiltersProps {
 }
 
 const ProjectAdvancedFilters = ({ filters, onFiltersChange }: ProjectAdvancedFiltersProps) => {
+  const [open, setOpen] = useState(false);
+
   const handleMultiPersonToggle = (checked: boolean) => {
     onFiltersChange({ ...filters, showOnlyMultiPerson: checked });
   };
@@ -70,20 +74,48 @@ const ProjectAdvancedFilters = ({ filters, onFiltersChange }: ProjectAdvancedFil
             </div>
             <div className="space-y-2">
               <Label>Hide Statuses</Label>
-              <div className="space-y-2">
-                {PROJECT_STATUS_OPTIONS.map(status => (
-                  <div key={status.value} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`status-${status.value}`}
-                      checked={filters.hiddenStatuses.includes(status.value)}
-                      onCheckedChange={(checked) => handleStatusToggle(status.value, !!checked)}
-                    />
-                    <Label htmlFor={`status-${status.value}`} className="text-sm font-normal">
-                      {status.label}
-                    </Label>
-                  </div>
-                ))}
-              </div>
+              <Popover open={open} onOpenChange={setOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={open}
+                    className="w-full justify-between font-normal"
+                  >
+                    {filters.hiddenStatuses.length > 0
+                      ? `${filters.hiddenStatuses.length} selected`
+                      : "Select statuses to hide..."}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                  <Command>
+                    <CommandInput placeholder="Search status..." />
+                    <CommandList>
+                      <CommandEmpty>No status found.</CommandEmpty>
+                      <CommandGroup>
+                        {PROJECT_STATUS_OPTIONS.map((status) => (
+                          <CommandItem
+                            key={status.value}
+                            onSelect={() => {
+                              const isSelected = filters.hiddenStatuses.includes(status.value);
+                              handleStatusToggle(status.value, !isSelected);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                filters.hiddenStatuses.includes(status.value) ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            {status.label}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
           {activeFilterCount > 0 && (
