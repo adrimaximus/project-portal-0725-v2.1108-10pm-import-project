@@ -9,6 +9,13 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
+const sanitizeUrl = (url: string | undefined) => {
+  if (!url) return '';
+  if (url.startsWith('https://')) return url;
+  if (url.startsWith('http://')) return url.replace('http://', 'https://');
+  return `https://${url.replace(/^ttps?:\/\//, '')}`;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -36,7 +43,7 @@ serve(async (req) => {
         status: 500,
       })
     }
-    const redirectTo = `${siteUrl}/reset-password`;
+    const redirectTo = `${sanitizeUrl(siteUrl)}/reset-password`;
 
     const { data, error } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
       redirectTo: redirectTo,

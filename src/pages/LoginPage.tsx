@@ -100,6 +100,7 @@ const LoginPage = () => {
             first_name: firstName,
             last_name: lastName,
           },
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
         },
       });
 
