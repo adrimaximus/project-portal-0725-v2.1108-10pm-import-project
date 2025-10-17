@@ -1,10 +1,10 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
-import { DndContext, DragOverlay, DragStartEvent, DragEndEvent, MouseSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { DndContext, DragOverlay, DragStartEvent, DragEndEvent, MouseSensor, TouchSensor, useSensor, useSensors, DragOverEvent } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
 import { Project, PROJECT_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS, ProjectStatus, PaymentStatus } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { formatInJakarta, generatePastelColor, getAvatarUrl } from '@/lib/utils';
+import { formatInJakarta, cn, generatePastelColor, getAvatarUrl } from '@/lib/utils';
 import { Badge } from '../ui/badge';
 import { CheckCircle } from 'lucide-react';
 import KanbanColumn from './KanbanColumn';
@@ -16,6 +16,41 @@ const KanbanView = ({ projects, groupBy }: { projects: Project[], groupBy: 'stat
   const [activeProject, setActiveProject] = useState<Project | null>(null);
   const dragHappened = useRef(false);
   const { updateProjectOrder } = useProjectKanbanMutations();
+  const [projectGroups, setProjectGroups] = useState<Record<string, Project[]>>({});
+
+  const columns = useMemo(() => {
+    return groupBy === 'status' ? PROJECT_STATUS_OPTIONS : PAYMENT_STATUS_OPTIONS;
+  }, [groupBy]);
+
+  useEffect(() => {
+    if (!activeProject) {
+      const groups: Record<string, Project[]> = {};
+      columns.forEach(opt => {
+        groups[opt.value] = [];
+      });
+      
+      projects.forEach(project => {
+        const key = project[groupBy];
+        if (key && Object.prototype.hasOwnProperty.call(groups, key)) {
+          groups[key].push(project);
+        } else {
+          if (columns.length > 0) {
+            groups[columns[0].value].push(project);
+          }
+        }
+      });
+  
+      for (const groupKey in groups) {
+          const orderKey = groupBy === 'status' ? 'kanban_order' : 'payment_kanban_order';
+          groups[groupKey].sort((a, b) => {
+              const orderA = a[orderKey] ?? 0;
+              const orderB = b[orderKey] ?? 0;
+              return orderA - orderB;
+          });
+      }
+      setProjectGroups(groups);
+    }
+  }, [projects, columns, groupBy, activeProject]);
 
   useEffect(() => {
     const savedState = localStorage.getItem('projectKanbanCollapsedColumns');
@@ -32,39 +67,6 @@ const KanbanView = ({ projects, groupBy }: { projects: Project[], groupBy: 'stat
     localStorage.setItem('projectKanbanCollapsedColumns', JSON.stringify(newCollapsedColumns));
   };
 
-  const columns = useMemo(() => {
-    return groupBy === 'status' ? PROJECT_STATUS_OPTIONS : PAYMENT_STATUS_OPTIONS;
-  }, [groupBy]);
-
-  const projectGroups = useMemo(() => {
-    const groups: Record<string, Project[]> = {};
-    
-    columns.forEach(opt => {
-      groups[opt.value] = [];
-    });
-    
-    projects.forEach(project => {
-      const key = project[groupBy];
-      if (key && Object.prototype.hasOwnProperty.call(groups, key)) {
-        groups[key].push(project);
-      } else {
-        if (columns.length > 0) {
-          groups[columns[0].value].push(project);
-        }
-      }
-    });
-
-    for (const groupKey in groups) {
-        const orderKey = groupBy === 'status' ? 'kanban_order' : 'payment_kanban_order';
-        groups[groupKey].sort((a, b) => {
-            const orderA = a[orderKey] ?? 0;
-            const orderB = b[orderKey] ?? 0;
-            return orderA - orderB;
-        });
-    }
-    return groups;
-  }, [projects, columns, groupBy]);
-
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } })
@@ -75,6 +77,50 @@ const KanbanView = ({ projects, groupBy }: { projects: Project[], groupBy: 'stat
     dragHappened.current = true;
   };
 
+  const handleDragOver = (event: DragOverEvent) => {
+    const { active, over } = event;
+    if (!over) return;
+
+    const activeId = String(active.id);
+    const overId = String(over.id);
+
+    if (activeId === overId) return;
+
+    const activeContainer = active.data.current?.sortable.containerId as string;
+    const overIsItem = !!over.data.current?.sortable;
+    const overContainer = overIsItem ? over.data.current?.sortable.containerId as string : overId;
+
+    if (!activeContainer || !overContainer) return;
+
+    setProjectGroups(prev => {
+      const newGroups = { ...prev };
+      const sourceItems = newGroups[activeContainer];
+      const destItems = newGroups[overContainer];
+      if (!sourceItems || !destItems) return prev;
+
+      const activeIndex = sourceItems.findIndex(p => p.id === activeId);
+      if (activeIndex === -1) return prev;
+
+      const [movedItem] = sourceItems.splice(activeIndex, 1);
+
+      if (activeContainer === overContainer) {
+        const overIndex = destItems.findIndex(p => p.id === overId);
+        if (overIndex !== -1) {
+          destItems.splice(overIndex, 0, movedItem);
+        }
+      } else {
+        movedItem[groupBy] = overContainer as ProjectStatus | PaymentStatus;
+        const overIndex = overIsItem ? destItems.findIndex(p => p.id === overId) : destItems.length;
+        if (overIndex !== -1) {
+          destItems.splice(overIndex, 0, movedItem);
+        } else {
+          destItems.push(movedItem);
+        }
+      }
+      return newGroups;
+    });
+  };
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveProject(null);
@@ -83,56 +129,18 @@ const KanbanView = ({ projects, groupBy }: { projects: Project[], groupBy: 'stat
     if (!over) return;
 
     const activeId = String(active.id);
-    const overId = String(over.id);
-
     const activeContainer = active.data.current?.sortable.containerId as string;
-    let overContainer = over.data.current?.sortable.containerId as string;
-    if (!overContainer) overContainer = overId;
+    const overIsItem = !!over.data.current?.sortable;
+    const overContainer = overIsItem ? over.data.current?.sortable.containerId as string : String(over.id);
     
     const activeProjectInstance = projects.find(p => p.id === activeId);
     if (!activeProjectInstance || !activeContainer || !overContainer) return;
 
-    let newProjectsState = [...projects];
-    const activeIndex = newProjectsState.findIndex(p => p.id === activeId);
-
-    if (activeIndex === -1) return;
-
-    if (activeContainer === overContainer) {
-      const overIndex = newProjectsState.findIndex(p => p.id === overId);
-      if (overIndex !== -1) {
-        newProjectsState = arrayMove(newProjectsState, activeIndex, overIndex);
-      }
-    } else {
-      const [movedItem] = newProjectsState.splice(activeIndex, 1);
-      movedItem[groupBy] = overContainer as ProjectStatus | PaymentStatus;
-
-      const overIsItem = !!over.data.current?.sortable;
-      const overIndex = overIsItem ? newProjectsState.findIndex(p => p.id === overId) : -1;
-      
-      if (overIndex !== -1) {
-        newProjectsState.splice(overIndex, 0, movedItem);
-      } else {
-        const itemsInDest = newProjectsState.filter(p => p[groupBy] === overContainer);
-        if (itemsInDest.length > 0) {
-          const lastItem = itemsInDest[itemsInDest.length - 1];
-          const lastItemIndex = newProjectsState.findIndex(p => p.id === lastItem.id);
-          newProjectsState.splice(lastItemIndex + 1, 0, movedItem);
-        } else {
-          newProjectsState.push(movedItem);
-        }
-      }
-    }
+    const newProjectsState = Object.values(projectGroups).flat();
 
     const finalUpdates: any[] = [];
-    const finalProjectGroups = newProjectsState.reduce((acc, p) => {
-        const key = p[groupBy] as string;
-        if (!acc[key]) acc[key] = [];
-        acc[key].push(p);
-        return acc;
-    }, {} as Record<string, Project[]>);
-
-    for (const groupKey in finalProjectGroups) {
-        finalProjectGroups[groupKey].forEach((project, index) => {
+    for (const groupKey in projectGroups) {
+        projectGroups[groupKey].forEach((project, index) => {
             finalUpdates.push({
                 project_id: project.id,
                 kanban_order: index,
@@ -178,7 +186,7 @@ const KanbanView = ({ projects, groupBy }: { projects: Project[], groupBy: 'stat
   };
 
   return (
-    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragCancel={() => setActiveProject(null)}>
+    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd} onDragCancel={() => setActiveProject(null)}>
       <div className="flex flex-row gap-4 overflow-x-auto pb-4 h-full">
         {columns.map(statusOption => {
           const projectsInColumn = projectGroups[statusOption.value] || [];
@@ -231,7 +239,7 @@ const KanbanView = ({ projects, groupBy }: { projects: Project[], groupBy: 'stat
                   <div className="flex -space-x-2">
                     {activeProject.assignedTo.slice(0, 3).map(user => (
                       <Avatar key={user.id} className="h-6 w-6 border-2 border-card">
-                        <AvatarImage src={user.avatar_url} />
+                        <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
                         <AvatarFallback style={generatePastelColor(user.id)}>{user.initials}</AvatarFallback>
                       </Avatar>
                     ))}

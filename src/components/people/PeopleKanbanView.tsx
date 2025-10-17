@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useState, useEffect, forwardRef, useImperativeHandle } from 'react';
-import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors, DragOverlay, DragStartEvent, MouseSensor, TouchSensor } from '@dnd-kit/core';
+import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors, DragOverlay, DragStartEvent, MouseSensor, TouchSensor, DragOverEvent } from '@dnd-kit/core';
 import { Person, Tag, User } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -47,31 +47,34 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
   const [visibleColumnIds, setVisibleColumnIds] = useState<string[]>([]);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const { updatePeopleOrder } = usePeopleKanbanMutations();
+  const [personGroups, setPersonGroups] = useState<Record<string, Person[]>>({});
 
   const uncategorizedTag: Tag = { id: 'uncategorized', name: 'Uncategorized', color: '#9ca3af' };
 
-  const personGroups = useMemo(() => {
-    const groups: Record<string, Person[]> = {};
-    const allCols = [uncategorizedTag, ...tags];
-    allCols.forEach(col => {
-      groups[col.id] = [];
-    });
-    people.forEach(person => {
-      const tagId = person.tags?.[0]?.id;
-      const isTagColumnVisible = tagId && visibleColumnIds.includes(tagId);
-      const columnId = tagId && isTagColumnVisible && Object.prototype.hasOwnProperty.call(groups, tagId) 
-        ? tagId 
-        : 'uncategorized';
-      
-      if (groups[columnId]) {
-        groups[columnId].push(person);
+  useEffect(() => {
+    if (!activePerson) {
+      const groups: Record<string, Person[]> = {};
+      const allCols = [uncategorizedTag, ...tags];
+      allCols.forEach(col => {
+        groups[col.id] = [];
+      });
+      people.forEach(person => {
+        const tagId = person.tags?.[0]?.id;
+        const isTagColumnVisible = tagId && visibleColumnIds.includes(tagId);
+        const columnId = tagId && isTagColumnVisible && Object.prototype.hasOwnProperty.call(groups, tagId) 
+          ? tagId 
+          : 'uncategorized';
+        
+        if (groups[columnId]) {
+          groups[columnId].push(person);
+        }
+      });
+      for (const groupId in groups) {
+        groups[groupId].sort((a, b) => (a.kanban_order ?? 0) - (b.kanban_order ?? 0));
       }
-    });
-    for (const groupId in groups) {
-      groups[groupId].sort((a, b) => (a.kanban_order ?? 0) - (b.kanban_order ?? 0));
+      setPersonGroups(groups);
     }
-    return groups;
-  }, [people, tags, visibleColumnIds]);
+  }, [people, tags, visibleColumnIds, activePerson]);
 
   useImperativeHandle(ref, () => ({
     openSettings: () => setIsSettingsOpen(true),
@@ -158,6 +161,47 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
     setActivePerson(people.find(p => p.id === active.id) || null);
   };
 
+  const handleDragOver = (event: DragOverEvent) => {
+    const { active, over } = event;
+    if (!over) return;
+    const activeId = String(active.id);
+    const overId = String(over.id);
+    if (activeId === overId) return;
+
+    const activeContainer = active.data.current?.sortable.containerId as string;
+    const overIsItem = !!over.data.current?.sortable;
+    const overContainer = overIsItem ? over.data.current?.sortable.containerId as string : overId;
+
+    if (!activeContainer || !overContainer) return;
+
+    setPersonGroups(prev => {
+      const newGroups = { ...prev };
+      const sourceItems = newGroups[activeContainer];
+      const destItems = newGroups[overContainer];
+      if (!sourceItems || !destItems) return prev;
+
+      const activeIndex = sourceItems.findIndex(p => p.id === activeId);
+      if (activeIndex === -1) return prev;
+
+      const [movedItem] = sourceItems.splice(activeIndex, 1);
+
+      if (activeContainer === overContainer) {
+        const overIndex = destItems.findIndex(p => p.id === overId);
+        if (overIndex !== -1) {
+          destItems.splice(overIndex, 0, movedItem);
+        }
+      } else {
+        const overIndex = overIsItem ? destItems.findIndex(p => p.id === overId) : destItems.length;
+        if (overIndex !== -1) {
+          destItems.splice(overIndex, 0, movedItem);
+        } else {
+          destItems.push(movedItem);
+        }
+      }
+      return newGroups;
+    });
+  };
+
   const handleDragEnd = (event: DragEndEvent) => {
     setActivePerson(null);
     setTimeout(() => { dragHappened.current = false; }, 0);
@@ -166,62 +210,15 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
     if (!over) return;
 
     const activeId = String(active.id);
-    const overId = String(over.id);
-    
     const sourceContainerId = active.data.current?.sortable.containerId as string;
     const overIsItem = !!over.data.current?.sortable;
-    const destContainerId = overIsItem ? over.data.current?.sortable.containerId as string : overId;
+    const destContainerId = overIsItem ? over.data.current?.sortable.containerId as string : String(over.id);
 
     if (!sourceContainerId || !destContainerId) return;
 
-    let newPeopleState: Person[] = JSON.parse(JSON.stringify(people));
-    const activeIndex = newPeopleState.findIndex(p => p.id === activeId);
-    if (activeIndex === -1) return;
-
-    const [movedItem] = newPeopleState.splice(activeIndex, 1);
-
-    if (sourceContainerId !== destContainerId) {
-      const destTag = tags.find(t => t.id === destContainerId);
-      let newTags = (movedItem.tags || []).filter(t => t.id !== sourceContainerId);
-      if (destTag && destTag.id !== 'uncategorized') {
-        newTags.push(destTag);
-      }
-      newTags.sort((a, b) => a.name.localeCompare(b.name));
-      movedItem.tags = newTags;
-    }
-
-    const overIndex = newPeopleState.findIndex(p => p.id === overId);
-    if (overIsItem && overIndex !== -1) {
-      newPeopleState.splice(overIndex, 0, movedItem);
-    } else {
-      const itemsInDest = newPeopleState.filter(p => (p.tags?.[0]?.id || 'uncategorized') === destContainerId);
-      if (itemsInDest.length > 0) {
-        const lastItem = itemsInDest[itemsInDest.length - 1];
-        const lastItemIndex = newPeopleState.findIndex(p => p.id === lastItem.id);
-        newPeopleState.splice(lastItemIndex + 1, 0, movedItem);
-      } else {
-        newPeopleState.push(movedItem);
-      }
-    }
-
-    const finalGroups = newPeopleState.reduce((acc, p) => {
-      const tagId = p.tags?.[0]?.id || 'uncategorized';
-      if (!acc[tagId]) acc[tagId] = [];
-      acc[tagId].push(p);
-      return acc;
-    }, {} as Record<string, Person[]>);
-
-    for (const tagId in finalGroups) {
-      finalGroups[tagId].forEach((p, index) => {
-        const originalPerson = newPeopleState.find(op => op.id === p.id);
-        if (originalPerson) {
-          originalPerson.kanban_order = index;
-        }
-      });
-    }
-
-    const sourceColumnIds = (finalGroups[sourceContainerId] || []).map(p => p.id);
-    const destColumnIds = (finalGroups[destContainerId] || []).map(p => p.id);
+    const newPeopleState = Object.values(personGroups).flat();
+    const sourceColumnIds = (personGroups[sourceContainerId] || []).map(p => p.id);
+    const destColumnIds = (personGroups[destContainerId] || []).map(p => p.id);
 
     updatePeopleOrder({
       newPeopleState,
@@ -236,7 +233,7 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
   const allTagsForEditor = [uncategorizedTag, ...tags];
 
   return (
-    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragCancel={() => setActivePerson(null)}>
+    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd} onDragCancel={() => setActivePerson(null)}>
       <div className="flex flex-row items-start gap-4 overflow-x-auto pb-4 h-full">
         <div className={`transition-all duration-300 ease-in-out flex-shrink-0 ${isSettingsOpen ? 'w-64' : 'w-0'} overflow-hidden`}>
           <div className="w-64 h-full bg-muted/50 rounded-lg border">

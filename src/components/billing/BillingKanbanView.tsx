@@ -1,7 +1,7 @@
 import { Invoice, PAYMENT_STATUS_OPTIONS, PaymentStatus, Project } from '@/types';
 import BillingKanbanColumn from './BillingKanbanColumn';
-import { useMemo, useState, useRef } from 'react';
-import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, MouseSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { useMemo, useState, useRef, useEffect } from 'react';
+import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, MouseSensor, TouchSensor, useSensor, useSensors, DragOverEvent } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
 import { useProjectKanbanMutations } from '@/hooks/useProjectKanbanMutations';
 import { Card, CardContent } from '@/components/ui/card';
@@ -16,19 +16,22 @@ interface BillingKanbanViewProps {
 const BillingKanbanView = ({ invoices, onEditInvoice }: BillingKanbanViewProps) => {
     const [activeInvoice, setActiveInvoice] = useState<Invoice | null>(null);
     const { updateProjectOrder } = useProjectKanbanMutations();
+    const [groupedInvoices, setGroupedInvoices] = useState<Record<string, Invoice[]>>({});
 
-    const groupedInvoices = useMemo(() => {
-        const groups: Record<string, Invoice[]> = {};
-        PAYMENT_STATUS_OPTIONS.forEach(opt => {
-            groups[opt.value] = [];
-        });
-        invoices.forEach(invoice => {
-            if (groups[invoice.status]) {
-                groups[invoice.status].push(invoice);
-            }
-        });
-        return groups;
-    }, [invoices]);
+    useEffect(() => {
+        if (!activeInvoice) {
+            const groups: Record<string, Invoice[]> = {};
+            PAYMENT_STATUS_OPTIONS.forEach(opt => {
+                groups[opt.value] = [];
+            });
+            invoices.forEach(invoice => {
+                if (groups[invoice.status]) {
+                    groups[invoice.status].push(invoice);
+                }
+            });
+            setGroupedInvoices(groups);
+        }
+    }, [invoices, activeInvoice]);
 
     const sensors = useSensors(
         useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
@@ -39,6 +42,50 @@ const BillingKanbanView = ({ invoices, onEditInvoice }: BillingKanbanViewProps) 
         setActiveInvoice(invoices.find(i => i.rawProjectId === event.active.id) || null);
     };
 
+    const handleDragOver = (event: DragOverEvent) => {
+        const { active, over } = event;
+        if (!over) return;
+    
+        const activeId = String(active.id);
+        const overId = String(over.id);
+    
+        if (activeId === overId) return;
+    
+        const activeContainer = active.data.current?.sortable.containerId as string;
+        const overIsItem = !!over.data.current?.sortable;
+        const overContainer = overIsItem ? over.data.current?.sortable.containerId as string : overId;
+    
+        if (!activeContainer || !overContainer) return;
+    
+        setGroupedInvoices(prev => {
+            const newGroups = { ...prev };
+            const sourceItems = newGroups[activeContainer];
+            const destItems = newGroups[overContainer];
+            if (!sourceItems || !destItems) return prev;
+    
+            const activeIndex = sourceItems.findIndex(p => p.rawProjectId === activeId);
+            if (activeIndex === -1) return prev;
+    
+            const [movedItem] = sourceItems.splice(activeIndex, 1);
+    
+            if (activeContainer === overContainer) {
+                const overIndex = destItems.findIndex(p => p.rawProjectId === overId);
+                if (overIndex !== -1) {
+                    destItems.splice(overIndex, 0, movedItem);
+                }
+            } else {
+                movedItem.status = overContainer as PaymentStatus;
+                const overIndex = overIsItem ? destItems.findIndex(p => p.rawProjectId === overId) : destItems.length;
+                if (overIndex !== -1) {
+                    destItems.splice(overIndex, 0, movedItem);
+                } else {
+                    destItems.push(movedItem);
+                }
+            }
+            return newGroups;
+        });
+    };
+
     const handleDragEnd = (event: DragEndEvent) => {
         const { active, over } = event;
         setActiveInvoice(null);
@@ -46,56 +93,18 @@ const BillingKanbanView = ({ invoices, onEditInvoice }: BillingKanbanViewProps) 
         if (!over) return;
 
         const activeId = String(active.id);
-        const overId = String(over.id);
-
         const activeContainer = active.data.current?.sortable.containerId as string;
-        let overContainer = over.data.current?.sortable.containerId as string;
-        if (!overContainer) overContainer = overId;
+        const overIsItem = !!over.data.current?.sortable;
+        const overContainer = overIsItem ? over.data.current?.sortable.containerId as string : String(over.id);
         
         const activeInvoiceInstance = invoices.find(i => i.rawProjectId === activeId);
         if (!activeInvoiceInstance || !activeContainer || !overContainer) return;
 
-        let newInvoicesState = [...invoices];
-        const activeIndex = newInvoicesState.findIndex(i => i.rawProjectId === activeId);
-
-        if (activeIndex === -1) return;
-
-        if (activeContainer === overContainer) {
-            const overIndex = newInvoicesState.findIndex(i => i.rawProjectId === overId);
-            if (overIndex !== -1) {
-                newInvoicesState = arrayMove(newInvoicesState, activeIndex, overIndex);
-            }
-        } else {
-            const [movedItem] = newInvoicesState.splice(activeIndex, 1);
-            movedItem.status = overContainer as PaymentStatus;
-
-            const overIsItem = !!over.data.current?.sortable;
-            const overIndex = overIsItem ? newInvoicesState.findIndex(i => i.rawProjectId === overId) : -1;
-            
-            if (overIndex !== -1) {
-                newInvoicesState.splice(overIndex, 0, movedItem);
-            } else {
-                const itemsInDest = newInvoicesState.filter(i => i.status === overContainer);
-                if (itemsInDest.length > 0) {
-                    const lastItem = itemsInDest[itemsInDest.length - 1];
-                    const lastItemIndex = newInvoicesState.findIndex(i => i.id === lastItem.id);
-                    newInvoicesState.splice(lastItemIndex + 1, 0, movedItem);
-                } else {
-                    newInvoicesState.push(movedItem);
-                }
-            }
-        }
+        const newInvoicesState = Object.values(groupedInvoices).flat();
 
         const finalUpdates: any[] = [];
-        const finalInvoiceGroups = newInvoicesState.reduce((acc, p) => {
-            const key = p.status as string;
-            if (!acc[key]) acc[key] = [];
-            acc[key].push(p);
-            return acc;
-        }, {} as Record<string, Invoice[]>);
-
-        for (const groupKey in finalInvoiceGroups) {
-            finalInvoiceGroups[groupKey].forEach((invoice, index) => {
+        for (const groupKey in groupedInvoices) {
+            groupedInvoices[groupKey].forEach((invoice, index) => {
                 finalUpdates.push({
                     project_id: invoice.rawProjectId,
                     kanban_order: index,
@@ -118,7 +127,7 @@ const BillingKanbanView = ({ invoices, onEditInvoice }: BillingKanbanViewProps) 
     };
 
     return (
-        <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+        <DndContext sensors={sensors} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
             <div className="flex gap-4 overflow-x-auto pb-4 p-4">
                 {PAYMENT_STATUS_OPTIONS.map(statusOption => (
                     <BillingKanbanColumn
