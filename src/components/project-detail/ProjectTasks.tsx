@@ -1,6 +1,6 @@
 import { Task, User } from "@/types";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ListChecks, Plus, MoreHorizontal, Edit, Trash2 } from "lucide-react";
+import { ListChecks, Plus, MoreHorizontal, Edit, Trash2, Ticket } from "lucide-react";
 import { Button } from "../ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -49,9 +49,12 @@ const ProjectTasks = ({ tasks, onAddTask, onEditTask, onDeleteTask, onToggleTask
             />
             <label
               htmlFor={`task-${task.id}`}
-              className={`flex-1 text-sm ${task.completed ? 'text-muted-foreground line-through' : 'text-card-foreground'}`}
+              className={`flex-1 text-sm flex items-center gap-2 cursor-pointer ${task.completed ? 'text-muted-foreground line-through' : 'text-card-foreground'}`}
             >
-              {task.title}
+              {(task.originTicketId || task.tags?.some(t => t.name === 'Ticket')) && (
+                <Ticket className={`h-4 w-4 flex-shrink-0 ${task.completed ? 'text-green-500' : 'text-red-500'}`} />
+              )}
+              <span className="truncate" title={task.title}>{task.title}</span>
             </label>
 
             <div className="flex items-center -space-x-2 ml-auto pr-2">
