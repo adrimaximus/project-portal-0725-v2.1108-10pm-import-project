@@ -93,7 +93,12 @@ export const useTaskMutations = (refetch?: () => void) => {
     },
   });
 
-  const { mutate: updateTaskStatusAndOrder } = useMutation<void, Error, UpdateTaskOrderPayload>({
+  const { mutate: updateTaskStatusAndOrder } = useMutation<
+    void,
+    Error,
+    UpdateTaskOrderPayload,
+    { previousTasks: Task[] | undefined }
+  >({
     mutationFn: async ({ taskId, newStatus, orderedTaskIds }) => {
       const { error } = await supabase.rpc('update_task_status_and_order', {
         p_task_id: taskId,
