@@ -17,6 +17,7 @@ import { Service } from '@/types';
 import { toast } from "sonner";
 import ColorThemePicker from './ColorThemePicker';
 import IconPicker from '../IconPicker';
+import { Sparkles } from 'lucide-react';
 
 interface ServiceFormDialogProps {
   open: boolean;
@@ -32,6 +33,7 @@ const ServiceFormDialog = ({ open, onOpenChange, onSuccess, service }: ServiceFo
   const [iconColor, setIconColor] = useState('bg-gray-100 text-gray-600');
   const [isFeatured, setIsFeatured] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
 
   useEffect(() => {
     if (service) {
@@ -48,6 +50,33 @@ const ServiceFormDialog = ({ open, onOpenChange, onSuccess, service }: ServiceFo
       setIsFeatured(false);
     }
   }, [service, open]);
+
+  const handleGenerateDescription = async () => {
+    if (!title) {
+      toast.info("Please enter a title first to generate a description.");
+      return;
+    }
+    setIsGeneratingDescription(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-service-description', {
+        body: { title },
+      });
+
+      if (error) throw error;
+
+      if (data.description) {
+        setDescription(data.description);
+        toast.success("Description generated successfully!");
+      } else {
+        throw new Error("No description was generated.");
+      }
+    } catch (error: any) {
+      toast.error("Failed to generate description.");
+      console.error("Error generating description:", error);
+    } finally {
+      setIsGeneratingDescription(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -107,7 +136,30 @@ const ServiceFormDialog = ({ open, onOpenChange, onSuccess, service }: ServiceFo
               <Label htmlFor="description" className="text-right">
                 Description
               </Label>
-              <Textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} className="col-span-3" required />
+              <div className="col-span-3 relative">
+                <Textarea
+                  id="description"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  className="pr-10"
+                  required
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute top-2 right-2 h-6 w-6"
+                  onClick={handleGenerateDescription}
+                  disabled={isGeneratingDescription || !title}
+                  aria-label="Generate description with AI"
+                >
+                  {isGeneratingDescription ? (
+                    <div className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <Sparkles className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="icon" className="text-right">
