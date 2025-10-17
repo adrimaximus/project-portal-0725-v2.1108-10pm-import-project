@@ -8,7 +8,7 @@ export type UpsertTaskPayload = {
   project_id: string;
   title: string;
   description?: string;
-  due_date?: string;
+  due_date?: string | null;
   priority?: string;
   status?: string;
   completed?: boolean;
@@ -40,16 +40,16 @@ export const useTaskMutations = (refetch?: () => void) => {
   const { mutate: upsertTask, isPending: isUpserting } = useMutation({
     mutationFn: async (taskData: UpsertTaskPayload) => {
       const { error } = await supabase.rpc('upsert_task_with_details', {
-        p_id: taskData.id,
+        p_id: taskData.id || null,
         p_project_id: taskData.project_id,
         p_title: taskData.title,
-        p_description: taskData.description,
-        p_due_date: taskData.due_date,
-        p_priority: taskData.priority,
-        p_status: taskData.status,
-        p_completed: taskData.completed,
-        p_assignee_ids: taskData.assignee_ids,
-        p_tag_ids: taskData.tag_ids,
+        p_description: taskData.description || null,
+        p_due_date: taskData.due_date || null,
+        p_priority: taskData.priority || 'Normal',
+        p_status: taskData.status || 'To do',
+        p_completed: taskData.completed || false,
+        p_assignee_ids: taskData.assignee_ids || [],
+        p_tag_ids: taskData.tag_ids || [],
       });
       if (error) throw error;
     },
