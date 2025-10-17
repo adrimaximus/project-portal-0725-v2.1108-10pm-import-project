@@ -101,6 +101,10 @@ const Index = () => {
     }
   });
 
+  const handleToggleTaskCompletion = (task: Task, completed: boolean) => {
+    toggleTaskCompletion({ task, completed });
+  };
+
   const handleViewChange = (newView: ViewMode | null) => {
     if (newView) setSearchParams({ view: newView });
   };
@@ -124,7 +128,7 @@ const Index = () => {
           isLoading={isLoadingTasks}
           onEdit={() => toast.info("Edit not implemented.")}
           onDelete={() => toast.error("Delete not implemented.")}
-          onToggleTaskCompletion={toggleTaskCompletion}
+          onToggleTaskCompletion={handleToggleTaskCompletion}
           isToggling={isToggling}
           sortConfig={taskSortConfig}
           requestSort={(key) => requestProjectSort(key as keyof Project)}
