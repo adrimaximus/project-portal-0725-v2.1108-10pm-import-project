@@ -109,7 +109,11 @@ const KanbanView = ({ projects, groupBy }: { projects: Project[], groupBy: 'stat
           destItems.splice(overIndex, 0, movedItem);
         }
       } else {
-        movedItem[groupBy] = overContainer as ProjectStatus | PaymentStatus;
+        if (groupBy === 'status') {
+          movedItem.status = overContainer as ProjectStatus;
+        } else {
+          movedItem.payment_status = overContainer as PaymentStatus;
+        }
         const overIndex = overIsItem ? destItems.findIndex(p => p.id === overId) : destItems.length;
         if (overIndex !== -1) {
           destItems.splice(overIndex, 0, movedItem);
