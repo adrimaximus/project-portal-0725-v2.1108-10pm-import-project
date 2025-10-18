@@ -15,6 +15,8 @@ import { getErrorMessage } from '@/lib/utils';
 import UserSelector from './UserSelector';
 import { useAuth } from '@/contexts/AuthContext';
 import CompanySelector from './CompanySelector';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 // Minimal profile type definition to avoid touching global types.ts
 interface Profile {
@@ -75,36 +77,13 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
     email: z.string().email('Invalid email address').optional().or(z.literal('')),
     phone: z.string().optional(),
     company_id: z.string().uuid().optional().nullable(),
+    custom_properties: z.record(z.any()).optional(),
   });
 
-  const [dynamicSchema, setDynamicSchema] = React.useState<z.AnyZodObject>(baseSchema);
-
-  useEffect(() => {
-    if (filteredProperties.length > 0) {
-      const schema = filteredProperties.reduce((schema, prop) => {
-        let fieldSchema;
-        switch (prop.type) {
-          case 'number':
-            fieldSchema = z.coerce.number().optional();
-            break;
-          case 'date':
-            fieldSchema = z.string().optional();
-            break;
-          default:
-            fieldSchema = z.string().optional();
-        }
-        return schema.extend({ [prop.name]: fieldSchema });
-      }, baseSchema);
-      setDynamicSchema(schema);
-    } else {
-      setDynamicSchema(baseSchema);
-    }
-  }, [filteredProperties, baseSchema]);
-
-  type PropertyFormValues = z.infer<typeof dynamicSchema>;
+  type PropertyFormValues = z.infer<typeof baseSchema>;
 
   const { register, handleSubmit, reset, formState: { errors }, control, setValue } = useForm<PropertyFormValues>({
-    resolver: zodResolver(dynamicSchema),
+    resolver: zodResolver(baseSchema),
   });
 
   useEffect(() => {
@@ -114,16 +93,15 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
         const nameParts = full_name ? full_name.split(' ') : [''];
         const firstName = nameParts[0] || '';
         const lastName = nameParts.slice(1).join(' ') || '';
-        reset({ ...personData, first_name: firstName, last_name: lastName, ...custom_properties, company_id: person.company_id });
+        reset({ ...personData, first_name: firstName, last_name: lastName, custom_properties: custom_properties || {}, company_id: person.company_id });
       } else { // Create mode
-        const defaultValues = filteredProperties.reduce((acc, prop) => ({ ...acc, [prop.name]: '' }), {});
-        reset({ first_name: '', last_name: '', email: '', phone: '', company_id: null, ...defaultValues });
+        reset({ first_name: '', last_name: '', email: '', phone: '', company_id: null, custom_properties: {} });
       }
     } else {
       // Reset when dialog closes
       setSelectedProfile(null);
     }
-  }, [person, open, reset, filteredProperties]);
+  }, [person, open, reset]);
 
   useEffect(() => {
     if (selectedProfile && !person) { // Only pre-fill in create mode
@@ -156,15 +134,6 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
       const isEditingLinkedUser = person && person.user_id && isAdmin;
 
       const full_name = `${values.first_name || ''} ${values.last_name || ''}`.trim();
-
-      const standardFields = ['first_name', 'last_name', 'email', 'phone', 'company_id', 'avatar_url'];
-      const custom_properties: Record<string, any> = {};
-
-      for (const key in values) {
-        if (!standardFields.includes(key)) {
-          custom_properties[key] = (values as any)[key];
-        }
-      }
       
       const contactJson = {
         emails: values.email ? [values.email] : [],
@@ -187,7 +156,7 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
         p_custom_tags: [],
         p_avatar_url: person?.avatar_url || (selectedProfile ? selectedProfile.avatar_url : null),
         p_address: person?.address || null,
-        p_custom_properties: custom_properties,
+        p_custom_properties: values.custom_properties,
       };
 
       if (isEditingLinkedUser) {
@@ -229,15 +198,14 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
     mutation.mutate(data);
   };
 
-  const renderField = (prop: ContactProperty) => {
-    const fieldName = prop.name;
+  const renderField = (prop: ContactProperty, field: any) => {
     switch (prop.type) {
       case 'number':
-        return <Input id={fieldName} type="number" {...register(fieldName)} />;
+        return <Input type="number" {...field} value={field.value ?? ''} />;
       case 'date':
-        return <Input id={fieldName} type="date" {...register(fieldName)} />;
+        return <Input type="date" {...field} value={field.value ?? ''} />;
       default:
-        return <Input id={fieldName} {...register(fieldName)} />;
+        return <Input type="text" {...field} value={field.value ?? ''} />;
     }
   };
 
@@ -245,76 +213,97 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>{person ? 'Edit Person' : 'Add New Person'}</DialogTitle>
           <DialogDescription>Fill in the details for the person.</DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 max-h-[70vh] overflow-y-auto px-6 py-4 -mx-6">
-          {!person && (
-            <div className="px-6 pb-4 border-b">
-              <Label>Pre-fill from User Profile</Label>
-              <UserSelector onSelectUser={setSelectedProfile} />
-              <p className="text-xs text-muted-foreground mt-1">
-                Fields with existing data will be locked. You can fill in any empty fields.
-              </p>
-            </div>
-          )}
-          <div className="grid grid-cols-2 gap-4 px-6">
-            <div>
-              <Label htmlFor="first_name">First Name</Label>
-              <Input id="first_name" {...register('first_name')} disabled={!!selectedProfile || isLinkedUser} />
-              {errors.first_name && <p className="text-sm text-destructive mt-1">{errors.first_name.message as string}</p>}
-            </div>
-            <div>
-              <Label htmlFor="last_name">Last Name</Label>
-              <Input id="last_name" {...register('last_name')} disabled={!!selectedProfile || isLinkedUser} />
-            </div>
-          </div>
-          <div className="px-6">
-            <Label htmlFor="email">Email</Label>
-            <Input id="email" {...register('email')} disabled={!!selectedProfile || isLinkedUser} />
-            {errors.email && <p className="text-sm text-destructive mt-1">{errors.email.message as string}</p>}
-          </div>
-          <div className="px-6">
-            <Label htmlFor="phone">Phone</Label>
-            <Input id="phone" {...register('phone')} disabled={!!selectedProfile || isLinkedUser} />
-          </div>
-          <div className="px-6">
-            <Label htmlFor="company">Company</Label>
-            <Controller
-              name="company_id"
-              control={control}
-              render={({ field }) => (
-                <CompanySelector
-                  value={field.value}
-                  onChange={field.onChange}
-                />
-              )}
-            />
-          </div>
-
-          {isLoadingProperties ? (
-            <div className="flex justify-center px-6"><Loader2 className="h-6 w-6 animate-spin" /></div>
-          ) : filteredProperties.length > 0 && (
-            <div className="space-y-4 border-t pt-4 mt-4 px-6">
-              {filteredProperties.map(prop => (
-                <div key={prop.id}>
-                  <Label htmlFor={prop.name}>{prop.label}</Label>
-                  {renderField(prop)}
-                </div>
-              ))}
-            </div>
-          )}
-        
-          <DialogFooter className="pt-4 sticky bottom-0 bg-background px-6">
-            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button type="submit" disabled={mutation.isPending}>
-              {mutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {person ? 'Save Changes' : 'Create Person'}
-            </Button>
-          </DialogFooter>
-        </form>
+        <Form {...form}>
+          <form id="person-form" onSubmit={handleSubmit(onSubmit)}>
+            <ScrollArea className="max-h-[60vh] p-1">
+              <div className="space-y-4 pr-4">
+                {!person && (
+                  <div className="pb-4 border-b">
+                    <Label>Pre-fill from User Profile</Label>
+                    <UserSelector onSelectUser={setSelectedProfile} />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Fields with existing data will be locked. You can fill in any empty fields.
+                    </p>
+                  </div>
+                )}
+                <FormField control={form.control} name="first_name" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>First Name</FormLabel>
+                    <FormControl><Input {...field} disabled={!!selectedProfile || isLinkedUser} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="last_name" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Last Name</FormLabel>
+                    <FormControl><Input {...field} disabled={!!selectedProfile || isLinkedUser} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="email" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl><Input {...field} disabled={!!selectedProfile || isLinkedUser} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="phone" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Phone</FormLabel>
+                    <FormControl><Input {...field} disabled={!!selectedProfile || isLinkedUser} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="company_id" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Company</FormLabel>
+                    <FormControl>
+                      <CompanySelector
+                        value={field.value}
+                        onChange={field.onChange}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                
+                {isLoadingProperties ? (
+                  <div className="flex justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div>
+                ) : filteredProperties.length > 0 && (
+                  <div className="space-y-4 border-t pt-4 mt-4">
+                    <h3 className="text-lg font-medium">Custom Properties</h3>
+                    {filteredProperties.map(prop => (
+                      <FormField
+                        key={prop.id}
+                        control={control}
+                        name={`custom_properties.${prop.name}`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>{prop.label}</FormLabel>
+                            <FormControl>{renderField(prop, field)}</FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </ScrollArea>
+          </form>
+        </Form>
+        <DialogFooter>
+          <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button type="submit" form="person-form" disabled={mutation.isPending}>
+            {mutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {person ? 'Save Changes' : 'Create Person'}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
