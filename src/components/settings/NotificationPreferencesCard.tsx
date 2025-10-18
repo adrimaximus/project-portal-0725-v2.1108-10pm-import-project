@@ -14,7 +14,6 @@ const notificationTypes = [
   { id: 'project_update', label: 'Project Updates', description: 'When you are added to a project, a task is assigned to you, or a project you are in is updated.' },
   { id: 'mention', label: 'Mentions', description: 'When someone @mentions you in a comment.' },
   { id: 'comment', label: 'New Chat Messages', description: 'When you receive a new message and are not on the chat page.' },
-  { id: 'whatsapp_chat', label: 'WhatsApp Chat Messages', description: 'Receive a WhatsApp notification for new chat messages.' },
   { id: 'goal', label: 'Goal Updates', description: 'When a new goal is created for you.' },
   { id: 'system', label: 'System Notifications', description: 'Important updates and announcements from the system.' },
 ];
@@ -96,8 +95,24 @@ const NotificationPreferencesCard = () => {
     return true;
   };
 
+  const getIsEnabled = (typeId: string) => {
+    const pref = preferences[typeId];
+    if (typeof pref === 'object' && pref !== null) {
+      return pref.enabled !== false;
+    }
+    return pref !== false;
+  };
+
   const handlePreferenceChange = async (typeId: string, isEnabled: boolean) => {
-    const newPreferences = { ...preferences, [typeId]: isEnabled };
+    const newPreferences = { ...preferences };
+    const currentPref = newPreferences[typeId];
+
+    if (typeof currentPref === 'object' && currentPref !== null) {
+      newPreferences[typeId] = { ...currentPref, enabled: isEnabled };
+    } else {
+      newPreferences[typeId] = { enabled: isEnabled };
+    }
+    
     const success = await updatePreferences(newPreferences);
     if (success) {
       if (isEnabled) {
@@ -115,34 +130,26 @@ const NotificationPreferencesCard = () => {
       audio.play().catch(e => console.error("Error playing audio preview:", e));
     }
     
-    const newPreferences = { ...preferences, tone: toneValue };
+    const newPreferences = { ...preferences };
+    const currentCommentPref = newPreferences['comment'];
+    
+    if (typeof currentCommentPref === 'object' && currentCommentPref !== null) {
+        newPreferences['comment'] = { ...currentCommentPref, sound: toneValue };
+    } else {
+        newPreferences['comment'] = { enabled: currentCommentPref !== false, sound: toneValue };
+    }
+
     const success = await updatePreferences(newPreferences);
     if (success) {
       toast.success("Notification tone updated.");
     }
   };
 
-  const handleGlobalToastToggle = async (isEnabled: boolean) => {
-    const newPreferences = { ...preferences, toast_enabled: isEnabled };
+  const handleGlobalToggle = async (key: 'toast_enabled' | 'whatsapp_enabled' | 'email_enabled', isEnabled: boolean) => {
+    const newPreferences = { ...preferences, [key]: isEnabled };
     const success = await updatePreferences(newPreferences);
     if (success) {
-      toast.success("Toast notification setting updated.");
-    }
-  };
-
-  const handleWhatsAppToggle = async (isEnabled: boolean) => {
-    const newPreferences = { ...preferences, whatsapp_enabled: isEnabled };
-    const success = await updatePreferences(newPreferences);
-    if (success) {
-      toast.success("WhatsApp notification setting updated.");
-    }
-  };
-
-  const handleEmailToggle = async (isEnabled: boolean) => {
-    const newPreferences = { ...preferences, email_enabled: isEnabled };
-    const success = await updatePreferences(newPreferences);
-    if (success) {
-      toast.success("Email notification setting updated.");
+      toast.success("Notification setting updated.");
     }
   };
 
@@ -192,8 +199,8 @@ const NotificationPreferencesCard = () => {
                   </div>
                   <Switch
                     id="toast-notifications"
-                    checked={preferences.toast_enabled !== false} // Default to true
-                    onCheckedChange={handleGlobalToastToggle}
+                    checked={preferences.toast_enabled !== false}
+                    onCheckedChange={(checked) => handleGlobalToggle('toast_enabled', checked)}
                   />
               </div>
           </div>
@@ -206,7 +213,7 @@ const NotificationPreferencesCard = () => {
                   <Switch
                     id="whatsapp-notifications"
                     checked={preferences.whatsapp_enabled !== false}
-                    onCheckedChange={handleWhatsAppToggle}
+                    onCheckedChange={(checked) => handleGlobalToggle('whatsapp_enabled', checked)}
                   />
               </div>
           </div>
@@ -219,7 +226,7 @@ const NotificationPreferencesCard = () => {
                   <Switch
                     id="email-notifications"
                     checked={preferences.email_enabled !== false}
-                    onCheckedChange={handleEmailToggle}
+                    onCheckedChange={(checked) => handleGlobalToggle('email_enabled', checked)}
                   />
               </div>
           </div>
@@ -229,7 +236,7 @@ const NotificationPreferencesCard = () => {
                       <Label htmlFor="notification-tone" className="text-base">Notification Tone</Label>
                       <p className="text-sm text-muted-foreground">Select a sound for incoming notifications.</p>
                   </div>
-                  <Select value={preferences.tone || 'none'} onValueChange={handleToneChange}>
+                  <Select value={preferences.comment?.sound || 'none'} onValueChange={handleToneChange}>
                       <SelectTrigger className="w-[240px]">
                           <SelectValue placeholder="Select a tone" />
                       </SelectTrigger>
@@ -253,7 +260,7 @@ const NotificationPreferencesCard = () => {
                 </div>
                 <Switch
                   id={`notif-${type.id}`}
-                  checked={preferences[type.id] !== false} // Default to true if not set
+                  checked={getIsEnabled(type.id)}
                   onCheckedChange={(checked) => handlePreferenceChange(type.id, checked)}
                 />
               </div>
