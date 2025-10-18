@@ -54,7 +54,7 @@ serve(async (req) => {
       `,
     };
 
-    const response = await fetch("https://api.emailit.com/v1/send", {
+    const response = await fetch("https://api.emailit.com/v1/emails", {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
@@ -64,7 +64,7 @@ serve(async (req) => {
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
+      const errorData = await response.json().catch(() => ({ message: response.statusText }));
       throw new Error(`Failed to send email: ${errorData.message || response.statusText}`);
     }
 
