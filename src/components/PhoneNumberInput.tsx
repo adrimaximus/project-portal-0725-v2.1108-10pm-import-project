@@ -19,13 +19,18 @@ const countryCodes = [
 const PhoneNumberInput: React.FC<PhoneNumberInputProps> = ({ value = '', onChange, disabled }) => {
   const [countryCode, setCountryCode] = useState('+62');
   const [localNumber, setLocalNumber] = useState('');
-  // Ref ini akan menyimpan nilai terakhir yang dikirim ke komponen induk.
   const lastEmittedValue = useRef<string | undefined>();
 
   useEffect(() => {
-    // Jika nilai yang masuk sama dengan yang terakhir kita kirim, itu adalah gema.
-    // Kita bisa mengabaikannya untuk mencegah loop dan membiarkan pengguna terus mengetik.
+    // Abaikan pembaruan jika itu adalah gema dari perubahan kita sendiri.
     if (value === lastEmittedValue.current) {
+      return;
+    }
+
+    // Pelindung baru: Jika nilai yang masuk kosong, tetapi kita baru saja mengirim
+    // nilai yang berisi, abaikan pembaruan sementara ini untuk mencegah
+    // input pengguna terhapus.
+    if (!value && lastEmittedValue.current && lastEmittedValue.current !== countryCode) {
       return;
     }
 
@@ -40,18 +45,14 @@ const PhoneNumberInput: React.FC<PhoneNumberInputProps> = ({ value = '', onChang
       const numberPart = rawValue.substring(foundCode.code.length);
       setLocalNumber(numberPart);
     } else {
-      // Jika tidak ada kode, asumsikan itu adalah nomor lokal Indonesia dan default ke +62
       setCountryCode('+62');
       setLocalNumber(rawValue.replace(/\D/g, ''));
     }
-    // Saat kita menerima perubahan eksternal, kita juga harus memperbarui ref lastEmittedValue kita
-    // agar sinkron dengan state baru.
     lastEmittedValue.current = value;
-  }, [value]);
+  }, [value, countryCode]);
 
   const triggerChange = (code: string, num: string) => {
     let numberToEmit = num.replace(/\D/g, '');
-    // Saat menyimpan, hapus '0' di depan untuk nomor Indonesia jika ada
     if (code === '+62' && numberToEmit.startsWith('0')) {
       numberToEmit = numberToEmit.substring(1);
     }
@@ -62,7 +63,6 @@ const PhoneNumberInput: React.FC<PhoneNumberInputProps> = ({ value = '', onChang
   };
 
   const handleNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Izinkan hanya angka
     const newNumber = e.target.value.replace(/[^0-9]/g, '');
     setLocalNumber(newNumber);
     triggerChange(countryCode, newNumber);
