@@ -10,7 +10,8 @@ import { useNavigate, useLocation } from 'react-router-dom';
 type AuthContextType = {
   user: User | null;
   session: Session | null;
-  isLoading: boolean;
+  isLoading: boolean; // Will now represent ONLY session loading
+  isUserLoading: boolean; // Explicitly for user profile loading
   onlineCollaborators: Collaborator[];
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
@@ -222,7 +223,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     <AuthContext.Provider value={{ 
       user: user || null, 
       session, 
-      isLoading: isLoading || isUserLoading, 
+      isLoading,
+      isUserLoading,
       onlineCollaborators,
       logout,
       refreshUser: async () => { await refreshUser() },
