@@ -9,7 +9,7 @@ import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import *z from 'zod';
+import * as z from 'zod';
 import { ContactProperty, Person } from '@/types';
 import { getErrorMessage } from '@/lib/utils';
 import UserSelector from './UserSelector';
