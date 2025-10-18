@@ -194,12 +194,24 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
           )}
           <div className="px-6">
             <Label htmlFor="full_name">Full Name</Label>
-            <Input id="full_name" {...register('full_name')} readOnly={!!(profileToUse && `${profileToUse.first_name || ''} ${profileToUse.last_name || ''}`.trim())} />
+            {profileToUse && `${profileToUse.first_name || ''} ${profileToUse.last_name || ''}`.trim() ? (
+              <p className="w-full rounded-md border border-input bg-muted px-3 py-2 text-sm text-muted-foreground">
+                {`${profileToUse.first_name || ''} ${profileToUse.last_name || ''}`.trim()}
+              </p>
+            ) : (
+              <Input id="full_name" {...register('full_name')} />
+            )}
             {errors.full_name && <p className="text-sm text-destructive mt-1">{errors.full_name.message as string}</p>}
           </div>
           <div className="px-6">
             <Label htmlFor="email">Email</Label>
-            <Input id="email" {...register('email')} readOnly={!!(profileToUse && profileToUse.email)} />
+            {profileToUse && profileToUse.email ? (
+              <p className="w-full rounded-md border border-input bg-muted px-3 py-2 text-sm text-muted-foreground">
+                {profileToUse.email}
+              </p>
+            ) : (
+              <Input id="email" {...register('email')} />
+            )}
             {errors.email && <p className="text-sm text-destructive mt-1">{errors.email.message as string}</p>}
           </div>
           <div className="px-6">
