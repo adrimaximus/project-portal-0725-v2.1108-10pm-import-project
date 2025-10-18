@@ -36,7 +36,7 @@ interface PeopleFormDialogProps {
 
 const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormDialogProps) => {
   const queryClient = useQueryClient();
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, session } = useAuth();
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
 
   const { data: properties = [], isLoading: isLoadingProperties } = useQuery<ContactProperty[]>({
@@ -97,28 +97,30 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
         const { custom_properties, ...personData } = person;
         reset({ ...personData, ...custom_properties });
       } else { // Create mode
+        const profileForDefaults = selectedProfile || (currentUser as unknown as Profile | null);
         const defaultValues = properties.reduce((acc, prop) => ({ ...acc, [prop.name]: '' }), {});
-        if (profileToUse) {
+        
+        if (profileForDefaults) {
           reset({
             ...defaultValues,
-            full_name: `${profileToUse.first_name || ''} ${profileToUse.last_name || ''}`.trim(),
-            email: profileToUse.email || '',
-            phone: profileToUse.phone || '',
+            full_name: `${profileForDefaults.first_name || ''} ${profileForDefaults.last_name || ''}`.trim(),
+            email: profileForDefaults.email || session?.user?.email || '',
+            phone: profileForDefaults.phone || '',
             company: '',
             job_title: '',
-            avatar_url: profileToUse.avatar_url || '',
+            avatar_url: profileForDefaults.avatar_url || '',
             notes: '',
             address: '',
           });
         } else {
-          reset({ full_name: '', email: '', phone: '', company: '', job_title: '', avatar_url: '', notes: '', address: '', ...defaultValues });
+          reset({ full_name: '', email: session?.user?.email || '', phone: '', company: '', job_title: '', avatar_url: '', notes: '', address: '', ...defaultValues });
         }
       }
     } else {
       // Reset when dialog closes
       setSelectedProfile(null);
     }
-  }, [person, open, reset, properties, profileToUse]);
+  }, [person, open, reset, properties, selectedProfile, currentUser, session]);
 
   const mutation = useMutation({
     mutationFn: async (values: any) => {
@@ -197,7 +199,7 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
           </div>
           <div className="px-6">
             <Label htmlFor="email">Email</Label>
-            <Input id="email" {...register('email')} readOnly={!!(profileToUse && profileToUse.email)} />
+            <Input id="email" {...register('email')} readOnly={!!(profileToUse && profileToUse.email) || !!(!person && !selectedProfile && session?.user?.email)} />
             {errors.email && <p className="text-sm text-destructive mt-1">{errors.email.message as string}</p>}
           </div>
           <div className="px-6">
