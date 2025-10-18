@@ -80,14 +80,27 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
       if (!profile) return null;
 
       const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email;
-      return {
-        ...stats,
+      
+      const collaboratorData: CollaboratorStat = {
         id: userId,
         name: fullName,
         avatar_url: profile.avatar_url,
+        email: profile.email,
         initials: getInitials(fullName, profile.email),
+        first_name: profile.first_name,
+        last_name: profile.last_name,
         role: profile.role || 'member',
+        status: profile.status,
+        updated_at: profile.updated_at,
+        phone: profile.phone,
+        projectCount: stats.project_count,
+        upcomingProjectCount: stats.upcoming_project_count,
+        ongoingProjectCount: stats.ongoing_project_count,
+        activeTaskCount: stats.active_task_count,
+        activeTicketCount: stats.active_ticket_count,
+        overdueBillCount: stats.overdue_bill_count,
       };
+      return collaboratorData;
     }).filter((c): c is CollaboratorStat => c !== null);
 
     const roleHierarchy: Record<string, number> = { 'owner': 1, 'admin': 2, 'editor': 3, 'member': 4 };
