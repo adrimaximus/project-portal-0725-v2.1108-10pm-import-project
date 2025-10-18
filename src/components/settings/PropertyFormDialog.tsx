@@ -20,7 +20,7 @@ interface PropertyFormDialogProps {
 
 const propertySchema = z.object({
   label: z.string().min(1, "Label is required."),
-  type: z.enum(['text', 'email', 'phone', 'url', 'date', 'textarea', 'number', 'image', 'select', 'multi-select', 'checkbox']),
+  type: z.enum(['text', 'email', 'phone', 'url', 'date', 'textarea', 'number', 'image', 'multi-image', 'select', 'multi-select', 'checkbox']),
   options: z.string().optional(),
 });
 
@@ -97,7 +97,8 @@ const PropertyFormDialog = ({ open, onOpenChange, onSave, property, isSaving }: 
                     <SelectItem value="email">Email</SelectItem>
                     <SelectItem value="phone">Phone</SelectItem>
                     <SelectItem value="url">URL</SelectItem>
-                    <SelectItem value="image">Image</SelectItem>
+                    <SelectItem value="image">Image (single)</SelectItem>
+                    <SelectItem value="multi-image">Image (multiple)</SelectItem>
                     <SelectItem value="select">Select</SelectItem>
                     <SelectItem value="multi-select">Multi-select</SelectItem>
                     <SelectItem value="checkbox">Checkbox</SelectItem>
