@@ -28,32 +28,31 @@ const PhoneNumberInput: React.FC<PhoneNumberInputProps> = ({ value = '', onChang
     }
 
     const rawValue = value || '';
-    const foundCode = countryCodes.find(c => rawValue.startsWith(c.code));
+    
+    const foundCode = countryCodes
+      .sort((a, b) => b.code.length - a.code.length) // Sort to match longest code first (e.g., +44 before +4)
+      .find(c => rawValue.startsWith(c.code));
 
     if (foundCode) {
       setCountryCode(foundCode.code);
-      const numberPart = rawValue.substring(foundCode.code.length);
+      let numberPart = rawValue.substring(foundCode.code.length);
+      // For display, Indonesian numbers should start with 0
       if (foundCode.code === '+62' && numberPart.length > 0 && !numberPart.startsWith('0')) {
-        setLocalNumber('0' + numberPart);
-      } else {
-        setLocalNumber(numberPart);
+        numberPart = '0' + numberPart;
       }
+      setLocalNumber(numberPart);
     } else {
-      const digitsOnly = rawValue.replace(/\D/g, '');
-      if (digitsOnly.startsWith('62')) {
-        setCountryCode('+62');
-        setLocalNumber('0' + digitsOnly.substring(2));
-      } else {
-        setCountryCode('+62');
-        setLocalNumber(digitsOnly);
-      }
+      // If no code, assume it's a local Indonesian number
+      setCountryCode('+62');
+      setLocalNumber(rawValue.replace(/\D/g, ''));
     }
   }, [value]);
 
   const triggerChange = (code: string, num: string) => {
-    let numberToEmit = num;
-    if (code === '+62' && num.startsWith('0')) {
-      numberToEmit = num.substring(1);
+    let numberToEmit = num.replace(/\D/g, '');
+    // When saving, remove the leading '0' for Indonesian numbers
+    if (code === '+62' && numberToEmit.startsWith('0')) {
+      numberToEmit = numberToEmit.substring(1);
     }
     
     isInternalChange.current = true;
@@ -61,7 +60,7 @@ const PhoneNumberInput: React.FC<PhoneNumberInputProps> = ({ value = '', onChang
   };
 
   const handleNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newNumber = e.target.value.replace(/\D/g, '');
+    const newNumber = e.target.value.replace(/[^0-9]/g, '');
     setLocalNumber(newNumber);
     triggerChange(countryCode, newNumber);
   };
