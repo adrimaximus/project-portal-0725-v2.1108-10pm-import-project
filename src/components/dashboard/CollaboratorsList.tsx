@@ -30,6 +30,16 @@ interface CollaboratorsListProps {
   projects: Project[];
 }
 
+interface CollaboratorStatData {
+  user_id: string;
+  project_count: number;
+  upcoming_project_count: number;
+  ongoing_project_count: number;
+  active_task_count: number;
+  active_ticket_count: number;
+  overdue_bill_count: number;
+}
+
 interface CollaboratorStat extends User {
   projectCount: number;
   upcomingProjectCount: number;
@@ -44,7 +54,7 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const projectIds = useMemo(() => projects.map(p => p.id), [projects]);
 
-  const { data: collaboratorStats, isLoading: isLoadingStats } = useQuery({
+  const { data: collaboratorStats, isLoading: isLoadingStats } = useQuery<CollaboratorStatData[]>({
     queryKey: ['collaboratorStats', projectIds],
     queryFn: async () => {
       if (projectIds.length === 0) return [];
@@ -55,7 +65,7 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
     enabled: projectIds.length > 0,
   });
 
-  const userIds = useMemo(() => collaboratorStats?.map((s: any) => s.user_id) || [], [collaboratorStats]);
+  const userIds = useMemo(() => collaboratorStats?.map((s) => s.user_id) || [], [collaboratorStats]);
 
   const { data: profiles, isLoading: isLoadingProfiles } = useQuery({
     queryKey: ['profilesForStats', userIds],
@@ -71,7 +81,7 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
   const { collaboratorsByRole, allCollaborators } = useMemo(() => {
     if (!collaboratorStats || !profiles) return { collaboratorsByRole: {}, allCollaborators: [] };
 
-    const statsMap = new Map(collaboratorStats.map((s: any) => [s.user_id, s]));
+    const statsMap = new Map(collaboratorStats.map((s) => [s.user_id, s]));
     const profileMap = new Map(profiles.map(p => [p.id, p]));
 
     const collaborators = Array.from(statsMap.keys()).map(userId => {
