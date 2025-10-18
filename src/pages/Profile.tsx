@@ -14,6 +14,7 @@ import { generatePastelColor, getAvatarUrl, getInitials } from "@/lib/utils";
 import { useQueryClient } from "@tanstack/react-query";
 import AvatarCropper from "@/components/settings/AvatarCropper";
 import PhoneNumberInput from "@/components/PhoneNumberInput";
+import SafeLocalStorage from "@/lib/localStorage";
 
 const Profile = () => {
   const { user, session, refreshUser, logout } = useAuth();
@@ -33,15 +34,51 @@ const Profile = () => {
 
   useEffect(() => {
     if (user) {
-      setFirstName(user.first_name || "");
-      setLastName(user.last_name || "");
-      setPhone(user.phone || "");
+      const savedFirstName = SafeLocalStorage.getItem<string>(`profile-form-firstName-${user.id}`);
+      const savedLastName = SafeLocalStorage.getItem<string>(`profile-form-lastName-${user.id}`);
+      const savedPhone = SafeLocalStorage.getItem<string>(`profile-form-phone-${user.id}`);
+
+      setFirstName(savedFirstName !== null ? savedFirstName : user.first_name || "");
+      setLastName(savedLastName !== null ? savedLastName : user.last_name || "");
+      setPhone(savedPhone !== null ? savedPhone : user.phone || "");
     }
   }, [user]);
 
+  useEffect(() => {
+    if (user && firstName !== (user.first_name || '')) {
+      SafeLocalStorage.setItem(`profile-form-firstName-${user.id}`, firstName);
+    } else if (user) {
+      SafeLocalStorage.removeItem(`profile-form-firstName-${user.id}`);
+    }
+  }, [firstName, user]);
+
+  useEffect(() => {
+    if (user && lastName !== (user.last_name || '')) {
+      SafeLocalStorage.setItem(`profile-form-lastName-${user.id}`, lastName);
+    } else if (user) {
+      SafeLocalStorage.removeItem(`profile-form-lastName-${user.id}`);
+    }
+  }, [lastName, user]);
+
+  useEffect(() => {
+    if (user && phone !== (user.phone || '')) {
+      SafeLocalStorage.setItem(`profile-form-phone-${user.id}`, phone);
+    } else if (user) {
+      SafeLocalStorage.removeItem(`profile-form-phone-${user.id}`);
+    }
+  }, [phone, user]);
+
+  const hasUnsavedChanges = useMemo(() => {
+    if (!user) return false;
+    return (
+      firstName !== (user.first_name || "") ||
+      lastName !== (user.last_name || "") ||
+      phone !== (user.phone || "")
+    );
+  }, [user, firstName, lastName, phone]);
+
   const canChangePassword = useMemo(() => {
     if (!session?.user) return false;
-    // This correctly checks if the primary sign-in method was email/password or magic link.
     return session.user.app_metadata?.provider === 'email';
   }, [session]);
 
@@ -64,7 +101,6 @@ const Profile = () => {
     });
     reader.readAsDataURL(file);
     
-    // Reset file input value to allow re-selecting the same file
     event.target.value = '';
   };
 
@@ -139,12 +175,29 @@ const Profile = () => {
       if (error) throw error;
 
       toast.success("Profil berhasil diperbarui.");
+      
+      SafeLocalStorage.removeItem(`profile-form-firstName-${user.id}`);
+      SafeLocalStorage.removeItem(`profile-form-lastName-${user.id}`);
+      SafeLocalStorage.removeItem(`profile-form-phone-${user.id}`);
+
       await refreshUser();
     } catch (error: any) {
       toast.error("Gagal memperbarui profil.", { description: error.message });
       console.error(error);
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleResetChanges = () => {
+    if (user) {
+      setFirstName(user.first_name || "");
+      setLastName(user.last_name || "");
+      setPhone(user.phone || "");
+      SafeLocalStorage.removeItem(`profile-form-firstName-${user.id}`);
+      SafeLocalStorage.removeItem(`profile-form-lastName-${user.id}`);
+      SafeLocalStorage.removeItem(`profile-form-phone-${user.id}`);
+      toast.info("Changes have been discarded.");
     }
   };
 
@@ -250,10 +303,15 @@ const Profile = () => {
                 <PhoneNumberInput value={phone} onChange={setPhone} />
               </div>
             </div>
-            <Button onClick={handleSaveChanges} disabled={isSaving}>
-              {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save Changes
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button onClick={handleSaveChanges} disabled={isSaving || !hasUnsavedChanges}>
+                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Save Changes
+              </Button>
+              <Button variant="outline" onClick={handleResetChanges} disabled={isSaving || !hasUnsavedChanges}>
+                Reset
+              </Button>
+            </div>
           </CardContent>
         </Card>
 
