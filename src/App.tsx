@@ -28,6 +28,7 @@ import GoogleDrivePage from "./pages/integrations/GoogleDrivePage";
 import GoogleCalendarIntegrationPage from "./pages/GoogleCalendarIntegrationPage";
 import OpenAiIntegrationPage from "./pages/integrations/OpenAiIntegrationPage";
 import WbiztoolPage from "./pages/integrations/WbiztoolPage";
+import EmailitPage from "./pages/integrations/EmailitPage";
 import Profile from "./pages/Profile";
 import SearchPage from "./pages/SearchPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
@@ -91,6 +92,7 @@ const App = () => {
         <Route path="/settings/integrations/google-calendar" element={<GoogleCalendarIntegrationPage />} />
         <Route path="/settings/integrations/openai" element={<OpenAiIntegrationPage />} />
         <Route path="/settings/integrations/wbiztool" element={<WbiztoolPage />} />
+        <Route path="/settings/integrations/emailit" element={<EmailitPage />} />
         <Route path="/settings/storage" element={<StorageSettingsPage />} />
         <Route path="/settings/people-properties" element={<ContactPropertiesPage />} />
         <Route path="/settings/company-properties" element={<CompanyPropertiesPage />} />
