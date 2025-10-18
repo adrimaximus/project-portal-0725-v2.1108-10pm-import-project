@@ -10,7 +10,7 @@ import {
 } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Session, User as SupabaseUser } from "@supabase/supabase-js";
-import { User as AppUser } from "@/types";
+import { User as AppUser, Collaborator } from "@/types";
 import { getInitials } from "@/lib/utils";
 import { toast } from "sonner";
 import SafeLocalStorage from "@/lib/localStorage";
@@ -25,6 +25,7 @@ interface AuthContextType {
   hasPermission: (permission: string) => boolean;
   startImpersonation: (targetUser: AppUser) => Promise<void>;
   stopImpersonation: () => Promise<void>;
+  onlineCollaborators: Collaborator[];
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -34,6 +35,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isImpersonating, setIsImpersonating] = useState(false);
+  const [onlineCollaborators, setOnlineCollaborators] = useState<Collaborator[]>([]);
 
   const fetchUserProfile = useCallback(async (authUser: SupabaseUser | null): Promise<AppUser | null> => {
     if (!authUser) return null;
@@ -185,6 +187,65 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
   }, [fetchUserProfile]);
 
+  useEffect(() => {
+    if (!user) {
+      setOnlineCollaborators([]);
+      return;
+    }
+
+    const channel = supabase.channel('online-users', {
+      config: {
+        presence: {
+          key: user.id,
+        },
+      },
+    });
+
+    channel
+      .on('presence', { event: 'sync' }, () => {
+        const presenceState = channel.presenceState<any>();
+        const userIds = Object.keys(presenceState);
+        
+        if (userIds.length > 0) {
+          supabase
+            .from('profiles')
+            .select('id, first_name, last_name, avatar_url, email')
+            .in('id', userIds)
+            .then(({ data, error }) => {
+              if (error) {
+                console.error('Error fetching online user profiles:', error);
+                return;
+              }
+              const collaborators: Collaborator[] = data.map(profile => {
+                const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
+                return {
+                  id: profile.id,
+                  name: fullName || profile.email || 'Unnamed User',
+                  avatar_url: profile.avatar_url,
+                  initials: getInitials(fullName, profile.email) || 'NN',
+                  email: profile.email,
+                  first_name: profile.first_name,
+                  last_name: profile.last_name,
+                  online: true,
+                };
+              });
+              setOnlineCollaborators(collaborators);
+            });
+        } else {
+          setOnlineCollaborators([]);
+        }
+      })
+      .subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          await channel.track({ online_at: new Date().toISOString() });
+        }
+      });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
+
   const value = {
     user,
     session,
@@ -195,6 +256,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     hasPermission,
     startImpersonation,
     stopImpersonation,
+    onlineCollaborators,
   };
 
   return (
