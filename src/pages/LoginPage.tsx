@@ -157,7 +157,7 @@ const LoginPage = () => {
       <div className="absolute top-0 left-0 w-full h-full bg-black/50 z-10"></div>
       <div className="w-full max-w-4xl grid lg:grid-cols-2 rounded-2xl overflow-hidden shadow-2xl z-20 relative">
         {/* Left Panel */}
-        <div className="hidden lg:flex flex-col justify-between p-12 text-white bg-black/50 backdrop-blur-md">
+        <div className="hidden lg:flex flex-col justify-between p-12 text-white bg-black/80 backdrop-blur-md">
           <div>
             <p className="text-sm font-medium tracking-widest uppercase text-white/80">A Wise Quote</p>
             <div className="w-16 h-px bg-white/50 mt-2"></div>
@@ -169,7 +169,7 @@ const LoginPage = () => {
         </div>
 
         {/* Right Panel */}
-        <div className="bg-black/50 backdrop-blur-md p-8 sm:p-12 flex flex-col justify-center">
+        <div className="bg-black/80 backdrop-blur-md p-8 sm:p-12 flex flex-col justify-center">
           <div className="w-full max-w-md mx-auto">
             <div className="flex items-center gap-2 mb-8">
               <img src="https://quuecudndfztjlxbrvyb.supabase.co/storage/v1/object/public/General/logo.png" alt="7i Portal Logo" className="h-8 w-8" />
