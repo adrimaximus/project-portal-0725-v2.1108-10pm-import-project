@@ -88,8 +88,8 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
   const profileToUse = useMemo(() => {
     if (person) return null; // Edit mode, no pre-fill
     if (selectedProfile) return selectedProfile;
-    return currentUser as unknown as Profile | null;
-  }, [person, selectedProfile, currentUser]);
+    return null;
+  }, [person, selectedProfile]);
 
   useEffect(() => {
     if (open) {
@@ -97,14 +97,14 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
         const { custom_properties, ...personData } = person;
         reset({ ...personData, ...custom_properties });
       } else { // Create mode
-        const profileForDefaults = selectedProfile || (currentUser as unknown as Profile | null);
+        const profileForDefaults = selectedProfile;
         const defaultValues = properties.reduce((acc, prop) => ({ ...acc, [prop.name]: '' }), {});
         
         if (profileForDefaults) {
           reset({
             ...defaultValues,
             full_name: `${profileForDefaults.first_name || ''} ${profileForDefaults.last_name || ''}`.trim(),
-            email: profileForDefaults.email || session?.user?.email || '',
+            email: profileForDefaults.email || '',
             phone: profileForDefaults.phone || '',
             company: '',
             job_title: '',
@@ -113,14 +113,14 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
             address: '',
           });
         } else {
-          reset({ full_name: '', email: session?.user?.email || '', phone: '', company: '', job_title: '', avatar_url: '', notes: '', address: '', ...defaultValues });
+          reset({ full_name: '', email: '', phone: '', company: '', job_title: '', avatar_url: '', notes: '', address: '', ...defaultValues });
         }
       }
     } else {
       // Reset when dialog closes
       setSelectedProfile(null);
     }
-  }, [person, open, reset, properties, selectedProfile, currentUser, session]);
+  }, [person, open, reset, properties, selectedProfile]);
 
   const mutation = useMutation({
     mutationFn: async (values: any) => {
@@ -199,7 +199,7 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
           </div>
           <div className="px-6">
             <Label htmlFor="email">Email</Label>
-            <Input id="email" {...register('email')} readOnly={!!(profileToUse && profileToUse.email) || !!(!person && !selectedProfile && session?.user?.email)} />
+            <Input id="email" {...register('email')} readOnly={!!(profileToUse && profileToUse.email)} />
             {errors.email && <p className="text-sm text-destructive mt-1">{errors.email.message as string}</p>}
           </div>
           <div className="px-6">
