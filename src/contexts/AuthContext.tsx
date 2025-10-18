@@ -92,6 +92,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (_event === 'PASSWORD_RECOVERY') {
+        navigate('/reset-password', { replace: true });
+      }
       if (_event === 'SIGNED_OUT') {
         SafeLocalStorage.removeItem(IMPERSONATION_KEY);
         SafeLocalStorage.removeItem(ORIGINAL_SESSION_KEY);
@@ -103,7 +106,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [navigate]);
 
   useEffect(() => {
     if (!isLoading && !isUserLoading && user && session) {
