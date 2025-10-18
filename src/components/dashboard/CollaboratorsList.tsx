@@ -51,25 +51,14 @@ const CollaboratorsList = () => {
   const [isOpen, setIsOpen] = useState(false);
   const { user } = useAuth();
 
-  const { data: projectIds, isLoading: isLoadingProjectIds } = useQuery<string[]>({
-    queryKey: ['allProjectIdsForStats', user?.id],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('projects').select('id');
-      if (error) throw error;
-      return data.map(p => p.id);
-    },
-    enabled: !!user,
-  });
-
   const { data: collaboratorStats, isLoading: isLoadingStats } = useQuery<CollaboratorStatData[]>({
-    queryKey: ['collaboratorStats', projectIds],
+    queryKey: ['collaboratorStats', user?.id],
     queryFn: async () => {
-      if (!projectIds || projectIds.length === 0) return [];
-      const { data, error } = await supabase.rpc('get_collaborator_stats', { p_project_ids: projectIds });
+      const { data, error } = await supabase.rpc('get_collaborator_stats');
       if (error) throw error;
       return data;
     },
-    enabled: !!projectIds && projectIds.length > 0,
+    enabled: !!user,
   });
 
   const userIds = useMemo(() => collaboratorStats?.map((s) => s.user_id) || [], [collaboratorStats]);
