@@ -121,10 +121,18 @@ const LoginPage = () => {
   const handleGoogleLogin = async () => {
     setGoogleLoading(true);
     try {
+      const redirectURL = import.meta.env.VITE_APP_URL;
+      if (!redirectURL) {
+        throw new Error("VITE_APP_URL is not defined in your environment variables. Please configure it in the Dyad settings.");
+      }
+
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${import.meta.env.VITE_APP_URL}/auth/callback`,
+          redirectTo: `${redirectURL}/auth/callback`,
+          queryParams: {
+            prompt: 'consent',
+          }
         },
       });
       if (error) {
@@ -132,7 +140,9 @@ const LoginPage = () => {
         setGoogleLoading(false);
       }
     } catch (error: any) {
-      toast.error("An unexpected error occurred with Google sign-in.");
+      toast.error("An unexpected error occurred with Google sign-in.", {
+        description: error.message,
+      });
       console.error("Google login error:", error);
       setGoogleLoading(false);
     }
