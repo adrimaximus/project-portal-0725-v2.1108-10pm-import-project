@@ -84,7 +84,7 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
     }
   }, [filteredProperties, baseSchema]);
 
-  const { register, handleSubmit, reset, formState: { errors }, control } = useForm({
+  const { register, handleSubmit, reset, formState: { errors }, control, setValue } = useForm({
     resolver: zodResolver(dynamicSchema),
   });
 
@@ -97,27 +97,23 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
         const lastName = nameParts.slice(1).join(' ') || '';
         reset({ ...personData, first_name: firstName, last_name: lastName, ...custom_properties, company_id: person.company_id });
       } else { // Create mode
-        const profileForDefaults = selectedProfile;
         const defaultValues = filteredProperties.reduce((acc, prop) => ({ ...acc, [prop.name]: '' }), {});
-        
-        if (profileForDefaults) {
-          reset({
-            ...defaultValues,
-            first_name: profileForDefaults.first_name || '',
-            last_name: profileForDefaults.last_name || '',
-            email: profileForDefaults.email || '',
-            phone: profileForDefaults.phone || '',
-            company_id: null,
-          });
-        } else {
-          reset({ first_name: '', last_name: '', email: '', phone: '', company_id: null, ...defaultValues });
-        }
+        reset({ first_name: '', last_name: '', email: '', phone: '', company_id: null, ...defaultValues });
       }
     } else {
       // Reset when dialog closes
       setSelectedProfile(null);
     }
-  }, [person, open, reset, filteredProperties, selectedProfile]);
+  }, [person, open, reset, filteredProperties]);
+
+  useEffect(() => {
+    if (selectedProfile && !person) { // Only pre-fill in create mode
+        setValue('first_name', selectedProfile.first_name || '', { shouldValidate: true });
+        setValue('last_name', selectedProfile.last_name || '', { shouldValidate: true });
+        setValue('email', selectedProfile.email || '', { shouldValidate: true });
+        setValue('phone', selectedProfile.phone || '', { shouldValidate: true });
+    }
+  }, [selectedProfile, person, setValue]);
 
   const mutation = useMutation({
     mutationFn: async (values: any) => {
@@ -216,22 +212,22 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
           <div className="grid grid-cols-2 gap-4 px-6">
             <div>
               <Label htmlFor="first_name">First Name</Label>
-              <Input id="first_name" {...register('first_name')} />
+              <Input id="first_name" {...register('first_name')} disabled={!!selectedProfile?.first_name} />
               {errors.first_name && <p className="text-sm text-destructive mt-1">{errors.first_name.message as string}</p>}
             </div>
             <div>
               <Label htmlFor="last_name">Last Name</Label>
-              <Input id="last_name" {...register('last_name')} />
+              <Input id="last_name" {...register('last_name')} disabled={!!selectedProfile?.last_name} />
             </div>
           </div>
           <div className="px-6">
             <Label htmlFor="email">Email</Label>
-            <Input id="email" {...register('email')} />
+            <Input id="email" {...register('email')} disabled={!!selectedProfile?.email} />
             {errors.email && <p className="text-sm text-destructive mt-1">{errors.email.message as string}</p>}
           </div>
           <div className="px-6">
             <Label htmlFor="phone">Phone</Label>
-            <Input id="phone" {...register('phone')} />
+            <Input id="phone" {...register('phone')} disabled={!!selectedProfile?.phone} />
           </div>
           <div className="px-6">
             <Label htmlFor="company">Company</Label>
