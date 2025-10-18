@@ -118,31 +118,36 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
           const isFromAnotherUser = messagePayload.sender_id !== currentUser.id;
           const isChatActiveAndVisible = isChatPageActiveRef.current && selectedConversationIdRef.current === convo.id;
 
+          // Always update the conversation list for last message previews
           queryClient.invalidateQueries({ queryKey: ['conversations', currentUser.id] });
 
-          const sender = convo.members.find(m => m.id === messagePayload.sender_id);
-          if (sender) {
-            const newMessage: Message = {
-              id: messagePayload.id,
-              text: messagePayload.content,
-              timestamp: messagePayload.created_at,
-              sender: sender,
-              attachment: messagePayload.attachment_url ? { name: messagePayload.attachment_name, url: messagePayload.attachment_url, type: messagePayload.attachment_type } : undefined,
-              reply_to_message_id: messagePayload.reply_to_message_id,
-              reactions: [],
-              is_deleted: false,
-              is_forwarded: messagePayload.is_forwarded || false,
-            };
+          // Optimistically update the messages list if the chat is visible
+          if (isChatActiveAndVisible) {
+            const sender = convo.members.find(m => m.id === messagePayload.sender_id);
+            if (sender) {
+              const newMessage: Message = {
+                id: messagePayload.id,
+                text: messagePayload.content,
+                timestamp: messagePayload.created_at,
+                sender: sender,
+                attachment: messagePayload.attachment_url ? { name: messagePayload.attachment_name, url: messagePayload.attachment_url, type: messagePayload.attachment_type } : undefined,
+                reply_to_message_id: messagePayload.reply_to_message_id,
+                reactions: [],
+                is_deleted: false,
+                is_forwarded: messagePayload.is_forwarded || false,
+              };
 
-            queryClient.setQueryData(['messages', convo.id], (oldData: Message[] | undefined) => {
-              const data = oldData || [];
-              if (data.some(m => m.id === newMessage.id)) {
-                return data.map(m => m.id === newMessage.id ? { ...m, ...newMessage, isOptimistic: false } : m);
-              }
-              return [...data, newMessage];
-            });
-          } else {
-            queryClient.invalidateQueries({ queryKey: ['messages', convo.id] });
+              queryClient.setQueryData(['messages', convo.id], (oldData: Message[] | undefined) => {
+                const data = oldData || [];
+                if (data.some(m => m.id === newMessage.id)) {
+                  return data;
+                }
+                return [...data, newMessage];
+              });
+            } else {
+              // Fallback to invalidation if sender info isn't available
+              queryClient.invalidateQueries({ queryKey: ['messages', convo.id] });
+            }
           }
 
           if (isFromAnotherUser && !isChatActiveAndVisible) {
@@ -190,7 +195,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
   }, [conversations, searchTerm, messageSearchResults]);
 
   const sendMessageMutation = useMutation({
-    mutationFn: async (variables: { text: string, attachmentFile: File | null, replyToMessageId?: string | null, tempId: string }) => {
+    mutationFn: async (variables: { text: string, attachmentFile: File | null, replyToMessageId?: string | null }) => {
       let attachmentUrl: string | null = null;
       let attachmentName: string | null = null;
       let attachmentType: string | null = null;
@@ -198,7 +203,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
       if (variables.attachmentFile && currentUser && selectedConversationId) {
         const file = variables.attachmentFile;
         const sanitizedFileName = file.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
-        const filePath = `${selectedConversationId}/${variables.tempId}-${sanitizedFileName}`;
+        const filePath = `${selectedConversationId}/${uuidv4()}-${sanitizedFileName}`;
         const { error: uploadError } = await supabase.storage.from('chat-attachments').upload(filePath, file);
         if (uploadError) throw new Error(`Failed to upload attachment: ${uploadError.message}`);
         
@@ -209,7 +214,6 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
       }
       
       await sendHybridMessage({
-        id: variables.tempId,
         conversationId: selectedConversationId!,
         senderId: currentUser!.id,
         text: variables.text,
@@ -218,31 +222,8 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         attachmentType,
         replyToMessageId: variables.replyToMessageId,
       });
-      return { finalAttachmentUrl: attachmentUrl, tempId: variables.tempId };
     },
-    onSuccess: ({ finalAttachmentUrl, tempId }) => {
-      queryClient.setQueryData<Message[]>(['messages', selectedConversationId], (old = []) =>
-        old.map(msg => {
-          if (msg.id === tempId) {
-            return {
-              ...msg,
-              isOptimistic: false,
-              attachment: finalAttachmentUrl && msg.attachment
-                ? { ...msg.attachment, url: finalAttachmentUrl }
-                : msg.attachment,
-            };
-          }
-          return msg;
-        })
-      );
-      queryClient.invalidateQueries({ queryKey: ['conversations', currentUser?.id] });
-    },
-    onError: (error: any, variables) => {
-      toast.error("Failed to send message.", { description: error.message });
-      queryClient.setQueryData<Message[]>(['messages', selectedConversationId], (old = []) =>
-        old.filter(msg => msg.id !== variables.tempId)
-      );
-    },
+    onError: (error: any) => toast.error("Failed to send message.", { description: error.message }),
   });
 
   const forwardMessageMutation = useMutation({
@@ -391,32 +372,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
   }, [selectedConversationId, conversations, messages]);
 
   const sendMessage = (text: string, attachmentFile: File | null, replyToMessageId?: string | null) => {
-    if (!currentUser || !selectedConversationId) return;
-
-    const tempId = uuidv4();
-    
-    const tempMessage: Message = {
-      id: tempId,
-      text: text,
-      timestamp: new Date().toISOString(),
-      sender: {
-        id: currentUser.id,
-        name: currentUser.name || '',
-        email: currentUser.email || '',
-        avatar_url: currentUser.avatar_url,
-        initials: currentUser.initials || 'ME',
-      },
-      attachment: attachmentFile ? { name: attachmentFile.name, url: URL.createObjectURL(attachmentFile), type: attachmentFile.type } : undefined,
-      reply_to_message_id: replyToMessageId,
-      reactions: [],
-      is_deleted: false,
-      is_forwarded: false,
-      isOptimistic: true,
-    };
-
-    queryClient.setQueryData<Message[]>(['messages', selectedConversationId], (old = []) => [...old, tempMessage]);
-
-    sendMessageMutation.mutate({ text, attachmentFile, replyToMessageId, tempId });
+    sendMessageMutation.mutate({ text, attachmentFile, replyToMessageId });
   };
 
   const toggleReaction = (messageId: string, emoji: string) => {
