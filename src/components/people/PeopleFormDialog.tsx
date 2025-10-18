@@ -101,7 +101,9 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
     }
   }, [filteredProperties, baseSchema]);
 
-  const { register, handleSubmit, reset, formState: { errors }, control, setValue } = useForm({
+  type PropertyFormValues = z.infer<typeof dynamicSchema>;
+
+  const { register, handleSubmit, reset, formState: { errors }, control, setValue } = useForm<PropertyFormValues>({
     resolver: zodResolver(dynamicSchema),
   });
 
@@ -132,8 +134,8 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
     }
   }, [selectedProfile, person, setValue]);
 
-  const mutation = useMutation({
-    mutationFn: async (values: any) => {
+  const mutation = useMutation<Person, Error, PropertyFormValues>({
+    mutationFn: async (values: PropertyFormValues): Promise<Person> => {
       if (selectedProfile && !person) { // Creating a new person from a profile
         const { data: existingPerson, error: fetchError } = await supabase
             .from('people')
@@ -160,7 +162,7 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
 
       for (const key in values) {
         if (!standardFields.includes(key)) {
-          custom_properties[key] = values[key];
+          custom_properties[key] = (values as any)[key];
         }
       }
       
@@ -176,9 +178,9 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
         p_contact: contactJson,
         p_company_id: values.company_id,
         p_job_title: person?.job_title || null,
-        p_department: values.department,
+        p_department: person?.department || null,
         p_social_media: person?.social_media || {},
-        p_birthday: values.birthday,
+        p_birthday: person?.birthday || null,
         p_notes: person?.notes || null,
         p_project_ids: person?.projects?.map(p => p.id) || [],
         p_existing_tag_ids: person?.tags?.map(t => t.id) || [],
@@ -194,26 +196,27 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
 
       const { data, error } = await supabase.rpc(rpcName, rpcParams).single();
       if (error) throw error;
+      const resultData = data as any;
 
       if (selectedProfile && !person) {
         const { error: updateError } = await supabase
             .from('people')
             .update({ user_id: selectedProfile.id })
-            .eq('id', data.id);
+            .eq('id', resultData.id);
         
         if (updateError) {
             throw updateError;
         }
-        data.user_id = selectedProfile.id;
+        resultData.user_id = selectedProfile.id;
       }
 
-      return data;
+      return resultData as Person;
     },
     onSuccess: (data) => {
       toast.success(`Person ${person ? 'updated' : 'created'} successfully.`);
       queryClient.invalidateQueries({ queryKey: ['people'] });
       if (onSuccess) {
-        onSuccess(data as Person);
+        onSuccess(data);
       }
       onOpenChange(false);
     },
@@ -222,7 +225,7 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
     },
   });
 
-  const onSubmit = (data: any) => {
+  const onSubmit = (data: PropertyFormValues) => {
     mutation.mutate(data);
   };
 
