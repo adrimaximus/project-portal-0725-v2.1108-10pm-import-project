@@ -10,7 +10,6 @@ import { useFeatures } from "@/contexts/FeaturesContext";
 import TagsCard from "@/components/settings/TagsCard";
 import ThemeCard from "@/components/settings/ThemeCard";
 import ServicesCard from "@/components/settings/ServicesCard";
-import NotificationsCard from "@/components/settings/NotificationsCard";
 
 const WorkspaceSettingsCard = () => {
   const navigate = useNavigate();
@@ -49,7 +48,6 @@ const SettingsPage = () => {
           <NavigationCard />
           <TagsCard />
           <ThemeCard />
-          <NotificationsCard />
           
           {/* Conditionally available */}
           {isFeatureEnabled('integrations') && hasPermission('settings:manage_integrations') && <IntegrationCard />}

@@ -1,273 +1,245 @@
-"use client";
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { User, Collaborator } from '@/types';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { RealtimeChannel, Session } from '@supabase/supabase-js';
+import { toast } from 'sonner';
+import SafeLocalStorage from '@/lib/localStorage';
+import { useNavigate, useLocation } from 'react-router-dom';
 
-import {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-  ReactNode,
-  useCallback,
-} from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { Session, User as SupabaseUser } from "@supabase/supabase-js";
-import { User as AppUser, Collaborator } from "@/types";
-import { getInitials } from "@/lib/utils";
-import { toast } from "sonner";
-import SafeLocalStorage from "@/lib/localStorage";
-
-interface AuthContextType {
-  user: AppUser | null;
+type AuthContextType = {
+  user: User | null;
   session: Session | null;
   isLoading: boolean;
-  isImpersonating: boolean;
-  refreshUser: () => Promise<void>;
-  logout: () => Promise<void>;
-  hasPermission: (permission: string) => boolean;
-  startImpersonation: (targetUser: AppUser) => Promise<void>;
-  stopImpersonation: () => Promise<void>;
   onlineCollaborators: Collaborator[];
-}
+  logout: () => Promise<void>;
+  refreshUser: () => Promise<void>;
+  hasPermission: (permission: string) => boolean;
+  isImpersonating: boolean;
+  startImpersonation: (targetUser: User) => Promise<void>;
+  stopImpersonation: () => Promise<void>;
+};
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const IMPERSONATION_KEY = 'impersonation_active';
+const ORIGINAL_SESSION_KEY = 'original_session';
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<AppUser | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isImpersonating, setIsImpersonating] = useState(false);
   const [onlineCollaborators, setOnlineCollaborators] = useState<Collaborator[]>([]);
+  const [channel, setChannel] = useState<RealtimeChannel | null>(null);
+  const [isImpersonating, setIsImpersonating] = useState(false);
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const location = useLocation();
 
-  const fetchUserProfile = useCallback(async (authUser: SupabaseUser | null): Promise<AppUser | null> => {
-    if (!authUser) return null;
-    
-    const { data, error } = await supabase
-      .rpc('get_user_profile_with_permissions', { p_user_id: authUser.id })
-      .single();
+  const fetchUserProfile = async (userId: string | undefined) => {
+    if (!userId) return null;
+
+    const tryFetch = async () => {
+        const { data, error } = await supabase
+            .rpc('get_user_profile_with_permissions', { p_user_id: userId })
+            .single();
+        return { data, error };
+    };
+
+    let { data, error } = await tryFetch();
+
+    // If no profile found (PGRST116), it might be a new user whose profile is being created.
+    // Retry once after a short delay to handle potential race conditions with the new_user trigger.
+    if (error && error.code === 'PGRST116') {
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
+        const retryResult = await tryFetch();
+        data = retryResult.data;
+        error = retryResult.error;
+    }
 
     if (error) {
-      console.error("Error fetching user profile with permissions:", error);
-      // Fallback to basic profile fetch if RPC fails
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', authUser.id)
-        .single();
-      
-      if (profileError) {
-        console.error("Fallback profile fetch also failed:", profileError);
-        return null;
+      console.error('Error fetching user profile with permissions:', error);
+      if (error.code === 'PGRST116') {
+        console.warn("User profile not found, this might be a new user. The app will keep trying to fetch it.");
       }
-      
-      const fullName = `${profileData.first_name || ''} ${profileData.last_name || ''}`.trim();
-      return {
-        ...profileData,
-        name: fullName || profileData.email,
-        initials: getInitials(fullName, profileData.email),
-        permissions: [],
-      } as AppUser;
+      return null;
     }
     
-    return data as AppUser;
-  }, []);
-
-  const refreshUser = useCallback(async () => {
-    const { data: { user: authUser } } = await supabase.auth.getUser();
-    if (authUser) {
-      const profile = await fetchUserProfile(authUser);
-      setUser(profile);
-      if (profile) {
-        SafeLocalStorage.setItem('lastUserName', profile.name);
-      }
+    const userProfile = data as User;
+    if (userProfile.first_name || userProfile.last_name) {
+      SafeLocalStorage.setItem('lastUserName', `${userProfile.first_name || ''} ${userProfile.last_name || ''}`.trim());
     }
-  }, [fetchUserProfile]);
-  
-  const stopImpersonation = async () => {
-    const originalSession = SafeLocalStorage.getItem<{ access_token: string, refresh_token: string | undefined }>('original_session');
-    if (originalSession) {
-      const { error } = await supabase.auth.setSession({
-        access_token: originalSession.access_token,
-        refresh_token: originalSession.refresh_token!,
-      });
-      SafeLocalStorage.removeItem('original_session');
-      setIsImpersonating(false);
-      if (error) {
-        toast.error("Failed to restore session. Please log in again.");
-        await supabase.auth.signOut();
-      } else {
-        toast.info("Returned to your original session.");
-      }
-    }
+    return userProfile;
   };
 
-  const logout = async () => {
-    await stopImpersonation();
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      toast.error("Logout failed", { description: error.message });
+  const { data: user, isLoading: isUserLoading, refetch: refreshUser } = useQuery({
+    queryKey: ['userProfile', session?.user?.id],
+    queryFn: () => fetchUserProfile(session?.user?.id),
+    enabled: !!session?.user?.id,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  useEffect(() => {
+    const checkImpersonation = () => {
+      const impersonating = SafeLocalStorage.getItem(IMPERSONATION_KEY);
+      setIsImpersonating(!!impersonating);
+    };
+
+    checkImpersonation();
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setIsLoading(false);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (_event === 'PASSWORD_RECOVERY') {
+        navigate('/reset-password', { replace: true });
+      }
+      if (_event === 'SIGNED_OUT') {
+        SafeLocalStorage.removeItem(IMPERSONATION_KEY);
+        SafeLocalStorage.removeItem(ORIGINAL_SESSION_KEY);
+        setIsImpersonating(false);
+      }
+      setSession(session);
+      checkImpersonation();
+      setIsLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
+  }, [navigate]);
+
+  useEffect(() => {
+    if (!isLoading && !isUserLoading && user && session) {
+      const from = (location.state as any)?.from?.pathname || '/dashboard';
+      if (location.pathname === '/login' || location.pathname === '/' || location.pathname === '/auth/callback') {
+        navigate(from, { replace: true });
+      }
     }
+  }, [user, isLoading, isUserLoading, session, navigate, location]);
+
+  useEffect(() => {
+    if (user && !channel) {
+      const newChannel = supabase.channel(`online-users`, {
+        config: {
+          presence: {
+            key: user.id,
+          },
+        },
+      });
+
+      newChannel
+        .on('presence', { event: 'sync' }, () => {
+          const newState = newChannel.presenceState<Collaborator>();
+          const collaborators = Object.values(newState)
+            .flat()
+            .filter(c => c.id !== user.id);
+          setOnlineCollaborators(collaborators);
+        })
+        .subscribe(async (status) => {
+          if (status === 'SUBSCRIBED') {
+            await newChannel.track({
+              id: user.id,
+              name: `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email,
+              initials: `${user.first_name?.[0] || ''}${user.last_name?.[0] || ''}`.toUpperCase(),
+              avatar_url: user.avatar_url,
+            });
+          }
+        });
+      
+      setChannel(newChannel);
+    }
+
+    return () => {
+      if (channel) {
+        supabase.removeChannel(channel);
+        setChannel(null);
+      }
+    };
+  }, [user, channel]);
+
+  const logout = async () => {
+    await supabase.auth.signOut({ scope: 'local' });
+    queryClient.clear();
   };
 
   const hasPermission = useCallback((permission: string): boolean => {
-    if (!user || !user.permissions) {
-      return false;
-    }
-    if (user.permissions.includes('*')) {
+    if (!user) return false;
+    if (user.role === 'master admin' || user.permissions?.includes('*')) {
       return true;
     }
-    const [module, action] = permission.split(':');
-    if (action) {
-      if (user.permissions.includes(`${module}:*`)) {
-        return true;
-      }
-    }
-    return user.permissions.includes(permission);
+    return user.permissions?.includes(permission) ?? false;
   }, [user]);
 
-  const startImpersonation = async (targetUser: AppUser) => {
+  const startImpersonation = async (targetUser: User) => {
     if (!session) {
       toast.error("You must be logged in to impersonate.");
       return;
     }
     try {
-      const originalSession = {
-        access_token: session.access_token,
-        refresh_token: session.refresh_token,
-      };
-      SafeLocalStorage.setItem('original_session', originalSession);
-
       const { data, error } = await supabase.functions.invoke('impersonate-user', {
         body: { target_user_id: targetUser.id },
       });
+
       if (error) throw error;
+
+      SafeLocalStorage.setItem(ORIGINAL_SESSION_KEY, session);
+      SafeLocalStorage.setItem(IMPERSONATION_KEY, true);
 
       const { error: sessionError } = await supabase.auth.setSession({
         access_token: data.access_token,
         refresh_token: data.refresh_token,
       });
+
       if (sessionError) throw sessionError;
 
       setIsImpersonating(true);
       toast.success(`Now viewing as ${targetUser.name}.`);
     } catch (error: any) {
       toast.error("Failed to impersonate user.", { description: error.message });
-      SafeLocalStorage.removeItem('original_session');
     }
   };
 
-  useEffect(() => {
-    const getInitialSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setSession(session);
-      const profile = await fetchUserProfile(session?.user ?? null);
-      setUser(profile);
-      setIsImpersonating(!!SafeLocalStorage.getItem('original_session'));
-      setIsLoading(false);
-    };
-
-    getInitialSession();
-
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        setSession(session);
-        const profile = await fetchUserProfile(session?.user ?? null);
-        setUser(profile);
-        setIsImpersonating(!!SafeLocalStorage.getItem('original_session'));
-        if (_event === 'SIGNED_IN' || _event === 'USER_UPDATED' || _event === 'TOKEN_REFRESHED') {
-          setIsLoading(false);
-        }
-        if (_event === 'SIGNED_OUT') {
-          setUser(null);
-          setIsLoading(false);
-        }
-      }
-    );
-
-    return () => {
-      authListener.subscription.unsubscribe();
-    };
-  }, [fetchUserProfile]);
-
-  useEffect(() => {
-    if (!user) {
-      setOnlineCollaborators([]);
+  const stopImpersonation = async () => {
+    const originalSession = SafeLocalStorage.getItem<Session>(ORIGINAL_SESSION_KEY);
+    if (!originalSession) {
+      toast.error("Original session not found. Please log out and log back in.");
       return;
     }
 
-    const channel = supabase.channel('online-users', {
-      config: {
-        presence: {
-          key: user.id,
-        },
-      },
-    });
+    const { error } = await supabase.auth.setSession(originalSession);
+    if (error) {
+      toast.error("Failed to restore original session.", { description: error.message });
+      return;
+    }
 
-    channel
-      .on('presence', { event: 'sync' }, () => {
-        const presenceState = channel.presenceState<any>();
-        const userIds = Object.keys(presenceState);
-        
-        if (userIds.length > 0) {
-          supabase
-            .from('profiles')
-            .select('id, first_name, last_name, avatar_url, email')
-            .in('id', userIds)
-            .then(({ data, error }) => {
-              if (error) {
-                console.error('Error fetching online user profiles:', error);
-                return;
-              }
-              const collaborators: Collaborator[] = data.map(profile => {
-                const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
-                return {
-                  id: profile.id,
-                  name: fullName || profile.email || 'Unnamed User',
-                  avatar_url: profile.avatar_url,
-                  initials: getInitials(fullName, profile.email) || 'NN',
-                  email: profile.email,
-                  first_name: profile.first_name,
-                  last_name: profile.last_name,
-                  online: true,
-                };
-              });
-              setOnlineCollaborators(collaborators);
-            });
-        } else {
-          setOnlineCollaborators([]);
-        }
-      })
-      .subscribe(async (status) => {
-        if (status === 'SUBSCRIBED') {
-          await channel.track({ online_at: new Date().toISOString() });
-        }
-      });
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user]);
-
-  const value = {
-    user,
-    session,
-    isLoading,
-    isImpersonating,
-    refreshUser,
-    logout,
-    hasPermission,
-    startImpersonation,
-    stopImpersonation,
-    onlineCollaborators,
+    SafeLocalStorage.removeItem(IMPERSONATION_KEY);
+    SafeLocalStorage.removeItem(ORIGINAL_SESSION_KEY);
+    setIsImpersonating(false);
+    toast.info("Returned to your original session.");
   };
 
   return (
-    <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+    <AuthContext.Provider value={{ 
+      user: user || null, 
+      session, 
+      isLoading: isLoading || isUserLoading, 
+      onlineCollaborators,
+      logout,
+      refreshUser: async () => { await refreshUser() },
+      hasPermission,
+      isImpersonating,
+      startImpersonation,
+      stopImpersonation,
+    }}>
+      {children}
+    </AuthContext.Provider>
   );
 };
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider");
+    throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
 };

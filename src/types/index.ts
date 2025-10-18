@@ -56,7 +56,6 @@ export interface User {
   people_kanban_settings?: any;
   theme?: string;
   phone?: string;
-  notification_preferences?: Record<string, any>;
 }
 
 export interface Person {
