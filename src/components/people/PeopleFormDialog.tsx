@@ -58,7 +58,6 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
     phone: z.string().optional(),
     company: z.string().optional(),
     job_title: z.string().optional(),
-    notes: z.string().optional(),
   });
 
   const [dynamicSchema, setDynamicSchema] = React.useState<z.AnyZodObject>(baseSchema);
@@ -112,10 +111,9 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
             phone: profileForDefaults.phone || '',
             company: '',
             job_title: '',
-            notes: '',
           });
         } else {
-          reset({ full_name: '', email: '', phone: '', company: '', job_title: '', notes: '', ...defaultValues });
+          reset({ full_name: '', email: '', phone: '', company: '', job_title: '', ...defaultValues });
         }
       }
     } else {
@@ -129,7 +127,7 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
       const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'master admin';
       const isEditingLinkedUser = person && person.user_id && isAdmin;
 
-      const standardFields = ['full_name', 'email', 'phone', 'company', 'job_title', 'notes', 'avatar_url'];
+      const standardFields = ['full_name', 'email', 'phone', 'company', 'job_title', 'avatar_url'];
       const personData: Partial<Person> = {};
       const custom_properties: Record<string, any> = {};
 
@@ -157,7 +155,7 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
         p_department: values.department,
         p_social_media: person?.social_media || {},
         p_birthday: values.birthday,
-        p_notes: values.notes,
+        p_notes: person?.notes || null,
         p_project_ids: person?.projects?.map(p => p.id) || [],
         p_existing_tag_ids: person?.tags?.map(t => t.id) || [],
         p_custom_tags: [],
@@ -245,10 +243,6 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
           <div className="px-6">
             <Label htmlFor="job_title">Job Title</Label>
             <Input id="job_title" {...register('job_title')} />
-          </div>
-          <div className="px-6">
-            <Label htmlFor="notes">Notes</Label>
-            <Textarea id="notes" {...register('notes')} />
           </div>
 
           {isLoadingProperties ? (
