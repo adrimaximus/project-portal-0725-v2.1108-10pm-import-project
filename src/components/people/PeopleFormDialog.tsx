@@ -5,7 +5,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 import { useForm, Controller } from 'react-hook-form';
@@ -15,6 +14,7 @@ import { ContactProperty, Person } from '@/types';
 import { getErrorMessage } from '@/lib/utils';
 import UserSelector from './UserSelector';
 import { useAuth } from '@/contexts/AuthContext';
+import CompanySelector from './CompanySelector';
 
 // Minimal profile type definition to avoid touching global types.ts
 interface Profile {
@@ -57,7 +57,7 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
     last_name: z.string().optional(),
     email: z.string().email('Invalid email address').optional().or(z.literal('')),
     phone: z.string().optional(),
-    company: z.string().optional(),
+    company_id: z.string().uuid().optional().nullable(),
   });
 
   const [dynamicSchema, setDynamicSchema] = React.useState<z.AnyZodObject>(baseSchema);
@@ -95,7 +95,7 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
         const nameParts = full_name ? full_name.split(' ') : [''];
         const firstName = nameParts[0] || '';
         const lastName = nameParts.slice(1).join(' ') || '';
-        reset({ ...personData, first_name: firstName, last_name: lastName, ...custom_properties });
+        reset({ ...personData, first_name: firstName, last_name: lastName, ...custom_properties, company_id: person.company_id });
       } else { // Create mode
         const profileForDefaults = selectedProfile;
         const defaultValues = filteredProperties.reduce((acc, prop) => ({ ...acc, [prop.name]: '' }), {});
@@ -107,10 +107,10 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
             last_name: profileForDefaults.last_name || '',
             email: profileForDefaults.email || '',
             phone: profileForDefaults.phone || '',
-            company: '',
+            company_id: null,
           });
         } else {
-          reset({ first_name: '', last_name: '', email: '', phone: '', company: '', ...defaultValues });
+          reset({ first_name: '', last_name: '', email: '', phone: '', company_id: null, ...defaultValues });
         }
       }
     } else {
@@ -126,7 +126,7 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
 
       const full_name = `${values.first_name || ''} ${values.last_name || ''}`.trim();
 
-      const standardFields = ['first_name', 'last_name', 'email', 'phone', 'company', 'avatar_url'];
+      const standardFields = ['first_name', 'last_name', 'email', 'phone', 'company_id', 'avatar_url'];
       const custom_properties: Record<string, any> = {};
 
       for (const key in values) {
@@ -145,7 +145,7 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
         p_id: person?.id || null,
         p_full_name: full_name,
         p_contact: contactJson,
-        p_company: values.company,
+        p_company_id: values.company_id,
         p_job_title: person?.job_title || null,
         p_department: values.department,
         p_social_media: person?.social_media || {},
@@ -235,7 +235,16 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
           </div>
           <div className="px-6">
             <Label htmlFor="company">Company</Label>
-            <Input id="company" {...register('company')} />
+            <Controller
+              name="company_id"
+              control={control}
+              render={({ field }) => (
+                <CompanySelector
+                  value={field.value}
+                  onChange={field.onChange}
+                />
+              )}
+            />
           </div>
 
           {isLoadingProperties ? (
