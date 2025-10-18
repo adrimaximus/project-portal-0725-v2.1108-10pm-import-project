@@ -48,6 +48,7 @@ import CompanyPropertiesPage from "./pages/CompanyPropertiesPage";
 import NotificationsPage from "./pages/Notifications";
 import { useCheckAudioPermission } from "./hooks/useCheckAudioPermission";
 import ServicesSettingsPage from "./pages/ServicesSettingsPage";
+import NotificationSettingsPage from "./pages/NotificationSettingsPage";
 
 const App = () => {
   useCheckAudioPermission();
@@ -97,6 +98,7 @@ const App = () => {
         <Route path="/settings/people-properties" element={<ContactPropertiesPage />} />
         <Route path="/settings/company-properties" element={<CompanyPropertiesPage />} />
         <Route path="/settings/services" element={<ServicesSettingsPage />} />
+        <Route path="/settings/notifications" element={<NotificationSettingsPage />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/search" element={<SearchPage />} />
         <Route path="/custom/:slug" element={<CustomPage />} />
