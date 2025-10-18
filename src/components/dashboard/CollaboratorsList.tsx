@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Project, User } from '@/types';
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import {
@@ -22,22 +22,11 @@ import {
 } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ChevronsUpDown } from "lucide-react";
-import { generatePastelColor, getAvatarUrl, getInitials } from '@/lib/utils';
-import { useQuery } from '@tanstack/react-query';
+import { generatePastelColor, getAvatarUrl } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 
 interface CollaboratorsListProps {
   projects: Project[];
-}
-
-interface CollaboratorStatData {
-  user_id: string;
-  project_count: number;
-  upcoming_project_count: number;
-  ongoing_project_count: number;
-  active_task_count: number;
-  active_ticket_count: number;
-  overdue_bill_count: number;
 }
 
 interface CollaboratorStat extends User {
@@ -52,69 +41,95 @@ interface CollaboratorStat extends User {
 
 const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
   const [isOpen, setIsOpen] = useState(false);
-  const projectIds = useMemo(() => projects.map(p => p.id), [projects]);
+  const [tasks, setTasks] = useState<any[]>([]);
 
-  const { data: collaboratorStats, isLoading: isLoadingStats } = useQuery<CollaboratorStatData[]>({
-    queryKey: ['collaboratorStats', projectIds],
-    queryFn: async () => {
-      if (projectIds.length === 0) return [];
-      const { data, error } = await supabase.rpc('get_collaborator_stats', { p_project_ids: projectIds });
-      if (error) throw error;
-      return data;
-    },
-    enabled: projectIds.length > 0,
-  });
+  useEffect(() => {
+    const fetchTasks = async () => {
+      if (!projects || projects.length === 0) {
+        setTasks([]);
+        return;
+      }
+      const projectIds = projects.map(p => p.id);
+      const { data, error } = await supabase.rpc('get_project_tasks', { p_project_ids: projectIds });
+      
+      if (error) {
+        console.error("Error fetching project tasks:", error);
+        setTasks([]);
+      } else {
+        setTasks(data || []);
+      }
+    };
 
-  const userIds = useMemo(() => collaboratorStats?.map((s) => s.user_id) || [], [collaboratorStats]);
-
-  const { data: profiles, isLoading: isLoadingProfiles } = useQuery({
-    queryKey: ['profilesForStats', userIds],
-    queryFn: async () => {
-      if (userIds.length === 0) return [];
-      const { data, error } = await supabase.from('profiles').select('*').in('id', userIds);
-      if (error) throw error;
-      return data;
-    },
-    enabled: userIds.length > 0,
-  });
+    fetchTasks();
+  }, [projects]);
 
   const { collaboratorsByRole, allCollaborators } = useMemo(() => {
-    if (!collaboratorStats || !profiles) return { collaboratorsByRole: {}, allCollaborators: [] };
-
-    const statsMap = new Map(collaboratorStats.map((s) => [s.user_id, s]));
-    const profileMap = new Map(profiles.map(p => [p.id, p]));
-
-    const collaborators = Array.from(statsMap.keys()).map(userId => {
-      const stats = statsMap.get(userId)!;
-      const profile = profileMap.get(userId);
-      if (!profile) return null;
-
-      const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email;
-      
-      const collaboratorData: CollaboratorStat = {
-        id: userId,
-        name: fullName,
-        avatar_url: profile.avatar_url,
-        email: profile.email,
-        initials: getInitials(fullName, profile.email),
-        first_name: profile.first_name,
-        last_name: profile.last_name,
-        role: profile.role || 'member',
-        status: profile.status,
-        updated_at: profile.updated_at,
-        phone: profile.phone,
-        projectCount: stats.project_count,
-        upcomingProjectCount: stats.upcoming_project_count,
-        ongoingProjectCount: stats.ongoing_project_count,
-        activeTaskCount: stats.active_task_count,
-        activeTicketCount: stats.active_ticket_count,
-        overdueBillCount: stats.overdue_bill_count,
-      };
-      return collaboratorData;
-    }).filter((c): c is CollaboratorStat => c !== null);
-
+    const stats: Record<string, CollaboratorStat & { countedProjectIds: Set<string> }> = {};
     const roleHierarchy: Record<string, number> = { 'owner': 1, 'admin': 2, 'editor': 3, 'member': 4 };
-    
+
+    const ensureUser = (user: User) => {
+        if (!stats[user.id]) {
+            stats[user.id] = {
+                ...user,
+                projectCount: 0,
+                upcomingProjectCount: 0,
+                ongoingProjectCount: 0,
+                activeTaskCount: 0,
+                activeTicketCount: 0,
+                overdueBillCount: 0,
+                role: user.role || 'member',
+                countedProjectIds: new Set(),
+            };
+        }
+        return stats[user.id];
+    };
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    projects.forEach(p => {
+        const startDate = p.start_date ? new Date(p.start_date) : null;
+        const isUpcoming = startDate ? startDate > today : false;
+        const isOngoing = !['Completed', 'Cancelled'].includes(p.status);
+        
+        const paymentDueDate = p.payment_due_date ? new Date(p.payment_due_date) : null;
+        const isOverdue = paymentDueDate ? paymentDueDate < today && p.payment_status !== 'Paid' : false;
+
+        p.assignedTo.forEach(user => {
+            const userStat = ensureUser(user);
+            
+            const currentRolePriority = roleHierarchy[userStat.role] || 99;
+            const newRolePriority = roleHierarchy[user.role || 'member'] || 99;
+            if (newRolePriority < currentRolePriority) {
+                userStat.role = user.role || 'member';
+            }
+
+            if (!userStat.countedProjectIds.has(p.id)) {
+                userStat.projectCount++;
+                if (isUpcoming) userStat.upcomingProjectCount++;
+                if (isOngoing) userStat.ongoingProjectCount++;
+                if (isOverdue) userStat.overdueBillCount++;
+                userStat.countedProjectIds.add(p.id);
+            }
+        });
+    });
+
+    (tasks || []).forEach(task => {
+        if (!task.completed) {
+            (task.assignedTo || []).forEach((assignee: User) => {
+                const userStat = ensureUser(assignee);
+                userStat.activeTaskCount++;
+                if (task.origin_ticket_id) {
+                    userStat.activeTicketCount++;
+                }
+            });
+        }
+    });
+
+    const collaborators = Object.values(stats)
+        .map(({ countedProjectIds, ...rest }) => rest)
+        .sort((a, b) => b.projectCount - a.projectCount);
+
     const grouped: Record<string, CollaboratorStat[]> = {};
     collaborators.forEach(collab => {
         const role = collab.role || 'member';
@@ -127,14 +142,14 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
     const orderedGrouped: Record<string, CollaboratorStat[]> = {};
     Object.keys(roleHierarchy).forEach(role => {
         if (grouped[role]) {
-            orderedGrouped[role] = grouped[role].sort((a, b) => b.projectCount - a.projectCount);
+            orderedGrouped[role] = grouped[role];
         }
     });
     
     const flatList = Object.values(orderedGrouped).flat();
 
     return { collaboratorsByRole: orderedGrouped, allCollaborators: flatList };
-  }, [collaboratorStats, profiles]);
+  }, [projects, tasks]);
 
   return (
     <Card>
