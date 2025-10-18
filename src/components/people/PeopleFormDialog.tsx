@@ -13,7 +13,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { ContactProperty, Person } from '@/types';
 import { getErrorMessage } from '@/lib/utils';
-import AddressAutocompleteInput from '../AddressAutocompleteInput';
 import UserSelector from './UserSelector';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -54,9 +53,7 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
     phone: z.string().optional(),
     company: z.string().optional(),
     job_title: z.string().optional(),
-    avatar_url: z.string().url().optional().or(z.literal('')),
     notes: z.string().optional(),
-    address: z.string().optional(),
   });
 
   const [dynamicSchema, setDynamicSchema] = React.useState<z.AnyZodObject>(baseSchema);
@@ -108,12 +105,10 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
             phone: profileForDefaults.phone || '',
             company: '',
             job_title: '',
-            avatar_url: profileForDefaults.avatar_url || '',
             notes: '',
-            address: '',
           });
         } else {
-          reset({ full_name: '', email: '', phone: '', company: '', job_title: '', avatar_url: '', notes: '', address: '', ...defaultValues });
+          reset({ full_name: '', email: '', phone: '', company: '', job_title: '', notes: '', ...defaultValues });
         }
       }
     } else {
@@ -124,7 +119,7 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
 
   const mutation = useMutation({
     mutationFn: async (values: any) => {
-      const standardFields = ['full_name', 'email', 'phone', 'company', 'job_title', 'avatar_url', 'notes', 'address'];
+      const standardFields = ['full_name', 'email', 'phone', 'company', 'job_title', 'notes'];
       const personData: Partial<Person> = {};
       const custom_properties: Record<string, any> = {};
 
@@ -136,6 +131,11 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
         }
       }
       personData.custom_properties = custom_properties;
+
+      // If a profile was selected, use its avatar_url
+      if (selectedProfile && !person) {
+        personData.avatar_url = selectedProfile.avatar_url;
+      }
 
       let data, error;
       if (person) {
@@ -225,24 +225,6 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
           <div className="px-6">
             <Label htmlFor="job_title">Job Title</Label>
             <Input id="job_title" {...register('job_title')} />
-          </div>
-          <div className="px-6">
-            <Label htmlFor="address">Address</Label>
-            <Controller
-              name="address"
-              control={control}
-              render={({ field }) => (
-                <AddressAutocompleteInput
-                  value={field.value || ''}
-                  onChange={field.onChange}
-                />
-              )}
-            />
-          </div>
-          <div className="px-6">
-            <Label htmlFor="avatar_url">Avatar URL</Label>
-            <Input id="avatar_url" {...register('avatar_url')} readOnly={!!(profileToUse && profileToUse.avatar_url)} />
-            {errors.avatar_url && <p className="text-sm text-destructive mt-1">{errors.avatar_url.message as string}</p>}
           </div>
           <div className="px-6">
             <Label htmlFor="notes">Notes</Label>
