@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { ContactProperty } from '@/types';
 import { Loader2 } from 'lucide-react';
 
@@ -21,6 +21,7 @@ interface PropertyFormDialogProps {
 const propertySchema = z.object({
   label: z.string().min(1, "Label is required."),
   type: z.enum(['text', 'email', 'phone', 'url', 'date', 'textarea', 'number', 'image', 'select', 'multi-select', 'checkbox']),
+  options: z.string().optional(),
 });
 
 type PropertyFormValues = z.infer<typeof propertySchema>;
@@ -32,27 +33,37 @@ const PropertyFormDialog = ({ open, onOpenChange, onSave, property, isSaving }: 
     resolver: zodResolver(propertySchema),
   });
 
+  const type = form.watch('type');
+
   useEffect(() => {
     if (open && property) {
       form.reset({
         label: property.label,
         type: property.type,
+        options: Array.isArray((property as any).options) ? (property as any).options.join(', ') : '',
       });
     } else if (open) {
       form.reset({
         label: '',
         type: 'text',
+        options: '',
       });
     }
   }, [property, open, form]);
 
   const onSubmit = (values: PropertyFormValues) => {
     const machineName = values.label.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
-    onSave({
+    const newProperty: any = {
       name: machineName,
       label: values.label,
       type: values.type,
-    });
+    };
+
+    if ((values.type === 'select' || values.type === 'multi-select') && values.options) {
+      newProperty.options = values.options.split(',').map(opt => opt.trim()).filter(Boolean);
+    }
+
+    onSave(newProperty);
   };
 
   return (
@@ -87,11 +98,28 @@ const PropertyFormDialog = ({ open, onOpenChange, onSave, property, isSaving }: 
                     <SelectItem value="phone">Phone</SelectItem>
                     <SelectItem value="url">URL</SelectItem>
                     <SelectItem value="image">Image</SelectItem>
+                    <SelectItem value="select">Select</SelectItem>
+                    <SelectItem value="multi-select">Multi-select</SelectItem>
+                    <SelectItem value="checkbox">Checkbox</SelectItem>
                   </SelectContent>
                 </Select>
                 <FormMessage />
               </FormItem>
             )} />
+            {(type === 'select' || type === 'multi-select') && (
+              <FormField control={form.control} name="options" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Options</FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder="e.g., Option 1, Option 2" />
+                  </FormControl>
+                  <FormDescription>
+                    Enter comma-separated values for the select options.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )} />
+            )}
             <DialogFooter className="pt-4">
               <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={isSaving}>Cancel</Button>
               <Button type="submit" disabled={isSaving}>
