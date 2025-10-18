@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import SafeLocalStorage from '@/lib/localStorage';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import { Link } from 'react-router-dom';
 
 const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" {...props}>
@@ -189,20 +190,29 @@ const LoginPage = () => {
                       className="pl-10 h-12 bg-gray-800/50 border-gray-700 text-white focus:ring-primary"
                     />
                   </div>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                    <Input
-                      id="password"
-                      type={showPassword ? "text" : "password"}
-                      placeholder="Password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                      className="pl-10 h-12 bg-gray-800/50 border-gray-700 text-white focus:ring-primary"
-                    />
-                    <Button type="button" variant="ghost" size="icon" className="absolute inset-y-0 right-0 h-full px-3 text-gray-400 hover:text-white" onClick={() => setShowPassword(!showPassword)}>
-                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </Button>
+                  <div className="space-y-2">
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                      <Input
+                        id="password"
+                        type={showPassword ? "text" : "password"}
+                        placeholder="Password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                        className="pl-10 h-12 bg-gray-800/50 border-gray-700 text-white focus:ring-primary"
+                      />
+                      <Button type="button" variant="ghost" size="icon" className="absolute inset-y-0 right-0 h-full px-3 text-gray-400 hover:text-white" onClick={() => setShowPassword(!showPassword)}>
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                    <div className="text-right">
+                      <Button asChild variant="link" className="px-0 text-gray-400 hover:text-white h-auto text-sm">
+                        <Link to="/forgot-password">
+                          Forgot Password?
+                        </Link>
+                      </Button>
+                    </div>
                   </div>
                   <Button type="submit" className="w-full h-12 text-base" disabled={loading}>
                     {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Sign In'}
