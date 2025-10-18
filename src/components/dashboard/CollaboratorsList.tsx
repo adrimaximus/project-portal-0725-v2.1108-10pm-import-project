@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Project, User } from '@/types';
+import { User } from '@/types';
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import {
   Collapsible,
@@ -25,10 +25,7 @@ import { ChevronsUpDown } from "lucide-react";
 import { generatePastelColor, getAvatarUrl, getInitials } from '@/lib/utils';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-
-interface CollaboratorsListProps {
-  projects: Project[];
-}
+import { useAuth } from '@/contexts/AuthContext';
 
 interface CollaboratorStatData {
   user_id: string;
@@ -50,19 +47,29 @@ interface CollaboratorStat extends User {
   role: string;
 }
 
-const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
+const CollaboratorsList = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const projectIds = useMemo(() => projects.map(p => p.id), [projects]);
+  const { user } = useAuth();
+
+  const { data: projectIds, isLoading: isLoadingProjectIds } = useQuery<string[]>({
+    queryKey: ['allProjectIdsForStats', user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('projects').select('id');
+      if (error) throw error;
+      return data.map(p => p.id);
+    },
+    enabled: !!user,
+  });
 
   const { data: collaboratorStats, isLoading: isLoadingStats } = useQuery<CollaboratorStatData[]>({
     queryKey: ['collaboratorStats', projectIds],
     queryFn: async () => {
-      if (projectIds.length === 0) return [];
+      if (!projectIds || projectIds.length === 0) return [];
       const { data, error } = await supabase.rpc('get_collaborator_stats', { p_project_ids: projectIds });
       if (error) throw error;
       return data;
     },
-    enabled: projectIds.length > 0,
+    enabled: !!projectIds && projectIds.length > 0,
   });
 
   const userIds = useMemo(() => collaboratorStats?.map((s) => s.user_id) || [], [collaboratorStats]);
