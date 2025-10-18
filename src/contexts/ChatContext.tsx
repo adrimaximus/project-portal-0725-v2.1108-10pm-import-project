@@ -108,47 +108,18 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     const subscriptions = conversations.map(convo => {
       return subscribeToConversation({
         conversationId: convo.id,
-        onNewMessage: (messagePayload) => {
-          if (recentlyProcessedIds.current.has(messagePayload.id)) {
+        onNewMessage: (message) => {
+          if (recentlyProcessedIds.current.has(message.id)) {
             return;
           }
-          recentlyProcessedIds.current.add(messagePayload.id);
-          setTimeout(() => recentlyProcessedIds.current.delete(messagePayload.id), 2000);
+          recentlyProcessedIds.current.add(message.id);
+          setTimeout(() => recentlyProcessedIds.current.delete(message.id), 2000);
 
-          const isFromAnotherUser = messagePayload.sender_id !== currentUser.id;
-          const isChatActiveAndVisible = isChatPageActiveRef.current && selectedConversationIdRef.current === convo.id;
-
-          // Always update the conversation list for last message previews
+          queryClient.invalidateQueries({ queryKey: ['messages', convo.id] });
           queryClient.invalidateQueries({ queryKey: ['conversations', currentUser.id] });
 
-          // Optimistically update the messages list if the chat is visible
-          if (isChatActiveAndVisible) {
-            const sender = convo.members.find(m => m.id === messagePayload.sender_id);
-            if (sender) {
-              const newMessage: Message = {
-                id: messagePayload.id,
-                text: messagePayload.content,
-                timestamp: messagePayload.created_at,
-                sender: sender,
-                attachment: messagePayload.attachment_url ? { name: messagePayload.attachment_name, url: messagePayload.attachment_url, type: messagePayload.attachment_type } : undefined,
-                reply_to_message_id: messagePayload.reply_to_message_id,
-                reactions: [],
-                is_deleted: false,
-                is_forwarded: messagePayload.is_forwarded || false,
-              };
-
-              queryClient.setQueryData(['messages', convo.id], (oldData: Message[] | undefined) => {
-                const data = oldData || [];
-                if (data.some(m => m.id === newMessage.id)) {
-                  return data;
-                }
-                return [...data, newMessage];
-              });
-            } else {
-              // Fallback to invalidation if sender info isn't available
-              queryClient.invalidateQueries({ queryKey: ['messages', convo.id] });
-            }
-          }
+          const isFromAnotherUser = message.sender_id !== currentUser.id;
+          const isChatActiveAndVisible = isChatPageActiveRef.current && selectedConversationIdRef.current === convo.id;
 
           if (isFromAnotherUser && !isChatActiveAndVisible) {
             playSound();
