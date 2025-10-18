@@ -53,7 +53,8 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
   }, [properties]);
 
   const baseSchema = z.object({
-    full_name: z.string().min(1, 'Full name is required'),
+    first_name: z.string().min(1, 'First name is required'),
+    last_name: z.string().optional(),
     email: z.string().email('Invalid email address').optional().or(z.literal('')),
     phone: z.string().optional(),
     company: z.string().optional(),
@@ -87,17 +88,14 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
     resolver: zodResolver(dynamicSchema),
   });
 
-  const profileToUse = useMemo(() => {
-    if (person) return null; // Edit mode, no pre-fill
-    if (selectedProfile) return selectedProfile;
-    return null;
-  }, [person, selectedProfile]);
-
   useEffect(() => {
     if (open) {
       if (person) { // Edit mode
-        const { custom_properties, ...personData } = person;
-        reset({ ...personData, ...custom_properties });
+        const { custom_properties, full_name, ...personData } = person;
+        const nameParts = full_name ? full_name.split(' ') : [''];
+        const firstName = nameParts[0] || '';
+        const lastName = nameParts.slice(1).join(' ') || '';
+        reset({ ...personData, first_name: firstName, last_name: lastName, ...custom_properties });
       } else { // Create mode
         const profileForDefaults = selectedProfile;
         const defaultValues = filteredProperties.reduce((acc, prop) => ({ ...acc, [prop.name]: '' }), {});
@@ -105,13 +103,14 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
         if (profileForDefaults) {
           reset({
             ...defaultValues,
-            full_name: `${profileForDefaults.first_name || ''} ${profileForDefaults.last_name || ''}`.trim(),
+            first_name: profileForDefaults.first_name || '',
+            last_name: profileForDefaults.last_name || '',
             email: profileForDefaults.email || '',
             phone: profileForDefaults.phone || '',
             company: '',
           });
         } else {
-          reset({ full_name: '', email: '', phone: '', company: '', ...defaultValues });
+          reset({ first_name: '', last_name: '', email: '', phone: '', company: '', ...defaultValues });
         }
       }
     } else {
@@ -125,18 +124,16 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
       const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'master admin';
       const isEditingLinkedUser = person && person.user_id && isAdmin;
 
-      const standardFields = ['full_name', 'email', 'phone', 'company', 'avatar_url'];
-      const personData: Partial<Person> = {};
+      const full_name = `${values.first_name || ''} ${values.last_name || ''}`.trim();
+
+      const standardFields = ['first_name', 'last_name', 'email', 'phone', 'company', 'avatar_url'];
       const custom_properties: Record<string, any> = {};
 
       for (const key in values) {
-        if (standardFields.includes(key)) {
-          personData[key] = values[key];
-        } else {
+        if (!standardFields.includes(key)) {
           custom_properties[key] = values[key];
         }
       }
-      personData.custom_properties = custom_properties;
       
       const contactJson = {
         emails: values.email ? [values.email] : [],
@@ -146,10 +143,10 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
       let rpcName = 'upsert_person_with_details';
       let rpcParams: any = {
         p_id: person?.id || null,
-        p_full_name: values.full_name,
+        p_full_name: full_name,
         p_contact: contactJson,
         p_company: values.company,
-        p_job_title: values.job_title,
+        p_job_title: person?.job_title || null,
         p_department: values.department,
         p_social_media: person?.social_media || {},
         p_birthday: values.birthday,
@@ -157,17 +154,13 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
         p_project_ids: person?.projects?.map(p => p.id) || [],
         p_existing_tag_ids: person?.tags?.map(t => t.id) || [],
         p_custom_tags: [],
-        p_avatar_url: values.avatar_url,
+        p_avatar_url: person?.avatar_url || (selectedProfile ? selectedProfile.avatar_url : null),
         p_address: person?.address || null,
         p_custom_properties: custom_properties,
       };
 
       if (isEditingLinkedUser) {
         rpcName = 'admin_update_person_details';
-      } else if (!person && selectedProfile) {
-        // When creating a person from a profile, link them
-        personData.user_id = selectedProfile.id;
-        personData.avatar_url = selectedProfile.avatar_url;
       }
 
       const { data, error } = await supabase.rpc(rpcName, rpcParams).single();
@@ -220,10 +213,16 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
               </p>
             </div>
           )}
-          <div className="px-6">
-            <Label htmlFor="full_name">Full Name</Label>
-            <Input id="full_name" {...register('full_name')} />
-            {errors.full_name && <p className="text-sm text-destructive mt-1">{errors.full_name.message as string}</p>}
+          <div className="grid grid-cols-2 gap-4 px-6">
+            <div>
+              <Label htmlFor="first_name">First Name</Label>
+              <Input id="first_name" {...register('first_name')} />
+              {errors.first_name && <p className="text-sm text-destructive mt-1">{errors.first_name.message as string}</p>}
+            </div>
+            <div>
+              <Label htmlFor="last_name">Last Name</Label>
+              <Input id="last_name" {...register('last_name')} />
+            </div>
           </div>
           <div className="px-6">
             <Label htmlFor="email">Email</Label>
