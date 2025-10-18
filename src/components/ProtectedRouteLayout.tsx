@@ -12,8 +12,16 @@ const ProtectedRouteLayout = () => {
     return <LoadingScreen />;
   }
   
-  if (!session || !user) {
+  if (!session) {
     return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  if (!user) {
+    // We have a session, but the user profile is still loading or failed to load.
+    // This can happen for new users where the profile creation trigger is slow.
+    // We show a loading screen and let the AuthContext's query retry in the background.
+    // This avoids a redirect loop between here and the login page.
+    return <LoadingScreen />;
   }
   
   if (location.pathname === '/') {
