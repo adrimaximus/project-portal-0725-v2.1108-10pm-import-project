@@ -10,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import SafeLocalStorage from '@/lib/localStorage';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { Link } from 'react-router-dom';
+import { useTheme } from '@/contexts/ThemeProvider';
 
 const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" {...props}>
@@ -38,8 +39,10 @@ const quotes = [
 
 const LoginPage = () => {
   const { isLoading: authContextLoading } = useAuth();
+  const { theme } = useTheme();
   const [lastUserName, setLastUserName] = useState<string | null>(null);
   const [currentQuote, setCurrentQuote] = useState(quotes[0]);
+  const [videoSrc, setVideoSrc] = useState('');
 
   // Login state
   const [email, setEmail] = useState('');
@@ -65,6 +68,25 @@ const LoginPage = () => {
     }
     setCurrentQuote(quotes[Math.floor(Math.random() * quotes.length)]);
   }, []);
+
+  useEffect(() => {
+    const darkVideo = "https://quuecudndfztjlxbrvyb.supabase.co/storage/v1/object/public/General/Abstract%20futuristic%20technology%20particles%20background%20royal.mp4";
+    const lightVideo = "https://quuecudndfztjlxbrvyb.supabase.co/storage/v1/object/public/General/Degradado%20en%20movimiento.mp4";
+
+    const updateVideoSrc = () => {
+      const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      const effectiveTheme = theme === "system" ? systemTheme : theme;
+      
+      const isDark = effectiveTheme.includes('dark') || effectiveTheme === 'claude' || effectiveTheme === 'nature' || effectiveTheme === 'corporate' || effectiveTheme === 'ahensi' || effectiveTheme === 'brand-activator';
+      setVideoSrc(isDark ? darkVideo : lightVideo);
+    };
+
+    updateVideoSrc();
+
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    mediaQuery.addEventListener('change', updateVideoSrc);
+    return () => mediaQuery.removeEventListener('change', updateVideoSrc);
+  }, [theme]);
 
   const handlePasswordLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -101,7 +123,7 @@ const LoginPage = () => {
             first_name: firstName,
             last_name: lastName,
           },
-          emailRedirectTo: `${import.meta.env.VITE_APP_URL}/auth/callback`,
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
         },
       });
 
@@ -121,18 +143,10 @@ const LoginPage = () => {
   const handleGoogleLogin = async () => {
     setGoogleLoading(true);
     try {
-      const redirectURL = import.meta.env.VITE_APP_URL;
-      if (!redirectURL) {
-        throw new Error("VITE_APP_URL is not defined in your environment variables. Please configure it in the Dyad settings.");
-      }
-
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${redirectURL}/auth/callback`,
-          queryParams: {
-            prompt: 'consent',
-          }
+          redirectTo: `${window.location.origin}/auth/callback`,
         },
       });
       if (error) {
@@ -140,24 +154,34 @@ const LoginPage = () => {
         setGoogleLoading(false);
       }
     } catch (error: any) {
-      toast.error("An unexpected error occurred with Google sign-in.", {
-        description: error.message,
-      });
+      toast.error("An unexpected error occurred with Google sign-in.");
       console.error("Google login error:", error);
       setGoogleLoading(false);
     }
   };
 
-  // Show loading while auth context is initializing
   if (authContextLoading) {
     return <LoadingSpinner />;
   }
 
   return (
-    <div className="min-h-screen w-full bg-gray-900 flex items-center justify-center p-4 bg-cover bg-center" style={{backgroundImage: "url('https://images.unsplash.com/photo-1554147090-e1221a04a025?q=80&w=2940&auto=format&fit=crop')"}}>
-      <div className="w-full max-w-4xl grid lg:grid-cols-2 rounded-2xl overflow-hidden shadow-2xl">
+    <div className="min-h-screen w-full relative flex items-center justify-center p-4 overflow-hidden">
+      {videoSrc && (
+        <video
+          key={videoSrc}
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="absolute top-0 left-0 w-full h-full object-cover z-0"
+        >
+          <source src={videoSrc} type="video/mp4" />
+        </video>
+      )}
+      <div className="absolute top-0 left-0 w-full h-full bg-black/50 z-10"></div>
+      <div className="w-full max-w-4xl grid lg:grid-cols-2 rounded-2xl overflow-hidden shadow-2xl z-20 relative">
         {/* Left Panel */}
-        <div className="hidden lg:flex flex-col justify-between p-12 text-white bg-black/50 backdrop-blur-md">
+        <div className="hidden lg:flex flex-col justify-between p-12 text-white bg-gradient-to-r from-black/20 to-black/30 backdrop-blur-md">
           <div>
             <p className="text-sm font-medium tracking-widest uppercase text-white/80">A Wise Quote</p>
             <div className="w-16 h-px bg-white/50 mt-2"></div>
@@ -169,7 +193,7 @@ const LoginPage = () => {
         </div>
 
         {/* Right Panel */}
-        <div className="bg-black/50 backdrop-blur-md p-8 sm:p-12 flex flex-col justify-center">
+        <div className="bg-black/80 backdrop-blur-md p-8 sm:p-12 flex flex-col justify-center">
           <div className="w-full max-w-md mx-auto">
             <div className="flex items-center gap-2 mb-8">
               <img src="https://quuecudndfztjlxbrvyb.supabase.co/storage/v1/object/public/General/logo.png" alt="7i Portal Logo" className="h-8 w-8" />

@@ -11,7 +11,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { Eye, EyeOff, Loader2, Camera } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { generatePastelColor, getAvatarUrl, getInitials } from "@/lib/utils";
-import NotificationPreferencesCard from "@/components/settings/NotificationPreferencesCard";
 import { useQueryClient } from "@tanstack/react-query";
 import AvatarCropper from "@/components/settings/AvatarCropper";
 import PhoneNumberInput from "@/components/PhoneNumberInput";
@@ -301,8 +300,6 @@ const Profile = () => {
             </CardContent>
           </Card>
         )}
-
-        <NotificationPreferencesCard />
 
         <Card>
           <CardHeader>
