@@ -62,7 +62,7 @@ const UpdatePasswordPage = () => {
         <source src="https://quuecudndfztjlxbrvyb.supabase.co/storage/v1/object/public/General/Abstract%20futuristic%20technology%20particles%20background%20royal.mp4" type="video/mp4" />
       </video>
       <div className="absolute top-0 left-0 w-full h-full bg-black/50 z-10"></div>
-      <div className="w-full max-w-md bg-black/60 backdrop-blur-md rounded-2xl overflow-hidden shadow-2xl z-20 relative p-8 sm:p-12">
+      <div className="w-full max-w-md bg-black/40 backdrop-blur-md rounded-2xl overflow-hidden shadow-2xl z-20 relative p-8 sm:p-12">
         <div className="flex items-center gap-2 mb-8">
           <img src="https://quuecudndfztjlxbrvyb.supabase.co/storage/v1/object/public/General/logo.png" alt="7i Portal Logo" className="h-8 w-8" />
           <span className="text-xl font-bold text-white">7i Portal</span>
