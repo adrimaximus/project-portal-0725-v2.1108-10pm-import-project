@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { Mail, Lock, Eye, EyeOff, Loader2, User as UserIcon } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, Loader2, User as UserIcon, Package } from 'lucide-react';
 import MagicLinkForm from '@/components/MagicLinkForm';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,7 +10,6 @@ import { supabase } from '@/integrations/supabase/client';
 import SafeLocalStorage from '@/lib/localStorage';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { Link } from 'react-router-dom';
-import { useTheme } from '@/contexts/ThemeProvider';
 
 const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" {...props}>
@@ -39,10 +38,8 @@ const quotes = [
 
 const LoginPage = () => {
   const { isLoading: authContextLoading } = useAuth();
-  const { theme } = useTheme();
   const [lastUserName, setLastUserName] = useState<string | null>(null);
   const [currentQuote, setCurrentQuote] = useState(quotes[0]);
-  const [videoSrc, setVideoSrc] = useState('');
 
   // Login state
   const [email, setEmail] = useState('');
@@ -68,25 +65,6 @@ const LoginPage = () => {
     }
     setCurrentQuote(quotes[Math.floor(Math.random() * quotes.length)]);
   }, []);
-
-  useEffect(() => {
-    const darkVideo = "https://quuecudndfztjlxbrvyb.supabase.co/storage/v1/object/public/General/Abstract%20futuristic%20technology%20particles%20background%20royal.mp4";
-    const lightVideo = "https://quuecudndfztjlxbrvyb.supabase.co/storage/v1/object/public/General/Degradado%20en%20movimiento.mp4";
-
-    const updateVideoSrc = () => {
-      const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-      const effectiveTheme = theme === "system" ? systemTheme : theme;
-      
-      const isDark = effectiveTheme.includes('dark') || effectiveTheme === 'claude' || effectiveTheme === 'nature' || effectiveTheme === 'corporate' || effectiveTheme === 'ahensi' || effectiveTheme === 'brand-activator';
-      setVideoSrc(isDark ? darkVideo : lightVideo);
-    };
-
-    updateVideoSrc();
-
-    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-    mediaQuery.addEventListener('change', updateVideoSrc);
-    return () => mediaQuery.removeEventListener('change', updateVideoSrc);
-  }, [theme]);
 
   const handlePasswordLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -165,55 +143,42 @@ const LoginPage = () => {
   }
 
   return (
-    <div className="min-h-screen w-full relative flex items-center justify-center p-4 overflow-hidden">
-      {videoSrc && (
-        <video
-          key={videoSrc}
-          autoPlay
-          loop
-          muted
-          playsInline
-          className="absolute top-0 left-0 w-full h-full object-cover z-0"
-        >
-          <source src={videoSrc} type="video/mp4" />
-        </video>
-      )}
-      <div className="absolute top-0 left-0 w-full h-full bg-black/50 z-10"></div>
-      <div className="w-full max-w-4xl grid lg:grid-cols-2 rounded-2xl overflow-hidden shadow-2xl z-20 relative">
+    <div className="min-h-screen w-full flex items-center justify-center p-4 bg-background">
+      <div className="w-full max-w-4xl grid lg:grid-cols-2 rounded-2xl overflow-hidden shadow-2xl border">
         {/* Left Panel */}
-        <div className="hidden lg:flex flex-col justify-between p-12 text-white bg-gradient-to-r from-black/20 to-black/30 backdrop-blur-md">
+        <div className="hidden lg:flex flex-col justify-between p-12 bg-muted/50">
           <div>
-            <p className="text-sm font-medium tracking-widest uppercase text-white/80">A Wise Quote</p>
-            <div className="w-16 h-px bg-white/50 mt-2"></div>
+            <p className="text-sm font-medium tracking-widest uppercase text-muted-foreground">A Wise Quote</p>
+            <div className="w-16 h-px bg-border mt-2"></div>
           </div>
           <div className="space-y-4">
             <h2 className="text-5xl font-serif font-bold">{currentQuote.title}</h2>
-            <p className="text-white/80">{currentQuote.text}</p>
+            <p className="text-muted-foreground">{currentQuote.text}</p>
           </div>
         </div>
 
         {/* Right Panel */}
-        <div className="bg-black/80 backdrop-blur-md p-8 sm:p-12 flex flex-col justify-center">
+        <div className="bg-background p-8 sm:p-12 flex flex-col justify-center">
           <div className="w-full max-w-md mx-auto">
             <div className="flex items-center gap-2 mb-8">
               <img src="https://quuecudndfztjlxbrvyb.supabase.co/storage/v1/object/public/General/logo.png" alt="7i Portal Logo" className="h-8 w-8" />
-              <span className="text-xl font-bold text-white">7i Portal</span>
+              <span className="text-xl font-bold">7i Portal</span>
             </div>
-            <h1 className="text-3xl font-serif font-bold mb-2 text-white">
+            <h1 className="text-3xl font-serif font-bold mb-2">
               Welcome Back{lastUserName ? `, ${lastUserName}` : ''}!👋
             </h1>
-            <p className="text-white/80 mb-8">Sign in or create an account to access your portal.</p>
+            <p className="text-muted-foreground mb-8">Sign in or create an account to access your portal.</p>
             
             <Tabs defaultValue="password" className="w-full">
-              <TabsList className="grid w-full grid-cols-3 bg-gray-800/50">
-                <TabsTrigger value="password" className="text-gray-400 data-[state=active]:bg-gray-700/50 data-[state=active]:text-white">Password</TabsTrigger>
-                <TabsTrigger value="magic-link" className="text-gray-400 data-[state=active]:bg-gray-700/50 data-[state=active]:text-white">Magic Link</TabsTrigger>
-                <TabsTrigger value="signup" className="text-gray-400 data-[state=active]:bg-gray-700/50 data-[state=active]:text-white">Sign Up</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="password">Password</TabsTrigger>
+                <TabsTrigger value="magic-link">Magic Link</TabsTrigger>
+                <TabsTrigger value="signup">Sign Up</TabsTrigger>
               </TabsList>
               <TabsContent value="password" className="pt-6">
                 <form onSubmit={handlePasswordLogin} className="space-y-4">
                   <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                     <Input
                       id="email"
                       type="email"
@@ -221,12 +186,12 @@ const LoginPage = () => {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
-                      className="pl-10 h-12 bg-gray-800/50 border-gray-700 text-white focus:ring-primary"
+                      className="pl-10 h-12"
                     />
                   </div>
                   <div className="space-y-2">
                     <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                       <Input
                         id="password"
                         type={showPassword ? "text" : "password"}
@@ -234,14 +199,14 @@ const LoginPage = () => {
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         required
-                        className="pl-10 h-12 bg-gray-800/50 border-gray-700 text-white focus:ring-primary"
+                        className="pl-10 h-12"
                       />
-                      <Button type="button" variant="ghost" size="icon" className="absolute inset-y-0 right-0 h-full px-3 text-gray-400 hover:text-white" onClick={() => setShowPassword(!showPassword)}>
+                      <Button type="button" variant="ghost" size="icon" className="absolute inset-y-0 right-0 h-full px-3 text-muted-foreground hover:text-foreground" onClick={() => setShowPassword(!showPassword)}>
                         {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </Button>
                     </div>
                     <div className="text-right">
-                      <Button asChild variant="link" className="px-0 text-gray-400 hover:text-white h-auto text-sm">
+                      <Button asChild variant="link" className="px-0 text-muted-foreground hover:text-primary h-auto text-sm">
                         <Link to="/forgot-password">
                           Forgot Password?
                         </Link>
@@ -260,7 +225,7 @@ const LoginPage = () => {
                 <form onSubmit={handleSignUp} className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="relative">
-                      <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                      <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                       <Input
                         id="firstName"
                         type="text"
@@ -268,7 +233,7 @@ const LoginPage = () => {
                         value={firstName}
                         onChange={(e) => setFirstName(e.target.value)}
                         required
-                        className="pl-10 h-12 bg-gray-800/50 border-gray-700 text-white focus:ring-primary"
+                        className="pl-10 h-12"
                       />
                     </div>
                     <div>
@@ -279,12 +244,12 @@ const LoginPage = () => {
                         value={lastName}
                         onChange={(e) => setLastName(e.target.value)}
                         required
-                        className="h-12 bg-gray-800/50 border-gray-700 text-white focus:ring-primary px-3"
+                        className="h-12 px-3"
                       />
                     </div>
                   </div>
                   <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                     <Input
                       id="signUpEmail"
                       type="email"
@@ -292,11 +257,11 @@ const LoginPage = () => {
                       value={signUpEmail}
                       onChange={(e) => setSignUpEmail(e.target.value)}
                       required
-                      className="pl-10 h-12 bg-gray-800/50 border-gray-700 text-white focus:ring-primary"
+                      className="pl-10 h-12"
                     />
                   </div>
                   <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                     <Input
                       id="signUpPassword"
                       type={showSignUpPassword ? "text" : "password"}
@@ -304,9 +269,9 @@ const LoginPage = () => {
                       value={signUpPassword}
                       onChange={(e) => setSignUpPassword(e.target.value)}
                       required
-                      className="pl-10 h-12 bg-gray-800/50 border-gray-700 text-white focus:ring-primary"
+                      className="pl-10 h-12"
                     />
-                     <Button type="button" variant="ghost" size="icon" className="absolute inset-y-0 right-0 h-full px-3 text-gray-400 hover:text-white" onClick={() => setShowSignUpPassword(!showSignUpPassword)}>
+                     <Button type="button" variant="ghost" size="icon" className="absolute inset-y-0 right-0 h-full px-3 text-muted-foreground hover:text-foreground" onClick={() => setShowSignUpPassword(!showSignUpPassword)}>
                       {showSignUpPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </Button>
                   </div>
@@ -319,12 +284,12 @@ const LoginPage = () => {
             
             <div className="my-6"></div>
 
-            <Button variant="outline" className="w-full h-12 text-base bg-transparent border-gray-700 text-white hover:bg-gray-800/50 hover:text-white" onClick={handleGoogleLogin}>
+            <Button variant="outline" className="w-full h-12 text-base" onClick={handleGoogleLogin}>
               {googleLoading ? (
                 <Loader2 className="h-5 w-5 animate-spin" />
               ) : (
                 <>
-                  <GoogleIcon className="mr-2 h-5 w-5 fill-white" />
+                  <GoogleIcon className="mr-2 h-5 w-5" />
                   Sign in with Google
                 </>
               )}

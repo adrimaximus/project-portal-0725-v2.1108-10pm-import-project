@@ -43,7 +43,7 @@ const MagicLinkForm = () => {
 
   if (submitted) {
     return (
-      <div className="text-center text-white/90 bg-green-500/20 p-4 rounded-lg">
+      <div className="text-center text-green-800 dark:text-green-300 bg-green-500/20 p-4 rounded-lg">
         <h3 className="font-bold">Check your email</h3>
         <p className="text-sm mt-2">We've sent a magic link to <strong>{email}</strong>. Click the link to sign in.</p>
       </div>
@@ -53,7 +53,7 @@ const MagicLinkForm = () => {
   return (
     <form onSubmit={handleLogin} className="space-y-4">
       <div className="relative">
-        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
         <Input
           id="email"
           type="email"
@@ -61,7 +61,7 @@ const MagicLinkForm = () => {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
-          className="pl-10 h-12 bg-gray-800/50 border-gray-700 text-white focus:ring-primary"
+          className="pl-10 h-12"
         />
       </div>
       <Button type="submit" className="w-full h-12 text-base" disabled={loading || cooldown > 0}>
