@@ -62,7 +62,7 @@ serve(async (req) => {
   );
 
   try {
-    console.log("[process-pending-notifications] Cron job triggered. Fetching pending notifications.");
+    console.log("[process-pending-notifications] Job started. Fetching pending notifications.");
     const { data: pendingNotifications, error: fetchError } = await supabaseAdmin
       .from('pending_whatsapp_notifications')
       .select('*')
