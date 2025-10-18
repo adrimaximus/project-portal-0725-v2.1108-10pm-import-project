@@ -18,7 +18,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 
-export const ChatConversation = () => {
+const ChatConversation = () => {
   const { selectedConversation, messages, sendMessage, isLoadingMessages } = useChatContext();
   const { user: currentUser } = useAuth();
   const [newMessage, setNewMessage] = useState('');
@@ -182,3 +182,5 @@ export const ChatConversation = () => {
     </div>
   );
 };
+
+export default ChatConversation;
