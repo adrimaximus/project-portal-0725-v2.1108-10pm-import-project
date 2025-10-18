@@ -166,7 +166,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
   }, [conversations, searchTerm, messageSearchResults]);
 
   const sendMessageMutation = useMutation({
-    mutationFn: async (variables: { text: string, attachmentFile: File | null, replyToMessageId?: string | null }) => {
+    mutationFn: async (variables: { messageId: string, text: string, attachmentFile: File | null, replyToMessageId?: string | null }) => {
       let attachmentUrl: string | null = null;
       let attachmentName: string | null = null;
       let attachmentType: string | null = null;
@@ -185,6 +185,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
       }
       
       await sendHybridMessage({
+        messageId: variables.messageId,
         conversationId: selectedConversationId!,
         senderId: currentUser!.id,
         text: variables.text,
@@ -194,7 +195,52 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         replyToMessageId: variables.replyToMessageId,
       });
     },
-    onError: (error: any) => toast.error("Failed to send message.", { description: error.message }),
+    onMutate: async (newMessageData) => {
+      if (!currentUser || !selectedConversationId) return;
+
+      await queryClient.cancelQueries({ queryKey: ['messages', selectedConversationId] });
+      const previousMessages = queryClient.getQueryData<Message[]>(['messages', selectedConversationId]);
+
+      queryClient.setQueryData<Message[]>(['messages', selectedConversationId], (old) => {
+        const optimisticMessage: Message = {
+          id: newMessageData.messageId,
+          text: newMessageData.text,
+          timestamp: new Date().toISOString(),
+          sender: currentUser,
+          attachment: newMessageData.attachmentFile ? {
+            name: newMessageData.attachmentFile.name,
+            url: URL.createObjectURL(newMessageData.attachmentFile),
+            type: newMessageData.attachmentFile.type,
+          } : undefined,
+          reply_to_message_id: newMessageData.replyToMessageId,
+        };
+        
+        if (newMessageData.replyToMessageId) {
+            const repliedMsg = (previousMessages || []).find(m => m.id === newMessageData.replyToMessageId);
+            if (repliedMsg) {
+                optimisticMessage.repliedMessage = {
+                    content: repliedMsg.text,
+                    senderName: repliedMsg.sender.name,
+                    isDeleted: false,
+                };
+            }
+        }
+
+        return [...(old || []), optimisticMessage];
+      });
+
+      return { previousMessages };
+    },
+    onError: (err: any, variables, context) => {
+      if (context?.previousMessages) {
+        queryClient.setQueryData(['messages', selectedConversationId], context.previousMessages);
+      }
+      toast.error("Failed to send message.", { description: err.message });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['messages', selectedConversationId] });
+      queryClient.invalidateQueries({ queryKey: ['conversations', currentUser?.id] });
+    },
   });
 
   const forwardMessageMutation = useMutation({
@@ -343,7 +389,8 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
   }, [selectedConversationId, conversations, messages]);
 
   const sendMessage = (text: string, attachmentFile: File | null, replyToMessageId?: string | null) => {
-    sendMessageMutation.mutate({ text, attachmentFile, replyToMessageId });
+    const messageId = uuidv4();
+    sendMessageMutation.mutate({ messageId, text, attachmentFile, replyToMessageId });
   };
 
   const toggleReaction = (messageId: string, emoji: string) => {
