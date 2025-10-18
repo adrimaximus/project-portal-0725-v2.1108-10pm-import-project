@@ -14,7 +14,6 @@ const notificationTypes = [
   { id: 'project_update', label: 'Project Updates', description: 'When you are added to a project, a task is assigned to you, or a project you are in is updated.' },
   { id: 'mention', label: 'Mentions', description: 'When someone @mentions you in a comment.' },
   { id: 'comment', label: 'New Chat Messages', description: 'When you receive a new message and are not on the chat page.' },
-  { id: 'whatsapp_chat', label: 'WhatsApp Chat Messages', description: 'Receive a WhatsApp notification for new chat messages.' },
   { id: 'goal', label: 'Goal Updates', description: 'When a new goal is created for you.' },
   { id: 'system', label: 'System Notifications', description: 'Important updates and announcements from the system.' },
 ];
@@ -130,6 +129,15 @@ const NotificationPreferencesCard = () => {
     }
   };
 
+  const handleChannelToggle = async (channelKey: string, isEnabled: boolean) => {
+    const newPreferences = { ...preferences, [channelKey]: isEnabled };
+    const success = await updatePreferences(newPreferences);
+    if (success) {
+      const channelName = channelKey.includes('whatsapp') ? 'WhatsApp' : 'Email';
+      toast.success(`${channelName} notification setting updated.`);
+    }
+  };
+
   if (isLoading) {
     return (
       <Card>
@@ -180,6 +188,32 @@ const NotificationPreferencesCard = () => {
                     onCheckedChange={handleGlobalToastToggle}
                   />
               </div>
+          </div>
+          <div className="rounded-lg border p-4">
+            <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                    <Label htmlFor="whatsapp-notifications" className="text-base">Enable WhatsApp Notifications</Label>
+                    <p className="text-sm text-muted-foreground">Receive important notifications via WhatsApp.</p>
+                </div>
+                <Switch
+                  id="whatsapp-notifications"
+                  checked={preferences.whatsapp_enabled !== false}
+                  onCheckedChange={(checked) => handleChannelToggle('whatsapp_enabled', checked)}
+                />
+            </div>
+          </div>
+          <div className="rounded-lg border p-4">
+            <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                    <Label htmlFor="email-notifications" className="text-base">Enable Email Notifications</Label>
+                    <p className="text-sm text-muted-foreground">Receive important notifications via Email.</p>
+                </div>
+                <Switch
+                  id="email-notifications"
+                  checked={preferences.email_enabled !== false}
+                  onCheckedChange={(checked) => handleChannelToggle('email_enabled', checked)}
+                />
+            </div>
           </div>
           <div className="rounded-lg border p-4">
               <div className="flex items-center justify-between">
