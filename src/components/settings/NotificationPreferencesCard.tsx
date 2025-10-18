@@ -6,9 +6,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, BellRing } from "lucide-react";
+import { Loader2, BellRing, Mail } from "lucide-react";
 import TestNotificationToast from "./TestNotificationToast";
 import { Button } from "../ui/button";
+import { Checkbox } from "../ui/checkbox";
+import WhatsappIcon from "../icons/WhatsappIcon";
 
 const notificationTypes = [
   { id: 'project_update', label: 'Project Updates', description: 'When you are added to a project, a task is assigned to you, or a project you are in is updated.' },
@@ -103,6 +105,16 @@ const NotificationPreferencesCard = () => {
     return pref !== false;
   };
 
+  const getChannelEnabled = (typeId: string, channel: 'email' | 'whatsapp') => {
+    const pref = preferences[typeId];
+    if (typeof pref === 'object' && pref !== null) {
+      // Default to true if the channel setting is not explicitly defined
+      return pref[channel] !== false;
+    }
+    // Default to true if the entire preference object for this type doesn't exist
+    return true;
+  };
+
   const handlePreferenceChange = async (typeId: string, isEnabled: boolean) => {
     const newPreferences = { ...preferences };
     const currentPref = newPreferences[typeId];
@@ -110,7 +122,7 @@ const NotificationPreferencesCard = () => {
     if (typeof currentPref === 'object' && currentPref !== null) {
       newPreferences[typeId] = { ...currentPref, enabled: isEnabled };
     } else {
-      newPreferences[typeId] = { enabled: isEnabled };
+      newPreferences[typeId] = { enabled: isEnabled, email: true, whatsapp: true };
     }
     
     const success = await updatePreferences(newPreferences);
@@ -126,20 +138,30 @@ const NotificationPreferencesCard = () => {
     }
   };
 
+  const handleChannelChange = async (typeId: string, channel: 'email' | 'whatsapp', isEnabled: boolean) => {
+    const newPreferences = { ...preferences };
+    const currentPref = newPreferences[typeId];
+
+    if (typeof currentPref === 'object' && currentPref !== null) {
+      newPreferences[typeId] = { ...currentPref, [channel]: isEnabled };
+    } else {
+      // If the object doesn't exist, create it with defaults
+      newPreferences[typeId] = { enabled: true, email: true, whatsapp: true, [channel]: isEnabled };
+    }
+
+    const success = await updatePreferences(newPreferences);
+    if (success) {
+      toast.success("Notification channel updated.");
+    }
+  };
+
   const handleToneChange = async (toneValue: string) => {
     if (toneValue !== 'none') {
       const audio = new Audio(`${TONE_BASE_URL}${toneValue}`);
       audio.play().catch(e => console.error("Error playing audio preview:", e));
     }
     
-    const newPreferences = { ...preferences };
-    const currentCommentPref = newPreferences['comment'];
-    
-    if (typeof currentCommentPref === 'object' && currentCommentPref !== null) {
-        newPreferences['comment'] = { ...currentCommentPref, sound: toneValue };
-    } else {
-        newPreferences['comment'] = { enabled: currentCommentPref !== false, sound: toneValue };
-    }
+    const newPreferences = { ...preferences, tone: toneValue };
 
     const success = await updatePreferences(newPreferences);
     if (success) {
@@ -147,14 +169,8 @@ const NotificationPreferencesCard = () => {
     }
   };
 
-  const handleGlobalToggle = async (key: 'toast_enabled' | 'whatsapp_enabled' | 'email_enabled', isEnabled: boolean) => {
-    const newPreferences = { ...preferences };
-    const currentPref = newPreferences[key];
-    if (typeof currentPref === 'object' && currentPref !== null) {
-      newPreferences[key] = { ...currentPref, enabled: isEnabled };
-    } else {
-      newPreferences[key] = { enabled: isEnabled };
-    }
+  const handleGlobalToggle = async (key: 'toast_enabled', isEnabled: boolean) => {
+    const newPreferences = { ...preferences, [key]: isEnabled };
     const success = await updatePreferences(newPreferences);
     if (success) {
       toast.success("Notification setting updated.");
@@ -207,34 +223,8 @@ const NotificationPreferencesCard = () => {
                   </div>
                   <Switch
                     id="toast-notifications"
-                    checked={getIsEnabled('toast_enabled')}
+                    checked={preferences.toast_enabled !== false}
                     onCheckedChange={(checked) => handleGlobalToggle('toast_enabled', checked)}
-                  />
-              </div>
-          </div>
-          <div className="rounded-lg border p-4">
-              <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                      <Label htmlFor="whatsapp-notifications" className="text-base">Enable WhatsApp Notifications</Label>
-                      <p className="text-sm text-muted-foreground">Receive reminders and important updates directly on WhatsApp.</p>
-                  </div>
-                  <Switch
-                    id="whatsapp-notifications"
-                    checked={getIsEnabled('whatsapp_enabled')}
-                    onCheckedChange={(checked) => handleGlobalToggle('whatsapp_enabled', checked)}
-                  />
-              </div>
-          </div>
-          <div className="rounded-lg border p-4">
-              <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                      <Label htmlFor="email-notifications" className="text-base">Enable Email Notifications</Label>
-                      <p className="text-sm text-muted-foreground">Receive summaries and important updates in your email inbox.</p>
-                  </div>
-                  <Switch
-                    id="email-notifications"
-                    checked={getIsEnabled('email_enabled')}
-                    onCheckedChange={(checked) => handleGlobalToggle('email_enabled', checked)}
                   />
               </div>
           </div>
@@ -244,7 +234,7 @@ const NotificationPreferencesCard = () => {
                       <Label htmlFor="notification-tone" className="text-base">Notification Tone</Label>
                       <p className="text-sm text-muted-foreground">Select a sound for incoming notifications.</p>
                   </div>
-                  <Select value={preferences.comment?.sound || 'none'} onValueChange={handleToneChange}>
+                  <Select value={preferences.tone || 'none'} onValueChange={handleToneChange}>
                       <SelectTrigger className="w-[240px]">
                           <SelectValue placeholder="Select a tone" />
                       </SelectTrigger>
@@ -260,19 +250,54 @@ const NotificationPreferencesCard = () => {
           </div>
         </div>
         <div className="space-y-4">
-            {notificationTypes.map((type) => (
-              <div key={type.id} className="flex items-start justify-between rounded-lg border p-4">
-                <div className="space-y-0.5 pr-4">
-                  <Label htmlFor={`notif-${type.id}`} className="text-base">{type.label}</Label>
-                  <p className="text-sm text-muted-foreground">{type.description}</p>
+            {notificationTypes.map((type) => {
+              const isEnabled = getIsEnabled(type.id);
+              return (
+                <div key={type.id} className="rounded-lg border p-4">
+                  <div className="flex items-start justify-between">
+                    <div className="space-y-0.5 pr-4">
+                      <Label htmlFor={`notif-${type.id}`} className="text-base">{type.label}</Label>
+                      <p className="text-sm text-muted-foreground">{type.description}</p>
+                    </div>
+                    <Switch
+                      id={`notif-${type.id}`}
+                      checked={isEnabled}
+                      onCheckedChange={(checked) => handlePreferenceChange(type.id, checked)}
+                    />
+                  </div>
+                  {isEnabled && (
+                    <div className="mt-4 pt-4 border-t flex items-center gap-6">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`${type.id}-email`}
+                          checked={getChannelEnabled(type.id, 'email')}
+                          onCheckedChange={(checked) => handleChannelChange(type.id, 'email', !!checked)}
+                        />
+                        <label
+                          htmlFor={`${type.id}-email`}
+                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex items-center gap-2"
+                        >
+                          <Mail className="h-4 w-4" /> Email
+                        </label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`${type.id}-whatsapp`}
+                          checked={getChannelEnabled(type.id, 'whatsapp')}
+                          onCheckedChange={(checked) => handleChannelChange(type.id, 'whatsapp', !!checked)}
+                        />
+                        <label
+                          htmlFor={`${type.id}-whatsapp`}
+                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex items-center gap-2"
+                        >
+                          <WhatsappIcon className="h-4 w-4" /> WhatsApp
+                        </label>
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <Switch
-                  id={`notif-${type.id}`}
-                  checked={getIsEnabled(type.id)}
-                  onCheckedChange={(checked) => handlePreferenceChange(type.id, checked)}
-                />
-              </div>
-            ))}
+              );
+            })}
         </div>
       </CardContent>
     </Card>

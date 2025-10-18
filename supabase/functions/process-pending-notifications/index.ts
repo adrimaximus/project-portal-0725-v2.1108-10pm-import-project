@@ -110,14 +110,17 @@ serve(async (req) => {
         if (recipientError) throw new Error(`Failed to fetch recipient profile: ${recipientError.message}`);
         
         const prefs = recipientData.notification_preferences || {};
-        const isWhatsappEnabled = prefs.whatsapp_enabled !== false;
-        const isEmailEnabled = prefs.email_enabled === true; // Explicitly check for true
+        const notificationType = notification.notification_type || 'new_chat_message';
+        const typePrefs = prefs[notificationType] || {};
+
+        // Check per-type settings, default to true if not specified
+        const isWhatsappEnabled = typePrefs.whatsapp !== false;
+        const isEmailEnabled = typePrefs.email === true; // Email is opt-in
 
         let whatsappSent = false;
         let emailSent = false;
 
         const recipientName = `${recipientData.first_name || ''} ${recipientData.last_name || ''}`.trim() || recipientData.email;
-        const notificationType = notification.notification_type || 'new_chat_message';
         
         // --- Send WhatsApp Notification ---
         if (isWhatsappEnabled) {
@@ -181,7 +184,8 @@ serve(async (req) => {
           await supabaseAdmin.from('pending_whatsapp_notifications').update({ status: 'sent' }).eq('id', notificationId);
           successCount++;
         } else {
-          throw new Error("Failed to send notification on all enabled channels.");
+          await supabaseAdmin.from('pending_whatsapp_notifications').update({ status: 'cancelled', error_message: 'All notification channels for this type are disabled by the user.' }).eq('id', notificationId);
+          cancelledCount++;
         }
 
       } catch (innerError) {
