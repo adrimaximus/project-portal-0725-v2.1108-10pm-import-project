@@ -10,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import SafeLocalStorage from '@/lib/localStorage';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { Link } from 'react-router-dom';
+import { useTheme } from '@/contexts/ThemeProvider';
 
 const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" {...props}>
@@ -38,8 +39,10 @@ const quotes = [
 
 const LoginPage = () => {
   const { isLoading: authContextLoading } = useAuth();
+  const { theme } = useTheme();
   const [lastUserName, setLastUserName] = useState<string | null>(null);
   const [currentQuote, setCurrentQuote] = useState(quotes[0]);
+  const [videoSrc, setVideoSrc] = useState('');
 
   // Login state
   const [email, setEmail] = useState('');
@@ -65,6 +68,25 @@ const LoginPage = () => {
     }
     setCurrentQuote(quotes[Math.floor(Math.random() * quotes.length)]);
   }, []);
+
+  useEffect(() => {
+    const darkVideo = "https://quuecudndfztjlxbrvyb.supabase.co/storage/v1/object/public/General/Abstract%20futuristic%20technology%20particles%20background%20royal.mp4";
+    const lightVideo = "https://quuecudndfztjlxbrvyb.supabase.co/storage/v1/object/public/General/Degradado%20en%20movimiento.mp4";
+
+    const updateVideoSrc = () => {
+      const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      const effectiveTheme = theme === "system" ? systemTheme : theme;
+      
+      const isDark = effectiveTheme.includes('dark') || effectiveTheme === 'claude' || effectiveTheme === 'nature' || effectiveTheme === 'corporate' || effectiveTheme === 'ahensi' || effectiveTheme === 'brand-activator';
+      setVideoSrc(isDark ? darkVideo : lightVideo);
+    };
+
+    updateVideoSrc();
+
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    mediaQuery.addEventListener('change', updateVideoSrc);
+    return () => mediaQuery.removeEventListener('change', updateVideoSrc);
+  }, [theme]);
 
   const handlePasswordLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -138,22 +160,24 @@ const LoginPage = () => {
     }
   };
 
-  // Show loading while auth context is initializing
   if (authContextLoading) {
     return <LoadingSpinner />;
   }
 
   return (
     <div className="min-h-screen w-full relative flex items-center justify-center p-4 overflow-hidden">
-      <video
-        autoPlay
-        loop
-        muted
-        playsInline
-        className="absolute top-0 left-0 w-full h-full object-cover z-0"
-      >
-        <source src="https://quuecudndfztjlxbrvyb.supabase.co/storage/v1/object/public/General/Abstract%20futuristic%20technology%20particles%20background%20royal.mp4" type="video/mp4" />
-      </video>
+      {videoSrc && (
+        <video
+          key={videoSrc}
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="absolute top-0 left-0 w-full h-full object-cover z-0"
+        >
+          <source src={videoSrc} type="video/mp4" />
+        </video>
+      )}
       <div className="absolute top-0 left-0 w-full h-full bg-black/50 z-10"></div>
       <div className="w-full max-w-4xl grid lg:grid-cols-2 rounded-2xl overflow-hidden shadow-2xl z-20 relative">
         {/* Left Panel */}
