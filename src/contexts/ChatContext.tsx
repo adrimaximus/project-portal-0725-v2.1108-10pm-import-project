@@ -9,6 +9,7 @@ import { Conversation, Message, Collaborator, Reaction } from '@/types';
 import debounce from 'lodash.debounce';
 import { ForwardMessageDialog } from '@/components/ForwardMessageDialog';
 import { v4 as uuidv4 } from 'uuid';
+import { sendHybridMessage, subscribeToConversation } from '@/lib/chatRealtime';
 
 const TONE_BASE_URL = `https://quuecudndfztjlxbrvyb.supabase.co/storage/v1/object/public/General/Notification/`;
 
@@ -53,6 +54,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
   const [messageToForward, setMessageToForward] = useState<Message | null>(null);
   const [isChatPageActive, setIsChatPageActive] = useState(false);
   const isChatPageActiveRef = useRef(isChatPageActive);
+  const recentlyProcessedIds = useRef(new Set<string>());
   
   const { user: currentUser } = useAuth();
   const queryClient = useQueryClient();
@@ -80,7 +82,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
   });
 
   useEffect(() => {
-    if (!currentUser) return;
+    if (!currentUser || conversations.length === 0) return;
 
     const playSound = async () => {
       try {
@@ -103,35 +105,32 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
       }
     };
 
-    const handlePostgresChange = (payload: any) => {
-      const conversationId = payload.new.conversation_id;
-      const isRelevant = conversations.some(c => c.id === conversationId);
-
-      if (isRelevant) {
-        queryClient.invalidateQueries({ queryKey: ['conversations', currentUser.id] });
-        queryClient.invalidateQueries({ queryKey: ['messages', conversationId] });
-
-        if (payload.eventType === 'INSERT' && payload.new.sender_id !== currentUser.id) {
-          const isChatActiveAndVisible = isChatPageActiveRef.current && selectedConversationIdRef.current === conversationId;
-          
-          if (!isChatActiveAndVisible) {
-            setUnreadConversationIds(prev => new Set(prev).add(conversationId));
+    const subscriptions = conversations.map(convo => {
+      return subscribeToConversation({
+        conversationId: convo.id,
+        onNewMessage: (message) => {
+          if (recentlyProcessedIds.current.has(message.id)) {
+            return;
           }
-        }
-      }
-    };
+          recentlyProcessedIds.current.add(message.id);
+          setTimeout(() => recentlyProcessedIds.current.delete(message.id), 2000);
 
-    const messagesChannel = supabase
-      .channel('public:messages')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'messages' },
-        handlePostgresChange
-      )
-      .subscribe();
+          queryClient.invalidateQueries({ queryKey: ['messages', convo.id] });
+          queryClient.invalidateQueries({ queryKey: ['conversations', currentUser.id] });
+
+          const isFromAnotherUser = message.sender_id !== currentUser.id;
+          const isChatActiveAndVisible = isChatPageActiveRef.current && selectedConversationIdRef.current === convo.id;
+
+          if (isFromAnotherUser && !isChatActiveAndVisible) {
+            playSound();
+            setUnreadConversationIds(prev => new Set(prev).add(convo.id));
+          }
+        },
+      });
+    });
 
     return () => {
-      supabase.removeChannel(messagesChannel);
+      subscriptions.forEach(unsubscribe => unsubscribe());
     };
   }, [currentUser, conversations, queryClient]);
 
@@ -168,29 +167,32 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
 
   const sendMessageMutation = useMutation({
     mutationFn: async (variables: { text: string, attachmentFile: File | null, replyToMessageId?: string | null }) => {
-      let attachment: { url: string, name: string, type: string } | null = null;
-      const messageId = uuidv4();
+      let attachmentUrl: string | null = null;
+      let attachmentName: string | null = null;
+      let attachmentType: string | null = null;
 
       if (variables.attachmentFile && currentUser && selectedConversationId) {
         const file = variables.attachmentFile;
         const sanitizedFileName = file.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
-        const filePath = `${selectedConversationId}/${messageId}-${sanitizedFileName}`;
+        const filePath = `${selectedConversationId}/${uuidv4()}-${sanitizedFileName}`;
         const { error: uploadError } = await supabase.storage.from('chat-attachments').upload(filePath, file);
         if (uploadError) throw new Error(`Failed to upload attachment: ${uploadError.message}`);
         
         const { data: urlData } = supabase.storage.from('chat-attachments').getPublicUrl(filePath);
-        attachment = { url: urlData.publicUrl, name: file.name, type: file.type };
+        attachmentUrl = urlData.publicUrl;
+        attachmentName = file.name;
+        attachmentType = file.type;
       }
       
-      const data = await chatApi.sendMessage({
-        messageId,
+      await sendHybridMessage({
         conversationId: selectedConversationId!,
         senderId: currentUser!.id,
         text: variables.text,
-        attachment,
+        attachmentUrl,
+        attachmentName,
+        attachmentType,
         replyToMessageId: variables.replyToMessageId,
       });
-      return data;
     },
     onError: (error: any) => toast.error("Failed to send message.", { description: error.message }),
   });
