@@ -47,6 +47,11 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
     },
   });
 
+  const filteredProperties = useMemo(() => {
+    const redundantFieldNames = ['jabatan', 'posisi'];
+    return properties.filter(prop => !redundantFieldNames.includes(prop.name.toLowerCase()));
+  }, [properties]);
+
   const baseSchema = z.object({
     full_name: z.string().min(1, 'Full name is required'),
     email: z.string().email('Invalid email address').optional().or(z.literal('')),
@@ -59,8 +64,8 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
   const [dynamicSchema, setDynamicSchema] = React.useState<z.AnyZodObject>(baseSchema);
 
   useEffect(() => {
-    if (properties.length > 0) {
-      const schema = properties.reduce((schema, prop) => {
+    if (filteredProperties.length > 0) {
+      const schema = filteredProperties.reduce((schema, prop) => {
         let fieldSchema;
         switch (prop.type) {
           case 'number':
@@ -75,8 +80,10 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
         return schema.extend({ [prop.name]: fieldSchema });
       }, baseSchema);
       setDynamicSchema(schema);
+    } else {
+      setDynamicSchema(baseSchema);
     }
-  }, [properties, baseSchema]);
+  }, [filteredProperties, baseSchema]);
 
   const { register, handleSubmit, reset, formState: { errors }, control } = useForm({
     resolver: zodResolver(dynamicSchema),
@@ -95,7 +102,7 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
         reset({ ...personData, ...custom_properties });
       } else { // Create mode
         const profileForDefaults = selectedProfile;
-        const defaultValues = properties.reduce((acc, prop) => ({ ...acc, [prop.name]: '' }), {});
+        const defaultValues = filteredProperties.reduce((acc, prop) => ({ ...acc, [prop.name]: '' }), {});
         
         if (profileForDefaults) {
           reset({
@@ -115,7 +122,7 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
       // Reset when dialog closes
       setSelectedProfile(null);
     }
-  }, [person, open, reset, properties, selectedProfile]);
+  }, [person, open, reset, filteredProperties, selectedProfile]);
 
   const mutation = useMutation({
     mutationFn: async (values: any) => {
@@ -233,10 +240,10 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
 
           {isLoadingProperties ? (
             <div className="flex justify-center px-6"><Loader2 className="h-6 w-6 animate-spin" /></div>
-          ) : properties.length > 0 && (
+          ) : filteredProperties.length > 0 && (
             <div className="space-y-4 border-t pt-4 mt-4 px-6">
               <h3 className="text-lg font-medium">Custom Properties</h3>
-              {properties.map(prop => (
+              {filteredProperties.map(prop => (
                 <div key={prop.id}>
                   <Label htmlFor={prop.name}>{prop.label}</Label>
                   {renderField(prop)}
