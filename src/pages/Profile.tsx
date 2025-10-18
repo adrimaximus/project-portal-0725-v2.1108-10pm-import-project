@@ -42,9 +42,8 @@ const Profile = () => {
 
   const canChangePassword = useMemo(() => {
     if (!session?.user) return false;
-    // Check the main provider and also check identities array for email provider
-    return session.user.app_metadata?.provider === 'email' || 
-           session.user.identities?.some(i => i.provider === 'email');
+    // This correctly checks if the primary sign-in method was email/password or magic link.
+    return session.user.app_metadata?.provider === 'email';
   }, [session]);
 
   if (!user) {
