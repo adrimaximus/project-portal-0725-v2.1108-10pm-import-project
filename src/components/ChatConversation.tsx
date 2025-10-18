@@ -18,7 +18,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 
-const ChatConversation = () => {
+export const ChatConversation = () => {
   const { selectedConversation, messages, sendMessage, isLoadingMessages } = useChatContext();
   const { user: currentUser } = useAuth();
   const [newMessage, setNewMessage] = useState('');
@@ -87,8 +87,8 @@ const ChatConversation = () => {
 
   const members = selectedConversation.members || [];
   const otherMembers = members.filter(m => m.id !== currentUser.id);
-  const conversationName = selectedConversation.isGroup ? selectedConversation.groupName : otherMembers[0]?.name || 'Chat';
-  const conversationAvatar = selectedConversation.isGroup ? selectedConversation.avatarUrl : otherMembers[0]?.avatar_url;
+  const conversationName = selectedConversation.isGroup ? selectedConversation.userName : otherMembers[0]?.name || 'Chat';
+  const conversationAvatar = selectedConversation.isGroup ? selectedConversation.userAvatar : otherMembers[0]?.avatar_url;
   const conversationAvatarId = selectedConversation.isGroup ? selectedConversation.id : otherMembers[0]?.id;
 
   return (
@@ -145,7 +145,7 @@ const ChatConversation = () => {
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
-                      {message.isOptimistic && <span className="ml-1">(sending...)</span>}
+                      {(message as any).isOptimistic && <span className="ml-1">(sending...)</span>}
                     </div>
                   </div>
                 </div>
@@ -182,5 +182,3 @@ const ChatConversation = () => {
     </div>
   );
 };
-
-export default ChatConversation;
