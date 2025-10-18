@@ -38,9 +38,8 @@ export const useProjectMutations = (slug: string) => {
                     p_invoice_number: projectDetails.invoice_number || null,
                     p_po_number: projectDetails.po_number || null,
                     p_paid_date: projectDetails.paid_date || null,
-                    p_email_sending_date: projectDetails.email_sending_date || null,
-                    p_hardcopy_sending_date: projectDetails.hardcopy_sending_date || null,
-                    p_channel: projectDetails.channel || null,
+                    p_email_sending_date: projectDetails.email_sending_date || null, 
+                    p_hardcopy_sending_date: projectDetails.hardcopy_sending_date || null, p_channel: projectDetails.channel || null,
                     p_client_company_id: projectDetails.client_company_id || null,
                 })
                 .single();
@@ -218,6 +217,22 @@ export const useProjectMutations = (slug: string) => {
             }).select().single();
             
             if (commentError) throw commentError;
+
+            if (mentionedUserIds.length > 0) {
+              supabase.functions.invoke('send-mention-email', {
+                body: {
+                  project_slug: project.slug,
+                  project_name: project.name,
+                  mentioner_name: user.name,
+                  mentioned_user_ids: mentionedUserIds,
+                  comment_text: text,
+                },
+              }).then(({ error }) => {
+                if (error) {
+                  console.error("Failed to trigger mention email notifications:", error);
+                }
+              });
+            }
     
             if (isTicket && commentData) {
                 const cleanTextForTitle = text.replace(/@\[[^\]]+\]\([^)]+\)\s*/g, '').trim();
@@ -309,6 +324,31 @@ export const useProjectMutations = (slug: string) => {
 
             const { error: updateError } = await supabase.from('comments').update(updatePayload).eq('id', commentId);
             if (updateError) throw updateError;
+
+            if (mentionedUserIds.length > 0) {
+              const { data: { user } } = await supabase.auth.getUser();
+              if (user) {
+                  const { data: projectData } = await supabase.from('projects').select('slug, name').eq('id', originalComment.project_id).single();
+                  const { data: mentionerData } = await supabase.from('profiles').select('first_name, last_name, email').eq('id', user.id).single();
+                  const mentionerName = `${mentionerData?.first_name || ''} ${mentionerData?.last_name || ''}`.trim() || mentionerData?.email || 'A user';
+
+                  if (projectData) {
+                    supabase.functions.invoke('send-mention-email', {
+                      body: {
+                        project_slug: projectData.slug,
+                        project_name: projectData.name,
+                        mentioner_name: mentionerName,
+                        mentioned_user_ids: mentionedUserIds,
+                        comment_text: text,
+                      },
+                    }).then(({ error }) => {
+                      if (error) {
+                        console.error("Failed to trigger mention email notifications on update:", error);
+                      }
+                    });
+                  }
+              }
+            }
 
             if (isConvertingToTicket && !originalComment.is_ticket) {
                 const cleanTextForTitle = text.replace(/@\[[^\]]+\]\([^)]+\)\s*/g, '').trim();
