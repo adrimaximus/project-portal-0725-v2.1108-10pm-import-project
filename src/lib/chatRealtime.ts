@@ -16,7 +16,6 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
  * Kirim pesan dan broadcast secara realtime
  */
 export async function sendHybridMessage({
-  messageId,
   conversationId,
   senderId,
   text,
@@ -25,17 +24,16 @@ export async function sendHybridMessage({
   attachmentType,
   replyToMessageId,
 }: {
-  messageId: string;
-  conversationId: string;
-  senderId: string;
-  text: string;
-  attachmentUrl?: string | null;
-  attachmentName?: string | null;
-  attachmentType?: string | null;
-  replyToMessageId?: string | null;
+  conversationId: string
+  senderId: string
+  text: string
+  attachmentUrl?: string | null
+  attachmentName?: string | null
+  attachmentType?: string | null
+  replyToMessageId?: string | null
 }) {
   const payload = {
-    id: messageId, // Use the passed-in ID for consistency
+    id: crypto.randomUUID(), // Add a temporary client-side ID
     content: text,
     attachment_url: attachmentUrl || null,
     attachment_name: attachmentName || null,
