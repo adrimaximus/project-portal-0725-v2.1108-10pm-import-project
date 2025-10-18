@@ -15,7 +15,8 @@ const Index = () => {
     from: new Date(new Date().getFullYear(), 0, 1),
     to: new Date(new Date().getFullYear(), 11, 31),
   });
-  const { data: projects = [], isLoading } = useProjects();
+  // Fetch only the 50 most recent projects for a fast initial load
+  const { data: projects = [], isLoading } = useProjects({ limit: 50 });
   const { user } = useAuth();
 
   const filteredProjects = projects.filter(project => {

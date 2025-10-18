@@ -1,65 +1,41 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Project } from '@/types';
-import { toast } from 'sonner';
-import { useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
 
-const fetchProjects = async ({ queryKey }: { queryKey: readonly (string | { searchTerm?: string } | undefined)[] }): Promise<Project[]> => {
-  const [_key, _userId, options] = queryKey;
-  const searchTerm = (options as { searchTerm?: string })?.searchTerm;
-  
-  const { data, error } = await supabase.rpc('get_dashboard_projects', {
-    p_limit: 1000,
-    p_offset: 0,
-    p_search_term: searchTerm || null,
-  });
-    
-  if (error) {
-    console.error('Error fetching projects:', error);
-    toast.error('Failed to fetch projects.', { description: error.message });
-    throw new Error(error.message);
-  }
-  
-  return data as Project[];
+// Define a type for the project data returned by the RPC
+// This is a simplified version based on the Dashboard's usage
+export type DashboardProject = {
+  id: string;
+  name: string;
+  status: string;
+  progress: number;
+  start_date: string | null;
+  due_date: string | null;
+  assignedTo: { id: string; name: string; avatar_url: string; }[];
+  // Add other fields from the RPC as needed
+  [key: string]: any;
 };
 
-export const useProjects = (options: { searchTerm?: string } = {}) => {
-  const { searchTerm } = options;
-  const queryClient = useQueryClient();
-  const { user } = useAuth();
+const fetchProjects = async ({ limit = 50, offset = 0, searchTerm = '' }: { limit?: number; offset?: number; searchTerm?: string }) => {
+  const { data, error } = await supabase.rpc('get_dashboard_projects', {
+    p_limit: limit,
+    p_offset: offset,
+    p_search_term: searchTerm || null,
+  });
 
-  useEffect(() => {
-    if (!user) return;
+  if (error) {
+    console.error('Error fetching projects:', error);
+    throw new Error('Could not fetch projects');
+  }
 
-    const channel = supabase
-      .channel('realtime-projects-and-members')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'project_members' },
-        (payload) => {
-          console.log('Project members change received, refetching projects.', payload);
-          queryClient.invalidateQueries({ queryKey: ['projects'] });
-        }
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'projects' },
-        (payload) => {
-          console.log('Projects table change received, refetching projects.', payload);
-          queryClient.invalidateQueries({ queryKey: ['projects'] });
-        }
-      )
-      .subscribe();
+  return data as DashboardProject[];
+};
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user, queryClient]);
-
-  return useQuery<Project[], Error>({
-    queryKey: ['projects', user?.id, { searchTerm }],
-    queryFn: fetchProjects,
-    enabled: !!user,
+export const useProjects = ({ limit = 50, offset = 0, searchTerm = '' } = {}) => {
+  return useQuery<DashboardProject[], Error>({
+    queryKey: ['projects', { limit, offset, searchTerm }],
+    queryFn: () => fetchProjects({ limit, offset, searchTerm }),
+    // Keep data fresh for 5 minutes, but refetch in the background every minute
+    staleTime: 1000 * 60 * 5,
+    refetchInterval: 1000 * 60,
   });
 };
