@@ -134,6 +134,22 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
 
   const mutation = useMutation({
     mutationFn: async (values: any) => {
+      if (selectedProfile && !person) { // Creating a new person from a profile
+        const { data: existingPerson, error: fetchError } = await supabase
+            .from('people')
+            .select('id')
+            .eq('user_id', selectedProfile.id)
+            .single();
+
+        if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116 is "No rows found"
+            throw fetchError;
+        }
+
+        if (existingPerson) {
+            throw new Error('A person record for this user already exists.');
+        }
+      }
+
       const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'master admin';
       const isEditingLinkedUser = person && person.user_id && isAdmin;
 
@@ -178,6 +194,19 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
 
       const { data, error } = await supabase.rpc(rpcName, rpcParams).single();
       if (error) throw error;
+
+      if (selectedProfile && !person) {
+        const { error: updateError } = await supabase
+            .from('people')
+            .update({ user_id: selectedProfile.id })
+            .eq('id', data.id);
+        
+        if (updateError) {
+            throw updateError;
+        }
+        data.user_id = selectedProfile.id;
+      }
+
       return data;
     },
     onSuccess: (data) => {
@@ -209,6 +238,8 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
     }
   };
 
+  const isLinkedUser = !!person?.user_id;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
@@ -229,22 +260,22 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
           <div className="grid grid-cols-2 gap-4 px-6">
             <div>
               <Label htmlFor="first_name">First Name</Label>
-              <Input id="first_name" {...register('first_name')} disabled={!!selectedProfile?.first_name} />
+              <Input id="first_name" {...register('first_name')} disabled={!!selectedProfile || isLinkedUser} />
               {errors.first_name && <p className="text-sm text-destructive mt-1">{errors.first_name.message as string}</p>}
             </div>
             <div>
               <Label htmlFor="last_name">Last Name</Label>
-              <Input id="last_name" {...register('last_name')} disabled={!!selectedProfile?.last_name} />
+              <Input id="last_name" {...register('last_name')} disabled={!!selectedProfile || isLinkedUser} />
             </div>
           </div>
           <div className="px-6">
             <Label htmlFor="email">Email</Label>
-            <Input id="email" {...register('email')} disabled={!!selectedProfile?.email} />
+            <Input id="email" {...register('email')} disabled={!!selectedProfile || isLinkedUser} />
             {errors.email && <p className="text-sm text-destructive mt-1">{errors.email.message as string}</p>}
           </div>
           <div className="px-6">
             <Label htmlFor="phone">Phone</Label>
-            <Input id="phone" {...register('phone')} disabled={!!selectedProfile?.phone} />
+            <Input id="phone" {...register('phone')} disabled={!!selectedProfile || isLinkedUser} />
           </div>
           <div className="px-6">
             <Label htmlFor="company">Company</Label>
