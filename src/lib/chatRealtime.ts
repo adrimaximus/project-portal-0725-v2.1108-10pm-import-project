@@ -54,17 +54,9 @@ export async function sendHybridMessage({
   })
 
   // 2️⃣ Simpan ke database untuk persistensi & memicu update di list chat
-  const { error } = await supabase.from('messages').insert({
-    id: payload.id, // Use the same ID for consistency
-    conversation_id: payload.conversation_id,
-    sender_id: payload.sender_id,
-    content: payload.content,
-    attachment_url: payload.attachment_url,
-    attachment_name: payload.attachment_name,
-    attachment_type: payload.attachment_type,
-    reply_to_message_id: payload.reply_to_message_id,
-    created_at: payload.created_at,
-  })
+  // Hapus flag 'is_broadcast' sebelum menyimpan ke database
+  const { is_broadcast, ...dbPayload } = payload;
+  const { error } = await supabase.from('messages').insert(dbPayload);
   if (error) console.error('❌ Failed to insert message:', error)
 }
 
