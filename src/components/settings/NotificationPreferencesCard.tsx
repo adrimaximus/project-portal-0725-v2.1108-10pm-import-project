@@ -75,7 +75,7 @@ const NotificationPreferencesCard = () => {
   };
 
   const updatePreferences = async (newPreferences: Record<string, any>) => {
-    if (!user) return;
+    if (!user) return false;
 
     const oldPreferences = { ...preferences };
     setPreferences(newPreferences);
@@ -91,7 +91,7 @@ const NotificationPreferencesCard = () => {
       return false;
     }
     
-    refreshUser();
+    await refreshUser();
     return true;
   };
 
@@ -117,7 +117,9 @@ const NotificationPreferencesCard = () => {
     if (success) {
       if (isEnabled) {
         const notificationType = notificationTypes.find(t => t.id === typeId);
-        toast(<TestNotificationToast user={user} type={notificationType} />);
+        if (user) {
+          toast(<TestNotificationToast user={user} type={notificationType} />);
+        }
       } else {
         toast.success("Notification setting updated.");
       }
@@ -146,7 +148,13 @@ const NotificationPreferencesCard = () => {
   };
 
   const handleGlobalToggle = async (key: 'toast_enabled' | 'whatsapp_enabled' | 'email_enabled', isEnabled: boolean) => {
-    const newPreferences = { ...preferences, [key]: isEnabled };
+    const newPreferences = { ...preferences };
+    const currentPref = newPreferences[key];
+    if (typeof currentPref === 'object' && currentPref !== null) {
+      newPreferences[key] = { ...currentPref, enabled: isEnabled };
+    } else {
+      newPreferences[key] = { enabled: isEnabled };
+    }
     const success = await updatePreferences(newPreferences);
     if (success) {
       toast.success("Notification setting updated.");
@@ -199,7 +207,7 @@ const NotificationPreferencesCard = () => {
                   </div>
                   <Switch
                     id="toast-notifications"
-                    checked={preferences.toast_enabled !== false}
+                    checked={getIsEnabled('toast_enabled')}
                     onCheckedChange={(checked) => handleGlobalToggle('toast_enabled', checked)}
                   />
               </div>
@@ -212,7 +220,7 @@ const NotificationPreferencesCard = () => {
                   </div>
                   <Switch
                     id="whatsapp-notifications"
-                    checked={preferences.whatsapp_enabled !== false}
+                    checked={getIsEnabled('whatsapp_enabled')}
                     onCheckedChange={(checked) => handleGlobalToggle('whatsapp_enabled', checked)}
                   />
               </div>
@@ -225,7 +233,7 @@ const NotificationPreferencesCard = () => {
                   </div>
                   <Switch
                     id="email-notifications"
-                    checked={preferences.email_enabled !== false}
+                    checked={getIsEnabled('email_enabled')}
                     onCheckedChange={(checked) => handleGlobalToggle('email_enabled', checked)}
                   />
               </div>
