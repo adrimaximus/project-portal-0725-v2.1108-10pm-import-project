@@ -9,7 +9,7 @@ import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
+import *z from 'zod';
 import { ContactProperty, Person } from '@/types';
 import { getErrorMessage } from '@/lib/utils';
 import UserSelector from './UserSelector';
@@ -48,8 +48,25 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
   });
 
   const filteredProperties = useMemo(() => {
-    const redundantFieldNames = ['jabatan', 'posisi'];
-    return properties.filter(prop => !redundantFieldNames.includes(prop.name.toLowerCase()));
+    const redundantFieldNames = [
+      'jabatan',
+      'posisi',
+      'country',
+      'department',
+      'email',
+      'full_name',
+      'home_address_instagram',
+      'job_title',
+      'job_titles',
+      'notes',
+      'phone',
+      'phone_number',
+      'website'
+    ];
+    return properties.filter(prop => 
+      !prop.is_default && 
+      !redundantFieldNames.includes(prop.name.toLowerCase())
+    );
   }, [properties]);
 
   const baseSchema = z.object({
