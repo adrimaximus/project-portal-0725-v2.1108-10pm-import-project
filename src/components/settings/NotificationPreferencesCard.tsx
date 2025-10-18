@@ -130,6 +130,22 @@ const NotificationPreferencesCard = () => {
     }
   };
 
+  const handleWhatsAppToggle = async (isEnabled: boolean) => {
+    const newPreferences = { ...preferences, whatsapp_enabled: isEnabled };
+    const success = await updatePreferences(newPreferences);
+    if (success) {
+      toast.success("WhatsApp notification setting updated.");
+    }
+  };
+
+  const handleEmailToggle = async (isEnabled: boolean) => {
+    const newPreferences = { ...preferences, email_enabled: isEnabled };
+    const success = await updatePreferences(newPreferences);
+    if (success) {
+      toast.success("Email notification setting updated.");
+    }
+  };
+
   if (isLoading) {
     return (
       <Card>
@@ -178,6 +194,32 @@ const NotificationPreferencesCard = () => {
                     id="toast-notifications"
                     checked={preferences.toast_enabled !== false} // Default to true
                     onCheckedChange={handleGlobalToastToggle}
+                  />
+              </div>
+          </div>
+          <div className="rounded-lg border p-4">
+              <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                      <Label htmlFor="whatsapp-notifications" className="text-base">Enable WhatsApp Notifications</Label>
+                      <p className="text-sm text-muted-foreground">Receive reminders and important updates directly on WhatsApp.</p>
+                  </div>
+                  <Switch
+                    id="whatsapp-notifications"
+                    checked={preferences.whatsapp_enabled !== false}
+                    onCheckedChange={handleWhatsAppToggle}
+                  />
+              </div>
+          </div>
+          <div className="rounded-lg border p-4">
+              <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                      <Label htmlFor="email-notifications" className="text-base">Enable Email Notifications</Label>
+                      <p className="text-sm text-muted-foreground">Receive summaries and important updates in your email inbox.</p>
+                  </div>
+                  <Switch
+                    id="email-notifications"
+                    checked={preferences.email_enabled !== false}
+                    onCheckedChange={handleEmailToggle}
                   />
               </div>
           </div>
