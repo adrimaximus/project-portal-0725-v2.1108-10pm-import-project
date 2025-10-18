@@ -1,239 +1,142 @@
-import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { User, Collaborator } from '@/types';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { RealtimeChannel, Session } from '@supabase/supabase-js';
-import { toast } from 'sonner';
-import SafeLocalStorage from '@/lib/localStorage';
-import { useNavigate, useLocation } from 'react-router-dom';
+"use client";
 
-type AuthContextType = {
-  user: User | null;
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { Session, User } from '@supabase/supabase-js';
+
+interface UserProfile extends User {
+  notification_preferences?: Record<string, any>;
+}
+
+interface AuthContextType {
+  user: UserProfile | null;
   session: Session | null;
   isLoading: boolean;
-  onlineCollaborators: Collaborator[];
-  logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
-  hasPermission: (permission: string) => boolean;
-  isImpersonating: boolean;
-  startImpersonation: (targetUser: User) => Promise<void>;
-  stopImpersonation: () => Promise<void>;
-};
+}
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const IMPERSONATION_KEY = 'impersonation_active';
-const ORIGINAL_SESSION_KEY = 'original_session';
+const TONE_BASE_URL = `https://quuecudndfztjlxbrvyb.supabase.co/storage/v1/object/public/General/Notification/`;
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
+  const [user, setUser] = useState<UserProfile | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [onlineCollaborators, setOnlineCollaborators] = useState<Collaborator[]>([]);
-  const [channel, setChannel] = useState<RealtimeChannel | null>(null);
-  const [isImpersonating, setIsImpersonating] = useState(false);
-  const queryClient = useQueryClient();
-  const navigate = useNavigate();
-  const location = useLocation();
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const fetchUserProfile = async (userId: string | undefined) => {
-    if (!userId) return null;
-
-    const tryFetch = async () => {
-        const { data, error } = await supabase
-            .rpc('get_user_profile_with_permissions', { p_user_id: userId })
-            .single();
-        return { data, error };
-    };
-
-    let { data, error } = await tryFetch();
-
-    // If no profile found (PGRST116), it might be a new user whose profile is being created.
-    // Retry once after a short delay to handle potential race conditions with the new_user trigger.
-    if (error && error.code === 'PGRST116') {
-        await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
-        const retryResult = await tryFetch();
-        data = retryResult.data;
-        error = retryResult.error;
-    }
-
+  const fetchUserProfile = useCallback(async (user: User | null): Promise<UserProfile | null> => {
+    if (!user) return null;
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('notification_preferences')
+      .eq('id', user.id)
+      .single();
+    
     if (error) {
-      console.error('Error fetching user profile with permissions:', error);
-      if (error.code === 'PGRST116') {
-        console.warn("User profile not found, this might be a new user. The app will keep trying to fetch it.");
-      }
-      return null;
+      console.error("Error fetching user profile:", error);
+      return user as UserProfile;
     }
     
-    const userProfile = data as User;
-    if (userProfile.first_name || userProfile.last_name) {
-      SafeLocalStorage.setItem('lastUserName', `${userProfile.first_name || ''} ${userProfile.last_name || ''}`.trim());
-    }
-    return userProfile;
-  };
+    return { ...user, ...data };
+  }, []);
 
-  const { data: user, isLoading: isUserLoading, refetch: refreshUser } = useQuery({
-    queryKey: ['userProfile', session?.user?.id],
-    queryFn: () => fetchUserProfile(session?.user?.id),
-    enabled: !!session?.user?.id,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-  });
+  const refreshUser = useCallback(async () => {
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (authUser) {
+      const profile = await fetchUserProfile(authUser);
+      setUser(profile);
+    }
+  }, [fetchUserProfile]);
 
   useEffect(() => {
-    const checkImpersonation = () => {
-      const impersonating = SafeLocalStorage.getItem(IMPERSONATION_KEY);
-      setIsImpersonating(!!impersonating);
+    const getInitialSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setSession(session);
+      const profile = await fetchUserProfile(session?.user ?? null);
+      setUser(profile);
+      setIsLoading(false);
     };
 
-    checkImpersonation();
+    getInitialSession();
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(session);
-      setIsLoading(false);
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (_event === 'PASSWORD_RECOVERY') {
-        navigate('/reset-password', { replace: true });
+      const profile = await fetchUserProfile(session?.user ?? null);
+      setUser(profile);
+      if (_event === 'SIGNED_IN' || _event === 'USER_UPDATED') {
+        setIsLoading(false);
       }
       if (_event === 'SIGNED_OUT') {
-        SafeLocalStorage.removeItem(IMPERSONATION_KEY);
-        SafeLocalStorage.removeItem(ORIGINAL_SESSION_KEY);
-        setIsImpersonating(false);
+        setUser(null);
+        setIsLoading(false);
       }
-      setSession(session);
-      checkImpersonation();
-      setIsLoading(false);
     });
 
-    return () => subscription.unsubscribe();
-  }, [navigate]);
-
-  useEffect(() => {
-    if (!isLoading && !isUserLoading && user && session) {
-      const from = (location.state as any)?.from?.pathname || '/dashboard';
-      if (location.pathname === '/login' || location.pathname === '/' || location.pathname === '/auth/callback') {
-        navigate(from, { replace: true });
-      }
-    }
-  }, [user, isLoading, isUserLoading, session, navigate, location]);
-
-  useEffect(() => {
-    if (user && !channel) {
-      const newChannel = supabase.channel(`online-users`, {
-        config: {
-          presence: {
-            key: user.id,
-          },
-        },
-      });
-
-      newChannel
-        .on('presence', { event: 'sync' }, () => {
-          const newState = newChannel.presenceState<Collaborator>();
-          const collaborators = Object.values(newState)
-            .flat()
-            .filter(c => c.id !== user.id);
-          setOnlineCollaborators(collaborators);
-        })
-        .subscribe(async (status) => {
-          if (status === 'SUBSCRIBED') {
-            await newChannel.track({
-              id: user.id,
-              name: `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email,
-              initials: `${user.first_name?.[0] || ''}${user.last_name?.[0] || ''}`.toUpperCase(),
-              avatar_url: user.avatar_url,
-            });
-          }
-        });
-      
-      setChannel(newChannel);
-    }
-
     return () => {
-      if (channel) {
-        supabase.removeChannel(channel);
-        setChannel(null);
+      authListener.subscription.unsubscribe();
+    };
+  }, [fetchUserProfile]);
+
+  // --- Logika Suara Notifikasi ---
+  useEffect(() => {
+    if (user?.notification_preferences?.tone && user.notification_preferences.tone !== 'none') {
+      const audio = new Audio(`${TONE_BASE_URL}${user.notification_preferences.tone}`);
+      audio.preload = 'auto';
+      audioRef.current = audio;
+    } else {
+      audioRef.current = null;
+    }
+  }, [user?.notification_preferences?.tone]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const handleNewMessage = async (payload: any) => {
+      const newMessage = payload.new as { sender_id: string; conversation_id: string };
+
+      const isChatPage = window.location.pathname.startsWith('/chat');
+      const isMyMessage = newMessage.sender_id === user.id;
+      const chatNotificationsEnabled = user.notification_preferences?.comment !== false;
+
+      if (isMyMessage || isChatPage || !chatNotificationsEnabled || !audioRef.current) {
+        return;
+      }
+
+      const { count } = await supabase
+        .from('conversation_participants')
+        .select('*', { count: 'exact', head: true })
+        .eq('conversation_id', newMessage.conversation_id)
+        .eq('user_id', user.id);
+
+      if (count && count > 0) {
+        audioRef.current.play().catch(e => console.error("Error playing notification sound:", e));
       }
     };
-  }, [user, channel]);
 
-  const logout = async () => {
-    await supabase.auth.signOut({ scope: 'local' });
-    queryClient.clear();
-  };
+    const channel = supabase
+      .channel('public:messages:sound-handler')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'messages' },
+        handleNewMessage
+      )
+      .subscribe();
 
-  const hasPermission = useCallback((permission: string): boolean => {
-    if (!user) return false;
-    if (user.role === 'master admin' || user.permissions?.includes('*')) {
-      return true;
-    }
-    return user.permissions?.includes(permission) ?? false;
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user]);
+  // --- Akhir Logika Suara Notifikasi ---
 
-  const startImpersonation = async (targetUser: User) => {
-    if (!session) {
-      toast.error("You must be logged in to impersonate.");
-      return;
-    }
-    try {
-      const { data, error } = await supabase.functions.invoke('impersonate-user', {
-        body: { target_user_id: targetUser.id },
-      });
-
-      if (error) throw error;
-
-      SafeLocalStorage.setItem(ORIGINAL_SESSION_KEY, session);
-      SafeLocalStorage.setItem(IMPERSONATION_KEY, true);
-
-      const { error: sessionError } = await supabase.auth.setSession({
-        access_token: data.access_token,
-        refresh_token: data.refresh_token,
-      });
-
-      if (sessionError) throw sessionError;
-
-      setIsImpersonating(true);
-      toast.success(`Now viewing as ${targetUser.name}.`);
-    } catch (error: any) {
-      toast.error("Failed to impersonate user.", { description: error.message });
-    }
+  const value = {
+    user,
+    session,
+    isLoading,
+    refreshUser,
   };
 
-  const stopImpersonation = async () => {
-    const originalSession = SafeLocalStorage.getItem<Session>(ORIGINAL_SESSION_KEY);
-    if (!originalSession) {
-      toast.error("Original session not found. Please log out and log back in.");
-      return;
-    }
-
-    const { error } = await supabase.auth.setSession(originalSession);
-    if (error) {
-      toast.error("Failed to restore original session.", { description: error.message });
-      return;
-    }
-
-    SafeLocalStorage.removeItem(IMPERSONATION_KEY);
-    SafeLocalStorage.removeItem(ORIGINAL_SESSION_KEY);
-    setIsImpersonating(false);
-    toast.info("Returned to your original session.");
-  };
-
-  return (
-    <AuthContext.Provider value={{ 
-      user: user || null, 
-      session, 
-      isLoading: isLoading || isUserLoading, 
-      onlineCollaborators,
-      logout,
-      refreshUser: async () => { await refreshUser() },
-      hasPermission,
-      isImpersonating,
-      startImpersonation,
-      stopImpersonation,
-    }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 export const useAuth = () => {
