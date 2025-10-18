@@ -35,7 +35,7 @@ interface PeopleFormDialogProps {
 
 const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormDialogProps) => {
   const queryClient = useQueryClient();
-  const { user: currentUser, session } = useAuth();
+  const { user: currentUser } = useAuth();
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
 
   const { data: properties = [], isLoading: isLoadingProperties } = useQuery<ContactProperty[]>({
@@ -126,7 +126,10 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
 
   const mutation = useMutation({
     mutationFn: async (values: any) => {
-      const standardFields = ['full_name', 'email', 'phone', 'company', 'job_title', 'notes'];
+      const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'master admin';
+      const isEditingLinkedUser = person && person.user_id && isAdmin;
+
+      const standardFields = ['full_name', 'email', 'phone', 'company', 'job_title', 'notes', 'avatar_url'];
       const personData: Partial<Person> = {};
       const custom_properties: Record<string, any> = {};
 
@@ -138,18 +141,40 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
         }
       }
       personData.custom_properties = custom_properties;
+      
+      const contactJson = {
+        emails: values.email ? [values.email] : [],
+        phones: values.phone ? [values.phone] : [],
+      };
 
-      // If a profile was selected, use its avatar_url
-      if (selectedProfile && !person) {
+      let rpcName = 'upsert_person_with_details';
+      let rpcParams: any = {
+        p_id: person?.id || null,
+        p_full_name: values.full_name,
+        p_contact: contactJson,
+        p_company: values.company,
+        p_job_title: values.job_title,
+        p_department: values.department,
+        p_social_media: person?.social_media || {},
+        p_birthday: values.birthday,
+        p_notes: values.notes,
+        p_project_ids: person?.projects?.map(p => p.id) || [],
+        p_existing_tag_ids: person?.tags?.map(t => t.id) || [],
+        p_custom_tags: [],
+        p_avatar_url: values.avatar_url,
+        p_address: person?.address || null,
+        p_custom_properties: custom_properties,
+      };
+
+      if (isEditingLinkedUser) {
+        rpcName = 'admin_update_person_details';
+      } else if (!person && selectedProfile) {
+        // When creating a person from a profile, link them
+        personData.user_id = selectedProfile.id;
         personData.avatar_url = selectedProfile.avatar_url;
       }
 
-      let data, error;
-      if (person) {
-        ({ data, error } = await supabase.from('people').update(personData).eq('id', person.id).select().single());
-      } else {
-        ({ data, error } = await supabase.from('people').insert(personData as any).select().single());
-      }
+      const { data, error } = await supabase.rpc(rpcName, rpcParams).single();
       if (error) throw error;
       return data;
     },
@@ -201,29 +226,17 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
           )}
           <div className="px-6">
             <Label htmlFor="full_name">Full Name</Label>
-            {profileToUse && `${profileToUse.first_name || ''} ${profileToUse.last_name || ''}`.trim() ? (
-              <p className="w-full rounded-md border border-input bg-muted px-3 py-2 text-sm text-muted-foreground">
-                {`${profileToUse.first_name || ''} ${profileToUse.last_name || ''}`.trim()}
-              </p>
-            ) : (
-              <Input id="full_name" {...register('full_name')} />
-            )}
+            <Input id="full_name" {...register('full_name')} />
             {errors.full_name && <p className="text-sm text-destructive mt-1">{errors.full_name.message as string}</p>}
           </div>
           <div className="px-6">
             <Label htmlFor="email">Email</Label>
-            {profileToUse && profileToUse.email ? (
-              <p className="w-full rounded-md border border-input bg-muted px-3 py-2 text-sm text-muted-foreground">
-                {profileToUse.email}
-              </p>
-            ) : (
-              <Input id="email" {...register('email')} />
-            )}
+            <Input id="email" {...register('email')} />
             {errors.email && <p className="text-sm text-destructive mt-1">{errors.email.message as string}</p>}
           </div>
           <div className="px-6">
             <Label htmlFor="phone">Phone</Label>
-            <Input id="phone" {...register('phone')} readOnly={!!(profileToUse && profileToUse.phone)} />
+            <Input id="phone" {...register('phone')} />
           </div>
           <div className="px-6">
             <Label htmlFor="company">Company</Label>
