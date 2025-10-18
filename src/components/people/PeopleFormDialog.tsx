@@ -57,7 +57,6 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
     email: z.string().email('Invalid email address').optional().or(z.literal('')),
     phone: z.string().optional(),
     company: z.string().optional(),
-    job_title: z.string().optional(),
   });
 
   const [dynamicSchema, setDynamicSchema] = React.useState<z.AnyZodObject>(baseSchema);
@@ -110,10 +109,9 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
             email: profileForDefaults.email || '',
             phone: profileForDefaults.phone || '',
             company: '',
-            job_title: '',
           });
         } else {
-          reset({ full_name: '', email: '', phone: '', company: '', job_title: '', ...defaultValues });
+          reset({ full_name: '', email: '', phone: '', company: '', ...defaultValues });
         }
       }
     } else {
@@ -127,7 +125,7 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
       const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'master admin';
       const isEditingLinkedUser = person && person.user_id && isAdmin;
 
-      const standardFields = ['full_name', 'email', 'phone', 'company', 'job_title', 'avatar_url'];
+      const standardFields = ['full_name', 'email', 'phone', 'company', 'avatar_url'];
       const personData: Partial<Person> = {};
       const custom_properties: Record<string, any> = {};
 
@@ -239,10 +237,6 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
           <div className="px-6">
             <Label htmlFor="company">Company</Label>
             <Input id="company" {...register('company')} />
-          </div>
-          <div className="px-6">
-            <Label htmlFor="job_title">Job Title</Label>
-            <Input id="job_title" {...register('job_title')} />
           </div>
 
           {isLoadingProperties ? (
