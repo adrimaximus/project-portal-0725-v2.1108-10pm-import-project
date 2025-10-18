@@ -31,6 +31,8 @@ const ContactPropertiesPage = () => {
     }
   });
 
+  const customProperties = properties.filter(prop => !prop.is_default);
+
   const handleAddNew = () => {
     setPropertyToEdit(null);
     setIsFormOpen(true);
@@ -97,8 +99,8 @@ const ContactPropertiesPage = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle>Active Properties</CardTitle>
-            <CardDescription>These are the fields available for your contacts.</CardDescription>
+            <CardTitle>Custom Properties</CardTitle>
+            <CardDescription>Create and manage custom fields for your contacts.</CardDescription>
           </CardHeader>
           <CardContent>
             <Table>
@@ -112,24 +114,22 @@ const ContactPropertiesPage = () => {
               <TableBody>
                 {isLoading ? (
                   <TableRow><TableCell colSpan={3} className="text-center">Loading properties...</TableCell></TableRow>
-                ) : properties.length === 0 ? (
+                ) : customProperties.length === 0 ? (
                   <TableRow><TableCell colSpan={3} className="text-center h-24">No custom properties found.</TableCell></TableRow>
-                ) : properties.map(prop => (
+                ) : customProperties.map(prop => (
                   <TableRow key={prop.id}>
                     <TableCell className="font-medium">{prop.label}</TableCell>
                     <TableCell><Badge variant="outline" className="capitalize">{prop.type}</Badge></TableCell>
                     <TableCell className="text-right">
-                      {!prop.is_default && (
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onSelect={() => handleEdit(prop)}><Edit className="mr-2 h-4 w-4" /> Edit</DropdownMenuItem>
-                            <DropdownMenuItem onSelect={() => setPropertyToDelete(prop)} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Delete</DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      )}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onSelect={() => handleEdit(prop)}><Edit className="mr-2 h-4 w-4" /> Edit</DropdownMenuItem>
+                          <DropdownMenuItem onSelect={() => setPropertyToDelete(prop)} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Delete</DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 ))}
