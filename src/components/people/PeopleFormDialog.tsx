@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -15,6 +15,7 @@ import { ContactProperty, Person } from '@/types';
 import { getErrorMessage } from '@/lib/utils';
 import AddressAutocompleteInput from '../AddressAutocompleteInput';
 import UserSelector from './UserSelector';
+import { useAuth } from '@/contexts/AuthContext';
 
 // Minimal profile type definition to avoid touching global types.ts
 interface Profile {
@@ -35,6 +36,7 @@ interface PeopleFormDialogProps {
 
 const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormDialogProps) => {
   const queryClient = useQueryClient();
+  const { user: currentUser } = useAuth();
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
 
   const { data: properties = [], isLoading: isLoadingProperties } = useQuery<ContactProperty[]>({
@@ -83,32 +85,40 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
     resolver: zodResolver(dynamicSchema),
   });
 
+  const profileToUse = useMemo(() => {
+    if (person) return null; // Edit mode, no pre-fill
+    if (selectedProfile) return selectedProfile;
+    return currentUser as unknown as Profile | null;
+  }, [person, selectedProfile, currentUser]);
+
   useEffect(() => {
     if (open) {
-      if (person) { // Editing existing person
-        setSelectedProfile(null);
+      if (person) { // Edit mode
         const { custom_properties, ...personData } = person;
         reset({ ...personData, ...custom_properties });
-      } else if (selectedProfile) { // Creating new person from profile
+      } else { // Create mode
         const defaultValues = properties.reduce((acc, prop) => ({ ...acc, [prop.name]: '' }), {});
-        reset({
-          ...defaultValues,
-          full_name: `${selectedProfile.first_name || ''} ${selectedProfile.last_name || ''}`.trim(),
-          email: selectedProfile.email || '',
-          phone: selectedProfile.phone || '',
-          company: '',
-          job_title: '',
-          avatar_url: selectedProfile.avatar_url || '',
-          notes: '',
-          address: '',
-        });
-      } else { // Creating new person from scratch
-        setSelectedProfile(null);
-        const defaultValues = properties.reduce((acc, prop) => ({ ...acc, [prop.name]: '' }), {});
-        reset({ full_name: '', email: '', phone: '', company: '', job_title: '', avatar_url: '', notes: '', address: '', ...defaultValues });
+        if (profileToUse) {
+          reset({
+            ...defaultValues,
+            full_name: `${profileToUse.first_name || ''} ${profileToUse.last_name || ''}`.trim(),
+            email: profileToUse.email || '',
+            phone: profileToUse.phone || '',
+            company: '',
+            job_title: '',
+            avatar_url: profileToUse.avatar_url || '',
+            notes: '',
+            address: '',
+          });
+        } else {
+          reset({ full_name: '', email: '', phone: '', company: '', job_title: '', avatar_url: '', notes: '', address: '', ...defaultValues });
+        }
       }
+    } else {
+      // Reset when dialog closes
+      setSelectedProfile(null);
     }
-  }, [person, open, reset, properties, selectedProfile]);
+  }, [person, open, reset, properties, profileToUse]);
 
   const mutation = useMutation({
     mutationFn: async (values: any) => {
@@ -182,17 +192,17 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
           )}
           <div className="px-6">
             <Label htmlFor="full_name">Full Name</Label>
-            <Input id="full_name" {...register('full_name')} readOnly={!!(selectedProfile && `${selectedProfile.first_name || ''} ${selectedProfile.last_name || ''}`.trim())} />
+            <Input id="full_name" {...register('full_name')} readOnly={!!(profileToUse && `${profileToUse.first_name || ''} ${profileToUse.last_name || ''}`.trim())} />
             {errors.full_name && <p className="text-sm text-destructive mt-1">{errors.full_name.message as string}</p>}
           </div>
           <div className="px-6">
             <Label htmlFor="email">Email</Label>
-            <Input id="email" {...register('email')} readOnly={!!(selectedProfile && selectedProfile.email)} />
+            <Input id="email" {...register('email')} readOnly={!!(profileToUse && profileToUse.email)} />
             {errors.email && <p className="text-sm text-destructive mt-1">{errors.email.message as string}</p>}
           </div>
           <div className="px-6">
             <Label htmlFor="phone">Phone</Label>
-            <Input id="phone" {...register('phone')} readOnly={!!(selectedProfile && selectedProfile.phone)} />
+            <Input id="phone" {...register('phone')} readOnly={!!(profileToUse && profileToUse.phone)} />
           </div>
           <div className="px-6">
             <Label htmlFor="company">Company</Label>
@@ -217,7 +227,7 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
           </div>
           <div className="px-6">
             <Label htmlFor="avatar_url">Avatar URL</Label>
-            <Input id="avatar_url" {...register('avatar_url')} readOnly={!!(selectedProfile && selectedProfile.avatar_url)} />
+            <Input id="avatar_url" {...register('avatar_url')} readOnly={!!(profileToUse && profileToUse.avatar_url)} />
             {errors.avatar_url && <p className="text-sm text-destructive mt-1">{errors.avatar_url.message as string}</p>}
           </div>
           <div className="px-6">
