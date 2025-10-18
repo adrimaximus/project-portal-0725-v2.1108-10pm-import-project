@@ -24,20 +24,32 @@ const formatPhoneNumberForApi = (phone: string): string | null => {
     return cleaned;
 };
 
-const getSystemPrompt = () => `Anda adalah asisten notifikasi yang ramah dan suportif. Tugas Anda adalah membuat pesan notifikasi WhatsApp yang singkat, natural, dan positif.
+const getSystemPrompt = (channel: 'whatsapp' | 'email') => {
+  if (channel === 'email') {
+    return `Anda adalah asisten notifikasi yang profesional dan efisien. Tugas Anda adalah membuat konten email notifikasi yang jelas dan informatif.
+
+**Aturan Penting:**
+1.  **Subjek yang Jelas:** Buat subjek email yang ringkas dan langsung ke intinya (misalnya, "Anda Disebut di Proyek X" atau "Pesan Baru di Grup Y").
+2.  **Konten HTML:** Buat isi email dalam format HTML sederhana. Mulai dengan sapaan (misalnya, "Hai [Nama Penerima],").
+3.  **Detail Lengkap:** Sertakan semua detail kontekstual yang relevan (siapa yang beraksi, di mana, dan kutipan singkat jika ada).
+4.  **Call to Action:** Sertakan tautan (URL) yang jelas di akhir email dengan ajakan untuk bertindak (misalnya, "Lihat Komentar" atau "Buka Proyek").
+5.  **Format Profesional:** Gunakan paragraf (<p>) dan format tebal (<strong>) untuk menyorot informasi penting.
+6.  **Output JSON:** Respons Anda HARUS berupa objek JSON yang valid dengan dua kunci: "subject" dan "htmlBody". Jangan sertakan teks atau format lain.`;
+  }
+
+  // Default to WhatsApp prompt
+  return `Anda adalah asisten notifikasi yang ramah dan suportif. Tugas Anda adalah membuat pesan notifikasi WhatsApp yang singkat, natural, dan positif.
 
 **Aturan Penting:**
 1.  **Gunakan Variasi Kalimat:** Jangan pernah menggunakan kalimat yang sama persis berulang kali.
 2.  **Sertakan Emoji:** Tambahkan satu atau dua emoji yang relevan dan sopan di akhir pesan untuk memberikan sentuhan visual.
-3.  **Sentuhan Personal Positif:** Di akhir pesan, sertakan satu kalimat positif yang ringan dan relevan. Variasikan gaya Anda agar tidak monoton:
-    *   **Pertanyaan Ramah:** Ajukan pertanyaan singkat yang tidak perlu dijawab (misal: _Sudah ngopi pagi ini? ☕_, _Jangan lupa istirahat sejenak ya!_).
-    *   **Observasi Positif:** Berikan komentar positif singkat (misal: _Kolaborasi tim yang hebat!_, _Satu langkah lebih dekat menuju sukses._).
-    *   **Penyemangat Klasik:** Gunakan kalimat penyemangat jika dirasa paling cocok (misal: _Semangat terus!_, _Anda pasti bisa!_).
+3.  **Sentuhan Personal Positif:** Di akhir pesan, sertakan satu kalimat positif yang ringan dan relevan.
 4.  **Jaga Profesionalisme:** Pastikan nada tetap profesional namun ramah.
 5.  **Format:** Gunakan format tebal WhatsApp (*kata*) untuk nama orang, nama proyek, nama tugas, dll.
 6.  **Konteks Pesan:** Jika isi pesan/komentar disediakan, kutip sebagian kecil saja (misalnya, 5-7 kata pertama) menggunakan format miring (_"kutipan..."_). Jangan kutip seluruh pesan.
 7.  **Singkat:** Jaga agar keseluruhan pesan notifikasi tetap singkat dan langsung ke intinya.
 8.  **Sertakan URL:** Jika URL disediakan dalam konteks, Anda HARUS menyertakannya secara alami di akhir pesan.`;
+};
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -74,9 +86,8 @@ serve(async (req) => {
       const notificationId = notification.id;
       try {
         await supabaseAdmin.from('pending_whatsapp_notifications').update({ status: 'processing', processed_at: new Date().toISOString() }).eq('id', notificationId);
-        console.log(`[process-and-send] [${notificationId}] Processing notification of type: ${notification.notification_type}, retry: ${notification.retry_count}`);
+        console.log(`[process-and-send] [${notificationId}] Processing notification of type: ${notification.notification_type}`);
         
-        // Smart Cancellation Check
         if (notification.notification_type === 'new_chat_message') {
           const { data: participantData, error: participantError } = await supabaseAdmin
             .from('conversation_participants')
@@ -95,62 +106,83 @@ serve(async (req) => {
           }
         }
 
-        const { data: recipientData, error: recipientError } = await supabaseAdmin.from('profiles').select('id, first_name, last_name, email, phone').eq('id', notification.recipient_id).single();
+        const { data: recipientData, error: recipientError } = await supabaseAdmin.from('profiles').select('id, first_name, last_name, email, phone, notification_preferences').eq('id', notification.recipient_id).single();
         if (recipientError) throw new Error(`Failed to fetch recipient profile: ${recipientError.message}`);
         
-        const recipientPhone = formatPhoneNumberForApi(recipientData.phone);
-        if (!recipientPhone) {
-            const errorMessage = `Recipient ${recipientData.id} does not have a valid phone number.`;
-            console.warn(`[process-and-send] [${notificationId}] Skipping notification: ${errorMessage}`);
-            await supabaseAdmin.from('pending_whatsapp_notifications').update({ status: 'failed', error_message: 'Recipient does not have a valid phone number.' }).eq('id', notificationId);
-            failureCount++;
-            continue;
-        }
+        const prefs = recipientData.notification_preferences || {};
+        const isWhatsappEnabled = prefs.whatsapp_enabled !== false;
+        const isEmailEnabled = prefs.email_enabled === true; // Explicitly check for true
 
-        let userPrompt = '';
+        let whatsappSent = false;
+        let emailSent = false;
+
         const recipientName = `${recipientData.first_name || ''} ${recipientData.last_name || ''}`.trim() || recipientData.email;
         const notificationType = notification.notification_type || 'new_chat_message';
+        
+        // --- Send WhatsApp Notification ---
+        if (isWhatsappEnabled) {
+          const recipientPhone = formatPhoneNumberForApi(recipientData.phone);
+          if (recipientPhone) {
+            try {
+              const userPrompt = `**Konteks:**\n- **Jenis:** Notifikasi ${notificationType}\n- **Penerima:** ${recipientName}\n- **Detail:** ${JSON.stringify(notification.context_data)}\n\nBuat pesan notifikasi WhatsApp yang sesuai.`;
+              const anthropic = new Anthropic({ apiKey: Deno.env.get('ANTHROPIC_API_KEY') });
+              const aiResponse = await anthropic.messages.create({ model: "claude-3-haiku-20240307", max_tokens: 150, system: getSystemPrompt('whatsapp'), messages: [{ role: "user", content: userPrompt }] });
+              const aiMessage = aiResponse.content[0].text;
 
-        // ... [Logic for generating userPrompt based on notificationType remains the same]
-        // This part is extensive, so I'm assuming it's correct from the previous step and not repeating it for brevity.
-        // The logic to generate userPrompt for each case ('new_chat_message', 'project_invite', etc.) goes here.
-        // For this example, I'll just use a placeholder.
-        userPrompt = `**Konteks:**\n- **Jenis:** Notifikasi ${notificationType}\n- **Penerima:** ${recipientName}\n- **Detail:** ${JSON.stringify(notification.context_data)}\n\nBuat pesan notifikasi yang sesuai.`;
+              const { data: wbizConfig } = await supabaseAdmin.from('app_config').select('key, value').in('key', ['WBIZTOOL_CLIENT_ID', 'WBIZTOOL_API_KEY']);
+              const clientId = wbizConfig?.find(c => c.key === 'WBIZTOOL_CLIENT_ID')?.value;
+              const apiKey = wbizConfig?.find(c => c.key === 'WBIZTOOL_API_KEY')?.value;
+              const whatsappClientId = Deno.env.get('WBIZTOOL_WHATSAPP_CLIENT_ID');
+              if (!clientId || !apiKey || !whatsappClientId) throw new Error("WBIZTOOL credentials not configured.");
 
-
-        const anthropic = new Anthropic({ apiKey: Deno.env.get('ANTHROPIC_API_KEY') });
-        const aiResponse = await anthropic.messages.create({ model: "claude-3-haiku-20240307", max_tokens: 150, system: getSystemPrompt(), messages: [{ role: "user", content: userPrompt }] });
-        const aiMessage = aiResponse.content[0].text;
-
-        const { data: wbizConfig } = await supabaseAdmin.from('app_config').select('key, value').in('key', ['WBIZTOOL_CLIENT_ID', 'WBIZTOOL_API_KEY']);
-        const clientId = wbizConfig?.find(c => c.key === 'WBIZTOOL_CLIENT_ID')?.value;
-        const apiKey = wbizConfig?.find(c => c.key === 'WBIZTOOL_API_KEY')?.value;
-        const whatsappClientId = Deno.env.get('WBIZTOOL_WHATSAPP_CLIENT_ID');
-        if (!clientId || !apiKey || !whatsappClientId) throw new Error("WBIZTOOL credentials not configured.");
-
-        const wbizPayload = { client_id: parseInt(clientId, 10), api_key: apiKey, whatsapp_client: parseInt(whatsappClientId, 10), phone: recipientPhone, message: aiMessage };
-
-        const wbizResponse = await fetch("https://wbiztool.com/api/v1/send_msg/", { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Client-ID': clientId, 'X-Api-Key': apiKey }, body: JSON.stringify(wbizPayload) });
-        if (!wbizResponse.ok) {
-            const errorData = await wbizResponse.json().catch(() => ({}));
-            throw new Error(`WBIZTOOL API Error (${wbizResponse.status}): ${errorData.message || 'Unknown error'}`);
+              const wbizPayload = { client_id: parseInt(clientId, 10), api_key: apiKey, whatsapp_client: parseInt(whatsappClientId, 10), phone: recipientPhone, message: aiMessage };
+              const wbizResponse = await fetch("https://wbiztool.com/api/v1/send_msg/", { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Client-ID': clientId, 'X-Api-Key': apiKey }, body: JSON.stringify(wbizPayload) });
+              if (!wbizResponse.ok) {
+                  const errorData = await wbizResponse.json().catch(() => ({}));
+                  throw new Error(`WBIZTOOL API Error (${wbizResponse.status}): ${errorData.message || 'Unknown error'}`);
+              }
+              whatsappSent = true;
+            } catch (e) {
+              console.error(`[process-and-send] [${notificationId}] Failed to send WhatsApp:`, e.message);
+            }
+          }
         }
 
-        // Rescheduling Logic
-        if (notification.retry_count < 2) {
-          const nextRetryCount = notification.retry_count + 1;
-          const nextSendAt = new Date(Date.now() + 5 * 60 * 1000).toISOString(); // 5 minutes from now
-          await supabaseAdmin.from('pending_whatsapp_notifications').update({
-            status: 'pending',
-            retry_count: nextRetryCount,
-            send_at: nextSendAt,
-          }).eq('id', notificationId);
-          console.log(`[process-and-send] [${notificationId}] Sent reminder #${notification.retry_count + 1}. Rescheduled for ${nextSendAt}.`);
-        } else {
+        // --- Send Email Notification ---
+        if (isEmailEnabled) {
+          const recipientEmail = recipientData.email;
+          if (recipientEmail) {
+            try {
+              const userPrompt = `**Konteks:**\n- **Jenis:** Notifikasi ${notificationType}\n- **Penerima:** ${recipientName}\n- **Detail:** ${JSON.stringify(notification.context_data)}\n\nBuat subjek dan isi email notifikasi yang sesuai.`;
+              const anthropic = new Anthropic({ apiKey: Deno.env.get('ANTHROPIC_API_KEY') });
+              const aiResponse = await anthropic.messages.create({ model: "claude-3-haiku-20240307", max_tokens: 400, system: getSystemPrompt('email'), messages: [{ role: "user", content: userPrompt }] });
+              const jsonMatch = aiResponse.content[0].text.match(/{[\s\S]*}/);
+              if (!jsonMatch) throw new Error("AI response for email was not valid JSON.");
+              const { subject, htmlBody } = JSON.parse(jsonMatch[0]);
+
+              const { data: emailitConfig } = await supabaseAdmin.from('app_config').select('value').eq('key', 'EMAILIT_API_KEY').single();
+              const emailitApiKey = emailitConfig?.value;
+              if (!emailitApiKey) throw new Error("Emailit API key not configured.");
+
+              const emailPayload = { from: Deno.env.get("EMAIL_FROM") ?? "7i Portal <no-reply@mail.ahensi.com>", to: recipientEmail, subject, html: htmlBody };
+              const emailitResponse = await fetch("https://api.emailit.com/v1/emails", { method: "POST", headers: { "Authorization": `Bearer ${emailitApiKey}`, "Content-Type": "application/json" }, body: JSON.stringify(emailPayload) });
+              if (!emailitResponse.ok) {
+                  const errorData = await emailitResponse.json().catch(() => ({}));
+                  throw new Error(`Emailit API Error (${emailitResponse.status}): ${errorData.message || 'Unknown error'}`);
+              }
+              emailSent = true;
+            } catch (e) {
+              console.error(`[process-and-send] [${notificationId}] Failed to send Email:`, e.message);
+            }
+          }
+        }
+
+        if (whatsappSent || emailSent) {
           await supabaseAdmin.from('pending_whatsapp_notifications').update({ status: 'sent' }).eq('id', notificationId);
-          console.log(`[process-and-send] [${notificationId}] Final reminder sent. Marking as complete.`);
+          successCount++;
+        } else {
+          throw new Error("Failed to send notification on all enabled channels.");
         }
-        successCount++;
 
       } catch (innerError) {
         failureCount++;
