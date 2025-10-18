@@ -25,17 +25,17 @@ export async function sendHybridMessage({
   attachmentType,
   replyToMessageId,
 }: {
-  messageId: string
-  conversationId: string
-  senderId: string
-  text: string
-  attachmentUrl?: string | null
-  attachmentName?: string | null
-  attachmentType?: string | null
-  replyToMessageId?: string | null
+  messageId: string;
+  conversationId: string;
+  senderId: string;
+  text: string;
+  attachmentUrl?: string | null;
+  attachmentName?: string | null;
+  attachmentType?: string | null;
+  replyToMessageId?: string | null;
 }) {
   const payload = {
-    id: messageId, // Use the provided ID
+    id: messageId, // Use the passed-in ID for consistency
     content: text,
     attachment_url: attachmentUrl || null,
     attachment_name: attachmentName || null,

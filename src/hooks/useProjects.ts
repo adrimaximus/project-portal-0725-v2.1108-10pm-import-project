@@ -1,28 +1,65 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Project } from '@/types';
+import { toast } from 'sonner';
+import { useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 
-const fetchProjects = async ({ limit = 50, offset = 0, searchTerm = '' }: { limit?: number; offset?: number; searchTerm?: string }) => {
+const fetchProjects = async ({ queryKey }: { queryKey: readonly (string | { searchTerm?: string } | undefined)[] }): Promise<Project[]> => {
+  const [_key, _userId, options] = queryKey;
+  const searchTerm = (options as { searchTerm?: string })?.searchTerm;
+  
   const { data, error } = await supabase.rpc('get_dashboard_projects', {
-    p_limit: limit,
-    p_offset: offset,
+    p_limit: 1000,
+    p_offset: 0,
     p_search_term: searchTerm || null,
   });
-
+    
   if (error) {
     console.error('Error fetching projects:', error);
-    throw new Error('Could not fetch projects');
+    toast.error('Failed to fetch projects.', { description: error.message });
+    throw new Error(error.message);
   }
-
-  return (data || []) as Project[];
+  
+  return data as Project[];
 };
 
-export const useProjects = ({ limit = 50, offset = 0, searchTerm = '' } = {}) => {
+export const useProjects = (options: { searchTerm?: string } = {}) => {
+  const { searchTerm } = options;
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel('realtime-projects-and-members')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'project_members' },
+        (payload) => {
+          console.log('Project members change received, refetching projects.', payload);
+          queryClient.invalidateQueries({ queryKey: ['projects'] });
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'projects' },
+        (payload) => {
+          console.log('Projects table change received, refetching projects.', payload);
+          queryClient.invalidateQueries({ queryKey: ['projects'] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, queryClient]);
+
   return useQuery<Project[], Error>({
-    queryKey: ['projects', { limit, offset, searchTerm }],
-    queryFn: () => fetchProjects({ limit, offset, searchTerm }),
-    // Keep data fresh for 5 minutes, but refetch in the background every minute
-    staleTime: 1000 * 60 * 5,
-    refetchInterval: 1000 * 60,
+    queryKey: ['projects', user?.id, { searchTerm }],
+    queryFn: fetchProjects,
+    enabled: !!user,
   });
 };

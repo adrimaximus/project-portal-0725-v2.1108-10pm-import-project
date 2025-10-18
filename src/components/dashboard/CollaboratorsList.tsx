@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { User } from '@/types';
+import React, { useState, useMemo, useEffect } from 'react';
+import { Project, User } from '@/types';
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import {
   Collapsible,
@@ -21,21 +21,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ChevronsUpDown, Users } from "lucide-react";
-import { generatePastelColor, getAvatarUrl, getInitials } from '@/lib/utils';
-import { useQuery } from '@tanstack/react-query';
+import { ChevronsUpDown } from "lucide-react";
+import { generatePastelColor, getAvatarUrl } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
-import { Skeleton } from '@/components/ui/skeleton';
 
-interface CollaboratorStatData {
-  user_id: string;
-  project_count: number;
-  upcoming_project_count: number;
-  ongoing_project_count: number;
-  active_task_count: number;
-  active_ticket_count: number;
-  overdue_bill_count: number;
+interface CollaboratorsListProps {
+  projects: Project[];
 }
 
 interface CollaboratorStat extends User {
@@ -48,70 +39,97 @@ interface CollaboratorStat extends User {
   role: string;
 }
 
-const CollaboratorsList = () => {
+const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
   const [isOpen, setIsOpen] = useState(false);
-  const { user } = useAuth();
+  const [tasks, setTasks] = useState<any[]>([]);
 
-  const { data: collaboratorStats, isLoading: isLoadingStats } = useQuery<CollaboratorStatData[]>({
-    queryKey: ['collaboratorStats', user?.id],
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_collaborator_stats');
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!user,
-  });
+  useEffect(() => {
+    const fetchTasks = async () => {
+      if (!projects || projects.length === 0) {
+        setTasks([]);
+        return;
+      }
+      const projectIds = projects.map(p => p.id);
+      const { data, error } = await supabase.rpc('get_project_tasks', { p_project_ids: projectIds });
+      
+      if (error) {
+        console.error("Error fetching project tasks:", error);
+        setTasks([]);
+      } else {
+        setTasks(data || []);
+      }
+    };
 
-  const userIds = useMemo(() => collaboratorStats?.map((s) => s.user_id) || [], [collaboratorStats]);
-
-  const { data: profiles, isLoading: isLoadingProfiles } = useQuery({
-    queryKey: ['profilesForStats', userIds],
-    queryFn: async () => {
-      if (userIds.length === 0) return [];
-      const { data, error } = await supabase.from('profiles').select('*').in('id', userIds);
-      if (error) throw error;
-      return data;
-    },
-    enabled: userIds.length > 0,
-  });
+    fetchTasks();
+  }, [projects]);
 
   const { collaboratorsByRole, allCollaborators } = useMemo(() => {
-    if (!collaboratorStats || !profiles) return { collaboratorsByRole: {}, allCollaborators: [] };
-
-    const statsMap = new Map(collaboratorStats.map((s) => [s.user_id, s]));
-    const profileMap = new Map(profiles.map(p => [p.id, p]));
-
-    const collaborators = Array.from(statsMap.keys()).map(userId => {
-      const stats = statsMap.get(userId)!;
-      const profile = profileMap.get(userId);
-      if (!profile) return null;
-
-      const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email;
-      
-      const collaboratorData: CollaboratorStat = {
-        id: userId,
-        name: fullName,
-        avatar_url: profile.avatar_url,
-        email: profile.email,
-        initials: getInitials(fullName, profile.email),
-        first_name: profile.first_name,
-        last_name: profile.last_name,
-        role: profile.role || 'member',
-        status: profile.status,
-        updated_at: profile.updated_at,
-        phone: profile.phone,
-        projectCount: stats.project_count,
-        upcomingProjectCount: stats.upcoming_project_count,
-        ongoingProjectCount: stats.ongoing_project_count,
-        activeTaskCount: stats.active_task_count,
-        activeTicketCount: stats.active_ticket_count,
-        overdueBillCount: stats.overdue_bill_count,
-      };
-      return collaboratorData;
-    }).filter((c): c is CollaboratorStat => c !== null);
-
+    const stats: Record<string, CollaboratorStat & { countedProjectIds: Set<string> }> = {};
     const roleHierarchy: Record<string, number> = { 'owner': 1, 'admin': 2, 'editor': 3, 'member': 4 };
-    
+
+    const ensureUser = (user: User) => {
+        if (!stats[user.id]) {
+            stats[user.id] = {
+                ...user,
+                projectCount: 0,
+                upcomingProjectCount: 0,
+                ongoingProjectCount: 0,
+                activeTaskCount: 0,
+                activeTicketCount: 0,
+                overdueBillCount: 0,
+                role: user.role || 'member',
+                countedProjectIds: new Set(),
+            };
+        }
+        return stats[user.id];
+    };
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    projects.forEach(p => {
+        const startDate = p.start_date ? new Date(p.start_date) : null;
+        const isUpcoming = startDate ? startDate > today : false;
+        const isOngoing = !['Completed', 'Cancelled'].includes(p.status);
+        
+        const paymentDueDate = p.payment_due_date ? new Date(p.payment_due_date) : null;
+        const isOverdue = paymentDueDate ? paymentDueDate < today && p.payment_status !== 'Paid' : false;
+
+        p.assignedTo.forEach(user => {
+            const userStat = ensureUser(user);
+            
+            const currentRolePriority = roleHierarchy[userStat.role] || 99;
+            const newRolePriority = roleHierarchy[user.role || 'member'] || 99;
+            if (newRolePriority < currentRolePriority) {
+                userStat.role = user.role || 'member';
+            }
+
+            if (!userStat.countedProjectIds.has(p.id)) {
+                userStat.projectCount++;
+                if (isUpcoming) userStat.upcomingProjectCount++;
+                if (isOngoing) userStat.ongoingProjectCount++;
+                if (isOverdue) userStat.overdueBillCount++;
+                userStat.countedProjectIds.add(p.id);
+            }
+        });
+    });
+
+    (tasks || []).forEach(task => {
+        if (!task.completed) {
+            (task.assignedTo || []).forEach((assignee: User) => {
+                const userStat = ensureUser(assignee);
+                userStat.activeTaskCount++;
+                if (task.origin_ticket_id) {
+                    userStat.activeTicketCount++;
+                }
+            });
+        }
+    });
+
+    const collaborators = Object.values(stats)
+        .map(({ countedProjectIds, ...rest }) => rest)
+        .sort((a, b) => b.projectCount - a.projectCount);
+
     const grouped: Record<string, CollaboratorStat[]> = {};
     collaborators.forEach(collab => {
         const role = collab.role || 'member';
@@ -124,16 +142,14 @@ const CollaboratorsList = () => {
     const orderedGrouped: Record<string, CollaboratorStat[]> = {};
     Object.keys(roleHierarchy).forEach(role => {
         if (grouped[role]) {
-            orderedGrouped[role] = grouped[role].sort((a, b) => b.projectCount - a.projectCount);
+            orderedGrouped[role] = grouped[role];
         }
     });
     
     const flatList = Object.values(orderedGrouped).flat();
 
     return { collaboratorsByRole: orderedGrouped, allCollaborators: flatList };
-  }, [collaboratorStats, profiles]);
-
-  const isLoading = isLoadingStats || isLoadingProfiles;
+  }, [projects, tasks]);
 
   return (
     <Card>
@@ -166,112 +182,92 @@ const CollaboratorsList = () => {
           </CollapsibleTrigger>
           <CollapsibleContent>
             <CardContent className="px-6 pb-6 pt-0">
-              {isLoading ? (
-                <div className="space-y-4 py-4">
-                  {[...Array(3)].map((_, i) => (
-                    <div key={i} className="flex items-center gap-3">
-                      <Skeleton className="h-8 w-8 rounded-full" />
-                      <Skeleton className="h-4 w-1/3" />
-                      <Skeleton className="h-4 w-1/6 ml-auto" />
-                      <Skeleton className="h-4 w-1/6" />
-                    </div>
-                  ))}
-                </div>
-              ) : allCollaborators.length === 0 ? (
-                <div className="text-center py-12 text-muted-foreground">
-                  <Users className="mx-auto h-10 w-10" />
-                  <p className="mt-2">No collaborator data available.</p>
-                </div>
-              ) : (
-                <>
-                  {/* Mobile View */}
-                  <div className="md:hidden">
-                    {Object.entries(collaboratorsByRole).map(([role, collaboratorsInRole]) => (
-                      <div key={role}>
-                        <h3 className="text-sm font-semibold uppercase text-muted-foreground tracking-wider pt-6 pb-2">
-                          {role.replace('_', ' ')}
-                        </h3>
-                        <div className="space-y-4">
-                          {collaboratorsInRole.map(c => (
-                            <div key={c.id} className="bg-muted/50 p-4 rounded-lg">
-                              <div className="flex items-center gap-3 mb-4">
-                                <Avatar className="h-10 w-10">
-                                  <AvatarImage src={getAvatarUrl(c.avatar_url, c.id)} alt={c.name} />
-                                  <AvatarFallback style={generatePastelColor(c.id)}>{c.initials}</AvatarFallback>
-                                </Avatar>
-                                <span className="font-medium">{c.name}</span>
-                              </div>
-                              <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                                <div className="text-muted-foreground">Total Projects</div>
-                                <div className="text-right font-medium">{c.projectCount}</div>
-                                <div className="text-muted-foreground">Upcoming</div>
-                                <div className="text-right font-medium">{c.upcomingProjectCount}</div>
-                                <div className="text-muted-foreground">On Going</div>
-                                <div className="text-right font-medium">{c.ongoingProjectCount}</div>
-                                <div className="text-muted-foreground">Active Tasks</div>
-                                <div className="text-right font-medium">{c.activeTaskCount}</div>
-                                <div className="text-muted-foreground">Active Tickets</div>
-                                <div className="text-right font-medium">{c.activeTicketCount}</div>
-                                <div className="text-muted-foreground">Overdue Bill</div>
-                                <div className="text-right font-medium">{c.overdueBillCount}</div>
-                              </div>
-                            </div>
-                          ))}
+              {/* Mobile View */}
+              <div className="md:hidden">
+                {Object.entries(collaboratorsByRole).map(([role, collaboratorsInRole]) => (
+                  <div key={role}>
+                    <h3 className="text-sm font-semibold uppercase text-muted-foreground tracking-wider pt-6 pb-2">
+                      {role.replace('_', ' ')}
+                    </h3>
+                    <div className="space-y-4">
+                      {collaboratorsInRole.map(c => (
+                        <div key={c.id} className="bg-muted/50 p-4 rounded-lg">
+                          <div className="flex items-center gap-3 mb-4">
+                            <Avatar className="h-10 w-10">
+                              <AvatarImage src={getAvatarUrl(c.avatar_url, c.id)} alt={c.name} />
+                              <AvatarFallback style={generatePastelColor(c.id)}>{c.initials}</AvatarFallback>
+                            </Avatar>
+                            <span className="font-medium">{c.name}</span>
+                          </div>
+                          <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                            <div className="text-muted-foreground">Total Projects</div>
+                            <div className="text-right font-medium">{c.projectCount}</div>
+                            <div className="text-muted-foreground">Upcoming</div>
+                            <div className="text-right font-medium">{c.upcomingProjectCount}</div>
+                            <div className="text-muted-foreground">On Going</div>
+                            <div className="text-right font-medium">{c.ongoingProjectCount}</div>
+                            <div className="text-muted-foreground">Active Tasks</div>
+                            <div className="text-right font-medium">{c.activeTaskCount}</div>
+                            <div className="text-muted-foreground">Active Tickets</div>
+                            <div className="text-right font-medium">{c.activeTicketCount}</div>
+                            <div className="text-muted-foreground">Overdue Bill</div>
+                            <div className="text-right font-medium">{c.overdueBillCount}</div>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
+                ))}
+              </div>
 
-                  {/* Desktop View */}
-                  <div className="hidden md:block overflow-x-auto">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Collaborator</TableHead>
-                                <TableHead className="text-right">Total Projects</TableHead>
-                                <TableHead className="text-right">Upcoming</TableHead>
-                                <TableHead className="text-right">On Going</TableHead>
-                                <TableHead className="text-right">Active Tasks</TableHead>
-                                <TableHead className="text-right">Active Tickets</TableHead>
-                                <TableHead className="text-right">Overdue Bill</TableHead>
+              {/* Desktop View */}
+              <div className="hidden md:block overflow-x-auto">
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Collaborator</TableHead>
+                            <TableHead className="text-right">Total Projects</TableHead>
+                            <TableHead className="text-right">Upcoming</TableHead>
+                            <TableHead className="text-right">On Going</TableHead>
+                            <TableHead className="text-right">Active Tasks</TableHead>
+                            <TableHead className="text-right">Active Tickets</TableHead>
+                            <TableHead className="text-right">Overdue Bill</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {Object.entries(collaboratorsByRole).map(([role, collaboratorsInRole]) => (
+                          <React.Fragment key={role}>
+                            <TableRow className="border-b-0 hover:bg-transparent">
+                              <TableCell colSpan={7} className="pt-6 pb-2">
+                                <h3 className="text-sm font-semibold uppercase text-muted-foreground tracking-wider">
+                                  {role.replace('_', ' ')}
+                                </h3>
+                              </TableCell>
                             </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {Object.entries(collaboratorsByRole).map(([role, collaboratorsInRole]) => (
-                              <React.Fragment key={role}>
-                                <TableRow className="border-b-0 hover:bg-transparent">
-                                  <TableCell colSpan={7} className="pt-6 pb-2">
-                                    <h3 className="text-sm font-semibold uppercase text-muted-foreground tracking-wider">
-                                      {role.replace('_', ' ')}
-                                    </h3>
-                                  </TableCell>
+                            {collaboratorsInRole.map(c => (
+                                <TableRow key={c.id}>
+                                    <TableCell>
+                                        <div className="flex items-center gap-3">
+                                            <Avatar className="h-8 w-8">
+                                                <AvatarImage src={getAvatarUrl(c.avatar_url, c.id)} alt={c.name} />
+                                                <AvatarFallback style={generatePastelColor(c.id)}>{c.initials}</AvatarFallback>
+                                            </Avatar>
+                                            <span className="font-medium whitespace-nowrap">{c.name}</span>
+                                        </div>
+                                    </TableCell>
+                                    <TableCell className="text-right font-medium">{c.projectCount}</TableCell>
+                                    <TableCell className="text-right font-medium">{c.upcomingProjectCount}</TableCell>
+                                    <TableCell className="text-right font-medium">{c.ongoingProjectCount}</TableCell>
+                                    <TableCell className="text-right font-medium">{c.activeTaskCount}</TableCell>
+                                    <TableCell className="text-right font-medium">{c.activeTicketCount}</TableCell>
+                                    <TableCell className="text-right font-medium">{c.overdueBillCount}</TableCell>
                                 </TableRow>
-                                {collaboratorsInRole.map(c => (
-                                    <TableRow key={c.id}>
-                                        <TableCell>
-                                            <div className="flex items-center gap-3">
-                                                <Avatar className="h-8 w-8">
-                                                    <AvatarImage src={getAvatarUrl(c.avatar_url, c.id)} alt={c.name} />
-                                                    <AvatarFallback style={generatePastelColor(c.id)}>{c.initials}</AvatarFallback>
-                                                </Avatar>
-                                                <span className="font-medium whitespace-nowrap">{c.name}</span>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell className="text-right font-medium">{c.projectCount}</TableCell>
-                                        <TableCell className="text-right font-medium">{c.upcomingProjectCount}</TableCell>
-                                        <TableCell className="text-right font-medium">{c.ongoingProjectCount}</TableCell>
-                                        <TableCell className="text-right font-medium">{c.activeTaskCount}</TableCell>
-                                        <TableCell className="text-right font-medium">{c.activeTicketCount}</TableCell>
-                                        <TableCell className="text-right font-medium">{c.overdueBillCount}</TableCell>
-                                    </TableRow>
-                                ))}
-                              </React.Fragment>
                             ))}
-                        </TableBody>
-                    </Table>
-                  </div>
-                </>
-              )}
+                          </React.Fragment>
+                        ))}
+                    </TableBody>
+                </Table>
+              </div>
             </CardContent>
           </CollapsibleContent>
         </Collapsible>
