@@ -19,47 +19,50 @@ const countryCodes = [
 const PhoneNumberInput: React.FC<PhoneNumberInputProps> = ({ value = '', onChange, disabled }) => {
   const [countryCode, setCountryCode] = useState('+62');
   const [localNumber, setLocalNumber] = useState('');
-  const isInternalChange = useRef(false);
+  // Ref ini akan menyimpan nilai terakhir yang dikirim ke komponen induk.
+  const lastEmittedValue = useRef<string | undefined>();
 
   useEffect(() => {
-    if (isInternalChange.current) {
-      isInternalChange.current = false;
+    // Jika nilai yang masuk sama dengan yang terakhir kita kirim, itu adalah gema.
+    // Kita bisa mengabaikannya untuk mencegah loop dan membiarkan pengguna terus mengetik.
+    if (value === lastEmittedValue.current) {
       return;
     }
 
     const rawValue = value || '';
     
     const foundCode = countryCodes
-      .sort((a, b) => b.code.length - a.code.length) // Sort to match longest code first (e.g., +44 before +4)
+      .sort((a, b) => b.code.length - a.code.length)
       .find(c => rawValue.startsWith(c.code));
 
     if (foundCode) {
       setCountryCode(foundCode.code);
-      let numberPart = rawValue.substring(foundCode.code.length);
-      // For display, Indonesian numbers should start with 0
-      if (foundCode.code === '+62' && numberPart.length > 0 && !numberPart.startsWith('0')) {
-        numberPart = '0' + numberPart;
-      }
+      const numberPart = rawValue.substring(foundCode.code.length);
       setLocalNumber(numberPart);
     } else {
-      // If no code, assume it's a local Indonesian number
+      // Jika tidak ada kode, asumsikan itu adalah nomor lokal Indonesia dan default ke +62
       setCountryCode('+62');
       setLocalNumber(rawValue.replace(/\D/g, ''));
     }
+    // Saat kita menerima perubahan eksternal, kita juga harus memperbarui ref lastEmittedValue kita
+    // agar sinkron dengan state baru.
+    lastEmittedValue.current = value;
   }, [value]);
 
   const triggerChange = (code: string, num: string) => {
     let numberToEmit = num.replace(/\D/g, '');
-    // When saving, remove the leading '0' for Indonesian numbers
+    // Saat menyimpan, hapus '0' di depan untuk nomor Indonesia jika ada
     if (code === '+62' && numberToEmit.startsWith('0')) {
       numberToEmit = numberToEmit.substring(1);
     }
     
-    isInternalChange.current = true;
-    onChange(`${code}${numberToEmit}`);
+    const fullNumber = `${code}${numberToEmit}`;
+    lastEmittedValue.current = fullNumber;
+    onChange(fullNumber);
   };
 
   const handleNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Izinkan hanya angka
     const newNumber = e.target.value.replace(/[^0-9]/g, '');
     setLocalNumber(newNumber);
     triggerChange(countryCode, newNumber);
