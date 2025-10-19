@@ -145,8 +145,8 @@ const LoginPage = () => {
   return (
     <div className="min-h-screen w-full relative flex items-center justify-center p-4 overflow-hidden">
       <img
-        src="https://images.unsplash.com/photo-1525130413817-d45c1d127c42?q=80&w=2070&auto=format&fit=crop"
-        alt="Modern illustration background"
+        src="https://images.unsplash.com/photo-1604079628040-94301bb21b91?q=80&w=2070&auto=format&fit=crop"
+        alt="Clean abstract background"
         className="absolute top-0 left-0 w-full h-full object-cover z-0"
       />
       <div className="absolute top-0 left-0 w-full h-full bg-black/50 z-10"></div>
