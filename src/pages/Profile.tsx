@@ -162,17 +162,26 @@ const Profile = () => {
   const handleSaveChanges = async () => {
     setIsSaving(true);
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ 
+      // Update core user metadata in auth.users
+      const { error: authError } = await supabase.auth.updateUser({
+        data: { 
           first_name: firstName, 
           last_name: lastName,
+        }
+      });
+
+      if (authError) throw authError;
+
+      // Update custom profile fields in public.profiles
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ 
           phone: phone,
           updated_at: new Date().toISOString(),
         })
         .eq('id', user.id);
 
-      if (error) throw error;
+      if (profileError) throw profileError;
 
       toast.success("Profil berhasil diperbarui.");
       
