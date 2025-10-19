@@ -5,7 +5,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 import { useForm, Controller } from 'react-hook-form';
@@ -17,7 +16,7 @@ import UserSelector from './UserSelector';
 import { useAuth } from '@/contexts/AuthContext';
 import CompanySelector from './CompanySelector';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { ScrollArea } from '../ui/scroll-area';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 // Minimal profile type definition to avoid touching global types.ts
 interface Profile {
@@ -78,20 +77,14 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
     email: z.string().email('Invalid email address').optional().or(z.literal('')),
     phone: z.string().optional(),
     company_id: z.string().uuid().optional().nullable(),
-    job_title: z.string().optional(),
-    department: z.string().optional(),
-    avatar_url: z.string().url().optional().or(z.literal('')),
-    birthday: z.string().optional(),
-    notes: z.string().optional(),
     custom_properties: z.record(z.any()).optional(),
   });
 
   type PropertyFormValues = z.infer<typeof baseSchema>;
 
-  const form = useForm<PropertyFormValues>({
+  const { register, handleSubmit, reset, formState: { errors }, control, setValue } = useForm<PropertyFormValues>({
     resolver: zodResolver(baseSchema),
   });
-  const { control, handleSubmit, reset, setValue } = form;
 
   useEffect(() => {
     if (open) {
@@ -100,16 +93,9 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
         const nameParts = full_name ? full_name.split(' ') : [''];
         const firstName = nameParts[0] || '';
         const lastName = nameParts.slice(1).join(' ') || '';
-        reset({ 
-          ...personData, 
-          first_name: firstName, 
-          last_name: lastName, 
-          custom_properties: custom_properties || {}, 
-          company_id: person.company_id,
-          birthday: person.birthday ? new Date(person.birthday).toISOString().split('T')[0] : '',
-        });
+        reset({ ...personData, first_name: firstName, last_name: lastName, custom_properties: custom_properties || {}, company_id: person.company_id });
       } else { // Create mode
-        reset({ first_name: '', last_name: '', email: '', phone: '', company_id: null, job_title: '', department: '', avatar_url: '', birthday: '', notes: '', custom_properties: {} });
+        reset({ first_name: '', last_name: '', email: '', phone: '', company_id: null, custom_properties: {} });
       }
     } else {
       // Reset when dialog closes
@@ -160,15 +146,15 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
         p_full_name: full_name,
         p_contact: contactJson,
         p_company_id: values.company_id,
-        p_job_title: values.job_title || null,
-        p_department: values.department || null,
+        p_job_title: person?.job_title || null,
+        p_department: person?.department || null,
         p_social_media: person?.social_media || {},
-        p_birthday: values.birthday || null,
-        p_notes: values.notes || null,
+        p_birthday: person?.birthday || null,
+        p_notes: person?.notes || null,
         p_project_ids: person?.projects?.map(p => p.id) || [],
         p_existing_tag_ids: person?.tags?.map(t => t.id) || [],
         p_custom_tags: [],
-        p_avatar_url: values.avatar_url || (selectedProfile ? selectedProfile.avatar_url : null),
+        p_avatar_url: person?.avatar_url || (selectedProfile ? selectedProfile.avatar_url : null),
         p_address: person?.address || null,
         p_custom_properties: values.custom_properties,
       };
@@ -245,35 +231,35 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
                     </p>
                   </div>
                 )}
-                <FormField control={control} name="first_name" render={({ field }) => (
+                <FormField control={form.control} name="first_name" render={({ field }) => (
                   <FormItem>
                     <FormLabel>First Name</FormLabel>
                     <FormControl><Input {...field} disabled={!!selectedProfile || isLinkedUser} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
-                <FormField control={control} name="last_name" render={({ field }) => (
+                <FormField control={form.control} name="last_name" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Last Name</FormLabel>
                     <FormControl><Input {...field} disabled={!!selectedProfile || isLinkedUser} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
-                <FormField control={control} name="email" render={({ field }) => (
+                <FormField control={form.control} name="email" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl><Input {...field} disabled={!!selectedProfile || isLinkedUser} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
-                <FormField control={control} name="phone" render={({ field }) => (
+                <FormField control={form.control} name="phone" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Phone</FormLabel>
                     <FormControl><Input {...field} disabled={!!selectedProfile || isLinkedUser} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
-                <FormField control={control} name="company_id" render={({ field }) => (
+                <FormField control={form.control} name="company_id" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Company</FormLabel>
                     <FormControl>
@@ -282,41 +268,6 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
                         onChange={field.onChange}
                       />
                     </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={control} name="job_title" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Job Title</FormLabel>
-                    <FormControl><Input {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={control} name="department" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Department</FormLabel>
-                    <FormControl><Input {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={control} name="avatar_url" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Avatar URL</FormLabel>
-                    <FormControl><Input {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={control} name="birthday" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Birthday</FormLabel>
-                    <FormControl><Input type="date" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={control} name="notes" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Notes</FormLabel>
-                    <FormControl><Textarea {...field} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />

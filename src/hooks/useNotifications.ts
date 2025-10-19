@@ -113,7 +113,7 @@ export const useNotifications = () => {
             if (Notification.permission === 'granted' && document.hidden) {
               new Notification(notificationData.title, {
                 body: notificationData.body,
-                icon: "/favicon.ico",
+                icon: '/favicon.ico',
               });
             }
 
