@@ -162,17 +162,16 @@ const Profile = () => {
   const handleSaveChanges = async () => {
     setIsSaving(true);
     try {
-      // Update core user metadata in auth.users
+      // 1. Update core user metadata in auth.users. This triggers a sync to profiles for name.
       const { error: authError } = await supabase.auth.updateUser({
         data: { 
           first_name: firstName, 
           last_name: lastName,
         }
       });
-
       if (authError) throw authError;
 
-      // Update custom profile fields in public.profiles
+      // 2. Update the phone number in the profiles table directly.
       const { error: profileError } = await supabase
         .from('profiles')
         .update({ 
@@ -180,8 +179,22 @@ const Profile = () => {
           updated_at: new Date().toISOString(),
         })
         .eq('id', user.id);
-
       if (profileError) throw profileError;
+
+      // 3. Also update the corresponding 'people' record to keep data consistent.
+      // This is important because other parts of the app might rely on the 'people' table.
+      const { error: peopleError } = await supabase
+        .from('people')
+        .update({ 
+          phone: phone,
+          full_name: `${firstName} ${lastName}`.trim(),
+        })
+        .eq('user_id', user.id);
+      
+      // We don't throw on peopleError, as a 'people' record might not exist for every user.
+      if (peopleError) {
+        console.warn("Could not update 'people' record. This might be okay if no record exists.", peopleError);
+      }
 
       toast.success("Profil berhasil diperbarui.");
       
