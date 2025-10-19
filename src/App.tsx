@@ -46,13 +46,10 @@ import ContactPropertiesPage from "./pages/ContactPropertiesPage";
 import CompaniesPage from "./pages/CompaniesPage";
 import CompanyPropertiesPage from "./pages/CompanyPropertiesPage";
 import NotificationsPage from "./pages/Notifications";
-import { useCheckAudioPermission } from "./hooks/useCheckAudioPermission";
 import ServicesSettingsPage from "./pages/ServicesSettingsPage";
 import NotificationSettingsPage from "./pages/NotificationSettingsPage";
 
 const App = () => {
-  useCheckAudioPermission();
-
   return (
     <Routes>
       {/* Public Routes */}
