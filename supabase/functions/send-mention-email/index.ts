@@ -70,7 +70,10 @@ serve(async (req) => {
 
     const emailPromises = usersToNotify.map(async (profile) => {
       const subject = `You were mentioned in the project: ${project_name}`;
-      const projectUrl = `${SITE_URL}/projects/${project_slug}`;
+      const projectUrl = project_slug === 'general-tasks' 
+        ? `${SITE_URL}/projects?view=tasks` 
+        : `${SITE_URL}/projects/${project_slug}`;
+      
       const html = `
         <p>Hi,</p>
         <p><strong>${mentioner_name}</strong> mentioned you in a comment on the project <strong>${project_name}</strong>.</p>

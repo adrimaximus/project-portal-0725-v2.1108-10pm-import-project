@@ -57,7 +57,8 @@ const getContext = async (supabaseAdmin: any, notification: any) => {
                 supabaseAdmin.from('tasks').select('title, project_id').eq('id', context_data.task_id).single(),
                 supabaseAdmin.from('projects').select('name, slug').eq('id', context_data.project_id).single(),
             ]);
-            context = { ...context, completerName: completer.name, taskTitle: task.data.title, projectName: project.data.name, url: `${SITE_URL}/projects/${project.data.slug}` };
+            const url = project.data.slug === 'general-tasks' ? `${SITE_URL}/projects?view=tasks` : `${SITE_URL}/projects/${project.data.slug}`;
+            context = { ...context, completerName: completer.name, taskTitle: task.data.title, projectName: project.data.name, url };
             break;
         }
         case 'project_status_updated': {
@@ -65,7 +66,8 @@ const getContext = async (supabaseAdmin: any, notification: any) => {
                 fetchProfile(context_data.updater_id),
                 supabaseAdmin.from('projects').select('name, slug').eq('id', context_data.project_id).single(),
             ]);
-            context = { ...context, updaterName: updater.name, projectName: project.data.name, oldStatus: context_data.old_status, newStatus: context_data.new_status, url: `${SITE_URL}/projects/${project.data.slug}` };
+            const url = project.data.slug === 'general-tasks' ? `${SITE_URL}/projects?view=tasks` : `${SITE_URL}/projects/${project.data.slug}`;
+            context = { ...context, updaterName: updater.name, projectName: project.data.name, oldStatus: context_data.old_status, newStatus: context_data.new_status, url };
             break;
         }
         case 'goal_progress_update': {
@@ -99,7 +101,8 @@ const getContext = async (supabaseAdmin: any, notification: any) => {
                 supabaseAdmin.from('projects').select('name, slug').eq('id', context_data.project_id).single(),
                 supabaseAdmin.from('comments').select('text').eq('id', context_data.comment_id).single(),
             ]);
-            context = { ...context, mentionerName: mentioner.name, projectName: project.data.name, commentText: comment.data.text, url: `${SITE_URL}/projects/${project.data.slug}` };
+            const url = project.data.slug === 'general-tasks' ? `${SITE_URL}/projects?view=tasks` : `${SITE_URL}/projects/${project.data.slug}`;
+            context = { ...context, mentionerName: mentioner.name, projectName: project.data.name, commentText: comment.data.text, url };
             break;
         }
         case 'task_assignment': {
@@ -113,7 +116,8 @@ const getContext = async (supabaseAdmin: any, notification: any) => {
             ]);
             if (!project.data) throw new Error(`Project with ID ${task.data.project_id} not found.`);
 
-            context = { ...context, assignerName: assigner.name, taskTitle: task.data.title, projectName: project.data.name, url: `${SITE_URL}/projects/${project.data.slug}` };
+            const url = project.data.slug === 'general-tasks' ? `${SITE_URL}/projects?view=tasks` : `${SITE_URL}/projects/${project.data.slug}`;
+            context = { ...context, assignerName: assigner.name, taskTitle: task.data.title, projectName: project.data.name, url };
             break;
         }
         case 'project_invite':
@@ -127,8 +131,14 @@ const getContext = async (supabaseAdmin: any, notification: any) => {
             ]);
             const resourceName = resource.data.name || resource.data.title;
             const resourceType = notification_type.split('_')[0];
-            const urlPath = resourceType === 'kb' ? 'knowledge-base/folders' : `${resourceType}s`;
-            context = { ...context, inviterName: inviter.name, resourceName, resourceType, url: `${SITE_URL}/${urlPath}/${resource.data.slug}` };
+            let url;
+            if (resourceType === 'project' && resource.data.slug === 'general-tasks') {
+                url = `${SITE_URL}/projects?view=tasks`;
+            } else {
+                const urlPath = resourceType === 'kb' ? 'knowledge-base/folders' : `${resourceType}s`;
+                url = `${SITE_URL}/${urlPath}/${resource.data.slug}`;
+            }
+            context = { ...context, inviterName: inviter.name, resourceName, resourceType, url };
             break;
         }
         default:
