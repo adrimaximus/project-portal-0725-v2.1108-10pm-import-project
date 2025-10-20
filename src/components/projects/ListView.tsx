@@ -199,7 +199,11 @@ const ListView = ({ projects, onDeleteProject }: { projects: Project[], onDelete
 
       {upcomingDayEntries.length > visibleUpcomingCount && (
         <div className="text-center mt-6">
-          <Button variant="outline" onClick={() => setVisibleUpcomingCount(prev => prev + 10)}>
+          <Button 
+            variant="outline" 
+            onClick={() => setVisibleUpcomingCount(prev => prev + 10)}
+            className="border-primary text-primary hover:bg-primary/10"
+          >
             Load More Upcoming
           </Button>
         </div>
@@ -227,7 +231,11 @@ const ListView = ({ projects, onDeleteProject }: { projects: Project[], onDelete
 
       {pastDayEntries.length > visiblePastCount && (
         <div className="text-center mt-6">
-          <Button variant="outline" onClick={() => setVisiblePastCount(prev => prev + 10)}>
+          <Button 
+            variant="outline" 
+            onClick={() => setVisiblePastCount(prev => prev + 10)}
+            className="border-primary text-primary hover:bg-primary/10"
+          >
             Load More Past
           </Button>
         </div>
