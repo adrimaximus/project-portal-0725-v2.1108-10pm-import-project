@@ -93,15 +93,21 @@ const LoginPage = () => {
     setLoading(true);
     
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
       
       if (error) {
         toast.error(error.message);
+      } else if (data.user) {
+        const firstName = data.user.user_metadata?.first_name || data.user.email?.split('@')[0];
+        if (firstName) {
+          SafeLocalStorage.setItem('lastUserName', firstName);
+          setLastUserName(firstName);
+        }
+        toast.success("Welcome back! Redirecting...");
       }
-      // AuthContext will handle navigation on successful login
     } catch (error: any) {
       toast.error("An unexpected error occurred");
       console.error("Login error:", error);
