@@ -54,7 +54,7 @@ type TaskFormValues = z.infer<typeof taskFormSchema>;
 
 const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task, project }: TaskFormDialogProps) => {
   const isMobile = useIsMobile();
-  const { data: projects = [], isLoading: isLoadingProjects } = useProjects();
+  const { data: projects = [], isLoading: isLoadingProjects } = useProjects({ excludeOtherPersonal: true });
   const { data: allTags = [], refetch: refetchTags } = useTags();
   const { data: allProfiles = [], isLoading: isLoadingProfiles } = useProfiles();
   const [selectedTags, setSelectedTags] = useState<Tag[]>([]);

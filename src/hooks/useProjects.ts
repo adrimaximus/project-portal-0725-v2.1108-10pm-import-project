@@ -5,14 +5,15 @@ import { toast } from 'sonner';
 import { useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 
-const fetchProjects = async ({ queryKey }: { queryKey: readonly (string | { searchTerm?: string } | undefined)[] }): Promise<Project[]> => {
+const fetchProjects = async ({ queryKey }: { queryKey: readonly (string | { searchTerm?: string, excludeOtherPersonal?: boolean } | undefined)[] }): Promise<Project[]> => {
   const [_key, _userId, options] = queryKey;
-  const searchTerm = (options as { searchTerm?: string })?.searchTerm;
+  const { searchTerm, excludeOtherPersonal } = (options as { searchTerm?: string, excludeOtherPersonal?: boolean }) || {};
   
   const { data, error } = await supabase.rpc('get_dashboard_projects', {
     p_limit: 1000,
     p_offset: 0,
     p_search_term: searchTerm || null,
+    p_exclude_other_personal: excludeOtherPersonal || false,
   });
     
   if (error) {
@@ -24,8 +25,8 @@ const fetchProjects = async ({ queryKey }: { queryKey: readonly (string | { sear
   return data as Project[];
 };
 
-export const useProjects = (options: { searchTerm?: string } = {}) => {
-  const { searchTerm } = options;
+export const useProjects = (options: { searchTerm?: string, excludeOtherPersonal?: boolean } = {}) => {
+  const { searchTerm, excludeOtherPersonal } = options;
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
@@ -58,7 +59,7 @@ export const useProjects = (options: { searchTerm?: string } = {}) => {
   }, [user, queryClient]);
 
   return useQuery<Project[], Error>({
-    queryKey: ['projects', user?.id, { searchTerm }],
+    queryKey: ['projects', user?.id, { searchTerm, excludeOtherPersonal }],
     queryFn: fetchProjects,
     enabled: !!user,
   });
