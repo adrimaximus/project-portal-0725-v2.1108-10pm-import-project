@@ -32,6 +32,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import StatusBadge from '@/components/StatusBadge';
 
 type Person = BasePerson & { company_id?: string | null };
 
@@ -335,15 +336,24 @@ const PersonProfilePage = () => {
             <Card>
               <CardHeader><CardTitle>Related Projects</CardTitle></CardHeader>
               <CardContent>
-                {person.projects && person.projects.length > 0 ? (
-                  <div className="max-h-60 overflow-y-auto space-y-2 pr-2">
-                    {person.projects.map(project => (
-                      <Link key={project.id} to={`/projects/${project.slug}`} className="block p-2 rounded-md hover:bg-muted">
-                        <p className="font-medium truncate">{project.name}</p>
-                      </Link>
-                    ))}
-                  </div>
-                ) : <p className="text-sm text-muted-foreground">No projects linked yet.</p>}
+                {(() => {
+                  const ongoingProjects = person.projects?.filter(p => p.status !== 'Completed' && p.status !== 'Cancelled') || [];
+                  if (ongoingProjects.length > 0) {
+                    return (
+                      <div className="max-h-60 overflow-y-auto space-y-2 pr-2">
+                        {ongoingProjects.map(project => (
+                          <Link key={project.id} to={`/projects/${project.slug}`} className="block p-2 rounded-md hover:bg-muted">
+                            <div className="flex justify-between items-center">
+                              <p className="font-medium truncate pr-2">{project.name}</p>
+                              <StatusBadge status={project.status} />
+                            </div>
+                          </Link>
+                        ))}
+                      </div>
+                    );
+                  }
+                  return <p className="text-sm text-muted-foreground">No ongoing projects linked yet.</p>;
+                })()}
               </CardContent>
             </Card>
 
