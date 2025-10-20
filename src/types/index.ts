@@ -98,6 +98,7 @@ export type Project = {
   channel?: string | null;
   kanban_order?: number;
   payment_kanban_order?: number;
+  category?: string | null;
 };
 
 export type TaskAttachment = {

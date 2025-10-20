@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { Project } from '@/types';
 
 type NewProjectData = {
     name: string;
@@ -14,7 +15,7 @@ type NewProjectData = {
     client_company_id?: string | null;
 };
 
-const createProject = async (projectData: NewProjectData) => {
+const createProject = async (projectData: NewProjectData): Promise<Project> => {
     const { data, error } = await supabase
       .rpc('create_project', {
         p_name: projectData.name,
@@ -34,7 +35,7 @@ const createProject = async (projectData: NewProjectData) => {
         throw new Error(error.message);
     }
 
-    return data;
+    return data as Project;
 };
 
 export const useCreateProject = () => {

@@ -85,7 +85,7 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
   const { data: allCompanies = [] } = useQuery<Company[]>({
     queryKey: ['allCompaniesForRequestForm'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('companies').select('id, name, logo_url, custom_properties');
+      const { data, error } = await supabase.from('companies').select('*').order('name', { ascending: true });
       if (error) {
         toast.error("Failed to fetch companies.");
         throw error;
