@@ -111,9 +111,9 @@ export const toggleReaction = async (messageId: string, emoji: string, userId: s
     .eq('message_id', messageId)
     .eq('user_id', userId)
     .eq('emoji', emoji)
-    .single();
+    .maybeSingle();
 
-  if (selectError && selectError.code !== 'PGRST116') {
+  if (selectError) {
     throw selectError;
   }
 

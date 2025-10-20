@@ -27,7 +27,9 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import EmojiPicker, { EmojiClickData } from 'emoji-picker-react';
+import Picker from '@emoji-mart/react';
+import data from '@emoji-mart/data';
+import { useTheme } from "@/contexts/ThemeProvider";
 
 interface ChatMessageActionsProps {
   message: Message;
@@ -47,6 +49,7 @@ export const ChatMessageActions = ({
   const { deleteMessage, toggleReaction, openForwardDialog } = useChatContext();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
+  const { theme } = useTheme();
 
   const handleCopy = () => {
     if (message.text) {
@@ -102,14 +105,14 @@ export const ChatMessageActions = ({
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="p-0 w-auto border-none" onClick={(e) => e.stopPropagation()}>
-                      <EmojiPicker
-                        onEmojiClick={(emojiData: EmojiClickData) => {
-                          toggleReaction(message.id, emojiData.emoji);
+                      <Picker
+                        data={data}
+                        onEmojiSelect={(emoji: any) => {
+                          toggleReaction(message.id, emoji.native);
                           setEmojiPickerOpen(false);
                         }}
-                        searchDisabled
-                        previewConfig={{ showPreview: false }}
-                        height={300}
+                        theme={theme === 'dark' ? 'dark' : 'light'}
+                        previewPosition="none"
                       />
                     </PopoverContent>
                   </Popover>
