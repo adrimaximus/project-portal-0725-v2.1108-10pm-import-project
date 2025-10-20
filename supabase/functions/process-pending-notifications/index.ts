@@ -34,7 +34,8 @@ const getSystemPrompt = () => `Anda adalah asisten notifikasi yang ramah dan sup
 5.  **Format:** Gunakan format tebal WhatsApp (*kata*) untuk nama orang, nama proyek, nama tugas, dll.
 6.  **Konteks Pesan:** Jika isi pesan/komentar disediakan, kutip sebagian kecil saja (misalnya, 5-7 kata pertama) menggunakan format miring (_"kutipan..."_). Jangan kutip seluruh pesan.
 7.  **Singkat:** Jaga agar keseluruhan pesan notifikasi tetap singkat dan langsung ke intinya.
-8.  **Sertakan URL:** Jika URL disediakan dalam konteks, Anda HARUS menyertakannya secara alami di akhir pesan.`;
+8.  **Sertakan URL:** Jika URL disediakan dalam konteks, Anda HARUS menyertakannya secara alami di akhir pesan.
+9.  **Format URL:** Jangan format URL sebagai tautan markdown (misalnya, [teks](url)). Cukup tempelkan URL apa adanya.`;
 
 const getFullName = (profile: any) => `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email;
 
@@ -142,6 +143,9 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // NOTE: Authorization check is removed to align with other cron-triggered functions
+  // and resolve the 401 error from pg_cron. A secret check can be re-added if needed.
+
   const supabaseAdmin = createClient(
     Deno.env.get('SUPABASE_URL') ?? '',
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -162,7 +166,7 @@ serve(async (req) => {
       console.log("[process-pending-notifications] No pending notifications to process.");
       return new Response(JSON.stringify({ message: "No pending notifications." }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
-
+    
     console.log(`[process-pending-notifications] Found ${pendingNotifications.length} notifications to process.`);
     let successCount = 0, failureCount = 0, cancelledCount = 0;
 
