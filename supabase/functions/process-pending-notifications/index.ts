@@ -24,21 +24,7 @@ const formatPhoneNumberForApi = (phone: string): string | null => {
     return cleaned;
 };
 
-const getSystemPrompt = (channel: 'whatsapp' | 'email') => {
-  if (channel === 'email') {
-    return `Anda adalah asisten notifikasi yang profesional dan efisien. Tugas Anda adalah membuat konten email notifikasi yang jelas dan informatif.
-
-**Aturan Penting:**
-1.  **Subjek yang Jelas:** Buat subjek email yang ringkas dan langsung ke intinya (misalnya, "Anda Disebut di Proyek X" atau "Pesan Baru di Grup Y").
-2.  **Konten HTML:** Buat isi email dalam format HTML sederhana. Mulai dengan sapaan (misalnya, "Hai [Nama Penerima],").
-3.  **Detail Lengkap:** Sertakan semua detail kontekstual yang relevan (siapa yang beraksi, di mana, dan kutipan singkat jika ada).
-4.  **Call to Action:** Sertakan tautan (URL) yang jelas di akhir email dengan ajakan untuk bertindak (misalnya, "Lihat Komentar" atau "Buka Proyek").
-5.  **Format Profesional:** Gunakan paragraf (<p>) dan format tebal (<strong>) untuk menyorot informasi penting.
-6.  **Output JSON:** Respons Anda HARUS berupa objek JSON yang valid dengan dua kunci: "subject" dan "htmlBody". Jangan sertakan teks atau format lain.`;
-  }
-
-  // Default to WhatsApp prompt
-  return `Anda adalah asisten notifikasi yang ramah dan suportif. Tugas Anda adalah membuat pesan notifikasi WhatsApp yang singkat, natural, dan positif, mengikuti format yang diberikan dalam contoh.
+const getSystemPrompt = () => `Anda adalah asisten notifikasi yang ramah dan suportif. Tugas Anda adalah membuat pesan notifikasi WhatsApp yang singkat, natural, dan positif, mengikuti format yang diberikan dalam contoh.
 
 **Aturan Penting:**
 1.  **Gunakan Variasi Kalimat:** Jangan pernah menggunakan kalimat yang sama persis berulang kali.
@@ -49,7 +35,6 @@ const getSystemPrompt = (channel: 'whatsapp' | 'email') => {
 6.  **Konteks Pesan:** Jika isi pesan/komentar disediakan, kutip sebagian kecil saja (misalnya, 5-7 kata pertama) menggunakan format miring (_"kutipan..."_). Jangan kutip seluruh pesan.
 7.  **Singkat:** Jaga agar keseluruhan pesan notifikasi tetap singkat dan langsung ke intinya.
 8.  **Sertakan URL:** Jika URL disediakan dalam konteks, Anda HARUS menyertakannya secara alami di akhir pesan.`;
-};
 
 const getFullName = (profile: any) => `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email;
 
@@ -100,14 +85,51 @@ const getContext = async (supabaseAdmin: any, notification: any) => {
                 .select('content')
                 .eq('conversation_id', notification.conversation_id)
                 .eq('sender_id', context_data.sender_id)
-                .gt('created_at', notification.created_at) // Fetch messages created after the notification was scheduled
+                .gt('created_at', notification.created_at)
                 .order('created_at', { ascending: true });
             if (msgError) throw msgError;
 
             context = { ...context, senderName: sender.name, isGroup: conversation.data.is_group, groupName: conversation.data.group_name, messages: unreadMessages.map(m => m.content), url: `${SITE_URL}/chat` };
             break;
         }
-        // Add other cases here...
+        case 'discussion_mention': {
+            const [mentioner, project, comment] = await Promise.all([
+                fetchProfile(context_data.mentioner_id),
+                supabaseAdmin.from('projects').select('name, slug').eq('id', context_data.project_id).single(),
+                supabaseAdmin.from('comments').select('text').eq('id', context_data.comment_id).single(),
+            ]);
+            context = { ...context, mentionerName: mentioner.name, projectName: project.data.name, commentText: comment.data.text, url: `${SITE_URL}/projects/${project.data.slug}` };
+            break;
+        }
+        case 'task_assignment': {
+            const { data: task, error: taskError } = await supabaseAdmin.from('tasks').select('title, project_id').eq('id', context_data.task_id).single();
+            if (taskError) throw taskError;
+            if (!task.data) throw new Error(`Task with ID ${context_data.task_id} not found.`);
+
+            const [assigner, project] = await Promise.all([
+                fetchProfile(context_data.assigner_id),
+                supabaseAdmin.from('projects').select('name, slug').eq('id', task.data.project_id).single(),
+            ]);
+            if (!project.data) throw new Error(`Project with ID ${task.data.project_id} not found.`);
+
+            context = { ...context, assignerName: assigner.name, taskTitle: task.data.title, projectName: project.data.name, url: `${SITE_URL}/projects/${project.data.slug}` };
+            break;
+        }
+        case 'project_invite':
+        case 'goal_invite':
+        case 'kb_invite': {
+            const [inviter, resource] = await Promise.all([
+                fetchProfile(context_data.inviter_id),
+                notification_type === 'project_invite' ? supabaseAdmin.from('projects').select('name, slug').eq('id', context_data.project_id).single() :
+                notification_type === 'goal_invite' ? supabaseAdmin.from('goals').select('title, slug').eq('id', context_data.goal_id).single() :
+                supabaseAdmin.from('kb_folders').select('name, slug').eq('id', context_data.folder_id).single(),
+            ]);
+            const resourceName = resource.data.name || resource.data.title;
+            const resourceType = notification_type.split('_')[0];
+            const urlPath = resourceType === 'kb' ? 'knowledge-base/folders' : `${resourceType}s`;
+            context = { ...context, inviterName: inviter.name, resourceName, resourceType, url: `${SITE_URL}/${urlPath}/${resource.data.slug}` };
+            break;
+        }
         default:
             context = { ...context, details: context_data };
             break;
@@ -176,82 +198,49 @@ serve(async (req) => {
         const typePrefs = prefs[notificationTypeKey] || {};
 
         const isWhatsappEnabled = typePrefs.whatsapp !== false;
-        const isEmailEnabled = typePrefs.email === true;
+        
+        if (!isWhatsappEnabled) {
+            await supabaseAdmin.from('pending_whatsapp_notifications').update({ status: 'cancelled', error_message: 'WhatsApp notifications for this type are disabled by the user.' }).eq('id', notificationId);
+            cancelledCount++;
+            continue;
+        }
 
-        let whatsappSent = false;
-        let emailSent = false;
+        const recipientPhone = formatPhoneNumberForApi(recipientData.phone);
+        if (!recipientPhone) {
+            await supabaseAdmin.from('pending_whatsapp_notifications').update({ status: 'failed', error_message: 'Recipient does not have a valid phone number.' }).eq('id', notificationId);
+            failureCount++;
+            continue;
+        }
 
         const context = await getContext(supabaseAdmin, notification);
         const recipientName = getFullName(recipientData);
 
-        if (isWhatsappEnabled) {
-          const recipientPhone = formatPhoneNumberForApi(recipientData.phone);
-          if (recipientPhone) {
-            try {
-              const userPrompt = `**Konteks:**\n- **Jenis:** Notifikasi ${notification.notification_type}\n- **Penerima:** ${recipientName}\n- **Detail:** ${JSON.stringify(context)}\n\nBuat pesan notifikasi WhatsApp yang sesuai.`;
-              const anthropic = new Anthropic({ apiKey: Deno.env.get('ANTHROPIC_API_KEY') });
-              const aiResponse = await anthropic.messages.create({ model: "claude-3-haiku-20240307", max_tokens: 250, system: getSystemPrompt('whatsapp'), messages: [{ role: "user", content: userPrompt }] });
-              const aiMessage = aiResponse.content[0].text;
+        const userPrompt = `**Konteks:**\n- **Jenis:** Notifikasi ${notification.notification_type}\n- **Penerima:** ${recipientName}\n- **Detail:** ${JSON.stringify(context)}\n\nBuat pesan notifikasi WhatsApp yang sesuai.`;
+        const anthropic = new Anthropic({ apiKey: Deno.env.get('ANTHROPIC_API_KEY') });
+        const aiResponse = await anthropic.messages.create({ model: "claude-3-haiku-20240307", max_tokens: 250, system: getSystemPrompt(), messages: [{ role: "user", content: userPrompt }] });
+        const aiMessage = aiResponse.content[0].text;
 
-              const { data: wbizConfig } = await supabaseAdmin.from('app_config').select('key, value').in('key', ['WBIZTOOL_CLIENT_ID', 'WBIZTOOL_API_KEY']);
-              const clientId = wbizConfig?.find(c => c.key === 'WBIZTOOL_CLIENT_ID')?.value;
-              const apiKey = wbizConfig?.find(c => c.key === 'WBIZTOOL_API_KEY')?.value;
-              const whatsappClientId = Deno.env.get('WBIZTOOL_WHATSAPP_CLIENT_ID');
-              if (!clientId || !apiKey || !whatsappClientId) throw new Error("WBIZTOOL credentials not configured.");
+        const { data: wbizConfig } = await supabaseAdmin.from('app_config').select('key, value').in('key', ['WBIZTOOL_CLIENT_ID', 'WBIZTOOL_API_KEY']);
+        const clientId = wbizConfig?.find(c => c.key === 'WBIZTOOL_CLIENT_ID')?.value;
+        const apiKey = wbizConfig?.find(c => c.key === 'WBIZTOOL_API_KEY')?.value;
+        const whatsappClientId = Deno.env.get('WBIZTOOL_WHATSAPP_CLIENT_ID');
+        if (!clientId || !apiKey || !whatsappClientId) throw new Error("WBIZTOOL credentials not configured.");
 
-              const wbizPayload = { client_id: parseInt(clientId, 10), api_key: apiKey, whatsapp_client: parseInt(whatsappClientId, 10), phone: recipientPhone, message: aiMessage };
-              const wbizResponse = await fetch("https://wbiztool.com/api/v1/send_msg/", { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Client-ID': clientId, 'X-Api-Key': apiKey }, body: JSON.stringify(wbizPayload) });
-              if (!wbizResponse.ok) {
-                  const errorData = await wbizResponse.json().catch(() => ({}));
-                  throw new Error(`WBIZTOOL API Error (${wbizResponse.status}): ${errorData.message || 'Unknown error'}`);
-              }
-              whatsappSent = true;
-            } catch (e) {
-              console.error(`[process-and-send] [${notificationId}] Failed to send WhatsApp:`, e.message);
-            }
-          }
+        const wbizPayload = { client_id: parseInt(clientId, 10), api_key: apiKey, whatsapp_client: parseInt(whatsappClientId, 10), phone: recipientPhone, message: aiMessage };
+        const wbizResponse = await fetch("https://wbiztool.com/api/v1/send_msg/", { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Client-ID': clientId, 'X-Api-Key': apiKey }, body: JSON.stringify(wbizPayload) });
+        if (!wbizResponse.ok) {
+            const errorData = await wbizResponse.json().catch(() => ({}));
+            throw new Error(`WBIZTOOL API Error (${wbizResponse.status}): ${errorData.message || 'Unknown error'}`);
         }
-
-        if (isEmailEnabled) {
-          const recipientEmail = recipientData.email;
-          if (recipientEmail) {
-            try {
-              const userPrompt = `**Konteks:**\n- **Jenis:** Notifikasi ${notification.notification_type}\n- **Penerima:** ${recipientName}\n- **Detail:** ${JSON.stringify(context)}\n\nBuat subjek dan isi email notifikasi yang sesuai.`;
-              const anthropic = new Anthropic({ apiKey: Deno.env.get('ANTHROPIC_API_KEY') });
-              const aiResponse = await anthropic.messages.create({ model: "claude-3-haiku-20240307", max_tokens: 400, system: getSystemPrompt('email'), messages: [{ role: "user", content: userPrompt }] });
-              const jsonMatch = aiResponse.content[0].text.match(/{[\s\S]*}/);
-              if (!jsonMatch) throw new Error("AI response for email was not valid JSON.");
-              const { subject, htmlBody } = JSON.parse(jsonMatch[0]);
-
-              const { data: emailitConfig } = await supabaseAdmin.from('app_config').select('value').eq('key', 'EMAILIT_API_KEY').single();
-              const emailitApiKey = emailitConfig?.value;
-              if (!emailitApiKey) throw new Error("Emailit API key not configured.");
-
-              const emailPayload = { from: Deno.env.get("EMAIL_FROM") ?? "7i Portal <no-reply@mail.ahensi.com>", to: recipientEmail, subject, html: htmlBody };
-              const emailitResponse = await fetch("https://api.emailit.com/v1/emails", { method: "POST", headers: { "Authorization": `Bearer ${emailitApiKey}`, "Content-Type": "application/json" }, body: JSON.stringify(emailPayload) });
-              if (!emailitResponse.ok) {
-                  const errorData = await emailitResponse.json().catch(() => ({}));
-                  throw new Error(`Emailit API Error (${emailitResponse.status}): ${errorData.message || 'Unknown error'}`);
-              }
-              emailSent = true;
-            } catch (e) {
-              console.error(`[process-and-send] [${notificationId}] Failed to send Email:`, e.message);
-            }
-          }
-        }
-
-        if (whatsappSent || emailSent) {
-          await supabaseAdmin.from('pending_whatsapp_notifications').update({ status: 'sent' }).eq('id', notificationId);
-          successCount++;
-        } else {
-          await supabaseAdmin.from('pending_whatsapp_notifications').update({ status: 'cancelled', error_message: 'All notification channels for this type are disabled by the user.' }).eq('id', notificationId);
-          cancelledCount++;
-        }
+        
+        await supabaseAdmin.from('pending_whatsapp_notifications').update({ status: 'sent' }).eq('id', notificationId);
+        successCount++;
+        console.log(`[process-and-send] [${notificationId}] Sent notification to ${recipientData.email}.`);
 
       } catch (innerError) {
         failureCount++;
         console.error(`[process-and-send] [${notificationId}] Error processing notification:`, innerError.message);
-        await supabaseAdmin.from('pending_whatsapp_notifications').update({ status: 'failed', error_message: innerError.message }).eq('id', notificationId);
+        await supabaseAdmin.from('pending_whatsapp_notifications').update({ status: 'failed', error_message: innerError.message, retry_count: (notification.retry_count || 0) + 1 }).eq('id', notificationId);
       }
     }
 
