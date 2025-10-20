@@ -247,7 +247,7 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
         </DialogHeader>
         <Form {...form}>
           <form id="person-form" onSubmit={handleSubmit(onSubmit)}>
-            <ScrollArea className="max-h-[60vh] p-1">
+            <ScrollArea className="max-h-[50vh] p-1">
               <div className="space-y-4 pr-4">
                 {!person && (
                   <div className="pb-4 border-b">
