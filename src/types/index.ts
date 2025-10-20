@@ -333,7 +333,7 @@ export type Person = {
   notes: string | null;
   created_at: string;
   updated_at: string;
-  projects: { id: string; name: string; slug: string; status: string; }[];
+  projects: { id: string; name: string; slug: string; status: string; start_date: string | null; }[];
   tags: Tag[];
   avatar_url: string | null;
   user_id: string | null;
