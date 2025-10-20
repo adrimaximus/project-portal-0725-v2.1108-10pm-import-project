@@ -38,17 +38,81 @@ const getSystemPrompt = (channel: 'whatsapp' | 'email') => {
   }
 
   // Default to WhatsApp prompt
-  return `Anda adalah asisten notifikasi yang ramah dan suportif. Tugas Anda adalah membuat pesan notifikasi WhatsApp yang singkat, natural, dan positif.
+  return `Anda adalah asisten notifikasi yang ramah dan suportif. Tugas Anda adalah membuat pesan notifikasi WhatsApp yang singkat, natural, dan positif, mengikuti format yang diberikan dalam contoh.
 
 **Aturan Penting:**
 1.  **Gunakan Variasi Kalimat:** Jangan pernah menggunakan kalimat yang sama persis berulang kali.
-2.  **Sertakan Emoji:** Tambahkan satu atau dua emoji yang relevan dan sopan di akhir pesan untuk memberikan sentuhan visual.
+2.  **Sertakan Emoji:** Tambahkan satu emoji yang relevan dan sopan di akhir pesan untuk memberikan sentuhan visual.
 3.  **Sentuhan Personal Positif:** Di akhir pesan, sertakan satu kalimat positif yang ringan dan relevan.
 4.  **Jaga Profesionalisme:** Pastikan nada tetap profesional namun ramah.
 5.  **Format:** Gunakan format tebal WhatsApp (*kata*) untuk nama orang, nama proyek, nama tugas, dll.
 6.  **Konteks Pesan:** Jika isi pesan/komentar disediakan, kutip sebagian kecil saja (misalnya, 5-7 kata pertama) menggunakan format miring (_"kutipan..."_). Jangan kutip seluruh pesan.
 7.  **Singkat:** Jaga agar keseluruhan pesan notifikasi tetap singkat dan langsung ke intinya.
 8.  **Sertakan URL:** Jika URL disediakan dalam konteks, Anda HARUS menyertakannya secara alami di akhir pesan.`;
+};
+
+const getFullName = (profile: any) => `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email;
+
+const getContext = async (supabaseAdmin: any, notification: any) => {
+    const { notification_type, context_data } = notification;
+    const SITE_URL = Deno.env.get("SITE_URL") ?? "https://7inked.ahensi.xyz";
+    let context: any = { type: notification_type };
+
+    const fetchProfile = async (userId: string) => {
+        const { data, error } = await supabaseAdmin.from('profiles').select('first_name, last_name, email').eq('id', userId).single();
+        if (error) throw new Error(`Failed to fetch profile for user ${userId}: ${error.message}`);
+        return { ...data, name: getFullName(data) };
+    };
+
+    switch (notification_type) {
+        case 'task_completed': {
+            const [completer, task, project] = await Promise.all([
+                fetchProfile(context_data.completer_id),
+                supabaseAdmin.from('tasks').select('title, project_id').eq('id', context_data.task_id).single(),
+                supabaseAdmin.from('projects').select('name, slug').eq('id', context_data.project_id).single(),
+            ]);
+            context = { ...context, completerName: completer.name, taskTitle: task.data.title, projectName: project.data.name, url: `${SITE_URL}/projects/${project.data.slug}` };
+            break;
+        }
+        case 'project_status_updated': {
+            const [updater, project] = await Promise.all([
+                fetchProfile(context_data.updater_id),
+                supabaseAdmin.from('projects').select('name, slug').eq('id', context_data.project_id).single(),
+            ]);
+            context = { ...context, updaterName: updater.name, projectName: project.data.name, oldStatus: context_data.old_status, newStatus: context_data.new_status, url: `${SITE_URL}/projects/${project.data.slug}` };
+            break;
+        }
+        case 'goal_progress_update': {
+            const [updater, goal] = await Promise.all([
+                fetchProfile(context_data.updater_id),
+                supabaseAdmin.from('goals').select('title, slug, unit').eq('id', context_data.goal_id).single(),
+            ]);
+            context = { ...context, updaterName: updater.name, goalTitle: goal.data.title, valueLogged: context_data.value_logged, unit: goal.data.unit, url: `${SITE_URL}/goals/${goal.data.slug}` };
+            break;
+        }
+        case 'new_chat_message': {
+            const [sender, conversation] = await Promise.all([
+                fetchProfile(context_data.sender_id),
+                supabaseAdmin.from('conversations').select('is_group, group_name').eq('id', notification.conversation_id).single(),
+            ]);
+            const { data: unreadMessages, error: msgError } = await supabaseAdmin
+                .from('messages')
+                .select('content')
+                .eq('conversation_id', notification.conversation_id)
+                .eq('sender_id', context_data.sender_id)
+                .gt('created_at', notification.created_at) // Fetch messages created after the notification was scheduled
+                .order('created_at', { ascending: true });
+            if (msgError) throw msgError;
+
+            context = { ...context, senderName: sender.name, isGroup: conversation.data.is_group, groupName: conversation.data.group_name, messages: unreadMessages.map(m => m.content), url: `${SITE_URL}/chat` };
+            break;
+        }
+        // Add other cases here...
+        default:
+            context = { ...context, details: context_data };
+            break;
+    }
+    return context;
 };
 
 serve(async (req) => {
@@ -78,9 +142,7 @@ serve(async (req) => {
     }
 
     console.log(`[process-pending-notifications] Found ${pendingNotifications.length} notifications to process.`);
-    let successCount = 0;
-    let failureCount = 0;
-    let cancelledCount = 0;
+    let successCount = 0, failureCount = 0, cancelledCount = 0;
 
     for (const notification of pendingNotifications) {
       const notificationId = notification.id;
@@ -110,26 +172,25 @@ serve(async (req) => {
         if (recipientError) throw new Error(`Failed to fetch recipient profile: ${recipientError.message}`);
         
         const prefs = recipientData.notification_preferences || {};
-        const notificationType = notification.notification_type || 'new_chat_message';
-        const typePrefs = prefs[notificationType] || {};
+        const notificationTypeKey = notification.notification_type?.replace(/_updated$/, '_update') || 'system';
+        const typePrefs = prefs[notificationTypeKey] || {};
 
-        // Check per-type settings, default to true if not specified
         const isWhatsappEnabled = typePrefs.whatsapp !== false;
-        const isEmailEnabled = typePrefs.email === true; // Email is opt-in
+        const isEmailEnabled = typePrefs.email === true;
 
         let whatsappSent = false;
         let emailSent = false;
 
-        const recipientName = `${recipientData.first_name || ''} ${recipientData.last_name || ''}`.trim() || recipientData.email;
-        
-        // --- Send WhatsApp Notification ---
+        const context = await getContext(supabaseAdmin, notification);
+        const recipientName = getFullName(recipientData);
+
         if (isWhatsappEnabled) {
           const recipientPhone = formatPhoneNumberForApi(recipientData.phone);
           if (recipientPhone) {
             try {
-              const userPrompt = `**Konteks:**\n- **Jenis:** Notifikasi ${notificationType}\n- **Penerima:** ${recipientName}\n- **Detail:** ${JSON.stringify(notification.context_data)}\n\nBuat pesan notifikasi WhatsApp yang sesuai.`;
+              const userPrompt = `**Konteks:**\n- **Jenis:** Notifikasi ${notification.notification_type}\n- **Penerima:** ${recipientName}\n- **Detail:** ${JSON.stringify(context)}\n\nBuat pesan notifikasi WhatsApp yang sesuai.`;
               const anthropic = new Anthropic({ apiKey: Deno.env.get('ANTHROPIC_API_KEY') });
-              const aiResponse = await anthropic.messages.create({ model: "claude-3-haiku-20240307", max_tokens: 150, system: getSystemPrompt('whatsapp'), messages: [{ role: "user", content: userPrompt }] });
+              const aiResponse = await anthropic.messages.create({ model: "claude-3-haiku-20240307", max_tokens: 250, system: getSystemPrompt('whatsapp'), messages: [{ role: "user", content: userPrompt }] });
               const aiMessage = aiResponse.content[0].text;
 
               const { data: wbizConfig } = await supabaseAdmin.from('app_config').select('key, value').in('key', ['WBIZTOOL_CLIENT_ID', 'WBIZTOOL_API_KEY']);
@@ -151,12 +212,11 @@ serve(async (req) => {
           }
         }
 
-        // --- Send Email Notification ---
         if (isEmailEnabled) {
           const recipientEmail = recipientData.email;
           if (recipientEmail) {
             try {
-              const userPrompt = `**Konteks:**\n- **Jenis:** Notifikasi ${notificationType}\n- **Penerima:** ${recipientName}\n- **Detail:** ${JSON.stringify(notification.context_data)}\n\nBuat subjek dan isi email notifikasi yang sesuai.`;
+              const userPrompt = `**Konteks:**\n- **Jenis:** Notifikasi ${notification.notification_type}\n- **Penerima:** ${recipientName}\n- **Detail:** ${JSON.stringify(context)}\n\nBuat subjek dan isi email notifikasi yang sesuai.`;
               const anthropic = new Anthropic({ apiKey: Deno.env.get('ANTHROPIC_API_KEY') });
               const aiResponse = await anthropic.messages.create({ model: "claude-3-haiku-20240307", max_tokens: 400, system: getSystemPrompt('email'), messages: [{ role: "user", content: userPrompt }] });
               const jsonMatch = aiResponse.content[0].text.match(/{[\s\S]*}/);
