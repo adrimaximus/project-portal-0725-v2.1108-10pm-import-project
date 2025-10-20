@@ -107,17 +107,13 @@ export const SupportDialog = ({ isOpen, onOpenChange }: SupportDialogProps) => {
 
       if (error) throw error;
 
-      // 3. Find 'General Tasks' project
-      const { data: generalProject, error: projectError } = await supabase
-        .from('projects')
-        .select('id')
-        .eq('slug', 'general-tasks')
-        .single();
-      
-      if (projectError || !generalProject) {
-        throw new Error("Could not find the 'General Tasks' project. Task cannot be created.");
+      // 3. Find or create 'General Tasks' project and ensure membership
+      const { data: projectId, error: projectError } = await supabase
+        .rpc('ensure_general_tasks_project_and_membership');
+
+      if (projectError || !projectId) {
+        throw new Error(`Could not access the 'General Tasks' project. Task cannot be created. ${projectError?.message || ''}`);
       }
-      const projectId = generalProject.id;
 
       // 4. Find assignees (BD and master admin)
       const { data: assignees, error: assigneesError } = await supabase
