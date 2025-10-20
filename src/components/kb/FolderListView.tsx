@@ -48,7 +48,7 @@ const FolderListView = ({ folders, onEdit, onDelete, requestSort }: FolderListVi
                   {folder.category ? <Badge variant="secondary">{folder.category}</Badge> : '-'}
                 </TableCell>
                 <TableCell className="text-muted-foreground">
-                  {formatDistanceToNow(new Date(folder.updated_at), { addSuffix: true })}
+                  {folder.updated_at ? formatDistanceToNow(new Date(folder.updated_at), { addSuffix: true }) : ''}
                 </TableCell>
                 <TableCell className="text-right">
                   <DropdownMenu>

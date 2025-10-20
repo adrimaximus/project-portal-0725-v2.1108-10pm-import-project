@@ -39,7 +39,7 @@ const PageListView = ({ articles, onEdit, onDelete }: PageListViewProps) => {
                 </Link>
               </TableCell>
               <TableCell className="text-muted-foreground">
-                {formatDistanceToNow(new Date(article.updated_at), { addSuffix: true })}
+                {article.updated_at ? formatDistanceToNow(new Date(article.updated_at), { addSuffix: true }) : ''}
               </TableCell>
               <TableCell className="text-right">
                 <DropdownMenu>

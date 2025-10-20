@@ -100,7 +100,7 @@ const NotificationsPage = () => {
                         </Link>
                         <p className="text-sm text-muted-foreground">{notification.description}</p>
                         <p className="text-xs text-muted-foreground mt-1">
-                          {formatDistanceToNow(new Date(notification.timestamp), { addSuffix: true, locale: id })}
+                          {notification.timestamp ? formatDistanceToNow(new Date(notification.timestamp), { addSuffix: true, locale: id }) : ''}
                         </p>
                       </div>
                       {notification.read ? (

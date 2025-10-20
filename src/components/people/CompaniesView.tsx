@@ -204,7 +204,7 @@ const CompaniesView = () => {
                                                     {renderCustomPropertyValue(company.custom_properties?.[prop.name], prop.type)}
                                                 </TableCell>
                                             ))}
-                                            <TableCell>{formatDistanceToNow(new Date(company.updated_at), { addSuffix: true })}</TableCell>
+                                            <TableCell>{company.updated_at ? formatDistanceToNow(new Date(company.updated_at), { addSuffix: true }) : ''}</TableCell>
                                             <TableCell className="text-right md:sticky right-0 bg-card">
                                                 <DropdownMenu>
                                                     <DropdownMenuTrigger asChild>

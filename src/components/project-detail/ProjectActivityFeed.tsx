@@ -107,10 +107,10 @@ const ProjectActivityFeed = ({ activities }: ProjectActivityFeedProps) => {
                     </div>
                     <div className="whitespace-nowrap text-right text-sm text-muted-foreground">
                       <time dateTime={activity.timestamp}>
-                        {formatDistanceToNow(new Date(activity.timestamp), {
+                        {activity.timestamp ? formatDistanceToNow(new Date(activity.timestamp), {
                           addSuffix: true,
                           locale: id,
-                        })}
+                        }) : ''}
                       </time>
                     </div>
                   </div>
