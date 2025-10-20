@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { ContactProperty, Person } from '@/types';
@@ -82,13 +82,6 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
     avatar_url: z.string().url().optional().or(z.literal('')),
     birthday: z.string().optional(),
     notes: z.string().optional(),
-    address_street: z.string().optional(),
-    address_city: z.string().optional(),
-    address_state: z.string().optional(),
-    address_postal_code: z.string().optional(),
-    address_country: z.string().optional(),
-    social_media_twitter: z.string().url({ message: "Invalid URL" }).optional().or(z.literal('')),
-    social_media_linkedin: z.string().url({ message: "Invalid URL" }).optional().or(z.literal('')),
     custom_properties: z.record(z.any()).optional(),
   });
 
@@ -107,13 +100,6 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
       avatar_url: '',
       birthday: '',
       notes: '',
-      address_street: '',
-      address_city: '',
-      address_state: '',
-      address_postal_code: '',
-      address_country: '',
-      social_media_twitter: '',
-      social_media_linkedin: '',
       custom_properties: {},
     },
   });
@@ -122,7 +108,7 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
   useEffect(() => {
     if (open) {
       if (person) { // Edit mode
-        const { custom_properties, full_name, address, social_media, ...personData } = person;
+        const { custom_properties, full_name, ...personData } = person;
         const nameParts = full_name ? full_name.split(' ') : [''];
         const firstName = nameParts[0] || '';
         const lastName = nameParts.slice(1).join(' ') || '';
@@ -133,21 +119,9 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
           custom_properties: custom_properties || {}, 
           company_id: person.company_id,
           birthday: person.birthday ? new Date(person.birthday).toISOString().split('T')[0] : '',
-          address_street: address?.street || '',
-          address_city: address?.city || '',
-          address_state: address?.state || '',
-          address_postal_code: address?.postal_code || '',
-          address_country: address?.country || '',
-          social_media_twitter: social_media?.twitter || '',
-          social_media_linkedin: social_media?.linkedin || '',
         });
       } else { // Create mode
-        reset({ 
-            first_name: '', last_name: '', email: '', phone: '', company_id: null, job_title: '', department: '', avatar_url: '', birthday: '', notes: '', 
-            address_street: '', address_city: '', address_state: '', address_postal_code: '', address_country: '',
-            social_media_twitter: '', social_media_linkedin: '',
-            custom_properties: {} 
-        });
+        reset({ first_name: '', last_name: '', email: '', phone: '', company_id: null, job_title: '', department: '', avatar_url: '', birthday: '', notes: '', custom_properties: {} });
       }
     } else {
       // Reset when dialog closes
@@ -192,19 +166,6 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
         phones: values.phone ? [values.phone] : [],
       };
 
-      const addressJson = {
-        street: values.address_street || null,
-        city: values.address_city || null,
-        state: values.address_state || null,
-        postal_code: values.address_postal_code || null,
-        country: values.address_country || null,
-      };
-  
-      const socialMediaJson = {
-        twitter: values.social_media_twitter || null,
-        linkedin: values.social_media_linkedin || null,
-      };
-
       let rpcName = 'upsert_person_with_details';
       let rpcParams: any = {
         p_id: person?.id || null,
@@ -213,14 +174,14 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
         p_company_id: values.company_id,
         p_job_title: values.job_title || null,
         p_department: values.department || null,
-        p_social_media: socialMediaJson,
+        p_social_media: person?.social_media || {},
         p_birthday: values.birthday || null,
         p_notes: values.notes || null,
         p_project_ids: person?.projects?.map(p => p.id) || [],
         p_existing_tag_ids: person?.tags?.map(t => t.id) || [],
         p_custom_tags: [],
         p_avatar_url: values.avatar_url || (selectedProfile ? selectedProfile.avatar_url : null),
-        p_address: addressJson,
+        p_address: person?.address || null,
         p_custom_properties: values.custom_properties,
       };
 
@@ -371,63 +332,6 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
                     <FormMessage />
                   </FormItem>
                 )} />
-
-                <div className="space-y-4 border-t pt-4 mt-4">
-                  <h3 className="text-lg font-medium">Social Media</h3>
-                  <FormField control={control} name="social_media_twitter" render={({ field }) => (
-                      <FormItem>
-                          <FormLabel>Twitter Profile URL</FormLabel>
-                          <FormControl><Input {...field} placeholder="https://twitter.com/username" /></FormControl>
-                          <FormMessage />
-                      </FormItem>
-                  )} />
-                  <FormField control={control} name="social_media_linkedin" render={({ field }) => (
-                      <FormItem>
-                          <FormLabel>LinkedIn Profile URL</FormLabel>
-                          <FormControl><Input {...field} placeholder="https://linkedin.com/in/username" /></FormControl>
-                          <FormMessage />
-                      </FormItem>
-                  )} />
-                </div>
-
-                <div className="space-y-4 border-t pt-4 mt-4">
-                    <h3 className="text-lg font-medium">Address</h3>
-                    <FormField control={control} name="address_street" render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Street</FormLabel>
-                            <FormControl><Input {...field} /></FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )} />
-                    <FormField control={control} name="address_city" render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>City</FormLabel>
-                            <FormControl><Input {...field} /></FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )} />
-                    <FormField control={control} name="address_state" render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>State/Province</FormLabel>
-                            <FormControl><Input {...field} /></FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )} />
-                    <FormField control={control} name="address_postal_code" render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Postal Code</FormLabel>
-                            <FormControl><Input {...field} /></FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )} />
-                    <FormField control={control} name="address_country" render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Country</FormLabel>
-                            <FormControl><Input {...field} /></FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )} />
-                </div>
                 
                 {isLoadingProperties ? (
                   <div className="flex justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div>
