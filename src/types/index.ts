@@ -81,3 +81,30 @@ export const TASK_PRIORITY_OPTIONS = [
   { value: 'Normal', label: 'Normal' },
   { value: 'Low', label: 'Low' },
 ];
+
+export type ProjectStatus = 'On Track' | 'In Progress' | 'In Review' | 'At Risk' | 'On Hold' | 'Off Track' | 'Completed' | 'Cancelled' | 'Requested' | 'Idea';
+
+export const PROJECT_STATUS_OPTIONS: { value: ProjectStatus; label: string }[] = [
+  { value: 'On Track', label: 'On Track' },
+  { value: 'In Progress', label: 'In Progress' },
+  { value: 'In Review', label: 'In Review' },
+  { value: 'At Risk', label: 'At Risk' },
+  { value: 'On Hold', label: 'On Hold' },
+  { value: 'Off Track', label: 'Off Track' },
+  { value: 'Completed', label: 'Completed' },
+  { value: 'Cancelled', label: 'Cancelled' },
+  { value: 'Requested', label: 'Requested' },
+  { value: 'Idea', label: 'Idea' },
+];
+
+export type PaymentStatus = 'Paid' | 'Overdue' | 'Unpaid' | 'Pending' | 'In Process' | 'Proposed' | 'Cancelled';
+
+export const PAYMENT_STATUS_OPTIONS: { value: PaymentStatus; label: string }[] = [
+  { value: 'Paid', label: 'Paid' },
+  { value: 'Overdue', label: 'Overdue' },
+  { value: 'Unpaid', label: 'Unpaid' },
+  { value: 'Pending', label: 'Pending' },
+  { value: 'In Process', label: 'In Process' },
+  { value: 'Proposed', label: 'Proposed' },
+  { value: 'Cancelled', label: 'Cancelled' },
+];
