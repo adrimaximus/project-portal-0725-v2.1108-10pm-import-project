@@ -1,23 +1,21 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import PortalLayout from '@/components/PortalLayout';
 import { Button } from '@/components/ui/button';
-import { Plus, LayoutGrid, Table as TableIcon } from 'lucide-react';
+import { Plus, LayoutGrid, Table as TableIcon, Loader2 } from 'lucide-react';
 import { Goal } from '@/types';
 import GoalFormDialog from '@/components/goals/GoalFormDialog';
 import GoalCard from '@/components/goals/GoalCard';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import GoalsTableView from '@/components/goals/GoalsTableView';
-import { useQueryClient } from '@tanstack/react-query';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useGoals } from '@/hooks/useGoals';
+import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+import { useQueryClient } from '@tanstack/react-query';
 
 const GoalsPage = () => {
   const [isNewGoalDialogOpen, setIsNewGoalDialogOpen] = useState(false);
-  const [goals, setGoals] = useState<Goal[]>([]);
-  const { user } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [viewMode, setViewMode] = useState<'card' | 'table'>(() => {
@@ -26,24 +24,7 @@ const GoalsPage = () => {
   });
   const [sortConfig, setSortConfig] = useState<{ key: keyof Goal | null; direction: 'ascending' | 'descending' }>({ key: 'title', direction: 'ascending' });
 
-  useEffect(() => {
-    localStorage.setItem('goals_view_mode', viewMode);
-  }, [viewMode]);
-
-  const fetchGoals = useCallback(async () => {
-    if (!user) return;
-    const { data, error } = await supabase.rpc('get_user_goals');
-    if (error) {
-      toast.error('Failed to fetch goals.');
-      console.error(error);
-    } else {
-      setGoals(data || []);
-    }
-  }, [user]);
-
-  useEffect(() => {
-    fetchGoals();
-  }, [fetchGoals]);
+  const { data: goals = [], isLoading, error } = useGoals();
 
   const handleDeleteGoal = async (goalId: string) => {
     const { error } = await supabase.from('goals').delete().eq('id', goalId);
@@ -51,7 +32,6 @@ const GoalsPage = () => {
       toast.error("Failed to delete goal.");
     } else {
       toast.success("Goal deleted successfully.");
-      setGoals(prevGoals => prevGoals.filter(g => g.id !== goalId));
       queryClient.invalidateQueries({ queryKey: ['goals'] });
     }
   };
@@ -107,12 +87,12 @@ const GoalsPage = () => {
   const handleSuccess = (newGoal: Goal) => {
     setIsNewGoalDialogOpen(false);
     navigate(`/goals/${newGoal.slug}`);
-    fetchGoals();
   };
 
   const handleViewChange = (value: 'card' | 'table' | null) => {
     if (value) {
       setViewMode(value);
+      localStorage.setItem('goals_view_mode', value);
     }
   };
 
@@ -147,7 +127,15 @@ const GoalsPage = () => {
         </div>
       </div>
 
-      {viewMode === 'card' ? (
+      {isLoading ? (
+        <div className="flex justify-center items-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      ) : error ? (
+        <div className="text-center py-12 text-destructive">
+          <p>Error loading goals: {error.message}</p>
+        </div>
+      ) : viewMode === 'card' ? (
         <>
           {specialGoals.length > 0 && (
             <div className="mb-12">
