@@ -1,13 +1,12 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Person as BasePerson } from '@/types';
 import { Card } from '@/components/ui/card';
-import { User as UserIcon, Instagram, Briefcase, Mail, Edit } from 'lucide-react';
+import { User as UserIcon, Instagram, Briefcase, Mail } from 'lucide-react';
 import { generatePastelColor, getAvatarUrl } from '@/lib/utils';
 import WhatsappIcon from '../icons/WhatsappIcon';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useQuery } from '@tanstack/react-query';
-import { Button } from '@/components/ui/button';
 
 type Person = BasePerson & { company_id?: string | null };
 
@@ -29,7 +28,7 @@ const formatPhoneNumberForWhatsApp = (phone: string | undefined) => {
   return cleaned;
 };
 
-const PersonCard = ({ person, onViewProfile, onEdit }: PersonCardProps) => {
+const PersonCard = ({ person, onViewProfile }: PersonCardProps) => {
   const [imageError, setImageError] = useState(false);
 
   const { data: companyProperties = [] } = useQuery({
@@ -125,19 +124,6 @@ const PersonCard = ({ person, onViewProfile, onEdit }: PersonCardProps) => {
       onClick={() => onViewProfile(person)}
     >
       <div className="relative">
-        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-            <Button
-              size="icon"
-              variant="secondary"
-              className="rounded-full h-8 w-8"
-              onClick={(e) => {
-                e.stopPropagation();
-                onEdit(person);
-              }}
-            >
-              <Edit className="h-4 w-4" />
-            </Button>
-          </div>
         <div className="aspect-[16/9] w-full overflow-hidden rounded-t-2xl">
           {!imageError ? (
             <img
