@@ -40,7 +40,7 @@ const ProjectTasks = ({ tasks, onAddTask, onEditTask, onDeleteTask, onToggleTask
       </div>
       <TooltipProvider>
         {tasks.map((task) => (
-          <div key={task.id} className="flex items-center space-x-3 p-2 rounded-md hover:bg-muted group">
+          <div key={task.id} className="flex items-start space-x-3 p-2 rounded-md hover:bg-muted group">
             <Checkbox
               id={`task-${task.id}`}
               checked={task.completed}
@@ -49,12 +49,12 @@ const ProjectTasks = ({ tasks, onAddTask, onEditTask, onDeleteTask, onToggleTask
             />
             <label
               htmlFor={`task-${task.id}`}
-              className={`flex-1 text-sm flex items-center gap-2 cursor-pointer ${task.completed ? 'text-muted-foreground line-through' : 'text-card-foreground'}`}
+              className={`flex-1 min-w-0 text-sm flex items-center gap-2 cursor-pointer ${task.completed ? 'text-muted-foreground line-through' : 'text-card-foreground'}`}
             >
               {(task.originTicketId || task.tags?.some(t => t.name === 'Ticket')) && (
                 <Ticket className={`h-4 w-4 flex-shrink-0 ${task.completed ? 'text-green-500' : 'text-red-500'}`} />
               )}
-              <span className="truncate" title={task.title}>{task.title}</span>
+              <span className="break-words" title={task.title}>{task.title}</span>
             </label>
 
             <div className="flex items-center -space-x-2 ml-auto pr-2">
