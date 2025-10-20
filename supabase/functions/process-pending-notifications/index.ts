@@ -48,7 +48,7 @@ const getSystemPrompt = (channel: 'whatsapp' | 'email') => {
 5.  **Format:** Gunakan format tebal WhatsApp (*kata*) untuk nama orang, nama proyek, nama tugas, dll.
 6.  **Konteks Pesan:** Jika isi pesan/komentar disediakan, kutip sebagian kecil saja (misalnya, 5-7 kata pertama) menggunakan format miring (_"kutipan..."_). Jangan kutip seluruh pesan.
 7.  **Singkat:** Jaga agar keseluruhan pesan notifikasi tetap singkat dan langsung ke intinya.
-8.  **Sertakan URL:** Jika URL disediakan dalam konteks, Anda HARUS menyertakannya secara alami di akhir pesan.`;
+8.  **Sertakan URL:** Jika URL disediakan dalam konteks, Anda HARUS menyertakannya secara alami di akhir pesan. Jangan membuat URL sendiri.`;
 };
 
 const getFullName = (profile: any) => `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email;
@@ -71,7 +71,7 @@ const getContext = async (supabaseAdmin: any, notification: any) => {
                 supabaseAdmin.from('tasks').select('title, project_id').eq('id', context_data.task_id).single(),
                 supabaseAdmin.from('projects').select('name, slug').eq('id', context_data.project_id).single(),
             ]);
-            context = { ...context, completerName: completer.name, taskTitle: task.data.title, projectName: project.data.name, url: `${SITE_URL}/projects/${project.data.slug}` };
+            context = { ...context, completerName: completer.name, taskTitle: task.data.title, projectName: project.data.name, url: `${SITE_URL}/projects/${project.data.slug}?tab=tasks&task=${context_data.task_id}` };
             break;
         }
         case 'project_status_updated': {
@@ -107,9 +107,49 @@ const getContext = async (supabaseAdmin: any, notification: any) => {
             context = { ...context, senderName: sender.name, isGroup: conversation.data.is_group, groupName: conversation.data.group_name, messages: unreadMessages.map(m => m.content), url: `${SITE_URL}/chat` };
             break;
         }
-        // Add other cases here...
+        case 'discussion_mention': {
+            const [mentioner, project] = await Promise.all([
+                fetchProfile(context_data.mentioner_id),
+                supabaseAdmin.from('projects').select('name, slug').eq('id', context_data.project_id).single(),
+            ]);
+            context = { ...context, mentionerName: mentioner.name, projectName: project.data.name, url: `${SITE_URL}/projects/${project.data.slug}?tab=discussion` };
+            break;
+        }
+        case 'task_assignment': {
+            const [assigner, task, project] = await Promise.all([
+                fetchProfile(context_data.assigner_id),
+                supabaseAdmin.from('tasks').select('title, project_id').eq('id', context_data.task_id).single(),
+                supabaseAdmin.from('projects').select('name, slug').eq('id', task.data.project_id).single(),
+            ]);
+            context = { ...context, assignerName: assigner.name, taskTitle: task.data.title, projectName: project.data.name, url: `${SITE_URL}/projects/${project.data.slug}?tab=tasks&task=${context_data.task_id}` };
+            break;
+        }
+        case 'project_invite': {
+            const [inviter, project] = await Promise.all([
+                fetchProfile(context_data.inviter_id),
+                supabaseAdmin.from('projects').select('name, slug').eq('id', context_data.project_id).single(),
+            ]);
+            context = { ...context, inviterName: inviter.name, projectName: project.data.name, url: `${SITE_URL}/projects/${project.data.slug}` };
+            break;
+        }
+        case 'goal_invite': {
+            const [inviter, goal] = await Promise.all([
+                fetchProfile(context_data.inviter_id),
+                supabaseAdmin.from('goals').select('title, slug').eq('id', context_data.goal_id).single(),
+            ]);
+            context = { ...context, inviterName: inviter.name, goalTitle: goal.data.title, url: `${SITE_URL}/goals/${goal.data.slug}` };
+            break;
+        }
+        case 'kb_invite': {
+            const [inviter, folder] = await Promise.all([
+                fetchProfile(context_data.inviter_id),
+                supabaseAdmin.from('kb_folders').select('name, slug').eq('id', context_data.folder_id).single(),
+            ]);
+            context = { ...context, inviterName: inviter.name, folderName: folder.data.name, url: `${SITE_URL}/knowledge-base/folders/${folder.data.slug}` };
+            break;
+        }
         default:
-            context = { ...context, details: context_data };
+            context = { ...context, details: context_data, url: SITE_URL };
             break;
     }
     return context;
