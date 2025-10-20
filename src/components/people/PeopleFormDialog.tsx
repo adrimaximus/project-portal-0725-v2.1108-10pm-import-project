@@ -17,7 +17,6 @@ import UserSelector from './UserSelector';
 import { useAuth } from '@/contexts/AuthContext';
 import CompanySelector from './CompanySelector';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { ScrollArea } from '@/components/ui/scroll-area';
 
 // Minimal profile type definition to avoid touching global types.ts
 interface Profile {
@@ -240,15 +239,15 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg flex flex-col max-h-[90vh]">
         <DialogHeader>
           <DialogTitle>{person ? 'Edit Person' : 'Add New Person'}</DialogTitle>
           <DialogDescription>Fill in the details for the person.</DialogDescription>
         </DialogHeader>
-        <Form {...form}>
-          <form id="person-form" onSubmit={handleSubmit(onSubmit)}>
-            <ScrollArea className="max-h-[50vh] p-1">
-              <div className="space-y-4 pr-4">
+        <div className="flex-1 min-h-0">
+          <Form {...form}>
+            <form id="person-form" onSubmit={handleSubmit(onSubmit)} className="h-full overflow-y-auto pr-4">
+              <div className="space-y-4">
                 {!person && (
                   <div className="pb-4 border-b">
                     <Label>Pre-fill from User Profile</Label>
@@ -356,9 +355,9 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
                   </div>
                 )}
               </div>
-            </ScrollArea>
-          </form>
-        </Form>
+            </form>
+          </Form>
+        </div>
         <DialogFooter>
           <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button type="submit" form="person-form" disabled={mutation.isPending}>
