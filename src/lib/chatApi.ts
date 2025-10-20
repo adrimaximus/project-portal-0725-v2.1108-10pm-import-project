@@ -1,5 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
-import { Conversation, Message, Attachment, Reaction, Collaborator } from '@/types';
+import { Conversation, Message, Attachment, Reaction, Collaborator } from '@/types/index';
 import { getInitials, getAvatarUrl } from '@/lib/utils';
 
 const mapConversationData = (c: any): Omit<Conversation, 'messages'> => ({
