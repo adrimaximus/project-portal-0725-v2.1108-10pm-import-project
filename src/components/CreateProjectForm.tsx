@@ -58,7 +58,6 @@ export function CreateProjectForm({ onFinished }: CreateProjectFormProps) {
         description: values.description,
         venue: values.venue,
         category: "General",
-        created_by: user.id,
       },
       {
         onSuccess: (data) => {

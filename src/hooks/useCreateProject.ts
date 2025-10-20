@@ -11,30 +11,26 @@ type NewProjectData = {
     budget?: number;
     origin_event_id?: string;
     venue?: string;
-    created_by: string;
     client_company_id?: string | null;
 };
 
 const createProject = async (projectData: NewProjectData) => {
-    // Secara eksplisit menyetel `created_by` untuk melewati pemicu database `set_created_by`
-    // yang salah dikonfigurasi (SECURITY DEFINER) yang menyebabkan pelanggaran RLS.
-    const dataToInsert = {
-        name: projectData.name,
-        description: projectData.description,
-        category: projectData.category,
-        start_date: projectData.startDate,
-        due_date: projectData.dueDate,
-        budget: projectData.budget,
-        origin_event_id: projectData.origin_event_id,
-        venue: projectData.venue,
-        created_by: projectData.created_by,
-        client_company_id: projectData.client_company_id,
-    };
-
-    const { data, error } = await supabase.from('projects').insert(dataToInsert).select().single();
+    const { data, error } = await supabase
+      .rpc('create_project', {
+        p_name: projectData.name,
+        p_description: projectData.description,
+        p_category: projectData.category,
+        p_start_date: projectData.startDate,
+        p_due_date: projectData.dueDate,
+        p_budget: projectData.budget,
+        p_origin_event_id: projectData.origin_event_id,
+        p_venue: projectData.venue,
+        p_client_company_id: projectData.client_company_id,
+      })
+      .single();
 
     if (error) {
-        console.error('Error creating project:', error);
+        console.error('Error creating project via RPC:', error);
         throw new Error(error.message);
     }
 

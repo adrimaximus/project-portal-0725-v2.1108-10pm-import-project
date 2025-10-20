@@ -140,7 +140,6 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
       startDate: date?.from?.toISOString(),
       dueDate: date?.to?.toISOString(),
       venue: venue,
-      created_by: currentUser.id,
       client_company_id: clientCompanyId,
     }, {
       onSuccess: async (newProject) => {
