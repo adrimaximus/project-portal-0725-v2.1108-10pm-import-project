@@ -70,7 +70,7 @@ export type Project = {
   budget: number | null;
   start_date: string | null;
   due_date: string | null;
-  payment_status: string;
+  payment_status: PaymentStatus;
   payment_due_date: string | null;
   created_by: User;
   assignedTo: AssignedUser[];
@@ -242,7 +242,7 @@ export type Owner = {
   name: string;
   avatar_url: string;
   initials: string;
-  email?: string;
+  email: string;
 };
 
 export type Member = {
@@ -251,7 +251,7 @@ export type Member = {
   avatar_url: string;
   initials: string;
   role: string;
-  email?: string;
+  email: string;
 };
 
 export type Invoice = {

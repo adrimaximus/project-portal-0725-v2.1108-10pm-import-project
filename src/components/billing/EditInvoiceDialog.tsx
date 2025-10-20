@@ -194,7 +194,7 @@ export const EditInvoiceDialog = ({ isOpen, onClose, invoice, project, onSave }:
             <Label htmlFor="status" className="text-right">
               Status
             </Label>
-            <Select value={status} onValueChange={(value: PaymentStatus) => setStatus(value)}>
+            <Select value={status} onValueChange={(value) => setStatus(value as PaymentStatus)}>
               <SelectTrigger className="col-span-3">
                 <SelectValue placeholder="Select status" />
               </SelectTrigger>

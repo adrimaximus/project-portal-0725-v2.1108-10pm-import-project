@@ -34,7 +34,7 @@ const Billing = () => {
       
       const dueDate = project.payment_due_date ? new Date(project.payment_due_date) : new Date(eventDate);
 
-      let finalStatus: PaymentStatus = project.payment_status as PaymentStatus;
+      let finalStatus: PaymentStatus = project.payment_status;
       if (['Unpaid', 'Pending', 'In Process'].includes(finalStatus) && isPast(dueDate)) {
         finalStatus = 'Overdue';
       }
