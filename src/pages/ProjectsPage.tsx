@@ -219,19 +219,31 @@ const ProjectsPage = () => {
     }
   };
 
+  const deleteProjectMutation = useMutation({
+    mutationFn: async (projectId: string) => {
+      const { error } = await supabase.from('projects').delete().eq('id', projectId);
+      if (error) throw error;
+      return projectId;
+    },
+    onSuccess: (deletedProjectId) => {
+      const deletedProject = projectsData.find(p => p.id === deletedProjectId);
+      toast.success(`Project "${deletedProject?.name || 'Project'}" has been deleted.`);
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+    },
+    onError: (error: any, deletedProjectId) => {
+      const deletedProject = projectsData.find(p => p.id === deletedProjectId);
+      toast.error(`Failed to delete project "${deletedProject?.name || 'Project'}".`, { description: getErrorMessage(error) });
+    }
+  });
+
   const handleDeleteProject = (projectId: string) => {
     const project = projectsData.find(p => p.id === projectId);
     if (project) setProjectToDelete(project);
   };
 
-  const confirmDeleteProject = async () => {
+  const confirmDeleteProject = () => {
     if (projectToDelete) {
-      const { error } = await supabase.from('projects').delete().eq('id', projectToDelete.id);
-      if (error) toast.error(`Failed to delete project "${projectToDelete.name}".`);
-      else {
-        toast.success(`Project "${projectToDelete.name}" has been deleted.`);
-        refetch();
-      }
+      deleteProjectMutation.mutate(projectToDelete.id);
       setProjectToDelete(null);
     }
   };
