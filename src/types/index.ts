@@ -215,6 +215,7 @@ export interface Project {
   activities?: Activity[];
   people?: Person[];
   person_ids?: string[];
+  personal_for_user_id?: string;
 }
 
 export interface Collaborator extends User {
