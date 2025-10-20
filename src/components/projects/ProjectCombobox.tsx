@@ -18,6 +18,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { Project } from "@/types"
+import { useAuth } from "@/contexts/AuthContext"
 
 interface ProjectComboboxProps {
   projects: Project[];
@@ -29,14 +30,16 @@ interface ProjectComboboxProps {
 
 export function ProjectCombobox({ projects, value, onChange, isLoading, disabled }: ProjectComboboxProps) {
   const [open, setOpen] = React.useState(false)
+  const { user } = useAuth();
 
-  const { generalTasksProject, sortedProjects } = React.useMemo(() => {
-    const generalProject = projects.find(p => p.slug === 'general-tasks');
+  const { personalProject, generalTasksProject, sortedProjects } = React.useMemo(() => {
+    const personal = projects.find(p => p.personal_for_user_id === user?.id);
+    const general = projects.find(p => p.slug === 'general-tasks');
     const otherProjects = projects
-      .filter(p => p.slug !== 'general-tasks')
+      .filter(p => p.personal_for_user_id !== user?.id && p.slug !== 'general-tasks')
       .sort((a, b) => a.name.localeCompare(b.name));
-    return { generalTasksProject: generalProject, sortedProjects: otherProjects };
-  }, [projects]);
+    return { personalProject: personal, generalTasksProject: general, sortedProjects: otherProjects };
+  }, [projects, user]);
 
   const selectedProject = projects.find(
     (project) => project.id === value
@@ -66,6 +69,24 @@ export function ProjectCombobox({ projects, value, onChange, isLoading, disabled
           <CommandList>
             <CommandEmpty>No project found.</CommandEmpty>
             <CommandGroup className="max-h-72 overflow-y-auto">
+              {personalProject && (
+                <CommandItem
+                  key={personalProject.id}
+                  value={personalProject.name}
+                  onSelect={() => {
+                    onChange(personalProject.id)
+                    setOpen(false)
+                  }}
+                >
+                  <Check
+                    className={cn(
+                      "mr-2 h-4 w-4",
+                      value === personalProject.id ? "opacity-100" : "opacity-0"
+                    )}
+                  />
+                  {personalProject.name}
+                </CommandItem>
+              )}
               {generalTasksProject && (
                 <CommandItem
                   key={generalTasksProject.id}
@@ -84,7 +105,7 @@ export function ProjectCombobox({ projects, value, onChange, isLoading, disabled
                   {generalTasksProject.name}
                 </CommandItem>
               )}
-              {generalTasksProject && sortedProjects.length > 0 && <CommandSeparator />}
+              {(personalProject || generalTasksProject) && sortedProjects.length > 0 && <CommandSeparator />}
               {sortedProjects.map((project) => (
                 <CommandItem
                   key={project.id}
