@@ -47,7 +47,7 @@ export const EditInvoiceDialog = ({ isOpen, onClose, invoice, project, onSave }:
       setInvoiceNumber(project.invoice_number || invoice.id);
       setPoNumber(project.po_number || '');
       setAmount(project.budget || 0);
-      setStatus(project.payment_status || 'Unpaid');
+      setStatus(project.payment_status as PaymentStatus || 'Unpaid');
       setPaidDate(project.paid_date ? new Date(project.paid_date) : undefined);
       setEmailSendingDate(project.email_sending_date ? new Date(project.email_sending_date) : undefined);
       setHardcopySendingDate(project.hardcopy_sending_date ? new Date(project.hardcopy_sending_date) : undefined);

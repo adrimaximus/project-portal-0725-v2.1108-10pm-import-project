@@ -242,6 +242,7 @@ export type Owner = {
   name: string;
   avatar_url: string;
   initials: string;
+  email?: string;
 };
 
 export type Member = {
@@ -250,6 +251,7 @@ export type Member = {
   avatar_url: string;
   initials: string;
   role: string;
+  email?: string;
 };
 
 export type Invoice = {
