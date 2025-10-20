@@ -5,6 +5,22 @@ export type User = {
   avatar_url: string;
   initials: string;
   role?: string;
+  permissions?: string[];
+  first_name?: string | null;
+  last_name?: string | null;
+  status?: string;
+  phone?: string | null;
+  updated_at?: string;
+  people_kanban_settings?: any;
+  theme?: string;
+};
+
+export type Collaborator = User & {
+  online?: boolean;
+};
+
+export type AssignedUser = User & {
+  role: string;
 };
 
 export type Tag = {
