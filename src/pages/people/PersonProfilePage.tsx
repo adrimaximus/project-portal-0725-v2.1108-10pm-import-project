@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft, Briefcase, Cake, Edit, Instagram, Linkedin, Mail, MapPin, MoreVertical, Phone, Twitter, User as UserIcon, Users, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { formatInJakarta, generatePastelColor, getInitials, getAvatarUrl, formatPhoneNumberForApi } from '@/lib/utils';
-import PeopleFormDialog from '@/components/people/PeopleFormDialog';
+import PeopleFormDialog from '@/components/people/PersonFormDialog';
 import { Person as BasePerson, ContactProperty, User } from '@/types';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -336,24 +336,18 @@ const PersonProfilePage = () => {
             <Card>
               <CardHeader><CardTitle>Related Projects</CardTitle></CardHeader>
               <CardContent>
-                {(() => {
-                  const ongoingProjects = person.projects?.filter(p => p.status !== 'Completed' && p.status !== 'Cancelled') || [];
-                  if (ongoingProjects.length > 0) {
-                    return (
-                      <div className="max-h-60 overflow-y-auto space-y-2 pr-2">
-                        {ongoingProjects.map(project => (
-                          <Link key={project.id} to={`/projects/${project.slug}`} className="block p-2 rounded-md hover:bg-muted">
-                            <div className="flex justify-between items-center">
-                              <p className="font-medium truncate pr-2">{project.name}</p>
-                              <StatusBadge status={project.status} />
-                            </div>
-                          </Link>
-                        ))}
-                      </div>
-                    );
-                  }
-                  return <p className="text-sm text-muted-foreground">No ongoing projects linked yet.</p>;
-                })()}
+                {person.projects && person.projects.length > 0 ? (
+                  <div className="max-h-60 overflow-y-auto space-y-2 pr-2">
+                    {person.projects.map(project => (
+                      <Link key={project.id} to={`/projects/${project.slug}`} className="block p-2 rounded-md hover:bg-muted">
+                        <div className="flex justify-between items-center">
+                          <p className="font-medium truncate pr-2">{project.name}</p>
+                          <StatusBadge status={project.status} />
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                ) : <p className="text-sm text-muted-foreground">No projects linked yet.</p>}
               </CardContent>
             </Card>
 
