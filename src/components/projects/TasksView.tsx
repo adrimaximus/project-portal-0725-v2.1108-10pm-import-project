@@ -171,13 +171,13 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
                           <div className="flex flex-col cursor-pointer" onClick={() => setSelectedTask(task)}>
                             <div className="flex items-center gap-2">
                               {(task.originTicketId || task.tags?.some(t => t.name === 'Ticket')) && <Ticket className={`h-4 w-4 flex-shrink-0 ${task.completed ? 'text-green-500' : 'text-red-500'}`} />}
+                              <div onClick={(e) => e.stopPropagation()}>
+                                {renderAttachments(task)}
+                              </div>
                               <div className={`${task.completed ? 'line-through text-muted-foreground' : ''}`}>
                                 <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ p: 'span' }}>
                                   {formatTaskText(task.title)}
                                 </ReactMarkdown>
-                              </div>
-                              <div onClick={(e) => e.stopPropagation()}>
-                                {renderAttachments(task)}
                               </div>
                             </div>
                             {task.originTicketId && task.created_by && (
