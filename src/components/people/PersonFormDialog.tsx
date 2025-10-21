@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { ContactProperty, Person } from '@/types';
@@ -19,7 +19,7 @@ import CompanySelector from './CompanySelector';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import AvatarUpload from './AvatarUpload';
-import ImageUpload from '@/components/ImageUpload';
+import ImageUploader from '@/components/ui/ImageUploader';
 
 // Minimal profile type definition to avoid touching global types.ts
 interface Profile {
@@ -246,7 +246,7 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
       case 'date':
         return <Input type="date" {...field} value={field.value ?? ''} />;
       case 'image':
-        return <ImageUpload value={field.value} onChange={field.onChange} storagePath="contact-properties" />;
+        return <ImageUploader value={field.value} onChange={field.onChange} bucket="people" />;
       default:
         return <Input type="text" {...field} value={field.value ?? ''} />;
     }
@@ -256,7 +256,7 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg grid grid-rows-[auto_1fr_auto] max-h-[80vh] p-0">
+      <DialogContent className="sm:max-w-lg flex flex-col max-h-[80vh] p-0">
         <DialogHeader className="p-4">
           <DialogTitle>{person ? 'Edit Person' : 'Add New Person'}</DialogTitle>
           <DialogDescription>Fill in the details for the person.</DialogDescription>

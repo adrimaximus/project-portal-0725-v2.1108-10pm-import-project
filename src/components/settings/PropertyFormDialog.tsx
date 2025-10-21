@@ -1,14 +1,14 @@
 import { useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 import { ContactProperty } from '@/types';
-import { Loader2 } from 'lucide-react';
+import { Loader2, X } from 'lucide-react';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 
 interface PropertyFormDialogProps {
@@ -63,7 +63,7 @@ const PropertyFormDialog = ({ open, onOpenChange, onSave, property, isSaving }: 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{property ? 'Edit Property' : 'New Property'}</DialogTitle>
           <DialogDescription>Define a new custom field for your contacts.</DialogDescription>
@@ -77,18 +77,6 @@ const PropertyFormDialog = ({ open, onOpenChange, onSave, property, isSaving }: 
                 <FormItem>
                   <FormLabel>Label</FormLabel>
                   <FormControl><Input {...field} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Field Name</FormLabel>
-                  <FormControl><Input {...field} readOnly={!!property} /></FormControl>
-                  <p className="text-xs text-muted-foreground mt-1">This is the internal name used in the database. It cannot be changed.</p>
                   <FormMessage />
                 </FormItem>
               )}
