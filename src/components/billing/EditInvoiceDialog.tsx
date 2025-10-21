@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Project, PaymentStatus, InvoiceAttachment, PAYMENT_STATUS_OPTIONS } from '@/types';
 import { DatePicker } from '../ui/date-picker';
-import { NumericInput } from '../ui/currency-input';
+import { CurrencyInput } from '../ui/currency-input';
 import { Input } from '../ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -247,7 +247,7 @@ export const EditInvoiceDialog = ({ isOpen, onClose, invoice, project }: EditInv
             <Label htmlFor="amount" className="text-right">
               Amount (Rp)
             </Label>
-            <NumericInput
+            <CurrencyInput
               id="amount"
               value={amount}
               onChange={setAmount}
@@ -265,7 +265,7 @@ export const EditInvoiceDialog = ({ isOpen, onClose, invoice, project }: EditInv
                 Paid Term {index + 1}
               </Label>
               <div className="col-span-3 flex items-center gap-2">
-                <NumericInput
+                <CurrencyInput
                   id={`term-amount-${index}`}
                   value={term.amount}
                   onChange={(value) => handleTermChange(index, 'amount', value)}
