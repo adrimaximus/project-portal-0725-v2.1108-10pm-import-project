@@ -14,22 +14,35 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 interface PropertyFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: (data: Omit<ContactProperty, 'id' | 'is_default' | 'company_logo_url'>) => void;
+  onSave: (data: Omit<ContactProperty, 'id' | 'is_default'>) => void;
   property: ContactProperty | null;
   isSaving: boolean;
+  properties: ContactProperty[];
 }
 
-const propertySchema = z.object({
+const createPropertySchema = (properties: ContactProperty[], property: ContactProperty | null) => z.object({
   label: z.string().min(1, 'Label is required'),
   name: z.string().min(1, 'Name is required').regex(/^[a-z0-9_]+$/, 'Name can only contain lowercase letters, numbers, and underscores.'),
-  type: z.enum(['text', 'number', 'date', 'image']),
+  type: z.enum(['text', 'email', 'phone', 'url', 'date', 'textarea', 'number', 'image', 'multi-image', 'select', 'multi-select', 'checkbox']),
+  options: z.array(z.string()).optional(),
+}).superRefine((data, ctx) => {
+  const machineName = data.label.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+  if (properties.some(p => p.name === machineName && p.id !== property?.id)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'A property with this name already exists. Please use a different label.',
+      path: ['label'],
+    });
+  }
 });
 
-type PropertyFormValues = z.infer<typeof propertySchema>;
+type PropertyFormValues = z.infer<ReturnType<typeof createPropertySchema>>;
 
-const PropertyFormDialog = ({ open, onOpenChange, onSave, property, isSaving }: PropertyFormDialogProps) => {
+const PropertyFormDialog = ({ open, onOpenChange, onSave, property, isSaving, properties }: PropertyFormDialogProps) => {
+  const isEditMode = !!property;
+
   const form = useForm<PropertyFormValues>({
-    resolver: zodResolver(propertySchema),
+    resolver: zodResolver(createPropertySchema(properties, property)),
     defaultValues: {
       label: '',
       name: '',
@@ -43,12 +56,12 @@ const PropertyFormDialog = ({ open, onOpenChange, onSave, property, isSaving }: 
   useEffect(() => {
     if (open) {
       if (property) {
-        reset(property);
+        form.reset(property);
       } else {
-        reset({ label: '', name: '', type: 'text' });
+        form.reset({ label: '', name: '', type: 'text' });
       }
     }
-  }, [property, open, reset]);
+  }, [property, open, form, reset]);
 
   useEffect(() => {
     if (!property) { // Only auto-generate name for new properties
@@ -58,7 +71,7 @@ const PropertyFormDialog = ({ open, onOpenChange, onSave, property, isSaving }: 
   }, [labelValue, setValue, property]);
 
   const onSubmit = (data: PropertyFormValues) => {
-    onSave(data);
+    onSave(data as Omit<ContactProperty, 'id' | 'is_default'>);
   };
 
   return (
@@ -95,9 +108,16 @@ const PropertyFormDialog = ({ open, onOpenChange, onSave, property, isSaving }: 
                     </FormControl>
                     <SelectContent>
                       <SelectItem value="text">Text</SelectItem>
+                      <SelectItem value="textarea">Text Area</SelectItem>
                       <SelectItem value="number">Number</SelectItem>
                       <SelectItem value="date">Date</SelectItem>
+                      <SelectItem value="email">Email</SelectItem>
+                      <SelectItem value="phone">Phone</SelectItem>
+                      <SelectItem value="url">URL</SelectItem>
                       <SelectItem value="image">Image</SelectItem>
+                      <SelectItem value="select">Select</SelectItem>
+                      <SelectItem value="multi-select">Multi-Select</SelectItem>
+                      <SelectItem value="checkbox">Checkbox</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />

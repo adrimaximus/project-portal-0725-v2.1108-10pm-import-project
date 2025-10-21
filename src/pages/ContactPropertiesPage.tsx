@@ -43,7 +43,7 @@ const ContactPropertiesPage = () => {
     setIsFormOpen(true);
   };
 
-  const handleSave = async (propertyData: Omit<ContactProperty, 'id' | 'is_default' | 'company_logo_url'>) => {
+  const handleSave = async (propertyData: Omit<ContactProperty, 'id' | 'is_default'>) => {
     setIsSaving(true);
     const { id, is_default, ...dataToSave } = propertyToEdit || {};
     const upsertData = { ...dataToSave, ...propertyData };
@@ -145,6 +145,7 @@ const ContactPropertiesPage = () => {
         onSave={handleSave}
         property={propertyToEdit}
         isSaving={isSaving}
+        properties={properties}
       />
 
       <AlertDialog open={!!propertyToDelete} onOpenChange={(open) => !open && setPropertyToDelete(null)}>
