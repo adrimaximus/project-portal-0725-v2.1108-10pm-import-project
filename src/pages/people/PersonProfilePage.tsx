@@ -377,8 +377,12 @@ const PersonProfilePage = () => {
         open={isFormOpen}
         onOpenChange={setIsFormOpen}
         person={person}
-        onSuccess={() => {
+        onSuccess={(updatedPerson) => {
           queryClient.invalidateQueries({ queryKey: ['person', slug] });
+          queryClient.invalidateQueries({ queryKey: ['person', updatedPerson.slug] });
+          if (updatedPerson.slug && updatedPerson.slug !== slug) {
+            navigate(`/people/${updatedPerson.slug}`, { replace: true });
+          }
         }}
       />
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
