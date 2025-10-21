@@ -75,7 +75,7 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
   }, [properties]);
 
   const baseSchema = z.object({
-    first_name: z.string().optional(),
+    first_name: z.string().min(1, 'First name is required'),
     last_name: z.string().optional(),
     email: z.string().email('Invalid email address').optional().or(z.literal('')),
     phone: z.string().optional().nullable(),
@@ -86,13 +86,7 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
     birthday: z.string().optional().nullable(),
     notes: z.string().optional().nullable(),
     custom_properties: z.record(z.any()).optional(),
-  }).refine(data => {
-      const fullName = `${data.first_name || ''} ${data.last_name || ''}`.trim();
-      return fullName !== '' || (data.email && data.email.trim() !== '');
-    }, {
-      message: "A name or email is required.",
-      path: ['first_name'],
-    });
+  });
 
   type PropertyFormValues = z.infer<typeof baseSchema>;
 
