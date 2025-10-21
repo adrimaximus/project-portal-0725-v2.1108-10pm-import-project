@@ -262,132 +262,134 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
           <DialogDescription>Fill in the details for the person.</DialogDescription>
         </DialogHeader>
         
-        <ScrollArea className="flex-1">
-          <div className="px-4 pb-4">
-            <Form {...form}>
-              <form id="person-form" onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-                {!person && (
-                  <div className="pb-4 border-b">
-                    <Label>Pre-fill from User Profile</Label>
-                    <UserSelector onSelectUser={setSelectedProfile} />
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Fields with existing data will be locked. You can fill in any empty fields.
-                    </p>
-                  </div>
-                )}
-                <FormField
-                  control={control}
-                  name="avatar_url"
-                  render={({ field }) => (
+        <div className="flex-1 overflow-hidden">
+          <ScrollArea className="h-full">
+            <div className="px-4 pb-4">
+              <Form {...form}>
+                <form id="person-form" onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+                  {!person && (
+                    <div className="pb-4 border-b">
+                      <Label>Pre-fill from User Profile</Label>
+                      <UserSelector onSelectUser={setSelectedProfile} />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Fields with existing data will be locked. You can fill in any empty fields.
+                      </p>
+                    </div>
+                  )}
+                  <FormField
+                    control={control}
+                    name="avatar_url"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Avatar</FormLabel>
+                        <FormControl>
+                          <AvatarUpload
+                            value={field.value || null}
+                            onChange={field.onChange}
+                            storagePath="people"
+                            name={`${watchedFirstName || ''} ${watchedLastName || ''}`}
+                            email={watchedEmail || ''}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField control={control} name="first_name" render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Avatar</FormLabel>
+                      <FormLabel>First Name</FormLabel>
+                      <FormControl><Input {...field} disabled={!!selectedProfile || isLinkedUser} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                  <FormField control={control} name="last_name" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Last Name</FormLabel>
+                      <FormControl><Input {...field} disabled={!!selectedProfile || isLinkedUser} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                  <FormField control={control} name="email" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email</FormLabel>
+                      <FormControl><Input {...field} disabled={!!selectedProfile || isLinkedUser} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                  <FormField control={control} name="phone" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Phone</FormLabel>
+                      <FormControl><Input {...field} value={field.value || ''} disabled={!!selectedProfile || isLinkedUser} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                  <FormField control={control} name="company_id" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Company</FormLabel>
                       <FormControl>
-                        <AvatarUpload
-                          value={field.value || null}
+                        <CompanySelector
+                          value={field.value}
                           onChange={field.onChange}
-                          storagePath="people"
-                          name={`${watchedFirstName || ''} ${watchedLastName || ''}`}
-                          email={watchedEmail || ''}
                         />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
+                  )} />
+                  <FormField control={control} name="job_title" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Job Title</FormLabel>
+                      <FormControl><Input {...field} value={field.value || ''} placeholder="e.g., Marketing Manager" /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                  <FormField control={control} name="department" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Department</FormLabel>
+                      <FormControl><Input {...field} value={field.value || ''} placeholder="e.g., Sales" /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                  <FormField control={control} name="birthday" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Birthday</FormLabel>
+                      <FormControl><Input type="date" {...field} value={field.value || ''} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                  <FormField control={control} name="notes" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Notes</FormLabel>
+                      <FormControl><Textarea {...field} value={field.value || ''} placeholder="Add any relevant notes here..." /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                  
+                  {isLoadingProperties ? (
+                    <div className="flex justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div>
+                  ) : filteredProperties.length > 0 && (
+                    <div className="space-y-4 border-t pt-4 mt-4">
+                      <h3 className="text-lg font-medium">Custom Properties</h3>
+                      {filteredProperties.map(prop => (
+                        <FormField
+                          key={prop.id}
+                          control={control}
+                          name={`custom_properties.${prop.name}`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>{prop.label}</FormLabel>
+                              <FormControl>{renderField(prop, field)}</FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      ))}
+                    </div>
                   )}
-                />
-                <FormField control={control} name="first_name" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>First Name</FormLabel>
-                    <FormControl><Input {...field} disabled={!!selectedProfile || isLinkedUser} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={control} name="last_name" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Last Name</FormLabel>
-                    <FormControl><Input {...field} disabled={!!selectedProfile || isLinkedUser} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={control} name="email" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl><Input {...field} disabled={!!selectedProfile || isLinkedUser} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={control} name="phone" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Phone</FormLabel>
-                    <FormControl><Input {...field} value={field.value || ''} disabled={!!selectedProfile || isLinkedUser} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={control} name="company_id" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Company</FormLabel>
-                    <FormControl>
-                      <CompanySelector
-                        value={field.value}
-                        onChange={field.onChange}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={control} name="job_title" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Job Title</FormLabel>
-                    <FormControl><Input {...field} value={field.value || ''} placeholder="e.g., Marketing Manager" /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={control} name="department" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Department</FormLabel>
-                    <FormControl><Input {...field} value={field.value || ''} placeholder="e.g., Sales" /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={control} name="birthday" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Birthday</FormLabel>
-                    <FormControl><Input type="date" {...field} value={field.value || ''} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={control} name="notes" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Notes</FormLabel>
-                    <FormControl><Textarea {...field} value={field.value || ''} placeholder="Add any relevant notes here..." /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                
-                {isLoadingProperties ? (
-                  <div className="flex justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div>
-                ) : filteredProperties.length > 0 && (
-                  <div className="space-y-4 border-t pt-4 mt-4">
-                    <h3 className="text-lg font-medium">Custom Properties</h3>
-                    {filteredProperties.map(prop => (
-                      <FormField
-                        key={prop.id}
-                        control={control}
-                        name={`custom_properties.${prop.name}`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>{prop.label}</FormLabel>
-                            <FormControl>{renderField(prop, field)}</FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    ))}
-                  </div>
-                )}
-              </form>
-            </Form>
-          </div>
-        </ScrollArea>
+                </form>
+              </Form>
+            </div>
+          </ScrollArea>
+        </div>
 
         <DialogFooter className="p-4 border-t">
           <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
