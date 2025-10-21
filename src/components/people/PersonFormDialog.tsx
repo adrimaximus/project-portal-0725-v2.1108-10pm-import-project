@@ -256,16 +256,15 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg flex flex-col max-h-[80vh] p-0">
-        <DialogHeader className="p-4 pb-0 flex-shrink-0">
+      <DialogContent className="sm:max-w-lg flex flex-col max-h-[80vh]">
+        <DialogHeader>
           <DialogTitle>{person ? 'Edit Person' : 'Add New Person'}</DialogTitle>
           <DialogDescription>Fill in the details for the person.</DialogDescription>
         </DialogHeader>
-        
         <Form {...form}>
           <form onSubmit={handleSubmit(onSubmit)} id="person-form" className="flex-1 flex flex-col overflow-hidden">
-            <ScrollArea className="flex-1 p-4">
-              <div className="space-y-4">
+            <ScrollArea className="flex-1 -mx-6">
+              <div className="space-y-4 px-6 py-4">
                 {!person && (
                   <div className="pb-4 border-b">
                     <Label>Pre-fill from User Profile</Label>
@@ -386,7 +385,7 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
                 )}
               </div>
             </ScrollArea>
-            <DialogFooter className="p-4 border-t flex-shrink-0">
+            <DialogFooter className="flex-shrink-0">
               <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
               <Button type="submit" form="person-form" disabled={mutation.isPending}>
                 {mutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
