@@ -263,8 +263,8 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={handleSubmit(onSubmit)} id="person-form" className="flex-1 flex flex-col overflow-hidden">
-            <ScrollArea className="flex-1 -mx-6">
-              <div className="space-y-4 px-6 py-4">
+            <ScrollArea className="flex-1">
+              <div className="space-y-4 pr-6 py-4">
                 {!person && (
                   <div className="pb-4 border-b">
                     <Label>Pre-fill from User Profile</Label>
@@ -385,7 +385,7 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
                 )}
               </div>
             </ScrollArea>
-            <DialogFooter className="flex-shrink-0">
+            <DialogFooter className="flex-shrink-0 pt-4 border-t">
               <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
               <Button type="submit" form="person-form" disabled={mutation.isPending}>
                 {mutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
