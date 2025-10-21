@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -9,7 +9,8 @@ import { NumericInput } from '../ui/NumericInput';
 import { Input } from '../ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Paperclip, X, Loader2 } from 'lucide-react';
+import { Paperclip, X, Loader2, Plus, Calendar as CalendarIcon } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 
 type Invoice = {
   id: string;
@@ -22,12 +23,15 @@ interface EditInvoiceDialogProps {
   onClose: () => void;
   invoice: Invoice | null;
   project: Project | null;
-  onSave: (updatedProjectData: Partial<Project> & { id: string }) => void;
 }
 
-const channelOptions = ['Email', 'Gojek', 'Grab', 'JNE', 'Lalamove', 'Portal', 'Rex', 'TIKI'].sort();
+type Term = {
+  amount: number | '';
+  date: Date | undefined;
+};
 
-export const EditInvoiceDialog = ({ isOpen, onClose, invoice, project, onSave }: EditInvoiceDialogProps) => {
+export const EditInvoiceDialog = ({ isOpen, onClose, invoice, project }: EditInvoiceDialogProps) => {
+  const queryClient = useQueryClient();
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [poNumber, setPoNumber] = useState('');
   const [amount, setAmount] = useState(0);
@@ -36,6 +40,8 @@ export const EditInvoiceDialog = ({ isOpen, onClose, invoice, project, onSave }:
   const [emailSendingDate, setEmailSendingDate] = useState<Date | undefined>();
   const [hardcopySendingDate, setHardcopySendingDate] = useState<Date | undefined>();
   const [channel, setChannel] = useState('');
+  
+  const [terms, setTerms] = useState<Term[]>([{ amount: '', date: undefined }]);
   
   const [currentAttachments, setCurrentAttachments] = useState<InvoiceAttachment[]>([]);
   const [newAttachments, setNewAttachments] = useState<File[]>([]);
@@ -56,8 +62,45 @@ export const EditInvoiceDialog = ({ isOpen, onClose, invoice, project, onSave }:
       setCurrentAttachments(project.invoice_attachments || []);
       setNewAttachments([]);
       setAttachmentsToRemove([]);
+
+      if (project.payment_terms && Array.isArray(project.payment_terms) && project.payment_terms.length > 0) {
+        setTerms(project.payment_terms.map(t => ({
+            amount: t.amount || '',
+            date: t.date ? new Date(t.date) : undefined
+        })));
+      } else {
+        setTerms([{ amount: '', date: undefined }]);
+      }
     }
   }, [invoice, project, isOpen]);
+
+  const balance = useMemo(() => {
+    const totalAmount = amount || 0;
+    const totalPaid = terms.reduce((sum, term) => sum + (Number(term.amount) || 0), 0);
+    return totalAmount - totalPaid;
+  }, [amount, terms]);
+
+  const handleTermChange = (index: number, field: 'amount' | 'date', value: number | '' | Date | undefined) => {
+    const newTerms = [...terms];
+    const termToUpdate = { ...newTerms[index] };
+    
+    if (field === 'amount') {
+      termToUpdate.amount = value as number | '';
+    } else if (field === 'date') {
+      termToUpdate.date = value as Date | undefined;
+    }
+    
+    newTerms[index] = termToUpdate;
+    setTerms(newTerms);
+  };
+
+  const addTerm = () => {
+    setTerms([...terms, { amount: '', date: undefined }]);
+  };
+
+  const removeTerm = (index: number) => {
+    setTerms(terms.filter((_, i) => i !== index));
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -79,9 +122,14 @@ export const EditInvoiceDialog = ({ isOpen, onClose, invoice, project, onSave }:
     setIsProcessing(true);
 
     try {
-      // 1. Update project details (non-attachment fields)
-      await onSave({
-        id: project.id,
+      const processedTerms = terms
+        .map(term => ({
+            amount: Number(term.amount) || 0,
+            date: term.date ? term.date.toISOString() : null,
+        }))
+        .filter(term => term.amount > 0 || term.date);
+
+      const projectUpdatePayload = {
         invoice_number: invoiceNumber,
         po_number: poNumber || null,
         budget: amount,
@@ -90,9 +138,16 @@ export const EditInvoiceDialog = ({ isOpen, onClose, invoice, project, onSave }:
         email_sending_date: emailSendingDate ? emailSendingDate.toISOString() : null,
         hardcopy_sending_date: hardcopySendingDate ? hardcopySendingDate.toISOString() : null,
         channel: channel || null,
-      });
+        payment_terms: processedTerms,
+      };
 
-      // 2. Handle attachment removals
+      const { error: projectUpdateError } = await supabase
+        .from('projects')
+        .update(projectUpdatePayload)
+        .eq('id', project.id);
+      
+      if (projectUpdateError) throw projectUpdateError;
+
       if (attachmentsToRemove.length > 0) {
         const attachmentsToDelete = project.invoice_attachments?.filter(att => attachmentsToRemove.includes(att.id));
         if (attachmentsToDelete && attachmentsToDelete.length > 0) {
@@ -105,7 +160,6 @@ export const EditInvoiceDialog = ({ isOpen, onClose, invoice, project, onSave }:
         }
       }
 
-      // 3. Handle new attachment uploads
       if (newAttachments.length > 0) {
         toast.info(`Uploading ${newAttachments.length} attachment(s)...`);
         const uploadPromises = newAttachments.map(file => {
@@ -136,6 +190,7 @@ export const EditInvoiceDialog = ({ isOpen, onClose, invoice, project, onSave }:
       }
 
       toast.success('Invoice updated successfully!');
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
       onClose();
     } catch (error: any) {
       toast.error('An error occurred', { description: error.message });
@@ -190,6 +245,42 @@ export const EditInvoiceDialog = ({ isOpen, onClose, invoice, project, onSave }:
               className="col-span-3"
             />
           </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label className="text-right">Balance (Rp)</Label>
+            <Input value={balance.toLocaleString('id-ID')} className="col-span-3 bg-muted" readOnly />
+          </div>
+
+          {terms.map((term, index) => (
+            <div key={index} className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor={`term-amount-${index}`} className="text-right">
+                Paid Term {index + 1}
+              </Label>
+              <div className="col-span-3 flex items-center gap-2">
+                <NumericInput
+                  id={`term-amount-${index}`}
+                  value={term.amount}
+                  onChange={(value) => handleTermChange(index, 'amount', value)}
+                  placeholder="Amount"
+                />
+                <DatePicker
+                  date={term.date}
+                  onDateChange={(date) => handleTermChange(index, 'date', date)}
+                  triggerIcon={<CalendarIcon className="h-4 w-4" />}
+                />
+                {index === terms.length - 1 && (
+                  <Button type="button" size="icon" variant="outline" onClick={addTerm}>
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                )}
+                {terms.length > 1 && (
+                  <Button type="button" size="icon" variant="ghost" onClick={() => removeTerm(index)}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            </div>
+          ))}
+
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="status" className="text-right">
               Status

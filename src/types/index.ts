@@ -99,6 +99,7 @@ export type Project = {
   kanban_order?: number;
   payment_kanban_order?: number;
   category?: string | null;
+  payment_terms?: { amount: number; date: string | null }[];
 };
 
 export type TaskAttachment = {
@@ -276,6 +277,7 @@ export type Invoice = {
   projectOwner: Owner | null;
   assignedMembers: Member[];
   invoiceAttachments: InvoiceAttachment[];
+  payment_terms?: { amount: number; date: string | null }[];
 };
 
 // Service types

@@ -6,7 +6,6 @@ import { PaymentStatus, Project, Invoice, Member, Owner } from "@/types";
 import { isPast } from "date-fns";
 import { Loader2 } from "lucide-react";
 import { EditInvoiceDialog } from "@/components/billing/EditInvoiceDialog";
-import { useProjectMutations } from "@/hooks/useProjectMutations";
 import BillingStats from "@/components/billing/BillingStats";
 import BillingToolbar from "@/components/billing/BillingToolbar";
 import BillingTable from "@/components/billing/BillingTable";
@@ -23,8 +22,6 @@ const Billing = () => {
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [viewMode, setViewMode] = useState<'table' | 'kanban'>('table');
   
-  const { updateProject } = useProjectMutations(selectedInvoice?.projectId || '');
-
   const invoices: Invoice[] = useMemo(() => projects
     .map(project => {
       const eventDate = project.due_date || project.start_date;
@@ -34,7 +31,7 @@ const Billing = () => {
       
       const dueDate = project.payment_due_date ? new Date(project.payment_due_date) : new Date(eventDate);
 
-      let finalStatus: PaymentStatus = project.payment_status;
+      let finalStatus: PaymentStatus = project.payment_status as PaymentStatus;
       if (['Unpaid', 'Pending', 'In Process'].includes(finalStatus) && isPast(dueDate)) {
         finalStatus = 'Overdue';
       }
@@ -61,6 +58,7 @@ const Billing = () => {
         projectOwner: project.created_by as Owner | null,
         assignedMembers: (project.assignedTo as Member[]) || [],
         invoiceAttachments: project.invoice_attachments || [],
+        payment_terms: project.payment_terms || [],
       };
     })
     .filter((invoice): invoice is Invoice => invoice !== null), [projects]);
@@ -128,14 +126,6 @@ const Billing = () => {
     setIsFormOpen(true);
   };
 
-  const handleSave = (updatedProjectData: Partial<Project> & { id: string }) => {
-    const originalProject = projects.find(p => p.id === updatedProjectData.id);
-    if (originalProject) {
-      const projectToUpdate = { ...originalProject, ...updatedProjectData };
-      updateProject.mutate(projectToUpdate);
-    }
-  };
-
   if (isLoading) {
     return (
       <PortalLayout>
@@ -191,7 +181,6 @@ const Billing = () => {
         onClose={() => setIsFormOpen(false)}
         invoice={selectedInvoice}
         project={projects.find(p => p.id === selectedInvoice?.rawProjectId) || null}
-        onSave={handleSave}
       />
     </PortalLayout>
   );
