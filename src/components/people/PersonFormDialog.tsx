@@ -18,6 +18,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import CompanySelector from './CompanySelector';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import AvatarUpload from './AvatarUpload';
 
 // Minimal profile type definition to avoid touching global types.ts
 interface Profile {
@@ -80,7 +81,7 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
     company_id: z.string().uuid().optional().nullable(),
     job_title: z.string().optional(),
     department: z.string().optional(),
-    avatar_url: z.string().url().optional().or(z.literal('')),
+    avatar_url: z.string().url().optional().nullable().or(z.literal('')),
     birthday: z.string().optional(),
     notes: z.string().optional(),
     custom_properties: z.record(z.any()).optional(),
@@ -104,7 +105,10 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
       custom_properties: {},
     },
   });
-  const { control, handleSubmit, reset, setValue } = form;
+  const { control, handleSubmit, reset, setValue, watch } = form;
+  const watchedFirstName = watch('first_name');
+  const watchedLastName = watch('last_name');
+  const watchedEmail = watch('email');
 
   useEffect(() => {
     if (open) {
@@ -259,6 +263,25 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
                     </p>
                   </div>
                 )}
+                <FormField
+                  control={control}
+                  name="avatar_url"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Avatar</FormLabel>
+                      <FormControl>
+                        <AvatarUpload
+                          value={field.value || null}
+                          onChange={field.onChange}
+                          storagePath="people"
+                          name={`${watchedFirstName || ''} ${watchedLastName || ''}`}
+                          email={watchedEmail || ''}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 <FormField control={control} name="first_name" render={({ field }) => (
                   <FormItem>
                     <FormLabel>First Name</FormLabel>
@@ -309,13 +332,6 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
                 <FormField control={control} name="department" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Department</FormLabel>
-                    <FormControl><Input {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={control} name="avatar_url" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Avatar URL</FormLabel>
                     <FormControl><Input {...field} /></FormControl>
                     <FormMessage />
                   </FormItem>
