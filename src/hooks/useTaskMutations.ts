@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Task, TaskStatus } from '@/types';
+import { useAuth } from '@/contexts/AuthContext';
 
 export type UpsertTaskPayload = {
   id?: string;
@@ -28,6 +29,7 @@ type UpdateTaskOrderPayload = {
 
 export const useTaskMutations = (refetch?: () => void) => {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   const invalidateQueries = () => {
     queryClient.invalidateQueries({ queryKey: ['projects'] });
@@ -39,7 +41,8 @@ export const useTaskMutations = (refetch?: () => void) => {
 
   const { mutate: upsertTask, isPending: isUpserting } = useMutation({
     mutationFn: async (taskData: UpsertTaskPayload) => {
-      const { error } = await supabase.rpc('upsert_task_with_details', {
+      // Step 1: Upsert the task details and get the task ID
+      const { data: taskResult, error: rpcError } = await supabase.rpc('upsert_task_with_details', {
         p_id: taskData.id || null,
         p_project_id: taskData.project_id,
         p_title: taskData.title,
@@ -50,8 +53,58 @@ export const useTaskMutations = (refetch?: () => void) => {
         p_completed: taskData.completed || false,
         p_assignee_ids: taskData.assignee_ids || [],
         p_tag_ids: taskData.tag_ids || [],
-      });
-      if (error) throw error;
+      }).select().single();
+
+      if (rpcError) throw rpcError;
+      const taskId = taskResult.id;
+
+      // Step 2: Handle deleted files
+      if (taskData.deleted_files && taskData.deleted_files.length > 0) {
+        const { data: filesToDelete, error: fetchFilesError } = await supabase
+          .from('task_attachments')
+          .select('id, storage_path')
+          .in('id', taskData.deleted_files);
+
+        if (fetchFilesError) throw new Error(`Could not fetch files to delete: ${fetchFilesError.message}`);
+
+        if (filesToDelete && filesToDelete.length > 0) {
+          const storagePaths = filesToDelete.map(f => f.storage_path);
+          if (storagePaths.length > 0) {
+            const { error: storageError } = await supabase.storage.from('project-files').remove(storagePaths);
+            if (storageError) console.warn("Failed to delete some files from storage:", storageError.message);
+          }
+
+          const { error: dbError } = await supabase.from('task_attachments').delete().in('id', taskData.deleted_files);
+          if (dbError) throw new Error(`Failed to delete file records: ${dbError.message}`);
+        }
+      }
+
+      // Step 3: Handle new file uploads
+      if (taskData.new_files && taskData.new_files.length > 0) {
+        const uploadPromises = taskData.new_files.map(async (file) => {
+          const sanitizedFileName = file.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
+          const filePath = `task-attachments/${taskId}/${Date.now()}-${sanitizedFileName}`;
+          
+          const { error: uploadError } = await supabase.storage.from('project-files').upload(filePath, file);
+          if (uploadError) throw new Error(`Failed to upload ${file.name}: ${uploadError.message}`);
+
+          const { data: urlData } = supabase.storage.from('project-files').getPublicUrl(filePath);
+          
+          return {
+            task_id: taskId,
+            uploaded_by: user?.id,
+            file_name: file.name,
+            file_url: urlData.publicUrl,
+            storage_path: filePath,
+            file_type: file.type,
+            file_size: file.size,
+          };
+        });
+
+        const newAttachmentRecords = await Promise.all(uploadPromises);
+        const { error: insertError } = await supabase.from('task_attachments').insert(newAttachmentRecords);
+        if (insertError) throw new Error(`Failed to save attachment records: ${insertError.message}`);
+      }
     },
     onSuccess: (_, variables) => {
       toast.success(variables.id ? 'Task updated successfully' : 'Task created successfully');
