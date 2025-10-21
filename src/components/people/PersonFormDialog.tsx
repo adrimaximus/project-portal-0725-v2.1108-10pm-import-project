@@ -262,7 +262,7 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
           <DialogDescription>Fill in the details for the person.</DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={handleSubmit(onSubmit)} id="person-form" className="flex-1 flex flex-col overflow-hidden">
+          <form onSubmit={handleSubmit(onSubmit)} id="person-form" className="flex-1 flex flex-col min-h-0">
             <ScrollArea className="flex-1">
               <div className="space-y-4 p-4">
                 {!person && (
