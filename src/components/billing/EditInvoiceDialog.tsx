@@ -5,11 +5,11 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Project, PaymentStatus, InvoiceAttachment, PAYMENT_STATUS_OPTIONS } from '@/types';
 import { DatePicker } from '../ui/date-picker';
-import { NumericInput } from '../ui/NumericInput';
+import { NumericInput } from '../ui/currency-input';
 import { Input } from '../ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Paperclip, X, Loader2, Plus, Calendar as CalendarIcon } from 'lucide-react';
+import { Paperclip, X, Loader2, Plus } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 
 type Invoice = {
@@ -26,7 +26,7 @@ interface EditInvoiceDialogProps {
 }
 
 type Term = {
-  amount: number | '';
+  amount: number | null;
   date: Date | undefined;
 };
 
@@ -50,7 +50,7 @@ export const EditInvoiceDialog = ({ isOpen, onClose, invoice, project }: EditInv
   const [hardcopySendingDate, setHardcopySendingDate] = useState<Date | undefined>();
   const [channel, setChannel] = useState('');
   
-  const [terms, setTerms] = useState<Term[]>([{ amount: '', date: undefined }]);
+  const [terms, setTerms] = useState<Term[]>([{ amount: null, date: undefined }]);
   
   const [currentAttachments, setCurrentAttachments] = useState<InvoiceAttachment[]>([]);
   const [newAttachments, setNewAttachments] = useState<File[]>([]);
@@ -74,11 +74,11 @@ export const EditInvoiceDialog = ({ isOpen, onClose, invoice, project }: EditInv
 
       if (project.payment_terms && Array.isArray(project.payment_terms) && project.payment_terms.length > 0) {
         setTerms(project.payment_terms.map(t => ({
-            amount: t.amount || '',
+            amount: t.amount || null,
             date: t.date ? new Date(t.date) : undefined
         })));
       } else {
-        setTerms([{ amount: '', date: undefined }]);
+        setTerms([{ amount: null, date: undefined }]);
       }
     }
   }, [invoice, project, isOpen]);
@@ -89,12 +89,12 @@ export const EditInvoiceDialog = ({ isOpen, onClose, invoice, project }: EditInv
     return totalAmount - totalPaid;
   }, [amount, terms]);
 
-  const handleTermChange = (index: number, field: 'amount' | 'date', value: number | '' | Date | undefined) => {
+  const handleTermChange = (index: number, field: 'amount' | 'date', value: number | null | Date | undefined) => {
     const newTerms = [...terms];
     const termToUpdate = { ...newTerms[index] };
     
     if (field === 'amount') {
-      termToUpdate.amount = value as number | '';
+      termToUpdate.amount = value as number | null;
     } else if (field === 'date') {
       termToUpdate.date = value as Date | undefined;
     }
@@ -104,7 +104,7 @@ export const EditInvoiceDialog = ({ isOpen, onClose, invoice, project }: EditInv
   };
 
   const addTerm = () => {
-    setTerms([...terms, { amount: '', date: undefined }]);
+    setTerms([...terms, { amount: null, date: undefined }]);
   };
 
   const removeTerm = (index: number) => {
@@ -274,7 +274,6 @@ export const EditInvoiceDialog = ({ isOpen, onClose, invoice, project }: EditInv
                 <DatePicker
                   date={term.date}
                   onDateChange={(date) => handleTermChange(index, 'date', date)}
-                  triggerIcon={<CalendarIcon className="h-4 w-4" />}
                 />
                 {index === terms.length - 1 && (
                   <Button type="button" size="icon" variant="outline" onClick={addTerm}>
