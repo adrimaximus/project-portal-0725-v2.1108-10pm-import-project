@@ -277,7 +277,7 @@ export type Invoice = {
   projectOwner: Owner | null;
   assignedMembers: Member[];
   invoiceAttachments: InvoiceAttachment[];
-  payment_terms?: { amount: number; date: string | null }[];
+  payment_terms: { amount: number; date: string | null }[];
 };
 
 // Service types
