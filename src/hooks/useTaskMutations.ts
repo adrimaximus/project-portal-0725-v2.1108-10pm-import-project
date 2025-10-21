@@ -83,7 +83,7 @@ export const useTaskMutations = (refetch?: () => void) => {
       if (taskData.new_files && taskData.new_files.length > 0) {
         const uploadPromises = taskData.new_files.map(async (file) => {
           const sanitizedFileName = file.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
-          const filePath = `task-attachments/${taskId}/${Date.now()}-${sanitizedFileName}`;
+          const filePath = `${taskData.project_id}/${taskId}/${Date.now()}-${sanitizedFileName}`;
           
           const { error: uploadError } = await supabase.storage.from('project-files').upload(filePath, file);
           if (uploadError) throw new Error(`Failed to upload ${file.name}: ${uploadError.message}`);
