@@ -3,7 +3,7 @@ import { Task, TaskAttachment } from '@/types';
 import { DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
+import { Button } from '../ui/button';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { generatePastelColor, getPriorityStyles, getTaskStatusStyles, isOverdue, cn, getAvatarUrl, getInitials, formatTaskText } from '@/lib/utils';
@@ -48,6 +48,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
           <div className="flex-1 min-w-0">
             <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
               {task.originTicketId && <Ticket className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />}
+              {allAttachments.length > 0 && <Paperclip className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0 text-muted-foreground" />}
               <span className={cn("min-w-0 break-words", task.completed && 'line-through text-muted-foreground')}>
                 <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ p: 'span' }}>
                   {formatTaskText(task.title)}
