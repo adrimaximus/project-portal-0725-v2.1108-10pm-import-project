@@ -121,17 +121,34 @@ const CompanyFormDialog: React.FC<CompanyFormDialogProps> = ({ open, onOpenChang
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[600px]">
-                <DialogHeader>
+            <DialogContent className="sm:max-w-lg grid grid-rows-[auto_1fr_auto] max-h-[80vh] p-0">
+                <DialogHeader className="p-4 border-b">
                     <DialogTitle>{company ? 'Edit Company' : 'Add New Company'}</DialogTitle>
                     <DialogDescription>
                         {company ? `Updating information for ${company.name}.` : 'Enter the details for the new company.'}
                     </DialogDescription>
                 </DialogHeader>
-                <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                        <ScrollArea className="max-h-[60vh] p-1">
-                            <div className="space-y-4 pr-4">
+                <ScrollArea className="h-full">
+                    <div className="p-4">
+                        <Form {...form}>
+                            <form id="company-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                                <FormField
+                                    control={form.control}
+                                    name="logo_url"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormControl>
+                                                <ImageUploader
+                                                    value={field.value}
+                                                    onChange={field.onChange}
+                                                    bucket="company-logos"
+                                                    label="Company Logo"
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
                                 <FormField
                                     control={form.control}
                                     name="name"
@@ -165,39 +182,20 @@ const CompanyFormDialog: React.FC<CompanyFormDialogProps> = ({ open, onOpenChang
                                         </FormItem>
                                     )}
                                 />
-                                <FormField
-                                    control={form.control}
-                                    name="logo_url"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormControl>
-                                                <ImageUploader
-                                                    value={field.value}
-                                                    onChange={field.onChange}
-                                                    bucket="company-logos"
-                                                    label="Company Logo"
-                                                />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
                                 {isLoadingProperties ? (
-                                    <div className="flex items-center justify-center p-4">
-                                        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                                    </div>
+                                    <div className="flex justify-center"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
                                 ) : properties.map(renderCustomField)}
-                            </div>
-                        </ScrollArea>
-                        <DialogFooter>
-                            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-                            <Button type="submit" disabled={isSubmitting}>
-                                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                {company ? 'Save Changes' : 'Create Company'}
-                            </Button>
-                        </DialogFooter>
-                    </form>
-                </Form>
+                            </form>
+                        </Form>
+                    </div>
+                </ScrollArea>
+                <DialogFooter className="p-4 border-t">
+                    <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+                    <Button type="submit" form="company-form" disabled={isSubmitting}>
+                        {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        {company ? 'Save Changes' : 'Create Company'}
+                    </Button>
+                </DialogFooter>
             </DialogContent>
         </Dialog>
     );
