@@ -1,6 +1,6 @@
 import { Task, User } from "@/types";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ListChecks, Plus, MoreHorizontal, Edit, Trash2, Ticket } from "lucide-react";
+import { ListChecks, Plus, MoreHorizontal, Edit, Trash2, Ticket, Paperclip } from "lucide-react";
 import { Button } from "../ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -39,59 +39,79 @@ const ProjectTasks = ({ tasks, onAddTask, onEditTask, onDeleteTask, onToggleTask
         </Button>
       </div>
       <TooltipProvider>
-        {tasks.map((task) => (
-          <div key={task.id} className="flex items-start space-x-3 p-2 rounded-md hover:bg-muted group">
-            <Checkbox
-              id={`task-${task.id}`}
-              checked={task.completed}
-              onCheckedChange={(checked) => onToggleTaskCompletion(task, !!checked)}
-              className="mt-1"
-            />
-            <label
-              htmlFor={`task-${task.id}`}
-              className={`flex-1 min-w-0 text-sm flex items-center gap-2 cursor-pointer ${task.completed ? 'text-muted-foreground line-through' : 'text-card-foreground'}`}
-            >
-              {(task.originTicketId || task.tags?.some(t => t.name === 'Ticket')) && (
-                <Ticket className={`h-4 w-4 flex-shrink-0 ${task.completed ? 'text-green-500' : 'text-red-500'}`} />
-              )}
-              <span className="break-words" title={task.title}>{task.title}</span>
-            </label>
+        {tasks.map((task) => {
+          const attachmentCount = (task.attachments?.length || 0) + (task.attachment_url ? 1 : 0);
+          const hasAttachments = attachmentCount > 0;
 
-            <div className="flex items-center -space-x-2 ml-auto pr-2">
-              {task.assignedTo?.map((assignee: User) => (
-                <Tooltip key={assignee.id}>
-                  <TooltipTrigger asChild>
-                    <Avatar className="h-6 w-6 border-2 border-background">
-                      <AvatarImage src={assignee.avatar_url} alt={assignee.name} />
-                      <AvatarFallback>{assignee.initials}</AvatarFallback>
-                    </Avatar>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>{assignee.name}</p>
-                  </TooltipContent>
-                </Tooltip>
-              ))}
+          return (
+            <div key={task.id} className="flex items-start space-x-3 p-2 rounded-md hover:bg-muted group">
+              <Checkbox
+                id={`task-${task.id}`}
+                checked={task.completed}
+                onCheckedChange={(checked) => onToggleTaskCompletion(task, !!checked)}
+                className="mt-1"
+              />
+              <label
+                htmlFor={`task-${task.id}`}
+                className={`flex-1 min-w-0 text-sm flex items-center gap-2 cursor-pointer ${task.completed ? 'text-muted-foreground line-through' : 'text-card-foreground'}`}
+              >
+                {(task.originTicketId || task.tags?.some(t => t.name === 'Ticket')) && (
+                  <Ticket className={`h-4 w-4 flex-shrink-0 ${task.completed ? 'text-green-500' : 'text-red-500'}`} />
+                )}
+                <span className="break-words" title={task.title}>{task.title}</span>
+              </label>
+
+              <div className="flex items-center gap-2 ml-auto">
+                {hasAttachments && (
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <div className="flex items-center gap-1 text-muted-foreground">
+                        <Paperclip className="h-4 w-4" />
+                        <span className="text-xs font-medium">{attachmentCount}</span>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{attachmentCount} attachment(s)</p>
+                    </TooltipContent>
+                  </Tooltip>
+                )}
+                <div className="flex items-center -space-x-2 pr-2">
+                  {task.assignedTo?.map((assignee: User) => (
+                    <Tooltip key={assignee.id}>
+                      <TooltipTrigger asChild>
+                        <Avatar className="h-6 w-6 border-2 border-background">
+                          <AvatarImage src={assignee.avatar_url} alt={assignee.name} />
+                          <AvatarFallback>{assignee.initials}</AvatarFallback>
+                        </Avatar>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{assignee.name}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  ))}
+                </div>
+              </div>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onSelect={() => onEditTask(task)}>
+                    <Edit className="mr-2 h-4 w-4" />
+                    Edit
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => onDeleteTask(task)} className="text-destructive">
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
-
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100">
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onSelect={() => onEditTask(task)}>
-                  <Edit className="mr-2 h-4 w-4" />
-                  Edit
-                </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => onDeleteTask(task)} className="text-destructive">
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Delete
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        ))}
+          );
+        })}
       </TooltipProvider>
     </div>
   );
