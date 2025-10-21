@@ -1,10 +1,11 @@
-import { Task, User } from "@/types";
+import { Task, User, TaskAttachment } from "@/types";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ListChecks, Plus, MoreHorizontal, Edit, Trash2, Ticket, Paperclip } from "lucide-react";
+import { ListChecks, Plus, MoreHorizontal, Edit, Trash2, Ticket, Paperclip, Eye, Download, File as FileIcon } from "lucide-react";
 import { Button } from "../ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 interface ProjectTasksProps {
   tasks: Task[];
@@ -13,6 +14,15 @@ interface ProjectTasksProps {
   onEditTask: (task: Task) => void;
   onDeleteTask: (task: Task) => void;
   onToggleTaskCompletion: (task: Task, completed: boolean) => void;
+}
+
+const formatBytes = (bytes?: number, decimals = 2) => {
+  if (!bytes || bytes === 0) return '';
+  const k = 1024;
+  const dm = decimals < 0 ? 0 : decimals;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
 }
 
 const ProjectTasks = ({ tasks, onAddTask, onEditTask, onDeleteTask, onToggleTaskCompletion }: ProjectTasksProps) => {
@@ -40,7 +50,21 @@ const ProjectTasks = ({ tasks, onAddTask, onEditTask, onDeleteTask, onToggleTask
       </div>
       <TooltipProvider>
         {tasks.map((task) => {
-          const attachmentCount = (task.attachments?.length || 0) + (task.attachment_url ? 1 : 0);
+          const allAttachments: TaskAttachment[] = [...(task.attachments || [])];
+          if (task.originTicketId && task.attachment_url) {
+            if (!allAttachments.some(att => att.file_url === task.attachment_url)) {
+              allAttachments.unshift({
+                id: `origin-${task.originTicketId}`,
+                file_name: task.attachment_name || 'Ticket Attachment',
+                file_url: task.attachment_url,
+                file_type: null,
+                file_size: 0,
+                storage_path: '',
+                created_at: task.created_at,
+              });
+            }
+          }
+          const attachmentCount = allAttachments.length;
           const hasAttachments = attachmentCount > 0;
 
           return (
@@ -63,17 +87,44 @@ const ProjectTasks = ({ tasks, onAddTask, onEditTask, onDeleteTask, onToggleTask
 
               <div className="flex items-center gap-2 ml-auto">
                 {hasAttachments && (
-                  <Tooltip>
-                    <TooltipTrigger>
-                      <div className="flex items-center gap-1 text-muted-foreground">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="ghost" size="sm" className="flex items-center gap-1 text-muted-foreground h-auto p-1">
                         <Paperclip className="h-4 w-4" />
                         <span className="text-xs font-medium">{attachmentCount}</span>
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-80">
+                      <div className="space-y-2">
+                        <h4 className="font-medium leading-none">Attachments ({attachmentCount})</h4>
+                        <div className="space-y-2 pt-2">
+                          {allAttachments.map((att) => (
+                            <div key={att.id} className="flex items-center justify-between p-2 rounded-md border">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <FileIcon className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                                <div className="min-w-0">
+                                  <p className="text-sm font-medium truncate" title={att.file_name}>{att.file_name}</p>
+                                  {att.file_size && att.file_size > 0 && <p className="text-xs text-muted-foreground">{formatBytes(att.file_size)}</p>}
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+                                  <a href={att.file_url} target="_blank" rel="noopener noreferrer" title="Preview">
+                                    <Eye className="h-4 w-4" />
+                                  </a>
+                                </Button>
+                                <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+                                  <a href={att.file_url} download={att.file_name} title="Download">
+                                    <Download className="h-4 w-4" />
+                                  </a>
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{attachmentCount} attachment(s)</p>
-                    </TooltipContent>
-                  </Tooltip>
+                    </PopoverContent>
+                  </Popover>
                 )}
                 <div className="flex items-center -space-x-2 pr-2">
                   {task.assignedTo?.map((assignee: User) => (
