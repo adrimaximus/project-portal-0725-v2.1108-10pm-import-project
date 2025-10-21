@@ -77,13 +77,13 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
     first_name: z.string().optional(),
     last_name: z.string().optional(),
     email: z.string().email('Invalid email address').optional().or(z.literal('')),
-    phone: z.string().optional(),
+    phone: z.string().optional().nullable(),
     company_id: z.string().uuid().optional().nullable(),
-    job_title: z.string().optional(),
-    department: z.string().optional(),
+    job_title: z.string().optional().nullable(),
+    department: z.string().optional().nullable(),
     avatar_url: z.string().url().optional().nullable().or(z.literal('')),
-    birthday: z.string().optional(),
-    notes: z.string().optional(),
+    birthday: z.string().optional().nullable(),
+    notes: z.string().optional().nullable(),
     custom_properties: z.record(z.any()).optional(),
   }).refine(data => {
       const fullName = `${data.first_name || ''} ${data.last_name || ''}`.trim();
