@@ -13,7 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { ContactProperty } from '@/types';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import PropertyFormDialog from '@/components/settings/PropertyFormDialog';
+import PropertyFormDialog, { PropertyFormValues } from '@/components/settings/PropertyFormDialog';
 
 const ContactPropertiesPage = () => {
   const queryClient = useQueryClient();
@@ -43,7 +43,7 @@ const ContactPropertiesPage = () => {
     setIsFormOpen(true);
   };
 
-  const handleSave = async (propertyData: Omit<ContactProperty, 'id' | 'is_default'>) => {
+  const handleSave = async (propertyData: PropertyFormValues) => {
     setIsSaving(true);
     const { id, is_default, ...dataToSave } = propertyToEdit || {};
     const upsertData = { ...dataToSave, ...propertyData };

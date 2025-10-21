@@ -11,38 +11,38 @@ import { ContactProperty } from '@/types';
 import { Loader2, X } from 'lucide-react';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 
+const propertySchema = z.object({
+  label: z.string().min(1, 'Label is required'),
+  name: z.string().min(1, 'Name is required').regex(/^[a-z0-9_]+$/, 'Name can only contain lowercase letters, numbers, and underscores.'),
+  type: z.enum(['text', 'email', 'phone', 'url', 'date', 'textarea', 'number', 'image', 'multi-image', 'select', 'multi-select', 'checkbox']),
+  options: z.array(z.string()).optional(),
+});
+
+export type PropertyFormValues = z.infer<typeof propertySchema>;
+
 interface PropertyFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: (data: Omit<ContactProperty, 'id' | 'is_default'>) => void;
+  onSave: (data: PropertyFormValues) => void;
   property: ContactProperty | null;
   isSaving: boolean;
   properties: ContactProperty[];
 }
 
-const createPropertySchema = (properties: ContactProperty[], property: ContactProperty | null) => z.object({
-  label: z.string().min(1, 'Label is required'),
-  name: z.string().min(1, 'Name is required').regex(/^[a-z0-9_]+$/, 'Name can only contain lowercase letters, numbers, and underscores.'),
-  type: z.enum(['text', 'email', 'phone', 'url', 'date', 'textarea', 'number', 'image', 'multi-image', 'select', 'multi-select', 'checkbox']),
-  options: z.array(z.string()).optional(),
-}).superRefine((data, ctx) => {
-  const machineName = data.label.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
-  if (properties.some(p => p.name === machineName && p.id !== property?.id)) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: 'A property with this name already exists. Please use a different label.',
-      path: ['label'],
-    });
-  }
-});
-
-type PropertyFormValues = z.infer<ReturnType<typeof createPropertySchema>>;
-
 const PropertyFormDialog = ({ open, onOpenChange, onSave, property, isSaving, properties }: PropertyFormDialogProps) => {
   const isEditMode = !!property;
 
   const form = useForm<PropertyFormValues>({
-    resolver: zodResolver(createPropertySchema(properties, property)),
+    resolver: zodResolver(propertySchema.superRefine((data, ctx) => {
+      const machineName = data.label.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+      if (properties.some(p => p.name === machineName && p.id !== property?.id)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'A property with this name already exists. Please use a different label.',
+          path: ['label'],
+        });
+      }
+    })),
     defaultValues: {
       label: '',
       name: '',
@@ -71,7 +71,7 @@ const PropertyFormDialog = ({ open, onOpenChange, onSave, property, isSaving, pr
   }, [labelValue, setValue, property]);
 
   const onSubmit = (data: PropertyFormValues) => {
-    onSave(data as Omit<ContactProperty, 'id' | 'is_default'>);
+    onSave(data);
   };
 
   return (
