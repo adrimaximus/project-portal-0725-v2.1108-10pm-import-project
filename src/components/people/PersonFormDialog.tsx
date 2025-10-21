@@ -334,14 +334,14 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
                 <FormField control={control} name="job_title" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Job Title</FormLabel>
-                    <FormControl><Input {...field} /></FormControl>
+                    <FormControl><Input {...field} placeholder="e.g., Marketing Manager" /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
                 <FormField control={control} name="department" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Department</FormLabel>
-                    <FormControl><Input {...field} /></FormControl>
+                    <FormControl><Input {...field} placeholder="e.g., Sales" /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
@@ -355,7 +355,7 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
                 <FormField control={control} name="notes" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Notes</FormLabel>
-                    <FormControl><Textarea {...field} /></FormControl>
+                    <FormControl><Textarea {...field} placeholder="Add any relevant notes here..." /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
