@@ -122,8 +122,8 @@ const PortalHeader = ({ summary }: PortalHeaderProps) => {
                       navigate(notification.link || '/notifications');
                     }} className="flex items-start gap-3 p-3 cursor-pointer">
                       <Icon className="h-4 w-4 mt-1 text-muted-foreground flex-shrink-0" />
-                      <div className="flex-1 space-y-1">
-                        <p className="text-sm font-medium leading-none">{notification.title}</p>
+                      <div className="flex-1 space-y-1 min-w-0">
+                        <p className="text-sm font-medium leading-none whitespace-normal">{notification.title}</p>
                         <p className="text-xs text-muted-foreground line-clamp-2">{notification.description}</p>
                         <p className="text-xs text-muted-foreground">
                           {formatDistanceToNow(new Date(notification.timestamp), { addSuffix: true, locale: id })}
