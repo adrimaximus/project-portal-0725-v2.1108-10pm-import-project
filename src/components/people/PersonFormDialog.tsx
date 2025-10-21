@@ -256,15 +256,16 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg flex flex-col max-h-[80vh]">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-lg grid grid-rows-[auto_1fr_auto] max-h-[80vh] p-0">
+        <DialogHeader className="p-4 border-b">
           <DialogTitle>{person ? 'Edit Person' : 'Add New Person'}</DialogTitle>
           <DialogDescription>Fill in the details for the person.</DialogDescription>
         </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={handleSubmit(onSubmit)} id="person-form" className="flex-1 flex flex-col min-h-0">
-            <ScrollArea className="flex-1">
-              <div className="space-y-4 p-4">
+        
+        <ScrollArea className="h-full">
+          <div className="p-4">
+            <Form {...form}>
+              <form id="person-form" onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                 {!person && (
                   <div className="pb-4 border-b">
                     <Label>Pre-fill from User Profile</Label>
@@ -383,17 +384,18 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
                     ))}
                   </div>
                 )}
-              </div>
-            </ScrollArea>
-            <DialogFooter className="flex-shrink-0 pt-4 border-t">
-              <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
-              <Button type="submit" form="person-form" disabled={mutation.isPending}>
-                {mutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {person ? 'Save Changes' : 'Create Person'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
+              </form>
+            </Form>
+          </div>
+        </ScrollArea>
+
+        <DialogFooter className="p-4 border-t">
+          <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button type="submit" form="person-form" disabled={mutation.isPending}>
+            {mutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {person ? 'Save Changes' : 'Create Person'}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
