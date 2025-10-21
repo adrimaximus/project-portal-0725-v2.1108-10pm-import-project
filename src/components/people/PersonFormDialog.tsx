@@ -19,6 +19,7 @@ import CompanySelector from './CompanySelector';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import AvatarUpload from './AvatarUpload';
+import ImageUpload from '@/components/ImageUpload';
 
 // Minimal profile type definition to avoid touching global types.ts
 interface Profile {
@@ -244,6 +245,8 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
         return <Input type="number" {...field} value={field.value ?? ''} />;
       case 'date':
         return <Input type="date" {...field} value={field.value ?? ''} />;
+      case 'image':
+        return <ImageUpload value={field.value} onChange={field.onChange} storagePath="contact-properties" />;
       default:
         return <Input type="text" {...field} value={field.value ?? ''} />;
     }
@@ -315,7 +318,7 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
                 <FormField control={control} name="phone" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Phone</FormLabel>
-                    <FormControl><Input {...field} disabled={!!selectedProfile || isLinkedUser} /></FormControl>
+                    <FormControl><Input {...field} value={field.value || ''} disabled={!!selectedProfile || isLinkedUser} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
@@ -334,28 +337,28 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
                 <FormField control={control} name="job_title" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Job Title</FormLabel>
-                    <FormControl><Input {...field} placeholder="e.g., Marketing Manager" /></FormControl>
+                    <FormControl><Input {...field} value={field.value || ''} placeholder="e.g., Marketing Manager" /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
                 <FormField control={control} name="department" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Department</FormLabel>
-                    <FormControl><Input {...field} placeholder="e.g., Sales" /></FormControl>
+                    <FormControl><Input {...field} value={field.value || ''} placeholder="e.g., Sales" /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
                 <FormField control={control} name="birthday" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Birthday</FormLabel>
-                    <FormControl><Input type="date" {...field} /></FormControl>
+                    <FormControl><Input type="date" {...field} value={field.value || ''} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
                 <FormField control={control} name="notes" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Notes</FormLabel>
-                    <FormControl><Textarea {...field} placeholder="Add any relevant notes here..." /></FormControl>
+                    <FormControl><Textarea {...field} value={field.value || ''} placeholder="Add any relevant notes here..." /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />

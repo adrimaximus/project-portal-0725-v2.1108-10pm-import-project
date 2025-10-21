@@ -2,134 +2,129 @@ import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { ContactProperty } from '@/types';
 import { Loader2 } from 'lucide-react';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 
 interface PropertyFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: (property: Omit<ContactProperty, 'id' | 'is_default' | 'company_logo_url'>) => void;
-  property?: ContactProperty | null;
+  onSave: (data: Omit<ContactProperty, 'id' | 'is_default' | 'company_logo_url'>) => void;
+  property: ContactProperty | null;
   isSaving: boolean;
 }
 
 const propertySchema = z.object({
-  label: z.string().min(1, "Label is required."),
-  type: z.enum(['text', 'email', 'phone', 'url', 'date', 'textarea', 'number', 'image', 'multi-image', 'select', 'multi-select', 'checkbox']),
-  options: z.string().optional(),
+  label: z.string().min(1, 'Label is required'),
+  name: z.string().min(1, 'Name is required').regex(/^[a-z0-9_]+$/, 'Name can only contain lowercase letters, numbers, and underscores.'),
+  type: z.enum(['text', 'number', 'date', 'image']),
 });
 
 type PropertyFormValues = z.infer<typeof propertySchema>;
 
 const PropertyFormDialog = ({ open, onOpenChange, onSave, property, isSaving }: PropertyFormDialogProps) => {
-  const isEditMode = !!property;
-
   const form = useForm<PropertyFormValues>({
     resolver: zodResolver(propertySchema),
+    defaultValues: {
+      label: '',
+      name: '',
+      type: 'text',
+    }
   });
 
-  const type = form.watch('type');
+  const { control, handleSubmit, reset, setValue, watch } = form;
+  const labelValue = watch('label');
 
   useEffect(() => {
-    if (open && property) {
-      form.reset({
-        label: property.label,
-        type: property.type,
-        options: Array.isArray((property as any).options) ? (property as any).options.join(', ') : '',
-      });
-    } else if (open) {
-      form.reset({
-        label: '',
-        type: 'text',
-        options: '',
-      });
+    if (open) {
+      if (property) {
+        reset(property);
+      } else {
+        reset({ label: '', name: '', type: 'text' });
+      }
     }
-  }, [property, open, form]);
+  }, [property, open, reset]);
 
-  const onSubmit = (values: PropertyFormValues) => {
-    const machineName = values.label.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
-    const newProperty: any = {
-      name: machineName,
-      label: values.label,
-      type: values.type,
-    };
-
-    if ((values.type === 'select' || values.type === 'multi-select') && values.options) {
-      newProperty.options = values.options.split(',').map(opt => opt.trim()).filter(Boolean);
+  useEffect(() => {
+    if (!property) { // Only auto-generate name for new properties
+      const newName = labelValue?.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '') || '';
+      setValue('name', newName, { shouldValidate: true });
     }
+  }, [labelValue, setValue, property]);
 
-    onSave(newProperty);
+  const onSubmit = (data: PropertyFormValues) => {
+    onSave(data);
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent>
         <DialogHeader>
-          <DialogTitle>{isEditMode ? 'Edit Property' : 'Create New Property'}</DialogTitle>
-          <DialogDescription>
-            Define a new field to store information about your contacts.
-          </DialogDescription>
+          <DialogTitle>{property ? 'Edit Property' : 'New Property'}</DialogTitle>
+          <DialogDescription>Define a new custom field for your contacts.</DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
-            <FormField control={form.control} name="label" render={({ field }) => (
-              <FormItem>
-                <FormLabel>Field Label</FormLabel>
-                <FormControl><Input {...field} placeholder="e.g., Home Address" /></FormControl>
-                <FormMessage />
-              </FormItem>
-            )} />
-            <FormField control={form.control} name="type" render={({ field }) => (
-              <FormItem>
-                <FormLabel>Field Type</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <FormControl><SelectTrigger><SelectValue placeholder="Select a field type" /></SelectTrigger></FormControl>
-                  <SelectContent>
-                    <SelectItem value="text">Text</SelectItem>
-                    <SelectItem value="textarea">Text Area</SelectItem>
-                    <SelectItem value="number">Number</SelectItem>
-                    <SelectItem value="date">Date</SelectItem>
-                    <SelectItem value="email">Email</SelectItem>
-                    <SelectItem value="phone">Phone</SelectItem>
-                    <SelectItem value="url">URL</SelectItem>
-                    <SelectItem value="image">Image (single)</SelectItem>
-                    <SelectItem value="multi-image">Image (multiple)</SelectItem>
-                    <SelectItem value="select">Select</SelectItem>
-                    <SelectItem value="multi-select">Multi-select</SelectItem>
-                    <SelectItem value="checkbox">Checkbox</SelectItem>
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )} />
-            {(type === 'select' || type === 'multi-select') && (
-              <FormField control={form.control} name="options" render={({ field }) => (
+          <form onSubmit={handleSubmit(onSubmit)} id="property-form" className="space-y-4">
+            <FormField
+              control={control}
+              name="label"
+              render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Options</FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder="e.g., Option 1, Option 2" />
-                  </FormControl>
-                  <FormDescription>
-                    Enter comma-separated values for the select options.
-                  </FormDescription>
+                  <FormLabel>Label</FormLabel>
+                  <FormControl><Input {...field} /></FormControl>
                   <FormMessage />
                 </FormItem>
-              )} />
-            )}
-            <DialogFooter className="pt-4">
-              <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={isSaving}>Cancel</Button>
-              <Button type="submit" disabled={isSaving}>
-                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Save Property
-              </Button>
-            </DialogFooter>
+              )}
+            />
+            <FormField
+              control={control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Field Name</FormLabel>
+                  <FormControl><Input {...field} readOnly={!!property} /></FormControl>
+                  <p className="text-xs text-muted-foreground mt-1">This is the internal name used in the database. It cannot be changed.</p>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={control}
+              name="type"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Type</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a type" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="text">Text</SelectItem>
+                      <SelectItem value="number">Number</SelectItem>
+                      <SelectItem value="date">Date</SelectItem>
+                      <SelectItem value="image">Image</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
           </form>
         </Form>
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button type="submit" form="property-form" disabled={isSaving}>
+            {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Save
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
