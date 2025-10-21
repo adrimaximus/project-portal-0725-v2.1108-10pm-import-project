@@ -264,7 +264,7 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
         <Form {...form}>
           <form onSubmit={handleSubmit(onSubmit)} id="person-form" className="flex-1 flex flex-col overflow-hidden">
             <ScrollArea className="flex-1">
-              <div className="space-y-4 pr-6 py-4">
+              <div className="space-y-4 p-4">
                 {!person && (
                   <div className="pb-4 border-b">
                     <Label>Pre-fill from User Profile</Label>
