@@ -31,13 +31,12 @@ type Term = {
 };
 
 const channelOptions = [
-  'Direct',
-  'Referral',
-  'Organic Search',
-  'Social Media',
-  'Email Marketing',
-  'Paid Advertising',
-  'Other',
+  'Email',
+  'JNE TIKI',
+  'Kurir',
+  'Lalamove',
+  'Portal',
+  'Rex',
 ];
 
 export const EditInvoiceDialog = ({ isOpen, onClose, invoice, project }: EditInvoiceDialogProps) => {
