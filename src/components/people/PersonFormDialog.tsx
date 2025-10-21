@@ -240,13 +240,14 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg flex flex-col max-h-[90vh]">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-lg grid grid-rows-[auto_1fr_auto] max-h-[80vh] p-0">
+        <DialogHeader className="p-4">
           <DialogTitle>{person ? 'Edit Person' : 'Add New Person'}</DialogTitle>
           <DialogDescription>Fill in the details for the person.</DialogDescription>
         </DialogHeader>
-        <div className="flex-1 overflow-hidden">
-          <ScrollArea className="h-full p-4 pr-6">
+        
+        <ScrollArea className="h-full">
+          <div className="px-4">
             <Form {...form}>
               <form id="person-form" onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                 {!person && (
@@ -357,9 +358,10 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
                 )}
               </form>
             </Form>
-          </ScrollArea>
-        </div>
-        <DialogFooter className="pt-4 border-t flex-shrink-0">
+          </div>
+        </ScrollArea>
+
+        <DialogFooter className="p-4 border-t">
           <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button type="submit" form="person-form" disabled={mutation.isPending}>
             {mutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
