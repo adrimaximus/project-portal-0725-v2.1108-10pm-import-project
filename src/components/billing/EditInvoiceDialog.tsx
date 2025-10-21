@@ -30,6 +30,16 @@ type Term = {
   date: Date | undefined;
 };
 
+const channelOptions = [
+  'Direct',
+  'Referral',
+  'Organic Search',
+  'Social Media',
+  'Email Marketing',
+  'Paid Advertising',
+  'Other',
+];
+
 export const EditInvoiceDialog = ({ isOpen, onClose, invoice, project }: EditInvoiceDialogProps) => {
   const queryClient = useQueryClient();
   const [invoiceNumber, setInvoiceNumber] = useState('');
