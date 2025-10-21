@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { ContactProperty, Person } from '@/types';
@@ -90,6 +90,19 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
 
   const form = useForm<PropertyFormValues>({
     resolver: zodResolver(baseSchema),
+    defaultValues: {
+      first_name: '',
+      last_name: '',
+      email: '',
+      phone: '',
+      company_id: null,
+      job_title: '',
+      department: '',
+      avatar_url: '',
+      birthday: '',
+      notes: '',
+      custom_properties: {},
+    },
   });
   const { control, handleSubmit, reset, setValue } = form;
 
@@ -227,15 +240,15 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg flex flex-col max-h-[90vh]">
         <DialogHeader>
           <DialogTitle>{person ? 'Edit Person' : 'Add New Person'}</DialogTitle>
           <DialogDescription>Fill in the details for the person.</DialogDescription>
         </DialogHeader>
-        <Form {...form}>
-          <form id="person-form" onSubmit={handleSubmit(onSubmit)}>
-            <ScrollArea className="max-h-[60vh] p-1">
-              <div className="space-y-4 pr-4">
+        <div className="flex-1 overflow-hidden">
+          <ScrollArea className="h-full p-4 pr-6">
+            <Form {...form}>
+              <form id="person-form" onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                 {!person && (
                   <div className="pb-4 border-b">
                     <Label>Pre-fill from User Profile</Label>
@@ -342,11 +355,11 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
                     ))}
                   </div>
                 )}
-              </div>
-            </ScrollArea>
-          </form>
-        </Form>
-        <DialogFooter>
+              </form>
+            </Form>
+          </ScrollArea>
+        </div>
+        <DialogFooter className="pt-4 border-t flex-shrink-0">
           <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button type="submit" form="person-form" disabled={mutation.isPending}>
             {mutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
