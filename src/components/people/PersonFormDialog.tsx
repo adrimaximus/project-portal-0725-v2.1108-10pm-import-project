@@ -74,7 +74,7 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
   }, [properties]);
 
   const baseSchema = z.object({
-    first_name: z.string().min(1, 'First name is required'),
+    first_name: z.string().optional(),
     last_name: z.string().optional(),
     email: z.string().email('Invalid email address').optional().or(z.literal('')),
     phone: z.string().optional(),
@@ -85,7 +85,13 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
     birthday: z.string().optional(),
     notes: z.string().optional(),
     custom_properties: z.record(z.any()).optional(),
-  });
+  }).refine(data => {
+      const fullName = `${data.first_name || ''} ${data.last_name || ''}`.trim();
+      return fullName !== '' || (data.email && data.email.trim() !== '');
+    }, {
+      message: "A name or email is required.",
+      path: ['first_name'],
+    });
 
   type PropertyFormValues = z.infer<typeof baseSchema>;
 
@@ -164,7 +170,10 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
       const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'master admin';
       const isEditingLinkedUser = person && person.user_id && isAdmin;
 
-      const full_name = `${values.first_name || ''} ${values.last_name || ''}`.trim();
+      let full_name = `${values.first_name || ''} ${values.last_name || ''}`.trim();
+      if (!full_name && values.email) {
+        full_name = values.email.split('@')[0];
+      }
       
       const contactJson = {
         emails: values.email ? [values.email] : [],
