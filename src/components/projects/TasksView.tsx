@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { Task as ProjectTask, TaskAttachment } from "@/types";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -9,7 +9,7 @@ import { generatePastelColor, getPriorityStyles, getTaskStatusStyles, isOverdue,
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "../ui/button";
-import { MoreHorizontal, Edit, Trash2, Ticket, Paperclip, Eye, Download, File as FileIconLucide } from "lucide-react";
+import { MoreHorizontal, Edit, Trash2, Ticket, Paperclip, SmilePlus } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Checkbox } from "@/components/ui/checkbox";
 import TaskAttachmentList from './TaskAttachmentList';
@@ -17,6 +17,10 @@ import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import TaskDetailCard from './TaskDetailCard';
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import EmojiPicker from "emoji-picker-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useSession } from "@/hooks/useSession";
 
 interface TasksViewProps {
   tasks: ProjectTask[];
@@ -29,21 +33,11 @@ interface TasksViewProps {
   requestSort: (key: string) => void;
 }
 
-const processMentions = (text: string | null | undefined) => {
-  if (!text) return '';
-  let processedText = text.replace(/@\[([^\]]+)\]\(([^)]+)\)/g, '@$1');
-  if (processedText.length > 50) {
-    return processedText.substring(0, 50) + '...';
-  }
-  return processedText;
-};
-
 // Utility function to aggregate attachments
 const aggregateAttachments = (task: ProjectTask): TaskAttachment[] => {
   let attachments: TaskAttachment[] = [...(task.attachments || [])];
   
   if (task.ticket_attachments && task.ticket_attachments.length > 0) {
-    const existingUrls = new Set(attachments.map(a => a.file_url));
     const uniqueTicketAttachments = task.ticket_attachments.filter(
       (ticketAtt) => !attachments.some((att) => att.file_url === ticketAtt.file_url)
     );
@@ -55,6 +49,7 @@ const aggregateAttachments = (task: ProjectTask): TaskAttachment[] => {
 
 const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion, isToggling, sortConfig, requestSort }: TasksViewProps) => {
   const [selectedTask, setSelectedTask] = useState<ProjectTask | null>(null);
+  const { user } = useSession();
 
   useEffect(() => {
     if (selectedTask) {
@@ -64,6 +59,19 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
       }
     }
   }, [tasks, selectedTask?.id]);
+
+  const handleEmojiSelect = async (emoji: string, taskId: string) => {
+    const { error } = await supabase.rpc('toggle_task_reaction', {
+      p_task_id: taskId,
+      p_emoji: emoji,
+    });
+
+    if (error) {
+      console.error("Error toggling reaction:", error);
+      // In a real app, you'd show a toast notification here.
+    }
+    // Assuming the parent component will refetch data upon database change (e.g., via Supabase realtime).
+  };
 
   if (isLoading) {
     return (
@@ -144,9 +152,18 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
             const statusStyle = getTaskStatusStyles(task.status);
             const priorityStyle = getPriorityStyles(task.priority);
             const allAttachments = aggregateAttachments(task);
-            const hasIcons = (task.originTicketId || task.tags?.some(t => t.name === 'Ticket')) || allAttachments.length > 0;
             const hasAssignees = task.assignedTo && task.assignedTo.length > 0;
-            const hasBottomBar = hasIcons || hasAssignees;
+            const reactions = task.reactions || [];
+            const hasBottomBar = hasAssignees || reactions.length > 0 || (task.originTicketId || task.tags?.some(t => t.name === 'Ticket')) || allAttachments.length > 0;
+
+            const groupedReactions = reactions.reduce((acc, reaction) => {
+                if (!acc[reaction.emoji]) {
+                    acc[reaction.emoji] = { users: [], userIds: [] };
+                }
+                acc[reaction.emoji].users.push(reaction.user_name);
+                acc[reaction.emoji].userIds.push(reaction.user_id);
+                return acc;
+            }, {} as Record<string, { users: string[]; userIds: string[] }>);
 
             const taskMonthYear = task.due_date ? format(new Date(task.due_date), 'MMMM yyyy') : 'No Due Date';
             let showMonthSeparator = false;
@@ -208,26 +225,68 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
                             )}
                             {hasBottomBar && (
                               <div className="flex justify-between items-center border-t pt-1 mt-1">
-                                <div className="flex items-center -space-x-2">
-                                  {task.assignedTo?.map((user) => (
-                                    <TooltipProvider key={user.id}>
-                                      <Tooltip>
-                                        <TooltipTrigger>
-                                          <Avatar className="h-6 w-6 border-2 border-background">
-                                            <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
-                                            <AvatarFallback style={generatePastelColor(user.id)}>
-                                              {getInitials([user.first_name, user.last_name].filter(Boolean).join(' '), user.email || undefined)}
-                                            </AvatarFallback>
-                                          </Avatar>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                          <p>{[user.first_name, user.last_name].filter(Boolean).join(' ')}</p>
-                                        </TooltipContent>
-                                      </Tooltip>
-                                    </TooltipProvider>
-                                  ))}
+                                <div className="flex items-center gap-2">
+                                  {hasAssignees && (
+                                    <div className="flex items-center -space-x-2">
+                                      {task.assignedTo?.map((user) => (
+                                        <TooltipProvider key={user.id}>
+                                          <Tooltip>
+                                            <TooltipTrigger>
+                                              <Avatar className="h-6 w-6 border-2 border-background">
+                                                <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
+                                                <AvatarFallback style={generatePastelColor(user.id)}>
+                                                  {getInitials([user.first_name, user.last_name].filter(Boolean).join(' '), user.email || undefined)}
+                                                </AvatarFallback>
+                                              </Avatar>
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                              <p>{[user.first_name, user.last_name].filter(Boolean).join(' ')}</p>
+                                            </TooltipContent>
+                                          </Tooltip>
+                                        </TooltipProvider>
+                                      ))}
+                                    </div>
+                                  )}
+                                  <div className="flex items-center gap-1 flex-wrap">
+                                    {Object.entries(groupedReactions).map(([emoji, { users, userIds }]) => {
+                                        const userHasReacted = user ? userIds.includes(user.id) : false;
+                                        return (
+                                            <TooltipProvider key={emoji}>
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <Badge
+                                                            variant={userHasReacted ? "default" : "outline"}
+                                                            className="cursor-pointer"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleEmojiSelect(emoji, task.id);
+                                                            }}
+                                                        >
+                                                            {emoji} {users.length}
+                                                        </Badge>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent>
+                                                        <p>{users.join(', ')}</p>
+                                                    </TooltipContent>
+                                                </Tooltip>
+                                            </TooltipProvider>
+                                        );
+                                    })}
+                                  </div>
                                 </div>
                                 <div className="flex justify-end gap-1 items-center">
+                                  <Popover>
+                                    <PopoverTrigger asChild>
+                                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={e => e.stopPropagation()}>
+                                        <SmilePlus className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                                      </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent onClick={e => e.stopPropagation()} className="p-0 w-auto border-0">
+                                      <EmojiPicker onEmojiClick={(emojiObject) => {
+                                        handleEmojiSelect(emojiObject.emoji, task.id);
+                                      }} />
+                                    </PopoverContent>
+                                  </Popover>
                                   {(task.originTicketId || task.tags?.some(t => t.name === 'Ticket')) && (
                                     <TooltipProvider>
                                       <Tooltip>
