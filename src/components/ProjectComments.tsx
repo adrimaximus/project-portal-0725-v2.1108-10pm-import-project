@@ -15,11 +15,13 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Textarea } from "@/components/ui/textarea";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { generateTaskTitle } from '@/lib/openai';
+import { toast } from 'sonner';
 
 interface ProjectCommentsProps {
   project: Project;
   onAddCommentOrTicket: (text: string, isTicket: boolean, attachments: File[] | null, mentionedUserIds: string[]) => void;
-  onUpdateComment: (commentId: string, text: string, attachments: File[] | null, isConvertingToTicket: boolean, mentionedUserIds: string[]) => void;
+  onUpdateComment: (commentId: string, text: string, attachments: File[] | null, isConvertingToTicket: boolean, mentionedUserIds: string[], aiGeneratedTitle?: string, fullCommentTextAsDescription?: string) => void;
   onDeleteComment: (commentId: string) => void;
   isUpdatingComment?: boolean;
   updatedCommentId?: string;
@@ -51,6 +53,7 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
   const [commentToDelete, setCommentToDelete] = useState<CommentType | null>(null);
   const [newAttachments, setNewAttachments] = useState<File[]>([]);
   const [isConvertingToTicket, setIsConvertingToTicket] = useState(false);
+  const [isGeneratingTitle, setIsGeneratingTitle] = useState(false);
   const editFileInputRef = useRef<HTMLInputElement>(null);
 
   const handleEditClick = (comment: CommentType) => {
@@ -58,7 +61,7 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
     setEditingCommentId(comment.id);
     setEditedText(mainText);
     setNewAttachments([]);
-    setIsConvertingToTicket(false);
+    setIsConvertingToTicket(comment.isTicket);
   };
 
   const handleCancelEdit = () => {
@@ -68,10 +71,31 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
     setIsConvertingToTicket(false);
   };
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (editingCommentId) {
       const mentionedUserIds = parseMentions(editedText);
-      onUpdateComment(editingCommentId, editedText, newAttachments, isConvertingToTicket, mentionedUserIds);
+      const originalComment = comments.find(c => c.id === editingCommentId);
+
+      let textToPassForUpdate: string = editedText;
+      let aiGeneratedTitle: string | undefined;
+      let fullCommentTextAsDescription: string | undefined;
+
+      if (isConvertingToTicket && originalComment && !originalComment.isTicket) {
+        setIsGeneratingTitle(true);
+        try {
+          aiGeneratedTitle = await generateTaskTitle(originalComment.text);
+          fullCommentTextAsDescription = originalComment.text;
+        } catch (error: any) {
+          console.error('Error generating task title:', error);
+          toast.error("Failed to generate AI title. Using truncated comment text.");
+          aiGeneratedTitle = originalComment.text.trim().split(' ').slice(0, 10).join(' ') + (originalComment.text.trim().split(' ').length > 10 ? '...' : '');
+          fullCommentTextAsDescription = originalComment.text;
+        } finally {
+          setIsGeneratingTitle(false);
+        }
+      }
+
+      onUpdateComment(editingCommentId, textToPassForUpdate, newAttachments, isConvertingToTicket, mentionedUserIds, aiGeneratedTitle, fullCommentTextAsDescription);
     }
     handleCancelEdit();
   };
@@ -181,7 +205,7 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
                             </Tooltip>
                           </TooltipProvider>
                           <input type="file" ref={editFileInputRef} multiple onChange={handleEditFileChange} className="hidden" />
-                          {!isTicket && (
+                          {!comment.isTicket && (
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger asChild>
@@ -196,7 +220,10 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
                         </div>
                         <div className="flex justify-end gap-2">
                           <Button variant="ghost" size="sm" onClick={handleCancelEdit}>Cancel</Button>
-                          <Button size="sm" onClick={handleSaveEdit}>Save</Button>
+                          <Button size="sm" onClick={handleSaveEdit} disabled={isGeneratingTitle}>
+                            {isGeneratingTitle && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            {isGeneratingTitle ? 'Generating Title...' : 'Save Changes'}
+                          </Button>
                         </div>
                       </div>
                     </div>

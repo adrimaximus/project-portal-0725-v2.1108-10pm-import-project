@@ -37,6 +37,8 @@ interface TaskFormDialogProps {
   isSubmitting: boolean;
   task?: Task | null;
   project?: Project | null;
+  initialCommentContent?: string;
+  initialAiTitle?: string;
 }
 
 const taskFormSchema = z.object({
@@ -52,7 +54,7 @@ const taskFormSchema = z.object({
 
 type TaskFormValues = z.infer<typeof taskFormSchema>;
 
-const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task, project }: TaskFormDialogProps) => {
+const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task, project, initialCommentContent, initialAiTitle }: TaskFormDialogProps) => {
   const isMobile = useIsMobile();
   const { data: projects = [], isLoading: isLoadingProjects } = useProjects({ excludeOtherPersonal: true });
   const { data: allTags = [], refetch: refetchTags } = useTags();
@@ -122,21 +124,36 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task, proj
       } else {
         const personalProject = projects.find(p => p.personal_for_user_id === currentUser?.id);
         const generalTasksProject = projects.find(p => p.slug === 'general-tasks');
+        
+        let defaultProjectId = project?.id || personalProject?.id || generalTasksProject?.id || '';
+        
+        let defaultTitle = '';
+        let defaultDescription = '';
+        let defaultTags: Tag[] = [];
+
+        if (initialCommentContent && initialAiTitle) {
+            defaultTitle = initialAiTitle;
+            defaultDescription = initialCommentContent;
+            const ticketTagInOptions = allTags.find(t => t.name === TICKET_TAG_NAME);
+            const ticketTag = ticketTagInOptions || handleCreateTag(TICKET_TAG_NAME);
+            defaultTags = [ticketTag];
+        }
+
         form.reset({
-          title: '',
-          project_id: project?.id || personalProject?.id || generalTasksProject?.id || '',
-          description: '',
+          title: defaultTitle,
+          project_id: defaultProjectId,
+          description: defaultDescription,
           due_date: null,
           priority: 'Normal',
           status: 'To do',
           assignee_ids: [],
-          tag_ids: [],
+          tag_ids: defaultTags.map(t => t.id),
         });
-        setSelectedTags([]);
+        setSelectedTags(defaultTags);
         setPreviousStatus('To do');
       }
     }
-  }, [task, open, form, projects, project, currentUser]);
+  }, [task, open, form, projects, project, currentUser, initialCommentContent, initialAiTitle, allTags]);
 
   const handleTagsChange = (newTags: Tag[]) => {
     setSelectedTags(newTags);

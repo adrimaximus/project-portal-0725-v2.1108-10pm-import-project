@@ -201,7 +201,7 @@ export const useProjectMutations = (slug: string) => {
                 if (uploadedFiles.length > 0) {
                     firstAttachmentUrl = uploadedFiles[0].url;
                     firstAttachmentName = uploadedFiles[0].name;
-    
+
                     const markdownLinks = uploadedFiles.map(file => `* [${file.name}](${file.url})`).join('\n');
                     finalCommentText += `\n\n**Attachments:**\n${markdownLinks}`;
                 }
@@ -267,7 +267,7 @@ export const useProjectMutations = (slug: string) => {
     });
 
     const useUpdateComment = () => useMutation({
-        mutationFn: async ({ commentId, text, attachments, isConvertingToTicket, mentionedUserIds }: { commentId: string, text: string, attachments: File[] | null, isConvertingToTicket: boolean, mentionedUserIds: string[] }) => {
+        mutationFn: async ({ commentId, text, attachments, isConvertingToTicket, mentionedUserIds, aiGeneratedTitle, fullCommentTextAsDescription }: { commentId: string, text: string, attachments: File[] | null, isConvertingToTicket: boolean, mentionedUserIds: string[], aiGeneratedTitle?: string, fullCommentTextAsDescription?: string }) => {
             const { data: originalComment, error: fetchError } = await supabase
                 .from('comments')
                 .select('text, is_ticket, project_id, attachment_url, attachment_name')
@@ -351,10 +351,13 @@ export const useProjectMutations = (slug: string) => {
             }
 
             if (isConvertingToTicket && !originalComment.is_ticket) {
-                const cleanTextForTitle = text.replace(/@\[[^\]]+\]\([^)]+\)\s*/g, '').trim();
+                const taskTitle = aiGeneratedTitle || (fullCommentTextAsDescription || text).trim().split(' ').slice(0, 10).join(' ') + ((fullCommentTextAsDescription || text).trim().split(' ').length > 10 ? '...' : '');
+                const taskDescription = fullCommentTextAsDescription || text;
+
                 const { data: newTask, error: taskError } = await supabase.from('tasks').insert({
                     project_id: originalComment.project_id,
-                    title: cleanTextForTitle.substring(0, 100),
+                    title: taskTitle,
+                    description: taskDescription, // Use full comment text as description
                     origin_ticket_id: commentId,
                 }).select().single();
                 if (taskError) {
