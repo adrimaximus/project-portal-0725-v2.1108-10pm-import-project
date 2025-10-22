@@ -31,10 +31,12 @@ const ProjectDescription = ({ description, isEditing, onDescriptionChange, aiOpt
   return (
     <div className="bg-[#f6f7f3] dark:bg-stone-900 p-4 rounded-lg">
       {description ? (
-        <div 
-          className="chatgpt-text max-h-[300px] overflow-y-auto" 
-          dangerouslySetInnerHTML={{ __html: description }} 
-        />
+        <div className="ql-snow !border-none">
+          <div 
+            className="ql-editor [&>*:first-child]:mt-0 max-h-[300px] overflow-y-auto !p-0" 
+            dangerouslySetInnerHTML={{ __html: description }} 
+          />
+        </div>
       ) : (
         <p className="text-muted-foreground">No description provided.</p>
       )}

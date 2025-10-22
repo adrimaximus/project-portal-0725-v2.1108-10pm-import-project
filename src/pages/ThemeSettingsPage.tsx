@@ -17,13 +17,13 @@ const themeFamilies = [
     darkThemeId: 'dark',
     preview: (
       <div className="flex items-center gap-2">
-        <div className="w-8 h-8 rounded-md border bg-white flex items-center justify-center p-1">
+        <div className="w-8 h-8 rounded-md border bg-background flex items-center justify-center p-1">
           <div className="w-full space-y-1">
-            <div className="h-1 w-3/4 rounded-full bg-slate-300"></div>
-            <div className="h-1 w-1/2 rounded-full bg-slate-800/50"></div>
+            <div className="h-1 w-3/4 rounded-full bg-muted-foreground/30"></div>
+            <div className="h-1 w-1/2 rounded-full bg-primary/30"></div>
           </div>
         </div>
-        <div className="w-8 h-8 rounded-md border border-slate-800 bg-slate-950 flex items-center justify-center p-1">
+        <div className="w-8 h-8 rounded-md border bg-slate-900 flex items-center justify-center p-1">
           <div className="w-full space-y-1">
             <div className="h-1 w-3/4 rounded-full bg-slate-700"></div>
             <div className="h-1 w-1/2 rounded-full bg-slate-500"></div>
@@ -40,16 +40,16 @@ const themeFamilies = [
     darkThemeId: 'claude',
     preview: (
       <div className="flex items-center gap-2">
-        <div className="w-8 h-8 rounded-md flex items-center justify-center p-1" style={{ backgroundColor: '#ECEFF4', borderColor: '#D8DEE9', borderWidth: '1px' }}>
+        <div className="w-8 h-8 rounded-md bg-[#F6F5F1] border border-[#EAE8E2] flex items-center justify-center p-1">
           <div className="w-full space-y-1">
-            <div className="h-1 w-3/4 rounded-full" style={{ backgroundColor: '#4C566A' }}></div>
-            <div className="h-1 w-1/2 rounded-full" style={{ backgroundColor: '#D08770' }}></div>
+            <div className="h-1 w-3/4 rounded-full bg-[#352F2A]/30"></div>
+            <div className="h-1 w-1/2 rounded-full bg-[#D96D4A]/50"></div>
           </div>
         </div>
-        <div className="w-8 h-8 rounded-md flex items-center justify-center p-1" style={{ backgroundColor: '#2E3440', borderColor: '#434C5E', borderWidth: '1px' }}>
+        <div className="w-8 h-8 rounded-md bg-[#1C1917] border border-[#292524] flex items-center justify-center p-1">
           <div className="w-full space-y-1">
-            <div className="h-1 w-3/4 rounded-full" style={{ backgroundColor: '#D8DEE9' }}></div>
-            <div className="h-1 w-1/2 rounded-full" style={{ backgroundColor: '#D08770' }}></div>
+            <div className="h-1 w-3/4 rounded-full bg-[#A8A29E]/50"></div>
+            <div className="h-1 w-1/2 rounded-full bg-[#E07A5F]"></div>
           </div>
         </div>
       </div>
@@ -176,7 +176,8 @@ const ThemeSettingsPage = () => {
   const handleFamilyChange = (familyId: string) => {
     const selectedFamily = themeFamilies.find(f => f.id === familyId);
     if (selectedFamily) {
-      const isCurrentlyDark = document.documentElement.classList.contains('dark');
+      const isCurrentlyDark = ['dark', 'claude', 'nature', 'corporate', 'ahensi', 'brand-activator'].includes(currentTheme) || 
+                             (currentTheme === 'system' && window.matchMedia("(prefers-color-scheme: dark)").matches);
       
       const newTheme = isCurrentlyDark ? selectedFamily.darkThemeId : selectedFamily.lightThemeId;
       setTheme(newTheme as Theme);
