@@ -38,6 +38,21 @@ const processMentions = (text: string | null | undefined) => {
   return processedText;
 };
 
+// Utility function to aggregate attachments
+const aggregateAttachments = (task: ProjectTask): TaskAttachment[] => {
+  let attachments: TaskAttachment[] = [...(task.attachments || [])];
+  
+  if (task.ticket_attachments && task.ticket_attachments.length > 0) {
+    const existingUrls = new Set(attachments.map(a => a.file_url));
+    const uniqueTicketAttachments = task.ticket_attachments.filter(
+      (ticketAtt) => !attachments.some((att) => att.file_url === ticketAtt.file_url)
+    );
+    attachments = [...attachments, ...uniqueTicketAttachments];
+  }
+
+  return attachments;
+};
+
 const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion, isToggling, sortConfig, requestSort }: TasksViewProps) => {
   const [selectedTask, setSelectedTask] = useState<ProjectTask | null>(null);
 
@@ -63,22 +78,7 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
     return <div className="text-center text-muted-foreground p-8">No tasks found.</div>;
   }
 
-  const renderAttachments = (task: ProjectTask) => {
-    const allAttachments: TaskAttachment[] = useMemo(() => {
-      let attachments: TaskAttachment[] = [...(task.attachments || [])];
-  
-      // NEW LOGIC: Merge attachments from the origin ticket
-      if (task.ticket_attachments && task.ticket_attachments.length > 0) {
-        const existingUrls = new Set(attachments.map(a => a.file_url));
-        const uniqueTicketAttachments = task.ticket_attachments.filter(
-          (ticketAtt) => !allAttachments.some((att) => att.file_url === ticketAtt.file_url)
-        );
-        attachments = [...attachments, ...uniqueTicketAttachments];
-      }
-  
-      return attachments;
-    }, [task.attachments, task.ticket_attachments]);
-
+  const renderAttachments = (task: ProjectTask, allAttachments: TaskAttachment[]) => {
     if (allAttachments.length === 0) return null;
 
     return (
@@ -135,6 +135,7 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
           {tasks.map(task => {
             const statusStyle = getTaskStatusStyles(task.status);
             const priorityStyle = getPriorityStyles(task.priority);
+            const allAttachments = aggregateAttachments(task); // Call utility function here
 
             const taskMonthYear = task.due_date ? format(new Date(task.due_date), 'MMMM yyyy') : 'No Due Date';
             let showMonthSeparator = false;
@@ -207,7 +208,7 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
                                     </Tooltip>
                                   </TooltipProvider>
                                 )}
-                                {renderAttachments(task)}
+                                {renderAttachments(task, allAttachments)}
                               </div>
                             </div>
                           </DialogTrigger>

@@ -23,10 +23,24 @@ interface TasksKanbanCardProps {
   onDelete: (taskId: string) => void;
 }
 
+// Utility function to aggregate attachments
+const aggregateAttachments = (task: Task): TaskAttachment[] => {
+  let attachments: TaskAttachment[] = [...(task.attachments || [])];
+  if (task.ticket_attachments && task.ticket_attachments.length > 0) {
+    const existingUrls = new Set(attachments.map(a => a.file_url));
+    const uniqueTicketAttachments = task.ticket_attachments.filter(
+      (ticketAtt) => !attachments.some((att) => att.file_url === ticketAtt.file_url)
+    );
+    attachments = [...attachments, ...uniqueTicketAttachments];
+  }
+  return attachments;
+};
+
 const TasksKanbanCard = ({ task, onEdit, onDelete }: TasksKanbanCardProps) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id });
 
   const priorityStyle = getPriorityStyles(task.priority);
+  const allAttachments = useMemo(() => aggregateAttachments(task), [task]);
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -38,18 +52,6 @@ const TasksKanbanCard = ({ task, onEdit, onDelete }: TasksKanbanCardProps) => {
   const handleDropdownClick = (e: React.MouseEvent) => {
     e.stopPropagation();
   };
-
-  const allAttachments = useMemo(() => {
-    let attachments: TaskAttachment[] = [...(task.attachments || [])];
-    if (task.ticket_attachments && task.ticket_attachments.length > 0) {
-      const existingUrls = new Set(attachments.map(a => a.file_url));
-      const uniqueTicketAttachments = task.ticket_attachments.filter(
-        (ticketAtt) => !existingUrls.has(ticketAtt.file_url)
-      );
-      attachments = [...attachments, ...uniqueTicketAttachments];
-    }
-    return attachments;
-  }, [task.attachments, task.ticket_attachments]);
 
   const renderAttachments = () => {
     if (allAttachments.length === 0) return null;

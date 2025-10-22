@@ -20,23 +20,25 @@ interface TaskDetailCardProps {
   onDelete: (taskId: string) => void;
 }
 
+// Utility function to aggregate attachments
+const aggregateAttachments = (task: Task): TaskAttachment[] => {
+  let attachments: TaskAttachment[] = [...(task.attachments || [])];
+  if (task.ticket_attachments && task.ticket_attachments.length > 0) {
+    const existingUrls = new Set(attachments.map(a => a.file_url));
+    const uniqueTicketAttachments = task.ticket_attachments.filter(
+      (ticketAtt) => !attachments.some((att) => att.file_url === ticketAtt.file_url)
+    );
+    attachments = [...attachments, ...uniqueTicketAttachments];
+  }
+  return attachments;
+};
+
 const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, onDelete }) => {
   if (!task) return null;
 
   const statusStyle = getTaskStatusStyles(task.status);
   const priorityStyle = getPriorityStyles(task.priority);
-
-  const allAttachments: TaskAttachment[] = useMemo(() => {
-    let attachments: TaskAttachment[] = [...(task.attachments || [])];
-    if (task.ticket_attachments && task.ticket_attachments.length > 0) {
-      const existingUrls = new Set(attachments.map(a => a.file_url));
-      const uniqueTicketAttachments = task.ticket_attachments.filter(
-        (ticketAtt) => !existingUrls.has(ticketAtt.file_url)
-      );
-      attachments = [...attachments, ...uniqueTicketAttachments];
-    }
-    return attachments;
-  }, [task.attachments, task.ticket_attachments]);
+  const allAttachments = useMemo(() => aggregateAttachments(task), [task]);
 
   return (
     <DialogContent className="w-[90vw] max-w-[650px] max-h-[85vh] overflow-y-auto p-0 rounded-lg">
