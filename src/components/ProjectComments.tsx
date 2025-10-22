@@ -1,11 +1,11 @@
-import { useState, useRef } => 'react';
+import { useState, useRef } from 'react';
 import { Project, Comment as CommentType, Task, User, ProjectFile } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Ticket, MoreHorizontal, Edit, Trash2, FileText, Eye, Download, Paperclip, X, AlertTriangle, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { getInitials, generatePastelColor, parseMentions, formatMentionsForDisplay } from "@/lib/utils";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow } from 'date-fns';
 import CommentInput from "./CommentInput";
 import ReactMarkdown from "react-markdown";
 import { Link } from "react-router-dom";
