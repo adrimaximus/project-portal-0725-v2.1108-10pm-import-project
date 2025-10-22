@@ -302,13 +302,25 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
                                               <SmilePlus className="h-5 w-5 text-muted-foreground" />
                                             </button>
                                           </PopoverTrigger>
-                                          <PopoverContent onClick={e => e.stopPropagation()} className="p-0 w-auto">
-                                            <EmojiPicker 
+                                          <PopoverContent
+                                            onClick={(e) => e.stopPropagation()}
+                                            className="p-0 w-auto border-0"
+                                            side="bottom"
+                                            align="start"
+                                            sideOffset={8}
+                                          >
+                                            <EmojiPicker
                                               onEmojiClick={(emojiObject) => {
                                                 handleEmojiSelect(emojiObject.emoji, task.id);
                                               }}
-                                              perLine={12}
-                                              previewPosition="none"
+                                              emojiSize={20}
+                                              previewConfig={{ showPreview: false }}
+                                              width={350}
+                                              height={400}
+                                              style={{
+                                                fontFamily: '"Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif',
+                                                border: 'none',
+                                              }}
                                             />
                                           </PopoverContent>
                                         </Popover>
