@@ -235,12 +235,14 @@ export const useProjectMutations = (slug: string) => {
             }
     
             if (isTicket && commentData) {
-                const cleanTextForTitle = text.replace(/@\[[^\]]+\]\([^)]+\)\s*/g, '').trim();
-    
+                const cleanTextForDescription = text.replace(/@\[[^\]]+\]\([^)]+\)\s*/g, '').trim();
+                const taskTitle = `Ticket: ${cleanTextForDescription.substring(0, 50)}${cleanTextForDescription.length > 50 ? '...' : ''}`;
+
                 const { data: newTask, error: taskError } = await supabase.from('tasks').insert({
                     project_id: project.id, 
                     created_by: user.id, 
-                    title: cleanTextForTitle.substring(0, 100), 
+                    title: taskTitle, 
+                    description: cleanTextForDescription, // Comment text as description
                     origin_ticket_id: commentData.id,
                 }).select().single();
                 
@@ -351,10 +353,13 @@ export const useProjectMutations = (slug: string) => {
             }
 
             if (isConvertingToTicket && !originalComment.is_ticket) {
-                const cleanTextForTitle = text.replace(/@\[[^\]]+\]\([^)]+\)\s*/g, '').trim();
+                const cleanTextForDescription = text.replace(/@\[[^\]]+\]\([^)]+\)\s*/g, '').trim();
+                const taskTitle = `Ticket: ${cleanTextForDescription.substring(0, 50)}${cleanTextForDescription.length > 50 ? '...' : ''}`;
+
                 const { data: newTask, error: taskError } = await supabase.from('tasks').insert({
                     project_id: originalComment.project_id,
-                    title: cleanTextForTitle.substring(0, 100),
+                    title: taskTitle,
+                    description: cleanTextForDescription, // Comment text as description
                     origin_ticket_id: commentId,
                 }).select().single();
                 if (taskError) {
