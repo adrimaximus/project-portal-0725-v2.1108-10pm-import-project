@@ -40,16 +40,16 @@ const themeFamilies = [
     darkThemeId: 'claude',
     preview: (
       <div className="flex items-center gap-2">
-        <div className="w-8 h-8 rounded-md bg-[#F6F5F1] border border-[#EAE8E2] flex items-center justify-center p-1">
+        <div className="w-8 h-8 rounded-md flex items-center justify-center p-1" style={{ backgroundColor: 'oklch(0.98 0.01 95.10)', borderColor: 'oklch(0.88 0.01 97.36)', borderWidth: '1px' }}>
           <div className="w-full space-y-1">
-            <div className="h-1 w-3/4 rounded-full bg-[#352F2A]/30"></div>
-            <div className="h-1 w-1/2 rounded-full bg-[#D96D4A]/50"></div>
+            <div className="h-1 w-3/4 rounded-full" style={{ backgroundColor: 'oklch(0.34 0.03 95.72 / 0.3)' }}></div>
+            <div className="h-1 w-1/2 rounded-full" style={{ backgroundColor: 'oklch(0.62 0.14 39.04 / 0.5)' }}></div>
           </div>
         </div>
-        <div className="w-8 h-8 rounded-md bg-[#1C1917] border border-[#292524] flex items-center justify-center p-1">
+        <div className="w-8 h-8 rounded-md flex items-center justify-center p-1" style={{ backgroundColor: 'oklch(0.27 0.00 106.64)', borderColor: 'oklch(0.36 0.01 106.89)', borderWidth: '1px' }}>
           <div className="w-full space-y-1">
-            <div className="h-1 w-3/4 rounded-full bg-[#A8A29E]/50"></div>
-            <div className="h-1 w-1/2 rounded-full bg-[#E07A5F]"></div>
+            <div className="h-1 w-3/4 rounded-full" style={{ backgroundColor: 'oklch(0.81 0.01 93.01 / 0.5)' }}></div>
+            <div className="h-1 w-1/2 rounded-full" style={{ backgroundColor: 'oklch(0.67 0.13 38.76)' }}></div>
           </div>
         </div>
       </div>
