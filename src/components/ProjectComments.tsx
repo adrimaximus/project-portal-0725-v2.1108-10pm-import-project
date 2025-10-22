@@ -98,7 +98,7 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
             const mainText = textWithoutAttachments;
             
             const attachmentsData = comment.attachments_jsonb;
-            const attachments: ProjectFile[] = Array.isArray(attachmentsData)
+            const attachments: any[] = Array.isArray(attachmentsData)
               ? attachmentsData
               : attachmentsData
               ? [attachmentsData]
@@ -148,9 +148,9 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
                             <h4 className="font-semibold text-xs text-muted-foreground mb-2">Attachments</h4>
                             <div className="space-y-1">
                                 {attachments.map((file, index) => (
-                                    <div key={index} className="flex items-center gap-2 text-sm text-muted-foreground">
+                                    <div key={file.url || file.file_url || index} className="flex items-center gap-2 text-sm text-muted-foreground">
                                         <FileText className="h-4 w-4" />
-                                        <span>{file.name}</span>
+                                        <span>{file.name || file.file_name}</span>
                                     </div>
                                 ))}
                                 {newAttachments.map((file, index) => (
@@ -218,8 +218,8 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
                       )}
                       {attachments.length > 0 && (
                         <div className="mt-4 space-y-2">
-                          {attachments.map((file) => (
-                            <CommentAttachmentItem key={file.id} file={file} />
+                          {attachments.map((file, index) => (
+                            <CommentAttachmentItem key={file.url || file.file_url || index} file={file} />
                           ))}
                         </div>
                       )}
@@ -260,8 +260,8 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
                                   <DialogTitle>Attachments ({attachments.length})</DialogTitle>
                                 </DialogHeader>
                                 <div className="space-y-2 max-h-96 overflow-y-auto pr-2">
-                                  {attachments.map((file) => (
-                                    <CommentAttachmentItem key={file.id} file={file} />
+                                  {attachments.map((file, index) => (
+                                    <CommentAttachmentItem key={file.url || file.file_url || index} file={file} />
                                   ))}
                                 </div>
                               </DialogContent>
