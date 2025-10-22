@@ -42,9 +42,9 @@ interface FileIconProps {
   className?: string;
 }
 
-const FileIcon: React.FC<FileIconProps> = ({ fileType, className }) => {
+const FileIcon: React.FC<FileIconProps> = ({ fileType, className, ...props }) => {
   const IconComponent = getIconForFileType(fileType);
-  return <IconComponent className={className} />;
+  return <IconComponent className={className} {...props} />;
 };
 
 export default FileIcon;
