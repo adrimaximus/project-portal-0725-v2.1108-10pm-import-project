@@ -206,7 +206,7 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
                               </TooltipProvider>
                             )}
                             {hasIcons && (
-                              <div className="flex gap-1 items-center mr-1.5 border-t pt-1 mt-1">
+                              <div className="flex justify-end gap-1 items-center mr-1.5 border-t pt-1 mt-1">
                                   {(task.originTicketId || task.tags?.some(t => t.name === 'Ticket')) && (
                                     <TooltipProvider>
                                       <Tooltip>
