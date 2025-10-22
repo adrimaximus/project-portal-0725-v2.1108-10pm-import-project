@@ -56,7 +56,7 @@ const CommentInput = ({ project, onAddCommentOrTicket }: CommentInputProps) => {
   return (
     <div className="flex items-start space-x-4">
       <Avatar>
-        <AvatarImage src={user.avatar_url} />
+        <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
         <AvatarFallback style={generatePastelColor(user.id)}>
           {getInitials(fullName, user.email)}
         </AvatarFallback>
@@ -119,15 +119,13 @@ const CommentInput = ({ project, onAddCommentOrTicket }: CommentInputProps) => {
                     <p>Attach files</p>
                   </TooltipContent>
                 </Tooltip>
-              </TooltipProvider>
-              <input
-                type="file"
-                ref={fileInputRef}
-                multiple
-                onChange={handleFileChange}
-                className="hidden"
-              />
-              <TooltipProvider>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  multiple
+                  onChange={handleFileChange}
+                  className="hidden"
+                />
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button variant="ghost" size="icon" onClick={() => setIsTicket(!isTicket)} className={isTicket ? 'bg-primary/10 text-primary' : ''}>
