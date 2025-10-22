@@ -1,92 +1,133 @@
-import { createContext, useContext, useEffect, useState } from "react"
-import type { Theme } from "@/types"
+import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from "react";
+import { useAuth } from "./AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { Theme } from "@/types";
 
-const ALL_THEME_CLASSES = [
-  "theme-claude",
-  "theme-claude-light",
-  "theme-nature",
-  "theme-nature-light",
-  "theme-corporate",
-  "theme-corporate-light",
-  "theme-ahensi",
-  "theme-ahensi-light",
-  "theme-brand-activator",
-  "theme-brand-activator-light",
-]
+const themeClasses = ["light", "dark", "theme-claude", "theme-claude-light", "theme-nature", "theme-nature-light", "theme-corporate", "theme-corporate-light", "theme-ahensi", "theme-ahensi-light", "theme-brand-activator", "theme-brand-activator-light"];
 
-type ThemeProviderProps = {
-  children: React.ReactNode
-  defaultTheme?: Theme
-  storageKey?: string
-}
-
-type ThemeProviderState = {
-  theme: Theme
-  setTheme: (theme: Theme) => void
+interface ThemeProviderState {
+  theme: Theme;
+  setTheme: (theme: Theme) => void;
 }
 
 const initialState: ThemeProviderState = {
   theme: "system",
   setTheme: () => null,
-}
+};
 
-const ThemeProviderContext = createContext<ThemeProviderState>(initialState)
+const ThemeProviderContext = createContext<ThemeProviderState>(initialState);
 
 export function ThemeProvider({
   children,
   defaultTheme = "system",
-  storageKey = "vite-ui-theme",
-  ...props
-}: ThemeProviderProps) {
-  const [theme, setTheme] = useState<Theme>(
-    () => (localStorage.getItem(storageKey) as Theme) || defaultTheme
-  )
+}: {
+  children: ReactNode;
+  defaultTheme?: Theme;
+  storageKey?: string; // Kept for compatibility but unused
+}) {
+  const { user, refreshUser } = useAuth();
+  const [theme, setThemeState] = useState<Theme>(defaultTheme);
 
   useEffect(() => {
-    const root = window.document.documentElement
+    if (user?.theme) {
+      setThemeState(user.theme as Theme);
+    }
+  }, [user]);
 
-    root.classList.remove("light", "dark", ...ALL_THEME_CLASSES)
+  useEffect(() => {
+    const root = window.document.documentElement;
+    root.classList.remove(...themeClasses);
 
+    let effectiveTheme: Exclude<Theme, "system">;
     if (theme === "system") {
-      const systemTheme = window.matchMedia("(prefers-color-scheme: dark)")
-        .matches
+      effectiveTheme = window.matchMedia("(prefers-color-scheme: dark)").matches
         ? "dark"
-        : "light"
-
-      root.classList.add(systemTheme)
-      return
+        : "light";
+    } else {
+      effectiveTheme = theme;
     }
 
-    const isDark = theme === 'dark' || !theme.endsWith('-light');
-    root.classList.add(isDark ? 'dark' : 'light');
-    
-    const themeClass = theme === 'dark' || theme === 'light' ? '' : `theme-${theme}`;
-    if (themeClass) {
-      root.classList.add(themeClass);
+    switch (effectiveTheme) {
+      case 'claude':
+        root.classList.add('dark', 'theme-claude');
+        break;
+      case 'claude-light':
+        root.classList.add('light', 'theme-claude-light');
+        break;
+      case 'nature':
+        root.classList.add('dark', 'theme-nature');
+        break;
+      case 'nature-light':
+        root.classList.add('light', 'theme-nature-light');
+        break;
+      case 'corporate':
+        root.classList.add('dark', 'theme-corporate');
+        break;
+      case 'corporate-light':
+        root.classList.add('light', 'theme-corporate-light');
+        break;
+      case 'ahensi':
+        root.classList.add('dark', 'theme-ahensi');
+        break;
+      case 'ahensi-light':
+        root.classList.add('light', 'theme-ahensi-light');
+        break;
+      case 'brand-activator':
+        root.classList.add('dark', 'theme-brand-activator');
+        break;
+      case 'brand-activator-light':
+        root.classList.add('light', 'theme-brand-activator-light');
+        break;
+      case 'dark':
+        root.classList.add('dark');
+        break;
+      case 'light':
+      default:
+        root.classList.add('light');
+        break;
+    }
+  }, [theme]);
+
+  const setTheme = useCallback(async (newTheme: Theme) => {
+    if (!user) {
+      toast.error("You must be logged in to change your theme.");
+      return;
     }
 
-  }, [theme])
+    const oldTheme = theme;
+    setThemeState(newTheme); // Optimistic update
+
+    const { error } = await supabase
+      .from('profiles')
+      .update({ theme: newTheme })
+      .eq('id', user.id);
+
+    if (error) {
+      setThemeState(oldTheme); // Revert on error
+      toast.error("Failed to save your theme preference.");
+    } else {
+      await refreshUser(); // Refresh user context to ensure it's up-to-date
+    }
+  }, [user, theme, refreshUser]);
 
   const value = {
     theme,
-    setTheme: (theme: Theme) => {
-      localStorage.setItem(storageKey, theme)
-      setTheme(theme)
-    },
-  }
+    setTheme,
+  };
 
   return (
-    <ThemeProviderContext.Provider {...props} value={value}>
+    <ThemeProviderContext.Provider value={value}>
       {children}
     </ThemeProviderContext.Provider>
-  )
+  );
 }
 
 export const useTheme = () => {
-  const context = useContext(ThemeProviderContext)
+  const context = useContext(ThemeProviderContext);
 
   if (context === undefined)
-    throw new Error("useTheme must be used within a ThemeProvider")
+    throw new Error("useTheme must be used within a ThemeProvider");
 
-  return context
-}
+  return context;
+};
