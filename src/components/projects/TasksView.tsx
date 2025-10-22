@@ -50,6 +50,7 @@ const aggregateAttachments = (task: ProjectTask): TaskAttachment[] => {
 const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion, isToggling, sortConfig, requestSort }: TasksViewProps) => {
   const [selectedTask, setSelectedTask] = useState<ProjectTask | null>(null);
   const { user } = useSession();
+  const commonEmojis = ['👍', '❤️', '😂', '🎉', '🙏', '😢'];
 
   useEffect(() => {
     if (selectedTask) {
@@ -281,10 +282,30 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
                                         <SmilePlus className="h-4 w-4 text-muted-foreground hover:text-foreground" />
                                       </Button>
                                     </PopoverTrigger>
-                                    <PopoverContent onClick={e => e.stopPropagation()} className="p-0 w-auto border-0">
-                                      <EmojiPicker onEmojiClick={(emojiObject) => {
-                                        handleEmojiSelect(emojiObject.emoji, task.id);
-                                      }} />
+                                    <PopoverContent onClick={e => e.stopPropagation()} className="p-1 w-auto rounded-full bg-background border shadow-lg">
+                                      <div className="flex items-center gap-1">
+                                        {commonEmojis.map(emoji => (
+                                          <button
+                                            key={emoji}
+                                            className="hover:bg-muted rounded-full p-1 transition-transform transform hover:scale-125"
+                                            onClick={() => handleEmojiSelect(emoji, task.id)}
+                                          >
+                                            <span className="text-xl">{emoji}</span>
+                                          </button>
+                                        ))}
+                                        <Popover>
+                                          <PopoverTrigger asChild>
+                                            <button className="hover:bg-muted rounded-full p-1.5 transition-transform transform hover:scale-125">
+                                              <SmilePlus className="h-5 w-5 text-muted-foreground" />
+                                            </button>
+                                          </PopoverTrigger>
+                                          <PopoverContent onClick={e => e.stopPropagation()} className="p-0 w-auto border-0">
+                                            <EmojiPicker onEmojiClick={(emojiObject) => {
+                                              handleEmojiSelect(emojiObject.emoji, task.id);
+                                            }} />
+                                          </PopoverContent>
+                                        </Popover>
+                                      </div>
                                     </PopoverContent>
                                   </Popover>
                                   {(task.originTicketId || task.tags?.some(t => t.name === 'Ticket')) && (
