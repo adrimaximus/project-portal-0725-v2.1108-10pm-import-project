@@ -18,6 +18,7 @@ const EmojiReactionPicker = ({ onSelect }: EmojiReactionPickerProps) => {
 
   const handleQuickSelect = (emoji: string) => {
     onSelect(emoji);
+    setIsOpen(false);
   };
 
   const handlePickerSelect = (emoji: any) => {
@@ -49,7 +50,10 @@ const EmojiReactionPicker = ({ onSelect }: EmojiReactionPickerProps) => {
                 <SmilePlus className="h-5 w-5 text-muted-foreground" />
               </button>
             </PopoverTrigger>
-            <PopoverContent className="w-auto p-0 border-none mb-2">
+            <PopoverContent 
+              className="w-auto p-0 border-none mb-2" 
+              onPointerDown={(e) => e.stopPropagation()}
+            >
               <Picker 
                 data={data} 
                 onEmojiSelect={handlePickerSelect}
