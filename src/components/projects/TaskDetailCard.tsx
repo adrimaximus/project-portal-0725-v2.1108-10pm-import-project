@@ -175,7 +175,6 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
         )}
 
         <div className="border-t pt-3 sm:pt-4">
-          <h4 className="font-semibold mb-2 text-xs sm:text-sm">Reactions</h4>
           <TaskReactions reactions={task.reactions || []} onToggleReaction={handleToggleReaction} />
         </div>
       </div>
