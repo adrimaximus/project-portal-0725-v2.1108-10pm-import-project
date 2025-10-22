@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Task, TaskAttachment } from "@/types";
+import { Task as ProjectTask, TaskAttachment } from "@/types";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -19,11 +19,11 @@ import remarkGfm from 'remark-gfm';
 import TaskDetailCard from './TaskDetailCard';
 
 interface TasksViewProps {
-  tasks: Task[];
+  tasks: ProjectTask[];
   isLoading: boolean;
-  onEdit: (task: Task) => void;
+  onEdit: (task: ProjectTask) => void;
   onDelete: (taskId: string) => void;
-  onToggleTaskCompletion: (task: Task, completed: boolean) => void;
+  onToggleTaskCompletion: (task: ProjectTask, completed: boolean) => void;
   isToggling: boolean;
   sortConfig: { key: string; direction: 'asc' | 'desc' };
   requestSort: (key: string) => void;
@@ -39,7 +39,7 @@ const processMentions = (text: string | null | undefined) => {
 };
 
 const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion, isToggling, sortConfig, requestSort }: TasksViewProps) => {
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [selectedTask, setSelectedTask] = useState<ProjectTask | null>(null);
 
   if (isLoading) {
     return (
@@ -63,7 +63,7 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
     return <div className="text-center text-muted-foreground p-8">No tasks found.</div>;
   }
 
-  const renderAttachments = (task: Task) => {
+  const renderAttachments = (task: ProjectTask) => {
     const allAttachments: TaskAttachment[] = [...(task.attachments || [])];
 
     if (task.originTicketId && task.attachment_url) {
