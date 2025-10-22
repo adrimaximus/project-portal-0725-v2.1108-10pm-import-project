@@ -91,7 +91,6 @@ const TasksKanbanCard = ({ task, onEdit, onDelete }: TasksKanbanCardProps) => {
         <div className="flex justify-between items-start">
           <CardTitle className="text-sm leading-snug flex items-center gap-1.5 pr-2">
             {task.status === 'Done' && <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />}
-            {(task.originTicketId || task.tags?.some(t => t.name === 'Ticket')) && <Ticket className={cn("h-4 w-4 flex-shrink-0", task.status === 'Done' ? 'text-green-500' : 'text-red-500')} />}
             <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ p: 'span' }}>
               {formatTaskText(task.title)}
             </ReactMarkdown>
@@ -160,6 +159,18 @@ const TasksKanbanCard = ({ task, onEdit, onDelete }: TasksKanbanCardProps) => {
             }
           </div>
           <div className="flex items-center gap-2">
+            {(task.originTicketId || task.tags?.some(t => t.name === 'Ticket')) && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Ticket className={cn("h-4 w-4 flex-shrink-0", task.status === 'Done' ? 'text-green-500' : 'text-red-500')} />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>This is a ticket</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
             {renderAttachments()}
             {task.due_date && (
               <div className={cn("text-xs text-muted-foreground", isOverdue(task.due_date) && "text-red-600 font-bold")}>
