@@ -41,11 +41,30 @@
 .chatgpt-text ul,
 .chatgpt-text ol {
   margin: 0.75em 0 0.75em 1.25em;
-  padding-left: 1.25em;
+  padding-left: 1.5em;
   line-height: 1.6;
 }
 
+/* Pastikan bullet/nomor tidak hilang */
+.chatgpt-text ul {
+  list-style-type: disc;
+}
+
+.chatgpt-text ol {
+  list-style-type: decimal;
+}
+
+/* Jika kamu punya nested list */
+.chatgpt-text ul ul,
+.chatgpt-text ol ol {
+  margin-top: 0.3em;
+  margin-bottom: 0.3em;
+  list-style-type: circle;
+}
+
+/* Kadang Tailwind atau CSS reset menonaktifkan marker */
 .chatgpt-text li {
+  display: list-item;
   margin-bottom: 0.4em;
 }
 
