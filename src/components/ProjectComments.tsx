@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef } => 'react';
 import { Project, Comment as CommentType, Task, User, ProjectFile } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
@@ -15,6 +15,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Textarea } from "@/components/ui/textarea";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import FileIcon from './FileIcon';
 
 interface ProjectCommentsProps {
   project: Project;
@@ -213,7 +214,7 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
                             {attachments.map((file, index) => (
                               <div key={index} className="flex items-center justify-between p-2 rounded-md border bg-card">
                                 <div className="flex items-center gap-2 truncate min-w-0">
-                                  <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                                  <FileIcon fileType={file.type || ''} className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                                   <span className="text-sm truncate">{file.name}</span>
                                 </div>
                                 <div className="flex items-center gap-1 flex-shrink-0">
