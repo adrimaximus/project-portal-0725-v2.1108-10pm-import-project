@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Ticket, MoreHorizontal, Edit, Trash2, FileText, Paperclip, X, Loader2, SmilePlus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { getInitials, generatePastelColor, parseMentions, formatMentionsForDisplay } from "@/lib/utils";
+import { getInitials, generatePastelColor, parseMentions, formatMentionsForDisplay, cn } from "@/lib/utils";
 import { formatDistanceToNow } from 'date-fns';
 import CommentInput from "./CommentInput";
 import ReactMarkdown from "react-markdown";
@@ -282,13 +282,18 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
                                     <TooltipProvider key={emoji}>
                                         <Tooltip>
                                             <TooltipTrigger asChild>
-                                                <Badge
-                                                    variant={hasReacted ? 'default' : 'secondary'}
-                                                    className="cursor-pointer"
+                                                <button
                                                     onClick={() => onToggleCommentReaction(comment.id, emoji)}
+                                                    className={cn(
+                                                        "px-1.5 py-0.5 rounded-full text-xs flex items-center gap-1 transition-colors border",
+                                                        hasReacted
+                                                        ? "bg-primary/20 border-primary/50"
+                                                        : "bg-muted hover:bg-muted/80"
+                                                    )}
                                                 >
-                                                    {emoji} {users.length}
-                                                </Badge>
+                                                    <span>{emoji}</span>
+                                                    <span className="font-medium text-xs">{users.length}</span>
+                                                </button>
                                             </TooltipTrigger>
                                             <TooltipContent>
                                                 <p>{users.join(', ')}</p>
