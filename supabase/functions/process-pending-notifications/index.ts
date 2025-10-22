@@ -96,13 +96,49 @@ const getContext = async (supabaseAdmin: any, notification: any) => {
             break;
         }
         case 'discussion_mention': {
-            const [mentioner, project, comment] = await Promise.all([
+            const [mentioner, project, commentResult] = await Promise.all([
                 fetchProfile(context_data.mentioner_id),
                 supabaseAdmin.from('projects').select('name, slug').eq('id', context_data.project_id).single(),
                 supabaseAdmin.from('comments').select('text').eq('id', context_data.comment_id).single(),
             ]);
+
+            if (!commentResult.data) throw new Error(`Comment with ID ${context_data.comment_id} not found.`);
+            let processedCommentText = commentResult.data.text;
+
+            const mentionRegex = /@\[([^\]]+)\]\(([^)]+)\)/g;
+            let match;
+            const mentionedUserIds = new Set<string>();
+
+            // Collect all mentioned user IDs
+            while ((match = mentionRegex.exec(commentResult.data.text)) !== null) {
+                mentionedUserIds.add(match[2]); // match[2] is the user ID
+            }
+            // Reset regex lastIndex after loop
+            mentionRegex.lastIndex = 0;
+
+            // Fetch profiles for all mentioned users
+            const mentionedProfiles = new Map<string, string>(); // Map<userId, userName>
+            if (mentionedUserIds.size > 0) {
+                const { data: profilesData, error: profilesError } = await supabaseAdmin
+                    .from('profiles')
+                    .select('id, first_name, last_name, email')
+                    .in('id', Array.from(mentionedUserIds));
+                
+                if (profilesError) console.error("Error fetching mentioned profiles:", profilesError.message);
+                
+                profilesData?.forEach(profile => {
+                    mentionedProfiles.set(profile.id, getFullName(profile));
+                });
+            }
+
+            // Replace mentions in the comment text
+            processedCommentText = processedCommentText.replace(mentionRegex, (match, displayName, userId) => {
+                const resolvedName = mentionedProfiles.get(userId);
+                return resolvedName ? `*${resolvedName}*` : `*${displayName}*`; // Use fetched name, fallback to display name from mention
+            });
+
             const url = project.data.slug === 'general-tasks' ? `${SITE_URL}/projects?view=tasks` : `${SITE_URL}/projects/${project.data.slug}`;
-            context = { ...context, mentionerName: mentioner.name, projectName: project.data.name, commentText: comment.data.text, url };
+            context = { ...context, mentionerName: mentioner.name, projectName: project.data.name, commentText: processedCommentText, url };
             break;
         }
         case 'task_assignment': {
