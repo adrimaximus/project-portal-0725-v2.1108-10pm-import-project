@@ -302,7 +302,7 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
                                               <SmilePlus className="h-5 w-5 text-muted-foreground" />
                                             </button>
                                           </PopoverTrigger>
-                                          <PopoverContent onClick={e => e.stopPropagation()} className="p-0 w-[350px] border-0">
+                                          <PopoverContent onClick={e => e.stopPropagation()} className="p-0 w-[300px] border-0">
                                             <EmojiPicker width="100%" onEmojiClick={(emojiObject) => {
                                               handleEmojiSelect(emojiObject.emoji, task.id);
                                             }} />
