@@ -50,6 +50,7 @@ export type Comment = {
   isTicket: boolean;
   attachment_url?: string;
   attachment_name?: string;
+  attachments_jsonb?: ProjectFile[]; // NEW: Full attachment metadata
 };
 
 export type Activity = {
