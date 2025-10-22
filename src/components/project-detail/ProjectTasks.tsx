@@ -79,9 +79,6 @@ const ProjectTasks = ({ tasks, onAddTask, onDeleteTask, onToggleTaskCompletion }
                 htmlFor={`task-${task.id}`}
                 className={`flex-1 min-w-0 text-sm flex items-center gap-2 cursor-pointer ${task.completed ? 'text-muted-foreground line-through' : 'text-card-foreground'}`}
               >
-                {(task.originTicketId || task.tags?.some(t => t.name === 'Ticket')) && (
-                  <Ticket className={`h-4 w-4 flex-shrink-0 ${task.completed ? 'text-green-500' : 'text-red-500'}`} />
-                )}
                 <span className="break-words" title={task.title}>{task.title}</span>
               </label>
 
@@ -125,6 +122,16 @@ const ProjectTasks = ({ tasks, onAddTask, onDeleteTask, onToggleTaskCompletion }
                       </div>
                     </PopoverContent>
                   </Popover>
+                )}
+                {(task.originTicketId || task.tags?.some(t => t.name === 'Ticket')) && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Ticket className={`h-4 w-4 flex-shrink-0 ${task.completed ? 'text-green-500' : 'text-red-500'}`} />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>This is a ticket</p>
+                    </TooltipContent>
+                  </Tooltip>
                 )}
                 <div className="flex items-center -space-x-2 pr-2">
                   {task.assignedTo?.map((assignee: User) => (
