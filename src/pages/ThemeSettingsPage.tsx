@@ -40,16 +40,16 @@ const themeFamilies = [
     darkThemeId: 'claude',
     preview: (
       <div className="flex items-center gap-2">
-        <div className="w-8 h-8 rounded-md bg-[#F6F5F1] border border-[#EAE8E2] flex items-center justify-center p-1">
+        <div className="w-8 h-8 rounded-md bg-[oklch(0.98_0.01_95.10)] border-[oklch(0.88_0.01_97.36)] flex items-center justify-center p-1">
           <div className="w-full space-y-1">
-            <div className="h-1 w-3/4 rounded-full bg-[#352F2A]/30"></div>
-            <div className="h-1 w-1/2 rounded-full bg-[#D96D4A]/50"></div>
+            <div className="h-1 w-3/4 rounded-full bg-[oklch(0.34_0.03_95.72)]/30"></div>
+            <div className="h-1 w-1/2 rounded-full bg-[oklch(0.62_0.14_39.04)]/50"></div>
           </div>
         </div>
-        <div className="w-8 h-8 rounded-md bg-[#1C1917] border border-[#292524] flex items-center justify-center p-1">
+        <div className="w-8 h-8 rounded-md bg-[oklch(0.27_0.00_106.64)] border-[oklch(0.36_0.01_106.89)] flex items-center justify-center p-1">
           <div className="w-full space-y-1">
-            <div className="h-1 w-3/4 rounded-full bg-[#A8A29E]/50"></div>
-            <div className="h-1 w-1/2 rounded-full bg-[#E07A5F]"></div>
+            <div className="h-1 w-3/4 rounded-full bg-[oklch(0.81_0.01_93.01)]/50"></div>
+            <div className="h-1 w-1/2 rounded-full bg-[oklch(0.67_0.13_38.76)]"></div>
           </div>
         </div>
       </div>
@@ -150,19 +150,19 @@ const themeFamilies = [
 ];
 
 const getThemeFamily = (theme: Theme): 'default' | 'claude' | 'nature' | 'corporate' | 'ahensi' | 'brand-activator' => {
-  if (theme === 'claude' || theme === 'claude-light') {
+  if (theme.startsWith('claude')) {
     return 'claude';
   }
-  if (theme === 'nature' || theme === 'nature-light') {
+  if (theme.startsWith('nature')) {
     return 'nature';
   }
-  if (theme === 'corporate' || theme === 'corporate-light') {
+  if (theme.startsWith('corporate')) {
     return 'corporate';
   }
-  if (theme === 'ahensi' || theme === 'ahensi-light') {
+  if (theme.startsWith('ahensi')) {
     return 'ahensi';
   }
-  if (theme === 'brand-activator' || theme === 'brand-activator-light') {
+  if (theme.startsWith('brand-activator')) {
     return 'brand-activator';
   }
   return 'default';
