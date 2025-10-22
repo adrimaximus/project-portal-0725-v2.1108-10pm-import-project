@@ -144,7 +144,7 @@ const getContext = async (supabaseAdmin: any, notification: any) => {
                 projectName: project.data.name, 
                 commentText: processedCommentText, 
                 url,
-                attachments: commentResult.data.attachments_jsonb || [], // NEW: Attachments
+                attachments: context_data.attachments || [], // Use attachments from context_data (set by trigger)
             };
             break;
         }
@@ -154,18 +154,11 @@ const getContext = async (supabaseAdmin: any, notification: any) => {
             if (!taskResult) throw new Error(`Task with ID ${context_data.task_id} not found.`);
             const task = taskResult;
 
-            const [assigner, project, taskAttachmentsResult, commentAttachmentsResult] = await Promise.all([
+            const [assigner, project] = await Promise.all([
                 fetchProfile(context_data.assigner_id),
                 supabaseAdmin.from('projects').select('name, slug').eq('id', task.project_id).single(),
-                supabaseAdmin.from('task_attachments').select('file_name, file_url').eq('task_id', context_data.task_id),
-                task.origin_ticket_id ? supabaseAdmin.from('comments').select('attachments_jsonb').eq('id', task.origin_ticket_id).single() : Promise.resolve({ data: null }),
             ]);
             if (!project.data) throw new Error(`Project with ID ${task.project_id} not found.`);
-
-            let attachments = taskAttachmentsResult.data || [];
-            if (commentAttachmentsResult.data?.attachments_jsonb) {
-                attachments = [...attachments, ...commentAttachmentsResult.data.attachments_jsonb];
-            }
             
             const url = project.data.slug === 'general-tasks' ? `${SITE_URL}/projects?view=tasks` : `${SITE_URL}/projects/${project.data.slug}`;
             context = { 
@@ -174,7 +167,7 @@ const getContext = async (supabaseAdmin: any, notification: any) => {
                 taskTitle: task.title, 
                 projectName: project.data.name, 
                 url,
-                attachments, // NEW: Attachments
+                attachments: context_data.attachments || [], // Use attachments from context_data (set by trigger)
             };
             break;
         }
@@ -322,6 +315,7 @@ serve(async (req) => {
                     emailBody += `<p><strong>${context.mentionerName}</strong> menyebut Anda dalam sebuah komentar di proyek <strong>${context.projectName}</strong>.</p>`;
                     emailBody += `<blockquote style="border-left: 4px solid #007bff; padding-left: 15px; margin: 15px 0; font-style: italic; background-color: #f8f9fa; padding: 10px;">${context.commentText.replace(/\n/g, '<br>')}</blockquote>`;
                     emailText += `${context.mentionerName} menyebut Anda di proyek ${context.projectName}. Komentar: ${context.commentText}\n`;
+                    actionText = "Lihat Komentar";
                     break;
                 case 'task_assignment':
                     emailSubject = `Tugas baru untuk Anda: ${context.taskTitle}`;
@@ -336,7 +330,7 @@ serve(async (req) => {
                     break;
             }
 
-            // Add Attachment List to Email Body
+            // Add Attachment List to Email Body (Only for Email)
             if (attachments.length > 0) {
                 emailBody += `<p style="margin-top: 20px;"><strong>Lampiran:</strong></p><ul>`;
                 attachments.forEach((att: any) => {
@@ -361,6 +355,7 @@ serve(async (req) => {
                 })),
             };
 
+            // Call the dedicated Edge Function for email sending
             const emailResponse = await fetch(`https://quuecudndfztjlxbrvyb.supabase.co/functions/v1/send-email-with-attachments`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
