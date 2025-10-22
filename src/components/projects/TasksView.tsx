@@ -18,7 +18,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import TaskDetailCard from './TaskDetailCard';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import EmojiPicker from "emoji-picker-react";
+import EmojiPicker, { EmojiStyle } from "emoji-picker-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/hooks/useSession";
 import { useQueryClient } from "@tanstack/react-query";
@@ -355,7 +355,7 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
                                               onEmojiClick={(emojiObject) => {
                                                 handleEmojiSelect(emojiObject.emoji, task.id);
                                               }}
-                                              emojiStyle="native"
+                                              emojiStyle={EmojiStyle.NATIVE}
                                               previewConfig={{ showPreview: false }}
                                               width={350}
                                               height={400}

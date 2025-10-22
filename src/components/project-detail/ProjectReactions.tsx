@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { SmilePlus } from "lucide-react";
-import EmojiPicker from "emoji-picker-react";
+import EmojiPicker, { EmojiStyle } from "emoji-picker-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -109,7 +109,7 @@ const ProjectReactions = ({ project, onReactionsChange }: ProjectReactionsProps)
         <PopoverContent onClick={stopPropagation} className="p-0 w-auto border-0">
           <EmojiPicker
             onEmojiClick={(emojiObject) => handleEmojiSelect(emojiObject.emoji)}
-            emojiStyle="native"
+            emojiStyle={EmojiStyle.NATIVE}
             previewConfig={{ showPreview: false }}
             width={350}
             height={400}
