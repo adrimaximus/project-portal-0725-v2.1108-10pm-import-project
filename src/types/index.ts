@@ -139,7 +139,7 @@ export interface Person {
   slug: string;
   address: any;
   social_media: any;
-  projects?: { id: string; name: string; slug: string }[];
+  projects?: { id: string; name: string; slug: string; status: string; }[];
   tags?: Tag[];
 }
 
