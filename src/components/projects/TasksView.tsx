@@ -359,10 +359,6 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
                                               previewConfig={{ showPreview: false }}
                                               width={350}
                                               height={400}
-                                              style={{
-                                                fontFamily: '"Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif',
-                                                border: 'none',
-                                              }}
                                             />
                                           </PopoverContent>
                                         </Popover>
