@@ -83,6 +83,7 @@ const CompanyPropertyFormDialog = ({ open, onOpenChange, onSave, property, isSav
       label: values.label,
       type: values.type,
       options: values.options?.map(o => o.value).filter(Boolean) || null,
+      is_default: false,
     });
   };
 

@@ -46,7 +46,7 @@ const ContactPropertiesPage = () => {
   const handleSave = async (propertyData: PropertyFormValues) => {
     setIsSaving(true);
     const { id, is_default, ...dataToSave } = propertyToEdit || {};
-    const upsertData = { ...dataToSave, ...propertyData };
+    const upsertData = { ...dataToSave, ...propertyData, is_default: false };
 
     const promise = propertyToEdit?.id
       ? supabase.from('contact_properties').update(upsertData).eq('id', propertyToEdit.id)
