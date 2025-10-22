@@ -8,10 +8,11 @@ import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { getInitials, generatePastelColor, parseMentions, getAvatarUrl } from '@/lib/utils';
 import { MentionsInput, Mention, SuggestionDataItem } from 'react-mentions';
 import '@/styles/mentions.css';
+import { supabase } from '@/integrations/supabase/client';
 
 interface CommentInputProps {
   project: Project;
-  onAddCommentOrTicket: (text: string, isTicket: boolean, attachments: File[] | null, mentionedUserIds: string[]) => void;
+  onAddCommentOrTicket: (text: string, isTicket: boolean, attachments: File[] | null, mentionedUserIds: string[], description?: string) => void;
 }
 
 const CommentInput = ({ project, onAddCommentOrTicket }: CommentInputProps) => {
@@ -19,6 +20,7 @@ const CommentInput = ({ project, onAddCommentOrTicket }: CommentInputProps) => {
   const [text, setText] = useState('');
   const [isTicket, setIsTicket] = useState(false);
   const [attachments, setAttachments] = useState<File[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -31,16 +33,41 @@ const CommentInput = ({ project, onAddCommentOrTicket }: CommentInputProps) => {
     setAttachments(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!text.trim() && attachments.length === 0) return;
+
+    setIsLoading(true);
+    let taskTitle = text.trim();
+    let taskDescription = '';
     const mentionedUserIds = parseMentions(text);
-    onAddCommentOrTicket(text, isTicket, attachments, mentionedUserIds);
+
+    if (isTicket) {
+      taskDescription = text.trim();
+      try {
+        const { data, error } = await supabase.functions.invoke('generate-task-title', {
+          body: { commentText: text.trim() },
+        });
+
+        if (error) {
+          console.error('Error generating task title:', error);
+          taskTitle = text.trim().split(' ').slice(0, 10).join(' ') + (text.trim().split(' ').length > 10 ? '...' : '');
+        } else {
+          taskTitle = data.title;
+        }
+      } catch (error) {
+        console.error('Network error calling generate-task-title:', error);
+        taskTitle = text.trim().split(' ').slice(0, 10).join(' ') + (text.trim().split(' ').length > 10 ? '...' : '');
+      }
+    }
+
+    onAddCommentOrTicket(isTicket ? taskTitle : text, isTicket, attachments, mentionedUserIds, isTicket ? taskDescription : undefined);
     setText('');
     setIsTicket(false);
     setAttachments([]);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
+    setIsLoading(false);
   };
 
   if (!user) return null;
@@ -140,9 +167,9 @@ const CommentInput = ({ project, onAddCommentOrTicket }: CommentInputProps) => {
                 </Tooltip>
               </TooltipProvider>
             </div>
-            <Button onClick={handleSubmit} disabled={!text.trim() && attachments.length === 0}>
-              {isTicket ? 'Create Ticket' : 'Comment'}
-              <Send className="h-4 w-4 ml-2" />
+            <Button onClick={handleSubmit} disabled={(!text.trim() && attachments.length === 0) || isLoading}>
+              {isLoading ? 'Processing...' : (isTicket ? 'Create Ticket' : 'Comment')}
+              {!isLoading && <Send className="h-4 w-4 ml-2" />}
             </Button>
           </div>
         </div>
