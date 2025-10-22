@@ -25,7 +25,10 @@ export const useTasks = ({ projectIds, hideCompleted, sortConfig, enabled = true
       if (error) {
         throw new Error(`Failed to fetch tasks: ${error.message}`);
       }
-      return data || [];
+      return data.map(task => ({
+        ...task,
+        originTicketId: task.origin_ticket_id, // Map snake_case to camelCase for frontend consistency
+      })) || [];
     },
     enabled,
   });

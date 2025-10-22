@@ -195,14 +195,8 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
                                 </Tooltip>
                               </TooltipProvider>
                             )}
-                            <div className="flex justify-between items-center mt-2">
-                              <div className="flex gap-1 flex-wrap">
-                                {task.tags?.map(tag => (
-                                  <Badge key={tag.id} variant="outline" style={{ borderColor: tag.color, color: tag.color }}>{tag.name}</Badge>
-                                ))}
-                              </div>
-                              <div className="flex gap-1 items-center mr-1.5">
-                                {(task.originTicketId || task.origin_ticket_id || task.tags?.some(t => t.name === 'Ticket')) && (
+                            <div className="flex gap-1 items-center mr-1.5">
+                                {(task.originTicketId || task.tags?.some(t => t.name === 'Ticket')) && (
                                   <TooltipProvider>
                                     <Tooltip>
                                       <TooltipTrigger asChild>

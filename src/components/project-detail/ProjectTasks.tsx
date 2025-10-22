@@ -123,7 +123,7 @@ const ProjectTasks = ({ tasks, onAddTask, onEditTask, onDeleteTask, onToggleTask
                     </PopoverContent>
                   </Popover>
                 )}
-                {(task.originTicketId || task.origin_ticket_id || task.tags?.some(t => t.name === 'Ticket')) && (
+                {(task.originTicketId || task.tags?.some(t => t.name === 'Ticket')) && (
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Ticket className={`h-4 w-4 flex-shrink-0 ${task.completed ? 'text-green-500' : 'text-red-500'}`} />
