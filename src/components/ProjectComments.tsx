@@ -216,13 +216,6 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
                           </ReactMarkdown>
                         </div>
                       )}
-                      {attachments.length > 0 && (
-                        <div className="mt-4 space-y-2">
-                          {attachments.map((file, index) => (
-                            <CommentAttachmentItem key={file.url || file.file_url || index} file={file} />
-                          ))}
-                        </div>
-                      )}
                       {(isTicket || attachments.length > 0) && (
                         <div className="mt-2 flex items-center gap-4">
                           {isTicket && (
