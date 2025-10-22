@@ -99,7 +99,7 @@ const getContext = async (supabaseAdmin: any, notification: any) => {
             const [mentioner, project, commentResult] = await Promise.all([
                 fetchProfile(context_data.mentioner_id),
                 supabaseAdmin.from('projects').select('name, slug').eq('id', context_data.project_id).single(),
-                supabaseAdmin.from('comments').select('text').eq('id', context_data.comment_id).single(),
+                supabaseAdmin.from('comments').select('text, attachments_jsonb').eq('id', context_data.comment_id).single(),
             ]);
 
             if (!commentResult.data) throw new Error(`Comment with ID ${context_data.comment_id} not found.`);
@@ -138,22 +138,44 @@ const getContext = async (supabaseAdmin: any, notification: any) => {
             });
 
             const url = project.data.slug === 'general-tasks' ? `${SITE_URL}/projects?view=tasks` : `${SITE_URL}/projects/${project.data.slug}`;
-            context = { ...context, mentionerName: mentioner.name, projectName: project.data.name, commentText: processedCommentText, url };
+            context = { 
+                ...context, 
+                mentionerName: mentioner.name, 
+                projectName: project.data.name, 
+                commentText: processedCommentText, 
+                url,
+                attachments: commentResult.data.attachments_jsonb || [], // NEW: Attachments
+            };
             break;
         }
         case 'task_assignment': {
-            const { data: task, error: taskError } = await supabaseAdmin.from('tasks').select('title, project_id').eq('id', context_data.task_id).single();
+            const { data: taskResult, error: taskError } = await supabaseAdmin.from('tasks').select('title, project_id, origin_ticket_id').eq('id', context_data.task_id).single();
             if (taskError) throw taskError;
-            if (!task.data) throw new Error(`Task with ID ${context_data.task_id} not found.`);
+            if (!taskResult) throw new Error(`Task with ID ${context_data.task_id} not found.`);
+            const task = taskResult;
 
-            const [assigner, project] = await Promise.all([
+            const [assigner, project, taskAttachmentsResult, commentAttachmentsResult] = await Promise.all([
                 fetchProfile(context_data.assigner_id),
-                supabaseAdmin.from('projects').select('name, slug').eq('id', task.data.project_id).single(),
+                supabaseAdmin.from('projects').select('name, slug').eq('id', task.project_id).single(),
+                supabaseAdmin.from('task_attachments').select('file_name, file_url').eq('task_id', context_data.task_id),
+                task.origin_ticket_id ? supabaseAdmin.from('comments').select('attachments_jsonb').eq('id', task.origin_ticket_id).single() : Promise.resolve({ data: null }),
             ]);
-            if (!project.data) throw new Error(`Project with ID ${task.data.project_id} not found.`);
+            if (!project.data) throw new Error(`Project with ID ${task.project_id} not found.`);
 
+            let attachments = taskAttachmentsResult.data || [];
+            if (commentAttachmentsResult.data?.attachments_jsonb) {
+                attachments = [...attachments, ...commentAttachmentsResult.data.attachments_jsonb];
+            }
+            
             const url = project.data.slug === 'general-tasks' ? `${SITE_URL}/projects?view=tasks` : `${SITE_URL}/projects/${project.data.slug}`;
-            context = { ...context, assignerName: assigner.name, taskTitle: task.data.title, projectName: project.data.name, url };
+            context = { 
+                ...context, 
+                assignerName: assigner.name, 
+                taskTitle: task.title, 
+                projectName: project.data.name, 
+                url,
+                attachments, // NEW: Attachments
+            };
             break;
         }
         case 'project_invite':
@@ -188,9 +210,6 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
-
-  // NOTE: Authorization check is removed to align with other cron-triggered functions
-  // and resolve the 401 error from pg_cron. A secret check can be re-added if needed.
 
   const supabaseAdmin = createClient(
     Deno.env.get('SUPABASE_URL') ?? '',
@@ -248,41 +267,113 @@ serve(async (req) => {
         const typePrefs = prefs[notificationTypeKey] || {};
 
         const isWhatsappEnabled = typePrefs.whatsapp !== false;
+        const isEmailEnabled = typePrefs.email !== false;
         
-        if (!isWhatsappEnabled) {
-            await supabaseAdmin.from('pending_whatsapp_notifications').update({ status: 'cancelled', error_message: 'WhatsApp notifications for this type are disabled by the user.' }).eq('id', notificationId);
+        if (!isWhatsappEnabled && !isEmailEnabled) {
+            await supabaseAdmin.from('pending_whatsapp_notifications').update({ status: 'cancelled', error_message: 'All external notifications for this type are disabled by the user.' }).eq('id', notificationId);
             cancelledCount++;
-            continue;
-        }
-
-        const recipientPhone = formatPhoneNumberForApi(recipientData.phone);
-        if (!recipientPhone) {
-            await supabaseAdmin.from('pending_whatsapp_notifications').update({ status: 'failed', error_message: 'Recipient does not have a valid phone number.' }).eq('id', notificationId);
-            failureCount++;
             continue;
         }
 
         const context = await getContext(supabaseAdmin, notification);
         const recipientName = getFullName(recipientData);
+        const SITE_URL = Deno.env.get("SITE_URL") ?? "https://7inked.ahensi.xyz";
 
-        const userPrompt = `**Konteks:**\n- **Jenis:** Notifikasi ${notification.notification_type}\n- **Penerima:** ${recipientName}\n- **Detail:** ${JSON.stringify(context)}\n\nBuat pesan notifikasi WhatsApp yang sesuai.`;
-        const anthropic = new Anthropic({ apiKey: Deno.env.get('ANTHROPIC_API_KEY') });
-        const aiResponse = await anthropic.messages.create({ model: "claude-3-haiku-20240307", max_tokens: 250, system: getSystemPrompt(), messages: [{ role: "user", content: userPrompt }] });
-        const aiMessage = aiResponse.content[0].text;
+        // --- 1. WhatsApp Notification (AI Generated) ---
+        if (isWhatsappEnabled) {
+            const recipientPhone = formatPhoneNumberForApi(recipientData.phone);
+            if (recipientPhone) {
+                const userPrompt = `**Konteks:**\n- **Jenis:** Notifikasi ${notification.notification_type}\n- **Penerima:** ${recipientName}\n- **Detail:** ${JSON.stringify(context)}\n\nBuat pesan notifikasi WhatsApp yang sesuai.`;
+                const anthropic = new Anthropic({ apiKey: Deno.env.get('ANTHROPIC_API_KEY') });
+                const aiResponse = await anthropic.messages.create({ model: "claude-3-haiku-20240307", max_tokens: 250, system: getSystemPrompt(), messages: [{ role: "user", content: userPrompt }] });
+                const aiMessage = aiResponse.content[0].text;
 
-        const { data: wbizConfig } = await supabaseAdmin.from('app_config').select('key, value').in('key', ['WBIZTOOL_CLIENT_ID', 'WBIZTOOL_API_KEY']);
-        const clientId = wbizConfig?.find(c => c.key === 'WBIZTOOL_CLIENT_ID')?.value;
-        const apiKey = wbizConfig?.find(c => c.key === 'WBIZTOOL_API_KEY')?.value;
-        const whatsappClientId = Deno.env.get('WBIZTOOL_WHATSAPP_CLIENT_ID');
-        if (!clientId || !apiKey || !whatsappClientId) throw new Error("WBIZTOOL credentials not configured.");
+                const { data: wbizConfig } = await supabaseAdmin.from('app_config').select('key, value').in('key', ['WBIZTOOL_CLIENT_ID', 'WBIZTOOL_API_KEY']);
+                const clientId = wbizConfig?.find(c => c.key === 'WBIZTOOL_CLIENT_ID')?.value;
+                const apiKey = wbizConfig?.find(c => c.key === 'WBIZTOOL_API_KEY')?.value;
+                const whatsappClientId = Deno.env.get('WBIZTOOL_WHATSAPP_CLIENT_ID');
+                if (!clientId || !apiKey || !whatsappClientId) throw new Error("WBIZTOOL credentials not configured.");
 
-        const wbizPayload = { client_id: parseInt(clientId, 10), api_key: apiKey, whatsapp_client: parseInt(whatsappClientId, 10), phone: recipientPhone, message: aiMessage };
-        const wbizResponse = await fetch("https://wbiztool.com/api/v1/send_msg/", { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Client-ID': clientId, 'X-Api-Key': apiKey }, body: JSON.stringify(wbizPayload) });
-        if (!wbizResponse.ok) {
-            const errorData = await wbizResponse.json().catch(() => ({}));
-            throw new Error(`WBIZTOOL API Error (${wbizResponse.status}): ${errorData.message || 'Unknown error'}`);
+                const wbizPayload = { client_id: parseInt(clientId, 10), api_key: apiKey, whatsapp_client: parseInt(whatsappClientId, 10), phone: recipientPhone, message: aiMessage };
+
+                const wbizResponse = await fetch("https://wbiztool.com/api/v1/send_msg/", { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Client-ID': clientId, 'X-Api-Key': apiKey }, body: JSON.stringify(wbizPayload) });
+                if (!wbizResponse.ok) {
+                    const errorData = await wbizResponse.json().catch(() => ({}));
+                    throw new Error(`WBIZTOOL API Error (${wbizResponse.status}): ${errorData.message || 'Unknown error'}`);
+                }
+            } else {
+                console.warn(`[process-and-send] [${notificationId}] WhatsApp enabled but no phone number for ${recipientData.email}. Skipping WhatsApp.`);
+            }
         }
-        
+
+        // --- 2. Email Notification (Standard Template + Attachments) ---
+        if (isEmailEnabled) {
+            const attachments = context.attachments || [];
+            let emailSubject = `[7i Portal] Notification: ${context.projectName || context.resourceName || context.taskTitle || context.type}`;
+            let emailBody = `<p>Halo ${recipientName},</p>`;
+            let emailText = `Halo ${recipientName},\n\n`;
+            let actionUrl = context.url || SITE_URL;
+            let actionText = "Lihat Detail";
+
+            // Determine Email Content based on type
+            switch (notification.notification_type) {
+                case 'discussion_mention':
+                    emailSubject = `Anda disebut di proyek: ${context.projectName}`;
+                    emailBody += `<p><strong>${context.mentionerName}</strong> menyebut Anda dalam sebuah komentar di proyek <strong>${context.projectName}</strong>.</p>`;
+                    emailBody += `<blockquote style="border-left: 4px solid #007bff; padding-left: 15px; margin: 15px 0; font-style: italic; background-color: #f8f9fa; padding: 10px;">${context.commentText.replace(/\n/g, '<br>')}</blockquote>`;
+                    emailText += `${context.mentionerName} menyebut Anda di proyek ${context.projectName}. Komentar: ${context.commentText}\n`;
+                    break;
+                case 'task_assignment':
+                    emailSubject = `Tugas baru untuk Anda: ${context.taskTitle}`;
+                    emailBody += `<p><strong>${context.assignerName}</strong> telah menugaskan Anda sebuah tugas baru: <strong>${context.taskTitle}</strong> di proyek <strong>${context.projectName}</strong>.</p>`;
+                    emailText += `${context.assignerName} menugaskan Anda tugas baru: ${context.taskTitle} di proyek ${context.projectName}.\n`;
+                    actionText = "Lihat Tugas";
+                    break;
+                default:
+                    emailSubject = context.title || emailSubject;
+                    emailBody += `<p>Anda memiliki pembaruan baru di 7i Portal:</p><p>${context.body || 'Silakan periksa notifikasi Anda.'}</p>`;
+                    emailText += `Anda memiliki pembaruan baru di 7i Portal: ${context.body || 'Silakan periksa notifikasi Anda.'}\n`;
+                    break;
+            }
+
+            // Add Attachment List to Email Body
+            if (attachments.length > 0) {
+                emailBody += `<p style="margin-top: 20px;"><strong>Lampiran:</strong></p><ul>`;
+                attachments.forEach((att: any) => {
+                    emailBody += `<li><a href="${att.file_url}" style="color: #007bff;">${att.file_name}</a> (${att.file_type || 'File'})</li>`;
+                });
+                emailBody += `</ul>`;
+                emailText += `\nLampiran: ${attachments.map((att: any) => att.file_name).join(', ')}\n`;
+            }
+
+            // Add Call to Action Button
+            emailBody += `<p style="margin-top: 20px;"><a href="${actionUrl}" style="display: inline-block; padding: 10px 20px; font-size: 16px; color: #fff; background-color: #007bff; text-decoration: none; border-radius: 5px;">${actionText}</a></p>`;
+            emailText += `\nLihat di sini: ${actionUrl}`;
+
+            const emailPayload = {
+                to: recipientData.email,
+                subject: emailSubject,
+                html: emailBody,
+                text: emailText,
+                attachments: attachments.map((att: any) => ({
+                    file_name: att.file_name,
+                    file_url: att.file_url,
+                })),
+            };
+
+            const emailResponse = await fetch(`https://quuecudndfztjlxbrvyb.supabase.co/functions/v1/send-email-with-attachments`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(emailPayload),
+            });
+
+            if (!emailResponse.ok) {
+                const errorData = await emailResponse.json().catch(() => ({}));
+                console.error(`[process-and-send] [${notificationId}] Email API Error (${emailResponse.status}):`, errorData);
+                throw new Error(`Email failed: ${errorData.error || emailResponse.statusText}`);
+            }
+        }
+
         await supabaseAdmin.from('pending_whatsapp_notifications').update({ status: 'sent' }).eq('id', notificationId);
         successCount++;
         console.log(`[process-and-send] [${notificationId}] Sent notification to ${recipientData.email}.`);
