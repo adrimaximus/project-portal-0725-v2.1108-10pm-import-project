@@ -95,7 +95,13 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
             // Mengambil teks utama tanpa markdown lampiran
             const textWithoutAttachments = comment.text?.replace(/\n\n\*\*Attachments:\*\*[\s\S]*$/, '').trim() || '';
             const mainText = textWithoutAttachments;
-            const attachments: ProjectFile[] = comment.attachments_jsonb || [];
+            
+            const attachmentsData = comment.attachments_jsonb;
+            const attachments: ProjectFile[] = Array.isArray(attachmentsData)
+              ? attachmentsData
+              : attachmentsData
+              ? [attachmentsData]
+              : [];
 
             const isThisCommentBeingUpdated = isUpdatingComment && updatedCommentId === comment.id;
 
