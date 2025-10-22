@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import { Project, Comment as CommentType, Task, User, ProjectFile } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
-import { Ticket, MoreHorizontal, Edit, Trash2, FileText, Eye, Download, Paperclip, X, AlertTriangle, Loader2 } from "lucide-react";
+import { Ticket, MoreHorizontal, Edit, Trash2, FileText, Paperclip, X, Loader2, SmilePlus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { getInitials, generatePastelColor, parseMentions, formatMentionsForDisplay } from "@/lib/utils";
 import { formatDistanceToNow } from 'date-fns';
@@ -15,20 +15,32 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Textarea } from "@/components/ui/textarea";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import FileIcon from './FileIcon';
 import CommentAttachmentItem from './CommentAttachmentItem';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import CommentReactionPicker from './CommentReactionPicker';
+
+interface Reaction {
+  id: string;
+  emoji: string;
+  user_id: string;
+  user_name: string;
+}
+
+interface CommentWithReactions extends CommentType {
+  reactions?: Reaction[];
+}
 
 interface ProjectCommentsProps {
   project: Project;
   onAddCommentOrTicket: (text: string, isTicket: boolean, attachments: File[] | null, mentionedUserIds: string[]) => void;
   onUpdateComment: (commentId: string, text: string, attachments: File[] | null, isConvertingToTicket: boolean, mentionedUserIds: string[]) => void;
   onDeleteComment: (commentId: string) => void;
+  onToggleCommentReaction: (commentId: string, emoji: string) => void;
   isUpdatingComment?: boolean;
   updatedCommentId?: string;
 }
 
-const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDeleteComment, isUpdatingComment, updatedCommentId }: ProjectCommentsProps) => {
+const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDeleteComment, onToggleCommentReaction, isUpdatingComment, updatedCommentId }: ProjectCommentsProps) => {
   const { user: currentUser } = useAuth();
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editedText, setEditedText] = useState('');
@@ -38,7 +50,6 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
   const editFileInputRef = useRef<HTMLInputElement>(null);
 
   const handleEditClick = (comment: CommentType) => {
-    // Saat mengedit, kita hanya mengambil teks utama, menghapus markdown lampiran lama
     const textWithoutAttachments = comment.text?.replace(/\n\n\*\*Attachments:\*\*[\s\S]*$/, '').trim() || '';
     setEditingCommentId(comment.id);
     setEditedText(textWithoutAttachments);
@@ -78,7 +89,7 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
     setNewAttachments(prev => prev.filter((_, i) => i !== index));
   };
 
-  const comments = project.comments || [];
+  const comments = (project.comments || []) as CommentWithReactions[];
   const tasks = project.tasks || [];
 
   return (
@@ -93,18 +104,22 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
             const ticketTask = isTicket ? tasks.find((t) => t.originTicketId === comment.id) : null;
             const canManageComment = currentUser && (comment.author.id === currentUser.id || currentUser.role === 'admin' || currentUser.role === 'master admin');
             
-            // Mengambil teks utama tanpa markdown lampiran
             const textWithoutAttachments = comment.text?.replace(/\n\n\*\*Attachments:\*\*[\s\S]*$/, '').trim() || '';
             const mainText = textWithoutAttachments;
             
             const attachmentsData = comment.attachments_jsonb;
-            const attachments: any[] = Array.isArray(attachmentsData)
-              ? attachmentsData
-              : attachmentsData
-              ? [attachmentsData]
-              : [];
+            const attachments: any[] = Array.isArray(attachmentsData) ? attachmentsData : attachmentsData ? [attachmentsData] : [];
 
             const isThisCommentBeingUpdated = isUpdatingComment && updatedCommentId === comment.id;
+
+            const groupedReactions = (comment.reactions || []).reduce((acc, reaction) => {
+              if (!acc[reaction.emoji]) {
+                acc[reaction.emoji] = { users: [], userIds: [] };
+              }
+              acc[reaction.emoji].users.push(reaction.user_name);
+              acc[reaction.emoji].userIds.push(reaction.user_id);
+              return acc;
+            }, {} as Record<string, { users: string[], userIds: string[] }>);
 
             return (
               <div key={comment.id} className="flex items-start space-x-4">
@@ -216,52 +231,76 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
                           </ReactMarkdown>
                         </div>
                       )}
-                      {(isTicket || attachments.length > 0) && (
-                        <div className="mt-2 flex items-center gap-4">
-                          {isTicket && (
-                            <div>
-                              {ticketTask ? (
-                                <Link to={`/projects/${project.slug}?tab=tasks&task=${ticketTask.id}`}>
-                                  <Badge variant={ticketTask.completed ? 'default' : 'destructive'} className={ticketTask.completed ? 'bg-green-600 hover:bg-green-700' : ''}>
-                                    <Ticket className="h-3 w-3 mr-1" />
-                                    {ticketTask.completed ? 'Done' : 'Ticket'}
-                                  </Badge>
-                                </Link>
-                              ) : isThisCommentBeingUpdated ? (
-                                <Badge variant="outline">
-                                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                                  Creating task...
-                                </Badge>
-                              ) : (
-                                <Badge variant="destructive">
+                      <div className="mt-2 flex items-center gap-4 flex-wrap">
+                        {isTicket && (
+                          <div>
+                            {ticketTask ? (
+                              <Link to={`/projects/${project.slug}?tab=tasks&task=${ticketTask.id}`}>
+                                <Badge variant={ticketTask.completed ? 'default' : 'destructive'} className={ticketTask.completed ? 'bg-green-600 hover:bg-green-700' : ''}>
                                   <Ticket className="h-3 w-3 mr-1" />
-                                  Ticket
+                                  {ticketTask.completed ? 'Done' : 'Ticket'}
                                 </Badge>
-                              )}
-                            </div>
-                          )}
-                          {attachments.length > 0 && (
-                            <Dialog>
-                              <DialogTrigger asChild>
-                                <Button variant="ghost" size="sm" className="flex items-center gap-1 text-xs text-muted-foreground h-auto p-1">
-                                  <Paperclip className="h-3 w-3" />
-                                  <span>{attachments.length}</span>
-                                </Button>
-                              </DialogTrigger>
-                              <DialogContent>
-                                <DialogHeader>
-                                  <DialogTitle>Attachments ({attachments.length})</DialogTitle>
-                                </DialogHeader>
-                                <div className="space-y-2 max-h-96 overflow-y-auto pr-2">
-                                  {attachments.map((file, index) => (
-                                    <CommentAttachmentItem key={file.url || file.file_url || index} file={file} />
-                                  ))}
-                                </div>
-                              </DialogContent>
-                            </Dialog>
-                          )}
-                        </div>
-                      )}
+                              </Link>
+                            ) : isThisCommentBeingUpdated ? (
+                              <Badge variant="outline">
+                                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                Creating task...
+                              </Badge>
+                            ) : (
+                              <Badge variant="destructive">
+                                <Ticket className="h-3 w-3 mr-1" />
+                                Ticket
+                              </Badge>
+                            )}
+                          </div>
+                        )}
+                        {attachments.length > 0 && (
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <Button variant="ghost" size="sm" className="flex items-center gap-1 text-xs text-muted-foreground h-auto p-1">
+                                <Paperclip className="h-3 w-3" />
+                                <span>{attachments.length}</span>
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                              <DialogHeader>
+                                <DialogTitle>Attachments ({attachments.length})</DialogTitle>
+                              </DialogHeader>
+                              <div className="space-y-2 max-h-96 overflow-y-auto pr-2">
+                                {attachments.map((file, index) => (
+                                  <CommentAttachmentItem key={file.url || file.file_url || index} file={file} />
+                                ))}
+                              </div>
+                            </DialogContent>
+                          </Dialog>
+                        )}
+                        {(comment.reactions && comment.reactions.length > 0) && (
+                          <div className="flex flex-wrap items-center gap-1">
+                            {Object.entries(groupedReactions).map(([emoji, { users, userIds }]) => {
+                                const hasReacted = currentUser ? userIds.includes(currentUser.id) : false;
+                                return (
+                                    <TooltipProvider key={emoji}>
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <Badge
+                                                    variant={hasReacted ? 'default' : 'secondary'}
+                                                    className="cursor-pointer"
+                                                    onClick={() => onToggleCommentReaction(comment.id, emoji)}
+                                                >
+                                                    {emoji} {users.length}
+                                                </Badge>
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                                <p>{users.join(', ')}</p>
+                                            </TooltipContent>
+                                        </Tooltip>
+                                    </TooltipProvider>
+                                );
+                            })}
+                          </div>
+                        )}
+                        <CommentReactionPicker onSelect={(emoji) => onToggleCommentReaction(comment.id, emoji)} />
+                      </div>
                     </>
                   )}
                 </div>
