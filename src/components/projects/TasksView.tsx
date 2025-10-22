@@ -201,7 +201,7 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
                                   <Badge key={tag.id} variant="outline" style={{ borderColor: tag.color, color: tag.color }}>{tag.name}</Badge>
                                 ))}
                               </div>
-                              <div className="flex gap-1 items-center">
+                              <div className="flex gap-1 items-center mr-1.5">
                                 {(task.originTicketId || task.tags?.some(t => t.name === 'Ticket')) && (
                                   <TooltipProvider>
                                     <Tooltip>
