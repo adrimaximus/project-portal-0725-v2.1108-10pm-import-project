@@ -16,11 +16,13 @@ const fetchProject = async (slug: string): Promise<Project | null> => {
   }
   if (!projectData) return null;
 
+  const projectDataAsAny = projectData as any;
+
   // Fetch linked people (clients)
   const { data: peopleLinks, error: peopleError } = await supabase
     .from('people_projects')
     .select('people(*)')
-    .eq('project_id', (projectData as any).id);
+    .eq('project_id', projectDataAsAny.id);
 
   if (peopleError) {
     console.error("Error fetching linked people:", peopleError);
@@ -40,7 +42,7 @@ const fetchProject = async (slug: string): Promise<Project | null> => {
     return value;
   };
 
-  const parsedComments = (safeParse(projectData.comments) || []).map((comment: any) => ({
+  const parsedComments = (safeParse(projectDataAsAny.comments) || []).map((comment: any) => ({
     ...comment,
     // The RPC already builds the author object, so we don't need to parse it.
     // But let's ensure attachments_jsonb is an array.
@@ -48,14 +50,14 @@ const fetchProject = async (slug: string): Promise<Project | null> => {
   }));
 
   return { 
-    ...(projectData as any), 
+    ...(projectDataAsAny), 
     people,
     comments: parsedComments,
-    assignedTo: safeParse(projectData.assignedTo),
-    tasks: safeParse(projectData.tasks),
-    briefFiles: safeParse(projectData.briefFiles),
-    activities: safeParse(projectData.activities),
-    tags: safeParse(projectData.tags),
+    assignedTo: safeParse(projectDataAsAny.assignedTo),
+    tasks: safeParse(projectDataAsAny.tasks),
+    briefFiles: safeParse(projectDataAsAny.briefFiles),
+    activities: safeParse(projectDataAsAny.activities),
+    tags: safeParse(projectDataAsAny.tags),
   } as Project | null;
 };
 
