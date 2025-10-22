@@ -50,20 +50,17 @@ const ProjectTasks = ({ tasks, onAddTask, onEditTask, onDeleteTask, onToggleTask
       </div>
       <TooltipProvider>
         {tasks.map((task) => {
-          const allAttachments: TaskAttachment[] = [...(task.attachments || [])];
-          if (task.originTicketId && task.attachment_url) {
-            if (!allAttachments.some(att => att.file_url === task.attachment_url)) {
-              allAttachments.unshift({
-                id: `origin-${task.originTicketId}`,
-                file_name: task.attachment_name || 'Ticket Attachment',
-                file_url: task.attachment_url,
-                file_type: null,
-                file_size: 0,
-                storage_path: '',
-                created_at: task.created_at,
-              });
-            }
+          // 1. Ambil lampiran tugas langsung
+          let allAttachments: TaskAttachment[] = [...(task.attachments || [])];
+          
+          // 2. Tambahkan lampiran dari tiket asal (jika ada)
+          if (task.ticket_attachments && task.ticket_attachments.length > 0) {
+            const uniqueTicketAttachments = task.ticket_attachments.filter(
+              (ticketAtt) => !allAttachments.some((att) => att.file_url === ticketAtt.file_url)
+            );
+            allAttachments = [...uniqueTicketAttachments, ...allAttachments];
           }
+          
           const attachmentCount = allAttachments.length;
           const hasAttachments = attachmentCount > 0;
 
@@ -98,10 +95,10 @@ const ProjectTasks = ({ tasks, onAddTask, onEditTask, onDeleteTask, onToggleTask
                           {allAttachments.map((att) => (
                             <div key={att.id} className="flex items-center justify-between p-2 rounded-md border">
                               <div className="flex items-center gap-2 min-w-0">
-                                <FileIcon className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                                <FileIcon fileType={att.file_type || ''} className="h-5 w-5 text-muted-foreground flex-shrink-0" />
                                 <div className="min-w-0">
                                   <p className="text-sm font-medium truncate" title={att.file_name}>{att.file_name}</p>
-                                  {att.file_size && att.file_size > 0 && <p className="text-xs text-muted-foreground">{formatBytes(att.file_size)}</p>}
+                                  {att.file_size != null && att.file_size > 0 && <p className="text-xs text-muted-foreground">{formatBytes(att.file_size)}</p>}
                                 </div>
                               </div>
                               <div className="flex items-center gap-1">

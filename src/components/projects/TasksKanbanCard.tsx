@@ -38,23 +38,18 @@ const TasksKanbanCard = ({ task, onEdit, onDelete }: TasksKanbanCardProps) => {
     e.stopPropagation();
   };
 
-  const renderAttachments = () => {
-    const allAttachments: TaskAttachment[] = [...(task.attachments || [])];
-
-    if (task.originTicketId && task.attachment_url) {
-      if (!allAttachments.some(att => att.file_url === task.attachment_url)) {
-        allAttachments.unshift({
-          id: `origin-${task.originTicketId}`,
-          file_name: task.attachment_name || 'Ticket Attachment',
-          file_url: task.attachment_url,
-          file_type: null,
-          file_size: 0,
-          storage_path: '',
-          created_at: task.created_at,
-        });
-      }
+  const allAttachments = useMemo(() => {
+    let attachments: TaskAttachment[] = [...(task.attachments || [])];
+    if (task.ticket_attachments && task.ticket_attachments.length > 0) {
+      const uniqueTicketAttachments = task.ticket_attachments.filter(
+        (ticketAtt) => !attachments.some((att) => att.file_url === ticketAtt.file_url)
+      );
+      attachments = [...uniqueTicketAttachments, ...attachments];
     }
+    return attachments;
+  }, [task.attachments, task.ticket_attachments]);
 
+  const renderAttachments = () => {
     if (allAttachments.length === 0) return null;
 
     return (

@@ -129,6 +129,7 @@ export type Task = {
   status: TaskStatus;
   tags: Tag[];
   attachments?: TaskAttachment[];
+  ticket_attachments?: TaskAttachment[]; // NEW: Attachments from the origin comment
   originTicketId?: string | null;
   origin_ticket_id?: string | null;
   attachment_url?: string | null;
