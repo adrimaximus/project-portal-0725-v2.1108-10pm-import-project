@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Task as ProjectTask, TaskAttachment } from "@/types";
+import { Task as ProjectTask, TaskAttachment, Reaction, User } from "@/types";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -21,6 +21,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import EmojiPicker from "emoji-picker-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/hooks/useSession";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 interface TasksViewProps {
   tasks: ProjectTask[];
@@ -47,10 +49,16 @@ const aggregateAttachments = (task: ProjectTask): TaskAttachment[] => {
   return attachments;
 };
 
-const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion, isToggling, sortConfig, requestSort }: TasksViewProps) => {
+const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTaskCompletion, isToggling, sortConfig, requestSort }: TasksViewProps) => {
   const [selectedTask, setSelectedTask] = useState<ProjectTask | null>(null);
   const { user } = useSession();
+  const [tasks, setTasks] = useState<ProjectTask[]>(tasksProp);
+  const queryClient = useQueryClient();
   const commonEmojis = ['👍', '❤️', '😂', '🎉', '🙏', '😢'];
+
+  useEffect(() => {
+    setTasks(tasksProp);
+  }, [tasksProp]);
 
   useEffect(() => {
     if (selectedTask) {
@@ -62,6 +70,35 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
   }, [tasks, selectedTask?.id]);
 
   const handleEmojiSelect = async (emoji: string, taskId: string) => {
+    if (!user) return;
+
+    const previousTasks = tasks;
+    setTasks(currentTasks =>
+      currentTasks.map(task => {
+        if (task.id === taskId) {
+          const newReactions: Reaction[] = [...(task.reactions || [])];
+          const existingReactionIndex = newReactions.findIndex(r => r.user_id === user.id);
+
+          if (existingReactionIndex > -1) {
+            if (newReactions[existingReactionIndex].emoji === emoji) {
+              newReactions.splice(existingReactionIndex, 1);
+            } else {
+              newReactions[existingReactionIndex] = { ...newReactions[existingReactionIndex], emoji };
+            }
+          } else {
+            newReactions.push({
+              id: `temp-${Date.now()}`,
+              emoji,
+              user_id: user.id,
+              user_name: `${user.user_metadata.first_name || ''} ${user.user_metadata.last_name || ''}`.trim() || user.email || 'You',
+            });
+          }
+          return { ...task, reactions: newReactions };
+        }
+        return task;
+      })
+    );
+
     const { error } = await supabase.rpc('toggle_task_reaction', {
       p_task_id: taskId,
       p_emoji: emoji,
@@ -69,9 +106,14 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
 
     if (error) {
       console.error("Error toggling reaction:", error);
-      // In a real app, you'd show a toast notification here.
+      toast.error("Failed to update reaction.");
+      setTasks(previousTasks); // Rollback on error
+    } else {
+      // Invalidate queries to sync with the database in the background
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['project'] });
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
     }
-    // Assuming the parent component will refetch data upon database change (e.g., via Supabase realtime).
   };
 
   if (isLoading) {
