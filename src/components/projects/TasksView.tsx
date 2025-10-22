@@ -50,14 +50,26 @@ import {
 import TaskDetailCard from './TaskDetailCard';
 
 interface TasksViewProps {
-  project: Project;
   tasks: Task[];
-  refetchTasks: () => void;
-  profiles: User[];
-  tags: Tag[];
+  isLoading: boolean;
+  onEdit: (task: Task) => void;
+  onDelete: (taskId: string) => void;
+  onToggleTaskCompletion: (task: Task, completed: boolean) => void;
+  isToggling: boolean;
+  sortConfig: { key: string; direction: 'asc' | 'desc' };
+  requestSort: (key: string) => void;
 }
 
-const TasksView = ({ project, tasks, refetchTasks, profiles, tags }: TasksViewProps) => {
+const TasksView = ({
+  tasks,
+  isLoading,
+  onEdit,
+  onDelete,
+  onToggleTaskCompletion,
+  isToggling,
+  sortConfig,
+  requestSort,
+}: TasksViewProps) => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
