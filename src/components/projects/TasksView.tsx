@@ -195,23 +195,27 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
                                 </Tooltip>
                               </TooltipProvider>
                             )}
-                            <div className="flex gap-1 flex-wrap mt-2">
-                              {(task.originTicketId || task.tags?.some(t => t.name === 'Ticket')) && (
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Ticket className={`h-4 w-4 flex-shrink-0 ${task.completed ? 'text-green-500' : 'text-red-500'}`} />
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      <p>This is a ticket</p>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                              )}
-                              {renderAttachments(task)}
-                              {task.tags?.map(tag => (
-                                <Badge key={tag.id} variant="outline" style={{ borderColor: tag.color, color: tag.color }}>{tag.name}</Badge>
-                              ))}
+                            <div className="flex justify-between items-center mt-2">
+                              <div className="flex gap-1 flex-wrap">
+                                {task.tags?.map(tag => (
+                                  <Badge key={tag.id} variant="outline" style={{ borderColor: tag.color, color: tag.color }}>{tag.name}</Badge>
+                                ))}
+                              </div>
+                              <div className="flex gap-1 items-center">
+                                {(task.originTicketId || task.tags?.some(t => t.name === 'Ticket')) && (
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Ticket className={`h-4 w-4 flex-shrink-0 ${task.completed ? 'text-green-500' : 'text-red-500'}`} />
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p>This is a ticket</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                )}
+                                {renderAttachments(task)}
+                              </div>
                             </div>
                           </div>
                         </DialogTrigger>
