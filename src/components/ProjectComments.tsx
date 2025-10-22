@@ -8,14 +8,15 @@ import { getInitials, generatePastelColor, parseMentions, formatMentionsForDispl
 import { formatDistanceToNow } from 'date-fns';
 import CommentInput from "./CommentInput";
 import ReactMarkdown from "react-markdown";
-import { Link } from "react-router-dom";
 import remarkGfm from "remark-gfm";
+import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Textarea } from "@/components/ui/textarea";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import FileIcon from './FileIcon';
+import CommentAttachmentItem from './CommentAttachmentItem';
 
 interface ProjectCommentsProps {
   project: Project;
@@ -92,7 +93,8 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
             const canManageComment = currentUser && (comment.author.id === currentUser.id || currentUser.role === 'admin' || currentUser.role === 'master admin');
             
             // Mengambil teks utama tanpa markdown lampiran
-            const mainText = comment.text?.replace(/\n\n\*\*Attachments:\*\*[\s\S]*$/, '').trim() || '';
+            const textWithoutAttachments = comment.text?.replace(/\n\n\*\*Attachments:\*\*[\s\S]*$/, '').trim() || '';
+            const mainText = textWithoutAttachments;
             const attachments: ProjectFile[] = comment.attachments_jsonb || [];
 
             const isThisCommentBeingUpdated = isUpdatingComment && updatedCommentId === comment.id;
@@ -208,30 +210,11 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
                         </div>
                       )}
                       {attachments.length > 0 && (
-                        <div className="mt-4">
+                        <div className="mt-4 space-y-2">
                           <h4 className="font-semibold text-sm mb-2">Files Attached</h4>
-                          <div className="space-y-2">
-                            {attachments.map((file, index) => (
-                              <div key={index} className="flex items-center justify-between p-2 rounded-md border bg-card">
-                                <div className="flex items-center gap-2 truncate min-w-0">
-                                  <FileIcon fileType={file.type || ''} className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                                  <span className="text-sm truncate">{file.name}</span>
-                                </div>
-                                <div className="flex items-center gap-1 flex-shrink-0">
-                                  <a href={file.url} target="_blank" rel="noopener noreferrer">
-                                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                                      <Eye className="h-4 w-4" />
-                                    </Button>
-                                  </a>
-                                  <a href={file.url} download={file.name}>
-                                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                                      <Download className="h-4 w-4" />
-                                    </Button>
-                                  </a>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
+                          {attachments.map((file) => (
+                            <CommentAttachmentItem key={file.id} file={file} />
+                          ))}
                         </div>
                       )}
                       {isTicket && (
