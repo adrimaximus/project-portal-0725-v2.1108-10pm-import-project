@@ -1,26 +1,36 @@
+/* Default (Light Mode) */
 .chatgpt-text {
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   font-size: 15px;
   line-height: 1.7;
   letter-spacing: 0.01em;
-  color: #e6e6e6;
+  color: #6E6257; /* Light mode text color */
   transition: color 0.3s ease, background-color 0.3s ease;
 }
 
-/* Light mode auto switch */
-@media (prefers-color-scheme: light) {
-  .chatgpt-text {
-    color: #6E6257;
-  }
-  .chatgpt-text h1,
-  .chatgpt-text h2,
-  .chatgpt-text h3,
-  .chatgpt-text h4,
-  .chatgpt-text h5,
-  .chatgpt-text h6 {
-    color: #2E2A25;
-  }
+.chatgpt-text h1,
+.chatgpt-text h2,
+.chatgpt-text h3,
+.chatgpt-text h4,
+.chatgpt-text h5,
+.chatgpt-text h6 {
+  color: #2E2A25; /* Light mode heading color */
 }
+
+/* Dark Mode */
+.dark .chatgpt-text {
+  color: #e6e6e6; /* Dark mode text color */
+}
+
+.dark .chatgpt-text h1,
+.dark .chatgpt-text h2,
+.dark .chatgpt-text h3,
+.dark .chatgpt-text h4,
+.dark .chatgpt-text h5,
+.dark .chatgpt-text h6 {
+  color: #e6e6e6; /* Dark mode heading color */
+}
+
 
 /* Paragraph spacing */
 .chatgpt-text p {
@@ -53,7 +63,6 @@
   line-height: 1.6;
 }
 
-/* Pastikan bullet/nomor tidak hilang */
 .chatgpt-text ul {
   list-style-type: disc;
 }
@@ -62,7 +71,6 @@
   list-style-type: decimal;
 }
 
-/* Jika kamu punya nested list */
 .chatgpt-text ul ul,
 .chatgpt-text ol ol {
   margin-top: 0.3em;
@@ -70,7 +78,6 @@
   list-style-type: circle;
 }
 
-/* Kadang Tailwind atau CSS reset menonaktifkan marker */
 .chatgpt-text li {
   display: list-item;
   margin-bottom: 0.4em;
@@ -85,53 +92,49 @@
 
 .chatgpt-text th,
 .chatgpt-text td {
-  border: 1px solid rgba(255, 255, 255, 0.1);
   padding: 0.6em 0.8em;
   text-align: left;
+  border: 1px solid rgba(0, 0, 0, 0.1); /* Light mode border */
 }
 
 .chatgpt-text th {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(0, 0, 0, 0.04);
   font-weight: 600;
+  color: #2E2A25; /* Light mode table header text */
 }
 
-/* Light mode tables */
-@media (prefers-color-scheme: light) {
-  .chatgpt-text th,
-  .chatgpt-text td {
-    border-color: rgba(0, 0, 0, 0.1);
-  }
-  .chatgpt-text th {
-    background: rgba(0, 0, 0, 0.04);
-    color: #2E2A25;
-  }
+.dark .chatgpt-text th,
+.dark .chatgpt-text td {
+  border: 1px solid rgba(255, 255, 255, 0.1); /* Dark mode border */
 }
+
+.dark .chatgpt-text th {
+  background: rgba(255, 255, 255, 0.05);
+  color: #e6e6e6; /* Dark mode table header text */
+}
+
 
 /* Code highlight */
 .chatgpt-text code {
-  background: rgba(255, 255, 255, 0.08);
   padding: 0.15em 0.4em;
   border-radius: 4px;
   font-family: "SF Mono", Consolas, monospace;
   font-size: 0.95em;
+  background: rgba(0, 0, 0, 0.05); /* Light mode background */
 }
 
-@media (prefers-color-scheme: light) {
-  .chatgpt-text code {
-    background: rgba(0, 0, 0, 0.05);
-  }
+.dark .chatgpt-text code {
+  background: rgba(255, 255, 255, 0.08); /* Dark mode background */
 }
 
 /* Container wrapper */
 .chatgpt-text-container {
-  background: #1a1a1a;
   border-radius: 12px;
   padding: 16px 20px;
   transition: background-color 0.3s ease;
+  background: #ffffff; /* Light mode background */
 }
 
-@media (prefers-color-scheme: light) {
-  .chatgpt-text-container {
-    background: #ffffff;
-  }
+.dark .chatgpt-text-container {
+  background: #1a1a1a; /* Dark mode background */
 }
