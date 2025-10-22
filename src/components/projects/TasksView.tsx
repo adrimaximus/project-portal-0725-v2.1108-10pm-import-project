@@ -168,7 +168,7 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
                           />
                         </div>
                         <DialogTrigger asChild>
-                          <div className="flex flex-col cursor-pointer" onClick={() => setSelectedTask(task)}>
+                          <div className="flex flex-col cursor-pointer text-sm md:text-base" onClick={() => setSelectedTask(task)}>
                             <div className="flex items-center gap-2">
                               <div className={`${task.completed ? 'line-through text-muted-foreground' : ''}`}>
                                 <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ p: 'span' }}>
@@ -254,7 +254,7 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
                           <TooltipProvider key={user.id}>
                             <Tooltip>
                               <TooltipTrigger>
-                                <Avatar className="h-8 w-8 border-2 border-background">
+                                <Avatar className="h-6 w-6 md:h-8 md:w-8 border-2 border-background">
                                   <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
                                   <AvatarFallback style={generatePastelColor(user.id)}>
                                     {getInitials([user.first_name, user.last_name].filter(Boolean).join(' '), user.email || undefined)}
