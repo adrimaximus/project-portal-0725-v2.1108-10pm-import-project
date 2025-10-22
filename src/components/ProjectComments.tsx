@@ -240,7 +240,7 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
                               )}
                             </div>
                           )}
-                          {attachments.length > 0 && !isTicket && (
+                          {attachments.length > 0 && (
                             <div className="flex items-center gap-1 text-xs text-muted-foreground">
                               <Paperclip className="h-3 w-3" />
                               <span>{attachments.length}</span>
