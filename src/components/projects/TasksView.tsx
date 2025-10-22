@@ -297,19 +297,21 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
                                             <TooltipProvider key={emoji}>
                                                 <Tooltip>
                                                     <TooltipTrigger asChild>
-                                                        <Badge
-                                                            variant={userHasReacted ? "default" : "outline"}
-                                                            className={cn(
-                                                                "cursor-pointer",
-                                                                userHasReacted && "bg-[#DCE5DD] text-black border-[#A3BCA7] hover:bg-[#DCE5DD]/90 dark:bg-[#1E2A21] dark:border-[#3A523E] dark:text-white dark:hover:bg-[#1E2A21]/90"
-                                                            )}
+                                                        <button
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
                                                                 handleEmojiSelect(emoji, task.id);
                                                             }}
+                                                            className={cn(
+                                                                "px-1.5 py-0.5 rounded-full text-xs flex items-center gap-1 transition-colors border",
+                                                                userHasReacted
+                                                                ? "bg-primary/20 border-primary/50"
+                                                                : "bg-muted hover:bg-muted/80"
+                                                            )}
                                                         >
-                                                            {emoji} {users.length}
-                                                        </Badge>
+                                                            <span>{emoji}</span>
+                                                            <span className="font-medium text-xs">{users.length}</span>
+                                                        </button>
                                                     </TooltipTrigger>
                                                     <TooltipContent>
                                                         <p>{users.join(', ')}</p>
