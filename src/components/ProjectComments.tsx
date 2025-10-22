@@ -110,13 +110,7 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
                     <p className="font-semibold">{fullName}</p>
-                    <div className="flex items-center gap-2">
-                      {attachments.length > 0 && (
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <Paperclip className="h-3 w-3" />
-                          <span>{attachments.length}</span>
-                        </div>
-                      )}
+                    <div className="flex items-center gap-1">
                       <span className="text-xs text-muted-foreground">
                         {formatDistanceToNow(new Date(comment.timestamp), { addSuffix: true })}
                       </span>
@@ -222,25 +216,35 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
                           ))}
                         </div>
                       )}
-                      {isTicket && (
-                        <div className="mt-2">
-                          {ticketTask ? (
-                            <Link to={`/projects/${project.slug}?tab=tasks&task=${ticketTask.id}`}>
-                              <Badge variant={ticketTask.completed ? 'default' : 'destructive'} className={ticketTask.completed ? 'bg-green-600 hover:bg-green-700' : ''}>
-                                <Ticket className="h-3 w-3 mr-1" />
-                                {ticketTask.completed ? 'Done' : 'Ticket'}
-                              </Badge>
-                            </Link>
-                          ) : isThisCommentBeingUpdated ? (
-                            <Badge variant="outline">
-                              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                              Creating task...
-                            </Badge>
-                          ) : (
-                            <Badge variant="destructive">
-                              <Ticket className="h-3 w-3 mr-1" />
-                              Ticket
-                            </Badge>
+                      {(isTicket || attachments.length > 0) && (
+                        <div className="mt-2 flex items-center gap-4">
+                          {isTicket && (
+                            <div>
+                              {ticketTask ? (
+                                <Link to={`/projects/${project.slug}?tab=tasks&task=${ticketTask.id}`}>
+                                  <Badge variant={ticketTask.completed ? 'default' : 'destructive'} className={ticketTask.completed ? 'bg-green-600 hover:bg-green-700' : ''}>
+                                    <Ticket className="h-3 w-3 mr-1" />
+                                    {ticketTask.completed ? 'Done' : 'Ticket'}
+                                  </Badge>
+                                </Link>
+                              ) : isThisCommentBeingUpdated ? (
+                                <Badge variant="outline">
+                                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                  Creating task...
+                                </Badge>
+                              ) : (
+                                <Badge variant="destructive">
+                                  <Ticket className="h-3 w-3 mr-1" />
+                                  Ticket
+                                </Badge>
+                              )}
+                            </div>
+                          )}
+                          {attachments.length > 0 && !isTicket && (
+                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                              <Paperclip className="h-3 w-3" />
+                              <span>{attachments.length}</span>
+                            </div>
                           )}
                         </div>
                       )}
