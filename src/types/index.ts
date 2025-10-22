@@ -227,6 +227,7 @@ export interface Project {
   payment_terms?: any[];
   kanban_order?: number;
   payment_kanban_order?: number;
+  reactions?: Reaction[];
 }
 
 export interface Invoice {
