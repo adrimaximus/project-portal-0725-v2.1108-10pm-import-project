@@ -170,10 +170,6 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
                         <DialogTrigger asChild>
                           <div className="flex flex-col cursor-pointer" onClick={() => setSelectedTask(task)}>
                             <div className="flex items-center gap-2">
-                              {(task.originTicketId || task.tags?.some(t => t.name === 'Ticket')) && <Ticket className={`h-4 w-4 flex-shrink-0 ${task.completed ? 'text-green-500' : 'text-red-500'}`} />}
-                              <div onClick={(e) => e.stopPropagation()}>
-                                {renderAttachments(task)}
-                              </div>
                               <div className={`${task.completed ? 'line-through text-muted-foreground' : ''}`}>
                                 <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ p: 'span' }}>
                                   {formatTaskText(task.title)}
@@ -200,6 +196,19 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
                               </TooltipProvider>
                             )}
                             <div className="flex gap-1 flex-wrap mt-2">
+                              {(task.originTicketId || task.tags?.some(t => t.name === 'Ticket')) && (
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Ticket className={`h-4 w-4 flex-shrink-0 ${task.completed ? 'text-green-500' : 'text-red-500'}`} />
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>This is a ticket</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              )}
+                              {renderAttachments(task)}
                               {task.tags?.map(tag => (
                                 <Badge key={tag.id} variant="outline" style={{ borderColor: tag.color, color: tag.color }}>{tag.name}</Badge>
                               ))}
