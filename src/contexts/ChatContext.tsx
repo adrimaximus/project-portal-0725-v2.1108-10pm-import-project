@@ -327,41 +327,100 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     onError: (error: any) => toast.error("Failed to leave group.", { description: error.message }),
   });
 
-  const toggleReactionMutation = useMutation({
-    mutationFn: ({ messageId, emoji }: { messageId: string, emoji: string }) => {
+  const toggleReactionMutation = useMutation<
+    void,
+    Error,
+    { messageId: string; emoji: string },
+    { previousDataMap: Map<any[], any> }
+  >({
+    mutationFn: async ({ messageId, emoji }) => {
       if (!currentUser) throw new Error("User not authenticated");
       return chatApi.toggleReaction(messageId, emoji, currentUser.id);
     },
     onMutate: async ({ messageId, emoji }) => {
       await queryClient.cancelQueries({ queryKey: ['messages', selectedConversationId] });
-      const previousMessages = queryClient.getQueryData<Message[]>(['messages', selectedConversationId]);
+      await queryClient.cancelQueries({ queryKey: ['project'] });
+      await queryClient.cancelQueries({ queryKey: ['projects'] });
+      await queryClient.cancelQueries({ queryKey: ['tasks'] });
 
-      queryClient.setQueryData<Message[]>(['messages', selectedConversationId], (old) => {
-        if (!old) return [];
-        return old.map(message => {
+      const previousDataMap = new Map();
+      if (!currentUser) return { previousDataMap };
+
+      const optimisticallyUpdateReactions = (data: any) => {
+        if (!data) return data;
+
+        const updateMessageReactions = (message: Message): Message => {
           if (message.id === messageId) {
-            const existingReactionIndex = (message.reactions || []).findIndex(r => r.emoji === emoji && r.user_id === currentUser!.id);
-            let newReactions: Reaction[];
+            const newReactions: Reaction[] = message.reactions ? [...message.reactions] : [];
+            const existingReactionIndex = newReactions.findIndex(r => r.user_id === currentUser!.id);
+
             if (existingReactionIndex > -1) {
-              newReactions = (message.reactions || []).filter((_, index) => index !== existingReactionIndex);
+              const existingReaction = newReactions[existingReactionIndex];
+              if (existingReaction.emoji === emoji) {
+                newReactions.splice(existingReactionIndex, 1);
+              } else {
+                newReactions[existingReactionIndex] = { ...existingReaction, emoji };
+              }
             } else {
-              newReactions = [...(message.reactions || []), { emoji, user_id: currentUser!.id, user_name: currentUser!.name || '' }];
+              newReactions.push({
+                id: uuidv4(),
+                emoji,
+                user_id: currentUser!.id,
+                user_name: currentUser!.name || '',
+              });
             }
             return { ...message, reactions: newReactions };
           }
           return message;
-        });
-      });
-      return { previousMessages };
+        };
+
+        if (Array.isArray(data) && data.length > 0 && 'sender' in data[0]) { // Message[]
+          return data.map(updateMessageReactions);
+        }
+        if (Array.isArray(data) && data.length > 0 && 'comments' in data[0]) { // Project[]
+          return data.map(project => ({
+            ...project,
+            comments: (project.comments || []).map(updateMessageReactions)
+          }));
+        }
+        if (data.comments && Array.isArray(data.comments)) { // Single Project
+          return {
+            ...data,
+            comments: data.comments.map(updateMessageReactions),
+          };
+        }
+        return data;
+      };
+
+      const queryCache = queryClient.getQueryCache();
+      const relevantQueryKeys = queryCache.findAll()
+        .map(q => q.queryKey)
+        .filter(key => ['messages', 'project', 'projects', 'tasks'].includes(key[0] as string));
+
+      for (const queryKey of relevantQueryKeys) {
+        const previousData = queryClient.getQueryData(queryKey);
+        if (previousData) {
+          previousDataMap.set(queryKey, previousData);
+          const updatedData = optimisticallyUpdateReactions(previousData);
+          queryClient.setQueryData(queryKey, updatedData);
+        }
+      }
+
+      return { previousDataMap };
     },
     onError: (err, variables, context) => {
-      if (context?.previousMessages) {
-        queryClient.setQueryData(['messages', selectedConversationId], context.previousMessages);
+      if (context?.previousDataMap) {
+        for (const [queryKey, previousData] of context.previousDataMap.entries()) {
+          queryClient.setQueryData(queryKey, previousData);
+        }
       }
       toast.error("Failed to update reaction.");
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['messages', selectedConversationId] });
+      queryClient.invalidateQueries({ queryKey: ['project'] });
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
     },
   });
 
