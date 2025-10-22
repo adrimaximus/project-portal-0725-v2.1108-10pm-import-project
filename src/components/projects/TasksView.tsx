@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Task as ProjectTask, TaskAttachment, Reaction, User } from "@/types";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -55,6 +55,22 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
   const [tasks, setTasks] = useState<ProjectTask[]>(tasksProp);
   const queryClient = useQueryClient();
   const commonEmojis = ['👍', '❤️', '😂', '🎉', '🙏', '😢'];
+  const initialSortSet = useRef(false);
+
+  useEffect(() => {
+    if (!initialSortSet.current && tasksProp.length > 0) {
+      // Default sort: updated_at desc
+      if (sortConfig.key !== 'updated_at') {
+        requestSort('updated_at'); // This will trigger a re-render with asc
+      } else if (sortConfig.direction !== 'desc') {
+        requestSort('updated_at'); // This will toggle to desc
+        initialSortSet.current = true;
+      } else {
+        // Already sorted correctly
+        initialSortSet.current = true;
+      }
+    }
+  }, [tasksProp, sortConfig, requestSort]);
 
   useEffect(() => {
     setTasks(tasksProp);
