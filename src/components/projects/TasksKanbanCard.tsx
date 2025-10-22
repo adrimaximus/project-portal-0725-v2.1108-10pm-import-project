@@ -159,7 +159,7 @@ const TasksKanbanCard = ({ task, onEdit, onDelete }: TasksKanbanCardProps) => {
             }
           </div>
           <div className="flex items-center gap-2">
-            {(task.originTicketId || task.tags?.some(t => t.name === 'Ticket')) && (
+            {(task.originTicketId || task.origin_ticket_id || task.tags?.some(t => t.name === 'Ticket')) && (
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>

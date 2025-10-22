@@ -202,7 +202,7 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
                                 ))}
                               </div>
                               <div className="flex gap-1 items-center mr-1.5">
-                                {(task.originTicketId || task.tags?.some(t => t.name === 'Ticket')) && (
+                                {(task.originTicketId || task.origin_ticket_id || task.tags?.some(t => t.name === 'Ticket')) && (
                                   <TooltipProvider>
                                     <Tooltip>
                                       <TooltipTrigger asChild>
