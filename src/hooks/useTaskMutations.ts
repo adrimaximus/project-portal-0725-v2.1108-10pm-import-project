@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Task, TaskStatus } from '@/types';
+import { Task, TaskStatus, Reaction } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 
 export type UpsertTaskPayload = {
@@ -179,19 +179,95 @@ export const useTaskMutations = (refetch?: () => void) => {
     },
   });
 
-  const { mutate: toggleTaskReaction } = useMutation({
-    mutationFn: async ({ taskId, emoji }: { taskId: string, emoji: string }) => {
+  const { mutate: toggleTaskReaction } = useMutation<
+    void,
+    Error,
+    { taskId: string; emoji: string },
+    { previousDataMap: Map<any[], any> }
+  >({
+    mutationFn: async ({ taskId, emoji }) => {
       const { error } = await supabase.rpc('toggle_task_reaction', {
         p_task_id: taskId,
         p_emoji: emoji,
       });
       if (error) throw error;
     },
-    onSuccess: () => {
-      invalidateQueries();
+    onMutate: async ({ taskId, emoji }) => {
+      await queryClient.cancelQueries({ queryKey: ['projects'] });
+      await queryClient.cancelQueries({ queryKey: ['project'] });
+      await queryClient.cancelQueries({ queryKey: ['tasks'] });
+
+      const previousDataMap = new Map();
+      if (!user) return { previousDataMap };
+
+      const optimisticallyUpdateTaskReactions = (data: any) => {
+        if (!data) return data;
+
+        const updateReactions = (task: Task): Task => {
+          if (task.id !== taskId) return task;
+
+          const newReactions: Reaction[] = task.reactions ? [...task.reactions] : [];
+          const existingReactionIndex = newReactions.findIndex(r => r.user_id === user.id);
+
+          if (existingReactionIndex > -1) {
+            const existingReaction = newReactions[existingReactionIndex];
+            if (existingReaction.emoji === emoji) {
+              newReactions.splice(existingReactionIndex, 1);
+            } else {
+              newReactions[existingReactionIndex] = { ...existingReaction, emoji };
+            }
+          } else {
+            newReactions.push({
+              id: `temp-${Date.now()}`,
+              emoji,
+              user_id: user.id,
+              user_name: user.user_metadata?.full_name || user.email || 'You',
+            });
+          }
+          return { ...task, reactions: newReactions };
+        };
+
+        if (Array.isArray(data)) {
+          return data.map(item => item.id === taskId ? updateReactions(item) : item);
+        }
+        if (data.tasks && Array.isArray(data.tasks)) {
+          return {
+            ...data,
+            tasks: data.tasks.map(task => task.id === taskId ? updateReactions(task) : task),
+          };
+        }
+        if (data.id === taskId) {
+          return updateReactions(data);
+        }
+        return data;
+      };
+
+      const queryCache = queryClient.getQueryCache();
+      const relevantQueryKeys = queryCache.findAll()
+        .map(q => q.queryKey)
+        .filter(key => ['projects', 'project', 'tasks'].includes(key[0] as string));
+
+      for (const queryKey of relevantQueryKeys) {
+        const previousData = queryClient.getQueryData(queryKey);
+        if (previousData) {
+          previousDataMap.set(queryKey, previousData);
+          const updatedData = optimisticallyUpdateTaskReactions(previousData);
+          queryClient.setQueryData(queryKey, updatedData);
+        }
+      }
+
+      return { previousDataMap };
     },
-    onError: (error: any) => {
-      toast.error("Failed to update reaction.", { description: error.message });
+    onError: (err, variables, context) => {
+      if (context?.previousDataMap) {
+        for (const [queryKey, previousData] of context.previousDataMap.entries()) {
+          queryClient.setQueryData(queryKey, previousData);
+        }
+      }
+      toast.error("Failed to update reaction.", { description: err.message });
+    },
+    onSettled: () => {
+      invalidateQueries();
     },
   });
 
