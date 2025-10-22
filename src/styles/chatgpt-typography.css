@@ -10,7 +10,15 @@
 /* Light mode auto switch */
 @media (prefers-color-scheme: light) {
   .chatgpt-text {
-    color: #242424;
+    color: #6E6257;
+  }
+  .chatgpt-text h1,
+  .chatgpt-text h2,
+  .chatgpt-text h3,
+  .chatgpt-text h4,
+  .chatgpt-text h5,
+  .chatgpt-text h6 {
+    color: #2E2A25;
   }
 }
 
@@ -95,6 +103,7 @@
   }
   .chatgpt-text th {
     background: rgba(0, 0, 0, 0.04);
+    color: #2E2A25;
   }
 }
 
