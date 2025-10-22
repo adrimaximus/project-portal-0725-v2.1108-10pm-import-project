@@ -1,12 +1,13 @@
 import { Task, User, TaskAttachment } from "@/types";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ListChecks, Plus, MoreHorizontal, Edit, Trash2, Ticket, Paperclip, Eye, Download, File as FileIcon } from "lucide-react";
+import { ListChecks, Plus, MoreHorizontal, Edit, Trash2, Ticket, Paperclip, Eye, Download, File as FileIconLucide } from "lucide-react";
 import { Button } from "../ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useMemo } from "react";
+import FileIcon from "../FileIcon"; // Correct import for custom FileIcon
 
 interface ProjectTasksProps {
   tasks: Task[];
@@ -96,7 +97,7 @@ const ProjectTasks = ({ tasks, onAddTask, onEditTask, onDeleteTask, onToggleTask
                         <h4 className="font-medium leading-none">Attachments ({attachmentCount})</h4>
                         <div className="space-y-2 pt-2">
                           {allAttachments.map((att) => (
-                            <div key={att.id} className="flex items-center justify-between p-2 rounded-md border">
+                            <div key={att.id} className="flex items-center justify-between p-2 rounded-md border bg-card">
                               <div className="flex items-center gap-2 min-w-0">
                                 <FileIcon fileType={att.file_type || ''} className="h-5 w-5 text-muted-foreground flex-shrink-0" />
                                 <div className="min-w-0">
