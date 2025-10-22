@@ -86,11 +86,17 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
     }
   };
 
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+  const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
     onDrop,
     noClick: true,
     noKeyboard: true,
     multiple: false,
+    accept: {
+      'image/*': ['.jpeg', '.png', '.gif', '.webp'],
+      'application/pdf': ['.pdf'],
+      'application/msword': ['.doc'],
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+    }
   });
 
   const triggerTyping = () => {
@@ -114,13 +120,6 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
   const handleSendVoiceMessage = (file: File) => {
     onSendMessage("", file, replyTo?.id);
     onCancelReply();
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setAttachmentFile(file);
-    }
   };
 
   const handleTextChange = (newText: string) => {
@@ -194,17 +193,8 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
                 />
               </PopoverContent>
             </Popover>
-            <Button variant="ghost" size="icon" asChild disabled={isSending}>
-              <label htmlFor={`file-upload-${conversationId}`} className="cursor-pointer">
-                <Paperclip className="h-5 w-5" />
-                <input 
-                  id={`file-upload-${conversationId}`} 
-                  type="file" 
-                  className="sr-only" 
-                  onChange={handleFileChange}
-                  accept="image/*,application/pdf,.doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                />
-              </label>
+            <Button variant="ghost" size="icon" onClick={open} disabled={isSending}>
+              <Paperclip className="h-5 w-5" />
             </Button>
           </div>
         </div>
