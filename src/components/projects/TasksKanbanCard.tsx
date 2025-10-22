@@ -16,6 +16,9 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import TaskDetailCard from './TaskDetailCard';
 import { useMemo } from 'react';
+import TaskReactions from './TaskReactions';
+import { useTaskMutations } from '@/hooks/useTaskMutations';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface TasksKanbanCardProps {
   task: Task;
@@ -38,6 +41,11 @@ const aggregateAttachments = (task: Task): TaskAttachment[] => {
 
 const TasksKanbanCard = ({ task, onEdit, onDelete }: TasksKanbanCardProps) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id });
+  const queryClient = useQueryClient();
+  const { toggleTaskReaction } = useTaskMutations(() => {
+    queryClient.invalidateQueries({ queryKey: ['tasks'] });
+    queryClient.invalidateQueries({ queryKey: ['project'] });
+  });
 
   const priorityStyle = getPriorityStyles(task.priority);
   const allAttachments = useMemo(() => aggregateAttachments(task), [task]);
@@ -51,6 +59,10 @@ const TasksKanbanCard = ({ task, onEdit, onDelete }: TasksKanbanCardProps) => {
 
   const handleDropdownClick = (e: React.MouseEvent) => {
     e.stopPropagation();
+  };
+
+  const handleToggleReaction = (emoji: string) => {
+    toggleTaskReaction({ taskId: task.id, emoji });
   };
 
   const renderAttachments = () => {
@@ -177,6 +189,9 @@ const TasksKanbanCard = ({ task, onEdit, onDelete }: TasksKanbanCardProps) => {
               </div>
             )}
           </div>
+        </div>
+        <div className="mt-2 pt-2 border-t">
+          <TaskReactions reactions={task.reactions || []} onToggleReaction={handleToggleReaction} />
         </div>
       </CardContent>
     </Card>

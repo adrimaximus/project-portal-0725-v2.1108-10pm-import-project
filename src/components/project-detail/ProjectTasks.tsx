@@ -8,6 +8,9 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useMemo } from "react";
 import FileIcon from "../FileIcon"; // Correct import for custom FileIcon
+import TaskReactions from '../projects/TaskReactions';
+import { useTaskMutations } from '@/hooks/useTaskMutations';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface ProjectTasksProps {
   tasks: Task[];
@@ -27,7 +30,17 @@ const formatBytes = (bytes?: number, decimals = 2) => {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
 }
 
-const ProjectTasks = ({ tasks, onAddTask, onEditTask, onDeleteTask, onToggleTaskCompletion }: ProjectTasksProps) => {
+const ProjectTasks = ({ tasks, projectId, onAddTask, onEditTask, onDeleteTask, onToggleTaskCompletion }: ProjectTasksProps) => {
+  const queryClient = useQueryClient();
+  const { toggleTaskReaction } = useTaskMutations();
+
+  const handleToggleReaction = (taskId: string, emoji: string) => {
+    toggleTaskReaction({ taskId, emoji }, {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['project', (tasks.find(t => t.id === taskId) as Task)?.project_slug] });
+      }
+    });
+  };
   
   if (!tasks || tasks.length === 0) {
     return (
@@ -84,6 +97,7 @@ const ProjectTasks = ({ tasks, onAddTask, onEditTask, onDeleteTask, onToggleTask
               </label>
 
               <div className="flex items-center gap-2 ml-auto">
+                <TaskReactions reactions={task.reactions || []} onToggleReaction={(emoji) => handleToggleReaction(task.id, emoji)} />
                 {hasAttachments && (
                   <Popover>
                     <PopoverTrigger asChild>

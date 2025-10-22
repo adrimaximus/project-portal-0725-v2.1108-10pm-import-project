@@ -12,6 +12,9 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import TaskAttachmentList from './TaskAttachmentList';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
+import TaskReactions from './TaskReactions';
+import { useTaskMutations } from '@/hooks/useTaskMutations';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface TaskDetailCardProps {
   task: Task;
@@ -34,6 +37,18 @@ const aggregateAttachments = (task: Task): TaskAttachment[] => {
 };
 
 const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, onDelete }) => {
+  const queryClient = useQueryClient();
+  const { toggleTaskReaction } = useTaskMutations();
+
+  const handleToggleReaction = (emoji: string) => {
+    toggleTaskReaction({ taskId: task.id, emoji }, {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['tasks'] });
+        queryClient.invalidateQueries({ queryKey: ['project'] });
+      }
+    });
+  };
+
   if (!task) return null;
 
   const statusStyle = getTaskStatusStyles(task.status);
@@ -158,6 +173,11 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
             <TaskAttachmentList attachments={allAttachments} />
           </div>
         )}
+
+        <div className="border-t pt-3 sm:pt-4">
+          <h4 className="font-semibold mb-2 text-xs sm:text-sm">Reactions</h4>
+          <TaskReactions reactions={task.reactions || []} onToggleReaction={handleToggleReaction} />
+        </div>
       </div>
     </DialogContent>
   );

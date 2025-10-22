@@ -178,5 +178,21 @@ export const useTaskMutations = (refetch?: () => void) => {
     },
   });
 
-  return { upsertTask, isUpserting, deleteTask, toggleTaskCompletion, isToggling, updateTaskStatusAndOrder };
+  const { mutate: toggleTaskReaction } = useMutation({
+    mutationFn: async ({ taskId, emoji }: { taskId: string, emoji: string }) => {
+      const { error } = await supabase.rpc('toggle_task_reaction', {
+        p_task_id: taskId,
+        p_emoji: emoji,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      invalidateQueries();
+    },
+    onError: (error: any) => {
+      toast.error("Failed to update reaction.", { description: error.message });
+    },
+  });
+
+  return { upsertTask, isUpserting, deleteTask, toggleTaskCompletion, isToggling, updateTaskStatusAndOrder, toggleTaskReaction };
 };
