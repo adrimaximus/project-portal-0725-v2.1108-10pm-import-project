@@ -1,5 +1,5 @@
-import { Project } from "@/types";
-import { useState } from 'react';
+import { Project, Reaction } from "@/types";
+import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import ProjectDescription from './ProjectDescription';
@@ -8,6 +8,7 @@ import ProjectTags from './ProjectTags';
 import { Tag } from '@/types';
 import { toast } from 'sonner';
 import { Separator } from "@/components/ui/separator";
+import ProjectReactions from './ProjectReactions';
 
 interface ProjectOverviewTabProps {
   project: Project;
@@ -28,6 +29,15 @@ const ProjectOverviewTab = ({
   onTagsChange
 }: ProjectOverviewTabProps) => {
   const [isGenerating, setIsGenerating] = useState(false);
+  const [localProject, setLocalProject] = useState(project);
+
+  useEffect(() => {
+    setLocalProject(project);
+  }, [project]);
+
+  const handleReactionsChange = (reactions: Reaction[]) => {
+    setLocalProject(prev => ({ ...prev, reactions }));
+  };
 
   const handleGenerateBrief = async () => {
     setIsGenerating(true);
@@ -36,11 +46,11 @@ const ProjectOverviewTab = ({
     try {
       const { data, error } = await supabase.functions.invoke('generate-brief', {
         body: {
-          title: project.name,
-          startDate: project.start_date,
-          dueDate: project.due_date,
-          venue: project.venue,
-          services: project.services,
+          title: localProject.name,
+          startDate: localProject.start_date,
+          dueDate: localProject.due_date,
+          venue: localProject.venue,
+          services: localProject.services,
         },
       });
 
@@ -68,7 +78,7 @@ const ProjectOverviewTab = ({
         <CardHeader className="p-4 pb-2"><CardTitle>Description & Brief</CardTitle></CardHeader>
         <CardContent className="p-4 pt-0">
           <ProjectDescription
-            description={project.description}
+            description={localProject.description}
             isEditing={isEditing}
             onDescriptionChange={onDescriptionChange}
             aiOptions={{
@@ -79,9 +89,17 @@ const ProjectOverviewTab = ({
           />
           <Separator className="my-4" />
           <div>
+            <h3 className="text-base font-semibold mb-2">Reactions</h3>
+            <ProjectReactions
+              project={localProject}
+              onReactionsChange={handleReactionsChange}
+            />
+          </div>
+          <Separator className="my-4" />
+          <div>
             <h3 className="text-base font-semibold mb-2">Project Tags</h3>
             <ProjectTags
-              project={project}
+              project={localProject}
               isEditing={isEditing}
               onTagsChange={onTagsChange}
             />
@@ -90,7 +108,7 @@ const ProjectOverviewTab = ({
           <div>
             <h3 className="text-base font-semibold mb-2">Project Files</h3>
             <ProjectBrief
-              files={project.briefFiles || []}
+              files={localProject.briefFiles || []}
               isEditing={isEditing}
               onFilesAdd={onFilesAdd}
               onFileDelete={onFileDelete}
