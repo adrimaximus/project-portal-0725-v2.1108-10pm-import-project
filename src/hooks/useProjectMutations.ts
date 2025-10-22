@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { Project, User } from '@/types';
 import { useNavigate } from 'react-router-dom';
 import { getErrorMessage } from '@/lib/utils';
+import { v4 as uuidv4 } from 'uuid';
 
 export const useProjectMutations = (slug: string) => {
     const queryClient = useQueryClient();
@@ -188,29 +189,40 @@ export const useProjectMutations = (slug: string) => {
             let finalCommentText = text;
             let firstAttachmentUrl: string | null = null;
             let firstAttachmentName: string | null = null;
-    
+            let attachmentsJsonb: any[] = []; // Array untuk menyimpan metadata lampiran
+
             if (attachments && attachments.length > 0) {
                 const uploadPromises = attachments.map(async (file) => {
+                    const fileId = uuidv4();
                     const sanitizedFileName = file.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
                     const filePath = `${project.id}/comments/${Date.now()}-${sanitizedFileName}`;
                     const { error: uploadError } = await supabase.storage.from('project-files').upload(filePath, file);
                     if (uploadError) throw new Error(`Failed to upload ${file.name}: ${uploadError.message}`);
                     
                     const { data: urlData } = supabase.storage.from('project-files').getPublicUrl(filePath);
-                    // Explicitly check if publicUrl is valid
                     if (!urlData || !urlData.publicUrl) {
-                        throw new Error(`Failed to get public URL for uploaded file ${file.name}. This might indicate a storage configuration issue.`);
+                        throw new Error(`Failed to get public URL for uploaded file ${file.name}.`);
                     }
-                    return { name: file.name, url: urlData.publicUrl };
+                    
+                    return { 
+                        id: fileId,
+                        file_name: file.name, 
+                        file_url: urlData.publicUrl,
+                        file_type: file.type,
+                        file_size: file.size,
+                        storage_path: filePath,
+                        created_at: new Date().toISOString(),
+                    };
                 });
     
                 const uploadedFiles = await Promise.all(uploadPromises);
+                attachmentsJsonb = uploadedFiles;
     
                 if (uploadedFiles.length > 0) {
-                    firstAttachmentUrl = uploadedFiles[0].url;
-                    firstAttachmentName = uploadedFiles[0].name;
+                    firstAttachmentUrl = uploadedFiles[0].file_url;
+                    firstAttachmentName = uploadedFiles[0].file_name;
     
-                    const markdownLinks = uploadedFiles.map(file => `* [${file.name}](${file.url})`).join('\n');
+                    const markdownLinks = uploadedFiles.map(file => `* [${file.file_name}](${file.file_url})`).join('\n');
                     finalCommentText += `\n\n**Attachments:**\n${markdownLinks}`;
                 }
             }
@@ -222,6 +234,7 @@ export const useProjectMutations = (slug: string) => {
                 is_ticket: isTicket, 
                 attachment_url: firstAttachmentUrl, 
                 attachment_name: firstAttachmentName,
+                attachments_jsonb: attachmentsJsonb, // <-- Memasukkan data lampiran lengkap
             }).select().single();
             
             if (commentError) throw commentError;
@@ -280,7 +293,7 @@ export const useProjectMutations = (slug: string) => {
         mutationFn: async ({ commentId, text, attachments, isConvertingToTicket, mentionedUserIds }: { commentId: string, text: string, attachments: File[] | null, isConvertingToTicket: boolean, mentionedUserIds: string[] }) => {
             const { data: originalComment, error: fetchError } = await supabase
                 .from('comments')
-                .select('text, is_ticket, project_id, attachment_url, attachment_name')
+                .select('text, is_ticket, project_id, attachment_url, attachment_name, attachments_jsonb')
                 .eq('id', commentId)
                 .single();
             if (fetchError) throw fetchError;
@@ -288,48 +301,62 @@ export const useProjectMutations = (slug: string) => {
             let newAttachmentMarkdown = '';
             let newFirstAttachmentUrl: string | null = null;
             let newFirstAttachmentName: string | null = null;
+            let existingAttachmentsJsonb: any[] = originalComment.attachments_jsonb || [];
+            let newAttachmentsJsonb: any[] = [];
 
             if (attachments && attachments.length > 0) {
                 const uploadPromises = attachments.map(async (file) => {
+                    const fileId = uuidv4();
                     const sanitizedFileName = file.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
                     const filePath = `${originalComment.project_id}/comments/${Date.now()}-${sanitizedFileName}`;
                     const { error: uploadError } = await supabase.storage.from('project-files').upload(filePath, file);
                     if (uploadError) throw new Error(`Failed to upload ${file.name}: ${uploadError.message}`);
                     
                     const { data: urlData } = supabase.storage.from('project-files').getPublicUrl(filePath);
-                    // Explicitly check if publicUrl is valid
                     if (!urlData || !urlData.publicUrl) {
-                        throw new Error(`Failed to get public URL for uploaded file ${file.name}. This might indicate a storage configuration issue.`);
+                        throw new Error(`Failed to get public URL for uploaded file ${file.name}.`);
                     }
-                    return { name: file.name, url: urlData.publicUrl };
+
+                    return { 
+                        id: fileId,
+                        file_name: file.name, 
+                        file_url: urlData.publicUrl,
+                        file_type: file.type,
+                        file_size: file.size,
+                        storage_path: filePath,
+                        created_at: new Date().toISOString(),
+                    };
                 });
-                const uploadedFiles = await Promise.all(uploadPromises);
-                
-                if (uploadedFiles.length > 0) {
-                    newAttachmentMarkdown = uploadedFiles.map(file => `* [${file.name}](${file.url})`).join('\n');
+    
+                newAttachmentsJsonb = await Promise.all(uploadPromises);
+                existingAttachmentsJsonb = [...existingAttachmentsJsonb, ...newAttachmentsJsonb];
+    
+                if (newAttachmentsJsonb.length > 0) {
+                    newAttachmentMarkdown = newAttachmentsJsonb.map(file => `* [${file.file_name}](${file.file_url})`).join('\n');
                     if (!originalComment.attachment_url) {
-                        newFirstAttachmentUrl = uploadedFiles[0].url;
-                        newFirstAttachmentName = uploadedFiles[0].name;
+                        newFirstAttachmentUrl = newAttachmentsJsonb[0].file_url;
+                        newFirstAttachmentName = newAttachmentsJsonb[0].file_name;
                     }
                 }
             }
 
-            const attachmentsRegex = /\*\*Attachments:\*\*\n((?:\* \[.+\]\(.+\)\n?)+)/;
-            const existingAttachmentsMatch = originalComment.text.match(attachmentsRegex);
+            const attachmentsRegex = /\n\n\*\*Attachments:\*\*\n((?:\* \[.+\]\(.+\)\n?)+)/s;
             let finalCommentText = text;
 
-            if (existingAttachmentsMatch) {
-                finalCommentText += `\n\n${existingAttachmentsMatch[0]}`;
-                if (newAttachmentMarkdown) {
-                    finalCommentText += `\n${newAttachmentMarkdown}`;
-                }
-            } else if (newAttachmentMarkdown) {
-                finalCommentText += `\n\n**Attachments:**\n${newAttachmentMarkdown}`;
+            if (existingAttachmentsJsonb.length > 0) {
+                const markdownLinks = existingAttachmentsJsonb.map(file => `* [${file.file_name}](${file.file_url})`).join('\n');
+                const fullAttachmentMarkdown = `\n\n**Attachments:**\n${markdownLinks}`;
+                
+                // Remove old markdown block if it exists, then append the new one
+                finalCommentText = finalCommentText.replace(attachmentsRegex, '').trim() + fullAttachmentMarkdown;
+            } else {
+                finalCommentText = finalCommentText.replace(attachmentsRegex, '').trim();
             }
 
             const updatePayload: any = {
                 text: finalCommentText,
                 is_ticket: isConvertingToTicket || originalComment.is_ticket,
+                attachments_jsonb: existingAttachmentsJsonb, // <-- NEW: Update the JSONB column
             };
             if (newFirstAttachmentUrl) {
                 updatePayload.attachment_url = newFirstAttachmentUrl;
