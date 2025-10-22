@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { SmilePlus } from "lucide-react";
-import EmojiPicker from "emoji-picker-react";
+import EmojiPicker, { Categories } from "emoji-picker-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -113,7 +113,10 @@ const GoalReactions = ({ goal }: GoalReactionsProps) => {
             searchDisabled
             skinTonesDisabled
             previewConfig={{ showPreview: false }}
-            categories={['suggested', 'smileys_people']}
+            categories={[
+              { category: Categories.SUGGESTED, name: "Suggested" },
+              { category: Categories.SMILEYS_PEOPLE, name: "Smileys & People" },
+            ]}
             height={300}
             width={250}
           />

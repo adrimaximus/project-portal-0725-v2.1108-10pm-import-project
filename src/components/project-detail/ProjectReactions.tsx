@@ -109,7 +109,7 @@ const ProjectReactions = ({ project, onReactionsChange }: ProjectReactionsProps)
         <PopoverContent onClick={stopPropagation} className="p-0 w-auto border-0">
           <EmojiPicker
             onEmojiClick={(emojiObject) => handleEmojiSelect(emojiObject.emoji)}
-            emojiButtonSize={20}
+            emojiSize={20}
             previewConfig={{ showPreview: false }}
             width={350}
             height={400}
