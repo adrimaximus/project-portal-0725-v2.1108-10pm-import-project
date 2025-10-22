@@ -25,7 +25,7 @@ const formatBytes = (bytes?: number, decimals = 2) => {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
 }
 
-const ProjectTasks = ({ tasks, onAddTask, onDeleteTask, onToggleTaskCompletion }: ProjectTasksProps) => {
+const ProjectTasks = ({ tasks, onAddTask, onEditTask, onDeleteTask, onToggleTaskCompletion }: ProjectTasksProps) => {
   
   if (!tasks || tasks.length === 0) {
     return (
