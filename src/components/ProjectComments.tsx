@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Project, Comment as CommentType, Task, User } from "@/types";
+import { Project, Comment as CommentType, Task, User, ProjectFile } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Ticket, MoreHorizontal, Edit, Trash2, FileText, Eye, Download, Paperclip, X, AlertTriangle, Loader2 } from "lucide-react";
@@ -25,25 +25,6 @@ interface ProjectCommentsProps {
   updatedCommentId?: string;
 }
 
-const attachmentsRegex = /\*\*Attachments:\*\*\n((?:\* \[.+\]\(.+\)\n?)+)/;
-
-const parseComment = (text: string) => {
-  const match = text.match(attachmentsRegex);
-  const attachments: { name: string; url: string }[] = [];
-  let mainText = text;
-
-  if (match) {
-    mainText = text.replace(attachmentsRegex, '').trim();
-    const linksMarkdown = match[1];
-    const linkRegex = /\* \[([^\]]+)\]\(([^)]+)\)/g;
-    let linkMatch;
-    while ((linkMatch = linkRegex.exec(linksMarkdown)) !== null) {
-      attachments.push({ name: linkMatch[1], url: linkMatch[2] });
-    }
-  }
-  return { mainText, attachments };
-};
-
 const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDeleteComment, isUpdatingComment, updatedCommentId }: ProjectCommentsProps) => {
   const { user: currentUser } = useAuth();
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
@@ -54,11 +35,12 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
   const editFileInputRef = useRef<HTMLInputElement>(null);
 
   const handleEditClick = (comment: CommentType) => {
-    const { mainText } = parseComment(comment.text);
+    // Saat mengedit, kita hanya mengambil teks utama, menghapus markdown lampiran lama
+    const textWithoutAttachments = comment.text?.replace(/\n\n\*\*Attachments:\*\*[\s\S]*$/, '').trim() || '';
     setEditingCommentId(comment.id);
-    setEditedText(mainText);
+    setEditedText(textWithoutAttachments);
     setNewAttachments([]);
-    setIsConvertingToTicket(false);
+    setIsConvertingToTicket(comment.isTicket);
   };
 
   const handleCancelEdit = () => {
@@ -107,7 +89,11 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
             const isTicket = comment.isTicket;
             const ticketTask = isTicket ? tasks.find((t) => t.originTicketId === comment.id) : null;
             const canManageComment = currentUser && (comment.author.id === currentUser.id || currentUser.role === 'admin' || currentUser.role === 'master admin');
-            const { mainText, attachments } = parseComment(comment.text);
+            
+            // Mengambil teks utama tanpa markdown lampiran
+            const mainText = comment.text?.replace(/\n\n\*\*Attachments:\*\*[\s\S]*$/, '').trim() || '';
+            const attachments: ProjectFile[] = comment.attachments_jsonb || [];
+
             const isThisCommentBeingUpdated = isUpdatingComment && updatedCommentId === comment.id;
 
             return (

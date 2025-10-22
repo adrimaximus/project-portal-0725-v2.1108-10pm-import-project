@@ -1,1 +1,0 @@
-// File contents removed as it is replaced by src/components/ProjectComments.tsx
