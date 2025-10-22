@@ -64,15 +64,20 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
   }
 
   const renderAttachments = (task: ProjectTask) => {
-    let allAttachments: TaskAttachment[] = [...(task.attachments || [])];
-
-    // NEW LOGIC: Merge attachments from the origin ticket
-    if (task.ticket_attachments && task.ticket_attachments.length > 0) {
-      const uniqueTicketAttachments = task.ticket_attachments.filter(
-        (ticketAtt) => !allAttachments.some((att) => att.file_url === ticketAtt.file_url)
-      );
-      allAttachments = [...uniqueTicketAttachments, ...allAttachments];
-    }
+    const allAttachments: TaskAttachment[] = useMemo(() => {
+      let attachments: TaskAttachment[] = [...(task.attachments || [])];
+  
+      // NEW LOGIC: Merge attachments from the origin ticket
+      if (task.ticket_attachments && task.ticket_attachments.length > 0) {
+        const existingUrls = new Set(attachments.map(a => a.file_url));
+        const uniqueTicketAttachments = task.ticket_attachments.filter(
+          (ticketAtt) => !allAttachments.some((att) => att.file_url === ticketAtt.file_url)
+        );
+        attachments = [...attachments, ...uniqueTicketAttachments];
+      }
+  
+      return attachments;
+    }, [task.attachments, task.ticket_attachments]);
 
     if (allAttachments.length === 0) return null;
 
