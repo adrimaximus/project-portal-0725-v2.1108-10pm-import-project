@@ -1,19 +1,16 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Project, User } from '@/types';
+import { Project, User, Reaction } from '@/types';
 import { useNavigate } from 'react-router-dom';
 import { getErrorMessage } from '@/lib/utils';
 import { v4 as uuidv4 } from 'uuid';
+import { useAuth } from '@/contexts/AuthContext';
 
 export const useProjectMutations = (slug: string) => {
     const queryClient = useQueryClient();
     const navigate = useNavigate();
-
-    const invalidateProjectQueries = () => {
-        queryClient.invalidateQueries({ queryKey: ['project', slug] });
-        queryClient.invalidateQueries({ queryKey: ['projects'] });
-    };
+    const { user } = useAuth();
 
     const useUpdateProject = () => useMutation({
         mutationFn: async (editedProject: Project) => {
@@ -247,6 +244,7 @@ export const useProjectMutations = (slug: string) => {
                   mentioner_name: user.name,
                   mentioned_user_ids: mentionedUserIds,
                   comment_text: text,
+                  comment_id: commentData.id,
                 },
               }).then(({ error }) => {
                 if (error) {
@@ -381,6 +379,7 @@ export const useProjectMutations = (slug: string) => {
                         mentioner_name: mentionerName,
                         mentioned_user_ids: mentionedUserIds,
                         comment_text: text,
+                        comment_id: commentId,
                       },
                     }).then(({ error }) => {
                       if (error) {
@@ -450,6 +449,66 @@ export const useProjectMutations = (slug: string) => {
         onError: (err: any) => toast.error("Failed to delete project.", { description: getErrorMessage(err) }),
     });
 
+    const useToggleCommentReaction = () => useMutation({
+        mutationFn: async ({ commentId, emoji }: { commentId: string, emoji: string }) => {
+            if (!user) throw new Error("User not authenticated");
+            const { error } = await supabase.rpc('toggle_comment_reaction', {
+                p_comment_id: commentId,
+                p_emoji: emoji,
+            });
+            if (error) throw error;
+        },
+        onMutate: async ({ commentId, emoji }) => {
+            await queryClient.cancelQueries({ queryKey: ['project', slug] });
+            const previousProject = queryClient.getQueryData<Project>(['project', slug]);
+
+            if (previousProject && user) {
+                const newProject = {
+                    ...previousProject,
+                    comments: previousProject.comments.map(comment => {
+                        if (comment.id === commentId) {
+                            const newReactions = [...(comment.reactions || [])];
+                            const existingReactionIndex = newReactions.findIndex(r => r.user_id === user.id);
+
+                            if (existingReactionIndex > -1) {
+                                if (newReactions[existingReactionIndex].emoji === emoji) {
+                                    newReactions.splice(existingReactionIndex, 1);
+                                } else {
+                                    newReactions[existingReactionIndex] = { ...newReactions[existingReactionIndex], emoji };
+                                }
+                            } else {
+                                newReactions.push({
+                                    id: `temp-${Date.now()}`,
+                                    emoji,
+                                    user_id: user.id,
+                                    user_name: user.name || 'You',
+                                } as Reaction);
+                            }
+                            return { ...comment, reactions: newReactions };
+                        }
+                        return comment;
+                    })
+                };
+                queryClient.setQueryData(['project', slug], newProject);
+            }
+            return { previousProject };
+        },
+        onError: (err, variables, context) => {
+            if (context?.previousProject) {
+                queryClient.setQueryData(['project', slug], context.previousProject);
+            }
+            toast.error("Failed to update reaction.", { description: getErrorMessage(err) });
+        },
+        onSettled: () => {
+            queryClient.invalidateQueries({ queryKey: ['project', slug] });
+        },
+    });
+
+    const invalidateProjectQueries = () => {
+        queryClient.invalidateQueries({ queryKey: ['project', slug] });
+        queryClient.invalidateQueries({ queryKey: ['projects'] });
+    };
+
     return {
         updateProject: useUpdateProject(),
         addFiles: useAddFiles(),
@@ -462,5 +521,6 @@ export const useProjectMutations = (slug: string) => {
         updateComment: useUpdateComment(),
         deleteComment: useDeleteComment(),
         deleteProject: useDeleteProject(),
+        toggleCommentReaction: useToggleCommentReaction(),
     };
 };

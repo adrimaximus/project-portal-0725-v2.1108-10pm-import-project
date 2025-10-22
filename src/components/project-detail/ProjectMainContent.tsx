@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Project, Task } from "@/types";
+import { Project, Task, Reaction } from "@/types";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ProjectComments from '@/components/ProjectComments';
 import { useAuth } from '@/contexts/AuthContext';
@@ -18,6 +18,7 @@ interface ProjectMainContentProps {
   onEditTask: (task: Task) => void;
   onDeleteTask: (task: Task) => void;
   onToggleTaskCompletion: (task: Task, completed: boolean) => void;
+  onToggleCommentReaction: (commentId: string, emoji: string) => void;
 }
 
 const ProjectMainContent = ({ 
@@ -30,6 +31,7 @@ const ProjectMainContent = ({
   onEditTask,
   onDeleteTask,
   onToggleTaskCompletion,
+  onToggleCommentReaction,
 }: ProjectMainContentProps) => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState(defaultTab);
@@ -129,6 +131,7 @@ const ProjectMainContent = ({
             onAddCommentOrTicket={handleAddCommentOrTicket}
             onUpdateComment={handleUpdateComment}
             onDeleteComment={handleDeleteComment}
+            onToggleCommentReaction={onToggleCommentReaction}
             isUpdatingComment={isUpdatingComment}
             updatedCommentId={updatedCommentId}
           />

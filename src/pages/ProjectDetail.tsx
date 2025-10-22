@@ -173,6 +173,10 @@ const ProjectDetail = () => {
     toggleTaskCompletion({ task, completed });
   };
 
+  const handleToggleCommentReaction = (commentId: string, emoji: string) => {
+    mutations.toggleCommentReaction.mutate({ commentId, emoji });
+  };
+
   if (authLoading || isLoading || isLoadingTasks || !project || !editedProject) {
     return <ProjectDetailSkeleton />;
   }
@@ -210,6 +214,7 @@ const ProjectDetail = () => {
                 onEditTask={handleEditTask}
                 onDeleteTask={handleDeleteTask}
                 onToggleTaskCompletion={handleToggleTaskCompletion}
+                onToggleCommentReaction={handleToggleCommentReaction}
               />
             </div>
           </div>
