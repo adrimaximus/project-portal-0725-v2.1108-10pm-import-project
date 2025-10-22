@@ -75,7 +75,7 @@ const MentionInput = React.forwardRef<HTMLTextAreaElement, MentionInputProps>(
 
       const cursorPos = e.target.selectionStart;
       const textBeforeCursor = text.substring(0, cursorPos);
-      const match = textBeforeCursor.match(/([@\/])([\w\s-]*)$/);
+      const match = textBeforeCursor.match(/([@\/])([\w-]*)$/);
 
       if (match) {
         const trigger = match[1] as '@' | '/';
