@@ -8,7 +8,6 @@ import ProjectTags from './ProjectTags';
 import { Tag } from '@/types';
 import { toast } from 'sonner';
 import { Separator } from "@/components/ui/separator";
-import ProjectReactions from './ProjectReactions';
 
 interface ProjectOverviewTabProps {
   project: Project;
@@ -89,19 +88,12 @@ const ProjectOverviewTab = ({
           />
           <Separator className="my-4" />
           <div>
-            <h3 className="text-base font-semibold mb-2">Reactions</h3>
-            <ProjectReactions
-              project={localProject}
-              onReactionsChange={handleReactionsChange}
-            />
-          </div>
-          <Separator className="my-4" />
-          <div>
             <h3 className="text-base font-semibold mb-2">Project Tags</h3>
             <ProjectTags
               project={localProject}
               isEditing={isEditing}
               onTagsChange={onTagsChange}
+              onReactionsChange={handleReactionsChange}
             />
           </div>
           <Separator className="my-4" />
