@@ -145,6 +145,7 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
             const statusStyle = getTaskStatusStyles(task.status);
             const priorityStyle = getPriorityStyles(task.priority);
             const allAttachments = aggregateAttachments(task); // Call utility function here
+            const hasIcons = (task.originTicketId || task.tags?.some(t => t.name === 'Ticket')) || allAttachments.length > 0;
 
             const taskMonthYear = task.due_date ? format(new Date(task.due_date), 'MMMM yyyy') : 'No Due Date';
             let showMonthSeparator = false;
@@ -204,21 +205,23 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
                                 </Tooltip>
                               </TooltipProvider>
                             )}
-                            <div className="flex gap-1 items-center mr-1.5">
-                                {(task.originTicketId || task.tags?.some(t => t.name === 'Ticket')) && (
-                                  <TooltipProvider>
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <Ticket className={`h-4 w-4 flex-shrink-0 ${task.completed ? 'text-green-500' : 'text-red-500'}`} />
-                                      </TooltipTrigger>
-                                      <TooltipContent>
-                                        <p>This is a ticket</p>
-                                      </TooltipContent>
-                                    </Tooltip>
-                                  </TooltipProvider>
-                                )}
-                                {renderAttachments(task, allAttachments)}
-                              </div>
+                            {hasIcons && (
+                              <div className="flex gap-1 items-center mr-1.5 border-t pt-1 mt-1">
+                                  {(task.originTicketId || task.tags?.some(t => t.name === 'Ticket')) && (
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Ticket className={`h-4 w-4 flex-shrink-0 ${task.completed ? 'text-green-500' : 'text-red-500'}`} />
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          <p>This is a ticket</p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                  )}
+                                  {renderAttachments(task, allAttachments)}
+                                </div>
+                            )}
                             </div>
                           </DialogTrigger>
                         </div>
