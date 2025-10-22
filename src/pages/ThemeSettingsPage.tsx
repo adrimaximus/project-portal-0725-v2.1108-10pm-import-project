@@ -176,8 +176,7 @@ const ThemeSettingsPage = () => {
   const handleFamilyChange = (familyId: string) => {
     const selectedFamily = themeFamilies.find(f => f.id === familyId);
     if (selectedFamily) {
-      const isCurrentlyDark = ['dark', 'claude', 'nature', 'corporate', 'ahensi', 'brand-activator'].includes(currentTheme) || 
-                             (currentTheme === 'system' && window.matchMedia("(prefers-color-scheme: dark)").matches);
+      const isCurrentlyDark = document.documentElement.classList.contains('dark');
       
       const newTheme = isCurrentlyDark ? selectedFamily.darkThemeId : selectedFamily.lightThemeId;
       setTheme(newTheme as Theme);
