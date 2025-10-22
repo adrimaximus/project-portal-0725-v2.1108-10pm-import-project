@@ -19,7 +19,7 @@ import CompanySelector from './CompanySelector';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import AvatarUpload from './AvatarUpload';
-import ImageUploader from '@/components/ui/ImageUploader';
+import CustomPropertyInput from '../settings/CustomPropertyInput';
 
 // Minimal profile type definition to avoid touching global types.ts
 interface Profile {
@@ -76,7 +76,7 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
 
   const baseSchema = z.object({
     first_name: z.string().min(1, 'First name is required'),
-    last_name: z.string().optional(),
+    last_name: z.string().optional().nullable(),
     email: z.string().email('Invalid email address').optional().or(z.literal('')),
     phone: z.string().optional().nullable(),
     company_id: z.string().uuid().optional().nullable(),
@@ -233,21 +233,6 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
     mutation.mutate(data);
   };
 
-  const renderField = (prop: ContactProperty, field: any) => {
-    switch (prop.type) {
-      case 'number':
-        return <Input type="number" {...field} value={field.value ?? ''} />;
-      case 'date':
-        return <Input type="date" {...field} value={field.value ?? ''} />;
-      case 'image':
-        return <ImageUploader value={field.value} onChange={field.onChange} bucket="people" />;
-      default:
-        return <Input type="text" {...field} value={field.value ?? ''} />;
-    }
-  };
-
-  const isLinkedUser = !!person?.user_id;
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg grid grid-rows-[auto_1fr_auto] max-h-[80vh] p-0">
@@ -363,14 +348,18 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
                   <div className="space-y-4 border-t pt-4 mt-4">
                     <h3 className="text-lg font-medium">Custom Properties</h3>
                     {filteredProperties.map(prop => (
-                      <FormField
+                      <Controller
                         key={prop.id}
                         control={control}
                         name={`custom_properties.${prop.name}`}
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>{prop.label}</FormLabel>
-                            <FormControl>{renderField(prop, field)}</FormControl>
+                            <CustomPropertyInput 
+                              property={prop} 
+                              control={control} 
+                              name={`custom_properties.${prop.name}`} 
+                              bucket="people" // Use the correct bucket for people images
+                            />
                             <FormMessage />
                           </FormItem>
                         )}

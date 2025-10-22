@@ -5,14 +5,17 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import ImageUploader from '@/components/ui/ImageUploader';
+import { Checkbox } from '@/components/ui/checkbox';
+import { MultiSelect } from '@/components/ui/multi-select';
 
 interface CustomPropertyInputProps {
   property: CompanyProperty;
   control: Control<any>;
   name: string;
+  bucket?: string; // Added bucket prop for image upload
 }
 
-const CustomPropertyInput = ({ property, control, name }: CustomPropertyInputProps) => {
+const CustomPropertyInput = ({ property, control, name, bucket = "company-logos" }: CustomPropertyInputProps) => {
   const { field } = useController({ name, control });
 
   const renderInput = () => {
@@ -38,8 +41,28 @@ const CustomPropertyInput = ({ property, control, name }: CustomPropertyInputPro
             </SelectContent>
           </Select>
         );
+      case 'multi-select':
+        return (
+          <MultiSelect
+            options={property.options?.map(opt => ({ value: opt, label: opt })) || []}
+            value={field.value || []}
+            onChange={field.onChange}
+            placeholder={`Select multiple ${property.label}`}
+          />
+        );
+      case 'checkbox':
+        return (
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id={name}
+              checked={!!field.value}
+              onCheckedChange={field.onChange}
+            />
+            <Label htmlFor={name} className="font-normal">{property.label}</Label>
+          </div>
+        );
       case 'image':
-        return <ImageUploader value={field.value} onChange={field.onChange} bucket="company-logos" />;
+        return <ImageUploader value={field.value} onChange={field.onChange} bucket={bucket} />;
       default:
         return <Input type="text" {...field} value={field.value || ''} />;
     }
@@ -47,7 +70,7 @@ const CustomPropertyInput = ({ property, control, name }: CustomPropertyInputPro
 
   return (
     <div>
-      <Label htmlFor={name}>{property.label}</Label>
+      {property.type !== 'checkbox' && <Label htmlFor={name}>{property.label}</Label>}
       <div className="mt-1">
         {renderInput()}
       </div>
