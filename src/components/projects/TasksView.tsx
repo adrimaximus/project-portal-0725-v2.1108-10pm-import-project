@@ -136,7 +136,6 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
             <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => requestSort('updated_at')}>
               Last Updated
             </TableHead>
-            <TableHead>Assignees</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
@@ -144,8 +143,10 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
           {tasks.map(task => {
             const statusStyle = getTaskStatusStyles(task.status);
             const priorityStyle = getPriorityStyles(task.priority);
-            const allAttachments = aggregateAttachments(task); // Call utility function here
+            const allAttachments = aggregateAttachments(task);
             const hasIcons = (task.originTicketId || task.tags?.some(t => t.name === 'Ticket')) || allAttachments.length > 0;
+            const hasAssignees = task.assignedTo && task.assignedTo.length > 0;
+            const hasBottomBar = hasIcons || hasAssignees;
 
             const taskMonthYear = task.due_date ? format(new Date(task.due_date), 'MMMM yyyy') : 'No Due Date';
             let showMonthSeparator = false;
@@ -158,7 +159,7 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
               <React.Fragment key={task.id}>
                 {showMonthSeparator && (
                   <TableRow className="border-none hover:bg-transparent">
-                    <TableCell colSpan={8} className="pt-6 pb-2 px-4 text-sm font-semibold text-foreground">
+                    <TableCell colSpan={7} className="pt-6 pb-2 px-4 text-sm font-semibold text-foreground">
                       {taskMonthYear}
                     </TableCell>
                   </TableRow>
@@ -178,7 +179,7 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
                           />
                         </div>
                         <DialogTrigger asChild>
-                          <div className="flex flex-col cursor-pointer text-sm md:text-base" onClick={() => setSelectedTask(task)}>
+                          <div className="flex flex-col cursor-pointer text-sm md:text-base w-full" onClick={() => setSelectedTask(task)}>
                             <div className="flex items-center gap-2">
                               <div className={`${task.completed ? 'line-through text-muted-foreground' : ''}`}>
                                 <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ p: 'span' }}>
@@ -205,8 +206,28 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
                                 </Tooltip>
                               </TooltipProvider>
                             )}
-                            {hasIcons && (
-                              <div className="flex justify-end gap-1 items-center mr-1.5 border-t pt-1 mt-1">
+                            {hasBottomBar && (
+                              <div className="flex justify-between items-center border-t pt-1 mt-1">
+                                <div className="flex items-center -space-x-2">
+                                  {task.assignedTo?.map((user) => (
+                                    <TooltipProvider key={user.id}>
+                                      <Tooltip>
+                                        <TooltipTrigger>
+                                          <Avatar className="h-6 w-6 border-2 border-background">
+                                            <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
+                                            <AvatarFallback style={generatePastelColor(user.id)}>
+                                              {getInitials([user.first_name, user.last_name].filter(Boolean).join(' '), user.email || undefined)}
+                                            </AvatarFallback>
+                                          </Avatar>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          <p>{[user.first_name, user.last_name].filter(Boolean).join(' ')}</p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                  ))}
+                                </div>
+                                <div className="flex justify-end gap-1 items-center">
                                   {(task.originTicketId || task.tags?.some(t => t.name === 'Ticket')) && (
                                     <TooltipProvider>
                                       <Tooltip>
@@ -221,84 +242,64 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
                                   )}
                                   {renderAttachments(task, allAttachments)}
                                 </div>
+                              </div>
                             )}
-                            </div>
-                          </DialogTrigger>
-                        </div>
-                      </TableCell>
-                      <TableCell className="w-[20%]">
-                        {task.project_name && task.project_name !== 'General Tasks' ? (
-                          <Link to={`/projects/${task.project_slug}`} className="hover:underline text-primary text-xs block max-w-[50ch] break-words">
-                            {task.project_name}
-                          </Link>
-                        ) : null}
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={cn(statusStyle.tw, 'border-transparent')}>{task.status}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={priorityStyle.tw}>{task.priority || 'Low'}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        {task.due_date ? (
-                          <span className={cn(isOverdue(task.due_date) && "text-red-600 font-bold")}>
-                            {format(new Date(task.due_date), "MMM d, yyyy")}
-                          </span>
-                        ) : <span className="text-muted-foreground text-xs">No due date</span>}
-                      </TableCell>
-                      <TableCell>
-                        {task.updated_at ? (
-                          <span className="text-muted-foreground text-xs">
-                            {format(new Date(task.updated_at), "MMM d, yyyy")}
-                          </span>
-                        ) : <span className="text-muted-foreground text-xs">-</span>}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center -space-x-2">
-                          {task.assignedTo?.map((user) => (
-                            <TooltipProvider key={user.id}>
-                              <Tooltip>
-                                <TooltipTrigger>
-                                  <Avatar className="h-6 w-6 md:h-8 md:w-8 border-2 border-background">
-                                    <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
-                                    <AvatarFallback style={generatePastelColor(user.id)}>
-                                      {getInitials([user.first_name, user.last_name].filter(Boolean).join(' '), user.email || undefined)}
-                                    </AvatarFallback>
-                                  </Avatar>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>{[user.first_name, user.last_name].filter(Boolean).join(' ')}</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          ))}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div onClick={(e) => e.stopPropagation()}>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => onEdit(task)}>
-                                <Edit className="mr-2 h-4 w-4" />
-                                Edit
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                className="text-red-500"
-                                onClick={() => onDelete(task.id)}
-                              >
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Delete
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
-                      </TableCell>
-                    </TableRow>
+                          </div>
+                        </DialogTrigger>
+                      </div>
+                    </TableCell>
+                    <TableCell className="w-[20%]">
+                      {task.project_name && task.project_name !== 'General Tasks' ? (
+                        <Link to={`/projects/${task.project_slug}`} className="hover:underline text-primary text-xs block max-w-[50ch] break-words">
+                          {task.project_name}
+                        </Link>
+                      ) : null}
+                    </TableCell>
+                    <TableCell>
+                      <Badge className={cn(statusStyle.tw, 'border-transparent')}>{task.status}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge className={priorityStyle.tw}>{task.priority || 'Low'}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      {task.due_date ? (
+                        <span className={cn(isOverdue(task.due_date) && "text-red-600 font-bold")}>
+                          {format(new Date(task.due_date), "MMM d, yyyy")}
+                        </span>
+                      ) : <span className="text-muted-foreground text-xs">No due date</span>}
+                    </TableCell>
+                    <TableCell>
+                      {task.updated_at ? (
+                        <span className="text-muted-foreground text-xs">
+                          {format(new Date(task.updated_at), "MMM d, yyyy")}
+                        </span>
+                      ) : <span className="text-muted-foreground text-xs">-</span>}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div onClick={(e) => e.stopPropagation()}>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => onEdit(task)}>
+                              <Edit className="mr-2 h-4 w-4" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="text-red-500"
+                              onClick={() => onDelete(task.id)}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </TableCell>
+                  </TableRow>
                   <DialogContent>
                     {selectedTask && (
                       <TaskDetailCard
