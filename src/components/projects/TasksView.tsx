@@ -259,7 +259,7 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
                                                             variant={userHasReacted ? "default" : "outline"}
                                                             className={cn(
                                                                 "cursor-pointer",
-                                                                userHasReacted && "bg-emerald-900 text-white hover:bg-emerald-900/90 border-transparent dark:bg-[#1E2A21] dark:border-[#3A523E] dark:hover:bg-[#1E2A21]/90"
+                                                                userHasReacted && "bg-[#DCE5DD] text-black border-[#A3BCA7] hover:bg-[#DCE5DD]/90 dark:bg-[#1E2A21] dark:border-[#3A523E] dark:text-white dark:hover:bg-[#1E2A21]/90"
                                                             )}
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
