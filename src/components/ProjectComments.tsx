@@ -17,6 +17,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import FileIcon from './FileIcon';
 import CommentAttachmentItem from './CommentAttachmentItem';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 interface ProjectCommentsProps {
   project: Project;
@@ -247,10 +248,24 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
                             </div>
                           )}
                           {attachments.length > 0 && (
-                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                              <Paperclip className="h-3 w-3" />
-                              <span>{attachments.length}</span>
-                            </div>
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <Button variant="ghost" size="sm" className="flex items-center gap-1 text-xs text-muted-foreground h-auto p-1">
+                                  <Paperclip className="h-3 w-3" />
+                                  <span>{attachments.length}</span>
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent>
+                                <DialogHeader>
+                                  <DialogTitle>Attachments ({attachments.length})</DialogTitle>
+                                </DialogHeader>
+                                <div className="space-y-2 max-h-96 overflow-y-auto pr-2">
+                                  {attachments.map((file) => (
+                                    <CommentAttachmentItem key={file.id} file={file} />
+                                  ))}
+                                </div>
+                              </DialogContent>
+                            </Dialog>
                           )}
                         </div>
                       )}
