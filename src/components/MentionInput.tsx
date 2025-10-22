@@ -124,7 +124,11 @@ const MentionInput = React.forwardRef<HTMLTextAreaElement, MentionInputProps>(
 
       onChange(newValue);
       setOpen(false);
-      setActiveTrigger(null);
+      setSearchTerm(''); // Reset search term
+      setActiveTrigger(null); // Reset active trigger
+      if (onSearchTermChange) {
+        onSearchTermChange(null, ''); // Notify parent component to reset search state
+      }
 
       setTimeout(() => {
         if (textareaRef.current) {
