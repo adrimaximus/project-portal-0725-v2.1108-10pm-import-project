@@ -9,48 +9,41 @@
 
     --card: 0 0% 100%;
     --card-foreground: 222.2 84% 4.9%;
-
+ 
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
-
+ 
     --primary: 222.2 47.4% 11.2%;
     --primary-foreground: 210 40% 98%;
-
+ 
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 222.2 47.4% 11.2%;
-
+ 
     --muted: 210 40% 96.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
-
+ 
     --accent: 210 40% 96.1%;
     --accent-foreground: 222.2 47.4% 11.2%;
-
+ 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
     --ring: 222.2 84% 4.9%;
-
+ 
     --radius: 0.5rem;
 
     --sidebar-background: 0 0% 98%;
-
     --sidebar-foreground: 240 5.3% 26.1%;
-
     --sidebar-primary: 240 5.9% 10%;
-
     --sidebar-primary-foreground: 0 0% 98%;
-
     --sidebar-accent: 240 4.8% 95.9%;
-
     --sidebar-accent-foreground: 240 5.9% 10%;
-
     --sidebar-border: 220 13% 91%;
-
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
-
+ 
   .dark {
     --background: 222.2 84% 4.9%;
     --foreground: 210 40% 98%;
@@ -89,38 +82,40 @@
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
+  /* Claude Light Theme */
   .theme-claude-light {
-    --background: 39 17% 95%;
-    --foreground: 21 11% 18%;
+    --background: 39 17% 95%; /* #F6F5F1 */
+    --foreground: 21 11% 18%; /* #352F2A */
     --card: 39 17% 95%;
     --card-foreground: 21 11% 18%;
     --popover: 39 17% 95%;
     --popover-foreground: 21 11% 18%;
-    --primary: 15 66% 65%;
+    --primary: 15 66% 55%; /* #D96D4A */
     --primary-foreground: 39 17% 95%;
-    --secondary: 28 21% 91%;
-    --secondary-foreground: 15 66% 65%;
+    --secondary: 28 21% 91%; /* #EDEAE7 */
+    --secondary-foreground: 21 11% 18%;
     --muted: 28 21% 91%;
     --muted-foreground: 21 9% 40%;
     --accent: 28 21% 91%;
-    --accent-foreground: 15 66% 65%;
+    --accent-foreground: 15 66% 55%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 39 17% 95%;
-    --border: 33 18% 88%;
+    --border: 33 18% 88%; /* #EAE8E2 */
     --input: 33 18% 88%;
-    --ring: 15 66% 65%;
+    --ring: 15 66% 55%;
   }
 
+  /* Claude Dark Theme */
   .theme-claude {
-    --background: 24 9% 10%;
-    --foreground: 30 18% 90%;
+    --background: 24 9% 10%; /* #1C1917 */
+    --foreground: 30 18% 90%; /* #EAE8E2 */
     --card: 24 9% 10%;
     --card-foreground: 30 18% 90%;
     --popover: 24 9% 10%;
     --popover-foreground: 30 18% 90%;
-    --primary: 15 70% 68%;
+    --primary: 15 70% 68%; /* #E07A5F */
     --primary-foreground: 24 9% 10%;
-    --secondary: 20 6% 15%;
+    --secondary: 20 6% 15%; /* #292524 */
     --secondary-foreground: 30 18% 90%;
     --muted: 20 6% 15%;
     --muted-foreground: 28 6% 65%;
@@ -133,42 +128,44 @@
     --ring: 15 70% 68%;
   }
 
+  /* Nature Light Theme */
   .theme-nature-light {
-    --background: 33 25% 97%;
-    --foreground: 21 20% 21%;
+    --background: 33 25% 97%; /* #FBF9F6 */
+    --foreground: 21 20% 21%; /* #40332B */
     --card: 33 25% 97%;
     --card-foreground: 21 20% 21%;
     --popover: 33 25% 97%;
     --popover-foreground: 21 20% 21%;
-    --primary: 132 24% 39%;
+    --primary: 132 24% 39%; /* #4D7C57 */
     --primary-foreground: 33 25% 97%;
-    --secondary: 34 24% 90%;
+    --secondary: 34 24% 90%; /* #EAE3D9 */
     --secondary-foreground: 21 20% 21%;
     --muted: 34 24% 90%;
     --muted-foreground: 22 14% 38%;
-    --accent: 128 26% 87%;
+    --accent: 128 26% 87%; /* #D4E5D8 */
     --accent-foreground: 21 20% 21%;
     --destructive: 0 72% 42%;
     --destructive-foreground: 33 25% 97%;
-    --border: 32 18% 81%;
+    --border: 32 18% 81%; /* #E0DACE */
     --input: 32 18% 81%;
     --ring: 132 24% 39%;
   }
 
+  /* Nature Dark Theme */
   .theme-nature {
-    --background: 140 5% 12%;
-    --foreground: 33 13% 90%;
+    --background: 140 5% 12%; /* #1C1F1D */
+    --foreground: 33 13% 90%; /* #E0DACE */
     --card: 140 5% 12%;
     --card-foreground: 33 13% 90%;
     --popover: 140 5% 12%;
     --popover-foreground: 33 13% 90%;
-    --primary: 132 16% 55%;
+    --primary: 132 16% 55%; /* #7BA083 */
     --primary-foreground: 140 5% 12%;
-    --secondary: 140 5% 17%;
+    --secondary: 140 5% 17%; /* #282B29 */
     --secondary-foreground: 33 13% 90%;
     --muted: 140 5% 17%;
     --muted-foreground: 28 6% 65%;
-    --accent: 132 7% 24%;
+    --accent: 132 7% 24%; /* #38423A */
     --accent-foreground: 33 13% 90%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 140 5% 12%;
@@ -177,6 +174,7 @@
     --ring: 132 16% 55%;
   }
 
+  /* Corporate Light Theme */
   .theme-corporate-light {
     --background: 0 0% 100%;
     --foreground: 240 10% 3.9%;
@@ -184,7 +182,7 @@
     --card-foreground: 240 10% 3.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 240 10% 3.9%;
-    --primary: 221.2 83.2% 53.3%;
+    --primary: 221.2 83.2% 53.3%; /* #2563EB */
     --primary-foreground: 0 0% 98%;
     --secondary: 240 4.8% 95.9%;
     --secondary-foreground: 240 5.9% 10%;
@@ -199,14 +197,15 @@
     --ring: 221.2 83.2% 53.3%;
   }
 
+  /* Corporate Dark Theme */
   .theme-corporate {
-    --background: 240 10% 3.9%;
+    --background: 240 10% 3.9%; /* #09090B */
     --foreground: 0 0% 98%;
     --card: 240 10% 3.9%;
     --card-foreground: 0 0% 98%;
     --popover: 240 10% 3.9%;
     --popover-foreground: 0 0% 98%;
-    --primary: 217.2 91.2% 59.8%;
+    --primary: 217.2 91.2% 59.8%; /* #60A5FA */
     --primary-foreground: 222.2 47.4% 11.2%;
     --secondary: 240 3.7% 15.9%;
     --secondary-foreground: 0 0% 98%;
@@ -221,6 +220,7 @@
     --ring: 217.2 91.2% 59.8%;
   }
 
+  /* Ahensi Light Theme */
   .theme-ahensi-light {
     --background: 0 0% 100%;
     --foreground: 240 10% 3.9%;
@@ -228,13 +228,13 @@
     --card-foreground: 240 10% 3.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 240 10% 3.9%;
-    --primary: 327 98% 49%; /* Pink */
+    --primary: 327 98% 49%; /* #FA009F */
     --primary-foreground: 0 0% 98%;
     --secondary: 240 4.8% 95.9%;
     --secondary-foreground: 240 5.9% 10%;
     --muted: 240 4.8% 95.9%;
     --muted-foreground: 240 3.8% 46.1%;
-    --accent: 240 4.8% 95.9%;
+    --accent: 327 98% 97%;
     --accent-foreground: 240 5.9% 10%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
@@ -243,6 +243,7 @@
     --ring: 327 98% 49%;
   }
 
+  /* Ahensi Dark Theme */
   .theme-ahensi {
     --background: 240 10% 3.9%;
     --foreground: 0 0% 98%;
@@ -250,13 +251,13 @@
     --card-foreground: 0 0% 98%;
     --popover: 240 10% 3.9%;
     --popover-foreground: 0 0% 98%;
-    --primary: 327 98% 60%; /* Lighter Pink for dark mode */
+    --primary: 327 98% 60%; /* #FB33B1 */
     --primary-foreground: 240 10% 3.9%;
     --secondary: 240 3.7% 15.9%;
     --secondary-foreground: 0 0% 98%;
     --muted: 240 3.7% 15.9%;
     --muted-foreground: 240 5% 64.9%;
-    --accent: 240 3.7% 15.9%;
+    --accent: 327 98% 15%;
     --accent-foreground: 0 0% 98%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
@@ -265,6 +266,7 @@
     --ring: 327 98% 60%;
   }
 
+  /* Brand Activator Light Theme */
   .theme-brand-activator-light {
     --background: 0 0% 100%;
     --foreground: 240 10% 3.9%;
@@ -272,41 +274,42 @@
     --card-foreground: 240 10% 3.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 240 10% 3.9%;
-    --primary: 187 100% 39%; /* Teal */
+    --primary: 187 100% 31%; /* #008A9E */
     --primary-foreground: 0 0% 98%;
     --secondary: 240 4.8% 95.9%;
     --secondary-foreground: 240 5.9% 10%;
     --muted: 240 4.8% 95.9%;
     --muted-foreground: 240 3.8% 46.1%;
-    --accent: 240 4.8% 95.9%;
+    --accent: 187 100% 97%;
     --accent-foreground: 240 5.9% 10%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
     --border: 240 5.9% 90%;
     --input: 240 5.9% 90%;
-    --ring: 187 100% 39%;
+    --ring: 187 100% 31%;
   }
 
+  /* Brand Activator Dark Theme */
   .theme-brand-activator {
-    --background: 204 10% 10%;
+    --background: 204 10% 10%; /* #17191C */
     --foreground: 0 0% 98%;
     --card: 204 10% 10%;
     --card-foreground: 0 0% 98%;
     --popover: 204 10% 10%;
     --popover-foreground: 0 0% 98%;
-    --primary: 187 100% 45%; /* Lighter Teal for dark mode */
+    --primary: 187 100% 39%; /* #00A9C7 */
     --primary-foreground: 204 10% 10%;
     --secondary: 204 10% 15.9%;
     --secondary-foreground: 0 0% 98%;
     --muted: 204 10% 15.9%;
     --muted-foreground: 240 5% 64.9%;
-    --accent: 204 10% 15.9%;
+    --accent: 187 100% 15%;
     --accent-foreground: 0 0% 98%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
     --border: 204 10% 15.9%;
     --input: 204 10% 15.9%;
-    --ring: 187 100% 45%;
+    --ring: 187 100% 39%;
   }
 }
  

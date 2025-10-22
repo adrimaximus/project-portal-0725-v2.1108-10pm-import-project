@@ -17,13 +17,13 @@ const themeFamilies = [
     darkThemeId: 'dark',
     preview: (
       <div className="flex items-center gap-2">
-        <div className="w-8 h-8 rounded-md border bg-background flex items-center justify-center p-1">
+        <div className="w-8 h-8 rounded-md border bg-white flex items-center justify-center p-1">
           <div className="w-full space-y-1">
-            <div className="h-1 w-3/4 rounded-full bg-muted-foreground/30"></div>
-            <div className="h-1 w-1/2 rounded-full bg-primary/30"></div>
+            <div className="h-1 w-3/4 rounded-full bg-slate-300"></div>
+            <div className="h-1 w-1/2 rounded-full bg-slate-800/50"></div>
           </div>
         </div>
-        <div className="w-8 h-8 rounded-md border bg-slate-900 flex items-center justify-center p-1">
+        <div className="w-8 h-8 rounded-md border border-slate-800 bg-slate-950 flex items-center justify-center p-1">
           <div className="w-full space-y-1">
             <div className="h-1 w-3/4 rounded-full bg-slate-700"></div>
             <div className="h-1 w-1/2 rounded-full bg-slate-500"></div>
