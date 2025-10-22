@@ -88,6 +88,10 @@ export const useProjectMutations = (slug: string) => {
                 if (uploadError) throw new Error(`Failed to upload ${file.name}: ${uploadError.message}`);
                 
                 const { data: urlData } = supabase.storage.from('project-files').getPublicUrl(filePath);
+                // Add explicit check for publicUrl
+                if (!urlData || !urlData.publicUrl) {
+                    throw new Error(`Failed to get public URL for uploaded file ${file.name}.`);
+                }
                 
                 const { error: dbError } = await supabase.from('project_files').insert({
                     project_id: project.id, user_id: user.id, name: file.name,
@@ -193,6 +197,10 @@ export const useProjectMutations = (slug: string) => {
                     if (uploadError) throw new Error(`Failed to upload ${file.name}: ${uploadError.message}`);
                     
                     const { data: urlData } = supabase.storage.from('project-files').getPublicUrl(filePath);
+                    // Explicitly check if publicUrl is valid
+                    if (!urlData || !urlData.publicUrl) {
+                        throw new Error(`Failed to get public URL for uploaded file ${file.name}. This might indicate a storage configuration issue.`);
+                    }
                     return { name: file.name, url: urlData.publicUrl };
                 });
     
@@ -265,7 +273,7 @@ export const useProjectMutations = (slug: string) => {
             toast.success(variables.isTicket ? "Ticket created and added to tasks." : "Comment posted.");
             invalidateProjectQueries();
         },
-        onError: (err: any) => toast.error(getErrorMessage(err)),
+        onError: (err: any) => toast.error("Failed to add comment/ticket", { description: getErrorMessage(err) }),
     });
 
     const useUpdateComment = () => useMutation({
@@ -289,6 +297,10 @@ export const useProjectMutations = (slug: string) => {
                     if (uploadError) throw new Error(`Failed to upload ${file.name}: ${uploadError.message}`);
                     
                     const { data: urlData } = supabase.storage.from('project-files').getPublicUrl(filePath);
+                    // Explicitly check if publicUrl is valid
+                    if (!urlData || !urlData.publicUrl) {
+                        throw new Error(`Failed to get public URL for uploaded file ${file.name}. This might indicate a storage configuration issue.`);
+                    }
                     return { name: file.name, url: urlData.publicUrl };
                 });
                 const uploadedFiles = await Promise.all(uploadPromises);
@@ -358,7 +370,7 @@ export const useProjectMutations = (slug: string) => {
 
                 const { data: newTask, error: taskError } = await supabase.from('tasks').insert({
                     project_id: originalComment.project_id,
-                    title: taskTitle,
+                    title: taskTitle, 
                     description: cleanTextForDescription, // Comment text as description
                     origin_ticket_id: commentId,
                 }).select().single();
