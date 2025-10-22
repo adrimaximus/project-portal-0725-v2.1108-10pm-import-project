@@ -42,6 +42,8 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
   const queryClient = useQueryClient();
   const { user: currentUser } = useAuth();
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
+  
+  const isLinkedUser = !!person?.user_id; // DEFINISI isLinkedUser
 
   const { data: properties = [], isLoading: isLoadingProperties } = useQuery<ContactProperty[]>({
     queryKey: ['contact_properties'],
