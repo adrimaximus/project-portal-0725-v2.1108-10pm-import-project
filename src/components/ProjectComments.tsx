@@ -110,7 +110,13 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
                     <p className="font-semibold">{fullName}</p>
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-2">
+                      {attachments.length > 0 && (
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <Paperclip className="h-3 w-3" />
+                          <span>{attachments.length}</span>
+                        </div>
+                      )}
                       <span className="text-xs text-muted-foreground">
                         {formatDistanceToNow(new Date(comment.timestamp), { addSuffix: true })}
                       </span>
