@@ -15,7 +15,7 @@ import { CalendarIcon, Loader2 } from 'lucide-react';
 import { cn, getTaskStatusStyles, getPriorityStyles } from '@/lib/utils';
 import { format } from 'date-fns';
 import { useProjects } from '@/hooks/useProjects';
-import { Task, TaskStatus, TASK_PRIORITY_OPTIONS, TASK_STATUS_OPTIONS, Tag, User as Profile, Project } from '@/types';
+import { Task, TaskStatus, TASK_PRIORITY_OPTIONS, TASK_STATUS_OPTIONS, Tag, User as Profile, Project, TaskAttachment } from '@/types';
 import { UpsertTaskPayload } from '@/hooks/useTaskMutations';
 import { useTags } from '@/hooks/useTags';
 import { TagsMultiselect } from '@/components/ui/TagsMultiselect';
@@ -100,6 +100,32 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task, proj
     }
   }, [selectedProjectId, projects, allProfiles]);
 
+  const directTaskAttachments = useMemo(() => {
+    return (task?.attachments || []).filter(f => !filesToDelete.includes(f.id));
+  }, [task, filesToDelete]);
+
+  const ticketAttachments = useMemo(() => {
+    if (!task?.ticket_attachments) return [];
+    // We filter out files marked for deletion from the ticket attachments list 
+    // only for display purposes, even though the mutation won't delete them from the comment.
+    return task.ticket_attachments.filter(f => !filesToDelete.includes(f.id));
+  }, [task, filesToDelete]);
+
+  const allExistingAttachments: TaskAttachment[] = useMemo(() => {
+    // Combine direct task attachments and ticket attachments for display
+    let combined = [...directTaskAttachments];
+    
+    if (ticketAttachments.length > 0) {
+        const existingUrls = new Set(combined.map(a => a.file_url));
+        const uniqueTicketAttachments = ticketAttachments.filter(
+            (ticketAtt) => !existingUrls.has(ticketAtt.file_url)
+        );
+        combined = [...combined, ...uniqueTicketAttachments];
+    }
+    
+    return combined;
+  }, [directTaskAttachments, ticketAttachments]);
+
   useEffect(() => {
     if (open) {
       setNewFiles([]);
@@ -112,7 +138,7 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task, proj
         initialTags = task.tags || [];
 
         // 2. Cek apakah ini tiket yang berasal dari komentar (fallback konsistensi data)
-        if (task.origin_ticket_id) {
+        if (task.originTicketId) {
           const ticketTagInOptions = allTags.find(t => t.name === TICKET_TAG_NAME);
           
           // Jika tag 'Ticket' belum ada di daftar tag tugas, tambahkan
@@ -465,7 +491,8 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task, proj
       <FormItem>
         <FormLabel>Attachments</FormLabel>
         <TaskFileUpload
-          existingFiles={(task?.attachments || []).filter(f => !filesToDelete.includes(f.id))}
+          existingFiles={allExistingAttachments}
+          deletableFileIds={directTaskAttachments.map(f => f.id)}
           newFiles={newFiles}
           onNewFilesChange={setNewFiles}
           onExistingFileDelete={handleExistingFileDelete}

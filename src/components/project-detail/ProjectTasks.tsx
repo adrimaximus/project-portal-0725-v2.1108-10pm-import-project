@@ -6,6 +6,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { useMemo } from "react";
 
 interface ProjectTasksProps {
   tasks: Task[];
@@ -50,16 +51,18 @@ const ProjectTasks = ({ tasks, onAddTask, onEditTask, onDeleteTask, onToggleTask
       </div>
       <TooltipProvider>
         {tasks.map((task) => {
-          // 1. Ambil lampiran tugas langsung
-          let allAttachments: TaskAttachment[] = [...(task.attachments || [])];
-          
-          // 2. Tambahkan lampiran dari tiket asal (jika ada)
-          if (task.ticket_attachments && task.ticket_attachments.length > 0) {
-            const uniqueTicketAttachments = task.ticket_attachments.filter(
-              (ticketAtt) => !allAttachments.some((att) => att.file_url === ticketAtt.file_url)
-            );
-            allAttachments = [...uniqueTicketAttachments, ...allAttachments];
-          }
+          const allAttachments = useMemo(() => {
+            let attachments: TaskAttachment[] = [...(task.attachments || [])];
+            
+            if (task.ticket_attachments && task.ticket_attachments.length > 0) {
+              const existingUrls = new Set(attachments.map(a => a.file_url));
+              const uniqueTicketAttachments = task.ticket_attachments.filter(
+                (ticketAtt) => !existingUrls.has(ticketAtt.file_url)
+              );
+              attachments = [...attachments, ...uniqueTicketAttachments];
+            }
+            return attachments;
+          }, [task.attachments, task.ticket_attachments]);
           
           const attachmentCount = allAttachments.length;
           const hasAttachments = attachmentCount > 0;

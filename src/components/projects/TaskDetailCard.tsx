@@ -29,10 +29,11 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
   const allAttachments: TaskAttachment[] = useMemo(() => {
     let attachments: TaskAttachment[] = [...(task.attachments || [])];
     if (task.ticket_attachments && task.ticket_attachments.length > 0) {
+      const existingUrls = new Set(attachments.map(a => a.file_url));
       const uniqueTicketAttachments = task.ticket_attachments.filter(
-        (ticketAtt) => !attachments.some((att) => att.file_url === ticketAtt.file_url)
+        (ticketAtt) => !existingUrls.has(ticketAtt.file_url)
       );
-      attachments = [...uniqueTicketAttachments, ...attachments];
+      attachments = [...attachments, ...uniqueTicketAttachments];
     }
     return attachments;
   }, [task.attachments, task.ticket_attachments]);

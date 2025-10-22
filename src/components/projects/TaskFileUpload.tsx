@@ -10,9 +10,10 @@ interface TaskFileUploadProps {
   newFiles: File[];
   onNewFilesChange: (files: File[]) => void;
   onExistingFileDelete: (fileId: string) => void;
+  deletableFileIds?: string[];
 }
 
-const TaskFileUpload = ({ existingFiles, newFiles, onNewFilesChange, onExistingFileDelete }: TaskFileUploadProps) => {
+const TaskFileUpload = ({ existingFiles, newFiles, onNewFilesChange, onExistingFileDelete, deletableFileIds = [] }: TaskFileUploadProps) => {
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const updatedFiles = [...newFiles, ...acceptedFiles];
     onNewFilesChange(updatedFiles);
@@ -24,14 +25,16 @@ const TaskFileUpload = ({ existingFiles, newFiles, onNewFilesChange, onExistingF
     onNewFilesChange(newFiles.filter(file => file !== fileToRemove));
   };
 
-  const formatBytes = (bytes: number, decimals = 2) => {
-    if (bytes === 0) return '0 Bytes';
+  const formatBytes = (bytes: number | null | undefined, decimals = 2): string => {
+    if (bytes === 0 || bytes == null) return '0 Bytes';
     const k = 1024;
     const dm = decimals < 0 ? 0 : decimals;
     const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
   }
+
+  const totalAttachments = existingFiles.length + newFiles.length;
 
   return (
     <div className="space-y-4">
@@ -43,29 +46,34 @@ const TaskFileUpload = ({ existingFiles, newFiles, onNewFilesChange, onExistingF
         </div>
       </div>
       
-      {(existingFiles.length > 0 || newFiles.length > 0) && (
+      {totalAttachments > 0 && (
         <div className="space-y-2">
-          <h4 className="text-sm font-medium text-foreground">Attachments ({existingFiles.length + newFiles.length})</h4>
+          <h4 className="text-sm font-medium text-foreground">Attachments ({totalAttachments})</h4>
           <ul className="space-y-2">
-            {existingFiles.map(file => (
-              <li key={file.id} className="flex items-center justify-between p-2 rounded-md border bg-background">
-                <div className="flex items-center gap-3 truncate">
-                  <FileIcon fileType={file.file_type || ''} className="h-5 w-5 flex-shrink-0 text-muted-foreground" />
-                  <div className="flex flex-col truncate">
-                    <span className="truncate text-sm font-medium">{file.file_name}</span>
-                    {file.file_size != null && <span className="text-xs text-muted-foreground">{formatBytes(file.file_size)}</span>}
+            {existingFiles.map(file => {
+              const isDeletable = deletableFileIds.includes(file.id);
+              return (
+                <li key={file.id} className="flex items-center justify-between p-2 rounded-md border bg-background">
+                  <div className="flex items-center gap-3 truncate">
+                    <FileIcon fileType={file.file_type || ''} className="h-5 w-5 flex-shrink-0 text-muted-foreground" />
+                    <div className="flex flex-col truncate">
+                      <span className="truncate text-sm font-medium">{file.file_name}</span>
+                      <span className="text-xs text-muted-foreground">{formatBytes(file.file_size)}</span>
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-center flex-shrink-0">
-                  <a href={file.file_url} download={file.file_name} target="_blank" rel="noopener noreferrer">
-                    <Button variant="ghost" size="icon" className="h-8 w-8"><Download className="h-4 w-4" /></Button>
-                  </a>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => onExistingFileDelete(file.id)}>
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </li>
-            ))}
+                  <div className="flex items-center flex-shrink-0">
+                    <a href={file.file_url} download={file.file_name} target="_blank" rel="noopener noreferrer">
+                      <Button variant="ghost" size="icon" className="h-8 w-8"><Download className="h-4 w-4" /></Button>
+                    </a>
+                    {isDeletable && (
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => onExistingFileDelete(file.id)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
             {newFiles.map((file, index) => (
               <li key={`${file.name}-${index}`} className="flex items-center justify-between p-2 rounded-md border bg-muted/50">
                 <div className="flex items-center gap-3 truncate">
