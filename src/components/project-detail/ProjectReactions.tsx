@@ -69,19 +69,24 @@ const ProjectReactions = ({ project, onReactionsChange }: ProjectReactionsProps)
     return acc;
   }, {} as Record<string, { users: string[]; userIds: string[] }>);
 
+  const stopPropagation = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
   return (
     <div className="flex items-center gap-2 flex-wrap">
       {Object.entries(groupedReactions).map(([emoji, { users, userIds }]) => {
         const userHasReacted = user ? userIds.includes(user.id) : false;
         return (
-          <TooltipProvider key={emoji}>
+          <TooltipProvider key={emoji} delayDuration={100}>
             <Tooltip>
               <TooltipTrigger asChild>
                 <Badge
                   variant={userHasReacted ? "default" : "outline"}
                   className={cn(
-                    "cursor-pointer",
-                    userHasReacted && "bg-[#DCE5DD] text-black border-[#A3BCA7] hover:bg-[#DCE5DD]/90 dark:bg-[#1E2A21] dark:border-[#3A523E] dark:text-white dark:hover:bg-[#1E2A21]/90"
+                    "cursor-pointer text-xs px-1.5 py-0.5",
+                    userHasReacted && "bg-muted text-foreground"
                   )}
                   onClick={() => handleEmojiSelect(emoji)}
                 >
@@ -98,47 +103,21 @@ const ProjectReactions = ({ project, onReactionsChange }: ProjectReactionsProps)
       <Popover>
         <PopoverTrigger asChild>
           <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full">
-            <SmilePlus className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+            <SmilePlus className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent onClick={e => e.stopPropagation()} className="p-1 w-auto rounded-full bg-background border shadow-lg">
-          <div className="flex items-center gap-1">
-            {commonEmojis.map(emoji => (
-              <button
-                key={emoji}
-                className="hover:bg-muted rounded-full p-1 transition-transform transform hover:scale-125"
-                onClick={() => handleEmojiSelect(emoji)}
-              >
-                <span className="text-xl">{emoji}</span>
-              </button>
-            ))}
-            <Popover>
-              <PopoverTrigger asChild>
-                <button className="hover:bg-muted rounded-full p-1.5 transition-transform transform hover:scale-125">
-                  <SmilePlus className="h-5 w-5 text-muted-foreground" />
-                </button>
-              </PopoverTrigger>
-              <PopoverContent
-                onClick={(e) => e.stopPropagation()}
-                className="p-0 w-auto border-0"
-                side="bottom"
-                align="start"
-                sideOffset={8}
-              >
-                <EmojiPicker
-                  onEmojiClick={(emojiObject) => handleEmojiSelect(emojiObject.emoji)}
-                  emojiSize={20}
-                  previewConfig={{ showPreview: false }}
-                  width={350}
-                  height={400}
-                  style={{
-                    fontFamily: '"Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif',
-                    border: 'none',
-                  }}
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
+        <PopoverContent onClick={stopPropagation} className="p-0 w-auto border-0">
+          <EmojiPicker
+            onEmojiClick={(emojiObject) => handleEmojiSelect(emojiObject.emoji)}
+            emojiButtonSize={20}
+            previewConfig={{ showPreview: false }}
+            width={350}
+            height={400}
+            style={{
+              fontFamily: '"Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif',
+              border: 'none',
+            }}
+          />
         </PopoverContent>
       </Popover>
     </div>

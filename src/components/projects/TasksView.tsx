@@ -355,7 +355,7 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
                                               onEmojiClick={(emojiObject) => {
                                                 handleEmojiSelect(emojiObject.emoji, task.id);
                                               }}
-                                              emojiSize={20}
+                                              emojiButtonSize={20}
                                               previewConfig={{ showPreview: false }}
                                               width={350}
                                               height={400}
