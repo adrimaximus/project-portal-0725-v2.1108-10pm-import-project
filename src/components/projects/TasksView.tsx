@@ -9,44 +9,13 @@ import { generatePastelColor, getPriorityStyles, getTaskStatusStyles, isOverdue,
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "../ui/button";
-import { MoreHorizontal, Edit, Trash2, Ticket, Paperclip, CalendarIcon, PlusCircle, Loader2, MessageSquare, X, Send, Check, ChevronsUpDown } from "lucide-react";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { MoreHorizontal, Edit, Trash2, Ticket, Paperclip } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Checkbox } from "@/components/ui/checkbox";
 import TaskAttachmentList from './TaskAttachmentList';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
-import { Textarea } from '@/components/ui/textarea';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
-import CommentInput from '@/components/CommentInput';
-import { Project, Task, Comment, Tag, User } from '@/types';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { useAuth } from '@/contexts/AuthContext';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
 import TaskDetailCard from './TaskDetailCard';
 
 interface TasksViewProps {
@@ -60,235 +29,39 @@ interface TasksViewProps {
   requestSort: (key: string) => void;
 }
 
-const TasksView = ({
-  tasks,
-  isLoading,
-  onEdit,
-  onDelete,
-  onToggleTaskCompletion,
-  isToggling,
-  sortConfig,
-  requestSort,
-}: TasksViewProps) => {
-  const queryClient = useQueryClient();
-  const { user } = useAuth();
+const processMentions = (text: string | null | undefined) => {
+  if (!text) return '';
+  let processedText = text.replace(/@\[([^\]]+)\]\(([^)]+)\)/g, '@$1');
+  if (processedText.length > 50) {
+    return processedText.substring(0, 50) + '...';
+  }
+  return processedText;
+};
+
+const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion, isToggling, sortConfig, requestSort }: TasksViewProps) => {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
-  const [isTaskDialogOpen, setIsTaskDialogOpen] = useState(false);
-  const [isEditingTask, setIsEditingTask] = useState(false);
-  const [editedTask, setEditedTask] = useState<Partial<Task> | null>(null);
-  const [newCommentText, setNewCommentText] = useState('');
-  const [newCommentAttachments, setNewCommentAttachments] = useState<File[]>([]);
-  const [isAddingTask, setIsAddingTask] = useState(false);
-  const [newTaskTitle, setNewTaskTitle] = useState('');
-  const [newTaskDescription, setNewTaskDescription] = useState('');
-  const [newTaskDueDate, setNewTaskDueDate] = useState<Date | undefined>(undefined);
-  const [newTaskPriority, setNewTaskPriority] = useState<string>('normal');
-  const [newTaskStatus, setNewTaskStatus] = useState<string>('To do');
-  const [newTaskAssignees, setNewTaskAssignees] = useState<string[]>([]);
-  const [newTaskTags, setNewTaskTags] = useState<string[]>([]);
-  const [isAssigneeOpen, setIsAssigneeOpen] = useState(false);
-  const [isTagOpen, setIsTagOpen] = useState(false);
 
-  const handleAddCommentOrTicket = async (text: string, isTicket: boolean, attachments: File[] | null, mentionedUserIds: string[], description?: string) => {
-    if (!project || !user) return;
+  if (isLoading) {
+    return (
+      <div className="p-4 md:p-6">
+        <div className="space-y-4">
+          {[...Array(8)].map((_, i) => (
+            <div key={i} className="flex items-center space-x-4">
+              <Skeleton className="h-12 w-12" />
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-[250px]" />
+                <Skeleton className="h-4 w-[200px]" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
-    try {
-      let finalCommentText = text;
-      let firstAttachmentUrl: string | null = null;
-      let firstAttachmentName: string | null = null;
-      let firstAttachmentType: string | null = null;
-
-      if (attachments && attachments.length > 0) {
-        const uploadPromises = attachments.map(async (file) => {
-          const sanitizedFileName = file.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
-          const filePath = `${project.id}/comments/${Date.now()}-${sanitizedFileName}`;
-          const { error: uploadError } = await supabase.storage.from('project-files').upload(filePath, file);
-          if (uploadError) throw new Error(`Failed to upload ${file.name}: ${uploadError.message}`);
-          
-          const { data: urlData } = supabase.storage.from('project-files').getPublicUrl(filePath);
-          return { name: file.name, url: urlData.publicUrl, type: file.type };
-        });
-
-        const uploadedFiles = await Promise.all(uploadPromises);
-
-        if (uploadedFiles.length > 0) {
-          firstAttachmentUrl = uploadedFiles[0].url;
-          firstAttachmentName = uploadedFiles[0].name;
-          firstAttachmentType = uploadedFiles[0].type;
-
-          const markdownLinks = uploadedFiles.map(file => `* [${file.name}](${file.url})`).join('\n');
-          finalCommentText += `\n\n**Attachments:**\n${markdownLinks}`;
-        }
-      }
-
-      const { data: commentData, error: commentError } = await supabase.from('comments').insert({
-        project_id: project.id, 
-        author_id: user.id, 
-        text: finalCommentText, 
-        is_ticket: isTicket, 
-        attachment_url: firstAttachmentUrl, 
-        attachment_name: firstAttachmentName,
-      }).select().single();
-      
-      if (commentError) throw commentError;
-
-      if (mentionedUserIds.length > 0) {
-        supabase.functions.invoke('send-mention-email', {
-          body: {
-            project_slug: project.slug,
-            project_name: project.name,
-            mentioner_name: user.name,
-            mentioned_user_ids: mentionedUserIds,
-            comment_text: text,
-          },
-        }).then(({ error }) => {
-          if (error) {
-            console.error("Failed to trigger mention email notifications:", error);
-          }
-        });
-      }
-
-      if (isTicket && commentData) {
-          const cleanTextForTitle = text.replace(/@\[[^\]]+\]\([^)]+\)\s*/g, '').trim();
-
-          const { data: newTask, error: taskError } = await supabase.from('tasks').insert({
-              project_id: project.id, 
-              created_by: user.id, 
-              title: text, // This is now the AI-generated title from CommentInput
-              description: description, // This is the original comment text from CommentInput
-              origin_ticket_id: commentData.id,
-              status: 'To do', // Default status for new tickets
-              priority: 'high', // Default priority for new tickets
-          }).select().single();
-          
-          if (taskError) throw new Error(`Ticket created, but failed to create task: ${taskError.message}`);
-
-          if (newTask && mentionedUserIds.length > 0) {
-              const assignments = mentionedUserIds.map(userId => ({
-                  task_id: newTask.id,
-                  user_id: userId,
-              }));
-              const { error: assignError } = await supabase.from('task_assignees').insert(assignments);
-              if (assignError) {
-                  console.warn('Failed to assign mentioned users:', assignError);
-                  toast.warning("Ticket created, but couldn't assign mentioned users automatically.");
-              }
-          }
-      }
-      toast.success(isTicket ? "Ticket created and added to tasks." : "Comment posted.");
-      refetchTasks();
-      queryClient.invalidateQueries(['projectComments', project.id]);
-      queryClient.invalidateQueries(['project', project.slug]);
-      setNewCommentText('');
-      setNewCommentAttachments([]);
-    } catch (error: any) {
-      console.error('Error adding comment or ticket:', error);
-      toast.error(`Failed to add comment or ticket: ${error.message}`);
-    }
-  };
-
-  const handleUpdateTask = async () => {
-    if (!editedTask || !selectedTask) return;
-
-    try {
-      const { error } = await supabase
-        .from('tasks')
-        .update(editedTask)
-        .eq('id', selectedTask.id);
-
-      if (error) throw error;
-
-      toast.success('Task updated successfully!');
-      setIsEditingTask(false);
-      setSelectedTask(null); // Close dialog after update
-      refetchTasks();
-      queryClient.invalidateQueries(['project', project.slug]);
-    } catch (error: any) {
-      console.error('Error updating task:', error);
-      toast.error(`Failed to update task: ${error.message}`);
-    }
-  };
-
-  const handleDeleteTask = async (taskId: string) => {
-    try {
-      const { error } = await supabase
-        .from('tasks')
-        .delete()
-        .eq('id', taskId);
-
-      if (error) throw error;
-
-      toast.success('Task deleted successfully!');
-      setSelectedTask(null); // Close dialog after delete
-      refetchTasks();
-      queryClient.invalidateQueries(['project', project.slug]);
-    } catch (error: any) {
-      console.error('Error deleting task:', error);
-      toast.error(`Failed to delete task: ${error.message}`);
-    }
-  };
-
-  const handleAddTask = async () => {
-    if (!newTaskTitle.trim()) {
-      toast.error('Task title cannot be empty.');
-      return;
-    }
-
-    try {
-      const { data: taskData, error: taskError } = await supabase
-        .from('tasks')
-        .insert({
-          project_id: project.id,
-          title: newTaskTitle,
-          description: newTaskDescription,
-          due_date: newTaskDueDate?.toISOString(),
-          priority: newTaskPriority,
-          status: newTaskStatus,
-          created_by: user?.id,
-        })
-        .select()
-        .single();
-
-      if (taskError) throw taskError;
-
-      if (newTaskAssignees.length > 0) {
-        const assigneeInserts = newTaskAssignees.map(assigneeId => ({
-          task_id: taskData.id,
-          user_id: assigneeId,
-        }));
-        const { error: assigneeError } = await supabase
-          .from('task_assignees')
-          .insert(assigneeInserts);
-        if (assigneeError) throw assigneeError;
-      }
-
-      if (newTaskTags.length > 0) {
-        const tagInserts = newTaskTags.map(tagId => ({
-          task_id: taskData.id,
-          tag_id: tagId,
-        }));
-        const { error: tagError } = await supabase
-          .from('task_tags')
-          .insert(tagInserts);
-        if (tagError) throw tagError;
-      }
-
-      toast.success('Task added successfully!');
-      setIsAddingTask(false);
-      setNewTaskTitle('');
-      setNewTaskDescription('');
-      setNewTaskDueDate(undefined);
-      setNewTaskPriority('normal');
-      setNewTaskStatus('To do');
-      setNewTaskAssignees([]);
-      setNewTaskTags([]);
-      refetchTasks();
-      queryClient.invalidateQueries(['project', project.slug]);
-    } catch (error: any) {
-      console.error('Error adding task:', error);
-      toast.error(`Failed to add task: ${error.message}`);
-    }
-  };
+  if (tasks.length === 0) {
+    return <div className="text-center text-muted-foreground p-8">No tasks found.</div>;
+  }
 
   const renderAttachments = (task: Task) => {
     const allAttachments: TaskAttachment[] = [...(task.attachments || [])];
@@ -329,19 +102,6 @@ const TasksView = ({
         </DialogContent>
       </Dialog>
     );
-  };
-
-  const statusStyle: { [key: string]: { tw: string } } = {
-    'To do': { tw: 'bg-gray-200 text-gray-800' },
-    'In Progress': { tw: 'bg-blue-200 text-blue-800' },
-    'Done': { tw: 'bg-green-200 text-green-800' },
-    'Blocked': { tw: 'bg-red-200 text-red-800' },
-  };
-
-  const priorityStyle: { [key: string]: { tw: string } } = {
-    'low': { tw: 'bg-green-100 text-green-700' },
-    'normal': { tw: 'bg-yellow-100 text-yellow-700' },
-    'high': { tw: 'bg-red-100 text-red-700' },
   };
 
   let lastMonthYear: string | null = null;
@@ -489,20 +249,20 @@ const TasksView = ({
                       ) : <span className="text-muted-foreground text-xs">-</span>}
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center -space-x-1 md:-space-x-2">
-                        {task.assignedTo?.map((assignee) => (
-                          <TooltipProvider key={assignee.id}>
+                      <div className="flex items-center -space-x-2">
+                        {task.assignedTo?.map((user) => (
+                          <TooltipProvider key={user.id}>
                             <Tooltip>
                               <TooltipTrigger>
-                                <Avatar className="h-5 w-5 md:h-6 md:w-6 border-2 border-background">
-                                  <AvatarImage src={getAvatarUrl(assignee.avatar_url, assignee.id)} />
-                                  <AvatarFallback style={generatePastelColor(assignee.id)}>
-                                    {getInitials([assignee.first_name, assignee.last_name].filter(Boolean).join(' '), assignee.email || undefined)}
+                                <Avatar className="h-6 w-6 md:h-8 md:w-8 border-2 border-background">
+                                  <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
+                                  <AvatarFallback style={generatePastelColor(user.id)}>
+                                    {getInitials([user.first_name, user.last_name].filter(Boolean).join(' '), user.email || undefined)}
                                   </AvatarFallback>
                                 </Avatar>
                               </TooltipTrigger>
                               <TooltipContent>
-                                <p>{[assignee.first_name, assignee.last_name].filter(Boolean).join(' ')}</p>
+                                <p>{[user.first_name, user.last_name].filter(Boolean).join(' ')}</p>
                               </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>

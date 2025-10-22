@@ -15,7 +15,6 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Textarea } from "@/components/ui/textarea";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { toast } from 'sonner';
 
 interface ProjectCommentsProps {
   project: Project;
@@ -59,7 +58,7 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
     setEditingCommentId(comment.id);
     setEditedText(mainText);
     setNewAttachments([]);
-    setIsConvertingToTicket(comment.isTicket);
+    setIsConvertingToTicket(false);
   };
 
   const handleCancelEdit = () => {
@@ -72,11 +71,7 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
   const handleSaveEdit = () => {
     if (editingCommentId) {
       const mentionedUserIds = parseMentions(editedText);
-      const originalComment = comments.find(c => c.id === editingCommentId);
-
-      let textToPassForUpdate: string = editedText;
-      
-      onUpdateComment(editingCommentId, textToPassForUpdate, newAttachments, isConvertingToTicket, mentionedUserIds);
+      onUpdateComment(editingCommentId, editedText, newAttachments, isConvertingToTicket, mentionedUserIds);
     }
     handleCancelEdit();
   };
@@ -186,7 +181,7 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
                             </Tooltip>
                           </TooltipProvider>
                           <input type="file" ref={editFileInputRef} multiple onChange={handleEditFileChange} className="hidden" />
-                          {!comment.isTicket && (
+                          {!isTicket && (
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger asChild>
@@ -201,7 +196,7 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
                         </div>
                         <div className="flex justify-end gap-2">
                           <Button variant="ghost" size="sm" onClick={handleCancelEdit}>Cancel</Button>
-                          <Button size="sm" onClick={handleSaveEdit}>Save Changes</Button>
+                          <Button size="sm" onClick={handleSaveEdit}>Save</Button>
                         </div>
                       </div>
                     </div>

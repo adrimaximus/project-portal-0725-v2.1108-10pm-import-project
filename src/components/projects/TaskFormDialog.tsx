@@ -122,12 +122,9 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task, proj
       } else {
         const personalProject = projects.find(p => p.personal_for_user_id === currentUser?.id);
         const generalTasksProject = projects.find(p => p.slug === 'general-tasks');
-        
-        let defaultProjectId = project?.id || personalProject?.id || generalTasksProject?.id || '';
-        
         form.reset({
           title: '',
-          project_id: defaultProjectId,
+          project_id: project?.id || personalProject?.id || generalTasksProject?.id || '',
           description: '',
           due_date: null,
           priority: 'Normal',
@@ -139,7 +136,7 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task, proj
         setPreviousStatus('To do');
       }
     }
-  }, [task, open, form, projects, project, currentUser, allTags]);
+  }, [task, open, form, projects, project, currentUser]);
 
   const handleTagsChange = (newTags: Tag[]) => {
     setSelectedTags(newTags);

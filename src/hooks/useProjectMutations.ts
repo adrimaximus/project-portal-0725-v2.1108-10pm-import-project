@@ -201,7 +201,7 @@ export const useProjectMutations = (slug: string) => {
                 if (uploadedFiles.length > 0) {
                     firstAttachmentUrl = uploadedFiles[0].url;
                     firstAttachmentName = uploadedFiles[0].name;
-
+    
                     const markdownLinks = uploadedFiles.map(file => `* [${file.name}](${file.url})`).join('\n');
                     finalCommentText += `\n\n**Attachments:**\n${markdownLinks}`;
                 }
@@ -352,7 +352,6 @@ export const useProjectMutations = (slug: string) => {
 
             if (isConvertingToTicket && !originalComment.is_ticket) {
                 const cleanTextForTitle = text.replace(/@\[[^\]]+\]\([^)]+\)\s*/g, '').trim();
-    
                 const { data: newTask, error: taskError } = await supabase.from('tasks').insert({
                     project_id: originalComment.project_id,
                     title: cleanTextForTitle.substring(0, 100),
