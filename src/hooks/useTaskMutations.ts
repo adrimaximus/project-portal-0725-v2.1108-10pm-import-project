@@ -221,23 +221,26 @@ export const useTaskMutations = (refetch?: () => void) => {
               id: `temp-${Date.now()}`,
               emoji,
               user_id: user.id,
-              user_name: user.user_metadata?.full_name || user.email || 'You',
+              user_name: user.name || user.email || 'You',
             });
           }
           return { ...task, reactions: newReactions };
         };
 
-        if (Array.isArray(data)) {
-          return data.map(item => item.id === taskId ? updateReactions(item) : item);
+        if (Array.isArray(data) && data.length > 0 && 'project_id' in data[0]) { // Task[]
+          return data.map(updateReactions);
         }
-        if (data.tasks && Array.isArray(data.tasks)) {
+        if (Array.isArray(data) && data.length > 0 && 'tasks' in data[0]) { // Project[]
+          return data.map(project => ({
+            ...project,
+            tasks: (project.tasks || []).map(updateReactions)
+          }));
+        }
+        if (data.tasks && Array.isArray(data.tasks)) { // Single Project
           return {
             ...data,
-            tasks: data.tasks.map(task => task.id === taskId ? updateReactions(task) : task),
+            tasks: data.tasks.map(updateReactions),
           };
-        }
-        if (data.id === taskId) {
-          return updateReactions(data);
         }
         return data;
       };

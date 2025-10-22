@@ -96,6 +96,15 @@ const ProjectDetail = () => {
     }
   }, [isLoading, error, project, navigate]);
 
+  useEffect(() => {
+    if (editingTask && project?.tasks) {
+      const updatedTask = project.tasks.find(t => t.id === editingTask.id);
+      if (updatedTask) {
+        setEditingTask(updatedTask);
+      }
+    }
+  }, [project?.tasks, editingTask?.id]);
+
   const canEdit = user && (user.id === project?.created_by.id || user.role === 'admin' || user.role === 'master admin');
 
   const handleFieldChange = (field: keyof Project, value: any) => {
