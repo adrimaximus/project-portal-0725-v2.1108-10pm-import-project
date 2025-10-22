@@ -323,6 +323,7 @@ export interface Goal {
   tags: Tag[];
   collaborators: Collaborator[];
   completions: GoalCompletion[];
+  reactions?: Reaction[];
 }
 
 export interface AppNotification {

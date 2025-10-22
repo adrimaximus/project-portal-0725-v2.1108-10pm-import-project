@@ -8,6 +8,7 @@ import { getProgress } from '@/lib/progress';
 import { Link } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { generatePastelColor, getAvatarUrl } from '@/lib/utils';
+import GoalReactions from './GoalReactions';
 
 const GoalCard = ({ goal }: { goal: Goal }) => {
   const { percentage } = getProgress(goal);
@@ -49,10 +50,9 @@ const GoalCard = ({ goal }: { goal: Goal }) => {
             <Progress value={percentage} className="h-2" indicatorStyle={{ backgroundColor: goal.color }} />
           </div>
         </CardContent>
-        {goal.collaborators && goal.collaborators.length > 0 && (
-          <CardFooter className="p-4 pt-0 flex justify-between items-center">
-            <span className="text-xs font-semibold text-muted-foreground tracking-wider">TEAM</span>
-            <div className="flex -space-x-2">
+        <CardFooter className="p-4 pt-0 flex justify-between items-center min-h-[44px]">
+          <div className="flex -space-x-2">
+            {goal.collaborators && goal.collaborators.length > 0 && (
               <TooltipProvider delayDuration={100}>
                 {goal.collaborators.map(user => (
                   <Tooltip key={user.id}>
@@ -68,9 +68,10 @@ const GoalCard = ({ goal }: { goal: Goal }) => {
                   </Tooltip>
                 ))}
               </TooltipProvider>
-            </div>
-          </CardFooter>
-        )}
+            )}
+          </div>
+          <GoalReactions goal={goal} />
+        </CardFooter>
       </Card>
     </Link>
   );
