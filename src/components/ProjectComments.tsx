@@ -211,7 +211,6 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
                       )}
                       {attachments.length > 0 && (
                         <div className="mt-4 space-y-2">
-                          <h4 className="font-semibold text-sm mb-2">Files Attached</h4>
                           {attachments.map((file) => (
                             <CommentAttachmentItem key={file.id} file={file} />
                           ))}

@@ -8,7 +8,6 @@ const fetchProject = async (slug: string): Promise<Project | null> => {
     .single();
 
   if (projectError) {
-    // PGRST116 berarti tidak ada baris yang ditemukan, yang bukan merupakan kesalahan dalam konteks ini.
     if (projectError.code === 'PGRST116') {
       return null;
     }
@@ -29,7 +28,35 @@ const fetchProject = async (slug: string): Promise<Project | null> => {
 
   const people = peopleLinks ? peopleLinks.map((link: any) => link.people).filter(Boolean) : [];
 
-  return { ...(projectData as any), people } as Project | null;
+  // The RPC returns JSON fields which might need parsing if they are strings.
+  const safeParse = (value: any) => {
+    if (typeof value === 'string') {
+      try {
+        return JSON.parse(value);
+      } catch {
+        return value;
+      }
+    }
+    return value;
+  };
+
+  const parsedComments = (safeParse(projectData.comments) || []).map((comment: any) => ({
+    ...comment,
+    // The RPC already builds the author object, so we don't need to parse it.
+    // But let's ensure attachments_jsonb is an array.
+    attachments_jsonb: safeParse(comment.attachments_jsonb) || [],
+  }));
+
+  return { 
+    ...(projectData as any), 
+    people,
+    comments: parsedComments,
+    assignedTo: safeParse(projectData.assignedTo),
+    tasks: safeParse(projectData.tasks),
+    briefFiles: safeParse(projectData.briefFiles),
+    activities: safeParse(projectData.activities),
+    tags: safeParse(projectData.tags),
+  } as Project | null;
 };
 
 export const useProject = (slug: string) => {
