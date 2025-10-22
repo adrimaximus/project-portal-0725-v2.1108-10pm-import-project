@@ -89,7 +89,6 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
           {comments.map((comment) => {
             const author = comment.author;
             const fullName = `${author.first_name || ''} ${author.last_name || ''}`.trim() || author.email;
-            const displayName = `${author.first_name || ''} ${author.last_name || ''}`.trim() || (author.email ? author.email.split('@')[0] : 'Unknown User');
             const isTicket = comment.isTicket;
             const ticketTask = isTicket ? tasks.find((t) => t.originTicketId === comment.id) : null;
             const canManageComment = currentUser && (comment.author.id === currentUser.id || currentUser.role === 'admin' || currentUser.role === 'master admin');
@@ -117,7 +116,7 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
                 </Avatar>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
-                    <p className="font-semibold">{displayName}</p>
+                    <p className="font-semibold">{fullName}</p>
                     <div className="flex items-center gap-1">
                       <span className="text-xs text-muted-foreground">
                         {formatDistanceToNow(new Date(comment.timestamp), { addSuffix: true })}
