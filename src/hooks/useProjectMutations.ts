@@ -267,7 +267,7 @@ export const useProjectMutations = (slug: string) => {
     });
 
     const useUpdateComment = () => useMutation({
-        mutationFn: async ({ commentId, text, attachments, isConvertingToTicket, mentionedUserIds, aiGeneratedTitle, fullCommentTextAsDescription }: { commentId: string, text: string, attachments: File[] | null, isConvertingToTicket: boolean, mentionedUserIds: string[], aiGeneratedTitle?: string, fullCommentTextAsDescription?: string }) => {
+        mutationFn: async ({ commentId, text, attachments, isConvertingToTicket, mentionedUserIds }: { commentId: string, text: string, attachments: File[] | null, isConvertingToTicket: boolean, mentionedUserIds: string[] }) => {
             const { data: originalComment, error: fetchError } = await supabase
                 .from('comments')
                 .select('text, is_ticket, project_id, attachment_url, attachment_name')
@@ -351,13 +351,11 @@ export const useProjectMutations = (slug: string) => {
             }
 
             if (isConvertingToTicket && !originalComment.is_ticket) {
-                const taskTitle = aiGeneratedTitle || (fullCommentTextAsDescription || text).trim().split(' ').slice(0, 10).join(' ') + ((fullCommentTextAsDescription || text).trim().split(' ').length > 10 ? '...' : '');
-                const taskDescription = fullCommentTextAsDescription || text;
-
+                const cleanTextForTitle = text.replace(/@\[[^\]]+\]\([^)]+\)\s*/g, '').trim();
+    
                 const { data: newTask, error: taskError } = await supabase.from('tasks').insert({
                     project_id: originalComment.project_id,
-                    title: taskTitle,
-                    description: taskDescription, // Use full comment text as description
+                    title: cleanTextForTitle.substring(0, 100),
                     origin_ticket_id: commentId,
                 }).select().single();
                 if (taskError) {

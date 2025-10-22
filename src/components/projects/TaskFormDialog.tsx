@@ -37,8 +37,6 @@ interface TaskFormDialogProps {
   isSubmitting: boolean;
   task?: Task | null;
   project?: Project | null;
-  initialCommentContent?: string;
-  initialAiTitle?: string;
 }
 
 const taskFormSchema = z.object({
@@ -54,7 +52,7 @@ const taskFormSchema = z.object({
 
 type TaskFormValues = z.infer<typeof taskFormSchema>;
 
-const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task, project, initialCommentContent, initialAiTitle }: TaskFormDialogProps) => {
+const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task, project }: TaskFormDialogProps) => {
   const isMobile = useIsMobile();
   const { data: projects = [], isLoading: isLoadingProjects } = useProjects({ excludeOtherPersonal: true });
   const { data: allTags = [], refetch: refetchTags } = useTags();
@@ -127,33 +125,21 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task, proj
         
         let defaultProjectId = project?.id || personalProject?.id || generalTasksProject?.id || '';
         
-        let defaultTitle = '';
-        let defaultDescription = '';
-        let defaultTags: Tag[] = [];
-
-        if (initialCommentContent && initialAiTitle) {
-            defaultTitle = initialAiTitle;
-            defaultDescription = initialCommentContent;
-            const ticketTagInOptions = allTags.find(t => t.name === TICKET_TAG_NAME);
-            const ticketTag = ticketTagInOptions || handleCreateTag(TICKET_TAG_NAME);
-            defaultTags = [ticketTag];
-        }
-
         form.reset({
-          title: defaultTitle,
+          title: '',
           project_id: defaultProjectId,
-          description: defaultDescription,
+          description: '',
           due_date: null,
           priority: 'Normal',
           status: 'To do',
           assignee_ids: [],
-          tag_ids: defaultTags.map(t => t.id),
+          tag_ids: [],
         });
-        setSelectedTags(defaultTags);
+        setSelectedTags([]);
         setPreviousStatus('To do');
       }
     }
-  }, [task, open, form, projects, project, currentUser, initialCommentContent, initialAiTitle, allTags]);
+  }, [task, open, form, projects, project, currentUser, allTags]);
 
   const handleTagsChange = (newTags: Tag[]) => {
     setSelectedTags(newTags);
