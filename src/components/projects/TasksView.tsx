@@ -257,7 +257,10 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
                                                     <TooltipTrigger asChild>
                                                         <Badge
                                                             variant={userHasReacted ? "default" : "outline"}
-                                                            className="cursor-pointer"
+                                                            className={cn(
+                                                                "cursor-pointer",
+                                                                userHasReacted && "bg-emerald-900 text-white hover:bg-emerald-900/90 border-transparent"
+                                                            )}
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
                                                                 handleEmojiSelect(emoji, task.id);
