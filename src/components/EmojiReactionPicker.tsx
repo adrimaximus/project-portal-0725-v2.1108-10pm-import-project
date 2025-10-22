@@ -10,20 +10,14 @@ interface EmojiReactionPickerProps {
   onSelect: (emoji: string) => void;
 }
 
-const quickReactions = ['👍', '❤️', '😂', '🎉', '🙏', '😢'];
-
 const EmojiReactionPicker = ({ onSelect }: EmojiReactionPickerProps) => {
   const { theme } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
 
-  const handleQuickSelect = (emoji: string) => {
-    onSelect(emoji);
-    setIsOpen(false);
-  };
-
-  const handlePickerSelect = (emoji: any) => {
+  const handleEmojiSelect = (emoji: any) => {
     onSelect(emoji.native);
-    setIsOpen(false);
+    // We keep the popover open to allow for quick changes or multiple reactions.
+    // The user can click away to close it.
   };
 
   return (
@@ -33,36 +27,21 @@ const EmojiReactionPicker = ({ onSelect }: EmojiReactionPickerProps) => {
           <SmilePlus className="h-4 w-4" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0 border-none" side="top" align="center">
-        <div className="flex items-center gap-1 bg-background border rounded-full p-1 shadow-lg">
-          {quickReactions.map(emoji => (
-            <button
-              key={emoji}
-              onClick={() => handleQuickSelect(emoji)}
-              className="text-xl p-1 rounded-full hover:bg-muted transition-colors"
-            >
-              {emoji}
-            </button>
-          ))}
-          <Popover>
-            <PopoverTrigger asChild>
-              <button className="p-1 rounded-full hover:bg-muted transition-colors">
-                <SmilePlus className="h-5 w-5 text-muted-foreground" />
-              </button>
-            </PopoverTrigger>
-            <PopoverContent 
-              className="w-auto p-0 border-none mb-2" 
-              onPointerDown={(e) => e.stopPropagation()}
-            >
-              <Picker 
-                data={data} 
-                onEmojiSelect={handlePickerSelect}
-                theme={theme === 'dark' ? 'dark' : 'light'}
-                previewPosition="none"
-              />
-            </PopoverContent>
-          </Popover>
-        </div>
+      <PopoverContent 
+        className="w-auto p-0 border-none" 
+        side="top" 
+        align="center"
+      >
+        <Picker 
+          data={data} 
+          onEmojiSelect={handleEmojiSelect}
+          theme={theme === 'dark' ? 'dark' : 'light'}
+          previewPosition="none"
+          searchPosition="none"
+          navPosition="bottom"
+          perLine={8}
+          maxFrequentRows={2}
+        />
       </PopoverContent>
     </Popover>
   );
