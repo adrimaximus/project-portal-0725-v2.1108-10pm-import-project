@@ -1,0 +1,109 @@
+.chatgpt-text {
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 15px;
+  line-height: 1.7;
+  letter-spacing: 0.01em;
+  color: #e6e6e6;
+  transition: color 0.3s ease, background-color 0.3s ease;
+}
+
+/* Light mode auto switch */
+@media (prefers-color-scheme: light) {
+  .chatgpt-text {
+    color: #242424;
+  }
+}
+
+/* Paragraph spacing */
+.chatgpt-text p {
+  margin-top: 0.75em;
+  margin-bottom: 0.75em;
+}
+
+/* Headings */
+.chatgpt-text h1,
+.chatgpt-text h2,
+.chatgpt-text h3,
+.chatgpt-text h4,
+.chatgpt-text h5,
+.chatgpt-text h6 {
+  font-weight: 600;
+  line-height: 1.4;
+  margin-top: 1.5em;
+  margin-bottom: 0.75em;
+}
+
+.chatgpt-text h1 { font-size: 1.75rem; }
+.chatgpt-text h2 { font-size: 1.5rem; }
+.chatgpt-text h3 { font-size: 1.25rem; }
+
+/* Lists */
+.chatgpt-text ul,
+.chatgpt-text ol {
+  margin: 0.75em 0 0.75em 1.25em;
+  padding-left: 1.25em;
+  line-height: 1.6;
+}
+
+.chatgpt-text li {
+  margin-bottom: 0.4em;
+}
+
+/* Table */
+.chatgpt-text table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1em 0;
+}
+
+.chatgpt-text th,
+.chatgpt-text td {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 0.6em 0.8em;
+  text-align: left;
+}
+
+.chatgpt-text th {
+  background: rgba(255, 255, 255, 0.05);
+  font-weight: 600;
+}
+
+/* Light mode tables */
+@media (prefers-color-scheme: light) {
+  .chatgpt-text th,
+  .chatgpt-text td {
+    border-color: rgba(0, 0, 0, 0.1);
+  }
+  .chatgpt-text th {
+    background: rgba(0, 0, 0, 0.04);
+  }
+}
+
+/* Code highlight */
+.chatgpt-text code {
+  background: rgba(255, 255, 255, 0.08);
+  padding: 0.15em 0.4em;
+  border-radius: 4px;
+  font-family: "SF Mono", Consolas, monospace;
+  font-size: 0.95em;
+}
+
+@media (prefers-color-scheme: light) {
+  .chatgpt-text code {
+    background: rgba(0, 0, 0, 0.05);
+  }
+}
+
+/* Container wrapper */
+.chatgpt-text-container {
+  background: #1a1a1a;
+  border-radius: 12px;
+  padding: 16px 20px;
+  transition: background-color 0.3s ease;
+}
+
+@media (prefers-color-scheme: light) {
+  .chatgpt-text-container {
+    background: #ffffff;
+  }
+}

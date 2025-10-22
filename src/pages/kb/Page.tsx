@@ -143,7 +143,7 @@ const Page = () => {
         </div>
 
         <div
-          className="prose dark:prose-invert max-w-none prose-headings:mt-4 prose-headings:mb-1 prose-p:my-1 prose-ul:my-1 prose-li:my-0"
+          className="chatgpt-text"
           dangerouslySetInnerHTML={{ __html: articleContentHtml }}
         />
       </div>
