@@ -33,6 +33,7 @@ export const useTaskMutations = (refetch?: () => void) => {
 
   const invalidateQueries = () => {
     queryClient.invalidateQueries({ queryKey: ['projects'] });
+    queryClient.invalidateQueries({ queryKey: ['project'] });
     queryClient.invalidateQueries({ queryKey: ['tasks'] });
     if (refetch) {
       refetch();
