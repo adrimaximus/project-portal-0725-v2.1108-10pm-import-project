@@ -29,6 +29,7 @@ import { ProjectCombobox } from './ProjectCombobox';
 import { Checkbox } from '@/components/ui/checkbox';
 import { AssigneeCombobox } from './AssigneeCombobox';
 import { useAuth } from '@/contexts/AuthContext';
+import { v4 as uuidv4 } from 'uuid';
 
 interface TaskFormDialogProps {
   open: boolean;
@@ -52,6 +53,8 @@ const taskFormSchema = z.object({
 
 type TaskFormValues = z.infer<typeof taskFormSchema>;
 
+const TICKET_TAG_NAME = 'Ticket';
+
 const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task, project }: TaskFormDialogProps) => {
   const isMobile = useIsMobile();
   const { data: projects = [], isLoading: isLoadingProjects } = useProjects({ excludeOtherPersonal: true });
@@ -63,7 +66,6 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task, proj
   const [newFiles, setNewFiles] = useState<File[]>([]);
   const [filesToDelete, setFilesToDelete] = useState<string[]>([]);
   const [previousStatus, setPreviousStatus] = useState<TaskStatus>('To do');
-  const TICKET_TAG_NAME = 'Ticket';
 
   const form = useForm<TaskFormValues>({
     resolver: zodResolver(taskFormSchema),
@@ -102,7 +104,35 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task, proj
     if (open) {
       setNewFiles([]);
       setFilesToDelete([]);
+      
+      let initialTags: Tag[] = [];
+
       if (task) {
+        // 1. Ambil tag yang sudah ada
+        initialTags = task.tags || [];
+
+        // 2. Cek apakah ini tiket yang berasal dari komentar (fallback konsistensi data)
+        if (task.origin_ticket_id) {
+          const ticketTagInOptions = allTags.find(t => t.name === TICKET_TAG_NAME);
+          
+          // Jika tag 'Ticket' belum ada di daftar tag tugas, tambahkan
+          if (!initialTags.some(t => t.name === TICKET_TAG_NAME)) {
+            if (ticketTagInOptions) {
+              initialTags = [...initialTags, ticketTagInOptions];
+            } else {
+              // Fallback: Buat representasi tag baru (ini akan dibuat saat submit)
+              const syntheticTicketTag: Tag = {
+                id: uuidv4(),
+                name: TICKET_TAG_NAME,
+                color: '#DB2777',
+                isNew: true,
+                user_id: task.created_by.id,
+              };
+              initialTags = [...initialTags, syntheticTicketTag];
+            }
+          }
+        }
+
         form.reset({
           title: task.title,
           project_id: task.project_id,
@@ -111,9 +141,9 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task, proj
           priority: task.priority || 'Normal',
           status: task.status,
           assignee_ids: task.assignedTo?.map(a => a.id) || [],
-          tag_ids: task.tags?.map(t => t.id) || [],
+          tag_ids: initialTags.map(t => t.id),
         });
-        setSelectedTags(task.tags || []);
+        setSelectedTags(initialTags);
         if (task.status !== 'Done') {
           setPreviousStatus(task.status);
         } else {
@@ -136,7 +166,7 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task, proj
         setPreviousStatus('To do');
       }
     }
-  }, [task, open, form, projects, project, currentUser]);
+  }, [task, open, form, projects, project, currentUser, allTags]);
 
   const handleTagsChange = (newTags: Tag[]) => {
     setSelectedTags(newTags);
@@ -154,6 +184,11 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task, proj
     toast.info(`New tag "${tagName}" will be created upon saving.`);
     return newTag;
   };
+
+  const isTicketChecked = useMemo(() => 
+    selectedTags.some(t => t.name === TICKET_TAG_NAME),
+    [selectedTags, TICKET_TAG_NAME]
+  );
 
   const handleIsTicketChange = (checked: boolean) => {
     const ticketTagInOptions = allTags.find(t => t.name === TICKET_TAG_NAME);
@@ -224,11 +259,6 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task, proj
 
     onSubmit(payload);
   };
-
-  const isTicketChecked = useMemo(() => 
-    selectedTags.some(t => t.name === TICKET_TAG_NAME),
-    [selectedTags, TICKET_TAG_NAME]
-  );
 
   const formContent = (
     <div className="space-y-4">
