@@ -25,15 +25,15 @@ const formatBytes = (bytes?: number, decimals = 2) => {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
 }
 
-const ProjectTasks = ({ tasks, onAddTask, onEditTask, onDeleteTask, onToggleTaskCompletion }: ProjectTasksProps) => {
+const ProjectTasks = ({ tasks, onAddTask, onDeleteTask, onToggleTaskCompletion }: ProjectTasksProps) => {
   
   if (!tasks || tasks.length === 0) {
     return (
-      <div className="text-center text-muted-foreground py-8">
-        <ListChecks className="mx-auto h-12 w-12" />
-        <p className="mt-4">No tasks for this project yet.</p>
-        <Button onClick={onAddTask} className="mt-4">
-          <Plus className="mr-2 h-4 w-4" />
+      <div className="text-center text-muted-foreground py-4">
+        <ListChecks className="mx-auto h-8 w-8" />
+        <p className="mt-2 text-sm">No tasks for this project yet.</p>
+        <Button onClick={onAddTask} className="mt-3 text-sm h-8 px-3">
+          <Plus className="mr-1 h-4 w-4" />
           Add First Task
         </Button>
       </div>
