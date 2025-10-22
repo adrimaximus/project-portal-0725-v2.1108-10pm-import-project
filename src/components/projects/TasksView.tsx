@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { Task as ProjectTask, TaskAttachment } from "@/types";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -64,20 +64,14 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
   }
 
   const renderAttachments = (task: ProjectTask) => {
-    const allAttachments: TaskAttachment[] = [...(task.attachments || [])];
+    let allAttachments: TaskAttachment[] = [...(task.attachments || [])];
 
-    if (task.originTicketId && task.attachment_url) {
-      if (!allAttachments.some(att => att.file_url === task.attachment_url)) {
-        allAttachments.unshift({
-          id: `origin-${task.originTicketId}`,
-          file_name: task.attachment_name || 'Ticket Attachment',
-          file_url: task.attachment_url,
-          file_type: '',
-          file_size: 0,
-          storage_path: '',
-          created_at: task.created_at,
-        });
-      }
+    // NEW LOGIC: Merge attachments from the origin ticket
+    if (task.ticket_attachments && task.ticket_attachments.length > 0) {
+      const uniqueTicketAttachments = task.ticket_attachments.filter(
+        (ticketAtt) => !allAttachments.some((att) => att.file_url === ticketAtt.file_url)
+      );
+      allAttachments = [...uniqueTicketAttachments, ...allAttachments];
     }
 
     if (allAttachments.length === 0) return null;
