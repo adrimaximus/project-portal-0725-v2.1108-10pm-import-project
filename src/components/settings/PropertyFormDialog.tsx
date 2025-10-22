@@ -7,14 +7,14 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { ContactProperty } from '@/types';
+import { ContactProperty, CONTACT_PROPERTY_TYPES } from '@/types';
 import { Loader2, X } from 'lucide-react';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 
 const propertySchema = z.object({
   label: z.string().min(1, 'Label is required'),
   name: z.string().min(1, 'Name is required').regex(/^[a-z0-9_]+$/, 'Name can only contain lowercase letters, numbers, and underscores.'),
-  type: z.enum(['text', 'email', 'phone', 'url', 'date', 'textarea', 'number', 'image', 'multi-image', 'select', 'multi-select', 'checkbox']),
+  type: z.enum(CONTACT_PROPERTY_TYPES),
   options: z.array(z.string()).optional(),
 });
 
@@ -61,7 +61,7 @@ const PropertyFormDialog = ({ open, onOpenChange, onSave, property, isSaving, pr
         form.reset({ label: '', name: '', type: 'text' });
       }
     }
-  }, [property, open, form, reset]);
+  }, [property, open, form]);
 
   useEffect(() => {
     if (!property) { // Only auto-generate name for new properties
@@ -115,6 +115,7 @@ const PropertyFormDialog = ({ open, onOpenChange, onSave, property, isSaving, pr
                       <SelectItem value="phone">Phone</SelectItem>
                       <SelectItem value="url">URL</SelectItem>
                       <SelectItem value="image">Image</SelectItem>
+                      <SelectItem value="multi-image">Multi-Image</SelectItem>
                       <SelectItem value="select">Select</SelectItem>
                       <SelectItem value="multi-select">Multi-Select</SelectItem>
                       <SelectItem value="checkbox">Checkbox</SelectItem>

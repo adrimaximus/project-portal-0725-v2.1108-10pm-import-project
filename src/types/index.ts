@@ -381,11 +381,26 @@ export interface KbArticle {
   };
 }
 
+export const CONTACT_PROPERTY_TYPES = ['text', 'email', 'phone', 'url', 'date', 'textarea', 'number', 'image', 'multi-image', 'select', 'multi-select', 'checkbox'] as const;
+export type ContactPropertyType = typeof CONTACT_PROPERTY_TYPES[number];
+
 export interface ContactProperty {
   id: string;
   name: string;
   label: string;
-  type: string;
+  type: ContactPropertyType;
+  is_default: boolean;
+  options?: string[];
+}
+
+export const COMPANY_PROPERTY_TYPES = ['text', 'textarea', 'number', 'date', 'email', 'phone', 'url', 'image', 'select'] as const;
+export type CompanyPropertyType = typeof COMPANY_PROPERTY_TYPES[number];
+
+export interface CompanyProperty {
+  id: string;
+  name: string;
+  label: string;
+  type: CompanyPropertyType;
   is_default: boolean;
   options?: string[];
 }

@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { CompanyProperty } from '@/types';
+import { CompanyProperty, COMPANY_PROPERTY_TYPES } from '@/types';
 import { Loader2, X } from 'lucide-react';
 
 interface CompanyPropertyFormDialogProps {
@@ -21,7 +21,7 @@ interface CompanyPropertyFormDialogProps {
 
 const createPropertySchema = (properties: CompanyProperty[], property: CompanyProperty | null) => z.object({
   label: z.string().min(1, 'Label is required'),
-  type: z.enum(['text', 'textarea', 'number', 'date', 'email', 'phone', 'url', 'image', 'select']),
+  type: z.enum(COMPANY_PROPERTY_TYPES),
   options: z.array(z.object({ value: z.string() })).optional(),
 }).superRefine((data, ctx) => {
   const machineName = data.label.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
@@ -67,7 +67,7 @@ const CompanyPropertyFormDialog = ({ open, onOpenChange, onSave, property, isSav
       if (property) {
         form.reset({
           label: property.label,
-          type: property.type as PropertyFormValues['type'],
+          type: property.type,
           options: property.options?.map(o => ({ value: o })) || [{ value: '' }],
         });
       } else {
