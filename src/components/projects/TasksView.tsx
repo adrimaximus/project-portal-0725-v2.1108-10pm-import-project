@@ -79,24 +79,30 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
   };
 
   const getEffectivePriority = (task: ProjectTask): string => {
+    const basePriority = task.priority || 'Low';
+    // Normalize 'normal' to 'Normal' for consistent styling
+    const normalizedPriority = basePriority.toLowerCase() === 'normal' ? 'Normal' : basePriority;
+
     if (task.completed || !task.due_date) {
-        return task.priority || 'Low';
+        return normalizedPriority;
     }
 
     const dueDate = new Date(task.due_date);
     const now = new Date();
     const diffHours = (dueDate.getTime() - now.getTime()) / (1000 * 60 * 60);
 
-    if (diffHours > 0) {
-        if (diffHours <= 12) {
-            return 'Urgent';
-        }
-        if (diffHours <= 48) { // 2 days
-            return 'High';
-        }
+    // Apply due date conditions
+    if (diffHours < 0) { // Overdue tasks are Urgent
+        return 'Urgent';
+    }
+    if (diffHours <= 12) { // Due within 12 hours
+        return 'Urgent';
+    }
+    if (diffHours <= 48) { // Due within 48 hours (2 days)
+        return 'High';
     }
     
-    return task.priority || 'Low';
+    return normalizedPriority;
   };
 
   useEffect(() => {
@@ -125,7 +131,7 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
     };
 
     if (sortConfig.key === 'priority') {
-      const priorityOrder: { [key: string]: number } = { 'Urgent': 4, 'High': 3, 'Medium': 2, 'Low': 1 };
+      const priorityOrder: { [key: string]: number } = { 'Urgent': 4, 'High': 3, 'Medium': 2, 'Normal': 2, 'Low': 1 };
       tasksToSet.sort((a, b) => {
         const priorityA = getEffectivePriority(a);
         const priorityB = getEffectivePriority(b);
