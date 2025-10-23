@@ -24,6 +24,7 @@ import { useTaskMutations, UpsertTaskPayload } from '@/hooks/useTaskMutations';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import PortalLayout from '@/components/PortalLayout';
+import { formatInJakarta } from '@/lib/utils';
 
 type ViewMode = 'table' | 'list' | 'kanban' | 'tasks' | 'tasks-kanban';
 type SortConfig<T> = { key: keyof T | null; direction: 'ascending' | 'descending' };
@@ -38,33 +39,34 @@ const Index = () => {
   const [kanbanGroupBy, setKanbanGroupBy] = useState<'status' | 'payment_status'>('status');
   const [hideCompletedTasks, setHideCompletedTasks] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const { data: projectsData = [], isLoading: isLoadingProjects, refetch: refetchProjects } = useProjects({ searchTerm });
   
   const [advancedFilters, setAdvancedFilters] = useState<AdvancedFiltersState>({
     hiddenStatuses: [],
     selectedPeopleIds: [],
+    status: [],
+    assignees: [],
+    dueDate: null,
+  });
+
+  const { data: peopleData } = useQuery<Person[]>({
+    queryKey: ['people'],
+    queryFn: getPeople,
   });
 
   const allPeople = useMemo(() => {
-    if (!projectsData) return [];
-    const peopleMap = new Map<string, { id: string; name: string }>();
-    projectsData.forEach(project => {
-      project.assignedTo?.forEach(person => {
-        if (!peopleMap.has(person.id)) {
-          peopleMap.set(person.id, { id: person.id, name: person.name });
-        }
-      });
-    });
-    return Array.from(peopleMap.values()).sort((a, b) => a.name.localeCompare(b.name));
-  }, [projectsData]);
+    if (!peopleData) return [];
+    return peopleData.map(p => ({ id: p.id, name: p.full_name }));
+  }, [peopleData]);
 
   const {
     dateRange, setDateRange,
     sortConfig: projectSortConfig, requestSort: requestProjectSort, sortedProjects
   } = useProjectFilters(projectsData, advancedFilters);
 
-  const [taskSortConfig, setTaskSortConfig] = useState<{ key: keyof ProjectTask | string; direction: 'asc' | 'desc' }>({ key: 'due_date', direction: 'asc' });
+  const [taskSortConfig, setTaskSortConfig] = useState<{ key: keyof ProjectTask | string; direction: 'asc' | 'desc' }>({ key: 'updated_at', direction: 'desc' });
 
   const requestTaskSort = useCallback((key: string) => {
     setTaskSortConfig(prevConfig => {
