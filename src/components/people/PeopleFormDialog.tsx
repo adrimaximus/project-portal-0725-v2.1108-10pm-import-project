@@ -18,6 +18,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import CompanySelector from './CompanySelector';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import AvatarUpload from './AvatarUpload';
+import CustomPropertyInput from '../settings/CustomPropertyInput';
 
 // Minimal profile type definition to avoid touching global types.ts
 interface Profile {
@@ -40,6 +42,8 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
   const queryClient = useQueryClient();
   const { user: currentUser } = useAuth();
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
+  
+  const isLinkedUser = !!person?.user_id; // DEFINISI isLinkedUser
 
   const { data: properties = [], isLoading: isLoadingProperties } = useQuery<ContactProperty[]>({
     queryKey: ['contact_properties'],
@@ -74,15 +78,15 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
 
   const baseSchema = z.object({
     first_name: z.string().min(1, 'First name is required'),
-    last_name: z.string().optional(),
+    last_name: z.string().optional().nullable(),
     email: z.string().email('Invalid email address').optional().or(z.literal('')),
-    phone: z.string().optional(),
+    phone: z.string().optional().nullable(),
     company_id: z.string().uuid().optional().nullable(),
-    job_title: z.string().optional(),
-    department: z.string().optional(),
-    avatar_url: z.string().url().optional().or(z.literal('')),
-    birthday: z.string().optional(),
-    notes: z.string().optional(),
+    job_title: z.string().optional().nullable(),
+    department: z.string().optional().nullable(),
+    avatar_url: z.string().url().optional().nullable().or(z.literal('')),
+    birthday: z.string().optional().nullable(),
+    notes: z.string().optional().nullable(),
     custom_properties: z.record(z.any()).optional(),
   });
 
@@ -104,7 +108,10 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
       custom_properties: {},
     },
   });
-  const { control, handleSubmit, reset, setValue } = form;
+  const { control, handleSubmit, reset, setValue, watch } = form;
+  const watchedFirstName = watch('first_name');
+  const watchedLastName = watch('last_name');
+  const watchedEmail = watch('email');
 
   useEffect(() => {
     if (open) {
@@ -122,7 +129,21 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
           birthday: person.birthday ? new Date(person.birthday).toISOString().split('T')[0] : '',
         });
       } else { // Create mode
-        reset({ first_name: '', last_name: '', email: '', phone: '', company_id: null, job_title: '', department: '', avatar_url: '', birthday: '', notes: '', custom_properties: {} });
+        reset({ 
+          first_name: '', 
+          last_name: '', 
+          email: '', 
+          phone: '', 
+          company_id: null, 
+          job_title: '', 
+          department: '', 
+          avatar_url: '', 
+          birthday: '', 
+          notes: '', 
+          custom_properties: {
+            website: 'https://'
+          } 
+        });
       }
     } else {
       // Reset when dialog closes
@@ -160,7 +181,10 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
       const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'master admin';
       const isEditingLinkedUser = person && person.user_id && isAdmin;
 
-      const full_name = `${values.first_name || ''} ${values.last_name || ''}`.trim();
+      let full_name = `${values.first_name || ''} ${values.last_name || ''}`.trim();
+      if (!full_name && values.email) {
+        full_name = values.email.split('@')[0];
+      }
       
       const contactJson = {
         emails: values.email ? [values.email] : [],
@@ -225,30 +249,18 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
     mutation.mutate(data);
   };
 
-  const renderField = (prop: ContactProperty, field: any) => {
-    switch (prop.type) {
-      case 'number':
-        return <Input type="number" {...field} value={field.value ?? ''} />;
-      case 'date':
-        return <Input type="date" {...field} value={field.value ?? ''} />;
-      default:
-        return <Input type="text" {...field} value={field.value ?? ''} />;
-    }
-  };
-
-  const isLinkedUser = !!person?.user_id;
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg flex flex-col max-h-[90vh]">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-lg flex flex-col max-h-[80vh] p-0">
+        <DialogHeader className="p-4 border-b">
           <DialogTitle>{person ? 'Edit Person' : 'Add New Person'}</DialogTitle>
           <DialogDescription>Fill in the details for the person.</DialogDescription>
         </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={handleSubmit(onSubmit)} id="person-form" className="flex-1 flex flex-col min-h-0">
-            <ScrollArea className="flex-1 -mx-6 px-6">
-              <div className="space-y-4 pb-4">
+        
+        <ScrollArea className="h-full">
+          <div className="p-4">
+            <Form {...form}>
+              <form id="person-form" onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                 {!person && (
                   <div className="pb-4 border-b">
                     <Label>Pre-fill from User Profile</Label>
@@ -258,6 +270,25 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
                     </p>
                   </div>
                 )}
+                <FormField
+                  control={control}
+                  name="avatar_url"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Avatar</FormLabel>
+                      <FormControl>
+                        <AvatarUpload
+                          value={field.value || null}
+                          onChange={field.onChange}
+                          storagePath="people"
+                          name={`${watchedFirstName || ''} ${watchedLastName || ''}`}
+                          email={watchedEmail || ''}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 <FormField control={control} name="first_name" render={({ field }) => (
                   <FormItem>
                     <FormLabel>First Name</FormLabel>
@@ -282,7 +313,7 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
                 <FormField control={control} name="phone" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Phone</FormLabel>
-                    <FormControl><Input {...field} disabled={!!selectedProfile || isLinkedUser} /></FormControl>
+                    <FormControl><Input {...field} value={field.value || ''} disabled={!!selectedProfile || isLinkedUser} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
@@ -301,35 +332,28 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
                 <FormField control={control} name="job_title" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Job Title</FormLabel>
-                    <FormControl><Input {...field} /></FormControl>
+                    <FormControl><Input {...field} value={field.value || ''} placeholder="e.g., Marketing Manager" /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
                 <FormField control={control} name="department" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Department</FormLabel>
-                    <FormControl><Input {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={control} name="avatar_url" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Avatar URL</FormLabel>
-                    <FormControl><Input {...field} /></FormControl>
+                    <FormControl><Input {...field} value={field.value || ''} placeholder="e.g., Sales" /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
                 <FormField control={control} name="birthday" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Birthday</FormLabel>
-                    <FormControl><Input type="date" {...field} /></FormControl>
+                    <FormControl><Input type="date" {...field} value={field.value || ''} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
                 <FormField control={control} name="notes" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Notes</FormLabel>
-                    <FormControl><Textarea {...field} /></FormControl>
+                    <FormControl><Textarea {...field} value={field.value || ''} placeholder="Add any relevant notes here..." /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
@@ -340,14 +364,18 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
                   <div className="space-y-4 border-t pt-4 mt-4">
                     <h3 className="text-lg font-medium">Custom Properties</h3>
                     {filteredProperties.map(prop => (
-                      <FormField
+                      <Controller
                         key={prop.id}
                         control={control}
                         name={`custom_properties.${prop.name}`}
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>{prop.label}</FormLabel>
-                            <FormControl>{renderField(prop, field)}</FormControl>
+                            <CustomPropertyInput 
+                              property={prop} 
+                              control={control} 
+                              name={`custom_properties.${prop.name}`} 
+                              bucket="people" // Use the correct bucket for people images
+                            />
                             <FormMessage />
                           </FormItem>
                         )}
@@ -355,11 +383,12 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
                     ))}
                   </div>
                 )}
-              </div>
-            </ScrollArea>
-          </form>
-        </Form>
-        <DialogFooter className="pt-4 border-t flex-shrink-0">
+              </form>
+            </Form>
+          </div>
+        </ScrollArea>
+
+        <DialogFooter className="p-4 border-t">
           <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button type="submit" form="person-form" disabled={mutation.isPending}>
             {mutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
