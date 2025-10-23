@@ -8,7 +8,6 @@ const corsHeaders = {
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const EMAILIT_API_KEY = Deno.env.get("EMAILIT_API_KEY")!;
 const APP_URL = Deno.env.get("VITE_APP_URL")!;
 
 const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
@@ -65,7 +64,7 @@ serve(async (req) => {
     // 1. Fetch pending notifications
     const { data: pendingNotifications, error: fetchError } = await supabaseAdmin
       .from('pending_whatsapp_notifications')
-      .select('*, recipient:profiles(email, first_name, last_name), context_data')
+      .select('*, recipient:profiles(email, first_name, last_name, notification_preferences), context_data')
       .eq('status', 'pending')
       .lte('send_at', new Date().toISOString())
       .limit(50);
@@ -87,48 +86,48 @@ serve(async (req) => {
       const recipientName = notification.recipient?.first_name || notification.recipient?.email;
       const notificationType = notification.notification_type;
       const context = notification.context_data;
+      const prefs = notification.recipient?.notification_preferences || {};
       
-      let subject = "Pembaruan Proyek";
+      let subject = "Project Update";
       let bodyHtml = "";
       let attachments: any[] = [];
       let shouldSendEmail = false;
 
       // --- Logic for Mentions (discussion_mention) ---
-      if (notificationType === 'discussion_mention' && recipientEmail) {
+      if (notificationType === 'discussion_mention' && recipientEmail && prefs.mention !== false && prefs.email !== false) {
         shouldSendEmail = true;
         
         const mentionerId = context.mentioner_id;
         const projectId = context.project_id;
-        const commentId = context.comment_id;
         attachments = context.attachments || []; // Get attachments array
 
         // Fetch project and mentioner details
         const { data: projectData } = await supabaseAdmin.from('projects').select('name, slug').eq('id', projectId).single();
         const { data: mentionerData } = await supabaseAdmin.from('profiles').select('first_name, last_name, email').eq('id', mentionerId).single();
 
-        const mentionerName = mentionerData ? `${mentionerData.first_name || ''} ${mentionerData.last_name || ''}`.trim() || mentionerData.email : 'Seseorang';
-        const projectName = projectData?.name || 'Proyek';
+        const mentionerName = mentionerData ? `${mentionerData.first_name || ''} ${mentionerData.last_name || ''}`.trim() || mentionerData.email : 'Someone';
+        const projectName = projectData?.name || 'a project';
         const projectSlug = projectData?.slug || '';
         const projectLink = `${APP_URL}/projects/${projectSlug}`;
 
-        subject = `Anda disebut di proyek: ${projectName}`;
+        subject = `You were mentioned in: ${projectName}`;
         
         const attachmentHtml = generateAttachmentHtml(attachments);
 
         bodyHtml = `
           <p>Hi, ${recipientName},</p>
-          <p><strong>${mentionerName}</strong> menyebut Anda dalam sebuah komentar di proyek: <strong>${projectName}</strong>.</p>
+          <p><strong>${mentionerName}</strong> mentioned you in a comment on the project: <strong>${projectName}</strong>.</p>
           
           ${attachmentHtml}
 
-          <p style="margin-top: 20px;">Anda dapat melihat komentar tersebut dengan mengklik tombol di bawah ini:</p>
+          <p style="margin-top: 20px;">You can view the comment by clicking the button below:</p>
           <a href="${projectLink}" style="background-color: #1e40af; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">View Project</a>
           <p style="margin-top: 30px;">Thanks,<br>The 7i Portal Team</p>
         `;
       }
       
       // --- Logic for Task Assignment (task_assignment) ---
-      else if (notificationType === 'task_assignment' && recipientEmail) {
+      else if (notificationType === 'task_assignment' && recipientEmail && prefs.project_update !== false && prefs.email !== false) {
         shouldSendEmail = true;
         
         const taskId = context.task_id;
@@ -140,25 +139,25 @@ serve(async (req) => {
         const { data: projectData } = await supabaseAdmin.from('projects').select('name, slug').eq('id', taskData?.project_id).single();
         const { data: assignerData } = await supabaseAdmin.from('profiles').select('first_name, last_name, email').eq('id', assignerId).single();
 
-        const assignerName = assignerData ? `${assignerData.first_name || ''} ${assignerData.last_name || ''}`.trim() || assignerData.email : 'Seseorang';
-        const taskTitle = taskData?.title || 'Tugas Baru';
-        const projectName = projectData?.name || 'Proyek';
+        const assignerName = assignerData ? `${assignerData.first_name || ''} ${assignerData.last_name || ''}`.trim() || assignerData.email : 'Someone';
+        const taskTitle = taskData?.title || 'A new task';
+        const projectName = projectData?.name || 'a project';
         const projectSlug = projectData?.slug || '';
         const projectLink = `${APP_URL}/projects/${projectSlug}?tab=tasks&task=${taskId}`;
 
-        subject = `Tugas Baru untuk Anda: ${taskTitle}`;
+        subject = `New Task Assigned to You: ${taskTitle}`;
         
         const attachmentHtml = generateAttachmentHtml(attachments);
 
         bodyHtml = `
           <p>Hi, ${recipientName},</p>
-          <p><strong>${assignerName}</strong> telah menugaskan Anda pada tugas baru:</p>
-          <p style="font-size: 1.1em; font-weight: bold;">${taskTitle} (Proyek: ${projectName})</p>
+          <p><strong>${assignerName}</strong> has assigned you a new task:</p>
+          <p style="font-size: 1.1em; font-weight: bold;">${taskTitle} (in project: ${projectName})</p>
           
           ${attachmentHtml}
 
-          <p style="margin-top: 20px;">Anda dapat melihat detail tugas dengan mengklik tombol di bawah ini:</p>
-          <a href="${projectLink}" style="background-color: #1e40af; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Lihat Tugas</a>
+          <p style="margin-top: 20px;">You can view the task details by clicking the button below:</p>
+          <a href="${projectLink}" style="background-color: #1e40af; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">View Task</a>
           <p style="margin-top: 30px;">Thanks,<br>The 7i Portal Team</p>
         `;
       }
