@@ -11,7 +11,7 @@ const corsHeaders = {
 const EMAILIT_API_KEY = Deno.env.get("EMAILIT_API_KEY");
 const EMAIL_FROM = Deno.env.get("EMAIL_FROM") ?? "7i Portal <no-reply@mail.ahensi.com>";
 const SITE_URL = Deno.env.get("SITE_URL") ?? "https://7inked.ahensi.xyz";
-const ACCENT_COLOR = "#fa009f"; // 7i Portal Pink
+const ACCENT_COLOR = "#008A9E"; // 7inked Teal
 
 // Helper function to generate the styled attachment block
 function generateAttachmentHtml(attachments: any[]) {
