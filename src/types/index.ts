@@ -94,6 +94,7 @@ export interface Comment {
   attachment_url?: string;
   attachment_name?: string;
   attachments_jsonb?: any;
+  reactions?: Reaction[];
 }
 
 export interface ProjectFile {
