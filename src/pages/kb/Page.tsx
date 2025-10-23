@@ -10,6 +10,8 @@ import { Folder, FileText, Edit } from 'lucide-react';
 import { useState } from 'react';
 import PageEditorDialog from '@/components/kb/PageEditorDialog';
 import { Button } from '@/components/ui/button';
+import ArticleReactions from '@/components/kb/ArticleReactions';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const fetchArticleBySlug = async (slug: string): Promise<Article | null> => {
   const { data, error } = await supabase
@@ -25,6 +27,16 @@ const fetchArticleBySlug = async (slug: string): Promise<Article | null> => {
           id,
           name,
           color
+        )
+      ),
+      kb_article_reactions (
+        id,
+        emoji,
+        user_id,
+        profiles (
+          id,
+          first_name,
+          last_name
         )
       )
     `)
@@ -134,12 +146,28 @@ const Page = () => {
           />
         )}
 
-        <div className="flex justify-between items-start">
+        <div className="flex justify-between items-start gap-4">
           <h1 className="text-4xl font-bold tracking-tight">{article.title}</h1>
-          <Button variant="outline" onClick={() => setIsEditorOpen(true)}>
-            <Edit className="mr-2 h-4 w-4" />
-            Edit
-          </Button>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <ArticleReactions 
+              articleId={article.id}
+              rawReactions={article.kb_article_reactions || []}
+              articleSlug={slug!}
+            />
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="outline" size="icon" onClick={() => setIsEditorOpen(true)}>
+                    <Edit className="h-4 w-4" />
+                    <span className="sr-only">Edit Page</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Edit Page</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
         </div>
 
         <div
