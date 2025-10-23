@@ -100,7 +100,7 @@ serve(async (req) => {
       .select('*, recipient:profiles(id, email, first_name, last_name, phone, notification_preferences)')
       .eq('status', 'pending')
       .lte('send_at', new Date().toISOString())
-      .limit(20);
+      .limit(50);
 
     if (fetchError) throw fetchError;
 
@@ -113,21 +113,57 @@ serve(async (req) => {
     let failureCount = 0;
     let skippedCount = 0;
 
+    const userIds = new Set<string>();
+    const projectIds = new Set<string>();
+    const taskIds = new Set<string>();
+    const goalIds = new Set<string>();
+    const folderIds = new Set<string>();
+    const conversationIds = new Set<string>();
+
+    notifications.forEach(n => {
+        if (n.context_data) {
+            Object.values(n.context_data).forEach(value => {
+                if (typeof value === 'string' && value.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+                    userIds.add(value);
+                }
+            });
+            if (n.context_data.project_id) projectIds.add(n.context_data.project_id);
+            if (n.context_data.task_id) taskIds.add(n.context_data.task_id);
+            if (n.context_data.goal_id) goalIds.add(n.context_data.goal_id);
+            if (n.context_data.folder_id) folderIds.add(n.context_data.folder_id);
+        }
+        if (n.conversation_id) conversationIds.add(n.conversation_id);
+    });
+
+    const [profilesRes, projectsRes, tasksRes, goalsRes, foldersRes, conversationsRes] = await Promise.all([
+        userIds.size > 0 ? supabaseAdmin.from('profiles').select('id, first_name, last_name, email').in('id', Array.from(userIds)) : Promise.resolve({ data: [], error: null }),
+        projectIds.size > 0 ? supabaseAdmin.from('projects').select('id, name, slug').in('id', Array.from(projectIds)) : Promise.resolve({ data: [], error: null }),
+        taskIds.size > 0 ? supabaseAdmin.from('tasks').select('id, title, project_id').in('id', Array.from(taskIds)) : Promise.resolve({ data: [], error: null }),
+        goalIds.size > 0 ? supabaseAdmin.from('goals').select('id, title, slug').in('id', Array.from(goalIds)) : Promise.resolve({ data: [], error: null }),
+        folderIds.size > 0 ? supabaseAdmin.from('kb_folders').select('id, name, slug').in('id', Array.from(folderIds)) : Promise.resolve({ data: [], error: null }),
+        conversationIds.size > 0 ? supabaseAdmin.from('conversations').select('id, group_name, is_group').in('id', Array.from(conversationIds)) : Promise.resolve({ data: [], error: null }),
+    ]);
+
+    const profileMap = new Map(profilesRes.data?.map(p => [p.id, p]));
+    const projectMap = new Map(projectsRes.data?.map(p => [p.id, p]));
+    const taskMap = new Map(tasksRes.data?.map(t => [t.id, t]));
+    const goalMap = new Map(goalsRes.data?.map(g => [g.id, g]));
+    const folderMap = new Map(foldersRes.data?.map(f => [f.id, f]));
+    const conversationMap = new Map(conversationsRes.data?.map(c => [c.id, c]));
+
     for (const notification of notifications) {
       try {
         const recipient = notification.recipient;
-        if (!recipient) {
-          throw new Error(`Recipient profile not found for notification ${notification.id}.`);
+        if (!recipient || !recipient.phone) {
+          await supabaseAdmin.from('pending_whatsapp_notifications').update({ status: 'skipped', error_message: 'Recipient has no phone number.', processed_at: new Date().toISOString() }).eq('id', notification.id);
+          skippedCount++;
+          continue;
         }
 
         const prefs = recipient.notification_preferences || {};
         const typePref = prefs[notification.notification_type] || {};
-        
-        const isWhatsappEnabled = typePref.enabled !== false && typePref.whatsapp !== false;
-        const isEmailEnabled = typePref.enabled !== false && typePref.email !== false;
-
-        if (!isWhatsappEnabled && !isEmailEnabled) {
-          await supabaseAdmin.from('pending_whatsapp_notifications').update({ status: 'skipped', processed_at: new Date().toISOString() }).eq('id', notification.id);
+        if (typePref.enabled === false || typePref.whatsapp === false) {
+          await supabaseAdmin.from('pending_whatsapp_notifications').update({ status: 'skipped', error_message: 'User disabled this notification type.', processed_at: new Date().toISOString() }).eq('id', notification.id);
           skippedCount++;
           continue;
         }
@@ -146,97 +182,61 @@ serve(async (req) => {
             .neq('sender_id', recipient.id)
             .order('created_at', { ascending: true });
 
-          if (messagesError) throw messagesError;
-          if (!recentMessages || recentMessages.length === 0) {
+          if (messagesError || !recentMessages || recentMessages.length === 0) {
             await supabaseAdmin.from('pending_whatsapp_notifications').update({ status: 'processed', processed_at: new Date().toISOString() }).eq('id', notification.id);
             successCount++;
             continue;
           }
 
-          const { data: conversationData } = await supabaseAdmin.from('conversations').select('group_name, is_group').eq('id', notification.conversation_id).single();
+          const conversationData = conversationMap.get(notification.conversation_id);
           const senderName = getFullName(recentMessages[0].sender);
           const subject = recentMessages.length > 1
             ? `You have new messages in ${conversationData.is_group ? conversationData.group_name : senderName}`
             : `New message from ${senderName}`;
-
-          let emailBody = '';
-
-          if (recentMessages.length === 1) {
-            emailBody = `<p><strong>${senderName}:</strong></p><blockquote style="border-left: 4px solid #ccc; padding-left: 1em; margin: 1em 0; color: #666;">${recentMessages[0].content}</blockquote>`;
-          } else {
-            const messagesForPrompt = recentMessages.map(m => `${getFullName(m.sender)}: ${m.content}`).join('\n');
-            const summaryPrompt = `You are a helpful assistant. Summarize the following chat conversation concisely for an email notification. The recipient is ${getFullName(recipient)}. The conversation is from "${conversationData.is_group ? conversationData.group_name : senderName}". List who said what. Respond in Bahasa Indonesia.\n\nConversation:\n${messagesForPrompt}`;
-            
-            const aiResponse = await anthropic.messages.create({
-              model: "claude-3-haiku-20240307",
-              max_tokens: 250,
-              system: "Summarize the chat conversation provided by the user. Be concise and friendly. Respond in Bahasa Indonesia.",
-              messages: [{ role: "user", content: summaryPrompt }],
-            });
-            const summary = aiResponse.content[0].text;
-            emailBody = `<p>You have ${recentMessages.length} new messages. Here's a summary:</p><blockquote style="border-left: 4px solid #ccc; padding-left: 1em; margin: 1em 0; color: #666;">${summary.replace(/\n/g, '<br>')}</blockquote>`;
-          }
-
-          const html = `
-            <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; padding: 20px; max-width: 600px; margin: auto; border: 1px solid #ddd; border-radius: 8px;">
-              <p>Hai ${getFullName(recipient)},</p>
-              ${emailBody}
-              <p style="margin-top: 24px;">
-                <a href="${APP_URL}/chat" style="display: inline-block; padding: 12px 24px; font-size: 16px; color: #ffffff; background-color: #007bff; text-decoration: none; border-radius: 8px; font-weight: 600;">View Conversation</a>
-              </p>
-            </div>
-          `;
-
-          if (isEmailEnabled && recipient.email) {
-            const { error: emailError } = await supabaseAdmin.functions.invoke('send-email', {
-              body: { to: recipient.email, subject, html },
-            });
-            if (emailError) throw new Error(`Failed to send email: ${emailError.message}`);
-          }
           
-          await supabaseAdmin.from('pending_whatsapp_notifications').update({ status: 'processed', processed_at: new Date().toISOString() }).eq('id', notification.id);
-          successCount++;
-          continue;
-        }
-
-        if (isWhatsappEnabled && recipient.phone) {
+          const messagesForPrompt = recentMessages.map(m => `${getFullName(m.sender)}: ${m.content}`).join('\n');
+          userPrompt = `Buat notifikasi ringkasan chat. Penerima: ${recipientName}. Pengirim: ${senderName}. Percakapan: "${conversationData.is_group ? conversationData.group_name : senderName}". Ada ${recentMessages.length} pesan baru. Ringkasan pesan: ${messagesForPrompt}. URL: ${APP_URL}/chat`;
+        } else {
             switch (notification.notification_type) {
               case 'task_assignment': {
-                const { data: taskData } = await supabaseAdmin.from('tasks').select('title, project_id').eq('id', context.task_id).single();
-                const { data: projectData } = await supabaseAdmin.from('projects').select('name, slug').eq('id', taskData?.project_id).single();
-                const { data: assignerData } = await supabaseAdmin.from('profiles').select('first_name, last_name, email').eq('id', context.assigner_id).single();
+                const taskData = taskMap.get(context.task_id);
+                const projectData = projectMap.get(taskData?.project_id);
+                const assignerData = profileMap.get(context.assigner_id);
+                if (!taskData || !projectData || !assignerData) throw new Error('Missing context data for task_assignment');
                 userPrompt = `Buat notifikasi penugasan tugas. Penerima: ${recipientName}. Pemberi tugas: ${getFullName(assignerData)}. Judul tugas: "${taskData.title}". Proyek: "${projectData.name}". URL: ${APP_URL}/projects/${projectData.slug}?tab=tasks&task=${context.task_id}`;
                 break;
               }
               case 'discussion_mention': {
                 const { project_id, mentioner_id } = context;
-                const { data: projectData } = await supabaseAdmin.from('projects').select('name, slug').eq('id', project_id).single();
-                const { data: mentionerData } = await supabaseAdmin.from('profiles').select('first_name, last_name, email').eq('id', mentioner_id).single();
+                const projectData = projectMap.get(project_id);
+                const mentionerData = profileMap.get(mentioner_id);
+                if (!projectData || !mentionerData) throw new Error('Missing context data for discussion_mention');
                 userPrompt = `Buat notifikasi mention. Penerima: ${recipientName}. Yang me-mention: ${getFullName(mentionerData)}. Proyek: "${projectData.name}". URL: ${APP_URL}/projects/${projectData.slug}`;
                 break;
               }
               case 'task_completed': {
-                const { data: taskData } = await supabaseAdmin.from('tasks').select('title').eq('id', context.task_id).single();
-                const { data: completerData } = await supabaseAdmin.from('profiles').select('first_name, last_name, email').eq('id', context.completer_id).single();
+                const taskData = taskMap.get(context.task_id);
+                const completerData = profileMap.get(context.completer_id);
+                if (!taskData || !completerData) throw new Error('Missing context data for task_completed');
                 userPrompt = `Buat notifikasi tugas selesai. Penerima: ${recipientName}. Yang menyelesaikan: ${getFullName(completerData)}. Judul tugas: "${taskData.title}". Proyek: "${context.project_name}". URL: ${APP_URL}/projects/${context.project_slug}?tab=tasks&task=${context.task_id}`;
                 break;
               }
               case 'project_invite': {
-                const { data: projectData } = await supabaseAdmin.from('projects').select('name, slug').eq('id', context.project_id).single();
-                const { data: inviterData } = await supabaseAdmin.from('profiles').select('first_name, last_name, email').eq('id', context.inviter_id).single();
+                const projectData = projectMap.get(context.project_id);
+                const inviterData = profileMap.get(context.inviter_id);
+                if (!projectData || !inviterData) throw new Error('Missing context data for project_invite');
                 userPrompt = `Buat notifikasi undangan proyek. Penerima: ${recipientName}. Pengundang: ${getFullName(inviterData)}. Proyek: "${projectData.name}". URL: ${APP_URL}/projects/${projectData.slug}`;
                 break;
               }
               default:
                 throw new Error(`Unsupported notification type: ${notification.notification_type}`);
             }
-
-            const aiResponse = await anthropic.messages.create({ model: "claude-3-haiku-20240307", max_tokens: 200, system: getSystemPrompt(), messages: [{ role: "user", content: userPrompt }] });
-            const aiMessage = aiResponse.content[0].text;
-
-            await sendWhatsappMessage(recipient.phone, aiMessage);
         }
 
+        const aiResponse = await anthropic.messages.create({ model: "claude-3-haiku-20240307", max_tokens: 200, system: getSystemPrompt(), messages: [{ role: "user", content: userPrompt }] });
+        const aiMessage = aiResponse.content[0].text;
+
+        await sendWhatsappMessage(recipient.phone, aiMessage);
         await supabaseAdmin.from('pending_whatsapp_notifications').update({ status: 'processed', processed_at: new Date().toISOString() }).eq('id', notification.id);
         successCount++;
 
