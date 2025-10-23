@@ -57,6 +57,27 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
   const commonEmojis = ['👍', '❤️', '😂', '🎉', '🙏', '😢'];
   const initialSortSet = useRef(false);
 
+  const getDueDateClassName = (dueDateStr: string | null, completed: boolean): string => {
+    if (!dueDateStr || completed) {
+      return "text-muted-foreground text-xs";
+    }
+
+    const dueDate = new Date(dueDateStr);
+    const now = new Date();
+    const diffHours = (dueDate.getTime() - now.getTime()) / (1000 * 60 * 60);
+
+    if (diffHours < 0) {
+      return "text-red-600 font-bold text-xs"; // Overdue
+    }
+    if (diffHours <= 1) {
+      return "text-primary font-bold text-xs"; // Due within 1 hour
+    }
+    if (diffHours <= 24) {
+      return "text-primary text-xs"; // Due within 1 day
+    }
+    return "text-muted-foreground text-xs"; // Not due soon
+  };
+
   useEffect(() => {
     if (!initialSortSet.current && tasksProp.length > 0) {
       // Default sort: updated_at desc
@@ -418,7 +439,7 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
                     </TableCell>
                     <TableCell>
                       {task.due_date ? (
-                        <span className={cn("text-primary text-xs", isOverdue(task.due_date) && "text-red-600 font-bold")}>
+                        <span className={getDueDateClassName(task.due_date, task.completed)}>
                           {format(new Date(task.due_date), "MMM d, yyyy, p")}
                         </span>
                       ) : <span className="text-muted-foreground text-xs">No due date</span>}
