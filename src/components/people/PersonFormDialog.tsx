@@ -17,7 +17,6 @@ import UserSelector from './UserSelector';
 import { useAuth } from '@/contexts/AuthContext';
 import CompanySelector from './CompanySelector';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import AvatarUpload from './AvatarUpload';
 import CustomPropertyInput from '../settings/CustomPropertyInput';
 
@@ -260,7 +259,7 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
           <DialogDescription>Fill in the details for the person.</DialogDescription>
         </DialogHeader>
         
-        <ScrollArea className="h-full">
+        <div className="flex-1 overflow-y-auto">
           <div className="p-4">
             <Form {...form}>
               <form id="person-form" onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -389,7 +388,7 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
               </form>
             </Form>
           </div>
-        </ScrollArea>
+        </div>
 
         <DialogFooter className="p-4 border-t">
           <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
