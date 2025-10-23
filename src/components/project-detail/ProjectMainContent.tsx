@@ -117,6 +117,7 @@ const ProjectMainContent = ({
             }}
             onServicesChange={(services) => onFieldChange('services', services)}
             onTagsChange={(tags) => onFieldChange('tags', tags)}
+            onReactionsChange={(reactions) => onFieldChange('reactions', reactions)}
           />
         </TabsContent>
         <TabsContent value="tasks" className="mt-4">

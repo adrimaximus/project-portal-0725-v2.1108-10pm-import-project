@@ -1,13 +1,12 @@
-import { Project, Reaction } from "@/types";
-import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { useState } from 'react';
+import { Project, Tag, Reaction } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import ProjectDescription from './ProjectDescription';
 import ProjectBrief from './ProjectBrief';
 import ProjectTags from './ProjectTags';
-import { Tag } from '@/types';
-import { toast } from 'sonner';
 import { Separator } from "@/components/ui/separator";
+import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ProjectOverviewTabProps {
   project: Project;
@@ -17,6 +16,7 @@ interface ProjectOverviewTabProps {
   onFileDelete: (fileId: string) => void;
   onServicesChange: (services: string[]) => void;
   onTagsChange: (tags: Tag[]) => void;
+  onReactionsChange: (reactions: Reaction[]) => void;
 }
 
 const ProjectOverviewTab = ({ 
@@ -25,18 +25,10 @@ const ProjectOverviewTab = ({
   onDescriptionChange, 
   onFilesAdd, 
   onFileDelete,
-  onTagsChange
+  onTagsChange,
+  onReactionsChange
 }: ProjectOverviewTabProps) => {
   const [isGenerating, setIsGenerating] = useState(false);
-  const [localProject, setLocalProject] = useState(project);
-
-  useEffect(() => {
-    setLocalProject(project);
-  }, [project]);
-
-  const handleReactionsChange = (reactions: Reaction[]) => {
-    setLocalProject(prev => ({ ...prev, reactions }));
-  };
 
   const handleGenerateBrief = async () => {
     setIsGenerating(true);
@@ -45,11 +37,11 @@ const ProjectOverviewTab = ({
     try {
       const { data, error } = await supabase.functions.invoke('generate-brief', {
         body: {
-          title: localProject.name,
-          startDate: localProject.start_date,
-          dueDate: localProject.due_date,
-          venue: localProject.venue,
-          services: localProject.services,
+          title: project.name,
+          startDate: project.start_date,
+          dueDate: project.due_date,
+          venue: project.venue,
+          services: project.services,
         },
       });
 
@@ -77,7 +69,7 @@ const ProjectOverviewTab = ({
         <CardHeader className="p-4 pb-2"><CardTitle>Description & Brief</CardTitle></CardHeader>
         <CardContent className="p-4 pt-0">
           <ProjectDescription
-            description={localProject.description}
+            description={project.description}
             isEditing={isEditing}
             onDescriptionChange={onDescriptionChange}
             aiOptions={{
@@ -90,17 +82,17 @@ const ProjectOverviewTab = ({
           <div>
             <h3 className="text-base font-semibold mb-2">Project Tags</h3>
             <ProjectTags
-              project={localProject}
+              project={project}
               isEditing={isEditing}
               onTagsChange={onTagsChange}
-              onReactionsChange={handleReactionsChange}
+              onReactionsChange={onReactionsChange}
             />
           </div>
           <Separator className="my-4" />
           <div>
             <h3 className="text-base font-semibold mb-2">Project Files</h3>
             <ProjectBrief
-              files={localProject.briefFiles || []}
+              files={project.briefFiles || []}
               isEditing={isEditing}
               onFilesAdd={onFilesAdd}
               onFileDelete={onFileDelete}
