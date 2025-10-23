@@ -41,10 +41,11 @@ interface ProjectAdvancedFiltersProps {
 const ProjectAdvancedFilters = ({ filters, onFiltersChange, allPeople }: ProjectAdvancedFiltersProps) => {
   const [open, setOpen] = useState(false);
   const isDesktop = useMediaQuery("(min-width: 768px)");
-  const [statusPopoverOpen, setStatusPopoverOpen] = useState(false);
-  const [peoplePopoverOpen, setPeoplePopoverOpen] = useState(false);
+  const [hideStatusPopoverOpen, setHideStatusPopoverOpen] = useState(false);
+  const [assigneePopoverOpen, setAssigneePopoverOpen] = useState(false);
+  const [projectStatusPopoverOpen, setProjectStatusPopoverOpen] = useState(false);
 
-  const handleStatusToggle = (statusValue: string) => {
+  const handleHideStatusToggle = (statusValue: string) => {
     const isSelected = filters.hiddenStatuses.includes(statusValue);
     const newHiddenStatuses = isSelected
       ? filters.hiddenStatuses.filter(s => s !== statusValue)
@@ -52,15 +53,23 @@ const ProjectAdvancedFilters = ({ filters, onFiltersChange, allPeople }: Project
     onFiltersChange({ ...filters, hiddenStatuses: newHiddenStatuses });
   };
 
-  const handlePersonToggle = (personId: string) => {
-    const isSelected = filters.selectedPeopleIds.includes(personId);
-    const newSelectedPeopleIds = isSelected
-      ? filters.selectedPeopleIds.filter(id => id !== personId)
-      : [...filters.selectedPeopleIds, personId];
-    onFiltersChange({ ...filters, selectedPeopleIds: newSelectedPeopleIds });
+  const handleAssigneeToggle = (personId: string) => {
+    const isSelected = filters.assignees.includes(personId);
+    const newAssignees = isSelected
+      ? filters.assignees.filter(id => id !== personId)
+      : [...filters.assignees, personId];
+    onFiltersChange({ ...filters, assignees: newAssignees });
   };
 
-  const activeFilterCount = filters.hiddenStatuses.length + filters.selectedPeopleIds.length;
+  const handleProjectStatusToggle = (statusValue: string) => {
+    const isSelected = filters.status.includes(statusValue);
+    const newStatus = isSelected
+      ? filters.status.filter(s => s !== statusValue)
+      : [...filters.status, statusValue];
+    onFiltersChange({ ...filters, status: newStatus });
+  };
+
+  const activeFilterCount = filters.hiddenStatuses.length + filters.assignees.length + filters.status.length;
 
   const clearFilters = () => {
     onFiltersChange({ hiddenStatuses: [], selectedPeopleIds: [], status: [], assignees: [], dueDate: null });
@@ -81,18 +90,18 @@ const ProjectAdvancedFilters = ({ filters, onFiltersChange, allPeople }: Project
   const filterContent = (
     <div className="grid gap-4">
       <div className="space-y-2">
-        <Label>Filter by Person</Label>
-        <Popover open={peoplePopoverOpen} onOpenChange={setPeoplePopoverOpen}>
+        <Label>Filter by Assignee</Label>
+        <Popover open={assigneePopoverOpen} onOpenChange={setAssigneePopoverOpen}>
           <PopoverTrigger asChild>
             <Button
               variant="outline"
               role="combobox"
-              aria-expanded={peoplePopoverOpen}
+              aria-expanded={assigneePopoverOpen}
               className="w-full justify-between font-normal"
             >
-              {filters.selectedPeopleIds.length > 0
-                ? `${filters.selectedPeopleIds.length} people selected`
-                : "Select people..."}
+              {filters.assignees.length > 0
+                ? `${filters.assignees.length} people selected`
+                : "Select assignees..."}
               <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
             </Button>
           </PopoverTrigger>
@@ -105,12 +114,12 @@ const ProjectAdvancedFilters = ({ filters, onFiltersChange, allPeople }: Project
                   {allPeople.map((person) => (
                     <CommandItem
                       key={person.id}
-                      onSelect={() => handlePersonToggle(person.id)}
+                      onSelect={() => handleAssigneeToggle(person.id)}
                     >
                       <Check
                         className={cn(
                           "mr-2 h-4 w-4",
-                          filters.selectedPeopleIds.includes(person.id) ? "opacity-100" : "opacity-0"
+                          filters.assignees.includes(person.id) ? "opacity-100" : "opacity-0"
                         )}
                       />
                       {person.name}
@@ -124,13 +133,56 @@ const ProjectAdvancedFilters = ({ filters, onFiltersChange, allPeople }: Project
       </div>
 
       <div className="space-y-2">
-        <Label>Hide Statuses</Label>
-        <Popover open={statusPopoverOpen} onOpenChange={setStatusPopoverOpen}>
+        <Label>Filter by Project Status</Label>
+        <Popover open={projectStatusPopoverOpen} onOpenChange={setProjectStatusPopoverOpen}>
           <PopoverTrigger asChild>
             <Button
               variant="outline"
               role="combobox"
-              aria-expanded={statusPopoverOpen}
+              aria-expanded={projectStatusPopoverOpen}
+              className="w-full justify-between font-normal"
+            >
+              {filters.status.length > 0
+                ? `${filters.status.length} statuses selected`
+                : "Select project statuses..."}
+              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+            <Command>
+              <CommandInput placeholder="Search status..." />
+              <CommandList>
+                <CommandEmpty>No status found.</CommandEmpty>
+                <CommandGroup>
+                  {PROJECT_STATUS_OPTIONS.map((status) => (
+                    <CommandItem
+                      key={status.value}
+                      onSelect={() => handleProjectStatusToggle(status.value)}
+                    >
+                      <Check
+                        className={cn(
+                          "mr-2 h-4 w-4",
+                          filters.status.includes(status.value) ? "opacity-100" : "opacity-0"
+                        )}
+                      />
+                      {status.label}
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </CommandList>
+            </Command>
+          </PopoverContent>
+        </Popover>
+      </div>
+
+      <div className="space-y-2">
+        <Label>Hide Statuses</Label>
+        <Popover open={hideStatusPopoverOpen} onOpenChange={setHideStatusPopoverOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              role="combobox"
+              aria-expanded={hideStatusPopoverOpen}
               className="w-full justify-between font-normal"
             >
               {filters.hiddenStatuses.length > 0
@@ -148,7 +200,7 @@ const ProjectAdvancedFilters = ({ filters, onFiltersChange, allPeople }: Project
                   {PROJECT_STATUS_OPTIONS.map((status) => (
                     <CommandItem
                       key={status.value}
-                      onSelect={() => handleStatusToggle(status.value)}
+                      onSelect={() => handleHideStatusToggle(status.value)}
                     >
                       <Check
                         className={cn(
