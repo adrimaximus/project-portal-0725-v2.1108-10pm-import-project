@@ -7,10 +7,13 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useMemo, useRef, useEffect } from "react";
-import FileIcon from "../FileIcon"; // Correct import for custom FileIcon
+import FileIcon from "../FileIcon";
 import TaskReactions from '../projects/TaskReactions';
 import { useTaskMutations } from '@/hooks/useTaskMutations';
 import { useQueryClient } from '@tanstack/react-query';
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import TaskAttachmentList from './TaskAttachmentList';
+import { cn } from "@/lib/utils";
 
 interface ProjectTasksProps {
   tasks: Task[];
@@ -31,6 +34,136 @@ const formatBytes = (bytes?: number, decimals = 2) => {
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
 }
+
+const TaskRow = ({ task, onToggleTaskCompletion, onEditTask, onDeleteTask, handleToggleReaction, setRef }: {
+  task: Task;
+  onToggleTaskCompletion: (task: Task, completed: boolean) => void;
+  onEditTask: (task: Task) => void;
+  onDeleteTask: (task: Task) => void;
+  handleToggleReaction: (taskId: string, emoji: string) => void;
+  setRef: (el: HTMLDivElement | null) => void;
+}) => {
+  const allAttachments = useMemo(() => {
+    let attachments: TaskAttachment[] = [...(task.attachments || [])];
+    if (task.ticket_attachments && task.ticket_attachments.length > 0) {
+      const uniqueTicketAttachments = task.ticket_attachments.filter(
+        (ticketAtt) => !attachments.some((att) => att.file_url === ticketAtt.file_url)
+      );
+      attachments = [...attachments, ...uniqueTicketAttachments];
+    }
+    return attachments;
+  }, [task.attachments, task.ticket_attachments]);
+
+  const attachmentCount = allAttachments.length;
+  const hasAttachments = attachmentCount > 0;
+
+  return (
+    <div 
+      ref={setRef}
+      className="flex items-start space-x-3 p-2 rounded-md hover:bg-muted group transition-colors duration-500"
+    >
+      <Checkbox
+        id={`task-${task.id}`}
+        checked={task.completed}
+        onCheckedChange={(checked) => onToggleTaskCompletion(task, !!checked)}
+        className="mt-1"
+      />
+      <label
+        htmlFor={`task-${task.id}`}
+        className={`flex-1 min-w-0 text-sm flex items-center gap-2 cursor-pointer ${task.completed ? 'text-muted-foreground line-through' : 'text-card-foreground'}`}
+      >
+        <span className="break-words" title={task.title}>{task.title}</span>
+      </label>
+
+      <div className="flex items-center gap-2 ml-auto">
+        <TaskReactions reactions={task.reactions || []} onToggleReaction={(emoji) => handleToggleReaction(task.id, emoji)} />
+        {hasAttachments && (
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="ghost" size="sm" className="flex items-center gap-1 text-muted-foreground h-auto p-1">
+                <Paperclip className="h-4 w-4" />
+                <span className="text-xs font-medium">{attachmentCount}</span>
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80">
+              <div className="space-y-2">
+                <h4 className="font-medium leading-none">Attachments ({attachmentCount})</h4>
+                <div className="space-y-2 pt-2">
+                  {allAttachments.map((att) => (
+                    <div key={att.id} className="flex items-center justify-between p-2 rounded-md border bg-card">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <FileIcon fileType={att.file_type || ''} className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium truncate" title={att.file_name}>{att.file_name}</p>
+                          {att.file_size != null && att.file_size > 0 && <p className="text-xs text-muted-foreground">{formatBytes(att.file_size)}</p>}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+                          <a href={att.file_url} target="_blank" rel="noopener noreferrer" title="Preview">
+                            <Eye className="h-4 w-4" />
+                          </a>
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+                          <a href={att.file_url} download={att.file_name} title="Download">
+                            <Download className="h-4 w-4" />
+                          </a>
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
+        )}
+        {(task.originTicketId || task.tags?.some(t => t.name === 'Ticket')) && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Ticket className={`h-4 w-4 flex-shrink-0 ${task.completed ? 'text-green-500' : 'text-red-500'}`} />
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>This is a ticket</p>
+            </TooltipContent>
+          </Tooltip>
+        )}
+        <div className="flex items-center -space-x-2 pr-2">
+          {task.assignedTo?.map((assignee: User) => (
+            <Tooltip key={assignee.id}>
+              <TooltipTrigger asChild>
+                <Avatar className="h-6 w-6 border-2 border-background">
+                  <AvatarImage src={assignee.avatar_url} alt={assignee.name} />
+                  <AvatarFallback>{assignee.initials}</AvatarFallback>
+                </Avatar>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{assignee.name}</p>
+              </TooltipContent>
+            </Tooltip>
+          ))}
+        </div>
+      </div>
+
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100">
+            <MoreHorizontal className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem onSelect={() => onEditTask(task)}>
+            <Edit className="mr-2 h-4 w-4" />
+            Edit
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => onDeleteTask(task)} className="text-destructive">
+            <Trash2 className="mr-2 h-4 w-4" />
+            Delete
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  );
+};
 
 const ProjectTasks = ({ tasks, projectId, onAddTask, onEditTask, onDeleteTask, onToggleTaskCompletion, highlightedTaskId, onHighlightComplete }: ProjectTasksProps) => {
   const queryClient = useQueryClient();
@@ -83,134 +216,20 @@ const ProjectTasks = ({ tasks, projectId, onAddTask, onEditTask, onDeleteTask, o
         </Button>
       </div>
       <TooltipProvider>
-        {tasks.map((task) => {
-          const allAttachments = useMemo(() => {
-            let attachments: TaskAttachment[] = [...(task.attachments || [])];
-            
-            if (task.ticket_attachments && task.ticket_attachments.length > 0) {
-              const existingUrls = new Set(attachments.map(a => a.file_url));
-              const uniqueTicketAttachments = task.ticket_attachments.filter(
-                (ticketAtt) => !attachments.some((att) => att.file_url === ticketAtt.file_url)
-              );
-              attachments = [...attachments, ...uniqueTicketAttachments];
-            }
-            return attachments;
-          }, [task.attachments, task.ticket_attachments]);
-          
-          const attachmentCount = allAttachments.length;
-          const hasAttachments = attachmentCount > 0;
-
-          return (
-            <div 
-              key={task.id} 
-              ref={(el) => {
-                if (el) taskRefs.current.set(task.id, el);
-                else taskRefs.current.delete(task.id);
-              }}
-              className="flex items-start space-x-3 p-2 rounded-md hover:bg-muted group transition-colors duration-500"
-            >
-              <Checkbox
-                id={`task-${task.id}`}
-                checked={task.completed}
-                onCheckedChange={(checked) => onToggleTaskCompletion(task, !!checked)}
-                className="mt-1"
-              />
-              <label
-                htmlFor={`task-${task.id}`}
-                className={`flex-1 min-w-0 text-sm flex items-center gap-2 cursor-pointer ${task.completed ? 'text-muted-foreground line-through' : 'text-card-foreground'}`}
-              >
-                <span className="break-words" title={task.title}>{task.title}</span>
-              </label>
-
-              <div className="flex items-center gap-2 ml-auto">
-                <TaskReactions reactions={task.reactions || []} onToggleReaction={(emoji) => handleToggleReaction(task.id, emoji)} />
-                {hasAttachments && (
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button variant="ghost" size="sm" className="flex items-center gap-1 text-muted-foreground h-auto p-1">
-                        <Paperclip className="h-4 w-4" />
-                        <span className="text-xs font-medium">{attachmentCount}</span>
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-80">
-                      <div className="space-y-2">
-                        <h4 className="font-medium leading-none">Attachments ({attachmentCount})</h4>
-                        <div className="space-y-2 pt-2">
-                          {allAttachments.map((att) => (
-                            <div key={att.id} className="flex items-center justify-between p-2 rounded-md border bg-card">
-                              <div className="flex items-center gap-3 min-w-0">
-                                <FileIcon fileType={att.file_type || ''} className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-                                <div className="min-w-0">
-                                  <p className="text-sm font-medium truncate" title={att.file_name}>{att.file_name}</p>
-                                  {att.file_size != null && att.file_size > 0 && <p className="text-xs text-muted-foreground">{formatBytes(att.file_size)}</p>}
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
-                                  <a href={att.file_url} target="_blank" rel="noopener noreferrer" title="Preview">
-                                    <Eye className="h-4 w-4" />
-                                  </a>
-                                </Button>
-                                <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
-                                  <a href={att.file_url} download={att.file_name} title="Download">
-                                    <Download className="h-4 w-4" />
-                                  </a>
-                                </Button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </PopoverContent>
-                  </Popover>
-                )}
-                {(task.originTicketId || task.tags?.some(t => t.name === 'Ticket')) && (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Ticket className={`h-4 w-4 flex-shrink-0 ${task.completed ? 'text-green-500' : 'text-red-500'}`} />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>This is a ticket</p>
-                    </TooltipContent>
-                  </Tooltip>
-                )}
-                <div className="flex items-center -space-x-2 pr-2">
-                  {task.assignedTo?.map((assignee: User) => (
-                    <Tooltip key={assignee.id}>
-                      <TooltipTrigger asChild>
-                        <Avatar className="h-6 w-6 border-2 border-background">
-                          <AvatarImage src={assignee.avatar_url} alt={assignee.name} />
-                          <AvatarFallback>{assignee.initials}</AvatarFallback>
-                        </Avatar>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>{assignee.name}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  ))}
-                </div>
-              </div>
-
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100">
-                    <MoreHorizontal className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onSelect={() => onEditTask(task)}>
-                    <Edit className="mr-2 h-4 w-4" />
-                    Edit
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onSelect={() => onDeleteTask(task)} className="text-destructive">
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Delete
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          );
-        })}
+        {tasks.map((task) => (
+          <TaskRow
+            key={task.id}
+            task={task}
+            onToggleTaskCompletion={onToggleTaskCompletion}
+            onEditTask={onEditTask}
+            onDeleteTask={onDeleteTask}
+            handleToggleReaction={handleToggleReaction}
+            setRef={(el) => {
+              if (el) taskRefs.current.set(task.id, el);
+              else taskRefs.current.delete(task.id);
+            }}
+          />
+        ))}
       </TooltipProvider>
     </div>
   );

@@ -35,12 +35,21 @@ const AiChatView = forwardRef<HTMLTextAreaElement, AiChatViewProps>(({ onBack },
     };
   }, [aiUser, conversation, currentUser]);
 
-  if (!currentUser) return null;
-
   const handleSendMessage = (text: string, attachmentFile: File | null) => {
     sendMessage(text, attachmentFile, replyTo?.id);
     setReplyTo(null);
   };
+
+  if (!currentUser) {
+    return (
+      <div className="flex flex-col h-full bg-background overflow-hidden">
+        <ChatHeader onBack={onBack} conversation={aiConversationObject} />
+        <div className="flex-1 flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </div>
+    );
+  }
 
   if (isCheckingConnection) {
     return (
