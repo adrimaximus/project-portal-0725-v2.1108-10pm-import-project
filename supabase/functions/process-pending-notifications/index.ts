@@ -159,42 +159,29 @@ serve(async (req) => {
 
   try {
     // Security check
+    const internalHeader = req.headers.get('X-Internal-Request');
     const authHeader = req.headers.get('Authorization');
-    const referer = req.headers.get('Referer');
     const cronSecret = Deno.env.get('CRON_SECRET');
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
     let isAuthorized = false;
 
-    // Allow requests from pg_net (cron jobs)
-    if (referer === '_pg_net') {
+    // Path 1: Internal call from pg_net (cron job)
+    if (internalHeader === 'true') {
       isAuthorized = true;
     } 
-    // Allow requests with a valid secret (e.g., from external services or local testing)
+    // Path 2: External call with a secret
     else if (authHeader) {
       const token = authHeader.replace('Bearer ', '');
       if (token === cronSecret || token === serviceRoleKey) {
         isAuthorized = true;
-      } else {
-        // Fallback to check if the user is an admin
-        const userSupabase = createClient(SUPABASE_URL, Deno.env.get('SUPABASE_ANON_KEY')!, {
-          global: { headers: { Authorization: `Bearer ${token}` } },
-        });
-        const { data: { user } } = await userSupabase.auth.getUser();
-        if (user) {
-          const { data: profile } = await supabaseAdmin
-            .from('profiles')
-            .select('role')
-            .eq('id', user.id)
-            .single();
-          if (profile && (profile.role === 'master admin' || profile.role === 'admin')) {
-            isAuthorized = true;
-          }
-        }
       }
     }
 
     if (!isAuthorized) {
+      console.error("Unauthorized cron trigger attempt.", {
+        headers: Object.fromEntries(req.headers.entries()),
+      });
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: corsHeaders });
     }
 
