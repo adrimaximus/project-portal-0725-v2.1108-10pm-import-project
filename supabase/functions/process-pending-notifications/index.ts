@@ -83,16 +83,21 @@ Anda akan diberikan konteks untuk setiap notifikasi. Gunakan konteks tersebut un
 const getFullName = (profile: any) => `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email;
 
 serve(async (req) => {
+  console.log("[DEBUG] Function invoked.");
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    console.log("[DEBUG] Checking authorization...");
     const cronSecret = req.headers.get('Authorization')?.replace('Bearer ', '');
     if (cronSecret !== Deno.env.get('CRON_SECRET')) {
+      console.error("[DEBUG] Authorization failed. Provided secret does not match.");
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: corsHeaders });
     }
+    console.log("[DEBUG] Authorization successful.");
 
+    console.log("[DEBUG] Fetching pending notifications...");
     const { data: notifications, error: fetchError } = await supabaseAdmin
       .from('pending_whatsapp_notifications')
       .select('*, recipient:profiles(id, email, first_name, last_name, phone, notification_preferences)')
@@ -101,6 +106,8 @@ serve(async (req) => {
       .limit(20);
 
     if (fetchError) throw fetchError;
+    console.log(`[DEBUG] Found ${notifications?.length || 0} notifications to process.`);
+
     if (!notifications || notifications.length === 0) {
       return new Response(JSON.stringify({ message: 'No pending notifications.' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
@@ -109,7 +116,9 @@ serve(async (req) => {
     let successCount = 0;
     let failureCount = 0;
 
+    console.log("[DEBUG] Starting to process notifications loop.");
     for (const notification of notifications) {
+      console.log(`[DEBUG] Processing notification ID: ${notification.id}`);
       try {
         const recipient = notification.recipient;
         if (!recipient || !recipient.phone) {
@@ -169,6 +178,7 @@ serve(async (req) => {
         await supabaseAdmin.from('pending_whatsapp_notifications').update({ status: 'error', error_message: e.message, processed_at: new Date().toISOString() }).eq('id', notification.id);
       }
     }
+    console.log("[DEBUG] Finished processing loop.");
 
     return new Response(JSON.stringify({ message: `Processed ${notifications.length} notifications. Success: ${successCount}, Failed: ${failureCount}` }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -176,7 +186,7 @@ serve(async (req) => {
     });
 
   } catch (error) {
-    console.error("Top-level function error:", error.message);
+    console.error("[DEBUG] Top-level function error:", error.message);
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,
