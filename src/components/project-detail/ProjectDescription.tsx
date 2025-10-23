@@ -33,7 +33,7 @@ const ProjectDescription = ({ description, isEditing, onDescriptionChange, aiOpt
       {description ? (
         <div className="ql-snow !border-none">
           <div 
-            className="ql-editor [&>*:first-child]:mt-0 max-h-[300px] overflow-y-auto !p-0" 
+            className="ql-editor text-sm [&>*:first-child]:mt-0 max-h-[300px] overflow-y-auto !p-0" 
             dangerouslySetInnerHTML={{ __html: description }} 
           />
         </div>
