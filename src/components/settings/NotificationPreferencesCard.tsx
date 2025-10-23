@@ -13,6 +13,7 @@ import WhatsappIcon from "../icons/WhatsappIcon";
 import { useQuery } from "@tanstack/react-query";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Mail } from "lucide-react";
+import { PAYMENT_STATUS_OPTIONS } from "@/types";
 
 interface NotificationEvent {
   id: string;
@@ -34,6 +35,10 @@ const notificationTones = [
 ];
 
 const TONE_BASE_URL = `https://quuecudndfztjlxbrvyb.supabase.co/storage/v1/object/public/General/Notification/`;
+
+const REMINDER_STATUS_OPTIONS = PAYMENT_STATUS_OPTIONS.filter(opt => 
+  ['Unpaid', 'Overdue', 'Pending', 'In Process'].includes(opt.value)
+);
 
 const NotificationPreferencesCard = () => {
   const { user, refreshUser } = useAuth();
@@ -152,6 +157,31 @@ const NotificationPreferencesCard = () => {
     const success = await updatePreferences(newPreferences);
     if (success) {
       toast.success("Notification channel updated.");
+    }
+  };
+
+  const handleStatusChange = async (statusValue: string, isSelected: boolean) => {
+    const currentPref = preferences.billing_reminder || {};
+    const currentStatuses = currentPref.statuses || ['Overdue'];
+    
+    let newStatuses: string[];
+    if (isSelected) {
+      newStatuses = [...currentStatuses, statusValue];
+    } else {
+      newStatuses = currentStatuses.filter((s: string) => s !== statusValue);
+    }
+
+    const newPreferences = {
+      ...preferences,
+      billing_reminder: {
+        ...currentPref,
+        statuses: newStatuses,
+      },
+    };
+
+    const success = await updatePreferences(newPreferences);
+    if (success) {
+      toast.success("Billing reminder statuses updated.");
     }
   };
 
@@ -279,47 +309,75 @@ const NotificationPreferencesCard = () => {
                     </TableRow>
                     {events.map(type => {
                       const isEnabled = getIsEnabled(type.id);
+                      const isBillingReminder = type.id === 'billing_reminder';
+                      const selectedStatuses = preferences.billing_reminder?.statuses || ['Overdue'];
+
                       return (
-                        <TableRow key={type.id}>
-                          <TableCell>
-                            <Label htmlFor={`notif-${type.id}`} className="font-medium">{type.label}</Label>
-                            <p className="text-xs text-muted-foreground">{type.description}</p>
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <Switch
-                              id={`notif-${type.id}`}
-                              checked={isEnabled}
-                              onCheckedChange={(checked) => {
-                                const newPreferences = { ...preferences };
-                                const currentPref = newPreferences[type.id];
-                                if (typeof currentPref === 'object' && currentPref !== null) {
-                                  newPreferences[type.id] = { ...currentPref, enabled: checked };
-                                } else {
-                                  newPreferences[type.id] = { enabled: checked, email: true, whatsapp: true };
-                                }
-                                updatePreferences(newPreferences).then(success => {
-                                  if (success) toast.success("Notification setting updated.");
-                                });
-                              }}
-                            />
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <Checkbox
-                              id={`${type.id}-email`}
-                              checked={getChannelEnabled(type.id, 'email')}
-                              onCheckedChange={(checked) => handleChannelChange(type.id, 'email', !!checked)}
-                              disabled={!isEnabled}
-                            />
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <Checkbox
-                              id={`${type.id}-whatsapp`}
-                              checked={getChannelEnabled(type.id, 'whatsapp')}
-                              onCheckedChange={(checked) => handleChannelChange(type.id, 'whatsapp', !!checked)}
-                              disabled={!isEnabled}
-                            />
-                          </TableCell>
-                        </TableRow>
+                        <React.Fragment key={type.id}>
+                          <TableRow>
+                            <TableCell>
+                              <Label htmlFor={`notif-${type.id}`} className="font-medium">{type.label}</Label>
+                              <p className="text-xs text-muted-foreground">{type.description}</p>
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <Switch
+                                id={`notif-${type.id}`}
+                                checked={isEnabled}
+                                onCheckedChange={(checked) => {
+                                  const newPreferences = { ...preferences };
+                                  const currentPref = newPreferences[type.id];
+                                  if (typeof currentPref === 'object' && currentPref !== null) {
+                                    newPreferences[type.id] = { ...currentPref, enabled: checked };
+                                  } else {
+                                    newPreferences[type.id] = { enabled: checked, email: true, whatsapp: true };
+                                  }
+                                  updatePreferences(newPreferences).then(success => {
+                                    if (success) toast.success("Notification setting updated.");
+                                  });
+                                }}
+                              />
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <Checkbox
+                                id={`${type.id}-email`}
+                                checked={getChannelEnabled(type.id, 'email')}
+                                onCheckedChange={(checked) => handleChannelChange(type.id, 'email', !!checked)}
+                                disabled={!isEnabled}
+                              />
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <Checkbox
+                                id={`${type.id}-whatsapp`}
+                                checked={getChannelEnabled(type.id, 'whatsapp')}
+                                onCheckedChange={(checked) => handleChannelChange(type.id, 'whatsapp', !!checked)}
+                                disabled={!isEnabled}
+                              />
+                            </TableCell>
+                          </TableRow>
+                          {isBillingReminder && isEnabled && (
+                            <TableRow>
+                              <TableCell colSpan={4} className="p-0">
+                                <div className="p-4 pl-12 bg-muted/50">
+                                  <Label className="font-medium text-xs uppercase tracking-wider text-muted-foreground">Notify for statuses</Label>
+                                  <div className="flex flex-wrap gap-x-6 gap-y-2 mt-2">
+                                    {REMINDER_STATUS_OPTIONS.map(statusOption => (
+                                      <div key={statusOption.value} className="flex items-center space-x-2">
+                                        <Checkbox
+                                          id={`status-${statusOption.value}`}
+                                          checked={selectedStatuses.includes(statusOption.value)}
+                                          onCheckedChange={(checked) => handleStatusChange(statusOption.value, !!checked)}
+                                        />
+                                        <Label htmlFor={`status-${statusOption.value}`} className="text-sm font-normal">
+                                          {statusOption.label}
+                                        </Label>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </React.Fragment>
                       );
                     })}
                   </React.Fragment>

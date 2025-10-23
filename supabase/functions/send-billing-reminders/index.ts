@@ -1,150 +1,151 @@
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'
+// @ts-nocheck
+import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
+import { createClient } from 'npm:@supabase/supabase-js@2.54.0';
+import Anthropic from 'npm:@anthropic-ai/sdk@0.22.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+};
+
+const getSystemPrompt = () => `Anda adalah asisten keuangan yang profesional, sopan, dan proaktif. Tugas Anda adalah membuat pesan pengingat WhatsApp tentang invoice yang telah jatuh tempo.
+
+**Aturan Penting:**
+1.  **Nada Berdasarkan Urgensi:** Sesuaikan nada pesan Anda berdasarkan jumlah hari keterlambatan yang diberikan dalam konteks.
+    *   **Sedikit Mendesak (1-7 hari):** Gunakan bahasa yang ramah dan bersifat pengingat lembut.
+    *   **Cukup Mendesak (8-30 hari):** Gunakan bahasa yang lebih tegas namun tetap sopan, menekankan perlunya perhatian.
+    *   **Sangat Mendesak (>30 hari):** Gunakan bahasa yang jelas dan lugas, mendesak untuk segera ditindaklanjuti dan diselesaikan, sambil tetap menjaga profesionalisme.
+2.  **Sertakan Semua Detail:** Pastikan pesan Anda mencakup nama proyek, nomor invoice, dan jumlah hari keterlambatan.
+3.  **Format:** Gunakan format tebal WhatsApp (*kata*) untuk detail penting seperti nama proyek dan jumlah hari.
+4.  **Profesional dan Sopan:** Jaga agar bahasa tetap sopan dan profesional dalam segala situasi.
+5.  **Singkat dan Jelas:** Buat pesan yang langsung ke intinya.
+6.  **Sertakan URL:** Selalu sertakan URL yang diberikan di akhir pesan.
+7.  **Variasi:** Jangan gunakan kalimat yang sama persis setiap saat.`;
+
+const getFullName = (profile: any) => `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email;
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
-  }
-
-  // Use the SERVICE_ROLE_KEY for admin-level access
-  const supabaseAdmin = createClient(
-    Deno.env.get('SUPABASE_URL') ?? '',
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-  );
-
-  // 1. Security Check: Ensure this is a trusted request (e.g., from pg_cron)
-  const authHeader = req.headers.get('Authorization');
-  const cronSecret = Deno.env.get('CRON_SECRET');
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
-    console.error('CRON_SECRET mismatch or Authorization header missing.');
-    return new Response('Unauthorized', { status: 401, headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    // 2. Get all projects with unpaid invoices and a due date
+    const authHeader = req.headers.get('Authorization')?.replace('Bearer ', '');
+    if (authHeader !== Deno.env.get('CRON_SECRET')) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: corsHeaders });
+    }
+
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+
+    console.log("[send-overdue-reminders] Job started. Fetching projects.");
+
     const { data: projects, error: projectsError } = await supabaseAdmin
       .from('projects')
-      .select('id, name, payment_due_date, created_by')
-      .neq('payment_status', 'Paid')
+      .select('id, name, slug, invoice_number, payment_due_date, payment_status, created_by')
+      .in('payment_status', ['Unpaid', 'Overdue', 'Pending', 'In Process'])
       .not('payment_due_date', 'is', null);
 
     if (projectsError) throw projectsError;
 
-    const today = new Date();
-    today.setUTCHours(0, 0, 0, 0); // Use UTC for consistency
+    if (!projects || projects.length === 0) {
+      console.log("[send-overdue-reminders] No relevant invoices found.");
+      return new Response(JSON.stringify({ message: "No relevant invoices to process." }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+    
+    console.log(`[send-overdue-reminders] Found ${projects.length} relevant invoices.`);
 
-    let remindersSent = 0;
+    const projectIds = projects.map(p => p.id);
+    const { data: projectAdmins, error: adminsError } = await supabaseAdmin
+      .from('project_members')
+      .select('project_id, user_id')
+      .in('project_id', projectIds)
+      .eq('role', 'admin');
+    if (adminsError) throw adminsError;
+
+    const userIdsToFetch = new Set<string>();
+    projects.forEach(p => userIdsToFetch.add(p.created_by));
+    projectAdmins.forEach(m => userIdsToFetch.add(m.user_id));
+
+    const { data: profiles, error: profilesError } = await supabaseAdmin
+      .from('profiles')
+      .select('id, first_name, last_name, email, phone, notification_preferences')
+      .in('id', Array.from(userIdsToFetch));
+    if (profilesError) throw profilesError;
+    const profileMap = new Map(profiles.map(p => [p.id, p]));
+
+    let successCount = 0, failureCount = 0, skippedCount = 0;
 
     for (const project of projects) {
+      const recipients = new Set<string>([project.created_by, ...projectAdmins.filter(m => m.project_id === project.id).map(m => m.user_id)]);
       const dueDate = new Date(project.payment_due_date);
-      dueDate.setUTCHours(0, 0, 0, 0); // Use UTC for consistency
-
-      const timeDiff = today.getTime() - dueDate.getTime();
-      const daysOverdue = Math.floor(timeDiff / (1000 * 3600 * 24));
+      const today = new Date();
+      const overdueDays = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 3600 * 24));
 
       let reminderType: string | null = null;
+      if (overdueDays === 0) reminderType = 'due_date';
+      else if (overdueDays === 3) reminderType = 'overdue_3_days';
+      else if (overdueDays > 3 && (daysOverdue - 3) % 7 === 0) reminderType = 'overdue_weekly';
 
-      if (daysOverdue === 0) {
-        reminderType = 'due_date';
-      } else if (daysOverdue === 3) {
-        reminderType = 'overdue_3_days';
-      } else if (daysOverdue > 3 && (daysOverdue - 3) % 7 === 0) {
-        reminderType = 'overdue_weekly';
+      if (!reminderType) continue;
+
+      const { data: existingLog } = await supabaseAdmin
+        .from('billing_reminders_log')
+        .select('id')
+        .eq('project_id', project.id)
+        .eq('days_overdue_at_sending', overdueDays)
+        .limit(1).single();
+
+      if (existingLog) continue;
+
+      for (const userId of recipients) {
+        const profile = profileMap.get(userId);
+        if (!profile) continue;
+
+        const prefs = profile.notification_preferences || {};
+        const billingPrefs = prefs['billing_reminder'];
+        const isEnabled = (typeof billingPrefs === 'object' && billingPrefs !== null) ? billingPrefs.enabled !== false && billingPrefs.whatsapp !== false : billingPrefs !== false;
+        const statusesToNotify = (typeof billingPrefs === 'object' && billingPrefs?.statuses) ? billingPrefs.statuses : ['Overdue'];
+
+        if (isEnabled && statusesToNotify.includes(project.payment_status)) {
+          const { error: insertError } = await supabaseAdmin
+            .from('pending_whatsapp_notifications')
+            .insert({
+                recipient_id: userId,
+                send_at: new Date(),
+                notification_type: 'billing_reminder',
+                context_data: {
+                    project_id: project.id,
+                    project_name: project.name,
+                    days_overdue: overdueDays,
+                }
+            });
+          if (insertError) {
+            console.error(`Failed to insert notification for project ${project.id} to user ${userId}:`, insertError.message);
+            failureCount++;
+          } else {
+            successCount++;
+          }
+        } else {
+          skippedCount++;
+        }
       }
 
-      if (reminderType) {
-        // 3. Check if this specific reminder has already been sent for this number of days
-        const { data: existingLog, error: logError } = await supabaseAdmin
+      if (successCount > 0) {
+        const { error: logInsertError } = await supabaseAdmin
           .from('billing_reminders_log')
-          .select('id')
-          .eq('project_id', project.id)
-          .eq('days_overdue_at_sending', daysOverdue) 
-          .limit(1)
-          .single();
-
-        if (logError && logError.code !== 'PGRST116') { // Ignore 'not found' error
-            console.error(`Error checking log for project ${project.id}:`, logError.message);
-            continue;
-        }
-
-        if (!existingLog) {
-          // 4. Send notification if not already sent
-          const recipientId = project.created_by;
-          if (!recipientId) continue;
-
-          // Check user's notification preferences
-          const { data: profile, error: profileError } = await supabaseAdmin
-            .from('profiles')
-            .select('notification_preferences')
-            .eq('id', recipientId)
-            .single();
-
-          if (profileError) {
-            console.error(`Could not fetch profile for user ${recipientId}: ${profileError.message}`);
-            continue;
-          }
-
-          const prefs = profile.notification_preferences || {};
-          const prefSetting = prefs['billing_reminder'];
-          
-          // Check if enabled overall and if whatsapp channel is enabled
-          const isBillingEnabled = (typeof prefSetting === 'object' && prefSetting !== null)
-            ? prefSetting.enabled !== false && prefSetting.whatsapp !== false
-            : prefSetting !== false;
-
-
-          if (isBillingEnabled) {
-             const { error: insertError } = await supabaseAdmin
-                .from('pending_whatsapp_notifications')
-                .insert({
-                    recipient_id: recipientId,
-                    send_at: new Date(),
-                    notification_type: 'billing_reminder',
-                    context_data: {
-                        project_id: project.id,
-                        project_name: project.name,
-                        days_overdue: daysOverdue,
-                    }
-                });
-
-             if (insertError) {
-                console.error(`Failed to insert notification for project ${project.id}:`, insertError.message);
-                continue;
-             }
-
-             const { error: logInsertError } = await supabaseAdmin
-                .from('billing_reminders_log')
-                .insert({
-                    project_id: project.id,
-                    reminder_type: reminderType,
-                    days_overdue_at_sending: daysOverdue,
-                });
-
-             if (logInsertError) {
-                console.error(`Failed to log reminder for project ${project.id}:`, logInsertError.message);
-             } else {
-                remindersSent++;
-             }
-          }
-        }
+          .insert({ project_id: project.id, reminder_type: reminderType, days_overdue_at_sending: overdueDays });
+        if (logInsertError) console.error(`Failed to log reminder for project ${project.id}:`, logInsertError.message);
       }
     }
 
-    return new Response(JSON.stringify({ message: `Billing reminders processed. ${remindersSent} reminders sent.` }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 200,
-    });
+    return new Response(JSON.stringify({ success: true, processed_invoices: projects.length, sent_notifications: successCount, skipped_notifications: skippedCount, failed_notifications: failureCount }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
   } catch (error) {
-    console.error('Error processing billing reminders:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 500,
-    });
+    console.error('[send-overdue-reminders] Top-level function error:', error.message);
+    return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
 });
