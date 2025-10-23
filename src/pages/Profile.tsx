@@ -162,17 +162,27 @@ const Profile = () => {
   const handleSaveChanges = async () => {
     setIsSaving(true);
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ 
+      // This will trigger a database function to update the profiles table as well
+      const { error: authError } = await supabase.auth.updateUser({
+        data: { 
           first_name: firstName, 
           last_name: lastName,
+          full_name: `${firstName} ${lastName}`.trim()
+        }
+      });
+
+      if (authError) throw authError;
+
+      // Phone number is not in auth metadata, so update it separately in profiles
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ 
           phone: phone,
           updated_at: new Date().toISOString(),
         })
         .eq('id', user.id);
 
-      if (error) throw error;
+      if (profileError) throw profileError;
 
       toast.success("Profil berhasil diperbarui.");
       
