@@ -78,6 +78,27 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
     return "text-muted-foreground text-xs"; // Not due soon
   };
 
+  const getEffectivePriority = (task: ProjectTask): string => {
+    if (task.completed || !task.due_date) {
+        return task.priority || 'Low';
+    }
+
+    const dueDate = new Date(task.due_date);
+    const now = new Date();
+    const diffHours = (dueDate.getTime() - now.getTime()) / (1000 * 60 * 60);
+
+    if (diffHours > 0) {
+        if (diffHours <= 12) {
+            return 'Urgent';
+        }
+        if (diffHours <= 48) { // 2 days
+            return 'High';
+        }
+    }
+    
+    return task.priority || 'Low';
+  };
+
   useEffect(() => {
     if (!initialSortSet.current && tasksProp.length > 0) {
       // Default sort: updated_at desc
@@ -229,8 +250,9 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
         </TableHeader>
         <TableBody>
           {tasks.map(task => {
+            const effectivePriority = getEffectivePriority(task);
             const statusStyle = getTaskStatusStyles(task.status);
-            const priorityStyle = getPriorityStyles(task.priority);
+            const priorityStyle = getPriorityStyles(effectivePriority);
             const allAttachments = aggregateAttachments(task);
             const hasAssignees = task.assignedTo && task.assignedTo.length > 0;
             const reactions = task.reactions || [];
@@ -439,7 +461,7 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
                       )}
                     </TableCell>
                     <TableCell>
-                      <Badge className={priorityStyle.tw}>{task.priority || 'Low'}</Badge>
+                      <Badge className={priorityStyle.tw}>{effectivePriority}</Badge>
                     </TableCell>
                     <TableCell>
                       {task.due_date ? (
