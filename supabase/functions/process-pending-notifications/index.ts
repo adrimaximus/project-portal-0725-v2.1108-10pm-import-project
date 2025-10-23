@@ -308,6 +308,26 @@ serve(async (req) => {
           }
         } else {
             switch (notification.notification_type) {
+              case 'billing_reminder': {
+                const { project_name, days_overdue } = context;
+                if (!project_name) throw new Error('Missing project_name for billing_reminder');
+                let urgency = 'sedikit mendesak';
+                if (days_overdue > 30) {
+                    urgency = 'sangat mendesak dan perlu segera ditindaklanjuti';
+                } else if (days_overdue > 7) {
+                    urgency = 'cukup mendesak';
+                }
+                userPrompt = `**Konteks:**
+- **Jenis:** Pengingat Invoice Jatuh Tempo
+- **Penerima:** ${recipientName}
+- **Proyek:** ${project_name}
+- **Jumlah Hari Terlambat:** ${days_overdue} hari
+- **Tingkat Urgensi:** ${urgency}
+- **URL:** ${APP_URL}/billing
+
+Buat pesan pengingat yang sopan dan profesional sesuai dengan tingkat urgensi yang diberikan.`;
+                break;
+              }
               case 'task_assignment': {
                 const taskData = taskMap.get(context.task_id);
                 const projectData = projectMap.get(taskData?.project_id);
