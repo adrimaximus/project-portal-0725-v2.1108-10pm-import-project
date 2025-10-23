@@ -129,7 +129,24 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
           birthday: person.birthday ? new Date(person.birthday).toISOString().split('T')[0] : '',
         });
       } else { // Create mode
-        reset({ first_name: '', last_name: '', email: '', phone: '', company_id: null, job_title: '', department: '', avatar_url: '', birthday: '', notes: '', custom_properties: {} });
+        reset({ 
+          first_name: '', 
+          last_name: '', 
+          email: '', 
+          phone: '', 
+          company_id: null, 
+          job_title: '', 
+          department: '', 
+          avatar_url: '', 
+          birthday: '', 
+          notes: '', 
+          custom_properties: {
+            // Di sinilah Anda dapat mengatur nilai default untuk properti kustom Anda.
+            // Kuncinya harus cocok dengan 'name' dari properti yang Anda tentukan di pengaturan.
+            // Contoh untuk properti bernama 'website':
+            website: 'https://'
+          } 
+        });
       }
     } else {
       // Reset when dialog closes
@@ -237,7 +254,7 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg grid grid-rows-[auto_1fr_auto] max-h-[80vh] p-0">
+      <DialogContent className="sm:max-w-lg flex flex-col max-h-[80vh] p-0">
         <DialogHeader className="p-4 border-b">
           <DialogTitle>{person ? 'Edit Person' : 'Add New Person'}</DialogTitle>
           <DialogDescription>Fill in the details for the person.</DialogDescription>
