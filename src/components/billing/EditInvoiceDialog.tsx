@@ -105,7 +105,7 @@ export const EditInvoiceDialog = ({ isOpen, onClose, invoice, project }: EditInv
     if (!project) return;
     setIsGenerating(true);
     try {
-        const clientName = project.client_company_name || project.client_name || 'CLIENT';
+        const clientName = project.client_company_name || project.client_name || '';
         const projectKeywords = project.name.split(' ').slice(0, 3).join(' ');
 
         let sequence = 1;
@@ -119,9 +119,6 @@ export const EditInvoiceDialog = ({ isOpen, onClose, invoice, project }: EditInv
             if (error) throw error;
             sequence = (count || 0) + 1;
         } else {
-            // The previous implementation was querying a non-existent column 'client_company_name' on the 'projects' table, causing an error.
-            // We cannot reliably count invoices without a client_company_id.
-            // Defaulting to 1 and notifying the user is a safe fallback.
             sequence = 1;
             toast.info("Could not determine invoice sequence automatically.", {
                 description: "This project is not linked to a company record. The sequence number has been set to 1."
@@ -132,7 +129,8 @@ export const EditInvoiceDialog = ({ isOpen, onClose, invoice, project }: EditInv
         const monthRoman = toRoman(now.getMonth() + 1);
         const yearShort = now.getFullYear().toString().slice(-2);
 
-        const newInvoiceNumber = `INV/${clientName} ${projectKeywords}-${sequence}/${monthRoman}/${yearShort}`;
+        const invoicePrefix = clientName ? `${clientName} ` : '';
+        const newInvoiceNumber = `INV/${invoicePrefix}${projectKeywords}-${sequence}/${monthRoman}/${yearShort}`;
         setInvoiceNumber(newInvoiceNumber);
         toast.success("Invoice number generated!");
 
