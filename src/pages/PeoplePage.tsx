@@ -1,12 +1,11 @@
-import React, { useState, useMemo, useEffect, useRef } from "react";
-import { Project, User, Tag, Person } from '@/types';
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import PortalLayout from "@/components/PortalLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, PlusCircle, Search, Trash2, Edit, GitMerge, Loader2, Kanban, LayoutGrid, Table as TableIcon, Settings, Building } from "lucide-react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { getErrorMessage } from "@/lib/utils";
@@ -22,6 +21,8 @@ import MergeDialog from "@/components/people/MergeDialog";
 import CompaniesView from "@/components/people/CompaniesView";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import PeopleTableView from "@/components/people/PeopleTableView";
+import { usePeopleData } from "@/hooks/usePeopleData";
+import { Person } from "@/types";
 
 type KanbanViewHandle = {
   openSettings: () => void;
@@ -29,13 +30,11 @@ type KanbanViewHandle = {
 
 const PeoplePage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [searchTerm, setSearchTerm] = useState("");
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [personToEdit, setPersonToEdit] = useState<Person | null>(null);
   const [personToDelete, setPersonToDelete] = useState<Person | null>(null);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const [sortConfig, setSortConfig] = useState<{ key: keyof Person | null; direction: 'ascending' | 'descending' }>({ key: 'updated_at', direction: 'descending' });
   
   const activeTab = searchParams.get('tab') || 'people';
   const viewModeFromUrl = searchParams.get('view') as 'table' | 'kanban' | 'grid';
@@ -47,6 +46,16 @@ const PeoplePage = () => {
   const [selectedMergePair, setSelectedMergePair] = useState<DuplicatePair | null>(null);
   const kanbanViewRef = useRef<KanbanViewHandle>(null);
 
+  const {
+    tags,
+    isLoading,
+    searchTerm,
+    setSearchTerm,
+    sortConfig,
+    requestSort,
+    filteredPeople,
+  } = usePeopleData();
+
   useEffect(() => {
     if (activeTab === 'people') {
       localStorage.setItem('people_view_mode', viewMode);
@@ -55,27 +64,6 @@ const PeoplePage = () => {
       setSearchParams({ tab: 'companies' }, { replace: true });
     }
   }, [viewMode, activeTab, setSearchParams]);
-
-  const { data: people = [], isLoading } = useQuery({
-    queryKey: ['people', 'with-slug'],
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_people_with_details');
-      if (error) throw error;
-      return (data as Person[]).map(person => ({
-        ...person,
-        tags: person.tags ? [...person.tags].sort((a, b) => a.name.localeCompare(b.name)) : [],
-      }));
-    }
-  });
-
-  const { data: tags = [] } = useQuery({
-    queryKey: ['tags'],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('tags').select('*');
-      if (error) throw error;
-      return data as Tag[];
-    }
-  });
 
   const findAndAnalyzeDuplicates = async () => {
     setIsFindingDuplicates(true);
@@ -110,44 +98,6 @@ const PeoplePage = () => {
     setIsSummaryDialogOpen(true);
     setIsFindingDuplicates(false);
   };
-
-  const requestSort = (key: keyof Person) => {
-    let direction: 'ascending' | 'descending' = 'ascending';
-    if (sortConfig.key === key && sortConfig.direction === 'ascending') {
-      direction = 'descending';
-    }
-    setSortConfig({ key, direction });
-  };
-
-  const sortedPeople = useMemo(() => {
-    let sortableItems = [...people];
-    if (sortConfig.key !== null) {
-      sortableItems.sort((a, b) => {
-        const aValue = a[sortConfig.key!];
-        const bValue = b[sortConfig.key!];
-
-        if (aValue === null || aValue === undefined) return 1;
-        if (bValue === null || bValue === undefined) return -1;
-        
-        if (String(aValue).toLowerCase() < String(bValue).toLowerCase()) {
-          return sortConfig.direction === 'ascending' ? -1 : 1;
-        }
-        if (String(aValue).toLowerCase() > String(bValue).toLowerCase()) {
-          return sortConfig.direction === 'ascending' ? 1 : -1;
-        }
-        return 0;
-      });
-    }
-    return sortableItems;
-  }, [people, sortConfig]);
-
-  const filteredPeople = useMemo(() => {
-    return sortedPeople.filter(person =>
-      person.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (person.company && person.company.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (person.job_title && person.job_title.toLowerCase().includes(searchTerm.toLowerCase()))
-    );
-  }, [sortedPeople, searchTerm]);
 
   const handleAddNew = () => {
     setPersonToEdit(null);
