@@ -110,7 +110,7 @@ serve(async (req) => {
         : `${SITE_URL}/projects/${project_slug}`;
       
       const html = `
-        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; padding: 20px;">
             <p>Hi ${profile.first_name || profile.email.split('@')[0]},</p>
             <p>
                 <strong>${mentioner_name}</strong> mentioned you in a comment on the project <strong>${project_name}</strong>.
