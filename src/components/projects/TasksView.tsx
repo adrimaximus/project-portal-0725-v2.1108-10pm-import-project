@@ -432,7 +432,11 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
                       ) : null}
                     </TableCell>
                     <TableCell>
-                      <Badge className={cn(statusStyle.tw, 'border-transparent')}>{task.status}</Badge>
+                      {task.due_date && isOverdue(task.due_date) && !task.completed ? (
+                        <Badge className="bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400 border-transparent">Overdue</Badge>
+                      ) : (
+                        <Badge className={cn(statusStyle.tw, 'border-transparent')}>{task.status}</Badge>
+                      )}
                     </TableCell>
                     <TableCell>
                       <Badge className={priorityStyle.tw}>{task.priority || 'Low'}</Badge>
