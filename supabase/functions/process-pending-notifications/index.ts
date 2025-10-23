@@ -344,6 +344,41 @@ serve(async (req) => {
                 userPrompt = `Buat notifikasi undangan proyek. Penerima: ${recipientName}. Pengundang: ${getFullName(inviterData)}. Proyek: "${projectData.name}". URL: ${APP_URL}/projects/${projectData.slug}`;
                 break;
               }
+              case 'goal_invite': {
+                const goalData = goalMap.get(context.goal_id);
+                const inviterData = profileMap.get(context.inviter_id);
+                if (!goalData || !inviterData) throw new Error('Missing context data for goal_invite');
+                userPrompt = `Buat notifikasi undangan kolaborasi goal. Penerima: ${recipientName}. Pengundang: ${getFullName(inviterData)}. Judul goal: "${goalData.title}". URL: ${APP_URL}/goals/${goalData.slug}`;
+                break;
+              }
+              case 'kb_invite': {
+                const folderData = folderMap.get(context.folder_id);
+                const inviterData = profileMap.get(context.inviter_id);
+                if (!folderData || !inviterData) throw new Error('Missing context data for kb_invite');
+                userPrompt = `Buat notifikasi undangan kolaborasi knowledge base. Penerima: ${recipientName}. Pengundang: ${getFullName(inviterData)}. Nama folder: "${folderData.name}". URL: ${APP_URL}/knowledge-base/folders/${folderData.slug}`;
+                break;
+              }
+              case 'payment_status_updated': {
+                const projectData = projectMap.get(context.project_id);
+                const updaterData = profileMap.get(context.updater_id);
+                if (!projectData || !updaterData) throw new Error('Missing context data for payment_status_updated');
+                userPrompt = `Buat notifikasi pembaruan status pembayaran. Penerima: ${recipientName}. Yang memperbarui: ${getFullName(updaterData)}. Proyek: "${projectData.name}". Status baru: *${context.new_status}*. URL: ${APP_URL}/projects/${projectData.slug}`;
+                break;
+              }
+              case 'project_status_updated': {
+                const projectData = projectMap.get(context.project_id);
+                const updaterData = profileMap.get(context.updater_id);
+                if (!projectData || !updaterData) throw new Error('Missing context data for project_status_updated');
+                userPrompt = `Buat notifikasi pembaruan status proyek. Penerima: ${recipientName}. Yang memperbarui: ${getFullName(updaterData)}. Proyek: "${projectData.name}". Status diubah dari *${context.old_status}* menjadi *${context.new_status}*. URL: ${APP_URL}/projects/${projectData.slug}`;
+                break;
+              }
+              case 'goal_progress_update': {
+                const goalData = goalMap.get(context.goal_id);
+                const updaterData = profileMap.get(context.updater_id);
+                if (!goalData || !updaterData) throw new Error('Missing context data for goal_progress_update');
+                userPrompt = `Buat notifikasi pembaruan progres goal. Penerima: ${recipientName}. Yang memperbarui: ${getFullName(updaterData)}. Goal: "${goalData.title}". Progres baru dicatat. URL: ${APP_URL}/goals/${goalData.slug}`;
+                break;
+              }
               default:
                 throw new Error(`Unsupported notification type: ${notification.notification_type}`);
             }
