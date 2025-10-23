@@ -45,15 +45,18 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // NOTE: Authorization check is removed to align with other cron-triggered functions
-  // and resolve the 401 error from pg_cron. A secret check can be re-added if needed.
-
-  const supabaseAdmin = createClient(
-    Deno.env.get('SUPABASE_URL') ?? '',
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-  );
-
   try {
+    // Security check for cron job
+    const cronSecret = req.headers.get('Authorization')?.replace('Bearer ', '');
+    if (cronSecret !== Deno.env.get('CRON_SECRET')) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: corsHeaders });
+    }
+
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+
     console.log("[send-overdue-reminders] Job started. Fetching overdue invoices.");
 
     const { data: overdueProjects, error: projectsError } = await supabaseAdmin
