@@ -173,6 +173,15 @@ const PersonProfilePage = () => {
     }
   });
 
+  const personalEmailProperty = useMemo(() => 
+    customProperties.find(p => p.label.toLowerCase() === 'email pribadi' || p.label.toLowerCase() === 'personal email'),
+    [customProperties]
+  );
+  const personalEmail = useMemo(() => 
+    personalEmailProperty && person?.custom_properties ? person.custom_properties[personalEmailProperty.name] : null,
+    [personalEmailProperty, person?.custom_properties]
+  );
+
   const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'master admin';
 
   const handleDelete = async () => {
@@ -209,7 +218,7 @@ const PersonProfilePage = () => {
   const firstPhone = person.contact?.phones?.[0] || person.phone;
   const whatsappLink = firstPhone ? `https://wa.me/${formatPhoneNumberForApi(firstPhone)}` : null;
 
-  const customPropertiesWithValue = customProperties.filter(prop => person.custom_properties && person.custom_properties[prop.name]);
+  const customPropertiesWithValue = customProperties.filter(prop => person.custom_properties && person.custom_properties[prop.name] && prop.id !== personalEmailProperty?.id);
 
   return (
     <PortalLayout>
@@ -256,6 +265,7 @@ const PersonProfilePage = () => {
               <CardHeader><CardTitle>Contact Info</CardTitle></CardHeader>
               <CardContent className="space-y-3 text-sm">
                 {firstEmail && <div className="flex items-center gap-3"><Mail className="h-4 w-4 text-muted-foreground" /><a href={`mailto:${firstEmail}`} className="truncate hover:underline">{firstEmail}</a></div>}
+                {personalEmail && <div className="flex items-center gap-3"><Mail className="h-4 w-4 text-muted-foreground" /><a href={`mailto:${personalEmail}`} className="truncate hover:underline flex items-center gap-2">{personalEmail} <Badge variant="outline" className="text-xs">Pribadi</Badge></a></div>}
                 {whatsappLink && <div className="flex items-center gap-3"><WhatsappIcon className="h-4 w-4 text-muted-foreground" /><a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="truncate hover:underline text-primary">{firstPhone}</a></div>}
                 {addressObject && (addressObject.address || addressObject.name) && (
                   <div className="flex items-start gap-3">
