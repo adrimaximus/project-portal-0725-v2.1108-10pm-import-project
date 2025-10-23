@@ -48,7 +48,6 @@ const sendWhatsappMessage = async (phone: string, message: string) => {
     console.warn(`Invalid phone number format: ${phone}. Skipping.`);
     return;
   }
-  console.log("Sending WhatsApp:", { phone: formattedPhone, message });
   const response = await fetch("https://wbiztool.com/api/v1/send_msg/", {
     method: 'POST',
     headers: {
@@ -64,10 +63,8 @@ const sendWhatsappMessage = async (phone: string, message: string) => {
       message: message,
     }),
   });
-  console.log("WBIZ Response status:", response.status);
   if (!response.ok) {
     const errText = await response.text();
-    console.error("WBIZ Response body:", errText);
     let errorData;
     try {
       errorData = JSON.parse(errText);
@@ -95,7 +92,6 @@ Anda akan diberikan konteks untuk setiap notifikasi. Gunakan konteks tersebut un
 const getFullName = (profile: any) => `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email;
 
 const generateAiMessage = async (userPrompt: string): Promise<string> => {
-  // Try Anthropic first
   if (ANTHROPIC_API_KEY) {
     try {
       const anthropic = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
@@ -106,7 +102,6 @@ const generateAiMessage = async (userPrompt: string): Promise<string> => {
     }
   }
 
-  // Fallback to OpenAI
   if (OPENAI_API_KEY) {
     try {
       const openai = new OpenAI({ apiKey: OPENAI_API_KEY });
@@ -129,6 +124,34 @@ const generateAiMessage = async (userPrompt: string): Promise<string> => {
   throw new Error("No AI provider (Anthropic or OpenAI) is configured.");
 };
 
+const generateChatEmailHtml = (recipientName: string, messages: any[], conversationData: any, senderName: string) => {
+    const messageHtml = messages.map(msg => {
+        const sender = getFullName(msg.sender);
+        const time = new Date(msg.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+        return `
+            <div style="margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid #eeeeee;">
+                <p style="margin: 0; font-weight: 600; color: #111827;">${sender} <span style="font-weight: 400; color: #6b7280; font-size: 12px;">${time}</span></p>
+                <p style="margin: 4px 0 0; color: #374151;">${msg.content.replace(/\n/g, '<br>')}</p>
+            </div>
+        `;
+    }).join('');
+
+    const conversationName = conversationData.is_group ? `the group "${conversationData.group_name}"` : `your chat with ${senderName}`;
+
+    return `
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #111827;">
+        <h2 style="font-size: 24px; font-weight: 600; color: #111827; margin-bottom: 8px;">New Messages in 7i Portal</h2>
+        <p style="font-size: 16px; color: #374151; margin-top: 0;">Hi ${recipientName},</p>
+        <p style="font-size: 16px; color: #374151;">You have ${messages.length} new message(s) in ${conversationName}.</p>
+        <div style="background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin-top: 24px; margin-bottom: 24px;">
+            ${messageHtml}
+        </div>
+        <a href="${APP_URL}/chat" style="display: inline-block; padding: 12px 24px; font-size: 16px; color: #ffffff; background-color: #008A9E; text-decoration: none; border-radius: 8px; font-weight: 600;">View Conversation</a>
+        <p style="margin-top: 24px; font-size: 12px; color: #6b7280;">You are receiving this because you have email notifications enabled for new chat messages.</p>
+    </div>
+    `;
+};
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -137,13 +160,12 @@ serve(async (req) => {
   try {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader || authHeader !== `Bearer ${CRON_SECRET}`) {
-      const errorMessage = "Unauthorized. This function is protected and requires a valid 'Authorization: Bearer <CRON_SECRET>' header. It is intended to be run automatically by a scheduled job and does not require a request body.";
-      return new Response(JSON.stringify({ error: errorMessage }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
     const { data: notifications, error: fetchError } = await supabaseAdmin
       .from('pending_whatsapp_notifications')
-      .select('*, recipient:profiles(id, email, first_name, last_name, phone, notification_preferences)')
+      .select('*, recipient:profiles(*)')
       .eq('status', 'pending')
       .lte('send_at', new Date().toISOString())
       .limit(50);
@@ -155,14 +177,7 @@ serve(async (req) => {
     }
 
     const recipientIds = notifications.map(n => n.recipient_id).filter(Boolean);
-    const { data: peopleData, error: peopleError } = await supabaseAdmin
-      .from('people')
-      .select('user_id, contact')
-      .in('user_id', recipientIds);
-    
-    if (peopleError) {
-      console.warn("Could not fetch people contact info, will fallback to profile phone.", peopleError.message);
-    }
+    const { data: peopleData } = await supabaseAdmin.from('people').select('user_id, contact').in('user_id', recipientIds);
     const peopleContactMap = new Map(peopleData?.map(p => [p.user_id, p.contact]) || []);
 
     let successCount = 0;
@@ -210,19 +225,19 @@ serve(async (req) => {
     for (const notification of notifications) {
       try {
         const recipient = notification.recipient;
-        const personContact = peopleContactMap.get(recipient.id);
-        const phoneFromPeople = personContact?.phones?.[0];
-        const phoneToSend = phoneFromPeople || recipient.phone;
-
-        if (!recipient || !phoneToSend) {
-          await supabaseAdmin.from('pending_whatsapp_notifications').update({ status: 'skipped', error_message: 'Recipient has no phone number.', processed_at: new Date().toISOString() }).eq('id', notification.id);
+        if (!recipient) {
+          await supabaseAdmin.from('pending_whatsapp_notifications').update({ status: 'skipped', error_message: 'Recipient profile not found.', processed_at: new Date().toISOString() }).eq('id', notification.id);
           skippedCount++;
           continue;
         }
 
+        const personContact = peopleContactMap.get(recipient.id);
+        const phoneFromPeople = personContact?.phones?.[0];
+        const phoneToSend = phoneFromPeople || recipient.phone;
         const prefs = recipient.notification_preferences || {};
         const typePref = prefs[notification.notification_type] || {};
-        if (typePref.enabled === false || typePref.whatsapp === false) {
+
+        if (typePref.enabled === false) {
           await supabaseAdmin.from('pending_whatsapp_notifications').update({ status: 'skipped', error_message: 'User disabled this notification type.', processed_at: new Date().toISOString() }).eq('id', notification.id);
           skippedCount++;
           continue;
@@ -251,12 +266,26 @@ serve(async (req) => {
           const conversationData = conversationMap.get(notification.conversation_id);
           const senderName = getFullName(recentMessages[0].sender);
           const subject = recentMessages.length > 1
-            ? `You have new messages in ${conversationData.is_group ? conversationData.group_name : senderName}`
+            ? `You have new messages in ${conversationData.is_group ? `"${conversationData.group_name}"` : 'your chat'}`
             : `New message from ${senderName}`;
-          
-          const messagesForPrompt = recentMessages.map(m => `${getFullName(m.sender)}: ${m.content}`).join('\n');
-          userPrompt = `Buat notifikasi ringkasan chat. Penerima: ${recipientName}. Pengirim: ${senderName}. Percakapan: "${conversationData.is_group ? conversationData.group_name : senderName}". Ada ${recentMessages.length} pesan baru. Ringkasan pesan: ${messagesForPrompt}. URL: ${APP_URL}/chat`;
+
+          if (typePref.email !== false && recipient.email) {
+            const emailHtml = generateChatEmailHtml(recipientName, recentMessages, conversationData, senderName);
+            const { error: emailError } = await supabaseAdmin.functions.invoke('send-email', {
+                body: { to: recipient.email, subject, html: emailHtml }
+            });
+            if (emailError) console.error(`[EMAIL] Failed for notif ${notification.id}:`, emailError.message);
+            else console.log(`[EMAIL] Sent for notif ${notification.id} to ${recipient.email}`);
+          }
+
+          if (typePref.whatsapp !== false && phoneToSend) {
+            const messagesForPrompt = recentMessages.map(m => `${getFullName(m.sender)}: ${m.content}`).join('\n');
+            userPrompt = `Buat notifikasi ringkasan chat. Penerima: ${recipientName}. Pengirim: ${senderName}. Percakapan: "${conversationData.is_group ? conversationData.group_name : senderName}". Ada ${recentMessages.length} pesan baru. Ringkasan pesan: ${messagesForPrompt}. URL: ${APP_URL}/chat`;
+            const aiMessage = await generateAiMessage(userPrompt);
+            await sendWhatsappMessage(phoneToSend, aiMessage);
+          }
         } else {
+            // ... (existing logic for other notification types)
             switch (notification.notification_type) {
               case 'task_assignment': {
                 const taskData = taskMap.get(context.task_id);
@@ -291,11 +320,12 @@ serve(async (req) => {
               default:
                 throw new Error(`Unsupported notification type: ${notification.notification_type}`);
             }
+            if (typePref.whatsapp !== false && phoneToSend) {
+                const aiMessage = await generateAiMessage(userPrompt);
+                await sendWhatsappMessage(phoneToSend, aiMessage);
+            }
         }
 
-        const aiMessage = await generateAiMessage(userPrompt);
-
-        await sendWhatsappMessage(phoneToSend, aiMessage);
         await supabaseAdmin.from('pending_whatsapp_notifications').update({ status: 'processed', processed_at: new Date().toISOString() }).eq('id', notification.id);
         successCount++;
 
