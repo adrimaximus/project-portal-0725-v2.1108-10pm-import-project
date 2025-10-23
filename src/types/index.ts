@@ -442,3 +442,18 @@ export interface Conversation {
   messages: Message[];
   created_by: string;
 }
+
+export type UpsertTaskPayload = {
+  id?: string;
+  project_id: string;
+  title: string;
+  description?: string | null;
+  due_date?: string | null;
+  priority?: string | null;
+  status?: string;
+  completed?: boolean;
+  assignee_ids?: string[];
+  tag_ids?: string[];
+  new_files?: File[];
+  deleted_files?: string[];
+};

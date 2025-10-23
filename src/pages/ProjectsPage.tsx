@@ -21,6 +21,7 @@ import { useCreateProject } from '@/hooks/useCreateProject';
 import { useTaskMutations, UpsertTaskPayload } from '@/hooks/useTaskMutations';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import PortalLayout from '@/components/PortalLayout';
+import { getErrorMessage, formatInJakarta } from '@/lib/utils';
 
 type ViewMode = 'table' | 'list' | 'kanban' | 'tasks' | 'tasks-kanban';
 type SortConfig<T> = { key: keyof T | null; direction: 'ascending' | 'descending' };
@@ -108,7 +109,7 @@ const ProjectsPage = () => {
         const { error } = await supabase.functions.invoke('import-google-calendar-events', {
             body: { eventsToImport: events },
         });
-        if (error) throw new Error(error.message);
+        if (error) throw error;
     },
     onSuccess: () => {
         toast.success("Events imported successfully as projects!");
