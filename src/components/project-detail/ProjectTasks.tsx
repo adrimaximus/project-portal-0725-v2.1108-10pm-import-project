@@ -68,12 +68,20 @@ const TaskRow = ({ task, onToggleTaskCompletion, onEditTask, onDeleteTask, handl
         onCheckedChange={(checked) => onToggleTaskCompletion(task, !!checked)}
         className="mt-1"
       />
-      <label
-        htmlFor={`task-${task.id}`}
-        className={`flex-1 min-w-0 text-sm flex items-center gap-2 cursor-pointer ${task.completed ? 'text-muted-foreground line-through' : 'text-card-foreground'}`}
+      <div
+        className={`flex-1 min-w-0 text-sm flex items-center gap-2 ${task.completed ? 'text-muted-foreground' : 'text-card-foreground'}`}
       >
-        <span className="break-words" title={task.title}>{task.title}</span>
-      </label>
+        <span 
+          className={cn(
+            "break-words cursor-pointer hover:underline",
+            task.completed && "line-through"
+          )} 
+          title={task.title}
+          onClick={() => onEditTask(task)}
+        >
+          {task.title}
+        </span>
+      </div>
 
       <div className="flex items-center gap-2 ml-auto">
         <TaskReactions reactions={task.reactions || []} onToggleReaction={(emoji) => handleToggleReaction(task.id, emoji)} />
