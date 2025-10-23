@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 import Anthropic from 'npm:@anthropic-ai/sdk@^0.22.0';
 import OpenAI from 'https://esm.sh/openai@4.29.2';
@@ -171,7 +171,6 @@ serve(async (req) => {
     if (token === cronSecret || token === serviceRoleKey) {
       isAuthorized = true;
     } else {
-      // It might be a user JWT, let's check if they are a master admin
       const userSupabase = createClient(SUPABASE_URL, Deno.env.get('SUPABASE_ANON_KEY')!, {
         global: { headers: { Authorization: `Bearer ${token}` } },
       });
@@ -314,7 +313,6 @@ serve(async (req) => {
             await sendWhatsappMessage(phoneToSend, aiMessage);
           }
         } else {
-            // ... (existing logic for other notification types)
             switch (notification.notification_type) {
               case 'task_assignment': {
                 const taskData = taskMap.get(context.task_id);
