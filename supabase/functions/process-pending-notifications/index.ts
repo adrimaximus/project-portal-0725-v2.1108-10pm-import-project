@@ -158,31 +158,38 @@ serve(async (req) => {
   }
 
   try {
+    // Security check
     const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'Unauthorized: Missing Authorization header' }), { status: 401, headers: corsHeaders });
-    }
-    const token = authHeader.replace('Bearer ', '');
-
+    const referer = req.headers.get('Referer');
     const cronSecret = Deno.env.get('CRON_SECRET');
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
     let isAuthorized = false;
-    if (token === cronSecret || token === serviceRoleKey) {
+
+    // Allow requests from pg_net (cron jobs)
+    if (referer === '_pg_net') {
       isAuthorized = true;
-    } else {
-      const userSupabase = createClient(SUPABASE_URL, Deno.env.get('SUPABASE_ANON_KEY')!, {
-        global: { headers: { Authorization: `Bearer ${token}` } },
-      });
-      const { data: { user } } = await userSupabase.auth.getUser();
-      if (user) {
-        const { data: profile, error: profileError } = await supabaseAdmin
-          .from('profiles')
-          .select('role')
-          .eq('id', user.id)
-          .single();
-        if (profile && (profile.role === 'master admin' || profile.role === 'admin')) {
-          isAuthorized = true;
+    } 
+    // Allow requests with a valid secret (e.g., from external services or local testing)
+    else if (authHeader) {
+      const token = authHeader.replace('Bearer ', '');
+      if (token === cronSecret || token === serviceRoleKey) {
+        isAuthorized = true;
+      } else {
+        // Fallback to check if the user is an admin
+        const userSupabase = createClient(SUPABASE_URL, Deno.env.get('SUPABASE_ANON_KEY')!, {
+          global: { headers: { Authorization: `Bearer ${token}` } },
+        });
+        const { data: { user } } = await userSupabase.auth.getUser();
+        if (user) {
+          const { data: profile } = await supabaseAdmin
+            .from('profiles')
+            .select('role')
+            .eq('id', user.id)
+            .single();
+          if (profile && (profile.role === 'master admin' || profile.role === 'admin')) {
+            isAuthorized = true;
+          }
         }
       }
     }
