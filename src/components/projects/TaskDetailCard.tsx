@@ -36,6 +36,27 @@ const aggregateAttachments = (task: Task): TaskAttachment[] => {
   return attachments;
 };
 
+const getDueDateClassName = (dueDateStr: string | null, completed: boolean): string => {
+  if (!dueDateStr || completed) {
+    return "text-muted-foreground";
+  }
+
+  const dueDate = new Date(dueDateStr);
+  const now = new Date();
+  const diffHours = (dueDate.getTime() - now.getTime()) / (1000 * 60 * 60);
+
+  if (diffHours < 0) {
+    return "text-red-600 font-bold"; // Overdue
+  }
+  if (diffHours <= 1) {
+    return "text-primary font-bold"; // Due within 1 hour
+  }
+  if (diffHours <= 24) {
+    return "text-primary"; // Due within 1 day
+  }
+  return "text-muted-foreground"; // Not due soon
+};
+
 const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, onDelete }) => {
   const queryClient = useQueryClient();
   const { toggleTaskReaction } = useTaskMutations();
@@ -108,8 +129,8 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
           <div className="flex items-center gap-2">
             <TooltipProvider><Tooltip><TooltipTrigger><Calendar className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" /></TooltipTrigger><TooltipContent><p>Due Date</p></TooltipContent></Tooltip></TooltipProvider>
             {task.due_date ? (
-              <span className={cn(isOverdue(task.due_date) && "text-red-600 font-bold")}>
-                {format(new Date(task.due_date), "MMM d, yyyy")}
+              <span className={cn(getDueDateClassName(task.due_date, task.completed))}>
+                {format(new Date(task.due_date), "MMM d, yyyy, p")}
               </span>
             ) : <span className="text-muted-foreground">No due date</span>}
           </div>
