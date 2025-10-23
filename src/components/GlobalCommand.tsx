@@ -126,7 +126,7 @@ export function GlobalCommand() {
               {results.map((task) => (
                 <CommandItem
                   key={task.id}
-                  onSelect={() => runCommand(() => navigate(`/projects/${task.project_slug}?tab=tasks&task=${task.id}`))}
+                  onSelect={() => runCommand(() => navigate(`/projects/${task.project_slug}?task=${task.id}`))}
                   value={`task-${task.id}-${task.title}`}
                 >
                   <div className="flex items-center justify-between w-full">

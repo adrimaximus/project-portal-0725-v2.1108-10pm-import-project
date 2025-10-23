@@ -209,8 +209,9 @@ serve(async (req) => {
                 break;
               }
               case 'discussion_mention': {
-                const { data: projectData } = await supabaseAdmin.from('projects').select('name, slug').eq('id', context.project_id).single();
-                const { data: mentionerData } = await supabaseAdmin.from('profiles').select('first_name, last_name, email').eq('id', context.mentioner_id).single();
+                const { project_id, mentioner_id } = context;
+                const { data: projectData } = await supabaseAdmin.from('projects').select('name, slug').eq('id', project_id).single();
+                const { data: mentionerData } = await supabaseAdmin.from('profiles').select('first_name, last_name, email').eq('id', mentioner_id).single();
                 userPrompt = `Buat notifikasi mention. Penerima: ${recipientName}. Yang me-mention: ${getFullName(mentionerData)}. Proyek: "${projectData.name}". URL: ${APP_URL}/projects/${projectData.slug}`;
                 break;
               }

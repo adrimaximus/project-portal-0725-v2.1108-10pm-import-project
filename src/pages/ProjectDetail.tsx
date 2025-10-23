@@ -68,8 +68,8 @@ const ProjectDetail = () => {
   const mutations = useProjectMutations(slug!);
   const { upsertTask, deleteTask, toggleTaskCompletion, isUpserting } = useTaskMutations();
 
-  const defaultTab = searchParams.get('tab') || 'overview';
   const highlightedTaskId = searchParams.get('task');
+  const defaultTab = highlightedTaskId ? 'tasks' : (searchParams.get('tab') || 'overview');
 
   useEffect(() => {
     if (project) {
