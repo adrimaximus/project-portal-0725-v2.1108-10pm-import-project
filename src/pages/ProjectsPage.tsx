@@ -46,18 +46,13 @@ const ProjectsPage = () => {
     selectedPeopleIds: [],
   });
 
-  const allPeople = useMemo(() => {
-    if (!projectsData) return [];
-    const peopleMap = new Map<string, { id: string; name: string }>();
-    projectsData.forEach(project => {
-      project.assignedTo?.forEach(person => {
-        if (!peopleMap.has(person.id)) {
-          peopleMap.set(person.id, { id: person.id, name: person.name });
-        }
-      });
-    });
-    return Array.from(peopleMap.values()).sort((a, b) => a.name.localeCompare(b.name));
-  }, [projectsData]);
+  const { data: allPeople = [] } = useQuery({
+    queryKey: ['peopleForFilters'],
+    queryFn: async () => {
+        const people = await getPeople();
+        return people.map(p => ({ id: p.id, name: p.full_name }));
+    },
+  });
 
   const {
     dateRange, setDateRange,
@@ -144,6 +139,11 @@ const ProjectsPage = () => {
   const [taskSearchTerm, setTaskSearchTerm] = useState('');
   const filteredTasks = useMemo(() => {
     let tasksToFilter = allTasks;
+    if (advancedFilters.selectedPeopleIds.length > 0) {
+        tasksToFilter = tasksToFilter.filter(task => 
+            task.assignedTo?.some(assignee => advancedFilters.selectedPeopleIds.includes(assignee.id))
+        );
+    }
     if (!taskSearchTerm) return tasksToFilter;
     const lowercasedFilter = taskSearchTerm.toLowerCase();
     return tasksToFilter.filter(task => 
@@ -154,7 +154,7 @@ const ProjectsPage = () => {
       (task.project_client && task.project_client.toLowerCase().includes(lowercasedFilter)) ||
       (task.project_owner?.name && task.project_owner.name.toLowerCase().includes(lowercasedFilter))
     );
-  }, [allTasks, taskSearchTerm]);
+  }, [allTasks, taskSearchTerm, advancedFilters.selectedPeopleIds]);
 
   useEffect(() => {
     if (view === 'table' && !initialTableScrollDone.current && sortedProjects.length > 0) {
