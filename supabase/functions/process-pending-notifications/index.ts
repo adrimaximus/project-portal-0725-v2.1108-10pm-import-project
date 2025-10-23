@@ -154,6 +154,17 @@ serve(async (req) => {
       return new Response(JSON.stringify({ message: 'No pending notifications.' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
+    const recipientIds = notifications.map(n => n.recipient_id).filter(Boolean);
+    const { data: peopleData, error: peopleError } = await supabaseAdmin
+      .from('people')
+      .select('user_id, contact')
+      .in('user_id', recipientIds);
+    
+    if (peopleError) {
+      console.warn("Could not fetch people contact info, will fallback to profile phone.", peopleError.message);
+    }
+    const peopleContactMap = new Map(peopleData?.map(p => [p.user_id, p.contact]) || []);
+
     let successCount = 0;
     let failureCount = 0;
     let skippedCount = 0;
@@ -199,7 +210,11 @@ serve(async (req) => {
     for (const notification of notifications) {
       try {
         const recipient = notification.recipient;
-        if (!recipient || !recipient.phone) {
+        const personContact = peopleContactMap.get(recipient.id);
+        const phoneFromPeople = personContact?.phones?.[0];
+        const phoneToSend = phoneFromPeople || recipient.phone;
+
+        if (!recipient || !phoneToSend) {
           await supabaseAdmin.from('pending_whatsapp_notifications').update({ status: 'skipped', error_message: 'Recipient has no phone number.', processed_at: new Date().toISOString() }).eq('id', notification.id);
           skippedCount++;
           continue;
@@ -280,7 +295,7 @@ serve(async (req) => {
 
         const aiMessage = await generateAiMessage(userPrompt);
 
-        await sendWhatsappMessage(recipient.phone, aiMessage);
+        await sendWhatsappMessage(phoneToSend, aiMessage);
         await supabaseAdmin.from('pending_whatsapp_notifications').update({ status: 'processed', processed_at: new Date().toISOString() }).eq('id', notification.id);
         successCount++;
 
