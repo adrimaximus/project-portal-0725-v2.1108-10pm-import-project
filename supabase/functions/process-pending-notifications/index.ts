@@ -46,6 +46,7 @@ const sendWhatsappMessage = async (phone: string, message: string) => {
     console.warn(`Invalid phone number format: ${phone}. Skipping.`);
     return;
   }
+  console.log("Sending WhatsApp:", { phone: formattedPhone, message });
   const response = await fetch("https://wbiztool.com/api/v1/send_msg/", {
     method: 'POST',
     headers: {
@@ -61,8 +62,16 @@ const sendWhatsappMessage = async (phone: string, message: string) => {
       message: message,
     }),
   });
+  console.log("WBIZ Response status:", response.status);
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
+    const errText = await response.text();
+    console.error("WBIZ Response body:", errText);
+    let errorData;
+    try {
+      errorData = JSON.parse(errText);
+    } catch (e) {
+      errorData = { message: errText };
+    }
     throw new Error(`WBIZTOOL API Error (${response.status}): ${errorData.message || 'Unknown error'}`);
   }
   return response.json();
