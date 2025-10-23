@@ -32,7 +32,7 @@ const RichTextEditor = React.forwardRef<ReactQuill, RichTextEditorProps>(({ valu
   };
 
   return (
-    <div className="bg-background rounded-md border relative">
+    <div className="bg-background rounded-md border relative overflow-hidden">
       {onGenerate && (
         <TooltipProvider>
           <Tooltip>
