@@ -33,6 +33,9 @@ interface TasksViewProps {
   isToggling: boolean;
   sortConfig: { key: string; direction: 'asc' | 'desc' };
   requestSort: (key: string) => void;
+  rowRefs: React.MutableRefObject<Map<string, HTMLTableRowElement>>;
+  highlightedTaskId: string | null;
+  onHighlightComplete: () => void;
 }
 
 // Utility function to aggregate attachments
@@ -49,13 +52,29 @@ const aggregateAttachments = (task: ProjectTask): TaskAttachment[] => {
   return attachments;
 };
 
-const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTaskCompletion, isToggling, sortConfig, requestSort }: TasksViewProps) => {
+const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTaskCompletion, isToggling, sortConfig, requestSort, rowRefs, highlightedTaskId, onHighlightComplete }: TasksViewProps) => {
   const [selectedTask, setSelectedTask] = useState<ProjectTask | null>(null);
   const { user } = useSession();
   const [tasks, setTasks] = useState<ProjectTask[]>(tasksProp);
   const queryClient = useQueryClient();
   const commonEmojis = ['👍', '❤️', '😂', '🎉', '🙏', '😢'];
   const initialSortSet = useRef(false);
+
+  useEffect(() => {
+    if (highlightedTaskId) {
+      const element = rowRefs.current.get(highlightedTaskId);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        element.classList.add('bg-primary/10');
+        setTimeout(() => {
+          element.classList.remove('bg-primary/10');
+          if (onHighlightComplete) {
+            onHighlightComplete();
+          }
+        }, 2000);
+      }
+    }
+  }, [highlightedTaskId, onHighlightComplete, rowRefs]);
 
   const getDueDateClassName = (dueDateStr: string | null, completed: boolean): string => {
     if (!dueDateStr || completed) {
@@ -330,7 +349,13 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
                   </TableRow>
                 )}
                 <Dialog onOpenChange={(isOpen) => { if (!isOpen) setSelectedTask(null); }}>
-                  <TableRow data-state={task.completed ? "completed" : ""}>
+                  <TableRow 
+                    ref={el => {
+                      if (el) rowRefs.current.set(task.id, el);
+                      else rowRefs.current.delete(task.id);
+                    }}
+                    data-state={task.completed ? "completed" : ""}
+                  >
                     <TableCell className="font-medium sticky left-0 bg-background z-10 w-[40%] sm:w-[30%]">
                       <div className="flex items-start gap-3">
                         <div onClick={(e) => e.stopPropagation()}>

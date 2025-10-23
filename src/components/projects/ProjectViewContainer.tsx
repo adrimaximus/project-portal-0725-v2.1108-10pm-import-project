@@ -28,12 +28,14 @@ interface ProjectViewContainerProps {
   requestTaskSort: (key: string) => void;
   refetch: () => void;
   tasksQueryKey: any[];
+  highlightedTaskId: string | null;
+  onHighlightComplete: () => void;
 }
 
 const ProjectViewContainer = ({
   view, projects, tasks, isLoading, isTasksLoading, onDeleteProject, sortConfig, requestSort, rowRefs,
   kanbanGroupBy, onEditTask, onDeleteTask, onToggleTaskCompletion, isToggling,
-  taskSortConfig, requestTaskSort, refetch, tasksQueryKey
+  taskSortConfig, requestTaskSort, refetch, tasksQueryKey, highlightedTaskId, onHighlightComplete
 }: ProjectViewContainerProps) => {
   switch (view) {
     case 'table':
@@ -52,6 +54,9 @@ const ProjectViewContainer = ({
         isToggling={isToggling}
         sortConfig={taskSortConfig}
         requestSort={requestTaskSort}
+        rowRefs={rowRefs}
+        highlightedTaskId={highlightedTaskId}
+        onHighlightComplete={onHighlightComplete}
       />;
     case 'tasks-kanban':
       return <TasksKanbanView 
