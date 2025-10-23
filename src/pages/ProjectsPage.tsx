@@ -1,82 +1,44 @@
-import { useState, useMemo, useCallback, useRef, useEffect } from "react";
-import { Project, Task } from '@/types';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import PortalLayout from "@/components/PortalLayout";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { MoreHorizontal, PlusCircle, Search, Trash2, Edit, User as UserIcon, Linkedin, Twitter, Instagram, GitMerge, Loader2, Kanban, LayoutGrid, Table as TableIcon, Settings, Building } from "lucide-react";
-import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
-import { formatDistanceToNow } from "date-fns";
-import { id } from "date-fns/locale";
-import { generatePastelColor, getAvatarUrl, getErrorMessage, getInitials, formatInJakarta } from "@/lib/utils";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import PersonFormDialog from "@/components/people/PersonFormDialog";
-import { Badge } from "@/components/ui/badge";
-import WhatsappIcon from "@/components/icons/WhatsappIcon";
-import { DuplicatePair } from "@/components/people/DuplicateContactsCard";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import PeopleKanbanView from "@/components/people/PeopleKanbanView";
-import PeopleGridView from "@/components/people/PeopleGridView";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import DuplicateSummaryDialog from "@/components/people/DuplicateSummaryDialog";
-import MergeDialog from "@/components/people/MergeDialog";
-import CompaniesView from "@/components/people/CompaniesView";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useIsMobile } from "@/hooks/use-mobile";
-import PersonListCard from "@/components/people/PersonListCard";
-import { useProjectFilters } from "@/hooks/useProjectFilters";
-import ProjectsToolbar from "@/components/projects/ProjectsToolbar";
-import ProjectViewContainer from "@/components/projects/ProjectViewContainer";
-import { useTaskMutations, UpsertTaskPayload } from "@/hooks/useTaskMutations";
-import TaskFormDialog from "@/components/projects/TaskFormDialog";
-import { TaskStatus } from "@/types";
-import { DatePickerWithRange } from "@/components/ui/date-picker-with-range";
-import { useAuth } from "@/contexts/AuthContext";
-import { GoogleCalendarImportDialog } from "@/components/projects/GoogleCalendarImportDialog";
-import { useTasks } from "@/hooks/useTasks";
-import { useProjects } from "@/hooks/useProjects";
-import { useCreateProject } from "@/hooks/useCreateProject";
-import { Card, CardTitle } from "@/components/ui/card";
-import { AdvancedFiltersState } from "@/components/projects/ProjectAdvancedFilters";
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { getDashboardProjects, createProject, updateProjectDetails, deleteProject } from '@/api/projects';
+import { getProjectTasks, upsertTask, deleteTask, toggleTaskCompletion } from '@/api/tasks';
+import { getPeople } from '@/api/people';
+import { Project, Task as ProjectTask, Person } from '@/types';
+import { toast } from 'sonner';
+
+import ProjectsToolbar from '@/components/projects/ProjectsToolbar';
+import ProjectViewContainer from '@/components/projects/ProjectViewContainer';
+import TaskFormDialog from '@/components/projects/TaskFormDialog';
+import { GoogleCalendarImportDialog } from '@/components/projects/GoogleCalendarImportDialog';
+import { AdvancedFiltersState } from '@/components/projects/ProjectAdvancedFilters';
+import { useProjectFilters } from '@/hooks/useProjectFilters';
+import { useAuth } from '@/contexts/AuthContext';
+import { useTasks } from '@/hooks/useTasks';
+import { useProjects } from '@/hooks/useProjects';
+import { useCreateProject } from '@/hooks/useCreateProject';
+import { useTaskMutations, UpsertTaskPayload } from '@/hooks/useTaskMutations';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import PortalLayout from '@/components/PortalLayout';
 
 type ViewMode = 'table' | 'list' | 'kanban' | 'tasks' | 'tasks-kanban';
 type SortConfig<T> = { key: keyof T | null; direction: 'ascending' | 'descending' };
 
 const ProjectsPage = () => {
-  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const rowRefs = useRef(new Map<string, HTMLTableRowElement>());
+  const { user } = useAuth();
+
+  const view = (searchParams.get('view') as ViewMode) || 'list';
+  const [kanbanGroupBy, setKanbanGroupBy] = useState<'status' | 'payment_status'>('status');
+  const [hideCompletedTasks, setHideCompletedTasks] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  const viewFromUrl = searchParams.get('view') as ViewMode;
-  const view: ViewMode = useMemo(() => {
-    if (viewFromUrl && ['table', 'list', 'kanban', 'tasks', 'tasks-kanban'].includes(viewFromUrl)) {
-      return viewFromUrl;
-    }
-    return 'list';
-  }, [viewFromUrl]);
-  
-  const isTaskView = view === 'tasks' || view === 'tasks-kanban';
-
   const { data: projectsData = [], isLoading: isLoadingProjects, refetch: refetchProjects } = useProjects({ searchTerm });
-
-  const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
-  const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
-  const [kanbanGroupBy, setKanbanGroupBy] = useState<'status' | 'payment_status'>('status');
-  const createProjectMutation = useCreateProject();
-  const rowRefs = useRef(new Map<string, HTMLTableRowElement>());
-  const [scrollToProjectId, setScrollToProjectId] = useState<string | null>(null);
-  const initialTableScrollDone = useRef(false);
-  const queryClient = useQueryClient();
-  const { user } = useAuth();
-
-  const [isTaskFormOpen, setIsTaskFormOpen] = useState(false);
-  const [editingTask, setEditingTask] = useState<Task | null>(null);
   
   const [advancedFilters, setAdvancedFilters] = useState<AdvancedFiltersState>({
     hiddenStatuses: [],
@@ -101,9 +63,17 @@ const ProjectsPage = () => {
     sortConfig: projectSortConfig, requestSort: requestProjectSort, sortedProjects
   } = useProjectFilters(projectsData, advancedFilters);
 
-  const [taskSearchTerm, setTaskSearchTerm] = useState('');
-  const [taskSortConfig, setTaskSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'updated_at', direction: 'desc' });
-  const [hideCompletedTasks, setHideCompletedTasks] = useState(() => localStorage.getItem('hideCompletedTasks') === 'true');
+  const [taskSortConfig, setTaskSortConfig] = useState<{ key: keyof ProjectTask | string; direction: 'asc' | 'desc' }>({ key: 'updated_at', direction: 'desc' });
+
+  const requestTaskSort = useCallback((key: string) => {
+    setTaskSortConfig(prevConfig => {
+      let direction: 'asc' | 'desc' = 'asc';
+      if (prevConfig.key === key && prevConfig.direction === 'asc') {
+        direction = 'desc';
+      }
+      return { key, direction };
+    });
+  }, []);
 
   const finalTaskSortConfig = view === 'tasks-kanban' ? { key: 'kanban_order', direction: 'asc' as const } : taskSortConfig;
 
@@ -112,22 +82,15 @@ const ProjectsPage = () => {
     sortConfig: finalTaskSortConfig,
   });
 
-  const tasksQueryKey = ['tasks', { 
-    projectIds: undefined, 
-    hideCompleted: hideCompletedTasks, 
-    sortConfig: finalTaskSortConfig 
-  }];
+  const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
+  const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
+  const createProjectMutation = useCreateProject();
+  const [scrollToProjectId, setScrollToProjectId] = useState<string | null>(null);
+  const initialTableScrollDone = useRef(false);
 
-  const refetch = useCallback(() => {
-    if (isTaskView) {
-      refetchTasks();
-    } else {
-      refetchProjects();
-    }
-  }, [isTaskView, refetchTasks, refetchProjects]);
-
-  const { upsertTask, isUpserting, deleteTask, toggleTaskCompletion, isToggling } = useTaskMutations(refetch);
-
+  const [isTaskFormOpen, setIsTaskFormOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<ProjectTask | null>(null);
+  
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
 
   const { data: isGCalConnected } = useQuery({
@@ -150,12 +113,24 @@ const ProjectsPage = () => {
     onSuccess: () => {
         toast.success("Events imported successfully as projects!");
         setIsImportDialogOpen(false);
-        refetch();
+        refetchProjects();
     },
     onError: (error) => {
         toast.error("Failed to import events.", { description: error.message });
     }
   });
+
+  const isTaskView = view === 'tasks' || view === 'tasks-kanban';
+
+  const refetch = useCallback(() => {
+    if (isTaskView) {
+      refetchTasks();
+    } else {
+      refetchProjects();
+    }
+  }, [isTaskView, refetchTasks, refetchProjects]);
+
+  const { upsertTask, isUpserting, deleteTask, toggleTaskCompletion, isToggling } = useTaskMutations(refetch);
 
   const allTasks = useMemo(() => {
     if (isTaskView) {
@@ -165,6 +140,7 @@ const ProjectsPage = () => {
     return projectsData.flatMap(p => p.tasks || []);
   }, [projectsData, tasksData, isTaskView]);
 
+  const [taskSearchTerm, setTaskSearchTerm] = useState('');
   const filteredTasks = useMemo(() => {
     let tasksToFilter = allTasks;
     if (!taskSearchTerm) return tasksToFilter;
@@ -253,20 +229,12 @@ const ProjectsPage = () => {
     refetch();
   };
 
-  const requestTaskSort = (key: string) => {
-    let direction: 'asc' | 'desc' = 'asc';
-    if (taskSortConfig.key === key && taskSortConfig.direction === 'asc') {
-      direction = 'desc';
-    }
-    setTaskSortConfig({ key, direction });
-  };
-
   const handleCreateTask = () => {
     setEditingTask(null);
     setIsTaskFormOpen(true);
   };
 
-  const handleEditTask = (task: Task) => {
+  const handleEditTask = (task: ProjectTask) => {
     setEditingTask(task);
     setIsTaskFormOpen(true);
   };
@@ -294,7 +262,7 @@ const ProjectsPage = () => {
     });
   };
 
-  const handleToggleTaskCompletion = (task: Task, completed: boolean) => {
+  const handleToggleTaskCompletion = (task: ProjectTask, completed: boolean) => {
     toggleTaskCompletion({ task, completed });
   };
 
@@ -305,6 +273,12 @@ const ProjectsPage = () => {
       return newState;
     });
   };
+
+  const tasksQueryKey = ['tasks', { 
+    projectIds: undefined, 
+    hideCompleted: hideCompletedTasks, 
+    sortConfig: finalTaskSortConfig 
+  }];
 
   return (
     <PortalLayout disableMainScroll noPadding>
@@ -337,28 +311,8 @@ const ProjectsPage = () => {
         isImporting={importEventsMutation.isPending}
       />
 
-      <Card className="flex-1 flex flex-col min-h-0 rounded-none border-0 sm:border sm:rounded-lg">
+      <div className="flex-1 flex flex-col min-h-0 rounded-none border-0 sm:border sm:rounded-lg">
         <div className="flex-shrink-0 bg-background z-10 border-b">
-          <div className="p-4 space-y-4">
-            <div className="flex items-center justify-between">
-              <CardTitle>All Projects</CardTitle>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <div className="flex-1">
-                <DatePickerWithRange date={dateRange} onDateChange={setDateRange} />
-              </div>
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder={isTaskView ? "Search tasks..." : "Search projects..."}
-                  value={isTaskView ? taskSearchTerm : searchTerm}
-                  onChange={(e) => isTaskView ? setTaskSearchTerm(e.target.value) : setSearchTerm(e.target.value)}
-                  className="pl-9 w-full"
-                />
-              </div>
-            </div>
-          </div>
           <ProjectsToolbar
             view={view} onViewChange={handleViewChange}
             kanbanGroupBy={kanbanGroupBy} onKanbanGroupByChange={setKanbanGroupBy}
@@ -399,7 +353,7 @@ const ProjectsPage = () => {
             />
           </div>
         </div>
-      </Card>
+      </div>
     </PortalLayout>
   );
 };

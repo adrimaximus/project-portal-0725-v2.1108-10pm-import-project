@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { Project } from '@/types';
 import { DateRange } from 'react-day-picker';
 import { isBefore, startOfToday } from 'date-fns';
@@ -78,13 +78,15 @@ export const useProjectFilters = (projects: Project[], advancedFilters: Advanced
     return sortableItems;
   }, [filteredProjects, sortConfig]);
 
-  const requestSort = (key: keyof Project) => {
-    let direction: 'ascending' | 'descending' = 'ascending';
-    if (sortConfig.key === key && sortConfig.direction === 'ascending') {
-      direction = 'descending';
-    }
-    setSortConfig({ key, direction });
-  };
+  const requestSort = useCallback((key: keyof Project) => {
+    setSortConfig(prevConfig => {
+      let direction: 'ascending' | 'descending' = 'ascending';
+      if (prevConfig.key === key && prevConfig.direction === 'ascending') {
+        direction = 'descending';
+      }
+      return { key, direction };
+    });
+  }, []);
 
   return {
     dateRange,

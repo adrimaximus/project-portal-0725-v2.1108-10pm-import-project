@@ -1,19 +1,18 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { getDashboardProjects, createProject, updateProjectDetails, deleteProject } from '@/api/projects';
+import { getProjectTasks, upsertTask, deleteTask, toggleTaskCompletion } from '@/api/tasks';
+import { getPeople } from '@/api/people';
+import { Project, Task as ProjectTask, Person } from '@/types';
 import { toast } from 'sonner';
-import { Toaster } from '@/components/ui/sonner';
 
 import ProjectsToolbar from '@/components/projects/ProjectsToolbar';
 import TableView from '@/components/projects/TableView';
 import TasksView from '@/components/projects/TasksView';
-import { Project, Task } from '@/types';
 import { AdvancedFiltersState } from '@/components/projects/ProjectAdvancedFilters';
 import { useProjectFilters } from '@/hooks/useProjectFilters';
-import { DatePickerWithRange } from '@/components/ui/date-picker-with-range';
-import { Search } from 'lucide-react';
-import { Card, CardTitle } from '@/components/ui/card';
 import ProjectViewContainer from '@/components/projects/ProjectViewContainer';
 import TaskFormDialog from '@/components/projects/TaskFormDialog';
 import { GoogleCalendarImportDialog } from '@/components/projects/GoogleCalendarImportDialog';
@@ -23,30 +22,11 @@ import { useProjects } from '@/hooks/useProjects';
 import { useCreateProject } from '@/hooks/useCreateProject';
 import { useTaskMutations, UpsertTaskPayload } from '@/hooks/useTaskMutations';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { useNavigate } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import PortalLayout from '@/components/PortalLayout';
 
 type ViewMode = 'table' | 'list' | 'kanban' | 'tasks' | 'tasks-kanban';
 type SortConfig<T> = { key: keyof T | null; direction: 'ascending' | 'descending' };
-
-const fetchProjects = async (): Promise<Project[]> => {
-  const { data, error } = await supabase.rpc('get_dashboard_projects', { p_limit: 500, p_offset: 0 });
-  if (error) {
-    console.error('Error fetching projects:', error);
-    throw new Error(error.message);
-  }
-  return data || [];
-};
-
-const fetchTasks = async (): Promise<Task[]> => {
-  const { data, error } = await supabase.rpc('get_project_tasks');
-  if (error) {
-    console.error('Error fetching tasks:', error);
-    throw new Error(error.message);
-  }
-  return data || [];
-};
 
 const Index = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -56,12 +36,11 @@ const Index = () => {
 
   const view = (searchParams.get('view') as ViewMode) || 'table';
   const [kanbanGroupBy, setKanbanGroupBy] = useState<'status' | 'payment_status'>('status');
-  const [hideCompletedTasks, setHideCompletedTasks] = useState(false);
+  const [hideCompletedTasks, setHideCompletedTasks] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
 
   const { data: projectsData = [], isLoading: isLoadingProjects, refetch: refetchProjects } = useProjects({ searchTerm });
-  const { data: tasksData = [], isLoading: isLoadingTasks, refetch: refetchTasks } = useTasks({ hideCompleted: hideCompletedTasks, sortConfig: { key: 'due_date', direction: 'asc' } });
-
+  
   const [advancedFilters, setAdvancedFilters] = useState<AdvancedFiltersState>({
     hiddenStatuses: [],
     selectedPeopleIds: [],
@@ -85,10 +64,27 @@ const Index = () => {
     sortConfig: projectSortConfig, requestSort: requestProjectSort, sortedProjects
   } = useProjectFilters(projectsData, advancedFilters);
 
-  const [taskSortConfig, setTaskSortConfig] = useState<{ key: keyof Task | string; direction: 'asc' | 'desc' }>({ key: 'due_date', direction: 'asc' });
+  const [taskSortConfig, setTaskSortConfig] = useState<{ key: keyof ProjectTask | string; direction: 'asc' | 'desc' }>({ key: 'due_date', direction: 'asc' });
+
+  const requestTaskSort = useCallback((key: string) => {
+    setTaskSortConfig(prevConfig => {
+      let direction: 'asc' | 'desc' = 'asc';
+      if (prevConfig.key === key && prevConfig.direction === 'asc') {
+        direction = 'desc';
+      }
+      return { key, direction };
+    });
+  }, []);
+
+  const finalTaskSortConfig = view === 'tasks-kanban' ? { key: 'kanban_order', direction: 'asc' as const } : taskSortConfig;
+
+  const { data: tasksData = [], isLoading: isLoadingTasks, refetch: refetchTasks } = useTasks({
+    hideCompleted: hideCompletedTasks,
+    sortConfig: finalTaskSortConfig,
+  });
 
   const { mutate: toggleTaskCompletion, isPending: isToggling } = useMutation({
-    mutationFn: async ({ task, completed }: { task: Task, completed: boolean }) => {
+    mutationFn: async ({ task, completed }: { task: ProjectTask, completed: boolean }) => {
       const { error } = await supabase.from('tasks').update({ completed }).eq('id', task.id);
       if (error) throw error;
     },
@@ -101,7 +97,7 @@ const Index = () => {
     }
   });
 
-  const handleToggleTaskCompletion = (task: Task, completed: boolean) => {
+  const handleToggleTaskCompletion = (task: ProjectTask, completed: boolean) => {
     toggleTaskCompletion({ task, completed });
   };
 
@@ -131,7 +127,7 @@ const Index = () => {
           onToggleTaskCompletion={handleToggleTaskCompletion}
           isToggling={isToggling}
           sortConfig={taskSortConfig}
-          requestSort={(key) => requestProjectSort(key as keyof Project)}
+          requestSort={requestTaskSort}
         />;
       default:
         return (
@@ -171,7 +167,6 @@ const Index = () => {
           allPeople={allPeople}
         />
       </main>
-      <Toaster />
     </div>
   );
 };
