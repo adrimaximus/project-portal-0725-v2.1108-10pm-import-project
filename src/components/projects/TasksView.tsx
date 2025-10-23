@@ -379,13 +379,15 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
                                       {task.assignedTo?.map((user) => (
                                         <TooltipProvider key={user.id}>
                                           <Tooltip>
-                                            <TooltipTrigger>
-                                              <Avatar className="h-6 w-6 border-2 border-background">
-                                                <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
-                                                <AvatarFallback style={generatePastelColor(user.id)}>
-                                                  {getInitials([user.first_name, user.last_name].filter(Boolean).join(' '), user.email || undefined)}
-                                                </AvatarFallback>
-                                              </Avatar>
+                                            <TooltipTrigger asChild>
+                                              <Link to="/chat" state={{ recipient: user }} onClick={(e) => e.stopPropagation()}>
+                                                <Avatar className="h-6 w-6 border-2 border-background">
+                                                  <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
+                                                  <AvatarFallback style={generatePastelColor(user.id)}>
+                                                    {getInitials([user.first_name, user.last_name].filter(Boolean).join(' '), user.email || undefined)}
+                                                  </AvatarFallback>
+                                                </Avatar>
+                                              </Link>
                                             </TooltipTrigger>
                                             <TooltipContent>
                                               <p>{[user.first_name, user.last_name].filter(Boolean).join(' ')}</p>

@@ -175,12 +175,23 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
                 <h4 className="font-semibold flex items-center gap-2 flex-shrink-0"><UserIcon className="h-3 w-3 sm:h-4 sm:w-4" /> Assignees</h4>
                 <div className="flex -space-x-2">
                   {task.assignedTo.map((user) => (
-                    <Avatar key={user.id} className="h-6 w-6 sm:h-8 sm:w-8 border-2 border-background">
-                      <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
-                      <AvatarFallback style={generatePastelColor(user.id)}>
-                        {getInitials([user.first_name, user.last_name].filter(Boolean).join(' '), user.email || undefined)}
-                      </AvatarFallback>
-                    </Avatar>
+                    <TooltipProvider key={user.id}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Link to="/chat" state={{ recipient: user }}>
+                            <Avatar className="h-6 w-6 sm:h-8 sm:w-8 border-2 border-background">
+                              <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
+                              <AvatarFallback style={generatePastelColor(user.id)}>
+                                {getInitials([user.first_name, user.last_name].filter(Boolean).join(' '), user.email || undefined)}
+                              </AvatarFallback>
+                            </Avatar>
+                          </Link>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{[user.first_name, user.last_name].filter(Boolean).join(' ')}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   ))}
                 </div>
               </div>
