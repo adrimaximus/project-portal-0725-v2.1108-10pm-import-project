@@ -158,12 +158,38 @@ serve(async (req) => {
   }
 
   try {
-    const authHeader = req.headers.get('Authorization')?.replace('Bearer ', '');
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'Unauthorized: Missing Authorization header' }), { status: 401, headers: corsHeaders });
+    }
+    const token = authHeader.replace('Bearer ', '');
+
     const cronSecret = Deno.env.get('CRON_SECRET');
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
-    if (!authHeader || (authHeader !== cronSecret && authHeader !== serviceRoleKey)) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    let isAuthorized = false;
+    if (token === cronSecret || token === serviceRoleKey) {
+      isAuthorized = true;
+    } else {
+      // It might be a user JWT, let's check if they are a master admin
+      const userSupabase = createClient(SUPABASE_URL, Deno.env.get('SUPABASE_ANON_KEY')!, {
+        global: { headers: { Authorization: `Bearer ${token}` } },
+      });
+      const { data: { user } } = await userSupabase.auth.getUser();
+      if (user) {
+        const { data: profile, error: profileError } = await supabaseAdmin
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single();
+        if (profile && (profile.role === 'master admin' || profile.role === 'admin')) {
+          isAuthorized = true;
+        }
+      }
+    }
+
+    if (!isAuthorized) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: corsHeaders });
     }
 
     const { data: notifications, error: fetchError } = await supabaseAdmin
