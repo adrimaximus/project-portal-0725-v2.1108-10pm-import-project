@@ -143,7 +143,7 @@ const Page = () => {
         </div>
 
         <div
-          className="prose dark:prose-invert max-w-none leading-tight prose-headings:mt-0 prose-headings:mb-2 prose-p:mt-0 prose-p:mb-2 prose-li:mt-0 prose-li:mb-2 [&>*:first-child]:mt-0 [&_p:has(>br:only-child)]:my-0 [&_p:has(>br:only-child)]:leading-none"
+          className="prose dark:prose-invert max-w-none text-sm md:text-base leading-tight prose-headings:mt-0 prose-headings:mb-2 prose-p:mt-0 prose-p:mb-2 prose-li:mt-0 prose-li:mb-2 [&>*:first-child]:mt-0 [&_p:has(>br:only-child)]:my-0 [&_p:has(>br:only-child)]:leading-none"
           dangerouslySetInnerHTML={{ __html: articleContentHtml }}
         />
       </div>
