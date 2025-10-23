@@ -419,7 +419,7 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
                     <TableCell>
                       {task.due_date ? (
                         <span className={cn(isOverdue(task.due_date) && "text-red-600 font-bold")}>
-                          {format(new Date(task.due_date), "MMM d, yyyy")}
+                          {format(new Date(task.due_date), "MMM d, yyyy, p")}
                         </span>
                       ) : <span className="text-muted-foreground text-xs">No due date</span>}
                     </TableCell>
