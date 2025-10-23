@@ -61,6 +61,13 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
   const queryClient = useQueryClient();
   const { toggleTaskReaction } = useTaskMutations();
 
+  const allAttachments = useMemo(() => {
+    if (!task) return [];
+    return aggregateAttachments(task);
+  }, [task]);
+
+  if (!task) return null;
+
   const handleToggleReaction = (emoji: string) => {
     toggleTaskReaction({ taskId: task.id, emoji }, {
       onSuccess: () => {
@@ -70,11 +77,8 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
     });
   };
 
-  if (!task) return null;
-
   const statusStyle = getTaskStatusStyles(task.status);
   const priorityStyle = getPriorityStyles(task.priority);
-  const allAttachments = useMemo(() => aggregateAttachments(task), [task]);
 
   return (
     <DialogContent className="w-[90vw] max-w-[650px] max-h-[85vh] overflow-y-auto p-0 rounded-lg">
@@ -178,7 +182,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
                     <TooltipProvider key={user.id}>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <Link to="/chat" state={{ recipient: user }}>
+                          <Link to="/chat" state={{ selectedCollaborator: user }}>
                             <Avatar className="h-6 w-6 sm:h-8 sm:w-8 border-2 border-background">
                               <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
                               <AvatarFallback style={generatePastelColor(user.id)}>
