@@ -453,40 +453,132 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task, proj
       <FormField
         control={form.control}
         name="due_date"
-        render={({ field }) => (
-          <FormItem className="flex flex-col">
-            <FormLabel>Due Date</FormLabel>
-            <Popover>
-              <PopoverTrigger asChild>
-                <FormControl>
-                  <Button
-                    variant={"outline"}
-                    className={cn(
-                      "w-full pl-3 text-left font-normal",
-                      !field.value && "text-muted-foreground"
-                    )}
-                  >
-                    {field.value ? (
-                      format(field.value, "PPP")
-                    ) : (
-                      <span>Pick a date</span>
-                    )}
-                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                  </Button>
-                </FormControl>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={field.value || undefined}
-                  onSelect={field.onChange}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
-            <FormMessage />
-          </FormItem>
-        )}
+        render={({ field }) => {
+          const handleDateSelect = (day: Date | undefined) => {
+            if (!day) {
+              field.onChange(null);
+              return;
+            }
+            const currentVal = field.value || new Date();
+            const newDate = new Date(day);
+            newDate.setHours(currentVal.getHours());
+            newDate.setMinutes(currentVal.getMinutes());
+            field.onChange(newDate);
+          };
+
+          const handleTimeChange = (part: 'h' | 'm' | 'p', value: string) => {
+            const date = field.value || new Date();
+            let h = date.getHours();
+            let m = date.getMinutes();
+
+            let currentPeriod = h >= 12 ? 'PM' : 'AM';
+            let currentHour12 = h % 12;
+            if (currentHour12 === 0) currentHour12 = 12;
+
+            let newHour12 = currentHour12;
+            let newMinute = m;
+            let newPeriod = currentPeriod;
+
+            if (part === 'h') newHour12 = parseInt(value);
+            if (part === 'm') newMinute = parseInt(value);
+            if (part === 'p') newPeriod = value as 'AM' | 'PM';
+
+            let newHour24 = newHour12;
+            if (newPeriod === 'PM' && newHour12 < 12) {
+              newHour24 += 12;
+            }
+            if (newPeriod === 'AM' && newHour12 === 12) {
+              newHour24 = 0;
+            }
+
+            const newDate = new Date(date);
+            newDate.setHours(newHour24, newMinute, 0, 0);
+            field.onChange(newDate);
+          };
+
+          const hour = field.value ? field.value.getHours() : 0;
+          const minute = field.value ? field.value.getMinutes() : 0;
+          const period = hour >= 12 ? 'PM' : 'AM';
+          const displayHour = hour % 12 === 0 ? 12 : hour % 12;
+
+          return (
+            <FormItem className="flex flex-col">
+              <FormLabel>Due Date & Time</FormLabel>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <FormControl>
+                    <Button
+                      variant={"outline"}
+                      className={cn(
+                        "w-full pl-3 text-left font-normal",
+                        !field.value && "text-muted-foreground"
+                      )}
+                    >
+                      {field.value ? (
+                        format(field.value, "PPP p")
+                      ) : (
+                        <span>Pick a date and time</span>
+                      )}
+                      <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                    </Button>
+                  </FormControl>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={field.value || undefined}
+                    onSelect={handleDateSelect}
+                    initialFocus
+                  />
+                  <div className="p-3 border-t border-border">
+                    <div className="flex items-center justify-center gap-2">
+                      <Select
+                        value={String(displayHour)}
+                        onValueChange={(value) => handleTimeChange('h', value)}
+                      >
+                        <SelectTrigger className="w-[70px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Array.from({ length: 12 }, (_, i) => i + 1).map(h => (
+                            <SelectItem key={h} value={String(h)}>{String(h).padStart(2, '0')}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <span className="text-muted-foreground">:</span>
+                      <Select
+                        value={String(minute).padStart(2, '0')}
+                        onValueChange={(value) => handleTimeChange('m', value)}
+                      >
+                        <SelectTrigger className="w-[70px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'].map(m => (
+                            <SelectItem key={m} value={m}>{m}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Select
+                        value={period}
+                        onValueChange={(value) => handleTimeChange('p', value)}
+                      >
+                        <SelectTrigger className="w-[80px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="AM">AM</SelectItem>
+                          <SelectItem value="PM">PM</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
+              <FormMessage />
+            </FormItem>
+          );
+        }}
       />
       <FormItem>
         <FormLabel>Attachments</FormLabel>
