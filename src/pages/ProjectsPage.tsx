@@ -44,15 +44,20 @@ const ProjectsPage = () => {
   const [advancedFilters, setAdvancedFilters] = useState<AdvancedFiltersState>({
     hiddenStatuses: [],
     selectedPeopleIds: [],
+    status: [],
+    assignees: [],
+    dueDate: null,
   });
 
-  const { data: allPeople = [] } = useQuery({
-    queryKey: ['peopleForFilters'],
-    queryFn: async () => {
-        const people = await getPeople();
-        return people.map(p => ({ id: p.id, name: p.full_name }));
-    },
+  const { data: peopleData } = useQuery<Person[]>({
+    queryKey: ['people'],
+    queryFn: getPeople,
   });
+
+  const allPeople = useMemo(() => {
+    if (!peopleData) return [];
+    return peopleData.map(p => ({ id: p.id, name: p.full_name }));
+  }, [peopleData]);
 
   const {
     dateRange, setDateRange,

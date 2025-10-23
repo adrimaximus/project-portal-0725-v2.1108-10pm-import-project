@@ -17,6 +17,7 @@ import {
   DrawerFooter,
   DrawerClose
 } from "@/components/ui/drawer";
+import { DateRange } from "react-day-picker";
 
 interface Person {
   id: string;
@@ -26,6 +27,9 @@ interface Person {
 export interface AdvancedFiltersState {
   hiddenStatuses: string[];
   selectedPeopleIds: string[];
+  status: string[];
+  assignees: string[];
+  dueDate: DateRange | null;
 }
 
 interface ProjectAdvancedFiltersProps {
@@ -59,7 +63,7 @@ const ProjectAdvancedFilters = ({ filters, onFiltersChange, allPeople }: Project
   const activeFilterCount = filters.hiddenStatuses.length + filters.selectedPeopleIds.length;
 
   const clearFilters = () => {
-    onFiltersChange({ hiddenStatuses: [], selectedPeopleIds: [] });
+    onFiltersChange({ hiddenStatuses: [], selectedPeopleIds: [], status: [], assignees: [], dueDate: null });
   };
 
   const triggerButton = (
