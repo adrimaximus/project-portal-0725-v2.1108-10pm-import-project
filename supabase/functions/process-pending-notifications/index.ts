@@ -1,5 +1,7 @@
+// @ts-nocheck
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
+import Anthropic from 'npm:@anthropic-ai/sdk@^0.22.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -8,52 +10,77 @@ const corsHeaders = {
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const APP_URL = Deno.env.get("VITE_APP_URL")!;
+const APP_URL = Deno.env.get("SITE_URL")! || Deno.env.get("VITE_APP_URL")!;
+const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
 
-const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false,
-  },
-});
+const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-// Helper function to call the email Edge Function
-async function sendEmail(to: string, subject: string, html: string, attachments: any[] = []) {
-  const response = await fetch(`${SUPABASE_URL}/functions/v1/send-email-with-attachments`, {
-    method: "POST",
+let wbizConfigCache: { clientId: string; apiKey: string; whatsappClientId: string } | null = null;
+
+const formatPhoneNumberForApi = (phone: string): string | null => {
+  if (!phone) return null;
+  let cleaned = phone.trim().replace(/\D/g, '');
+  if (cleaned.startsWith('0')) return '62' + cleaned.substring(1);
+  if (cleaned.startsWith('62')) return cleaned;
+  if (cleaned.length > 8 && cleaned.startsWith('8')) return '62' + cleaned;
+  return cleaned;
+};
+
+const getWbizConfig = async () => {
+  if (wbizConfigCache) return wbizConfigCache;
+  const { data, error } = await supabaseAdmin.from('app_config').select('key, value').in('key', ['WBIZTOOL_CLIENT_ID', 'WBIZTOOL_API_KEY']);
+  if (error) throw error;
+  const clientId = data?.find(c => c.key === 'WBIZTOOL_CLIENT_ID')?.value;
+  const apiKey = data?.find(c => c.key === 'WBIZTOOL_API_KEY')?.value;
+  const whatsappClientId = Deno.env.get('WBIZTOOL_WHATSAPP_CLIENT_ID');
+  if (!clientId || !apiKey || !whatsappClientId) throw new Error("WBIZTOOL credentials not fully configured.");
+  wbizConfigCache = { clientId, apiKey, whatsappClientId };
+  return wbizConfigCache;
+};
+
+const sendWhatsappMessage = async (phone: string, message: string) => {
+  const config = await getWbizConfig();
+  const formattedPhone = formatPhoneNumberForApi(phone);
+  if (!formattedPhone) {
+    console.warn(`Invalid phone number format: ${phone}. Skipping.`);
+    return;
+  }
+  const response = await fetch("https://wbiztool.com/api/v1/send_msg/", {
+    method: 'POST',
     headers: {
-      "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-      "Content-Type": "application/json",
+      'Content-Type': 'application/json',
+      'X-Client-ID': config.clientId,
+      'X-Api-Key': config.apiKey,
     },
     body: JSON.stringify({
-      to,
-      subject,
-      html,
-      attachments,
+      client_id: parseInt(config.clientId, 10),
+      api_key: config.apiKey,
+      whatsapp_client: parseInt(config.whatsappClientId, 10),
+      phone: formattedPhone,
+      message: message,
     }),
   });
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(`WBIZTOOL API Error (${response.status}): ${errorData.message || 'Unknown error'}`);
+  }
   return response.json();
-}
+};
 
-// Helper function to generate HTML for attachments
-function generateAttachmentHtml(attachments: any[]) {
-    if (!attachments || attachments.length === 0) {
-        return '';
-    }
+const getSystemPrompt = () => `Anda adalah asisten AI untuk platform manajemen proyek bernama 7i Portal. Tugas Anda adalah membuat pesan notifikasi WhatsApp yang singkat, ramah, dan profesional dalam Bahasa Indonesia.
 
-    const listItems = attachments.map(att => 
-        `<li><a href="${att.file_url}" style="color: #1e40af; text-decoration: none;">${att.file_name} (${att.file_type})</a></li>`
-    ).join('');
+**Aturan Penting:**
+1.  **Bahasa:** Seluruh pesan WAJIB dalam Bahasa Indonesia.
+2.  **Nada:** Gunakan sapaan yang ramah (misalnya, "Hai [Nama],"), diikuti dengan pesan yang jelas dan positif.
+3.  **Emoji:** Awali setiap pesan dengan SATU emoji yang relevan dengan konteks notifikasi.
+4.  **Format:** Gunakan format tebal WhatsApp (*kata*) untuk menyorot detail penting seperti nama proyek, judul tugas, atau nama orang.
+5.  **Mention:** Saat menyebut nama pengguna, formatnya adalah **@Nama Pengguna**. JANGAN gunakan format \`[]()\` atau ID internal.
+6.  **URL:** Sertakan HANYA SATU URL lengkap di baris terakhir pesan. Jangan menambah teks lain setelah URL.
+7.  **Singkat:** Buat pesan seefisien mungkin, langsung ke intinya.
 
-    return `
-        <div style="margin-top: 20px; padding: 10px; border-left: 4px solid #3b82f6; background-color: #f3f4f6;">
-            <p style="font-weight: bold; margin-bottom: 5px; color: #1f2937;">Attached Files:</p>
-            <ul style="list-style-type: none; padding-left: 0; margin: 0;">
-                ${listItems}
-            </ul>
-        </div>
-    `;
-}
+Anda akan diberikan konteks untuk setiap notifikasi. Gunakan konteks tersebut untuk membuat pesan yang sesuai.`;
+
+const getFullName = (profile: any) => `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email;
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -61,154 +88,95 @@ serve(async (req) => {
   }
 
   try {
-    // 1. Fetch pending notifications
-    const { data: pendingNotifications, error: fetchError } = await supabaseAdmin
+    const cronSecret = req.headers.get('Authorization')?.replace('Bearer ', '');
+    if (cronSecret !== Deno.env.get('CRON_SECRET')) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: corsHeaders });
+    }
+
+    const { data: notifications, error: fetchError } = await supabaseAdmin
       .from('pending_whatsapp_notifications')
-      .select('*, recipient:profiles(email, first_name, last_name, notification_preferences), context_data')
+      .select('*, recipient:profiles(id, email, first_name, last_name, phone, notification_preferences)')
       .eq('status', 'pending')
       .lte('send_at', new Date().toISOString())
-      .limit(50);
+      .limit(20);
 
     if (fetchError) throw fetchError;
-
-    if (!pendingNotifications || pendingNotifications.length === 0) {
-      return new Response(JSON.stringify({ message: 'No pending notifications to process.' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
-      });
+    if (!notifications || notifications.length === 0) {
+      return new Response(JSON.stringify({ message: 'No pending notifications.' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    const updates = [];
-    const emailPromises = [];
+    const anthropic = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
+    let successCount = 0;
+    let failureCount = 0;
 
-    for (const notification of pendingNotifications) {
-      const recipientEmail = notification.recipient?.email;
-      const recipientName = notification.recipient?.first_name || notification.recipient?.email;
-      const notificationType = notification.notification_type;
-      const context = notification.context_data;
-      const prefs = notification.recipient?.notification_preferences || {};
-      
-      let subject = "Project Update";
-      let bodyHtml = "";
-      let attachments: any[] = [];
-      let shouldSendEmail = false;
+    for (const notification of notifications) {
+      try {
+        const recipient = notification.recipient;
+        if (!recipient || !recipient.phone) {
+          throw new Error(`Recipient ${recipient?.id || 'unknown'} has no phone number.`);
+        }
 
-      // --- Logic for Mentions (discussion_mention) ---
-      if (notificationType === 'discussion_mention' && recipientEmail && prefs.mention !== false && prefs.email !== false) {
-        shouldSendEmail = true;
-        
-        const mentionerId = context.mentioner_id;
-        const projectId = context.project_id;
-        attachments = context.attachments || []; // Get attachments array
+        const prefs = recipient.notification_preferences || {};
+        if (prefs[notification.notification_type] === false || prefs.whatsapp === false) {
+          await supabaseAdmin.from('pending_whatsapp_notifications').update({ status: 'skipped', processed_at: new Date().toISOString() }).eq('id', notification.id);
+          continue;
+        }
 
-        // Fetch project and mentioner details
-        const { data: projectData } = await supabaseAdmin.from('projects').select('name, slug').eq('id', projectId).single();
-        const { data: mentionerData } = await supabaseAdmin.from('profiles').select('first_name, last_name, email').eq('id', mentionerId).single();
+        let userPrompt = '';
+        const context = notification.context_data;
+        const recipientName = recipient.first_name || recipient.email.split('@')[0];
 
-        const mentionerName = mentionerData ? `${mentionerData.first_name || ''} ${mentionerData.last_name || ''}`.trim() || mentionerData.email : 'Someone';
-        const projectName = projectData?.name || 'a project';
-        const projectSlug = projectData?.slug || '';
-        const projectLink = `${APP_URL}/projects/${projectSlug}`;
+        switch (notification.notification_type) {
+          case 'task_assignment': {
+            const { data: taskData } = await supabaseAdmin.from('tasks').select('title, project_id').eq('id', context.task_id).single();
+            const { data: projectData } = await supabaseAdmin.from('projects').select('name, slug').eq('id', taskData?.project_id).single();
+            const { data: assignerData } = await supabaseAdmin.from('profiles').select('first_name, last_name, email').eq('id', context.assigner_id).single();
+            userPrompt = `Buat notifikasi penugasan tugas. Penerima: ${recipientName}. Pemberi tugas: ${getFullName(assignerData)}. Judul tugas: "${taskData.title}". Proyek: "${projectData.name}". URL: ${APP_URL}/projects/${projectData.slug}?tab=tasks&task=${context.task_id}`;
+            break;
+          }
+          case 'discussion_mention': {
+            const { data: projectData } = await supabaseAdmin.from('projects').select('name, slug').eq('id', context.project_id).single();
+            const { data: mentionerData } = await supabaseAdmin.from('profiles').select('first_name, last_name, email').eq('id', context.mentioner_id).single();
+            userPrompt = `Buat notifikasi mention. Penerima: ${recipientName}. Yang me-mention: ${getFullName(mentionerData)}. Proyek: "${projectData.name}". URL: ${APP_URL}/projects/${projectData.slug}`;
+            break;
+          }
+          case 'task_completed': {
+            const { data: taskData } = await supabaseAdmin.from('tasks').select('title').eq('id', context.task_id).single();
+            const { data: completerData } = await supabaseAdmin.from('profiles').select('first_name, last_name, email').eq('id', context.completer_id).single();
+            userPrompt = `Buat notifikasi tugas selesai. Penerima: ${recipientName}. Yang menyelesaikan: ${getFullName(completerData)}. Judul tugas: "${taskData.title}". Proyek: "${context.project_name}". URL: ${APP_URL}/projects/${context.project_slug}?tab=tasks&task=${context.task_id}`;
+            break;
+          }
+          case 'project_invite': {
+            const { data: projectData } = await supabaseAdmin.from('projects').select('name, slug').eq('id', context.project_id).single();
+            const { data: inviterData } = await supabaseAdmin.from('profiles').select('first_name, last_name, email').eq('id', context.inviter_id).single();
+            userPrompt = `Buat notifikasi undangan proyek. Penerima: ${recipientName}. Pengundang: ${getFullName(inviterData)}. Proyek: "${projectData.name}". URL: ${APP_URL}/projects/${projectData.slug}`;
+            break;
+          }
+          default:
+            throw new Error(`Unsupported notification type: ${notification.notification_type}`);
+        }
 
-        subject = `You were mentioned in: ${projectName}`;
-        
-        const attachmentHtml = generateAttachmentHtml(attachments);
+        const aiResponse = await anthropic.messages.create({ model: "claude-3-haiku-20240307", max_tokens: 200, system: getSystemPrompt(), messages: [{ role: "user", content: userPrompt }] });
+        const aiMessage = aiResponse.content[0].text;
 
-        bodyHtml = `
-          <p>Hi, ${recipientName},</p>
-          <p><strong>${mentionerName}</strong> mentioned you in a comment on the project: <strong>${projectName}</strong>.</p>
-          
-          ${attachmentHtml}
+        await sendWhatsappMessage(recipient.phone, aiMessage);
+        await supabaseAdmin.from('pending_whatsapp_notifications').update({ status: 'sent', processed_at: new Date().toISOString() }).eq('id', notification.id);
+        successCount++;
 
-          <p style="margin-top: 20px;">You can view the comment by clicking the button below:</p>
-          <a href="${projectLink}" style="background-color: #1e40af; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">View Project</a>
-          <p style="margin-top: 30px;">Thanks,<br>The 7i Portal Team</p>
-        `;
-      }
-      
-      // --- Logic for Task Assignment (task_assignment) ---
-      else if (notificationType === 'task_assignment' && recipientEmail && prefs.project_update !== false && prefs.email !== false) {
-        shouldSendEmail = true;
-        
-        const taskId = context.task_id;
-        const assignerId = context.assigner_id;
-        attachments = context.attachments || []; // Get attachments array
-
-        // Fetch task, project, and assigner details
-        const { data: taskData } = await supabaseAdmin.from('tasks').select('title, project_id').eq('id', taskId).single();
-        const { data: projectData } = await supabaseAdmin.from('projects').select('name, slug').eq('id', taskData?.project_id).single();
-        const { data: assignerData } = await supabaseAdmin.from('profiles').select('first_name, last_name, email').eq('id', assignerId).single();
-
-        const assignerName = assignerData ? `${assignerData.first_name || ''} ${assignerData.last_name || ''}`.trim() || assignerData.email : 'Someone';
-        const taskTitle = taskData?.title || 'A new task';
-        const projectName = projectData?.name || 'a project';
-        const projectSlug = projectData?.slug || '';
-        const projectLink = `${APP_URL}/projects/${projectSlug}?tab=tasks&task=${taskId}`;
-
-        subject = `New Task Assigned to You: ${taskTitle}`;
-        
-        const attachmentHtml = generateAttachmentHtml(attachments);
-
-        bodyHtml = `
-          <p>Hi, ${recipientName},</p>
-          <p><strong>${assignerName}</strong> has assigned you a new task:</p>
-          <p style="font-size: 1.1em; font-weight: bold;">${taskTitle} (in project: ${projectName})</p>
-          
-          ${attachmentHtml}
-
-          <p style="margin-top: 20px;">You can view the task details by clicking the button below:</p>
-          <a href="${projectLink}" style="background-color: #1e40af; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">View Task</a>
-          <p style="margin-top: 30px;">Thanks,<br>The 7i Portal Team</p>
-        `;
-      }
-      
-      // --- Execute Email Sending ---
-      if (shouldSendEmail) {
-        emailPromises.push(
-          sendEmail(recipientEmail, subject, bodyHtml, attachments)
-            .then(() => ({ id: notification.id, status: 'sent' }))
-            .catch((e) => ({ id: notification.id, status: 'error', error_message: e.message }))
-        );
-      } else {
-        // If it's a WhatsApp-only notification (or unsupported type), mark as processed/sent
-        updates.push({ id: notification.id, status: 'sent' });
+      } catch (e) {
+        failureCount++;
+        console.error(`Failed to process notification ${notification.id}:`, e.message);
+        await supabaseAdmin.from('pending_whatsapp_notifications').update({ status: 'error', error_message: e.message, processed_at: new Date().toISOString() }).eq('id', notification.id);
       }
     }
 
-    // Wait for all emails to finish
-    const emailResults = await Promise.all(emailPromises);
-    
-    // Combine results for database update
-    const finalUpdates = [...updates, ...emailResults];
-
-    // 2. Update notification statuses
-    const updatePromises = finalUpdates.map(result => {
-      const updateData: { status: string; processed_at: string; error_message?: string } = {
-        status: result.status,
-        processed_at: new Date().toISOString(),
-      };
-      if (result.error_message) {
-        updateData.error_message = result.error_message;
-      }
-      
-      return supabaseAdmin
-        .from('pending_whatsapp_notifications')
-        .update(updateData)
-        .eq('id', result.id);
-    });
-
-    await Promise.all(updatePromises);
-
-    return new Response(JSON.stringify({ 
-      message: `Processed ${pendingNotifications.length} notifications.`,
-      results: finalUpdates.map(r => ({ id: r.id, status: r.status, error: r.error_message }))
-    }), {
+    return new Response(JSON.stringify({ message: `Processed ${notifications.length} notifications. Success: ${successCount}, Failed: ${failureCount}` }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     });
 
   } catch (error) {
-    console.error("Error processing notifications:", error);
+    console.error("Top-level function error:", error.message);
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,
