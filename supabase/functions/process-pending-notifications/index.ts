@@ -2,6 +2,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 import Anthropic from 'npm:@anthropic-ai/sdk@^0.22.0';
+import OpenAI from 'https://esm.sh/openai@4.29.2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -12,6 +13,7 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const APP_URL = Deno.env.get("SITE_URL")! || Deno.env.get("VITE_APP_URL")!;
 const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
+const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
 const CRON_SECRET = Deno.env.get("CRON_SECRET");
 
 const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
@@ -92,6 +94,41 @@ Anda akan diberikan konteks untuk setiap notifikasi. Gunakan konteks tersebut un
 
 const getFullName = (profile: any) => `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email;
 
+const generateAiMessage = async (userPrompt: string): Promise<string> => {
+  // Try Anthropic first
+  if (ANTHROPIC_API_KEY) {
+    try {
+      const anthropic = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
+      const aiResponse = await anthropic.messages.create({ model: "claude-3-haiku-20240307", max_tokens: 200, system: getSystemPrompt(), messages: [{ role: "user", content: userPrompt }] });
+      return aiResponse.content[0].text;
+    } catch (anthropicError) {
+      console.warn("Anthropic API failed, falling back to OpenAI.", anthropicError.message);
+    }
+  }
+
+  // Fallback to OpenAI
+  if (OPENAI_API_KEY) {
+    try {
+      const openai = new OpenAI({ apiKey: OPENAI_API_KEY });
+      const aiResponse = await openai.chat.completions.create({
+        model: "gpt-3.5-turbo",
+        messages: [
+          { role: "system", content: getSystemPrompt() },
+          { role: "user", content: userPrompt }
+        ],
+        temperature: 0.7,
+        max_tokens: 150,
+      });
+      return aiResponse.choices[0].message.content || '';
+    } catch (openaiError) {
+      console.error("OpenAI API also failed.", openaiError.message);
+      throw new Error("Both AI providers failed. OpenAI Error: " + openaiError.message);
+    }
+  }
+
+  throw new Error("No AI provider (Anthropic or OpenAI) is configured.");
+};
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -117,7 +154,6 @@ serve(async (req) => {
       return new Response(JSON.stringify({ message: 'No pending notifications.' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    const anthropic = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
     let successCount = 0;
     let failureCount = 0;
     let skippedCount = 0;
@@ -242,8 +278,7 @@ serve(async (req) => {
             }
         }
 
-        const aiResponse = await anthropic.messages.create({ model: "claude-3-haiku-20240307", max_tokens: 200, system: getSystemPrompt(), messages: [{ role: "user", content: userPrompt }] });
-        const aiMessage = aiResponse.content[0].text;
+        const aiMessage = await generateAiMessage(userPrompt);
 
         await sendWhatsappMessage(recipient.phone, aiMessage);
         await supabaseAdmin.from('pending_whatsapp_notifications').update({ status: 'processed', processed_at: new Date().toISOString() }).eq('id', notification.id);
