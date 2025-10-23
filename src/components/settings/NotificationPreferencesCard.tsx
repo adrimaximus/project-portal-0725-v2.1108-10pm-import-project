@@ -20,6 +20,7 @@ interface NotificationEvent {
   description: string | null;
   category: string | null;
   is_enabled_by_default: boolean;
+  default_channels?: ('email' | 'whatsapp')[];
 }
 
 const notificationTones = [
@@ -108,6 +109,11 @@ const NotificationPreferencesCard = () => {
     return true;
   };
 
+  const getEventDefaults = (typeId: string) => {
+    const event = notificationEvents.find(e => e.id === typeId);
+    return event?.default_channels || ['email', 'whatsapp'];
+  };
+
   const getIsEnabled = (typeId: string) => {
     const pref = preferences[typeId];
     if (typeof pref === 'object' && pref !== null) {
@@ -118,10 +124,13 @@ const NotificationPreferencesCard = () => {
 
   const getChannelEnabled = (typeId: string, channel: 'email' | 'whatsapp') => {
     const pref = preferences[typeId];
-    if (typeof pref === 'object' && pref !== null) {
-      return pref[channel] !== false;
+
+    if (typeof pref === 'object' && pref !== null && typeof pref[channel] === 'boolean') {
+      return pref[channel];
     }
-    return true;
+
+    const defaultChannels = getEventDefaults(typeId);
+    return defaultChannels.includes(channel);
   };
 
   const handleChannelChange = async (typeId: string, channel: 'email' | 'whatsapp', isEnabled: boolean) => {
@@ -131,7 +140,13 @@ const NotificationPreferencesCard = () => {
     if (typeof currentPref === 'object' && currentPref !== null) {
       newPreferences[typeId] = { ...currentPref, [channel]: isEnabled };
     } else {
-      newPreferences[typeId] = { enabled: true, email: true, whatsapp: true, [channel]: isEnabled };
+      const defaultChannels = getEventDefaults(typeId);
+      newPreferences[typeId] = { 
+          enabled: true, 
+          email: defaultChannels.includes('email'), 
+          whatsapp: defaultChannels.includes('whatsapp'),
+          [channel]: isEnabled
+      };
     }
 
     const success = await updatePreferences(newPreferences);
