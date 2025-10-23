@@ -426,7 +426,7 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
                     <TableCell>
                       {task.updated_at ? (
                         <span className="text-muted-foreground text-xs">
-                          {format(new Date(task.updated_at), "MMM d, yyyy")}
+                          {format(new Date(task.updated_at), "MMM d, yyyy, p")}
                         </span>
                       ) : <span className="text-muted-foreground text-xs">-</span>}
                     </TableCell>
