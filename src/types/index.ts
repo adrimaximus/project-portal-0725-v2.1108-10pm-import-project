@@ -344,6 +344,8 @@ export interface AppNotification {
   };
 }
 
+export type FolderAccessLevel = 'private' | 'public_view' | 'public_edit';
+
 export interface KbFolder {
   id: string;
   user_id: string;
@@ -359,7 +361,16 @@ export interface KbFolder {
   last_modified_by: string | null;
 }
 
-export type FolderAccessLevel = 'private' | 'public_view' | 'public_edit';
+export interface KbArticleReaction {
+  id: string;
+  emoji: string;
+  user_id: string;
+  profiles: {
+    id: string;
+    first_name: string | null;
+    last_name: string | null;
+  } | null;
+}
 
 export interface KbArticle {
   id: string;
@@ -382,6 +393,7 @@ export interface KbArticle {
     avatar_url: string;
     initials: string;
   };
+  kb_article_reactions?: KbArticleReaction[];
 }
 
 export const CONTACT_PROPERTY_TYPES = ['text', 'email', 'phone', 'url', 'date', 'textarea', 'number', 'image', 'multi-image', 'select', 'multi-select', 'checkbox'] as const;

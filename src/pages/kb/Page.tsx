@@ -15,44 +15,16 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 
 const fetchArticleBySlug = async (slug: string): Promise<Article | null> => {
   const { data, error } = await supabase
-    .from('kb_articles')
-    .select(`
-      *,
-      kb_folders (
-        name,
-        slug
-      ),
-      kb_article_tags (
-        tags (
-          id,
-          name,
-          color
-        )
-      ),
-      kb_article_reactions (
-        id,
-        emoji,
-        user_id,
-        profiles (
-          id,
-          first_name,
-          last_name
-        )
-      )
-    `)
-    .eq('slug', slug)
+    .rpc('get_kb_article_by_slug', { p_slug: slug })
     .single();
   
   if (error) {
-    if (error.code === 'PGRST116') return null;
-    toast.error("Failed to fetch page details.");
+    if (error.code === 'PGRST116') return null; // No rows returned, likely due to security check
+    toast.error("Failed to fetch page details.", { description: error.message });
     console.error(error);
     return null;
   }
-
-  const { kb_article_tags, ...rest } = data;
-  const tags = kb_article_tags.map((t: any) => t.tags).filter(Boolean);
-  return { ...rest, tags } as Article;
+  return data as Article | null;
 };
 
 const Page = () => {
@@ -101,7 +73,7 @@ const Page = () => {
       <PortalLayout>
         <div className="text-center">
           <h2 className="text-2xl font-bold">Page Not Found</h2>
-          <p className="text-muted-foreground">The page you are looking for does not exist.</p>
+          <p className="text-muted-foreground">The page you are looking for does not exist or you do not have permission to view it.</p>
         </div>
       </PortalLayout>
     );
