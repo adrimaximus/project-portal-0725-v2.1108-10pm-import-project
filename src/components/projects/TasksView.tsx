@@ -115,8 +115,48 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
   }, [tasksProp, sortConfig, requestSort]);
 
   useEffect(() => {
-    setTasks(tasksProp);
-  }, [tasksProp]);
+    let tasksToSet = [...tasksProp];
+
+    const getEffectiveStatus = (task: ProjectTask): string => {
+      if (task.due_date && isOverdue(task.due_date) && !task.completed) {
+        return 'Overdue';
+      }
+      return task.status;
+    };
+
+    if (sortConfig.key === 'priority') {
+      const priorityOrder: { [key: string]: number } = { 'Urgent': 4, 'High': 3, 'Medium': 2, 'Low': 1 };
+      tasksToSet.sort((a, b) => {
+        const priorityA = getEffectivePriority(a);
+        const priorityB = getEffectivePriority(b);
+        const valueA = priorityOrder[priorityA] || 0;
+        const valueB = priorityOrder[priorityB] || 0;
+
+        if (valueA < valueB) {
+          return sortConfig.direction === 'asc' ? -1 : 1;
+        }
+        if (valueA > valueB) {
+          return sortConfig.direction === 'asc' ? 1 : -1;
+        }
+        return 0;
+      });
+    } else if (sortConfig.key === 'status') {
+      tasksToSet.sort((a, b) => {
+        const statusA = getEffectiveStatus(a);
+        const statusB = getEffectiveStatus(b);
+
+        if (statusA < statusB) {
+          return sortConfig.direction === 'asc' ? -1 : 1;
+        }
+        if (statusA > statusB) {
+          return sortConfig.direction === 'asc' ? 1 : -1;
+        }
+        return 0;
+      });
+    }
+    
+    setTasks(tasksToSet);
+  }, [tasksProp, sortConfig]);
 
   useEffect(() => {
     if (selectedTask) {
