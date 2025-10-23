@@ -91,7 +91,8 @@ serve(async (req) => {
   try {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader || authHeader !== `Bearer ${CRON_SECRET}`) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: corsHeaders });
+      const errorMessage = "Unauthorized. This function is protected and requires a valid 'Authorization: Bearer <CRON_SECRET>' header. It is intended to be run automatically by a scheduled job and does not require a request body.";
+      return new Response(JSON.stringify({ error: errorMessage }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
     const { data: notifications, error: fetchError } = await supabaseAdmin
