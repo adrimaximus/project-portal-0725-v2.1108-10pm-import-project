@@ -1,61 +1,62 @@
 "use client"
 
 import * as React from "react"
-import { Input } from "@/components/ui/input"
+import { Input, InputProps } from "@/components/ui/input"
 
-interface CurrencyInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange' | 'value'> {
-  value: number;
-  onChange: (value: number) => void;
-  prefix?: string;
+interface CurrencyInputProps extends Omit<InputProps, 'onChange' | 'value'> {
+  value: number | null | undefined;
+  onChange: (value: number | null) => void;
 }
 
 const CurrencyInput = React.forwardRef<HTMLInputElement, CurrencyInputProps>(
-  ({ value, onChange, prefix = 'Rp ', ...props }, ref) => {
+  ({ value, onChange, ...props }, ref) => {
     const [displayValue, setDisplayValue] = React.useState('');
 
+    // Effect to format the value from the parent state
     React.useEffect(() => {
-      // Only format on initial load or when value changes from outside
-      setDisplayValue(value.toLocaleString('id-ID'));
-    }, [value]);
+      if (value === null || value === undefined || isNaN(value)) {
+        setDisplayValue('');
+      } else {
+        // Only format if it's different from what would be parsed from current display
+        const currentNumeric = parseInt(displayValue.replace(/[^0-9]/g, ''), 10);
+        if (isNaN(currentNumeric) || currentNumeric !== value) {
+          setDisplayValue(new Intl.NumberFormat('id-ID').format(value));
+        }
+      }
+    }, [value, displayValue]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const rawValue = e.target.value;
-      // Allow user to type freely
-      setDisplayValue(rawValue);
-      
-      const numericValue = parseInt(rawValue.replace(/[^0-9]/g, ''), 10);
-      
-      if (!isNaN(numericValue)) {
-        onChange(numericValue);
-      } else {
-        onChange(0);
-      }
-    };
+      const rawValue = e.target.value.replace(/[^0-9]/g, '');
+      const numericValue = rawValue ? parseInt(rawValue, 10) : null;
 
-    const handleBlur = () => {
-      // Format the number on blur
-      setDisplayValue(value.toLocaleString('id-ID'));
+      // Update the parent with the raw numeric value
+      onChange(numericValue);
+
+      // Update the local display value with formatting
+      if (numericValue !== null) {
+        setDisplayValue(new Intl.NumberFormat('id-ID').format(numericValue));
+      } else {
+        setDisplayValue('');
+      }
     };
 
     return (
       <div className="relative">
         <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-sm text-muted-foreground">
-          {prefix}
+          Rp
         </span>
         <Input
-          {...props}
           ref={ref}
           value={displayValue}
           onChange={handleChange}
-          onBlur={handleBlur}
-          className="pl-10"
-          type="text" // Use text to allow for formatted strings
+          placeholder="0"
+          className="pl-9"
+          {...props}
         />
       </div>
-    );
+    )
   }
-);
+)
+CurrencyInput.displayName = "CurrencyInput"
 
-CurrencyInput.displayName = 'CurrencyInput';
-
-export { CurrencyInput };
+export { CurrencyInput }
