@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -9,76 +9,44 @@ import { Project, Task as ProjectTask, Person } from '@/types';
 import { toast } from 'sonner';
 
 import ProjectsToolbar from '@/components/projects/ProjectsToolbar';
-import ProjectsGridView from '@/components/projects/ProjectsGridView';
-import ProjectsListView from '@/components/projects/ProjectsListView';
-import ProjectsKanbanView from '@/components/projects/ProjectsKanbanView';
-import TasksView from '@/components/projects/TasksView';
-import TasksKanbanView from '@/components/projects/TasksKanbanView';
-import NewProjectDialog from '@/components/projects/NewProjectDialog';
-import NewTaskDialog from '@/components/projects/NewTaskDialog';
-import EditProjectDialog from '@/components/projects/EditProjectDialog';
-import EditTaskDialog from '@/components/projects/EditTaskDialog';
-import ImportFromCalendarDialog from '@/components/projects/ImportFromCalendarDialog';
+import ProjectViewContainer from '@/components/projects/ProjectViewContainer';
+import TaskFormDialog from '@/components/projects/TaskFormDialog';
+import { GoogleCalendarImportDialog } from '@/components/projects/GoogleCalendarImportDialog';
 import { AdvancedFiltersState } from '@/components/projects/ProjectAdvancedFilters';
-import { useSession } from '@/hooks/useSession';
+import { useProjectFilters } from '@/hooks/useProjectFilters';
+import { useAuth } from '@/contexts/AuthContext';
+import { useTasks } from '@/hooks/useTasks';
+import { useProjects } from '@/hooks/useProjects';
+import { useCreateProject } from '@/hooks/useCreateProject';
+import { useTaskMutations, UpsertTaskPayload } from '@/hooks/useTaskMutations';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import PortalLayout from '@/components/PortalLayout';
+import { getErrorMessage, formatInJakarta } from '@/lib/utils';
 
 type ViewMode = 'table' | 'list' | 'kanban' | 'tasks' | 'tasks-kanban';
+type SortConfig<T> = { key: keyof T | null; direction: 'ascending' | 'descending' };
 
-const Projects = () => {
+const ProjectsPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { user } = useSession();
+  const rowRefs = useRef(new Map<string, HTMLTableRowElement>());
+  const { user } = useAuth();
 
   const view = (searchParams.get('view') as ViewMode) || 'list';
-  const kanbanGroupBy = (searchParams.get('groupBy') as 'status' | 'payment_status') || 'status';
+  const [kanbanGroupBy, setKanbanGroupBy] = useState<'status' | 'payment_status'>('status');
   const [hideCompletedTasks, setHideCompletedTasks] = useState(true);
-  const [isNewProjectOpen, setIsNewProjectOpen] = useState(false);
-  const [isNewTaskOpen, setIsNewTaskOpen] = useState(false);
-  const [projectToEdit, setProjectToEdit] = useState<Project | null>(null);
-  const [taskToEdit, setTaskToEdit] = useState<ProjectTask | null>(null);
-  const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
-  const [isImportOpen, setIsImportOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  const { data: projectsData = [], isLoading: isLoadingProjects, refetch: refetchProjects } = useProjects({ searchTerm });
+  
   const [advancedFilters, setAdvancedFilters] = useState<AdvancedFiltersState>({
+    hiddenStatuses: [],
+    selectedPeopleIds: [],
     status: [],
     assignees: [],
     dueDate: null,
-  });
-  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'updated_at', direction: 'desc' });
-
-  const isTaskView = view === 'tasks' || view === 'tasks-kanban';
-
-  const { data: gcalTokens } = useQuery({
-    queryKey: ['gcalTokens', user?.id],
-    queryFn: async () => {
-      if (!user) return null;
-      const { data, error } = await supabase.from('google_calendar_tokens').select('*').eq('user_id', user.id).single();
-      if (error && error.code !== 'PGRST116') throw error;
-      return data;
-    },
-    enabled: !!user,
-  });
-  const isGCalConnected = !!gcalTokens;
-
-  const { data: projectsData, isLoading: isLoadingProjects, refetch: refetchProjects } = useQuery({
-    queryKey: ['projects', searchTerm],
-    queryFn: () => getDashboardProjects(100, 0, searchTerm),
-    enabled: !isTaskView,
-  });
-
-  const { data: tasksData, isLoading: isLoadingTasks, refetch: refetchTasks } = useQuery({
-    queryKey: ['tasks', hideCompletedTasks, advancedFilters, sortConfig],
-    queryFn: () => getProjectTasks({
-      completed: hideCompletedTasks ? false : undefined,
-      assigneeIds: advancedFilters.assignees,
-      dueDateRange: advancedFilters.dueDate,
-      statuses: advancedFilters.status,
-      orderBy: sortConfig.key,
-      orderDirection: sortConfig.direction,
-    }),
-    enabled: isTaskView,
   });
 
   const { data: peopleData } = useQuery<Person[]>({
@@ -86,164 +54,314 @@ const Projects = () => {
     queryFn: getPeople,
   });
 
-  const allPeople = peopleData || [];
+  const allPeople = useMemo(() => {
+    if (!peopleData) return [];
+    return peopleData.map(p => ({ id: p.id, name: p.full_name }));
+  }, [peopleData]);
 
-  const projects = useMemo(() => projectsData || [], [projectsData]);
-  const tasks = useMemo(() => tasksData || [], [tasksData]);
+  const {
+    dateRange, setDateRange,
+    sortConfig: projectSortConfig, requestSort: requestProjectSort, sortedProjects
+  } = useProjectFilters(projectsData, advancedFilters);
 
-  const handleViewChange = (newView: ViewMode | null) => {
-    if (newView) {
-      setSearchParams({ view: newView });
+  const [taskSortConfig, setTaskSortConfig] = useState<{ key: keyof ProjectTask | string; direction: 'asc' | 'desc' }>({ key: 'updated_at', direction: 'desc' });
+
+  const requestTaskSort = useCallback((key: string) => {
+    setTaskSortConfig(prevConfig => {
+      let direction: 'asc' | 'desc' = 'asc';
+      if (prevConfig.key === key && prevConfig.direction === 'asc') {
+        direction = 'desc';
+      }
+      return { key, direction };
+    });
+  }, []);
+
+  const finalTaskSortConfig = view === 'tasks-kanban' ? { key: 'kanban_order', direction: 'asc' as const } : taskSortConfig;
+
+  const { data: tasksData = [], isLoading: isLoadingTasks, refetch: refetchTasks } = useTasks({
+    hideCompleted: hideCompletedTasks,
+    sortConfig: finalTaskSortConfig,
+  });
+
+  const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
+  const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
+  const createProjectMutation = useCreateProject();
+  const [scrollToProjectId, setScrollToProjectId] = useState<string | null>(null);
+  const initialTableScrollDone = useRef(false);
+
+  const [isTaskFormOpen, setIsTaskFormOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<ProjectTask | null>(null);
+  
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+
+  const { data: isGCalConnected } = useQuery({
+    queryKey: ['googleCalendarConnection', user?.id],
+    queryFn: async () => {
+        if (!user) return false;
+        const { data } = await supabase.from('google_calendar_tokens').select('user_id').eq('user_id', user.id).maybeSingle();
+        return !!data;
+    },
+    enabled: !!user,
+  });
+
+  const importEventsMutation = useMutation({
+    mutationFn: async (events: any[]) => {
+        const { error } = await supabase.functions.invoke('import-google-calendar-events', {
+            body: { eventsToImport: events },
+        });
+        if (error) throw error;
+    },
+    onSuccess: () => {
+        toast.success("Events imported successfully as projects!");
+        setIsImportDialogOpen(false);
+        refetchProjects();
+    },
+    onError: (error) => {
+        toast.error("Failed to import events.", { description: error.message });
     }
-  };
+  });
 
-  const handleKanbanGroupByChange = (value: 'status' | 'payment_status') => {
-    setSearchParams({ view, groupBy: value });
-  };
+  const isTaskView = view === 'tasks' || view === 'tasks-kanban';
 
-  const handleToggleHideCompleted = () => {
-    setHideCompletedTasks(!hideCompletedTasks);
-  };
-
-  const handleRefresh = useCallback(() => {
+  const refetch = useCallback(() => {
     if (isTaskView) {
       refetchTasks();
     } else {
       refetchProjects();
     }
-    toast.success("Data refreshed!");
   }, [isTaskView, refetchTasks, refetchProjects]);
 
-  const requestSort = (key: string) => {
-    let direction: 'asc' | 'desc' = 'asc';
-    if (sortConfig.key === key && sortConfig.direction === 'asc') {
-      direction = 'desc';
+  const { upsertTask, isUpserting, deleteTask, toggleTaskCompletion, isToggling } = useTaskMutations(refetch);
+
+  const allTasks = useMemo(() => {
+    if (isTaskView) {
+      return tasksData || [];
     }
-    setSortConfig({ key, direction });
+    if (!projectsData) return [];
+    return projectsData.flatMap(p => p.tasks || []);
+  }, [projectsData, tasksData, isTaskView]);
+
+  const [taskSearchTerm, setTaskSearchTerm] = useState('');
+  const filteredTasks = useMemo(() => {
+    let tasksToFilter = allTasks;
+    if (advancedFilters.selectedPeopleIds.length > 0) {
+        tasksToFilter = tasksToFilter.filter(task => 
+            task.assignedTo?.some(assignee => advancedFilters.selectedPeopleIds.includes(assignee.id))
+        );
+    }
+    if (!taskSearchTerm) return tasksToFilter;
+    const lowercasedFilter = taskSearchTerm.toLowerCase();
+    return tasksToFilter.filter(task => 
+      task.title.toLowerCase().includes(lowercasedFilter) ||
+      (task.description && task.description.toLowerCase().includes(lowercasedFilter)) ||
+      (task.project_name && task.project_name.toLowerCase().includes(lowercasedFilter)) ||
+      (task.project_venue && task.project_venue.toLowerCase().includes(lowercasedFilter)) ||
+      (task.project_client && task.project_client.toLowerCase().includes(lowercasedFilter)) ||
+      (task.project_owner?.name && task.project_owner.name.toLowerCase().includes(lowercasedFilter))
+    );
+  }, [allTasks, taskSearchTerm, advancedFilters.selectedPeopleIds]);
+
+  useEffect(() => {
+    if (view === 'table' && !initialTableScrollDone.current && sortedProjects.length > 0) {
+      const todayStr = formatInJakarta(new Date(), 'yyyy-MM-dd');
+      let targetProject = sortedProjects.find(p => p.start_date && formatInJakarta(p.start_date, 'yyyy-MM-dd') >= todayStr);
+      if (!targetProject && sortedProjects.length > 0) {
+        targetProject = sortedProjects[sortedProjects.length - 1];
+      }
+      if (targetProject) {
+        setScrollToProjectId(targetProject.id);
+        initialTableScrollDone.current = true;
+      }
+    }
+  }, [sortedProjects, view]);
+
+  useEffect(() => {
+    if (scrollToProjectId) {
+      const targetElement = rowRefs.current.get(scrollToProjectId);
+      if (targetElement) {
+        setTimeout(() => {
+          targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          targetElement.classList.add('bg-muted', 'transition-colors', 'duration-1000');
+          setTimeout(() => {
+            targetElement.classList.remove('bg-muted');
+          }, 2000);
+          setScrollToProjectId(null);
+        }, 100);
+      }
+    }
+  }, [scrollToProjectId]);
+
+  const handleViewChange = (newView: ViewMode | null) => {
+    if (newView) {
+      setSearchParams({ view: newView }, { replace: true });
+      if (scrollContainerRef.current) {
+        scrollContainerRef.current.scrollTop = 0;
+        scrollContainerRef.current.scrollLeft = 0;
+      }
+    }
   };
 
-  const invalidateQueries = () => {
-    queryClient.invalidateQueries({ queryKey: ['projects'] });
-    queryClient.invalidateQueries({ queryKey: ['tasks'] });
+  const deleteProjectMutation = useMutation({
+    mutationFn: async (projectId: string) => {
+      const { error } = await supabase.from('projects').delete().eq('id', projectId);
+      if (error) throw error;
+      return projectId;
+    },
+    onSuccess: (deletedProjectId) => {
+      const deletedProject = projectsData.find(p => p.id === deletedProjectId);
+      toast.success(`Project "${deletedProject?.name || 'Project'}" has been deleted.`);
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+    },
+    onError: (error: any, deletedProjectId) => {
+      const deletedProject = projectsData.find(p => p.id === deletedProjectId);
+      toast.error(`Failed to delete project "${deletedProject?.name || 'Project'}".`, { description: getErrorMessage(error) });
+    }
+  });
+
+  const handleDeleteProject = (projectId: string) => {
+    const project = projectsData.find(p => p.id === projectId);
+    if (project) setProjectToDelete(project);
   };
 
-  const createProjectMutation = useMutation({
-    mutationFn: createProject,
-    onSuccess: () => {
-      toast.success("Project created successfully!");
-      invalidateQueries();
-      setIsNewProjectOpen(false);
-    },
-    onError: (error) => {
-      toast.error(`Error creating project: ${error.message}`);
-    },
-  });
+  const confirmDeleteProject = () => {
+    if (projectToDelete) {
+      deleteProjectMutation.mutate(projectToDelete.id);
+      setProjectToDelete(null);
+    }
+  };
 
-  const updateProjectMutation = useMutation({
-    mutationFn: updateProjectDetails,
-    onSuccess: () => {
-      toast.success("Project updated successfully!");
-      invalidateQueries();
-      setProjectToEdit(null);
-    },
-    onError: (error) => {
-      toast.error(`Error updating project: ${error.message}`);
-    },
-  });
+  const handleRefresh = () => {
+    toast.info("Refreshing data...");
+    refetch();
+  };
 
-  const upsertTaskMutation = useMutation({
-    mutationFn: upsertTask,
-    onSuccess: () => {
-      toast.success("Task saved successfully!");
-      invalidateQueries();
-      setIsNewTaskOpen(false);
-      setTaskToEdit(null);
-    },
-    onError: (error) => {
-      toast.error(`Error saving task: ${error.message}`);
-    },
-  });
+  const handleCreateTask = () => {
+    setEditingTask(null);
+    setIsTaskFormOpen(true);
+  };
 
-  const deleteTaskMutation = useMutation({
-    mutationFn: deleteTask,
-    onSuccess: () => {
-      toast.success("Task deleted successfully!");
-      invalidateQueries();
-      setTaskToDelete(null);
-    },
-    onError: (error) => {
-      toast.error(`Error deleting task: ${error.message}`);
-    },
-  });
+  const handleEditTask = (task: ProjectTask) => {
+    setEditingTask(task);
+    setIsTaskFormOpen(true);
+  };
 
-  const toggleTaskCompletionMutation = useMutation({
-    mutationFn: toggleTaskCompletion,
-    onSuccess: () => {
-      invalidateQueries();
-    },
-    onError: (error) => {
-      toast.error(`Error updating task: ${error.message}`);
-    },
-  });
+  const handleDeleteTask = (taskId: string) => {
+    setTaskToDelete(taskId);
+  };
+
+  const confirmDeleteTask = () => {
+    if (taskToDelete) {
+      deleteTask(taskToDelete, {
+        onSuccess: () => {
+          setTaskToDelete(null);
+        }
+      });
+    }
+  };
+
+  const handleTaskFormSubmit = (data: UpsertTaskPayload) => {
+    upsertTask(data, {
+      onSuccess: () => {
+        setIsTaskFormOpen(false);
+        setEditingTask(null);
+      },
+    });
+  };
+
+  const handleToggleTaskCompletion = (task: ProjectTask, completed: boolean) => {
+    toggleTaskCompletion({ task, completed });
+  };
+
+  const toggleHideCompleted = () => {
+    setHideCompletedTasks(prev => {
+      const newState = !prev;
+      localStorage.setItem('hideCompletedTasks', String(newState));
+      return newState;
+    });
+  };
+
+  const tasksQueryKey = ['tasks', { 
+    projectIds: undefined, 
+    hideCompleted: hideCompletedTasks, 
+    sortConfig: finalTaskSortConfig 
+  }];
 
   return (
-    <div className="flex flex-col h-full">
-      <ProjectsToolbar
-        view={view}
-        onViewChange={handleViewChange}
-        kanbanGroupBy={kanbanGroupBy}
-        onKanbanGroupByChange={handleKanbanGroupByChange}
-        hideCompletedTasks={hideCompletedTasks}
-        onToggleHideCompleted={handleToggleHideCompleted}
-        onNewProjectClick={() => setIsNewProjectOpen(true)}
-        onNewTaskClick={() => setIsNewTaskOpen(true)}
-        isTaskView={isTaskView}
-        isGCalConnected={isGCalConnected}
-        onImportClick={() => setIsImportOpen(true)}
-        onRefreshClick={handleRefresh}
-        advancedFilters={advancedFilters}
-        onAdvancedFiltersChange={setAdvancedFilters}
-        allPeople={allPeople}
-      />
-      <div className="flex-1 overflow-auto">
-        {view === 'list' && <ProjectsListView projects={projects} isLoading={isLoadingProjects} onEdit={setProjectToEdit} />}
-        {view === 'table' && <ProjectsGridView projects={projects} isLoading={isLoadingProjects} onEdit={setProjectToEdit} />}
-        {view === 'kanban' && <ProjectsKanbanView initialProjects={projects} isLoading={isLoadingProjects} groupBy={kanbanGroupBy} />}
-        {view === 'tasks' && (
-          <TasksView
-            tasks={tasks}
-            isLoading={isLoadingTasks}
-            onEdit={setTaskToEdit}
-            onDelete={setTaskToDelete}
-            onToggleTaskCompletion={(task, completed) => toggleTaskCompletionMutation.mutate({ taskId: task.id, completed })}
-            isToggling={toggleTaskCompletionMutation.isPending}
-            sortConfig={sortConfig}
-            requestSort={requestSort}
-          />
-        )}
-        {view === 'tasks-kanban' && <TasksKanbanView initialTasks={tasks} isLoading={isLoadingTasks} />}
-      </div>
-
-      {/* Dialogs */}
-      <NewProjectDialog isOpen={isNewProjectOpen} onClose={() => setIsNewProjectOpen(false)} onSave={createProjectMutation.mutate} isLoading={createProjectMutation.isPending} />
-      <NewTaskDialog isOpen={isNewTaskOpen} onClose={() => setIsNewTaskOpen(false)} onSave={upsertTaskMutation.mutate} isLoading={upsertTaskMutation.isPending} allPeople={allPeople} />
-      {projectToEdit && <EditProjectDialog isOpen={!!projectToEdit} onClose={() => setProjectToEdit(null)} project={projectToEdit} onSave={updateProjectMutation.mutate} isLoading={updateProjectMutation.isPending} />}
-      {taskToEdit && <EditTaskDialog isOpen={!!taskToEdit} onClose={() => setTaskToEdit(null)} task={taskToEdit} onSave={upsertTaskMutation.mutate} isLoading={upsertTaskMutation.isPending} allPeople={allPeople} />}
-      <ImportFromCalendarDialog isOpen={isImportOpen} onClose={() => setIsImportOpen(false)} onImportSuccess={handleRefresh} />
-      <AlertDialog open={!!taskToDelete} onOpenChange={() => setTaskToDelete(null)}>
+    <PortalLayout disableMainScroll noPadding>
+      <AlertDialog open={!!projectToDelete} onOpenChange={(open) => !open && setProjectToDelete(null)}>
         <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>This action cannot be undone. This will permanently delete the task.</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={() => taskToDelete && deleteTaskMutation.mutate(taskToDelete)}>Delete</AlertDialogAction>
-          </AlertDialogFooter>
+          <AlertDialogHeader><AlertDialogTitle>Are you sure?</AlertDialogTitle><AlertDialogDescription>This action cannot be undone. This will permanently delete the project "{projectToDelete?.name}".</AlertDialogDescription></AlertDialogHeader>
+          <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={confirmDeleteProject}>Delete</AlertDialogAction></AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+
+      <AlertDialog open={!!taskToDelete} onOpenChange={(open) => !open && setTaskToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader><AlertDialogTitle>Delete Task?</AlertDialogTitle><AlertDialogDescription>This action cannot be undone. Are you sure you want to delete this task?</AlertDialogDescription></AlertDialogHeader>
+          <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={confirmDeleteTask}>Delete</AlertDialogAction></AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <TaskFormDialog
+        open={isTaskFormOpen}
+        onOpenChange={setIsTaskFormOpen}
+        onSubmit={handleTaskFormSubmit}
+        isSubmitting={isUpserting}
+        task={editingTask}
+      />
+
+      <GoogleCalendarImportDialog
+        open={isImportDialogOpen}
+        onOpenChange={setIsImportDialogOpen}
+        onImport={(events) => importEventsMutation.mutate(events)}
+        isImporting={importEventsMutation.isPending}
+      />
+
+      <div className="flex-1 flex flex-col min-h-0 rounded-none border-0 sm:border sm:rounded-lg">
+        <div className="flex-shrink-0 bg-background z-10 border-b">
+          <ProjectsToolbar
+            view={view} onViewChange={handleViewChange}
+            kanbanGroupBy={kanbanGroupBy} onKanbanGroupByChange={setKanbanGroupBy}
+            hideCompletedTasks={hideCompletedTasks}
+            onToggleHideCompleted={toggleHideCompleted}
+            onNewProjectClick={() => navigate('/request')}
+            onNewTaskClick={handleCreateTask}
+            isTaskView={isTaskView}
+            isGCalConnected={isGCalConnected}
+            onImportClick={() => setIsImportDialogOpen(true)}
+            onRefreshClick={handleRefresh}
+            advancedFilters={advancedFilters}
+            onAdvancedFiltersChange={setAdvancedFilters}
+            allPeople={allPeople}
+          />
+        </div>
+        <div ref={scrollContainerRef} className="flex-grow min-h-0 overflow-y-auto">
+          <div className="p-0 data-[view=kanban]:px-4 data-[view=kanban]:pb-4 data-[view=kanban]:md:px-6 data-[view=kanban]:md:pb-6 data-[view=tasks-kanban]:p-0" data-view={view}>
+            <ProjectViewContainer
+              view={view}
+              projects={sortedProjects}
+              tasks={filteredTasks}
+              isLoading={isLoadingProjects}
+              isTasksLoading={isLoadingTasks}
+              onDeleteProject={handleDeleteProject}
+              sortConfig={projectSortConfig}
+              requestSort={(key) => requestProjectSort(key as keyof Project)}
+              rowRefs={rowRefs}
+              kanbanGroupBy={kanbanGroupBy}
+              onEditTask={handleEditTask}
+              onDeleteTask={handleDeleteTask}
+              onToggleTaskCompletion={handleToggleTaskCompletion}
+              isToggling={isToggling}
+              taskSortConfig={taskSortConfig}
+              requestTaskSort={requestTaskSort}
+              refetch={refetch}
+              tasksQueryKey={tasksQueryKey}
+            />
+          </div>
+        </div>
+      </div>
+    </PortalLayout>
   );
 };
 
-export default Projects;
+export default ProjectsPage;
