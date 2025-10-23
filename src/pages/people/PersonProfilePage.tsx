@@ -167,7 +167,7 @@ const PersonProfilePage = () => {
   const { data: customProperties = [] } = useQuery({
     queryKey: ['contact_properties'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('contact_properties').select('*').eq('is_default', false);
+      const { data, error } = await supabase.from('contact_properties').select('*');
       if (error) throw error;
       return data as ContactProperty[];
     }
