@@ -9,7 +9,7 @@ import { CurrencyInput } from '../ui/currency-input';
 import { Input } from '../ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Paperclip, X, Loader2, Plus } from 'lucide-react';
+import { Paperclip, X, Loader2, Plus, Wand2 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 
 type Invoice = {
@@ -39,6 +39,17 @@ const channelOptions = [
   'Rex',
 ];
 
+const toRoman = (num: number) => {
+    const roman: { [key: string]: number } = { M: 1000, CM: 900, D: 500, CD: 400, C: 100, XC: 90, L: 50, XL: 40, X: 10, IX: 9, V: 5, IV: 4, I: 1 };
+    let str = '';
+    for (let i of Object.keys(roman)) {
+        let q = Math.floor(num / roman[i]);
+        num -= q * roman[i];
+        str += i.repeat(q);
+    }
+    return str;
+};
+
 export const EditInvoiceDialog = ({ isOpen, onClose, invoice, project }: EditInvoiceDialogProps) => {
   const queryClient = useQueryClient();
   const [invoiceNumber, setInvoiceNumber] = useState('');
@@ -56,6 +67,7 @@ export const EditInvoiceDialog = ({ isOpen, onClose, invoice, project }: EditInv
   const [newAttachments, setNewAttachments] = useState<File[]>([]);
   const [attachmentsToRemove, setAttachmentsToRemove] = useState<string[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   useEffect(() => {
     if (invoice && project) {
@@ -88,6 +100,49 @@ export const EditInvoiceDialog = ({ isOpen, onClose, invoice, project }: EditInv
     const totalPaid = terms.reduce((sum, term) => sum + (Number(term.amount) || 0), 0);
     return totalAmount - totalPaid;
   }, [amount, terms]);
+
+  const handleGenerateInvoiceNumber = async () => {
+    if (!project) return;
+    setIsGenerating(true);
+    try {
+        const clientName = project.client_company_name || project.client_name || 'CLIENT';
+        const projectKeywords = project.name.split(' ').slice(0, 3).join(' ');
+
+        let sequence = 1;
+        if (project.client_company_id) {
+            const { count, error } = await supabase
+                .from('projects')
+                .select('id', { count: 'exact', head: true })
+                .eq('client_company_id', project.client_company_id)
+                .not('invoice_number', 'is', null);
+
+            if (error) throw error;
+            sequence = (count || 0) + 1;
+        } else {
+            const { count, error } = await supabase
+                .from('projects')
+                .select('id', { count: 'exact', head: true })
+                .eq('client_company_name', clientName)
+                .not('invoice_number', 'is', null);
+            
+            if (error) throw error;
+            sequence = (count || 0) + 1;
+        }
+
+        const now = new Date();
+        const monthRoman = toRoman(now.getMonth() + 1);
+        const yearShort = now.getFullYear().toString().slice(-2);
+
+        const newInvoiceNumber = `INV/${clientName} ${projectKeywords}-${sequence}/${monthRoman}/${yearShort}`;
+        setInvoiceNumber(newInvoiceNumber);
+        toast.success("Invoice number generated!");
+
+    } catch (error: any) {
+        toast.error("Failed to generate invoice number.", { description: error.message });
+    } finally {
+        setIsGenerating(false);
+    }
+  };
 
   const handleTermChange = (index: number, field: 'amount' | 'date', value: number | null | Date | undefined) => {
     const newTerms = [...terms];
@@ -224,12 +279,17 @@ export const EditInvoiceDialog = ({ isOpen, onClose, invoice, project }: EditInv
             <Label htmlFor="invoiceNumber" className="text-right">
               Invoice #
             </Label>
-            <Input
-              id="invoiceNumber"
-              value={invoiceNumber}
-              onChange={(e) => setInvoiceNumber(e.target.value)}
-              className="col-span-3"
-            />
+            <div className="col-span-3 flex items-center gap-2">
+              <Input
+                id="invoiceNumber"
+                value={invoiceNumber}
+                onChange={(e) => setInvoiceNumber(e.target.value)}
+                className="flex-1"
+              />
+              <Button type="button" size="icon" variant="outline" onClick={handleGenerateInvoiceNumber} disabled={isGenerating}>
+                  {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
+              </Button>
+            </div>
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="poNumber" className="text-right">
