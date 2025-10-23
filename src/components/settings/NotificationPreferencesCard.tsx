@@ -6,14 +6,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, BellRing } from "lucide-react";
+import { Loader2, BellRing, Wrench } from "lucide-react";
 import { Button } from "../ui/button";
 import { Checkbox } from "../ui/checkbox";
-import WhatsappIcon from "../icons/WhatsappIcon";
 import { useQuery } from "@tanstack/react-query";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Mail } from "lucide-react";
 import { PAYMENT_STATUS_OPTIONS } from "@/types";
+import { useNavigate } from "react-router-dom";
 
 interface NotificationEvent {
   id: string;
@@ -51,9 +50,12 @@ const PROJECT_STATUS_OPTIONS = [
 
 const NotificationPreferencesCard = () => {
   const { user, refreshUser } = useAuth();
+  const navigate = useNavigate();
   const [preferences, setPreferences] = useState<Record<string, any>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [notificationPermission, setNotificationPermission] = useState(Notification.permission);
+
+  const isAdmin = user?.role === 'admin' || user?.role === 'master admin';
 
   const { data: notificationEvents = [], isLoading: isLoadingEvents } = useQuery<NotificationEvent[]>({
     queryKey: ['notification_events'],
@@ -267,8 +269,18 @@ const NotificationPreferencesCard = () => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Notification Settings</CardTitle>
-        <CardDescription>Manage how you receive notifications from the platform.</CardDescription>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle>Notification Settings</CardTitle>
+            <CardDescription>Manage how you receive notifications from the platform.</CardDescription>
+          </div>
+          {isAdmin && (
+            <Button variant="outline" size="sm" onClick={() => navigate('/settings/notifications/system')}>
+              <Wrench className="mr-2 h-4 w-4" />
+              Manage System Notifications
+            </Button>
+          )}
+        </div>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="space-y-4">
