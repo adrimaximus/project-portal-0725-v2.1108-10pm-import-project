@@ -421,7 +421,7 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
                                     })}
                                   </div>
                                 </div>
-                                <div className="flex justify-end gap-1 items-center">
+                                <div className="flex justify-end gap-1 items-center mr-1">
                                   <Popover>
                                     <PopoverTrigger asChild>
                                       <Button variant="ghost" size="icon" className="h-6 w-6" onClick={e => e.stopPropagation()}>
