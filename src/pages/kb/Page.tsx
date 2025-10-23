@@ -135,7 +135,7 @@ const Page = () => {
         )}
 
         <div className="flex justify-between items-start">
-          <h1 className="text-3xl font-bold tracking-tight">{article.title}</h1>
+          <h1 className="text-4xl font-bold tracking-tight">{article.title}</h1>
           <Button variant="outline" onClick={() => setIsEditorOpen(true)}>
             <Edit className="mr-2 h-4 w-4" />
             Edit
@@ -143,7 +143,7 @@ const Page = () => {
         </div>
 
         <div
-          className="prose dark:prose-invert max-w-none text-xs leading-tight prose-headings:mt-0 prose-headings:mb-2 prose-p:mt-0 prose-p:mb-2 prose-li:mt-0 prose-li:mb-2 prose-h1:text-xl prose-h2:text-lg [&>*:first-child]:mt-0 [&_p:has(>br:only-child)]:my-0 [&_p:has(>br:only-child)]:leading-none"
+          className="prose dark:prose-invert max-w-none text-sm md:text-base leading-tight prose-headings:mt-0 prose-headings:mb-2 prose-p:mt-0 prose-p:mb-2 prose-li:mt-0 prose-li:mb-2 [&>*:first-child]:mt-0 [&_p:has(>br:only-child)]:my-0 [&_p:has(>br:only-child)]:leading-none"
           dangerouslySetInnerHTML={{ __html: articleContentHtml }}
         />
       </div>
