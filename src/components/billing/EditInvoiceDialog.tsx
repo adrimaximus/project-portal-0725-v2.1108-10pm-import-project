@@ -119,14 +119,13 @@ export const EditInvoiceDialog = ({ isOpen, onClose, invoice, project }: EditInv
             if (error) throw error;
             sequence = (count || 0) + 1;
         } else {
-            const { count, error } = await supabase
-                .from('projects')
-                .select('id', { count: 'exact', head: true })
-                .eq('client_company_name', clientName)
-                .not('invoice_number', 'is', null);
-            
-            if (error) throw error;
-            sequence = (count || 0) + 1;
+            // The previous implementation was querying a non-existent column 'client_company_name' on the 'projects' table, causing an error.
+            // We cannot reliably count invoices without a client_company_id.
+            // Defaulting to 1 and notifying the user is a safe fallback.
+            sequence = 1;
+            toast.info("Could not determine invoice sequence automatically.", {
+                description: "This project is not linked to a company record. The sequence number has been set to 1."
+            });
         }
 
         const now = new Date();
