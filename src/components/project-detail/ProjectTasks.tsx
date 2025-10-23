@@ -14,6 +14,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import TaskAttachmentList from './TaskAttachmentList';
 import { cn } from "@/lib/utils";
+import { useNavigate } from "react-router-dom";
 
 interface ProjectTasksProps {
   tasks: Task[];
@@ -35,13 +36,14 @@ const formatBytes = (bytes?: number, decimals = 2) => {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
 }
 
-const TaskRow = ({ task, onToggleTaskCompletion, onEditTask, onDeleteTask, handleToggleReaction, setRef }: {
+const TaskRow = ({ task, onToggleTaskCompletion, onEditTask, onDeleteTask, handleToggleReaction, setRef, onTitleClick }: {
   task: Task;
   onToggleTaskCompletion: (task: Task, completed: boolean) => void;
   onEditTask: (task: Task) => void;
   onDeleteTask: (task: Task) => void;
   handleToggleReaction: (taskId: string, emoji: string) => void;
   setRef: (el: HTMLDivElement | null) => void;
+  onTitleClick: (task: Task) => void;
 }) => {
   const allAttachments = useMemo(() => {
     let attachments: TaskAttachment[] = [...(task.attachments || [])];
@@ -77,7 +79,7 @@ const TaskRow = ({ task, onToggleTaskCompletion, onEditTask, onDeleteTask, handl
             task.completed && "line-through"
           )} 
           title={task.title}
-          onClick={() => onEditTask(task)}
+          onClick={() => onTitleClick(task)}
         >
           {task.title}
         </span>
@@ -174,6 +176,7 @@ const TaskRow = ({ task, onToggleTaskCompletion, onEditTask, onDeleteTask, handl
 };
 
 const ProjectTasks = ({ tasks, projectId, onAddTask, onEditTask, onDeleteTask, onToggleTaskCompletion, highlightedTaskId, onHighlightComplete }: ProjectTasksProps) => {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { toggleTaskReaction } = useTaskMutations();
   const taskRefs = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -200,6 +203,10 @@ const ProjectTasks = ({ tasks, projectId, onAddTask, onEditTask, onDeleteTask, o
         queryClient.invalidateQueries({ queryKey: ['project', (tasks.find(t => t.id === taskId) as Task)?.project_slug] });
       }
     });
+  };
+
+  const handleTitleClick = (task: Task) => {
+    navigate(`/projects?view=tasks&highlight=${task.id}`);
   };
   
   if (!tasks || tasks.length === 0) {
@@ -232,6 +239,7 @@ const ProjectTasks = ({ tasks, projectId, onAddTask, onEditTask, onDeleteTask, o
             onEditTask={onEditTask}
             onDeleteTask={onDeleteTask}
             handleToggleReaction={handleToggleReaction}
+            onTitleClick={handleTitleClick}
             setRef={(el) => {
               if (el) taskRefs.current.set(task.id, el);
               else taskRefs.current.delete(task.id);
