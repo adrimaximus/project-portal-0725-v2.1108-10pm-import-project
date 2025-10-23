@@ -206,6 +206,33 @@ const PersonProfilePage = () => {
     }
   };
 
+  const renderCustomPropertyValue = (prop: ContactProperty, value: any) => {
+    if (value === null || typeof value === 'undefined' || value === '') {
+      return <span className="text-muted-foreground">-</span>;
+    }
+  
+    switch (prop.type) {
+      case 'url':
+        return <a href={value} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline truncate block">{value}</a>;
+      case 'email':
+        return <a href={`mailto:${value}`} className="text-primary hover:underline truncate block">{value}</a>;
+      case 'phone':
+        return <a href={`tel:${value}`} className="text-primary hover:underline truncate block">{value}</a>;
+      case 'image':
+        return <img src={value} alt={prop.label} className="h-16 w-16 object-cover rounded-md mt-1" />;
+      case 'date':
+        try {
+          return <span className="text-muted-foreground">{formatInJakarta(value, 'PPP')}</span>;
+        } catch {
+          return <span className="text-muted-foreground">{value}</span>;
+        }
+      case 'checkbox':
+        return value ? <span className="text-green-600 font-semibold">Yes</span> : <span className="text-muted-foreground">No</span>;
+      default:
+        return <span className="text-muted-foreground whitespace-pre-wrap">{String(value)}</span>;
+    }
+  };
+
   if (isLoading) return <PersonProfileSkeleton />;
 
   if (error || !person) {
@@ -332,11 +359,13 @@ const PersonProfilePage = () => {
             {customPropertiesWithValue.length > 0 && (
               <Card>
                 <CardHeader><CardTitle>Additional Information</CardTitle></CardHeader>
-                <CardContent className="space-y-3 text-sm">
+                <CardContent className="space-y-4 text-sm">
                   {customPropertiesWithValue.map(prop => (
                     <div key={prop.id} className="flex items-start gap-3">
                       <span className="font-semibold w-24 flex-shrink-0">{prop.label}:</span>
-                      <span className="text-muted-foreground">{person.custom_properties?.[prop.name]}</span>
+                      <div className="flex-1 min-w-0">
+                        {renderCustomPropertyValue(prop, person.custom_properties?.[prop.name])}
+                      </div>
                     </div>
                   ))}
                 </CardContent>
