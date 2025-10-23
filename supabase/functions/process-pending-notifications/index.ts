@@ -115,6 +115,7 @@ serve(async (req) => {
     const anthropic = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
     let successCount = 0;
     let failureCount = 0;
+    let skippedCount = 0;
 
     console.log("[DEBUG] Starting to process notifications loop.");
     for (const notification of notifications) {
@@ -126,8 +127,24 @@ serve(async (req) => {
         }
 
         const prefs = recipient.notification_preferences || {};
-        if (prefs[notification.notification_type] === false || prefs.whatsapp === false) {
+        const typePref = prefs[notification.notification_type];
+        let isEnabled = true;
+
+        if (typeof typePref === 'boolean') {
+            isEnabled = typePref;
+        } else if (typeof typePref === 'object' && typePref !== null) {
+            if (typePref.enabled === false) {
+                isEnabled = false;
+            }
+            if (typePref.whatsapp === false) {
+                isEnabled = false;
+            }
+        }
+
+        if (!isEnabled) {
+          console.log(`[DEBUG] Skipping notification ${notification.id} for user ${recipient.id} due to preferences.`);
           await supabaseAdmin.from('pending_whatsapp_notifications').update({ status: 'skipped', processed_at: new Date().toISOString() }).eq('id', notification.id);
+          skippedCount++;
           continue;
         }
 
@@ -180,7 +197,7 @@ serve(async (req) => {
     }
     console.log("[DEBUG] Finished processing loop.");
 
-    return new Response(JSON.stringify({ message: `Processed ${notifications.length} notifications. Success: ${successCount}, Failed: ${failureCount}` }), {
+    return new Response(JSON.stringify({ message: `Processed ${notifications.length} notifications. Success: ${successCount}, Skipped: ${skippedCount}, Failed: ${failureCount}` }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     });
