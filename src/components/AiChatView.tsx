@@ -19,20 +19,23 @@ const AiChatView = forwardRef<HTMLTextAreaElement, AiChatViewProps>(({ onBack },
   const { conversation, isLoading, sendMessage, aiUser, isConnected, isCheckingConnection } = useAiChat(currentUser);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
 
-  if (!currentUser) return null;
+  const aiConversationObject = useMemo((): Conversation => {
+    const members = currentUser ? [currentUser, aiUser] : [aiUser];
+    return {
+      id: 'ai-assistant',
+      userName: 'AI Assistant',
+      userAvatar: aiUser.avatar_url,
+      isGroup: false,
+      members: members,
+      messages: conversation,
+      lastMessage: conversation[conversation.length - 1]?.text || "Ask me anything...",
+      lastMessageTimestamp: conversation[conversation.length - 1]?.timestamp || new Date().toISOString(),
+      unreadCount: 0,
+      created_by: 'ai-assistant',
+    };
+  }, [aiUser, conversation, currentUser]);
 
-  const aiConversationObject = useMemo((): Conversation => ({
-    id: 'ai-assistant',
-    userName: 'AI Assistant',
-    userAvatar: aiUser.avatar_url,
-    isGroup: false,
-    members: [currentUser!, aiUser],
-    messages: conversation,
-    lastMessage: conversation[conversation.length - 1]?.text || "Ask me anything...",
-    lastMessageTimestamp: conversation[conversation.length - 1]?.timestamp || new Date().toISOString(),
-    unreadCount: 0,
-    created_by: 'ai-assistant',
-  }), [aiUser, conversation, currentUser]);
+  if (!currentUser) return null;
 
   const handleSendMessage = (text: string, attachmentFile: File | null) => {
     sendMessage(text, attachmentFile, replyTo?.id);
