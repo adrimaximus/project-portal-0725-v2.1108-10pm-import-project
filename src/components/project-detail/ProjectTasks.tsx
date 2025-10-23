@@ -1,4 +1,4 @@
-import { Task, User, TaskAttachment } from "@/types";
+import { Task, User, TaskAttachment, Reaction } from "@/types";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ListChecks, Plus, MoreHorizontal, Edit, Trash2, Ticket, Paperclip, Eye, Download, File as FileIconLucide } from "lucide-react";
 import { Button } from "../ui/button";
@@ -6,7 +6,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { useMemo } from "react";
+import { useMemo, useRef, useEffect } from "react";
 import FileIcon from "../FileIcon"; // Correct import for custom FileIcon
 import TaskReactions from '../projects/TaskReactions';
 import { useTaskMutations } from '@/hooks/useTaskMutations';
@@ -19,6 +19,8 @@ interface ProjectTasksProps {
   onEditTask: (task: Task) => void;
   onDeleteTask: (task: Task) => void;
   onToggleTaskCompletion: (task: Task, completed: boolean) => void;
+  highlightedTaskId?: string | null;
+  onHighlightComplete?: () => void;
 }
 
 const formatBytes = (bytes?: number, decimals = 2) => {
@@ -30,9 +32,26 @@ const formatBytes = (bytes?: number, decimals = 2) => {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
 }
 
-const ProjectTasks = ({ tasks, projectId, onAddTask, onEditTask, onDeleteTask, onToggleTaskCompletion }: ProjectTasksProps) => {
+const ProjectTasks = ({ tasks, projectId, onAddTask, onEditTask, onDeleteTask, onToggleTaskCompletion, highlightedTaskId, onHighlightComplete }: ProjectTasksProps) => {
   const queryClient = useQueryClient();
   const { toggleTaskReaction } = useTaskMutations();
+  const taskRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+
+  useEffect(() => {
+    if (highlightedTaskId) {
+      const element = taskRefs.current.get(highlightedTaskId);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        element.classList.add('bg-primary/10', 'rounded-md');
+        setTimeout(() => {
+          element.classList.remove('bg-primary/10', 'rounded-md');
+          if (onHighlightComplete) {
+            onHighlightComplete();
+          }
+        }, 2000);
+      }
+    }
+  }, [highlightedTaskId, onHighlightComplete]);
 
   const handleToggleReaction = (taskId: string, emoji: string) => {
     toggleTaskReaction({ taskId, emoji }, {
@@ -82,7 +101,14 @@ const ProjectTasks = ({ tasks, projectId, onAddTask, onEditTask, onDeleteTask, o
           const hasAttachments = attachmentCount > 0;
 
           return (
-            <div key={task.id} className="flex items-start space-x-3 p-2 rounded-md hover:bg-muted group">
+            <div 
+              key={task.id} 
+              ref={(el) => {
+                if (el) taskRefs.current.set(task.id, el);
+                else taskRefs.current.delete(task.id);
+              }}
+              className="flex items-start space-x-3 p-2 rounded-md hover:bg-muted group transition-colors duration-500"
+            >
               <Checkbox
                 id={`task-${task.id}`}
                 checked={task.completed}

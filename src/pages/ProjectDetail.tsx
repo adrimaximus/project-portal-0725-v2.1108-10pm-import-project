@@ -25,6 +25,7 @@ import { Project, Task } from "@/types";
 import TaskFormDialog from "@/components/projects/TaskFormDialog";
 import { useTaskMutations, UpsertTaskPayload } from "@/hooks/useTaskMutations";
 import { useTasks } from "@/hooks/useTasks";
+import { Loader2 } from "lucide-react";
 
 const ProjectDetailSkeleton = () => (
   <PortalLayout>
@@ -46,7 +47,7 @@ const ProjectDetailSkeleton = () => (
 
 const ProjectDetail = () => {
   const { slug } = useParams<{ slug: string }>();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
@@ -68,6 +69,7 @@ const ProjectDetail = () => {
   const { upsertTask, deleteTask, toggleTaskCompletion, isUpserting } = useTaskMutations();
 
   const defaultTab = searchParams.get('tab') || 'overview';
+  const highlightedTaskId = searchParams.get('task');
 
   useEffect(() => {
     if (project) {
@@ -210,6 +212,11 @@ const ProjectDetail = () => {
                 onFieldChange={handleFieldChange}
                 mutations={mutations}
                 defaultTab={defaultTab}
+                highlightedTaskId={highlightedTaskId}
+                onTaskHighlightComplete={() => {
+                  searchParams.delete('task');
+                  setSearchParams(searchParams, { replace: true });
+                }}
                 onAddTask={handleCreateTask}
                 onEditTask={handleEditTask}
                 onDeleteTask={handleDeleteTask}

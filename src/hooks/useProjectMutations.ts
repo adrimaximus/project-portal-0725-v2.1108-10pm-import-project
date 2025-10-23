@@ -12,7 +12,12 @@ export const useProjectMutations = (slug: string) => {
     const navigate = useNavigate();
     const { user } = useAuth();
 
-    const useUpdateProject = () => useMutation({
+    const invalidateProjectQueries = () => {
+        queryClient.invalidateQueries({ queryKey: ['project', slug] });
+        queryClient.invalidateQueries({ queryKey: ['projects'] });
+    };
+
+    const updateProject = useMutation({
         mutationFn: async (editedProject: Project) => {
             const { id, person_ids, ...projectDetails } = editedProject as any;
             
@@ -76,7 +81,7 @@ export const useProjectMutations = (slug: string) => {
         onError: (err: any) => toast.error("Failed to save project", { description: getErrorMessage(err) }),
     });
 
-    const useAddFiles = () => useMutation({
+    const addFiles = useMutation({
         mutationFn: async ({ files, project, user }: { files: File[], project: Project, user: User }) => {
             toast.info(`Uploading ${files.length} file(s)...`);
             for (const file of files) {
@@ -86,7 +91,6 @@ export const useProjectMutations = (slug: string) => {
                 if (uploadError) throw new Error(`Failed to upload ${file.name}: ${uploadError.message}`);
                 
                 const { data: urlData } = supabase.storage.from('project-files').getPublicUrl(filePath);
-                // Add explicit check for publicUrl
                 if (!urlData || !urlData.publicUrl) {
                     throw new Error(`Failed to get public URL for uploaded file ${file.name}.`);
                 }
@@ -105,7 +109,7 @@ export const useProjectMutations = (slug: string) => {
         onError: (err: any) => toast.error(getErrorMessage(err, "File upload failed.")),
     });
 
-    const useDeleteFile = () => useMutation({
+    const deleteFile = useMutation({
         mutationFn: async (file: { id: string, storage_path: string }) => {
             const { error: storageError } = await supabase.storage.from('task-attachments').remove([file.storage_path]);
             if (storageError) throw new Error(`Failed to delete file from storage: ${storageError.message}`);
@@ -120,7 +124,7 @@ export const useProjectMutations = (slug: string) => {
         onError: (err: any) => toast.error(getErrorMessage(err)),
     });
 
-    const useAddTask = () => useMutation({
+    const addTask = useMutation({
         mutationFn: async ({ project, user, title, assigneeIds }: { project: Project, user: User, title: string, assigneeIds: string[] }) => {
             const { data: newTask, error } = await supabase.from('tasks').insert({ project_id: project.id, title, created_by: user.id }).select().single();
             if (error) throw error;
@@ -141,7 +145,7 @@ export const useProjectMutations = (slug: string) => {
         onError: (err: any) => toast.error("Failed to add task", { description: getErrorMessage(err) }),
     });
 
-    const useUpdateTask = () => useMutation({
+    const updateTask = useMutation({
         mutationFn: async ({ taskId, updates }: { taskId: string, updates: any }) => {
             const { error } = await supabase.from('tasks').update(updates).eq('id', taskId);
             if (error) throw error;
@@ -153,7 +157,7 @@ export const useProjectMutations = (slug: string) => {
         onError: (err: any) => toast.error("Failed to update task", { description: getErrorMessage(err) }),
     });
 
-    const useAssignUsersToTask = () => useMutation({
+    const assignUsersToTask = useMutation({
         mutationFn: async ({ taskId, userIds }: { taskId: string, userIds: string[] }) => {
             await supabase.from('task_assignees').delete().eq('task_id', taskId);
             if (userIds.length > 0) {
@@ -169,7 +173,7 @@ export const useProjectMutations = (slug: string) => {
         onError: (err: any) => toast.error("Failed to assign users", { description: getErrorMessage(err) }),
     });
 
-    const useDeleteTask = () => useMutation({
+    const deleteTask = useMutation({
         mutationFn: async (taskId: string) => {
             const { error } = await supabase.from('tasks').delete().eq('id', taskId);
             if (error) throw error;
@@ -181,7 +185,7 @@ export const useProjectMutations = (slug: string) => {
         onError: (err: any) => toast.error("Failed to delete task", { description: getErrorMessage(err) }),
     });
 
-    const useAddComment = () => useMutation({
+    const addComment = useMutation({
         mutationFn: async ({ project, user, text, isTicket, attachments, mentionedUserIds }: { project: Project, user: User, text: string, isTicket: boolean, attachments: File[] | null, mentionedUserIds: string[] }) => {
             let finalCommentText = text;
             let firstAttachmentUrl: string | null = null;
@@ -287,7 +291,7 @@ export const useProjectMutations = (slug: string) => {
         onError: (err: any) => toast.error("Failed to add comment/ticket", { description: getErrorMessage(err) }),
     });
 
-    const useUpdateComment = () => useMutation({
+    const updateComment = useMutation({
         mutationFn: async ({ commentId, text, attachments, isConvertingToTicket, mentionedUserIds }: { commentId: string, text: string, attachments: File[] | null, isConvertingToTicket: boolean, mentionedUserIds: string[] }) => {
             const { data: originalComment, error: fetchError } = await supabase
                 .from('comments')
@@ -345,7 +349,6 @@ export const useProjectMutations = (slug: string) => {
                 const markdownLinks = existingAttachmentsJsonb.map(file => `* [${file.file_name}](${file.file_url})`).join('\n');
                 const fullAttachmentMarkdown = `\n\n**Attachments:**\n${markdownLinks}`;
                 
-                // Remove old markdown block if it exists, then append the new one
                 finalCommentText = finalCommentText.replace(attachmentsRegex, '').trim() + fullAttachmentMarkdown;
             } else {
                 finalCommentText = finalCommentText.replace(attachmentsRegex, '').trim();
@@ -354,7 +357,7 @@ export const useProjectMutations = (slug: string) => {
             const updatePayload: any = {
                 text: finalCommentText,
                 is_ticket: isConvertingToTicket || originalComment.is_ticket,
-                attachments_jsonb: existingAttachmentsJsonb, // <-- NEW: Update the JSONB column
+                attachments_jsonb: existingAttachmentsJsonb,
             };
             if (newFirstAttachmentUrl) {
                 updatePayload.attachment_url = newFirstAttachmentUrl;
@@ -397,7 +400,7 @@ export const useProjectMutations = (slug: string) => {
                 const { data: newTask, error: taskError } = await supabase.from('tasks').insert({
                     project_id: originalComment.project_id,
                     title: taskTitle, 
-                    description: cleanTextForDescription, // Comment text as description
+                    description: cleanTextForDescription,
                     origin_ticket_id: commentId,
                 }).select().single();
                 if (taskError) {
@@ -424,7 +427,7 @@ export const useProjectMutations = (slug: string) => {
         onError: (err: any) => toast.error("Failed to update comment", { description: getErrorMessage(err) }),
     });
 
-    const useDeleteComment = () => useMutation({
+    const deleteComment = useMutation({
         mutationFn: async (commentId: string) => {
             const { error } = await supabase.rpc('delete_comment_and_task', { p_comment_id: commentId });
             if (error) throw error;
@@ -436,7 +439,7 @@ export const useProjectMutations = (slug: string) => {
         onError: (err: any) => toast.error("Failed to delete comment", { description: getErrorMessage(err) }),
     });
 
-    const useDeleteProject = () => useMutation({
+    const deleteProject = useMutation({
         mutationFn: async (projectId: string) => {
             const { error } = await supabase.from('projects').delete().eq('id', projectId);
             if (error) throw error;
@@ -449,7 +452,7 @@ export const useProjectMutations = (slug: string) => {
         onError: (err: any) => toast.error("Failed to delete project.", { description: getErrorMessage(err) }),
     });
 
-    const useToggleCommentReaction = () => useMutation({
+    const toggleCommentReaction = useMutation({
         mutationFn: async ({ commentId, emoji }: { commentId: string, emoji: string }) => {
             if (!user) throw new Error("User not authenticated");
             const { error } = await supabase.rpc('toggle_comment_reaction', {
@@ -504,23 +507,18 @@ export const useProjectMutations = (slug: string) => {
         },
     });
 
-    const invalidateProjectQueries = () => {
-        queryClient.invalidateQueries({ queryKey: ['project', slug] });
-        queryClient.invalidateQueries({ queryKey: ['projects'] });
-    };
-
     return {
-        updateProject: useUpdateProject(),
-        addFiles: useAddFiles(),
-        deleteFile: useDeleteFile(),
-        addTask: useAddTask(),
-        updateTask: useUpdateTask(),
-        assignUsersToTask: useAssignUsersToTask(),
-        deleteTask: useDeleteTask(),
-        addComment: useAddComment(),
-        updateComment: useUpdateComment(),
-        deleteComment: useDeleteComment(),
-        deleteProject: useDeleteProject(),
-        toggleCommentReaction: useToggleCommentReaction(),
+        updateProject,
+        addFiles,
+        deleteFile,
+        addTask,
+        updateTask,
+        assignUsersToTask,
+        deleteTask,
+        addComment,
+        updateComment,
+        deleteComment,
+        deleteProject,
+        toggleCommentReaction,
     };
 };
