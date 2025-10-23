@@ -40,6 +40,15 @@ const REMINDER_STATUS_OPTIONS = PAYMENT_STATUS_OPTIONS.filter(opt =>
   ['Unpaid', 'Overdue', 'Pending', 'In Process'].includes(opt.value)
 );
 
+const PROJECT_STATUS_OPTIONS = [
+  { label: 'On Track', value: 'On Track' },
+  { label: 'Completed', value: 'Completed' },
+  { label: 'Cancelled', value: 'Cancelled' },
+  { label: 'On Hold', value: 'On Hold' },
+  { label: 'Planning', value: 'Planning' },
+  { label: 'Pending', value: 'Pending' },
+];
+
 const NotificationPreferencesCard = () => {
   const { user, refreshUser } = useAuth();
   const [preferences, setPreferences] = useState<Record<string, any>>({});
@@ -185,6 +194,31 @@ const NotificationPreferencesCard = () => {
     }
   };
 
+  const handleProjectStatusChange = async (statusValue: string, isSelected: boolean) => {
+    const currentPref = preferences.project_status_updated || {};
+    const currentStatuses = currentPref.statuses || ['Completed'];
+    
+    let newStatuses: string[];
+    if (isSelected) {
+      newStatuses = [...currentStatuses, statusValue];
+    } else {
+      newStatuses = currentStatuses.filter((s: string) => s !== statusValue);
+    }
+
+    const newPreferences = {
+      ...preferences,
+      project_status_updated: {
+        ...currentPref,
+        statuses: newStatuses,
+      },
+    };
+
+    const success = await updatePreferences(newPreferences);
+    if (success) {
+      toast.success("Project status reminder statuses updated.");
+    }
+  };
+
   const handleToneChange = async (toneValue: string) => {
     if (toneValue !== 'none') {
       const audio = new Audio(`${TONE_BASE_URL}${toneValue}`);
@@ -311,6 +345,8 @@ const NotificationPreferencesCard = () => {
                       const isEnabled = getIsEnabled(type.id);
                       const isBillingReminder = type.id === 'billing_reminder';
                       const selectedStatuses = preferences.billing_reminder?.statuses || ['Overdue'];
+                      const isProjectStatusUpdate = type.id === 'project_status_updated';
+                      const selectedProjectStatuses = preferences.project_status_updated?.statuses || ['Completed'];
 
                       return (
                         <React.Fragment key={type.id}>
@@ -368,6 +404,29 @@ const NotificationPreferencesCard = () => {
                                           onCheckedChange={(checked) => handleStatusChange(statusOption.value, !!checked)}
                                         />
                                         <Label htmlFor={`status-${statusOption.value}`} className="text-sm font-normal">
+                                          {statusOption.label}
+                                        </Label>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          )}
+                          {isProjectStatusUpdate && isEnabled && (
+                            <TableRow>
+                              <TableCell colSpan={4} className="p-0">
+                                <div className="p-4 pl-12 bg-muted/50">
+                                  <Label className="font-medium text-xs uppercase tracking-wider text-muted-foreground">Notify for statuses</Label>
+                                  <div className="flex flex-wrap gap-x-6 gap-y-2 mt-2">
+                                    {PROJECT_STATUS_OPTIONS.map(statusOption => (
+                                      <div key={statusOption.value} className="flex items-center space-x-2">
+                                        <Checkbox
+                                          id={`project-status-${statusOption.value}`}
+                                          checked={selectedProjectStatuses.includes(statusOption.value)}
+                                          onCheckedChange={(checked) => handleProjectStatusChange(statusOption.value, !!checked)}
+                                        />
+                                        <Label htmlFor={`project-status-${statusOption.value}`} className="text-sm font-normal">
                                           {statusOption.label}
                                         </Label>
                                       </div>
