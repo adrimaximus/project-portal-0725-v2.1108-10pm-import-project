@@ -242,6 +242,7 @@ const PersonProfilePage = () => {
   }
 
   const firstEmail = person.contact?.emails?.[0];
+  const secondEmail = person.contact?.emails?.[1];
   const firstPhone = person.contact?.phones?.[0] || person.phone;
   const whatsappLink = firstPhone ? `https://wa.me/${formatPhoneNumberForApi(firstPhone)}` : null;
 
@@ -292,6 +293,7 @@ const PersonProfilePage = () => {
               <CardHeader><CardTitle>Contact Info</CardTitle></CardHeader>
               <CardContent className="space-y-3 text-sm">
                 {firstEmail && <div className="flex items-center gap-3"><Mail className="h-4 w-4 text-muted-foreground" /><a href={`mailto:${firstEmail}`} className="truncate hover:underline">{firstEmail}</a></div>}
+                {secondEmail && <div className="flex items-center gap-3"><Mail className="h-4 w-4 text-muted-foreground" /><a href={`mailto:${secondEmail}`} className="truncate hover:underline">{secondEmail}</a></div>}
                 {personalEmail && <div className="flex items-center gap-3"><Mail className="h-4 w-4 text-muted-foreground" /><a href={`mailto:${personalEmail}`} className="truncate hover:underline flex items-center gap-2">{personalEmail} <Badge variant="outline" className="text-xs">Pribadi</Badge></a></div>}
                 {whatsappLink && <div className="flex items-center gap-3"><WhatsappIcon className="h-4 w-4 text-muted-foreground" /><a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="truncate hover:underline text-primary">{firstPhone}</a></div>}
                 {addressObject && (addressObject.address || addressObject.name) && (
