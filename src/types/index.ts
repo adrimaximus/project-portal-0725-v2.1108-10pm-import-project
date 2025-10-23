@@ -202,6 +202,8 @@ export interface Project {
   origin_event_id: string | null;
   venue: string | null;
   created_by: User;
+  created_at: string;
+  updated_at: string;
   assignedTo: AssignedUser[];
   tasks: Task[];
   comments: Comment[];
