@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -6,19 +6,21 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, BellRing, Mail } from "lucide-react";
-import TestNotificationToast from "./TestNotificationToast";
+import { Loader2, BellRing } from "lucide-react";
 import { Button } from "../ui/button";
 import { Checkbox } from "../ui/checkbox";
 import WhatsappIcon from "../icons/WhatsappIcon";
+import { useQuery } from "@tanstack/react-query";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Mail } from "lucide-react";
 
-const notificationTypes = [
-  { id: 'project_update', label: 'Project Updates', description: 'When you are added to a project, a task is assigned to you, or a project you are in is updated.' },
-  { id: 'mention', label: 'Mentions', description: 'When someone @mentions you in a comment.' },
-  { id: 'comment', label: 'New Chat Messages', description: 'When you receive a new message and are not on the chat page.' },
-  { id: 'goal', label: 'Goal Updates', description: 'When a new goal is created for you.' },
-  { id: 'system', label: 'System Notifications', description: 'Important updates and announcements from the system.' },
-];
+interface NotificationEvent {
+  id: string;
+  label: string;
+  description: string | null;
+  category: string | null;
+  is_enabled_by_default: boolean;
+}
 
 const notificationTones = [
     { name: 'No Tone', value: 'none' },
@@ -37,6 +39,15 @@ const NotificationPreferencesCard = () => {
   const [preferences, setPreferences] = useState<Record<string, any>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [notificationPermission, setNotificationPermission] = useState(Notification.permission);
+
+  const { data: notificationEvents = [], isLoading: isLoadingEvents } = useQuery<NotificationEvent[]>({
+    queryKey: ['notification_events'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('notification_events').select('*').order('category').order('label');
+      if (error) throw error;
+      return data;
+    },
+  });
 
   useEffect(() => {
     if (user?.id) {
@@ -108,34 +119,9 @@ const NotificationPreferencesCard = () => {
   const getChannelEnabled = (typeId: string, channel: 'email' | 'whatsapp') => {
     const pref = preferences[typeId];
     if (typeof pref === 'object' && pref !== null) {
-      // Default to true if the channel setting is not explicitly defined
       return pref[channel] !== false;
     }
-    // Default to true if the entire preference object for this type doesn't exist
     return true;
-  };
-
-  const handlePreferenceChange = async (typeId: string, isEnabled: boolean) => {
-    const newPreferences = { ...preferences };
-    const currentPref = newPreferences[typeId];
-
-    if (typeof currentPref === 'object' && currentPref !== null) {
-      newPreferences[typeId] = { ...currentPref, enabled: isEnabled };
-    } else {
-      newPreferences[typeId] = { enabled: isEnabled, email: true, whatsapp: true };
-    }
-    
-    const success = await updatePreferences(newPreferences);
-    if (success) {
-      if (isEnabled) {
-        const notificationType = notificationTypes.find(t => t.id === typeId);
-        if (user) {
-          toast(<TestNotificationToast user={user} type={notificationType} />);
-        }
-      } else {
-        toast.success("Notification setting updated.");
-      }
-    }
   };
 
   const handleChannelChange = async (typeId: string, channel: 'email' | 'whatsapp', isEnabled: boolean) => {
@@ -145,7 +131,6 @@ const NotificationPreferencesCard = () => {
     if (typeof currentPref === 'object' && currentPref !== null) {
       newPreferences[typeId] = { ...currentPref, [channel]: isEnabled };
     } else {
-      // If the object doesn't exist, create it with defaults
       newPreferences[typeId] = { enabled: true, email: true, whatsapp: true, [channel]: isEnabled };
     }
 
@@ -177,7 +162,16 @@ const NotificationPreferencesCard = () => {
     }
   };
 
-  if (isLoading) {
+  const groupedEvents = notificationEvents.reduce((acc, event) => {
+    const category = event.category || 'Other';
+    if (!acc[category]) {
+      acc[category] = [];
+    }
+    acc[category].push(event);
+    return acc;
+  }, {} as Record<string, NotificationEvent[]>);
+
+  if (isLoading || isLoadingEvents) {
     return (
       <Card>
         <CardHeader>
@@ -249,55 +243,75 @@ const NotificationPreferencesCard = () => {
               </div>
           </div>
         </div>
+        
         <div className="space-y-4">
-            {notificationTypes.map((type) => {
-              const isEnabled = getIsEnabled(type.id);
-              return (
-                <div key={type.id} className="rounded-lg border p-4">
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-0.5 pr-4">
-                      <Label htmlFor={`notif-${type.id}`} className="text-base">{type.label}</Label>
-                      <p className="text-sm text-muted-foreground">{type.description}</p>
-                    </div>
-                    <Switch
-                      id={`notif-${type.id}`}
-                      checked={isEnabled}
-                      onCheckedChange={(checked) => handlePreferenceChange(type.id, checked)}
-                    />
-                  </div>
-                  {isEnabled && (
-                    <div className="mt-4 pt-4 border-t flex items-center gap-6">
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id={`${type.id}-email`}
-                          checked={getChannelEnabled(type.id, 'email')}
-                          onCheckedChange={(checked) => handleChannelChange(type.id, 'email', !!checked)}
-                        />
-                        <label
-                          htmlFor={`${type.id}-email`}
-                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex items-center gap-2"
-                        >
-                          <Mail className="h-4 w-4" /> Email
-                        </label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id={`${type.id}-whatsapp`}
-                          checked={getChannelEnabled(type.id, 'whatsapp')}
-                          onCheckedChange={(checked) => handleChannelChange(type.id, 'whatsapp', !!checked)}
-                        />
-                        <label
-                          htmlFor={`${type.id}-whatsapp`}
-                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex items-center gap-2"
-                        >
-                          <WhatsappIcon className="h-4 w-4" /> WhatsApp
-                        </label>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+          <h3 className="text-lg font-semibold">Notification Types</h3>
+          <div className="border rounded-lg">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Notification</TableHead>
+                  <TableHead className="text-center">In-App</TableHead>
+                  <TableHead className="text-center">Email</TableHead>
+                  <TableHead className="text-center">WhatsApp</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {Object.entries(groupedEvents).map(([category, events]) => (
+                  <React.Fragment key={category}>
+                    <TableRow className="bg-muted/50 hover:bg-muted/50">
+                      <TableCell colSpan={4} className="font-semibold text-sm">{category}</TableCell>
+                    </TableRow>
+                    {events.map(type => {
+                      const isEnabled = getIsEnabled(type.id);
+                      return (
+                        <TableRow key={type.id}>
+                          <TableCell>
+                            <Label htmlFor={`notif-${type.id}`} className="font-medium">{type.label}</Label>
+                            <p className="text-xs text-muted-foreground">{type.description}</p>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Switch
+                              id={`notif-${type.id}`}
+                              checked={isEnabled}
+                              onCheckedChange={(checked) => {
+                                const newPreferences = { ...preferences };
+                                const currentPref = newPreferences[type.id];
+                                if (typeof currentPref === 'object' && currentPref !== null) {
+                                  newPreferences[type.id] = { ...currentPref, enabled: checked };
+                                } else {
+                                  newPreferences[type.id] = { enabled: checked, email: true, whatsapp: true };
+                                }
+                                updatePreferences(newPreferences).then(success => {
+                                  if (success) toast.success("Notification setting updated.");
+                                });
+                              }}
+                            />
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Checkbox
+                              id={`${type.id}-email`}
+                              checked={getChannelEnabled(type.id, 'email')}
+                              onCheckedChange={(checked) => handleChannelChange(type.id, 'email', !!checked)}
+                              disabled={!isEnabled}
+                            />
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Checkbox
+                              id={`${type.id}-whatsapp`}
+                              checked={getChannelEnabled(type.id, 'whatsapp')}
+                              onCheckedChange={(checked) => handleChannelChange(type.id, 'whatsapp', !!checked)}
+                              disabled={!isEnabled}
+                            />
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </React.Fragment>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         </div>
       </CardContent>
     </Card>
