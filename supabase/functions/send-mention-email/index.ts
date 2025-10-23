@@ -8,7 +8,6 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
-const EMAILIT_API_KEY = Deno.env.get("EMAILIT_API_KEY");
 const EMAIL_FROM = Deno.env.get("EMAIL_FROM") ?? "7i Portal <no-reply@mail.ahensi.com>";
 const SITE_URL = Deno.env.get("SITE_URL") ?? "https://7inked.ahensi.xyz";
 const ACCENT_COLOR = "#008A9E"; // 7inked Teal
@@ -58,7 +57,19 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // 4. Fetch comment details to get attachments_jsonb
+    // 4. Fetch Emailit API key from app_config
+    const { data: config, error: configError } = await supabaseAdmin
+      .from('app_config')
+      .select('value')
+      .eq('key', 'EMAILIT_API_KEY')
+      .single();
+
+    if (configError || !config?.value) {
+      throw new Error("Email service is not configured on the server (EMAILIT_API_KEY is missing).");
+    }
+    const EMAILIT_API_KEY = config.value;
+
+    // 5. Fetch comment details to get attachments_jsonb
     const { data: commentData, error: commentError } = await supabaseAdmin
         .from('comments')
         .select('attachments_jsonb')
@@ -68,7 +79,7 @@ serve(async (req) => {
     if (commentError) throw commentError;
     const attachments = commentData?.attachments_jsonb || [];
 
-    // 5. Fetch profiles of mentioned users
+    // 6. Fetch profiles of mentioned users
     const { data: profiles, error: profileError } = await supabaseAdmin
       .from('profiles')
       .select('id, email, first_name, notification_preferences')
@@ -81,7 +92,7 @@ serve(async (req) => {
       return new Response(JSON.stringify({ message: "No users to notify." }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    // 6. Filter users who have email notifications for mentions enabled
+    // 7. Filter users who have email notifications for mentions enabled
     const usersToNotify = profiles.filter(p => {
       const prefs = p.notification_preferences || {};
       const mentionPref = prefs.mention;
@@ -96,11 +107,7 @@ serve(async (req) => {
       return new Response(JSON.stringify({ message: "No users to notify." }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    // 7. Send emails
-    if (!EMAILIT_API_KEY) {
-      throw new Error("Email service is not configured on the server (EMAILIT_API_KEY is missing).");
-    }
-
+    // 8. Send emails
     const attachmentHtml = generateAttachmentHtml(attachments);
 
     const emailPromises = usersToNotify.map(async (profile) => {
