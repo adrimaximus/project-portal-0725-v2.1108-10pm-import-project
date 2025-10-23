@@ -38,6 +38,13 @@ const ProjectsPage = () => {
   const [hideCompletedTasks, setHideCompletedTasks] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const highlightedTaskId = searchParams.get('highlight');
+
+  const onHighlightComplete = useCallback(() => {
+    const newSearchParams = new URLSearchParams(searchParams);
+    newSearchParams.delete('highlight');
+    setSearchParams(newSearchParams, { replace: true });
+  }, [searchParams, setSearchParams]);
 
   const { data: projectsData = [], isLoading: isLoadingProjects, refetch: refetchProjects } = useProjects({ searchTerm });
   
@@ -141,7 +148,6 @@ const ProjectsPage = () => {
     return projectsData.flatMap(p => p.tasks || []);
   }, [projectsData, tasksData, isTaskView]);
 
-  const [taskSearchTerm, setTaskSearchTerm] = useState('');
   const filteredTasks = useMemo(() => {
     let tasksToFilter = allTasks;
     if (advancedFilters.selectedPeopleIds.length > 0) {
@@ -149,17 +155,14 @@ const ProjectsPage = () => {
             task.assignedTo?.some(assignee => advancedFilters.selectedPeopleIds.includes(assignee.id))
         );
     }
-    if (!taskSearchTerm) return tasksToFilter;
-    const lowercasedFilter = taskSearchTerm.toLowerCase();
+    if (!searchTerm) return tasksToFilter;
+    const lowercasedFilter = searchTerm.toLowerCase();
     return tasksToFilter.filter(task => 
       task.title.toLowerCase().includes(lowercasedFilter) ||
       (task.description && task.description.toLowerCase().includes(lowercasedFilter)) ||
-      (task.project_name && task.project_name.toLowerCase().includes(lowercasedFilter)) ||
-      (task.project_venue && task.project_venue.toLowerCase().includes(lowercasedFilter)) ||
-      (task.project_client && task.project_client.toLowerCase().includes(lowercasedFilter)) ||
-      (task.project_owner?.name && task.project_owner.name.toLowerCase().includes(lowercasedFilter))
+      (task.project_name && task.project_name.toLowerCase().includes(lowercasedFilter))
     );
-  }, [allTasks, taskSearchTerm, advancedFilters.selectedPeopleIds]);
+  }, [allTasks, searchTerm, advancedFilters.selectedPeopleIds]);
 
   useEffect(() => {
     if (view === 'table' && !initialTableScrollDone.current && sortedProjects.length > 0) {
@@ -356,6 +359,8 @@ const ProjectsPage = () => {
               requestTaskSort={requestTaskSort}
               refetch={refetch}
               tasksQueryKey={tasksQueryKey}
+              highlightedTaskId={highlightedTaskId}
+              onHighlightComplete={onHighlightComplete}
             />
           </div>
         </div>

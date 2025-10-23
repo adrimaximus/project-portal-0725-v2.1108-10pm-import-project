@@ -109,6 +109,13 @@ const Index = () => {
 
   const isTaskView = view === 'tasks' || view === 'tasks-kanban';
 
+  const highlightedTaskId = searchParams.get('highlight');
+  const onHighlightComplete = useCallback(() => {
+    const newSearchParams = new URLSearchParams(searchParams);
+    newSearchParams.delete('highlight');
+    setSearchParams(newSearchParams, { replace: true });
+  }, [searchParams, setSearchParams]);
+
   const renderView = () => {
     switch (view) {
       case 'table':
@@ -130,6 +137,9 @@ const Index = () => {
           isToggling={isToggling}
           sortConfig={taskSortConfig}
           requestSort={requestTaskSort}
+          rowRefs={rowRefs}
+          highlightedTaskId={highlightedTaskId}
+          onHighlightComplete={onHighlightComplete}
         />;
       default:
         return (

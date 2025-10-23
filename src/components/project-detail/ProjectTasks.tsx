@@ -12,7 +12,7 @@ import TaskReactions from '../projects/TaskReactions';
 import { useTaskMutations } from '@/hooks/useTaskMutations';
 import { useQueryClient } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
-import TaskAttachmentList from './TaskAttachmentList';
+import TaskAttachmentList from '../projects/TaskAttachmentList';
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 
