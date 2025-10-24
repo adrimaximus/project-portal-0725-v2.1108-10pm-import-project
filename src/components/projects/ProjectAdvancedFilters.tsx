@@ -114,6 +114,7 @@ const ProjectAdvancedFilters = ({ filters, onFiltersChange, allPeople }: Project
                   {allPeople.map((person) => (
                     <CommandItem
                       key={person.id}
+                      value={person.name}
                       onSelect={() => handleAssigneeToggle(person.id)}
                     >
                       <Check
@@ -157,6 +158,7 @@ const ProjectAdvancedFilters = ({ filters, onFiltersChange, allPeople }: Project
                   {PROJECT_STATUS_OPTIONS.map((status) => (
                     <CommandItem
                       key={status.value}
+                      value={status.label}
                       onSelect={() => handleProjectStatusToggle(status.value)}
                     >
                       <Check
@@ -200,6 +202,7 @@ const ProjectAdvancedFilters = ({ filters, onFiltersChange, allPeople }: Project
                   {PROJECT_STATUS_OPTIONS.map((status) => (
                     <CommandItem
                       key={status.value}
+                      value={status.label}
                       onSelect={() => handleHideStatusToggle(status.value)}
                     >
                       <Check
