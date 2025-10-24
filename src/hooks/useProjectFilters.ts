@@ -33,8 +33,8 @@ export const useProjectFilters = (projects: Project[], advancedFilters: Advanced
       })();
 
       const isHiddenByStatus = advancedFilters.hiddenStatuses.includes(project.status);
-      const matchesPerson = advancedFilters.selectedPeopleIds.length === 0 ||
-        (project.assignedTo && project.assignedTo.some(person => advancedFilters.selectedPeopleIds.includes(person.id)));
+      const matchesPerson = advancedFilters.assignees.length === 0 ||
+        (project.assignedTo && project.assignedTo.some(person => advancedFilters.assignees.includes(person.id)));
 
       return matchesDate && !isHiddenByStatus && matchesPerson;
     });
@@ -50,10 +50,10 @@ export const useProjectFilters = (projects: Project[], advancedFilters: Advanced
         if (aValue === null || aValue === undefined) return 1;
         if (bValue === null || bValue === undefined) return -1;
 
-        if (aValue < bValue) {
+        if (String(aValue).toLowerCase() < String(bValue).toLowerCase()) {
           return sortConfig.direction === 'ascending' ? -1 : 1;
         }
-        if (aValue > bValue) {
+        if (String(aValue).toLowerCase() > String(bValue).toLowerCase()) {
           return sortConfig.direction === 'ascending' ? 1 : -1;
         }
         return 0;
