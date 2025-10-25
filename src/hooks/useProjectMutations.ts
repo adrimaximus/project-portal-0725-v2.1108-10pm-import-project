@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { Project, User, Reaction } from '@/types';
 import { useNavigate } from 'react-router-dom';
 import { getErrorMessage } from '@/lib/utils';
+import { v4 as uuidv4 } from 'uuid';
 import { useAuth } from '@/contexts/AuthContext';
 
 export const useProjectMutations = (slug: string) => {
@@ -43,7 +44,6 @@ export const useProjectMutations = (slug: string) => {
                     p_email_sending_date: projectDetails.email_sending_date || null, 
                     p_hardcopy_sending_date: projectDetails.hardcopy_sending_date || null, p_channel: projectDetails.channel || null,
                     p_client_company_id: projectDetails.client_company_id || null,
-                    p_public: projectDetails.public,
                 })
                 .single();
             if (error) throw error;
@@ -111,7 +111,7 @@ export const useProjectMutations = (slug: string) => {
 
     const deleteFile = useMutation({
         mutationFn: async (file: { id: string, storage_path: string }) => {
-            const { error: storageError } = await supabase.storage.from('project-files').remove([file.storage_path]);
+            const { error: storageError } = await supabase.storage.from('task-attachments').remove([file.storage_path]);
             if (storageError) throw new Error(`Failed to delete file from storage: ${storageError.message}`);
             
             const { error: dbError } = await supabase.from('project_files').delete().eq('id', file.id);
@@ -124,19 +124,306 @@ export const useProjectMutations = (slug: string) => {
         onError: (err: any) => toast.error(getErrorMessage(err)),
     });
 
+    const addTask = useMutation({
+        mutationFn: async ({ project, user, title, assigneeIds }: { project: Project, user: User, title: string, assigneeIds: string[] }) => {
+            const { data: newTask, error } = await supabase.from('tasks').insert({ project_id: project.id, title, created_by: user.id }).select().single();
+            if (error) throw error;
+
+            if (newTask && assigneeIds.length > 0) {
+                const assignments = assigneeIds.map(userId => ({ task_id: newTask.id, user_id: userId }));
+                const { error: assignError } = await supabase.from('task_assignees').insert(assignments);
+                if (assignError) {
+                    console.warn('Failed to assign users:', assignError);
+                    toast.warning("Task created, but couldn't assign users automatically.");
+                }
+            }
+        },
+        onSuccess: () => {
+            toast.success("Task added successfully.");
+            invalidateProjectQueries();
+        },
+        onError: (err: any) => toast.error("Failed to add task", { description: getErrorMessage(err) }),
+    });
+
+    const updateTask = useMutation({
+        mutationFn: async ({ taskId, updates }: { taskId: string, updates: any }) => {
+            const { error } = await supabase.from('tasks').update(updates).eq('id', taskId);
+            if (error) throw error;
+        },
+        onSuccess: () => {
+            toast.success("Task updated.");
+            invalidateProjectQueries();
+        },
+        onError: (err: any) => toast.error("Failed to update task", { description: getErrorMessage(err) }),
+    });
+
+    const assignUsersToTask = useMutation({
+        mutationFn: async ({ taskId, userIds }: { taskId: string, userIds: string[] }) => {
+            await supabase.from('task_assignees').delete().eq('task_id', taskId);
+            if (userIds.length > 0) {
+                const newAssignees = userIds.map(uid => ({ task_id: taskId, user_id: uid }));
+                const { error } = await supabase.from('task_assignees').insert(newAssignees);
+                if (error) throw error;
+            }
+        },
+        onSuccess: () => {
+            toast.success("Task assignments updated.");
+            invalidateProjectQueries();
+        },
+        onError: (err: any) => toast.error("Failed to assign users", { description: getErrorMessage(err) }),
+    });
+
+    const deleteTask = useMutation({
+        mutationFn: async (taskId: string) => {
+            const { error } = await supabase.from('tasks').delete().eq('id', taskId);
+            if (error) throw error;
+        },
+        onSuccess: () => {
+            toast.success("Task deleted.");
+            invalidateProjectQueries();
+        },
+        onError: (err: any) => toast.error("Failed to delete task", { description: getErrorMessage(err) }),
+    });
+
     const addComment = useMutation({
         mutationFn: async ({ project, user, text, isTicket, attachments, mentionedUserIds }: { project: Project, user: User, text: string, isTicket: boolean, attachments: File[] | null, mentionedUserIds: string[] }) => {
-            // ... (implementation from context)
+            let finalCommentText = text;
+            let firstAttachmentUrl: string | null = null;
+            let firstAttachmentName: string | null = null;
+            let attachmentsJsonb: any[] = []; // Array untuk menyimpan metadata lampiran
+
+            if (attachments && attachments.length > 0) {
+                const uploadPromises = attachments.map(async (file) => {
+                    const fileId = uuidv4();
+                    const sanitizedFileName = file.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
+                    const filePath = `${project.id}/comments/${Date.now()}-${sanitizedFileName}`;
+                    const { error: uploadError } = await supabase.storage.from('project-files').upload(filePath, file);
+                    if (uploadError) throw new Error(`Failed to upload ${file.name}: ${uploadError.message}`);
+                    
+                    const { data: urlData } = supabase.storage.from('project-files').getPublicUrl(filePath);
+                    if (!urlData || !urlData.publicUrl) {
+                        throw new Error(`Failed to get public URL for uploaded file ${file.name}.`);
+                    }
+                    
+                    return { 
+                        id: fileId,
+                        file_name: file.name, 
+                        file_url: urlData.publicUrl,
+                        file_type: file.type,
+                        file_size: file.size,
+                        storage_path: filePath,
+                        created_at: new Date().toISOString(),
+                    };
+                });
+    
+                const uploadedFiles = await Promise.all(uploadPromises);
+                attachmentsJsonb = uploadedFiles;
+    
+                if (uploadedFiles.length > 0) {
+                    firstAttachmentUrl = uploadedFiles[0].file_url;
+                    firstAttachmentName = uploadedFiles[0].file_name;
+    
+                    const markdownLinks = uploadedFiles.map(file => `* [${file.file_name}](${file.file_url})`).join('\n');
+                    finalCommentText += `\n\n**Attachments:**\n${markdownLinks}`;
+                }
+            }
+    
+            const { data: commentData, error: commentError } = await supabase.from('comments').insert({
+                project_id: project.id, 
+                author_id: user.id, 
+                text: finalCommentText, 
+                is_ticket: isTicket, 
+                attachment_url: firstAttachmentUrl, 
+                attachment_name: firstAttachmentName,
+                attachments_jsonb: attachmentsJsonb, // <-- Memasukkan data lampiran lengkap
+            }).select().single();
+            
+            if (commentError) throw commentError;
+
+            if (mentionedUserIds.length > 0) {
+              supabase.functions.invoke('send-mention-email', {
+                body: {
+                  project_slug: project.slug,
+                  project_name: project.name,
+                  mentioner_name: user.name,
+                  mentioned_user_ids: mentionedUserIds,
+                  comment_text: text,
+                  comment_id: commentData.id,
+                },
+              }).then(({ error }) => {
+                if (error) {
+                  console.error("Failed to trigger mention email notifications:", error);
+                }
+              });
+            }
+    
+            if (isTicket && commentData) {
+                const cleanTextForDescription = text.replace(/@\[[^\]]+\]\([^)]+\)\s*/g, '').trim();
+                const taskTitle = `Ticket: ${cleanTextForDescription.substring(0, 50)}${cleanTextForDescription.length > 50 ? '...' : ''}`;
+
+                const { data: newTask, error: taskError } = await supabase.from('tasks').insert({
+                    project_id: project.id, 
+                    created_by: user.id, 
+                    title: taskTitle, 
+                    description: cleanTextForDescription, // Comment text as description
+                    origin_ticket_id: commentData.id,
+                }).select().single();
+                
+                if (taskError) throw new Error(`Ticket created, but failed to create task: ${taskError.message}`);
+    
+                if (newTask && mentionedUserIds.length > 0) {
+                    const assignments = mentionedUserIds.map(userId => ({
+                        task_id: newTask.id,
+                        user_id: userId,
+                    }));
+                    const { error: assignError } = await supabase.from('task_assignees').insert(assignments);
+                    if (assignError) {
+                        console.warn('Failed to assign mentioned users:', assignError);
+                        toast.warning("Ticket created, but couldn't assign mentioned users automatically.");
+                    }
+                }
+            }
         },
-        onSuccess: () => { /* ... */ },
+        onSuccess: (_, variables) => {
+            toast.success(variables.isTicket ? "Ticket created and added to tasks." : "Comment posted.");
+            invalidateProjectQueries();
+        },
         onError: (err: any) => toast.error("Failed to add comment/ticket", { description: getErrorMessage(err) }),
     });
 
     const updateComment = useMutation({
         mutationFn: async ({ commentId, text, attachments, isConvertingToTicket, mentionedUserIds }: { commentId: string, text: string, attachments: File[] | null, isConvertingToTicket: boolean, mentionedUserIds: string[] }) => {
-            // ... (implementation from context)
+            const { data: originalComment, error: fetchError } = await supabase
+                .from('comments')
+                .select('text, is_ticket, project_id, attachment_url, attachment_name, attachments_jsonb')
+                .eq('id', commentId)
+                .single();
+            if (fetchError) throw fetchError;
+
+            let newAttachmentMarkdown = '';
+            let newFirstAttachmentUrl: string | null = null;
+            let newFirstAttachmentName: string | null = null;
+            let existingAttachmentsJsonb: any[] = originalComment.attachments_jsonb || [];
+            let newAttachmentsJsonb: any[] = [];
+
+            if (attachments && attachments.length > 0) {
+                const uploadPromises = attachments.map(async (file) => {
+                    const fileId = uuidv4();
+                    const sanitizedFileName = file.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
+                    const filePath = `${originalComment.project_id}/comments/${Date.now()}-${sanitizedFileName}`;
+                    const { error: uploadError } = await supabase.storage.from('project-files').upload(filePath, file);
+                    if (uploadError) throw new Error(`Failed to upload ${file.name}: ${uploadError.message}`);
+                    
+                    const { data: urlData } = supabase.storage.from('project-files').getPublicUrl(filePath);
+                    if (!urlData || !urlData.publicUrl) {
+                        throw new Error(`Failed to get public URL for uploaded file ${file.name}.`);
+                    }
+
+                    return { 
+                        id: fileId,
+                        file_name: file.name, 
+                        file_url: urlData.publicUrl,
+                        file_type: file.type,
+                        file_size: file.size,
+                        storage_path: filePath,
+                        created_at: new Date().toISOString(),
+                    };
+                });
+    
+                newAttachmentsJsonb = await Promise.all(uploadPromises);
+                existingAttachmentsJsonb = [...existingAttachmentsJsonb, ...newAttachmentsJsonb];
+    
+                if (newAttachmentsJsonb.length > 0) {
+                    newAttachmentMarkdown = newAttachmentsJsonb.map(file => `* [${file.file_name}](${file.file_url})`).join('\n');
+                    if (!originalComment.attachment_url) {
+                        newFirstAttachmentUrl = newAttachmentsJsonb[0].file_url;
+                        newFirstAttachmentName = newAttachmentsJsonb[0].file_name;
+                    }
+                }
+            }
+
+            const attachmentsRegex = /\n\n\*\*Attachments:\*\*\n((?:\* \[.+\]\(.+\)\n?)+)/s;
+            let finalCommentText = text;
+
+            if (existingAttachmentsJsonb.length > 0) {
+                const markdownLinks = existingAttachmentsJsonb.map(file => `* [${file.file_name}](${file.file_url})`).join('\n');
+                const fullAttachmentMarkdown = `\n\n**Attachments:**\n${markdownLinks}`;
+                
+                finalCommentText = finalCommentText.replace(attachmentsRegex, '').trim() + fullAttachmentMarkdown;
+            } else {
+                finalCommentText = finalCommentText.replace(attachmentsRegex, '').trim();
+            }
+
+            const updatePayload: any = {
+                text: finalCommentText,
+                is_ticket: isConvertingToTicket || originalComment.is_ticket,
+                attachments_jsonb: existingAttachmentsJsonb,
+            };
+            if (newFirstAttachmentUrl) {
+                updatePayload.attachment_url = newFirstAttachmentUrl;
+                updatePayload.attachment_name = newFirstAttachmentName;
+            }
+
+            const { error: updateError } = await supabase.from('comments').update(updatePayload).eq('id', commentId);
+            if (updateError) throw updateError;
+
+            if (mentionedUserIds.length > 0) {
+              const { data: { user } } = await supabase.auth.getUser();
+              if (user) {
+                  const { data: projectData } = await supabase.from('projects').select('slug, name').eq('id', originalComment.project_id).single();
+                  const { data: mentionerData } = await supabase.from('profiles').select('first_name, last_name, email').eq('id', user.id).single();
+                  const mentionerName = `${mentionerData?.first_name || ''} ${mentionerData?.last_name || ''}`.trim() || mentionerData?.email || 'A user';
+
+                  if (projectData) {
+                    supabase.functions.invoke('send-mention-email', {
+                      body: {
+                        project_slug: projectData.slug,
+                        project_name: projectData.name,
+                        mentioner_name: mentionerName,
+                        mentioned_user_ids: mentionedUserIds,
+                        comment_text: text,
+                        comment_id: commentId,
+                      },
+                    }).then(({ error }) => {
+                      if (error) {
+                        console.error("Failed to trigger mention email notifications on update:", error);
+                      }
+                    });
+                  }
+              }
+            }
+
+            if (isConvertingToTicket && !originalComment.is_ticket) {
+                const cleanTextForDescription = text.replace(/@\[[^\]]+\]\([^)]+\)\s*/g, '').trim();
+                const taskTitle = `Ticket: ${cleanTextForDescription.substring(0, 50)}${cleanTextForDescription.length > 50 ? '...' : ''}`;
+
+                const { data: newTask, error: taskError } = await supabase.from('tasks').insert({
+                    project_id: originalComment.project_id,
+                    title: taskTitle, 
+                    description: cleanTextForDescription,
+                    origin_ticket_id: commentId,
+                }).select().single();
+                if (taskError) {
+                    toast.warning("Comment updated, but failed to create the associated task.");
+                }
+
+                if (newTask && mentionedUserIds.length > 0) {
+                    const assignments = mentionedUserIds.map(userId => ({
+                        task_id: newTask.id,
+                        user_id: userId,
+                    }));
+                    const { error: assignError } = await supabase.from('task_assignees').insert(assignments);
+                    if (assignError) {
+                        console.warn('Failed to assign mentioned users:', assignError);
+                        toast.warning("Ticket created, but couldn't assign mentioned users automatically.");
+                    }
+                }
+            }
         },
-        onSuccess: () => { /* ... */ },
+        onSuccess: () => {
+            toast.success("Comment updated.");
+            invalidateProjectQueries();
+        },
         onError: (err: any) => toast.error("Failed to update comment", { description: getErrorMessage(err) }),
     });
 
@@ -174,16 +461,60 @@ export const useProjectMutations = (slug: string) => {
             });
             if (error) throw error;
         },
-        onSuccess: () => {
-            invalidateProjectQueries();
+        onMutate: async ({ commentId, emoji }) => {
+            await queryClient.cancelQueries({ queryKey: ['project', slug] });
+            const previousProject = queryClient.getQueryData<Project>(['project', slug]);
+
+            if (previousProject && user) {
+                const newProject = {
+                    ...previousProject,
+                    comments: previousProject.comments.map(comment => {
+                        if (comment.id === commentId) {
+                            const newReactions = [...(comment.reactions || [])];
+                            const existingReactionIndex = newReactions.findIndex(r => r.user_id === user.id);
+
+                            if (existingReactionIndex > -1) {
+                                if (newReactions[existingReactionIndex].emoji === emoji) {
+                                    newReactions.splice(existingReactionIndex, 1);
+                                } else {
+                                    newReactions[existingReactionIndex] = { ...newReactions[existingReactionIndex], emoji };
+                                }
+                            } else {
+                                newReactions.push({
+                                    id: `temp-${Date.now()}`,
+                                    emoji,
+                                    user_id: user.id,
+                                    user_name: user.name || 'You',
+                                } as Reaction);
+                            }
+                            return { ...comment, reactions: newReactions };
+                        }
+                        return comment;
+                    })
+                };
+                queryClient.setQueryData(['project', slug], newProject);
+            }
+            return { previousProject };
         },
-        onError: (err: any) => toast.error("Failed to update reaction.", { description: getErrorMessage(err) }),
+        onError: (err, variables, context) => {
+            if (context?.previousProject) {
+                queryClient.setQueryData(['project', slug], context.previousProject);
+            }
+            toast.error("Failed to update reaction.", { description: getErrorMessage(err) });
+        },
+        onSettled: () => {
+            queryClient.invalidateQueries({ queryKey: ['project', slug] });
+        },
     });
 
     return {
         updateProject,
         addFiles,
         deleteFile,
+        addTask,
+        updateTask,
+        assignUsersToTask,
+        deleteTask,
         addComment,
         updateComment,
         deleteComment,

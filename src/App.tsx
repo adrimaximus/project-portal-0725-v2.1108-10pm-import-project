@@ -1,94 +1,117 @@
-import { Suspense, lazy } from 'react';
-import { Routes, Route } from 'react-router-dom';
-import { Toaster } from '@/components/ui/sonner';
-import { TooltipProvider } from '@/components/ui/tooltip';
-import { AuthProvider } from './contexts/AuthContext';
-import ProtectedRoute from './components/ProtectedRoute';
-import LoginPage from './pages/LoginPage';
-import Index from './pages/Index';
-import NotFoundPage from './pages/NotFound';
-import PublicProjectPage from './pages/PublicProjectPage';
+import { Route, Routes } from "react-router-dom";
+import ProtectedRouteLayout from "./components/ProtectedRouteLayout";
+import LoginPage from "./pages/LoginPage";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage";
+import Dashboard from "./pages/Dashboard";
+import ProjectsPage from "./pages/ProjectsPage";
+import ProjectDetail from "./pages/ProjectDetail";
+import RequestPage from "./pages/Request";
+import ChatPage from "./pages/ChatPage";
+import MoodTracker from "./pages/MoodTracker";
+import GoalsPage from "./pages/GoalsPage";
+import GoalDetailPage from "./pages/GoalDetailPage";
+import Billing from "./pages/Billing";
+import PeoplePage from "./pages/PeoplePage";
+import PersonProfilePage from "./pages/people/PersonProfilePage";
+import UserProfilePage from "./pages/UserProfilePage";
+import KnowledgeBasePage from "./pages/KnowledgeBasePage";
+import FolderDetailPage from "./pages/kb/FolderDetailPage";
+import Page from "./pages/kb/Page";
+import SettingsPage from "./pages/SettingsPage";
+import TeamSettingsPage from "./pages/TeamSettingsPage";
+import WorkspaceSettingsPage from "./pages/WorkspaceSettingsPage";
+import NavigationSettingsPage from "./pages/NavigationSettingsPage";
+import TagsSettingsPage from "./pages/TagsSettingsPage";
+import ThemeSettingsPage from "./pages/ThemeSettingsPage";
+import IntegrationsPage from "./pages/IntegrationsPage";
+import GoogleDrivePage from "./pages/integrations/GoogleDrivePage";
+import GoogleCalendarIntegrationPage from "./pages/GoogleCalendarIntegrationPage";
+import OpenAiIntegrationPage from "./pages/integrations/OpenAiIntegrationPage";
+import WbiztoolPage from "./pages/integrations/WbiztoolPage";
+import EmailitPage from "./pages/integrations/EmailitPage";
+import Profile from "./pages/Profile";
+import SearchPage from "./pages/SearchPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
+import AuthCallbackPage from "./pages/AuthCallbackPage";
+import LandingPage from "./pages/LandingPage";
+import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
+import TermsOfServicePage from "./pages/TermsOfServicePage";
+import NotFound from "./pages/NotFound";
+import CustomPage from "./pages/CustomPage";
+import MultiEmbedPage from "./pages/MultiEmbedPage";
+import MultiEmbedItemPage from "./pages/MultiEmbedItemPage";
+import EmbedPage from "./pages/EmbedPage";
+import StorageSettingsPage from "./pages/StorageSettingsPage";
+import ContactPropertiesPage from "./pages/ContactPropertiesPage";
+import CompaniesPage from "./pages/CompaniesPage";
+import CompanyPropertiesPage from "./pages/CompanyPropertiesPage";
+import NotificationsPage from "./pages/Notifications";
+import { useCheckAudioPermission } from "./hooks/useCheckAudioPermission";
+import ServicesSettingsPage from "./pages/ServicesSettingsPage";
+import NotificationSettingsPage from "./pages/NotificationSettingsPage";
 
-// Lazy load the portal pages
-const PortalLayout = lazy(() => import('./components/PortalLayout'));
-const DashboardPage = lazy(() => import('./pages/DashboardPage'));
-const ProjectsPage = lazy(() => import('./pages/ProjectsPage'));
-const ProjectDetailPage = lazy(() => import('./pages/ProjectDetailPage'));
-const RequestPage = lazy(() => import('./pages/RequestPage'));
-const ChatPage = lazy(() => import('./pages/ChatPage'));
-const MoodTrackerPage = lazy(() => import('./pages/MoodTrackerPage'));
-const GoalsPage = lazy(() => import('./pages/GoalsPage'));
-const GoalDetailPage = lazy(() => import('./pages/GoalDetailPage'));
-const BillingPage = lazy(() => import('./pages/BillingPage'));
-const PeoplePage = lazy(() => import('./pages/PeoplePage'));
-const PersonDetailPage = lazy(() => import('./pages/PersonDetailPage'));
-const KnowledgeBasePage = lazy(() => import('./pages/KnowledgeBasePage'));
-const KnowledgeBaseFolderPage = lazy(() => import('./pages/KnowledgeBaseFolderPage'));
-const KnowledgeBaseArticlePage = lazy(() => import('./pages/KnowledgeBaseArticlePage'));
-const SettingsPage = lazy(() => import('./pages/SettingsPage'));
-const AccountSettingsPage = lazy(() => import('./pages/AccountSettingsPage'));
-const AppearanceSettingsPage = lazy(() => import('./pages/AppearanceSettingsPage'));
-const NotificationsSettingsPage = lazy(() => import('./pages/NotificationsSettingsPage'));
-const TeamSettingsPage = lazy(() => import('./pages/TeamSettingsPage'));
-const RolesAndPermissionsPage = lazy(() => import('./pages/RolesAndPermissionsPage'));
-const IntegrationsPage = lazy(() => import('./pages/IntegrationsPage'));
-const GoogleDriveIntegrationPage = lazy(() => import('./pages/integrations/GoogleDriveIntegrationPage'));
-const GoogleCalendarIntegrationPage = lazy(() => import('./pages/integrations/GoogleCalendarIntegrationPage'));
-const OpenAIIntegrationPage = lazy(() => import('./pages/integrations/OpenAIIntegrationPage'));
-const WBIZTOOLIntegrationPage = lazy(() => import('./pages/integrations/WBIZTOOLIntegrationPage'));
-const EmailitIntegrationPage = lazy(() => import('./pages/integrations/EmailitIntegrationPage'));
-const SpeechToTextIntegrationPage = lazy(() => import('./pages/integrations/SpeechToTextIntegrationPage'));
-const MultiPageViewer = lazy(() => import('./pages/MultiPageViewer'));
-const MultiEmbedItemPage = lazy(() => import('./pages/MultiEmbedItemPage'));
+const App = () => {
+  useCheckAudioPermission();
 
-function App() {
   return (
-    <AuthProvider>
-      <TooltipProvider>
-        <Suspense fallback={<div className="flex h-screen w-full items-center justify-center">Loading...</div>}>
-          <Routes>
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
-            <Route path="/p/:slug" element={<PublicProjectPage />} />
-            
-            <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
-            <Route path="/projects" element={<ProtectedRoute><ProjectsPage /></ProtectedRoute>} />
-            <Route path="/projects/:slug" element={<ProtectedRoute><ProjectDetailPage /></ProtectedRoute>} />
-            <Route path="/request" element={<ProtectedRoute><RequestPage /></ProtectedRoute>} />
-            <Route path="/chat" element={<ProtectedRoute><ChatPage /></ProtectedRoute>} />
-            <Route path="/chat/:conversationId" element={<ProtectedRoute><ChatPage /></ProtectedRoute>} />
-            <Route path="/mood-tracker" element={<ProtectedRoute><MoodTrackerPage /></ProtectedRoute>} />
-            <Route path="/goals" element={<ProtectedRoute><GoalsPage /></ProtectedRoute>} />
-            <Route path="/goals/:slug" element={<ProtectedRoute><GoalDetailPage /></ProtectedRoute>} />
-            <Route path="/billing" element={<ProtectedRoute><BillingPage /></ProtectedRoute>} />
-            <Route path="/people" element={<ProtectedRoute><PeoplePage /></ProtectedRoute>} />
-            <Route path="/people/:slug" element={<ProtectedRoute><PersonDetailPage /></ProtectedRoute>} />
-            <Route path="/knowledge-base" element={<ProtectedRoute><KnowledgeBasePage /></ProtectedRoute>} />
-            <Route path="/kb/:folderSlug" element={<ProtectedRoute><KnowledgeBaseFolderPage /></ProtectedRoute>} />
-            <Route path="/kb/:folderSlug/:articleSlug" element={<ProtectedRoute><KnowledgeBaseArticlePage /></ProtectedRoute>} />
-            <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
-            <Route path="/settings/account" element={<ProtectedRoute><AccountSettingsPage /></ProtectedRoute>} />
-            <Route path="/settings/appearance" element={<ProtectedRoute><AppearanceSettingsPage /></ProtectedRoute>} />
-            <Route path="/settings/notifications" element={<ProtectedRoute><NotificationsSettingsPage /></ProtectedRoute>} />
-            <Route path="/settings/team" element={<ProtectedRoute><TeamSettingsPage /></ProtectedRoute>} />
-            <Route path="/settings/roles" element={<ProtectedRoute><RolesAndPermissionsPage /></ProtectedRoute>} />
-            <Route path="/settings/integrations" element={<ProtectedRoute><IntegrationsPage /></ProtectedRoute>} />
-            <Route path="/settings/integrations/google-drive" element={<ProtectedRoute><GoogleDriveIntegrationPage /></ProtectedRoute>} />
-            <Route path="/settings/integrations/google-calendar" element={<ProtectedRoute><GoogleCalendarIntegrationPage /></ProtectedRoute>} />
-            <Route path="/settings/integrations/openai" element={<ProtectedRoute><OpenAIIntegrationPage /></ProtectedRoute>} />
-            <Route path="/settings/integrations/wbiztool" element={<ProtectedRoute><WBIZTOOLIntegrationPage /></ProtectedRoute>} />
-            <Route path="/settings/integrations/emailit" element={<ProtectedRoute><EmailitIntegrationPage /></ProtectedRoute>} />
-            <Route path="/settings/integrations/speech-to-text" element={<ProtectedRoute><SpeechToTextIntegrationPage /></ProtectedRoute>} />
-            <Route path="/multipage/:slug" element={<ProtectedRoute><MultiPageViewer /></ProtectedRoute>} />
-            <Route path="/multipage/:navSlug/:itemSlug" element={<ProtectedRoute><MultiEmbedItemPage /></ProtectedRoute>} />
+    <Routes>
+      {/* Public Routes */}
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
+      <Route path="/auth/callback" element={<AuthCallbackPage />} />
+      <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+      <Route path="/terms-of-service" element={<TermsOfServicePage />} />
 
-            <Route path="*" element={<NotFoundPage />} />
-          </Routes>
-        </Suspense>
-        <Toaster />
-      </TooltipProvider>
-    </AuthProvider>
+      {/* Protected Routes */}
+      <Route element={<ProtectedRouteLayout />}>
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/projects" element={<ProjectsPage />} />
+        <Route path="/projects/:slug" element={<ProjectDetail />} />
+        <Route path="/request" element={<RequestPage />} />
+        <Route path="/chat" element={<ChatPage />} />
+        <Route path="/chat/:conversationId" element={<ChatPage />} />
+        <Route path="/mood-tracker" element={<MoodTracker />} />
+        <Route path="/goals" element={<GoalsPage />} />
+        <Route path="/goals/:slug" element={<GoalDetailPage />} />
+        <Route path="/billing" element={<Billing />} />
+        <Route path="/people" element={<PeoplePage />} />
+        <Route path="/people/:slug" element={<PersonProfilePage />} />
+        <Route path="/users/:id" element={<UserProfilePage />} />
+        <Route path="/knowledge-base" element={<KnowledgeBasePage />} />
+        <Route path="/knowledge-base/folders/:slug" element={<FolderDetailPage />} />
+        <Route path="/knowledge-base/pages/:slug" element={<Page />} />
+        <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/settings/team" element={<TeamSettingsPage />} />
+        <Route path="/settings/workspace" element={<WorkspaceSettingsPage />} />
+        <Route path="/settings/navigation" element={<NavigationSettingsPage />} />
+        <Route path="/settings/tags" element={<TagsSettingsPage />} />
+        <Route path="/settings/theme" element={<ThemeSettingsPage />} />
+        <Route path="/settings/integrations" element={<IntegrationsPage />} />
+        <Route path="/settings/integrations/google-drive" element={<GoogleDrivePage />} />
+        <Route path="/settings/integrations/google-calendar" element={<GoogleCalendarIntegrationPage />} />
+        <Route path="/settings/integrations/openai" element={<OpenAiIntegrationPage />} />
+        <Route path="/settings/integrations/wbiztool" element={<WbiztoolPage />} />
+        <Route path="/settings/integrations/emailit" element={<EmailitPage />} />
+        <Route path="/settings/storage" element={<StorageSettingsPage />} />
+        <Route path="/settings/people-properties" element={<ContactPropertiesPage />} />
+        <Route path="/settings/company-properties" element={<CompanyPropertiesPage />} />
+        <Route path="/settings/services" element={<ServicesSettingsPage />} />
+        <Route path="/settings/notifications" element={<NotificationSettingsPage />} />
+        <Route path="/profile" element={<Profile />} />
+        <Route path="/search" element={<SearchPage />} />
+        <Route path="/custom/:slug" element={<CustomPage />} />
+        <Route path="/multipage/:slug" element={<MultiEmbedPage />} />
+        <Route path="/multipage/:slug/:itemSlug" element={<MultiEmbedItemPage />} />
+        <Route path="/embed" element={<EmbedPage />} />
+        <Route path="/companies" element={<CompaniesPage />} />
+        <Route path="/notifications" element={<NotificationsPage />} />
+      </Route>
+      
+      <Route path="*" element={<NotFound />} />
+    </Routes>
   );
-}
+};
 
 export default App;
