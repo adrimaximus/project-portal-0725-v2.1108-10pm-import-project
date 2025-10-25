@@ -1,4 +1,5 @@
 import PortalLayout from "@/components/PortalLayout";
+import SonioxSettingsForm from "@/components/integrations/SonioxSettingsForm";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link } from "react-router-dom";
@@ -38,15 +39,13 @@ const SpeechToTextPage = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle>Configuration</CardTitle>
+            <CardTitle>Soniox Configuration</CardTitle>
             <CardDescription>
-              Configure your preferred speech-to-text provider and settings.
+              Configure your Soniox speech-to-text provider and settings.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-muted-foreground">
-              Speech to text integration settings will be available here soon.
-            </p>
+            <SonioxSettingsForm />
           </CardContent>
         </Card>
       </div>
