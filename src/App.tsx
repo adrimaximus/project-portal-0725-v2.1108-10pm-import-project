@@ -3,7 +3,7 @@
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
-import BillingPage from "@/pages/BillingPage";
+import BillingPage from "@/pages/Billing";
 import ChatPage from "@/pages/ChatPage";
 import DashboardPage from "@/pages/DashboardPage";
 import GoalPage from "@/pages/GoalPage";
