@@ -231,6 +231,7 @@ export interface Project {
   kanban_order?: number;
   payment_kanban_order?: number;
   reactions?: Reaction[];
+  public?: boolean;
 }
 
 export interface Invoice {

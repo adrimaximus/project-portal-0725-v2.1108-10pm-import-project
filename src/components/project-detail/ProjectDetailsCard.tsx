@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Project as BaseProject, PROJECT_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS, Person, Company } from "@/types";
-import { Calendar, Wallet, Briefcase, MapPin, ListTodo, CreditCard, User, Building, ChevronsUpDown } from "lucide-react";
+import { Calendar, Wallet, Briefcase, MapPin, ListTodo, CreditCard, User, Building, ChevronsUpDown, Eye, Link as LinkIcon } from "lucide-react";
 import { isSameDay, subDays } from "date-fns";
 import { DateRangePicker } from "../DateRangePicker";
 import { DateRange } from "react-day-picker";
@@ -18,6 +18,8 @@ import { useMemo } from "react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 // Extend types to include the new optional company_id field for a robust relationship.
 type LocalPerson = Person & { company_id?: string | null };
@@ -212,6 +214,13 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetail
   const paymentBadgeColor = getPaymentStatusStyles(project.payment_status).tw;
   const hasOpenTasks = project.tasks?.some(task => !task.completed);
   const selectedValue = project.person_ids?.[0] || (project.client_company_id ? `company-${project.client_company_id}` : '');
+
+  const publicLink = `${window.location.origin}/p/${project.slug}`;
+
+  const copyPublicLink = () => {
+    navigator.clipboard.writeText(publicLink);
+    toast.success("Public link copied to clipboard!");
+  };
 
   return (
     <Card>
@@ -447,6 +456,32 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetail
                       ) : (
                         <p className="text-muted-foreground">No client assigned</p>
                       )}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-start gap-4">
+                <Eye className="h-4 w-4 mt-1 flex-shrink-0 text-muted-foreground" />
+                <div className="w-full">
+                  <p className="font-medium">Visibility</p>
+                  {isEditing ? (
+                    <div className="flex items-center space-x-2 mt-1">
+                      <Switch
+                        id="public-switch"
+                        checked={project.public}
+                        onCheckedChange={(checked) => onFieldChange('public', checked)}
+                      />
+                      <Label htmlFor="public-switch">Public</Label>
+                    </div>
+                  ) : (
+                    <p className="text-muted-foreground">{project.public ? 'Public' : 'Private'}</p>
+                  )}
+                  {project.public && !isEditing && (
+                    <div className="flex items-center gap-2 mt-1">
+                      <Input value={publicLink} readOnly className="h-8 text-xs" />
+                      <Button variant="outline" size="icon" className="h-8 w-8" onClick={copyPublicLink}>
+                        <LinkIcon className="h-4 w-4" />
+                      </Button>
                     </div>
                   )}
                 </div>
