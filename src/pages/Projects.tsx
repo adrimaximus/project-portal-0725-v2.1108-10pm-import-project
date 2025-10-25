@@ -52,7 +52,6 @@ const ProjectsPage = () => {
     hiddenStatuses: [],
     selectedPeopleIds: [],
     status: [],
-    assignees: [],
     dueDate: null,
   });
 
