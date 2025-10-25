@@ -62,7 +62,9 @@ const ProjectsPage = () => {
 
   const allPeople = useMemo(() => {
     if (!peopleData) return [];
-    return peopleData.map(p => ({ id: p.id, name: p.full_name }));
+    return peopleData
+      .filter(p => p.user_id)
+      .map(p => ({ id: p.user_id!, name: p.full_name }));
   }, [peopleData]);
 
   const {
