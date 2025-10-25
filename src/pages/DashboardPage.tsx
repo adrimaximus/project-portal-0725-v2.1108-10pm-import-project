@@ -10,7 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import MonthlyProgressChart from "@/components/dashboard/MonthlyProgressChart";
 import UnsplashImage from "@/components/dashboard/UnsplashImage";
 
-const Index = () => {
+const DashboardPage = () => {
   const [date, setDate] = useState<DateRange | undefined>({
     from: new Date(new Date().getFullYear(), 0, 1),
     to: new Date(new Date().getFullYear(), 11, 31),
@@ -86,4 +86,4 @@ const Index = () => {
   );
 };
 
-export default Index;
+export default DashboardPage;
