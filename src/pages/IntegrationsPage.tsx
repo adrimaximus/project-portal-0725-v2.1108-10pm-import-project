@@ -103,7 +103,6 @@ const IntegrationsPage = () => {
                 description="Convert audio to text for your projects." 
                 path="/settings/integrations/speech-to-text"
                 icon={<Mic className="h-5 w-5" />}
-                disabled={true}
             />
           </CardContent>
         </Card>
