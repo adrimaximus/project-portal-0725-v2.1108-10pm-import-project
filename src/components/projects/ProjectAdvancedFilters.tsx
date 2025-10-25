@@ -25,7 +25,6 @@ interface Person {
 }
 
 export interface AdvancedFiltersState {
-  hiddenStatuses: string[];
   selectedPeopleIds: string[];
   status: string[];
   dueDate: DateRange | null;
@@ -40,17 +39,8 @@ interface ProjectAdvancedFiltersProps {
 const ProjectAdvancedFilters = ({ filters, onFiltersChange, allPeople }: ProjectAdvancedFiltersProps) => {
   const [open, setOpen] = useState(false);
   const isDesktop = useMediaQuery("(min-width: 768px)");
-  const [hideStatusPopoverOpen, setHideStatusPopoverOpen] = useState(false);
   const [assigneePopoverOpen, setAssigneePopoverOpen] = useState(false);
   const [projectStatusPopoverOpen, setProjectStatusPopoverOpen] = useState(false);
-
-  const handleHideStatusToggle = (statusValue: string) => {
-    const isSelected = filters.hiddenStatuses.includes(statusValue);
-    const newHiddenStatuses = isSelected
-      ? filters.hiddenStatuses.filter(s => s !== statusValue)
-      : [...filters.hiddenStatuses, statusValue];
-    onFiltersChange({ ...filters, hiddenStatuses: newHiddenStatuses });
-  };
 
   const handleAssigneeToggle = (personId: string) => {
     const isSelected = filters.selectedPeopleIds.includes(personId);
@@ -68,10 +58,10 @@ const ProjectAdvancedFilters = ({ filters, onFiltersChange, allPeople }: Project
     onFiltersChange({ ...filters, status: newStatus });
   };
 
-  const activeFilterCount = filters.hiddenStatuses.length + filters.selectedPeopleIds.length + filters.status.length;
+  const activeFilterCount = filters.selectedPeopleIds.length + filters.status.length;
 
   const clearFilters = () => {
-    onFiltersChange({ hiddenStatuses: [], selectedPeopleIds: [], status: [], dueDate: null });
+    onFiltersChange({ selectedPeopleIds: [], status: [], dueDate: null });
   };
 
   const triggerButton = (
@@ -176,49 +166,6 @@ const ProjectAdvancedFilters = ({ filters, onFiltersChange, allPeople }: Project
         </Popover>
       </div>
 
-      <div className="space-y-2">
-        <Label>Hide Specific Statuses</Label>
-        <Popover open={hideStatusPopoverOpen} onOpenChange={setHideStatusPopoverOpen}>
-          <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              role="combobox"
-              aria-expanded={hideStatusPopoverOpen}
-              className="w-full justify-between font-normal"
-            >
-              {filters.hiddenStatuses.length > 0
-                ? `${filters.hiddenStatuses.length} selected`
-                : "Select statuses to hide..."}
-              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-            <Command>
-              <CommandInput placeholder="Search status..." />
-              <CommandList>
-                <CommandEmpty>No status found.</CommandEmpty>
-                <CommandGroup>
-                  {PROJECT_STATUS_OPTIONS.map((status) => (
-                    <CommandItem
-                      key={status.value}
-                      value={status.label}
-                      onSelect={() => handleHideStatusToggle(status.value)}
-                    >
-                      <Check
-                        className={cn(
-                          "mr-2 h-4 w-4",
-                          filters.hiddenStatuses.includes(status.value) ? "opacity-100" : "opacity-0"
-                        )}
-                      />
-                      {status.label}
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              </CommandList>
-            </Command>
-          </PopoverContent>
-        </Popover>
-      </div>
       {activeFilterCount > 0 && (
         <Button variant="ghost" size="sm" onClick={clearFilters} className="w-full">
           <X className="mr-2 h-4 w-4" />
