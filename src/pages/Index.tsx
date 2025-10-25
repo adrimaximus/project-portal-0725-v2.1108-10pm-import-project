@@ -47,6 +47,7 @@ const Index = () => {
     hiddenStatuses: [],
     selectedPeopleIds: [],
     status: [],
+    assignees: [],
     dueDate: null,
   });
 

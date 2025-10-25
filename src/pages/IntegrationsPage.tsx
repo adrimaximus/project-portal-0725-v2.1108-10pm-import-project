@@ -3,7 +3,7 @@ import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbP
 import { Link } from "react-router-dom";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { GitBranch, Mail, Mic } from "lucide-react";
+import { GitBranch, Mail } from "lucide-react";
 import React from "react";
 
 const IntegrationItem = ({ name, description, icon, path, noBg = false, disabled = false }: { name: string, description: string, icon: React.ReactNode, path: string, noBg?: boolean, disabled?: boolean }) => (
@@ -97,12 +97,6 @@ const IntegrationsPage = () => {
                 description="Connect your Emailit account for transactional emails." 
                 path="/settings/integrations/emailit"
                 icon={<Mail className="h-5 w-5" />}
-            />
-            <IntegrationItem 
-                name="Speech to Text" 
-                description="Convert audio to text for your projects." 
-                path="/settings/integrations/speech-to-text"
-                icon={<Mic className="h-5 w-5" />}
             />
           </CardContent>
         </Card>
