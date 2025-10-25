@@ -33,8 +33,8 @@ export const useProjectFilters = (projects: Project[], advancedFilters: Advanced
       })();
 
       const isHiddenByStatus = advancedFilters.hiddenStatuses.includes(project.status);
-      const matchesPerson = advancedFilters.assignees.length === 0 ||
-        (project.assignedTo && project.assignedTo.some(person => advancedFilters.assignees.includes(person.id)));
+      const matchesPerson = advancedFilters.selectedPeopleIds.length === 0 ||
+        (project.assignedTo && project.assignedTo.some(person => advancedFilters.selectedPeopleIds.includes(person.id)));
 
       return matchesDate && !isHiddenByStatus && matchesPerson;
     });

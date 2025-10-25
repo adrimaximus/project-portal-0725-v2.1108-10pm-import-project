@@ -28,7 +28,6 @@ export interface AdvancedFiltersState {
   hiddenStatuses: string[];
   selectedPeopleIds: string[];
   status: string[];
-  assignees: string[];
   dueDate: DateRange | null;
 }
 
@@ -54,11 +53,11 @@ const ProjectAdvancedFilters = ({ filters, onFiltersChange, allPeople }: Project
   };
 
   const handleAssigneeToggle = (personId: string) => {
-    const isSelected = filters.assignees.includes(personId);
-    const newAssignees = isSelected
-      ? filters.assignees.filter(id => id !== personId)
-      : [...filters.assignees, personId];
-    onFiltersChange({ ...filters, assignees: newAssignees });
+    const isSelected = filters.selectedPeopleIds.includes(personId);
+    const newSelectedPeopleIds = isSelected
+      ? filters.selectedPeopleIds.filter(id => id !== personId)
+      : [...filters.selectedPeopleIds, personId];
+    onFiltersChange({ ...filters, selectedPeopleIds: newSelectedPeopleIds });
   };
 
   const handleProjectStatusToggle = (statusValue: string) => {
@@ -69,10 +68,10 @@ const ProjectAdvancedFilters = ({ filters, onFiltersChange, allPeople }: Project
     onFiltersChange({ ...filters, status: newStatus });
   };
 
-  const activeFilterCount = filters.hiddenStatuses.length + filters.assignees.length + filters.status.length;
+  const activeFilterCount = filters.hiddenStatuses.length + filters.selectedPeopleIds.length + filters.status.length;
 
   const clearFilters = () => {
-    onFiltersChange({ hiddenStatuses: [], selectedPeopleIds: [], status: [], assignees: [], dueDate: null });
+    onFiltersChange({ hiddenStatuses: [], selectedPeopleIds: [], status: [], dueDate: null });
   };
 
   const triggerButton = (
@@ -99,8 +98,8 @@ const ProjectAdvancedFilters = ({ filters, onFiltersChange, allPeople }: Project
               aria-expanded={assigneePopoverOpen}
               className="w-full justify-between font-normal"
             >
-              {filters.assignees.length > 0
-                ? `${filters.assignees.length} people selected`
+              {filters.selectedPeopleIds.length > 0
+                ? `${filters.selectedPeopleIds.length} people selected`
                 : "Select assignees..."}
               <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
             </Button>
@@ -120,7 +119,7 @@ const ProjectAdvancedFilters = ({ filters, onFiltersChange, allPeople }: Project
                       <Check
                         className={cn(
                           "mr-2 h-4 w-4",
-                          filters.assignees.includes(person.id) ? "opacity-100" : "opacity-0"
+                          filters.selectedPeopleIds.includes(person.id) ? "opacity-100" : "opacity-0"
                         )}
                       />
                       {person.name}
