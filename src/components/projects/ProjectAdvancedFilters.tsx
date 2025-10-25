@@ -133,7 +133,7 @@ const ProjectAdvancedFilters = ({ filters, onFiltersChange, allPeople }: Project
       </div>
 
       <div className="space-y-2">
-        <Label>Filter by Project Status</Label>
+        <Label>Show Specific Statuses</Label>
         <Popover open={projectStatusPopoverOpen} onOpenChange={setProjectStatusPopoverOpen}>
           <PopoverTrigger asChild>
             <Button
@@ -177,7 +177,7 @@ const ProjectAdvancedFilters = ({ filters, onFiltersChange, allPeople }: Project
       </div>
 
       <div className="space-y-2">
-        <Label>Hide Statuses</Label>
+        <Label>Hide Specific Statuses</Label>
         <Popover open={hideStatusPopoverOpen} onOpenChange={setHideStatusPopoverOpen}>
           <PopoverTrigger asChild>
             <Button
