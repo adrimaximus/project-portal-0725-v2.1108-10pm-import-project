@@ -5,22 +5,23 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
 import BillingPage from "@/pages/Billing";
 import ChatPage from "@/pages/ChatPage";
-import DashboardPage from "@/pages/DashboardPage";
-import GoalPage from "@/pages/GoalPage";
+import DashboardPage from "@/pages/Dashboard";
+import GoalPage from "@/pages/GoalDetailPage";
 import GoalsPage from "@/pages/GoalsPage";
 import GoogleCalendarIntegrationPage from "@/pages/integrations/GoogleCalendarIntegrationPage";
-import GoogleDriveIntegrationPage from "@/pages/integrations/GoogleDriveIntegrationPage";
+import GoogleDriveIntegrationPage from "@/pages/integrations/GoogleDrivePage";
 import SpeechToTextPage from "@/pages/integrations/SpeechToTextPage";
 import IntegrationsPage from "@/pages/IntegrationsPage";
-import KnowledgeBaseArticlePage from "@/pages/KnowledgeBaseArticlePage";
+import KnowledgeBaseArticlePage from "@/pages/kb/Page";
+import KnowledgeBaseFolderPage from "@/pages/kb/FolderDetailPage";
 import KnowledgeBasePage from "@/pages/KnowledgeBasePage";
 import LoginPage from "@/pages/LoginPage";
-import MoodTrackerPage from "@/pages/MoodTrackerPage";
+import MoodTrackerPage from "@/pages/MoodTracker";
 import MultiEmbedPage from "@/pages/MultiEmbedPage";
 import PeoplePage from "@/pages/PeoplePage";
-import PersonDetailPage from "@/pages/PersonDetailPage";
-import ProjectDetailPage from "@/pages/ProjectDetailPage";
-import ProjectsPage from "@/pages/ProjectsPage";
+import PersonDetailPage from "@/pages/people/PersonProfilePage";
+import ProjectDetailPage from "@/pages/projects/[slug]";
+import ProjectsPage from "@/pages/Projects";
 import RequestPage from "@/pages/RequestPage";
 import SettingsPage from "@/pages/SettingsPage";
 import { ThemeProvider } from "next-themes";
@@ -52,11 +53,11 @@ function App() {
                 element={<KnowledgeBasePage />}
               />
               <Route
-                path="/knowledge-base/:folderSlug"
-                element={<KnowledgeBasePage />}
+                path="/knowledge-base/folders/:slug"
+                element={<KnowledgeBaseFolderPage />}
               />
               <Route
-                path="/knowledge-base/:folderSlug/:articleSlug"
+                path="/knowledge-base/pages/:slug"
                 element={<KnowledgeBaseArticlePage />}
               />
               <Route path="/settings" element={<SettingsPage />} />
