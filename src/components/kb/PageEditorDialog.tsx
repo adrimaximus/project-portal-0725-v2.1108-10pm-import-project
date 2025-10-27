@@ -110,9 +110,13 @@ const PageEditorDialog = ({ open, onOpenChange, folders = [], folder, article, o
   }, [article, folder, open, form]);
 
   const handleTagCreate = (tagName: string): Tag => {
-    const randomColor = '#808080';
-    const newTag: Tag = { id: uuidv4(), name: tagName, color: randomColor, isNew: true };
-    return newTag;
+    const newTagObject: Tag = {
+      id: `custom-${uuidv4()}`,
+      name: tagName,
+      color: '#808080',
+      user_id: user?.id || '',
+    };
+    return newTagObject;
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
