@@ -234,3 +234,56 @@
 .pac-container {
   z-index: 9999 !important;
 }
+
+/* Custom Quill styles for display-only content */
+.ql-snow.ql-container.display-only {
+  border: none;
+}
+.ql-editor.display-only {
+  padding: 0;
+  overflow-y: visible;
+  max-height: none;
+}
+
+/* Custom styles for quill-mention */
+.mention-item {
+  display: flex;
+  align-items: center;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+
+.mention-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background-color: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 500;
+  margin-right: 8px;
+}
+
+.ql-mention-list-container {
+  background-color: hsl(var(--popover));
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius);
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  color: hsl(var(--popover-foreground));
+}
+
+.ql-mention-list-item.selected {
+  background-color: hsl(var(--accent));
+  color: hsl(var(--accent-foreground));
+}
+
+.mention {
+  background-color: hsl(var(--primary) / 0.1);
+  color: hsl(var(--primary));
+  font-weight: 500;
+  padding: 1px 3px;
+  border-radius: 4px;
+}

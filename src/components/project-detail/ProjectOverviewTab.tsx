@@ -77,6 +77,7 @@ const ProjectOverviewTab = ({
               isGenerating: isGenerating,
               prompt: 'Generate with AI from project details'
             }}
+            teamMembers={project.assignedTo}
           />
           <Separator className="my-4" />
           <div>

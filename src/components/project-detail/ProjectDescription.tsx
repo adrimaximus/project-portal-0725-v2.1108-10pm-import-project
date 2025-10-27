@@ -1,5 +1,6 @@
 import RichTextEditor from '@/components/RichTextEditor';
 import 'react-quill/dist/quill.snow.css';
+import { User } from '@/types';
 
 interface AIOptions {
   onGenerate: () => void;
@@ -12,9 +13,15 @@ interface ProjectDescriptionProps {
   isEditing: boolean;
   onDescriptionChange: (value: string) => void;
   aiOptions?: AIOptions;
+  teamMembers?: User[];
 }
 
-const ProjectDescription = ({ description, isEditing, onDescriptionChange, aiOptions }: ProjectDescriptionProps) => {
+const ProjectDescription = ({ description, isEditing, onDescriptionChange, aiOptions, teamMembers = [] }: ProjectDescriptionProps) => {
+  const mentionableUsers = teamMembers.map(user => ({
+    id: user.id,
+    value: user.name || user.email || '',
+  }));
+
   if (isEditing) {
     return (
       <RichTextEditor
@@ -23,7 +30,8 @@ const ProjectDescription = ({ description, isEditing, onDescriptionChange, aiOpt
         onGenerate={aiOptions?.onGenerate}
         isGenerating={aiOptions?.isGenerating}
         prompt={aiOptions?.prompt}
-        placeholder="Describe the project goals, scope, and deliverables..."
+        placeholder="Describe the project goals, scope, and deliverables... Type @ to mention a team member."
+        mentionableUsers={mentionableUsers}
       />
     );
   }

@@ -1,11 +1,20 @@
 "use client";
 
-import React from 'react';
-import ReactQuill from 'react-quill';
+import React, { useMemo } from 'react';
+import ReactQuill, { Quill } from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
+import 'quill-mention/dist/quill.mention.css';
 import { Button } from '@/components/ui/button';
 import { Sparkles, RefreshCw } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+
+// Import and register the mention module
+import 'quill-mention';
+
+interface MentionableUser {
+  id: string;
+  value: string;
+}
 
 interface RichTextEditorProps {
   value: string;
@@ -14,10 +23,11 @@ interface RichTextEditorProps {
   onGenerate?: () => void;
   isGenerating?: boolean;
   prompt?: string;
+  mentionableUsers?: MentionableUser[];
 }
 
-const RichTextEditor = React.forwardRef<ReactQuill, RichTextEditorProps>(({ value, onChange, placeholder, onGenerate, isGenerating, prompt }, ref) => {
-  const modules = {
+const RichTextEditor = React.forwardRef<ReactQuill, RichTextEditorProps>(({ value, onChange, placeholder, onGenerate, isGenerating, prompt, mentionableUsers = [] }, ref) => {
+  const modules = useMemo(() => ({
     toolbar: [
       [{ 'font': [] }, { 'size': [] }],
       ['bold', 'italic', 'underline', 'strike'],
@@ -29,7 +39,30 @@ const RichTextEditor = React.forwardRef<ReactQuill, RichTextEditorProps>(({ valu
       ['link', 'image', 'video', 'formula'],
       ['clean']
     ],
-  };
+    mention: {
+      allowedChars: /^[A-Za-z\sÅÄÖåäö]*$/,
+      mentionDenotationChars: ["@"],
+      source: (searchTerm: string, renderList: (matches: MentionableUser[], searchTerm: string) => void) => {
+        if (searchTerm.length === 0) {
+          renderList(mentionableUsers, searchTerm);
+        } else {
+          const matches = mentionableUsers.filter(user =>
+            user.value.toLowerCase().includes(searchTerm.toLowerCase())
+          );
+          renderList(matches, searchTerm);
+        }
+      },
+      renderItem: (item: MentionableUser) => {
+        const initials = item.value.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+        return `
+          <div class="mention-item">
+            <div class="mention-avatar">${initials}</div>
+            <span>${item.value}</span>
+          </div>
+        `;
+      },
+    },
+  }), [mentionableUsers]);
 
   return (
     <div className="bg-background rounded-md border relative overflow-hidden">
