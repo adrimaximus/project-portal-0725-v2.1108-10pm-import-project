@@ -47,17 +47,22 @@ serve(async (req) => {
 
     const { data, error } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
       redirectTo: redirectTo,
-      app_metadata: { role: role } // Pass role to app_metadata
+      data: { role: role } // Pass role to user_metadata on invite
     })
 
     if (error) {
       console.error(`Error inviting user ${email}:`, error)
       if (error.message.includes('User already registered')) {
-        // The user already exists. Instead of an error, we treat this as a success.
-        // The goal is to have this person in the system, and they already are.
         return new Response(JSON.stringify({ message: `User ${email} is already a member.` }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 200,
+        });
+      }
+      // Check for SMTP configuration error
+      if (error.status === 500 && (error.message.includes('Unexpected failure') || error.message.includes('Error sending invite email'))) {
+        return new Response(JSON.stringify({ error: 'Failed to send invite. The email service (SMTP) may not be configured in your Supabase project settings.' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500,
         });
       }
       // For other errors, return a proper error response.
