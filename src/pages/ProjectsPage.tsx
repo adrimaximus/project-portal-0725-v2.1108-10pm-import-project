@@ -54,7 +54,7 @@ const ProjectsPage = () => {
     }
   }, [searchParams, setSearchParams, taskIdFromParams, navigate]);
 
-  const { data: projectsData, isLoading: isLoadingProjects, refetch: refetchProjects } = useProjects({ searchTerm });
+  const { data: projectsData = { pages: [], pageParams: [] }, isLoading: isLoadingProjects, refetch: refetchProjects } = useProjects({ searchTerm });
   
   const allProjects = useMemo(() => projectsData?.pages.flat() ?? [], [projectsData]);
 
