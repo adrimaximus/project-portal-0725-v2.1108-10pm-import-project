@@ -68,6 +68,7 @@ const App = () => {
       <Route element={<ProtectedRouteLayout />}>
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/projects" element={<ProjectsPage />} />
+        <Route path="/tasks/:taskId" element={<ProjectsPage />} />
         <Route path="/projects/:slug" element={<ProjectDetail />} />
         <Route path="/request" element={<RequestPage />} />
         <Route path="/chat" element={<ChatPage />} />

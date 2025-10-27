@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams, useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { getDashboardProjects, createProject, updateProjectDetails, deleteProject } from '@/api/projects';
@@ -32,19 +32,27 @@ const ProjectsPage = () => {
   const queryClient = useQueryClient();
   const rowRefs = useRef(new Map<string, HTMLTableRowElement>());
   const { user } = useAuth();
+  const { taskId: taskIdFromParams } = useParams<{ taskId: string }>();
 
-  const view = (searchParams.get('view') as ViewMode) || 'list';
+  const viewFromUrl = searchParams.get('view') as ViewMode;
+  const view = taskIdFromParams ? 'tasks' : viewFromUrl || 'list';
+
   const [kanbanGroupBy, setKanbanGroupBy] = useState<'status' | 'payment_status'>('status');
   const [hideCompletedTasks, setHideCompletedTasks] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const highlightedTaskId = searchParams.get('highlight');
+  
+  const highlightedTaskId = taskIdFromParams || searchParams.get('highlight');
 
   const onHighlightComplete = useCallback(() => {
-    const newSearchParams = new URLSearchParams(searchParams);
-    newSearchParams.delete('highlight');
-    setSearchParams(newSearchParams, { replace: true });
-  }, [searchParams, setSearchParams]);
+    if (taskIdFromParams) {
+      navigate('/projects?view=tasks', { replace: true });
+    } else {
+      const newSearchParams = new URLSearchParams(searchParams);
+      newSearchParams.delete('highlight');
+      setSearchParams(newSearchParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams, taskIdFromParams, navigate]);
 
   const { data: projectsData = [], isLoading: isLoadingProjects, refetch: refetchProjects } = useProjects({ searchTerm });
   
@@ -210,7 +218,11 @@ const ProjectsPage = () => {
 
   const handleViewChange = (newView: ViewMode | null) => {
     if (newView) {
-      setSearchParams({ view: newView }, { replace: true });
+      if (taskIdFromParams) {
+        navigate(`/projects?view=${newView}`);
+      } else {
+        setSearchParams({ view: newView }, { replace: true });
+      }
       if (scrollContainerRef.current) {
         scrollContainerRef.current.scrollTop = 0;
         scrollContainerRef.current.scrollLeft = 0;

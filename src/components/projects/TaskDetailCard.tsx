@@ -78,11 +78,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
   };
 
   const handleCopyLink = () => {
-    if (!task.project_slug) {
-      toast.error("Cannot create link for tasks in this project.");
-      return;
-    }
-    const url = `${window.location.origin}/projects?view=tasks&highlight=${task.id}`;
+    const url = `${window.location.origin}/tasks/${task.id}`;
     navigator.clipboard.writeText(url);
     toast.success("Link to task copied to clipboard!");
   };
