@@ -7,6 +7,7 @@ import ProjectTags from './ProjectTags';
 import { Separator } from "@/components/ui/separator";
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import ProjectReport from './ProjectReport';
 
 interface ProjectOverviewTabProps {
   project: Project;
@@ -79,6 +80,14 @@ const ProjectOverviewTab = ({
             }}
           />
           <Separator className="my-4" />
+          
+          {(project.status === 'Completed' || project.status === 'Cancelled') && (
+            <>
+              <ProjectReport project={project} />
+              <Separator className="my-4" />
+            </>
+          )}
+
           <div>
             <h3 className="text-base font-semibold mb-2">Project Tags</h3>
             <ProjectTags
