@@ -54,7 +54,14 @@ const ProjectsPage = () => {
     }
   }, [searchParams, setSearchParams, taskIdFromParams, navigate]);
 
-  const { data: projectsData = { pages: [], pageParams: [] }, isLoading: isLoadingProjects, refetch: refetchProjects } = useProjects({ searchTerm });
+  const { 
+    data: projectsData = { pages: [], pageParams: [] }, 
+    isLoading: isLoadingProjects, 
+    refetch: refetchProjects,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage 
+  } = useProjects({ searchTerm });
   
   const allProjects = useMemo(() => projectsData?.pages.flat() ?? [], [projectsData]);
 
@@ -389,6 +396,9 @@ const ProjectsPage = () => {
               tasksQueryKey={tasksQueryKey}
               highlightedTaskId={highlightedTaskId}
               onHighlightComplete={onHighlightComplete}
+              onLoadMore={fetchNextPage}
+              hasNextPage={hasNextPage}
+              isFetchingNextPage={isFetchingNextPage}
             />
           </div>
         </div>
