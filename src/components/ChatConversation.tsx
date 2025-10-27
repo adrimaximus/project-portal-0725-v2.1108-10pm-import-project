@@ -86,7 +86,7 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
           const isAudioAttachment = message.attachment?.type.startsWith('audio/');
 
           return (
-            <div key={message.id || index} id={`message-${message.id}`} className="transition-all duration-500 -m-1 p-1">
+            <div key={message.id || index} id={`message-${message.id}`} className="transition-all duration-500">
               {showDateSeparator && (
                 <div className="relative my-4">
                   <div className="absolute inset-0 flex items-center">
