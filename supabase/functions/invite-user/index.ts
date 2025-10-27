@@ -35,6 +35,36 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
+    // Check if user already exists
+    const { data: existingUserData, error: getUserError } = await supabaseAdmin.auth.admin.getUserByEmail(email);
+
+    if (getUserError && !getUserError.message.includes('User not found')) {
+        throw getUserError;
+    }
+
+    if (existingUserData && existingUserData.user) {
+        const existingUser = existingUserData.user;
+        const currentRole = existingUser.app_metadata?.role;
+        if (currentRole !== role) {
+            const { error: updateUserError } = await supabaseAdmin.auth.admin.updateUserById(
+                existingUser.id,
+                { app_metadata: { ...existingUser.app_metadata, role: role } }
+            );
+            if (updateUserError) {
+                return new Response(JSON.stringify({ error: `User exists but failed to update their role: ${updateUserError.message}` }), {
+                    status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+                });
+            }
+            return new Response(JSON.stringify({ message: `User ${email} already exists. Their role has been updated to ${role}.` }), {
+                status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+        }
+        return new Response(JSON.stringify({ message: `User ${email} is already a member with the correct role.` }), {
+            status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    }
+
+    // User does not exist, proceed with invite
     const siteUrl = Deno.env.get('SITE_URL')
     if (!siteUrl) {
       console.error("SITE_URL environment variable is not set.")
@@ -47,25 +77,24 @@ serve(async (req) => {
 
     const { data, error } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
       redirectTo: redirectTo,
-      data: { role: role } // Pass role to user_metadata on invite
+      data: { role: role } // Pass role to app_metadata on invite
     })
 
     if (error) {
       console.error(`Error inviting user ${email}:`, error)
       if (error.message.includes('User already registered')) {
+        // This is a fallback, should be caught by the check above
         return new Response(JSON.stringify({ message: `User ${email} is already a member.` }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 200,
         });
       }
-      // Check for SMTP configuration error
       if (error.status === 500 && (error.message.includes('Unexpected failure') || error.message.includes('Error sending invite email'))) {
         return new Response(JSON.stringify({ error: 'Failed to send invite. The email service (SMTP) may not be configured in your Supabase project settings.' }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 500,
         });
       }
-      // For other errors, return a proper error response.
       return new Response(JSON.stringify({ error: `Failed to invite user. Supabase error: ${error.message}` }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,

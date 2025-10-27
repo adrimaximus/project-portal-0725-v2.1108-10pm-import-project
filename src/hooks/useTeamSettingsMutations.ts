@@ -20,7 +20,7 @@ export const useTeamSettingsMutations = (fetchData: () => void) => {
       toast.info(`Sending ${validInvites.length} invite(s)...`);
 
       for (const invite of validInvites) {
-        const { error } = await supabase.functions.invoke('invite-user', {
+        const { data, error } = await supabase.functions.invoke('invite-user', {
           body: { email: invite.email, role: invite.role },
         });
 
@@ -38,6 +38,9 @@ export const useTeamSettingsMutations = (fetchData: () => void) => {
           }
           toast.error(`Failed to send invite to ${invite.email}`, { description: errorMessage });
         } else {
+          if (data.message) {
+            toast.info(data.message);
+          }
           successCount++;
         }
         if (validInvites.length > 1) {
@@ -48,7 +51,7 @@ export const useTeamSettingsMutations = (fetchData: () => void) => {
     },
     onSuccess: (successCount) => {
       if (successCount > 0) {
-        toast.success(`${successCount} invite(s) sent successfully!`);
+        toast.success(`${successCount} invite(s) processed successfully!`);
         fetchData();
       }
     },
