@@ -53,11 +53,14 @@ serve(async (req) => {
     if (error) {
       console.error(`Error inviting user ${email}:`, error)
       if (error.message.includes('User already registered')) {
-        return new Response(JSON.stringify({ error: `A user with the email ${email} already exists.` }), {
+        // The user already exists. Instead of an error, we treat this as a success.
+        // The goal is to have this person in the system, and they already are.
+        return new Response(JSON.stringify({ message: `User ${email} is already a member.` }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 409, // Conflict
-        })
+          status: 200,
+        });
       }
+      // For other errors, return a proper error response.
       return new Response(JSON.stringify({ error: `Failed to invite user. Supabase error: ${error.message}` }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,
