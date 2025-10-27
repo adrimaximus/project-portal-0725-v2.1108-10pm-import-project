@@ -48,7 +48,7 @@ const ProjectDetailSkeleton = () => (
 const ProjectDetail = () => {
   const { slug } = useParams<{ slug: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { user, isLoading: authLoading } = useAuth();
+  const { user, isLoading: authLoading, hasPermission } = useAuth();
   const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
   const [editedProject, setEditedProject] = useState<Project | null>(null);
@@ -107,7 +107,12 @@ const ProjectDetail = () => {
     }
   }, [project?.tasks, editingTask?.id]);
 
-  const canEdit = user && (user.id === project?.created_by.id || user.role === 'admin' || user.role === 'master admin');
+  // FIXED: Improved permission check for edit access
+  const canEdit = user && (
+    user.id === project?.created_by.id || // Owner can edit
+    hasPermission('projects:edit_all') || // Users with edit_all permission can edit any project
+    (hasPermission('projects:edit') && project?.assignedTo.some(member => member.id === user.id)) // Users with edit permission can edit projects they're members of
+  );
 
   const handleFieldChange = (field: keyof Project, value: any) => {
     setEditedProject(prev => prev ? { ...prev, [field]: value } : null);
