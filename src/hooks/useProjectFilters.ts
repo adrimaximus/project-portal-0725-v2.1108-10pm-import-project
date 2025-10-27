@@ -32,11 +32,11 @@ export const useProjectFilters = (projects: Project[], advancedFilters: Advanced
         return projectStart <= filterEnd && effectiveProjectEnd >= filterStart;
       })();
 
-      const isHiddenByStatus = advancedFilters.hiddenStatuses.includes(project.status);
+      const matchesStatus = advancedFilters.status.length === 0 || advancedFilters.status.includes(project.status);
       const matchesPerson = advancedFilters.selectedPeopleIds.length === 0 ||
         (project.assignedTo && project.assignedTo.some(person => advancedFilters.selectedPeopleIds.includes(person.id)));
 
-      return matchesDate && !isHiddenByStatus && matchesPerson;
+      return matchesDate && matchesStatus && matchesPerson;
     });
   }, [projects, dateRange, advancedFilters]);
 
