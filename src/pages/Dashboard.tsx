@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { DateRangePicker } from "@/components/DateRangePicker";
 import { DateRange } from "react-day-picker";
 import PortalLayout from "@/components/PortalLayout";
@@ -9,16 +9,37 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import MonthlyProgressChart from "@/components/dashboard/MonthlyProgressChart";
 import UnsplashImage from "@/components/dashboard/UnsplashImage";
+import { Loader2 } from "lucide-react";
 
 const Index = () => {
   const [date, setDate] = useState<DateRange | undefined>({
     from: new Date(new Date().getFullYear(), 0, 1),
     to: new Date(new Date().getFullYear(), 11, 31),
   });
-  const { data: projects = [], isLoading } = useProjects();
+  const { 
+    data, 
+    isLoading, 
+    fetchNextPage, 
+    hasNextPage, 
+    isFetchingNextPage 
+  } = useProjects();
   const { user } = useAuth();
 
-  const filteredProjects = projects.filter(project => {
+  const observer = useRef<IntersectionObserver>();
+  const lastProjectElementRef = useCallback((node: HTMLDivElement) => {
+    if (isLoading || isFetchingNextPage) return;
+    if (observer.current) observer.current.disconnect();
+    observer.current = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting && hasNextPage) {
+        fetchNextPage();
+      }
+    });
+    if (node) observer.current.observe(node);
+  }, [isLoading, isFetchingNextPage, hasNextPage, fetchNextPage]);
+
+  const allProjects = data?.pages.flatMap(page => page) ?? [];
+
+  const filteredProjects = allProjects.filter(project => {
     if (date?.from && project.start_date) {
         const projectStart = new Date(project.start_date);
         const pickerFrom = date.from;
@@ -33,7 +54,7 @@ const Index = () => {
     return true;
   });
 
-  if (isLoading) {
+  if (isLoading && !data) {
     return (
       <PortalLayout>
         <div className="space-y-8">
@@ -81,6 +102,15 @@ const Index = () => {
             <DashboardStatsGrid projects={filteredProjects} />
             <CollaboratorsList projects={filteredProjects} />
         </div>
+        
+        {/* This is a placeholder for the infinite scroll trigger */}
+        <div ref={lastProjectElementRef} />
+
+        {isFetchingNextPage && (
+          <div className="flex justify-center items-center py-4">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        )}
       </div>
     </PortalLayout>
   );
