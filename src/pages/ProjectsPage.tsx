@@ -49,7 +49,6 @@ const ProjectsPage = () => {
   const { data: projectsData = [], isLoading: isLoadingProjects, refetch: refetchProjects } = useProjects({ searchTerm });
   
   const [advancedFilters, setAdvancedFilters] = useState<AdvancedFiltersState>({
-    hiddenStatuses: [],
     selectedPeopleIds: [],
     status: [],
     dueDate: null,
