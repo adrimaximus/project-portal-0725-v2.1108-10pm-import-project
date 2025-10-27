@@ -79,7 +79,8 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
 
   const handleCopyLink = () => {
     const url = `${window.location.origin}/tasks/${task.id}`;
-    navigator.clipboard.writeText(url);
+    const textToCopy = `${task.project_name || 'Project'} | ${task.title}\n${url}`;
+    navigator.clipboard.writeText(textToCopy);
     toast.success("Link to task copied to clipboard!");
   };
 
