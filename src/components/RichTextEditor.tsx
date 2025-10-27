@@ -9,7 +9,9 @@ import { Sparkles, RefreshCw } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 // Import and register the mention module
-import 'quill-mention';
+import Mention from 'quill-mention';
+
+Quill.register('modules/mention', Mention);
 
 interface MentionableUser {
   id: string;
