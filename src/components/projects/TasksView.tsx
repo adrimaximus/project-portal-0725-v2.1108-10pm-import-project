@@ -9,7 +9,7 @@ import { generatePastelColor, getPriorityStyles, getTaskStatusStyles, isOverdue,
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "../ui/button";
-import { MoreHorizontal, Edit, Trash2, Ticket, Paperclip, SmilePlus } from "lucide-react";
+import { MoreHorizontal, Edit, Trash2, Ticket, Paperclip, SmilePlus, Link as LinkIcon } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Checkbox } from "@/components/ui/checkbox";
 import TaskAttachmentList from './TaskAttachmentList';
@@ -339,6 +339,13 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
               lastMonthYear = taskMonthYear;
             }
 
+            const handleCopyLink = (e: Event) => {
+              e.stopPropagation();
+              const url = `${window.location.origin}/projects?view=tasks&highlight=${task.id}`;
+              navigator.clipboard.writeText(url);
+              toast.success("Link to task copied!");
+            };
+
             return (
               <React.Fragment key={task.id}>
                 {showMonthSeparator && (
@@ -559,13 +566,17 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => onEdit(task)}>
+                            <DropdownMenuItem onSelect={() => onEdit(task)}>
                               <Edit className="mr-2 h-4 w-4" />
                               Edit
                             </DropdownMenuItem>
+                            <DropdownMenuItem onSelect={handleCopyLink}>
+                              <LinkIcon className="mr-2 h-4 w-4" />
+                              Copy Link
+                            </DropdownMenuItem>
                             <DropdownMenuItem
                               className="text-red-500"
-                              onClick={() => onDelete(task.id)}
+                              onSelect={() => onDelete(task.id)}
                             >
                               <Trash2 className="mr-2 h-4 w-4" />
                               Delete

@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Task, TaskAttachment } from '@/types';
+import { Task, TaskAttachment, Reaction, User } from '@/types';
 import { DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -7,7 +7,7 @@ import { Button } from '../ui/button';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { generatePastelColor, getPriorityStyles, getTaskStatusStyles, isOverdue, cn, getAvatarUrl, getInitials, formatTaskText } from '@/lib/utils';
-import { Edit, Trash2, Ticket, Paperclip, User as UserIcon, Calendar, Tag, Briefcase } from 'lucide-react';
+import { Edit, Trash2, Ticket, Paperclip, User as UserIcon, Calendar, Tag, Briefcase, Link as LinkIcon } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import TaskAttachmentList from './TaskAttachmentList';
@@ -15,6 +15,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/
 import TaskReactions from './TaskReactions';
 import { useTaskMutations } from '@/hooks/useTaskMutations';
 import { useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 
 interface TaskDetailCardProps {
   task: Task;
@@ -27,7 +28,6 @@ interface TaskDetailCardProps {
 const aggregateAttachments = (task: Task): TaskAttachment[] => {
   let attachments: TaskAttachment[] = [...(task.attachments || [])];
   if (task.ticket_attachments && task.ticket_attachments.length > 0) {
-    const existingUrls = new Set(attachments.map(a => a.file_url));
     const uniqueTicketAttachments = task.ticket_attachments.filter(
       (ticketAtt) => !attachments.some((att) => att.file_url === ticketAtt.file_url)
     );
@@ -77,6 +77,16 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
     });
   };
 
+  const handleCopyLink = () => {
+    if (!task.project_slug) {
+      toast.error("Cannot create link for tasks in this project.");
+      return;
+    }
+    const url = `${window.location.origin}/projects?view=tasks&highlight=${task.id}`;
+    navigator.clipboard.writeText(url);
+    toast.success("Link to task copied to clipboard!");
+  };
+
   const statusStyle = getTaskStatusStyles(task.status);
   const priorityStyle = getPriorityStyles(task.priority);
 
@@ -99,6 +109,9 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
             </p>
           </div>
           <div className="flex items-center gap-0 sm:gap-1 flex-shrink-0">
+            <Button variant="ghost" size="icon" className="hover:bg-accent h-7 w-7 sm:h-8 sm:w-8" onClick={handleCopyLink}>
+              <LinkIcon className="h-3 w-3 sm:h-4 sm:w-4" />
+            </Button>
             <Button variant="ghost" size="icon" className="hover:bg-accent h-7 w-7 sm:h-8 sm:w-8" onClick={() => { onEdit(task); onClose(); }}>
               <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
             </Button>
