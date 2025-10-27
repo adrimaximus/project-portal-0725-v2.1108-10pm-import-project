@@ -61,7 +61,7 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
   const initialSortSet = useRef(false);
 
   useEffect(() => {
-    if (highlightedTaskId) {
+    if (highlightedTaskId && tasks.length > 0) {
       const element = rowRefs.current.get(highlightedTaskId);
       if (element) {
         element.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -74,7 +74,7 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
         }, 2000);
       }
     }
-  }, [highlightedTaskId, onHighlightComplete, rowRefs]);
+  }, [highlightedTaskId, onHighlightComplete, rowRefs, tasks]);
 
   const getDueDateClassName = (dueDateStr: string | null, completed: boolean): string => {
     if (!dueDateStr || completed) {

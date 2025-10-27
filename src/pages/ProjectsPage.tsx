@@ -90,6 +90,20 @@ const ProjectsPage = () => {
     sortConfig: finalTaskSortConfig,
   });
 
+  useEffect(() => {
+    if (highlightedTaskId && tasksData.length > 0) {
+      const task = tasksData.find(t => t.id === highlightedTaskId);
+      if (task) {
+        const originalTitle = document.title;
+        document.title = `Task: ${task.title} | ${task.project_name || 'Project'}`;
+        
+        return () => {
+          document.title = originalTitle;
+        };
+      }
+    }
+  }, [highlightedTaskId, tasksData]);
+
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
   const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
   const createProjectMutation = useCreateProject();
