@@ -11,7 +11,9 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 // Import and register the mention module
 import * as Mention from 'quill-mention';
 
-Quill.register('modules/mention', Mention as any);
+// When importing a CommonJS module with a default export via an ES6 import,
+// the actual export is often on the `default` property of the imported object.
+Quill.register('modules/mention', (Mention as any).default);
 
 interface MentionableUser {
   id: string;
