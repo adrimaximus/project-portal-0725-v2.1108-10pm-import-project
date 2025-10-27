@@ -20,8 +20,12 @@ export const useTeamSettingsMutations = (fetchData: () => void) => {
       toast.info(`Sending ${validInvites.length} invite(s)...`);
 
       for (const invite of validInvites) {
-        const { data, error } = await supabase.functions.invoke('invite-user', {
-          body: { email: invite.email, role: invite.role },
+        const { data, error } = await supabase.functions.invoke('create-user-manually', {
+          body: { 
+            email: invite.email, 
+            mode: 'invite',
+            app_metadata: { role: invite.role }
+          },
         });
 
         if (error) {
@@ -151,8 +155,12 @@ export const useTeamSettingsMutations = (fetchData: () => void) => {
         body: { user_id: member.id },
       });
       if (deleteError) throw new Error(`Failed to remove previous invite for ${member.email}: ${deleteError.message}`);
-      const { error: inviteError } = await supabase.functions.invoke('invite-user', {
-        body: { email: member.email, role: member.role },
+      const { error: inviteError } = await supabase.functions.invoke('create-user-manually', {
+        body: { 
+          email: member.email, 
+          mode: 'invite',
+          app_metadata: { role: member.role }
+        },
       });
       if (inviteError) throw new Error(`Failed to resend invite to ${member.email}: ${inviteError.message}`);
       return member;
