@@ -25,7 +25,18 @@ export const useTeamSettingsMutations = (fetchData: () => void) => {
         });
 
         if (error) {
-          toast.error(`Failed to send invite to ${invite.email}: ${getErrorMessage(error)}`);
+          let errorMessage = getErrorMessage(error);
+          if (error.context && typeof error.context.json === 'function') {
+            try {
+              const errorBody = await error.context.json();
+              if (errorBody.error) {
+                errorMessage = errorBody.error;
+              }
+            } catch (e) {
+              // Fallback to default error message
+            }
+          }
+          toast.error(`Failed to send invite to ${invite.email}`, { description: errorMessage });
         } else {
           successCount++;
         }
