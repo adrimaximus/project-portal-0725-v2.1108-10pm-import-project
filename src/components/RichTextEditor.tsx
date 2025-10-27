@@ -1,13 +1,17 @@
 "use client";
 
 import React, { useMemo } from 'react';
-import ReactQuill from 'react-quill';
+import ReactQuill, { Quill } from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import 'quill-mention/dist/quill.mention.css';
-import 'quill-mention'; // Import for side-effects, which automatically registers the module
 import { Button } from '@/components/ui/button';
 import { Sparkles, RefreshCw } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+
+// Import the module and handle potential CJS/ESM interop issues
+import * as MentionModule from 'quill-mention';
+const Mention = (MentionModule as any).default || MentionModule;
+Quill.register('modules/mention', Mention);
 
 interface MentionableUser {
   id: string;
