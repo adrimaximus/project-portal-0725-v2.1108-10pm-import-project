@@ -47,7 +47,7 @@ serve(async (req) => {
 
     const { data, error } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
       redirectTo: redirectTo,
-      data: { role: role } // Pass role to be stored in user_meta_data
+      app_metadata: { role: role } // Pass role to app_metadata
     })
 
     if (error) {
