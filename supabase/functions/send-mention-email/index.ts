@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
@@ -104,7 +103,7 @@ serve(async (req) => {
 
     if (usersToNotify.length === 0) {
       console.log("All mentioned users have disabled email notifications for mentions.");
-      return new Response(JSON.stringify({ message: "No users to notify." }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      return new Response(JSON.stringify({ message: "No users to notify via email." }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
     // 8. Send emails
