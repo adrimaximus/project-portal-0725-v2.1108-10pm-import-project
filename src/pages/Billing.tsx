@@ -13,7 +13,8 @@ import BillingKanbanView from "@/components/billing/BillingKanbanView";
 import { DateRange } from "react-day-picker";
 
 const Billing = () => {
-  const { data: projects = [], isLoading } = useProjects();
+  const { data: projectsData, isLoading } = useProjects();
+  const allProjects = useMemo(() => projectsData?.pages.flat() ?? [], [projectsData]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [sortColumn, setSortColumn] = useState<keyof Invoice>('dueDate');
@@ -22,7 +23,7 @@ const Billing = () => {
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [viewMode, setViewMode] = useState<'table' | 'kanban'>('table');
   
-  const invoices: Invoice[] = useMemo(() => projects
+  const invoices: Invoice[] = useMemo(() => allProjects
     .map(project => {
       const eventDate = project.due_date || project.start_date;
       if (!project.payment_status || !project.budget || !eventDate) {
@@ -61,7 +62,7 @@ const Billing = () => {
         payment_terms: project.payment_terms || [],
       };
     })
-    .filter((invoice): invoice is Invoice => invoice !== null), [projects]);
+    .filter((invoice): invoice is Invoice => invoice !== null), [allProjects]);
 
   const filteredInvoices = useMemo(() => {
     return invoices.filter(invoice => {
@@ -180,7 +181,7 @@ const Billing = () => {
         isOpen={isFormOpen}
         onClose={() => setIsFormOpen(false)}
         invoice={selectedInvoice}
-        project={projects.find(p => p.id === selectedInvoice?.rawProjectId) || null}
+        project={allProjects.find(p => p.id === selectedInvoice?.rawProjectId) || null}
       />
     </PortalLayout>
   );
