@@ -1,19 +1,13 @@
 "use client";
 
 import React, { useMemo } from 'react';
-import ReactQuill, { Quill } from 'react-quill';
+import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import 'quill-mention/dist/quill.mention.css';
+import 'quill-mention'; // Import for side-effects, which automatically registers the module
 import { Button } from '@/components/ui/button';
 import { Sparkles, RefreshCw } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-
-// Import and register the mention module
-import * as Mention from 'quill-mention';
-
-// When importing a CommonJS module with a default export via an ES6 import,
-// the actual export is often on the `default` property of the imported object.
-Quill.register('modules/mention', (Mention as any).default);
 
 interface MentionableUser {
   id: string;
