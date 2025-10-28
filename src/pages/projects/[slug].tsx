@@ -8,8 +8,8 @@ import ProjectActivityFeed from '@/components/project-detail/ProjectActivityFeed
 import ProjectTasks from '@/components/project-detail/ProjectTasks';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { Task } from '@/types';
-import { useTaskMutations, UpsertTaskPayload } from '@/hooks/useTaskMutations';
+import { Task, UpsertTaskPayload } from '@/types';
+import { useTaskMutations } from '@/hooks/useTaskMutations';
 import TaskFormDialog from '@/components/projects/TaskFormDialog';
 import {
   AlertDialog,

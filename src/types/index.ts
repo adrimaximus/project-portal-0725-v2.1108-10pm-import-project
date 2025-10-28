@@ -197,6 +197,8 @@ export interface Project {
   origin_event_id?: string;
   venue?: string;
   created_by: Owner;
+  created_at: string;
+  updated_at: string;
   assignedTo: AssignedUser[];
   tasks?: Task[];
   comments?: Comment[];
@@ -237,7 +239,9 @@ export const PROJECT_STATUS_OPTIONS = [
   { value: 'On Hold', label: 'On Hold' },
   { value: 'Bid Lost', label: 'Bid Lost' },
   { value: 'Cancelled', label: 'Cancelled' },
-];
+] as const;
+
+export type ProjectStatus = typeof PROJECT_STATUS_OPTIONS[number]['value'];
 
 export type PaymentStatus = 'Unpaid' | 'Partially Paid' | 'Paid' | 'Overdue' | 'Pending' | 'In Process' | 'Proposed' | 'Cancelled';
 

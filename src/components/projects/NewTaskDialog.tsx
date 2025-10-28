@@ -1,5 +1,5 @@
 import TaskFormDialog from '@/components/projects/TaskFormDialog';
-import { UpsertTaskPayload } from '@/hooks/useTaskMutations';
+import { UpsertTaskPayload } from '@/types';
 import { User } from '@/types';
 
 interface NewTaskDialogProps {

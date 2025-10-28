@@ -21,9 +21,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useProject } from "@/hooks/useProject";
 import { useProjectMutations } from "@/hooks/useProjectMutations";
 import { toast } from "sonner";
-import { Project, Task } from "@/types";
+import { Project, Task, UpsertTaskPayload } from "@/types";
 import TaskFormDialog from "@/components/projects/TaskFormDialog";
-import { useTaskMutations, UpsertTaskPayload } from "@/hooks/useTaskMutations";
+import { useTaskMutations } from "@/hooks/useTaskMutations";
 import { useTasks } from "@/hooks/useTasks";
 import { Loader2 } from "lucide-react";
 
