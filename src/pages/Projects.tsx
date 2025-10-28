@@ -1,11 +1,11 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams, useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { getDashboardProjects, createProject, updateProjectDetails, deleteProject } from '@/api/projects';
 import { getProjectTasks, upsertTask, deleteTask, toggleTaskCompletion } from '@/api/tasks';
 import { getPeople } from '@/api/people';
-import { Project, Task as ProjectTask, Person } from '@/types';
+import { Project, Task as ProjectTask, Person, UpsertTaskPayload } from '@/types';
 import { toast } from 'sonner';
 
 import ProjectsToolbar from '@/components/projects/ProjectsToolbar';
@@ -18,7 +18,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useTasks } from '@/hooks/useTasks';
 import { useProjects } from '@/hooks/useProjects';
 import { useCreateProject } from '@/hooks/useCreateProject';
-import { useTaskMutations, UpsertTaskPayload } from '@/hooks/useTaskMutations';
+import { useTaskMutations } from '@/hooks/useTaskMutations';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import PortalLayout from '@/components/PortalLayout';
 import { getErrorMessage, formatInJakarta } from '@/lib/utils';
@@ -32,19 +32,27 @@ const ProjectsPage = () => {
   const queryClient = useQueryClient();
   const rowRefs = useRef(new Map<string, HTMLTableRowElement>());
   const { user } = useAuth();
+  const { taskId: taskIdFromParams } = useParams<{ taskId: string }>();
 
-  const view = (searchParams.get('view') as ViewMode) || 'list';
+  const viewFromUrl = searchParams.get('view') as ViewMode;
+  const view = taskIdFromParams ? 'tasks' : viewFromUrl || 'list';
+
   const [kanbanGroupBy, setKanbanGroupBy] = useState<'status' | 'payment_status'>('status');
   const [hideCompletedTasks, setHideCompletedTasks] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const highlightedTaskId = searchParams.get('highlight');
+  
+  const highlightedTaskId = taskIdFromParams || searchParams.get('highlight');
 
   const onHighlightComplete = useCallback(() => {
-    const newSearchParams = new URLSearchParams(searchParams);
-    newSearchParams.delete('highlight');
-    setSearchParams(newSearchParams, { replace: true });
-  }, [searchParams, setSearchParams]);
+    if (taskIdFromParams) {
+      navigate('/projects?view=tasks', { replace: true });
+    } else {
+      const newSearchParams = new URLSearchParams(searchParams);
+      newSearchParams.delete('highlight');
+      setSearchParams(newSearchParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams, taskIdFromParams, navigate]);
 
   const { data: projectsData = [], isLoading: isLoadingProjects, refetch: refetchProjects } = useProjects({ searchTerm });
   
@@ -89,6 +97,20 @@ const ProjectsPage = () => {
     hideCompleted: hideCompletedTasks,
     sortConfig: finalTaskSortConfig,
   });
+
+  useEffect(() => {
+    if (highlightedTaskId && tasksData.length > 0) {
+      const task = tasksData.find(t => t.id === highlightedTaskId);
+      if (task) {
+        const originalTitle = document.title;
+        document.title = `Task: ${task.title} | ${task.project_name || 'Project'}`;
+        
+        return () => {
+          document.title = originalTitle;
+        };
+      }
+    }
+  }, [highlightedTaskId, tasksData]);
 
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
   const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
@@ -196,7 +218,11 @@ const ProjectsPage = () => {
 
   const handleViewChange = (newView: ViewMode | null) => {
     if (newView) {
-      setSearchParams({ view: newView }, { replace: true });
+      if (taskIdFromParams) {
+        navigate(`/projects?view=${newView}`);
+      } else {
+        setSearchParams({ view: newView }, { replace: true });
+      }
       if (scrollContainerRef.current) {
         scrollContainerRef.current.scrollTop = 0;
         scrollContainerRef.current.scrollLeft = 0;
