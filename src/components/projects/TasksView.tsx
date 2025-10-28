@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from "react";
-import { Task as ProjectTask, TaskAttachment, Reaction, User } from "@/types";
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { ProjectTask, TaskAttachment, Reaction, User } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -42,11 +42,29 @@ interface TasksViewProps {
 const aggregateAttachments = (task: ProjectTask): TaskAttachment[] => {
   let attachments: TaskAttachment[] = [...(task.attachments || [])];
   
+  // 1. Add attachments from the modern ticket_attachments field (JSONB)
   if (task.ticket_attachments && task.ticket_attachments.length > 0) {
+    const existingUrls = new Set(attachments.map(a => a.file_url));
     const uniqueTicketAttachments = task.ticket_attachments.filter(
-      (ticketAtt) => !attachments.some((att) => att.file_url === ticketAtt.file_url)
+      (ticketAtt) => ticketAtt.file_url && !existingUrls.has(ticketAtt.file_url)
     );
     attachments = [...attachments, ...uniqueTicketAttachments];
+  }
+
+  // 2. Add attachment from legacy fields if it exists and is not already included
+  if (task.attachment_url && task.attachment_name) {
+    const existingUrls = new Set(attachments.map(a => a.file_url));
+    if (!existingUrls.has(task.attachment_url)) {
+      attachments.push({
+        id: task.originTicketId || `legacy-${task.id}`, // Use origin ticket ID if available
+        file_name: task.attachment_name,
+        file_url: task.attachment_url,
+        file_type: null,
+        file_size: null,
+        storage_path: '', // Not available for legacy
+        created_at: task.created_at, // Approximate time
+      });
+    }
   }
 
   return attachments;
@@ -342,8 +360,9 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
             const handleCopyLink = (e: Event) => {
               e.stopPropagation();
               const url = `${window.location.origin}/projects?view=tasks&highlight=${task.id}`;
-              navigator.clipboard.writeText(url);
-              toast.success("Link to task copied!");
+              const textToCopy = `${task.project_name || 'Project'} | ${task.title}\n${url}`;
+              navigator.clipboard.writeText(textToCopy);
+              toast.success("Link to task copied to clipboard!");
             };
 
             return (

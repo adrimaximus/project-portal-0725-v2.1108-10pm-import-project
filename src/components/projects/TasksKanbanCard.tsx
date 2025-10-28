@@ -1,4 +1,4 @@
-import { Task, TaskAttachment } from '@/types';
+import { Task, TaskAttachment, Reaction, User } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -29,13 +29,32 @@ interface TasksKanbanCardProps {
 // Utility function to aggregate attachments
 const aggregateAttachments = (task: Task): TaskAttachment[] => {
   let attachments: TaskAttachment[] = [...(task.attachments || [])];
+  
+  // 1. Add attachments from the modern ticket_attachments field (JSONB)
   if (task.ticket_attachments && task.ticket_attachments.length > 0) {
     const existingUrls = new Set(attachments.map(a => a.file_url));
     const uniqueTicketAttachments = task.ticket_attachments.filter(
-      (ticketAtt) => !attachments.some((att) => att.file_url === ticketAtt.file_url)
+      (ticketAtt) => ticketAtt.file_url && !existingUrls.has(ticketAtt.file_url)
     );
     attachments = [...attachments, ...uniqueTicketAttachments];
   }
+
+  // 2. Add attachment from legacy fields if it exists and is not already included
+  if (task.attachment_url && task.attachment_name) {
+    const existingUrls = new Set(attachments.map(a => a.file_url));
+    if (!existingUrls.has(task.attachment_url)) {
+      attachments.push({
+        id: task.originTicketId || `legacy-${task.id}`, // Use origin ticket ID if available
+        file_name: task.attachment_name,
+        file_url: task.attachment_url,
+        file_type: null,
+        file_size: null,
+        storage_path: '', // Not available for legacy
+        created_at: task.created_at, // Approximate time
+      });
+    }
+  }
+
   return attachments;
 };
 
