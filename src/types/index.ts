@@ -18,7 +18,7 @@ export interface User {
 }
 
 export interface Collaborator extends User {
-  role: string;
+  role?: string;
 }
 
 export interface Owner extends User {}
@@ -365,7 +365,7 @@ export interface Conversation {
   lastMessageTimestamp: string;
   unreadCount: number;
   isGroup: boolean;
-  members: Collaborator[];
+  members: User[];
   messages: Message[];
   created_by: string;
 }

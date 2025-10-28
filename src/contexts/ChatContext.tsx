@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useAuth } from './AuthContext';
 import * as chatApi from '@/lib/chatApi';
-import { Conversation, Message, Collaborator, Reaction } from '@/types/index';
+import { Conversation, Message, Collaborator, Reaction, User } from '@/types/index';
 import debounce from 'lodash.debounce';
 import { ForwardMessageDialog } from '@/components/ForwardMessageDialog';
 import { v4 as uuidv4 } from 'uuid';
