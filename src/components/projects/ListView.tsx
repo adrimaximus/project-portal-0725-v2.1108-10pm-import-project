@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback, useRef } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Project } from '@/types';
 import { useNavigate } from 'react-router-dom';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -28,6 +28,8 @@ interface ListViewProps {
   hasNextPage?: boolean;
   isFetchingNextPage: boolean;
 }
+
+const ITEMS_PER_PAGE = 10;
 
 const formatProjectDateRange = (startDateStr: string | null | undefined, dueDateStr: string | null | undefined): string => {
   if (!startDateStr) return '-';
@@ -191,18 +193,8 @@ const DayEntry = ({ dateStr, projectsOnDay, showMonthHeader, onDeleteProject, na
 
 const ListView = ({ projects, onDeleteProject, onLoadMore, hasNextPage, isFetchingNextPage }: ListViewProps) => {
   const navigate = useNavigate();
-  
-  const observer = useRef<IntersectionObserver>();
-  const lastElementRef = useCallback((node: HTMLDivElement) => {
-    if (isFetchingNextPage) return;
-    if (observer.current) observer.current.disconnect();
-    observer.current = new IntersectionObserver(entries => {
-      if (entries[0].isIntersecting && hasNextPage) {
-        onLoadMore();
-      }
-    });
-    if (node) observer.current.observe(node);
-  }, [isFetchingNextPage, hasNextPage, onLoadMore]);
+  const [visibleUpcomingCount, setVisibleUpcomingCount] = useState(ITEMS_PER_PAGE);
+  const [visiblePastCount, setVisiblePastCount] = useState(ITEMS_PER_PAGE);
 
   const { upcomingDayEntries, pastDayEntries } = useMemo(() => {
     const today = startOfToday();
@@ -234,6 +226,24 @@ const ListView = ({ projects, onDeleteProject, onLoadMore, hasNextPage, isFetchi
     };
   }, [projects]);
 
+  const visibleUpcomingDayEntries = upcomingDayEntries.slice(0, visibleUpcomingCount);
+  const hasMoreUpcoming = upcomingDayEntries.length > visibleUpcomingCount;
+
+  const visiblePastDayEntries = pastDayEntries.slice(0, visiblePastCount);
+  const hasMorePastLocally = pastDayEntries.length > visiblePastCount;
+
+  const handleLoadMoreUpcoming = () => {
+    setVisibleUpcomingCount(prev => prev + ITEMS_PER_PAGE);
+  };
+
+  const handleLoadMorePast = () => {
+    if (hasMorePastLocally) {
+      setVisiblePastCount(prev => prev + ITEMS_PER_PAGE);
+    } else if (hasNextPage) {
+      onLoadMore();
+    }
+  };
+
   let lastUpcomingMonth: string | null = null;
   let lastPastMonth: string | null = null;
 
@@ -247,18 +257,22 @@ const ListView = ({ projects, onDeleteProject, onLoadMore, hasNextPage, isFetchi
 
   return (
     <div className="space-y-4">
-      {upcomingDayEntries.map(([dateStr, projectsOnDay], index) => {
-        const isLastUpcoming = index === upcomingDayEntries.length - 1;
-        const isLastElementOverall = isLastUpcoming && pastDayEntries.length === 0;
+      {visibleUpcomingDayEntries.map(([dateStr, projectsOnDay]) => {
         const currentMonth = formatInJakarta(new Date(`${dateStr}T00:00:00`), 'MMMM yyyy');
         const showMonthHeader = currentMonth !== lastUpcomingMonth;
         if (showMonthHeader) lastUpcomingMonth = currentMonth;
         return (
-          <div key={dateStr} ref={isLastElementOverall ? lastElementRef : null}>
-            <DayEntry dateStr={dateStr} projectsOnDay={projectsOnDay} showMonthHeader={showMonthHeader} onDeleteProject={onDeleteProject} navigate={navigate} />
-          </div>
+          <DayEntry key={dateStr} dateStr={dateStr} projectsOnDay={projectsOnDay} showMonthHeader={showMonthHeader} onDeleteProject={onDeleteProject} navigate={navigate} />
         );
       })}
+
+      {hasMoreUpcoming && (
+        <div className="text-center py-4">
+          <Button variant="outline" onClick={handleLoadMoreUpcoming}>
+            Load More Upcoming
+          </Button>
+        </div>
+      )}
 
       {pastDayEntries.length > 0 && (
         <div className="relative my-8">
@@ -273,21 +287,24 @@ const ListView = ({ projects, onDeleteProject, onLoadMore, hasNextPage, isFetchi
         </div>
       )}
 
-      {pastDayEntries.map(([dateStr, projectsOnDay], index) => {
-        const isLast = index === pastDayEntries.length - 1;
+      {visiblePastDayEntries.map(([dateStr, projectsOnDay]) => {
         const currentMonth = formatInJakarta(new Date(`${dateStr}T00:00:00`), 'MMMM yyyy');
         const showMonthHeader = currentMonth !== lastPastMonth;
         if (showMonthHeader) lastPastMonth = currentMonth;
         return (
-          <div key={dateStr} ref={isLast ? lastElementRef : null}>
-            <DayEntry dateStr={dateStr} projectsOnDay={projectsOnDay} showMonthHeader={showMonthHeader} onDeleteProject={onDeleteProject} navigate={navigate} isPast />
-          </div>
+          <DayEntry key={dateStr} dateStr={dateStr} projectsOnDay={projectsOnDay} showMonthHeader={showMonthHeader} onDeleteProject={onDeleteProject} navigate={navigate} isPast />
         );
       })}
 
-      {isFetchingNextPage && (
-        <div className="flex justify-center items-center py-4">
-          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+      {(hasMorePastLocally || hasNextPage) && (
+        <div className="text-center py-4">
+          <Button variant="outline" onClick={handleLoadMorePast} disabled={isFetchingNextPage}>
+            {isFetchingNextPage ? (
+              <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading...</>
+            ) : (
+              'Load More Past'
+            )}
+          </Button>
         </div>
       )}
     </div>
