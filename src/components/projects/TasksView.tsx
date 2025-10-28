@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { ProjectTask, TaskAttachment, Reaction, User } from '@/types';
+import { Task as ProjectTask, TaskAttachment, Reaction, User } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -328,297 +328,302 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
             <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => requestSort('updated_at')}>
               Last Updated
             </TableHead>
-            <TableHead className="text-right">Actions</TableHead>
+            <TableHead className="text-right sticky right-0 bg-card z-10">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {tasks.map(task => {
-            const effectivePriority = getEffectivePriority(task);
-            const statusStyle = getTaskStatusStyles(task.status);
-            const priorityStyle = getPriorityStyles(effectivePriority);
-            const allAttachments = aggregateAttachments(task);
-            const hasAssignees = task.assignedTo && task.assignedTo.length > 0;
-            const reactions = task.reactions || [];
-            const hasBottomBar = hasAssignees || reactions.length > 0 || (task.originTicketId || task.tags?.some(t => t.name === 'Ticket')) || allAttachments.length > 0;
+          {isLoading ? (
+            <TableRow><TableCell colSpan={7} className="text-center h-24">Loading tasks...</TableCell></TableRow>
+          ) : tasks.length === 0 ? (
+            <TableRow><TableCell colSpan={7} className="text-center h-24">No tasks found.</TableCell></TableRow>
+          ) : (
+            tasks.map(task => {
+              const effectivePriority = getEffectivePriority(task);
+              const statusStyle = getTaskStatusStyles(task.status);
+              const priorityStyle = getPriorityStyles(effectivePriority);
+              const allAttachments = aggregateAttachments(task);
+              const hasAssignees = task.assignedTo && task.assignedTo.length > 0;
+              const reactions = task.reactions || [];
+              const hasBottomBar = hasAssignees || reactions.length > 0 || (task.originTicketId || task.tags?.some(t => t.name === 'Ticket')) || allAttachments.length > 0;
 
-            const groupedReactions = reactions.reduce((acc, reaction) => {
-                if (!acc[reaction.emoji]) {
-                    acc[reaction.emoji] = { users: [], userIds: [] };
-                }
-                acc[reaction.emoji].users.push(reaction.user_name);
-                acc[reaction.emoji].userIds.push(reaction.user_id);
-                return acc;
-            }, {} as Record<string, { users: string[]; userIds: string[] }>);
+              const groupedReactions = reactions.reduce((acc, reaction) => {
+                  if (!acc[reaction.emoji]) {
+                      acc[reaction.emoji] = { users: [], userIds: [] };
+                  }
+                  acc[reaction.emoji].users.push(reaction.user_name);
+                  acc[reaction.emoji].userIds.push(reaction.user_id);
+                  return acc;
+              }, {} as Record<string, { users: string[]; userIds: string[] }>);
 
-            const taskMonthYear = task.due_date ? format(new Date(task.due_date), 'MMMM yyyy') : 'No Due Date';
-            let showMonthSeparator = false;
-            if (isDateSorted && taskMonthYear !== lastMonthYear) {
-              showMonthSeparator = true;
-              lastMonthYear = taskMonthYear;
-            }
+              const taskMonthYear = task.due_date ? format(new Date(task.due_date), 'MMMM yyyy') : 'No Due Date';
+              let showMonthSeparator = false;
+              if (isDateSorted && taskMonthYear !== lastMonthYear) {
+                showMonthSeparator = true;
+                lastMonthYear = taskMonthYear;
+              }
 
-            const handleCopyLink = (e: Event) => {
-              e.stopPropagation();
-              const url = `${window.location.origin}/projects?view=tasks&highlight=${task.id}`;
-              const textToCopy = `${task.project_name || 'Project'} | ${task.title}\n${url}`;
-              navigator.clipboard.writeText(textToCopy);
-              toast.success("Link to task copied to clipboard!");
-            };
+              const handleCopyLink = (e: Event) => {
+                e.stopPropagation();
+                const url = `${window.location.origin}/projects?view=tasks&highlight=${task.id}`;
+                const textToCopy = `${task.project_name || 'Project'} | ${task.title}\n${url}`;
+                navigator.clipboard.writeText(textToCopy);
+                toast.success("Link to task copied to clipboard!");
+              };
 
-            return (
-              <React.Fragment key={task.id}>
-                {showMonthSeparator && (
-                  <TableRow className="border-none hover:bg-transparent">
-                    <TableCell colSpan={7} className="pt-6 pb-2 px-4 text-sm font-semibold text-foreground">
-                      {taskMonthYear}
-                    </TableCell>
-                  </TableRow>
-                )}
-                <Dialog onOpenChange={(isOpen) => { if (!isOpen) setSelectedTask(null); }}>
-                  <TableRow 
-                    ref={el => {
-                      if (el) rowRefs.current.set(task.id, el);
-                      else rowRefs.current.delete(task.id);
-                    }}
-                    data-state={task.completed ? "completed" : ""}
-                  >
-                    <TableCell className="font-medium sticky left-0 bg-background z-10 w-[40%] sm:w-[30%]">
-                      <div className="flex items-start gap-3">
-                        <div onClick={(e) => e.stopPropagation()}>
-                          <Checkbox
-                            id={`task-${task.id}`}
-                            checked={task.completed}
-                            onCheckedChange={(checked) => onToggleTaskCompletion(task, !!checked)}
-                            aria-label={`Mark task ${task.title} as complete`}
-                            className="mt-1"
-                            disabled={isToggling}
-                          />
-                        </div>
-                        <DialogTrigger asChild>
-                          <div className="flex flex-col cursor-pointer text-sm md:text-base w-full" onClick={() => setSelectedTask(task)}>
-                            <div className="flex items-center gap-2">
-                              <div className={`${task.completed ? 'line-through text-muted-foreground' : ''}`}>
-                                <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ p: 'span' }}>
-                                  {formatTaskText(task.title)}
-                                </ReactMarkdown>
+              return (
+                <React.Fragment key={task.id}>
+                  {showMonthSeparator && (
+                    <TableRow className="border-none hover:bg-transparent">
+                      <TableCell colSpan={7} className="pt-6 pb-2 px-4 text-sm font-semibold text-foreground">
+                        {taskMonthYear}
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  <Dialog onOpenChange={(isOpen) => { if (!isOpen) setSelectedTask(null); }}>
+                    <TableRow 
+                      ref={el => {
+                        if (el) rowRefs.current.set(task.id, el);
+                        else rowRefs.current.delete(task.id);
+                      }}
+                      data-state={task.completed ? "completed" : ""}
+                    >
+                      <TableCell className="font-medium sticky left-0 bg-background z-10 w-[40%] sm:w-[30%]">
+                        <div className="flex items-start gap-3">
+                          <div onClick={(e) => e.stopPropagation()}>
+                            <Checkbox
+                              id={`task-${task.id}`}
+                              checked={task.completed}
+                              onCheckedChange={(checked) => onToggleTaskCompletion(task, !!checked)}
+                              aria-label={`Mark task ${task.title} as complete`}
+                              className="mt-1"
+                              disabled={isToggling}
+                            />
+                          </div>
+                          <DialogTrigger asChild>
+                            <div className="flex flex-col cursor-pointer text-sm md:text-base w-full" onClick={() => setSelectedTask(task)}>
+                              <div className="flex items-center gap-2">
+                                <div className={`${task.completed ? 'line-through text-muted-foreground' : ''}`}>
+                                  <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ p: 'span' }}>
+                                    {formatTaskText(task.title)}
+                                  </ReactMarkdown>
+                                </div>
                               </div>
-                            </div>
-                            {task.originTicketId && task.created_by && (
-                              <p className="text-xs text-muted-foreground mt-1">
-                                From: {task.created_by.email}
-                              </p>
-                            )}
-                            {task.description && (
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <p className="text-xs text-muted-foreground mt-1">
-                                      {formatTaskText(task.description, 50)}
-                                    </p>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p className="max-w-xs">{formatTaskText(task.description)}</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            )}
-                            {hasBottomBar && (
-                              <div className="flex justify-between items-center border-t pt-1 mt-1">
-                                <div className="flex items-center gap-2">
-                                  {hasAssignees && (
-                                    <div className="flex items-center -space-x-2">
-                                      {task.assignedTo?.map((user) => (
-                                        <TooltipProvider key={user.id}>
-                                          <Tooltip>
-                                            <TooltipTrigger asChild>
-                                              <Link to="/chat" state={{ recipient: user }} onClick={(e) => e.stopPropagation()}>
-                                                <Avatar className="h-6 w-6 border-2 border-background">
-                                                  <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
-                                                  <AvatarFallback style={generatePastelColor(user.id)}>
-                                                    {getInitials([user.first_name, user.last_name].filter(Boolean).join(' '), user.email || undefined)}
-                                                  </AvatarFallback>
-                                                </Avatar>
-                                              </Link>
-                                            </TooltipTrigger>
-                                            <TooltipContent>
-                                              <p>{[user.first_name, user.last_name].filter(Boolean).join(' ')}</p>
-                                            </TooltipContent>
-                                          </Tooltip>
-                                        </TooltipProvider>
-                                      ))}
+                              {task.originTicketId && task.created_by && (
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  From: {task.created_by.email}
+                                </p>
+                              )}
+                              {task.description && (
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <p className="text-xs text-muted-foreground mt-1">
+                                        {formatTaskText(task.description, 50)}
+                                      </p>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p className="max-w-xs">{formatTaskText(task.description)}</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              )}
+                              {hasBottomBar && (
+                                <div className="flex justify-between items-center border-t pt-1 mt-1">
+                                  <div className="flex items-center gap-2">
+                                    {hasAssignees && (
+                                      <div className="flex items-center -space-x-2">
+                                        {task.assignedTo?.map((user) => (
+                                          <TooltipProvider key={user.id}>
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <Link to="/chat" state={{ recipient: user }} onClick={(e) => e.stopPropagation()}>
+                                                  <Avatar className="h-6 w-6 border-2 border-background">
+                                                    <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
+                                                    <AvatarFallback style={generatePastelColor(user.id)}>
+                                                      {getInitials([user.first_name, user.last_name].filter(Boolean).join(' '), user.email || undefined)}
+                                                    </AvatarFallback>
+                                                  </Avatar>
+                                                </Link>
+                                              </TooltipTrigger>
+                                              <TooltipContent>
+                                                <p>{[user.first_name, user.last_name].filter(Boolean).join(' ')}</p>
+                                              </TooltipContent>
+                                            </Tooltip>
+                                          </TooltipProvider>
+                                        ))}
+                                      </div>
+                                    )}
+                                    <div className="flex items-center gap-1 flex-wrap">
+                                      {Object.entries(groupedReactions).map(([emoji, { users, userIds }]) => {
+                                          const userHasReacted = user ? userIds.includes(user.id) : false;
+                                          return (
+                                              <TooltipProvider key={emoji}>
+                                                  <Tooltip>
+                                                      <TooltipTrigger asChild>
+                                                          <button
+                                                              onClick={(e) => {
+                                                                  e.stopPropagation();
+                                                                  handleEmojiSelect(emoji, task.id);
+                                                              }}
+                                                              className={cn(
+                                                                  "px-1.5 py-0.5 rounded-full text-xs flex items-center gap-1 transition-colors border",
+                                                                  userHasReacted
+                                                                  ? "bg-primary/20 border-primary/50"
+                                                                  : "bg-muted hover:bg-muted/80"
+                                                              )}
+                                                          >
+                                                              <span>{emoji}</span>
+                                                              <span className="font-medium text-xs">{users.length}</span>
+                                                          </button>
+                                                      </TooltipTrigger>
+                                                      <TooltipContent>
+                                                          <p>{users.join(', ')}</p>
+                                                      </TooltipContent>
+                                                  </Tooltip>
+                                              </TooltipProvider>
+                                          );
+                                      })}
                                     </div>
-                                  )}
-                                  <div className="flex items-center gap-1 flex-wrap">
-                                    {Object.entries(groupedReactions).map(([emoji, { users, userIds }]) => {
-                                        const userHasReacted = user ? userIds.includes(user.id) : false;
-                                        return (
-                                            <TooltipProvider key={emoji}>
-                                                <Tooltip>
-                                                    <TooltipTrigger asChild>
-                                                        <button
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                handleEmojiSelect(emoji, task.id);
-                                                            }}
-                                                            className={cn(
-                                                                "px-1.5 py-0.5 rounded-full text-xs flex items-center gap-1 transition-colors border",
-                                                                userHasReacted
-                                                                ? "bg-primary/20 border-primary/50"
-                                                                : "bg-muted hover:bg-muted/80"
-                                                            )}
-                                                        >
-                                                            <span>{emoji}</span>
-                                                            <span className="font-medium text-xs">{users.length}</span>
-                                                        </button>
-                                                    </TooltipTrigger>
-                                                    <TooltipContent>
-                                                        <p>{users.join(', ')}</p>
-                                                    </TooltipContent>
-                                                </Tooltip>
-                                            </TooltipProvider>
-                                        );
-                                    })}
+                                  </div>
+                                  <div className="flex justify-end gap-1 items-center mr-1">
+                                    <Popover>
+                                      <PopoverTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={e => e.stopPropagation()}>
+                                          <SmilePlus className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                                        </Button>
+                                      </PopoverTrigger>
+                                      <PopoverContent onClick={e => e.stopPropagation()} className="p-1 w-auto rounded-full bg-background border shadow-lg">
+                                        <div className="flex items-center gap-1">
+                                          {commonEmojis.map(emoji => (
+                                            <button
+                                              key={emoji}
+                                              className="hover:bg-muted rounded-full p-1 transition-transform transform hover:scale-125"
+                                              onClick={() => handleEmojiSelect(emoji, task.id)}
+                                            >
+                                              <span className="text-xl">{emoji}</span>
+                                            </button>
+                                          ))}
+                                          <Popover>
+                                            <PopoverTrigger asChild>
+                                              <button className="hover:bg-muted rounded-full p-1.5 transition-transform transform hover:scale-125">
+                                                <SmilePlus className="h-5 w-5 text-muted-foreground" />
+                                              </button>
+                                            </PopoverTrigger>
+                                            <PopoverContent
+                                              onClick={(e) => e.stopPropagation()}
+                                              className="p-0 w-auto border-0"
+                                              side="bottom"
+                                              align="start"
+                                              sideOffset={8}
+                                            >
+                                              <EmojiPicker
+                                                onEmojiClick={(emojiObject) => {
+                                                  handleEmojiSelect(emojiObject.emoji, task.id);
+                                                }}
+                                                emojiStyle={EmojiStyle.NATIVE}
+                                                previewConfig={{ showPreview: false }}
+                                                width={350}
+                                                height={400}
+                                              />
+                                            </PopoverContent>
+                                          </Popover>
+                                        </div>
+                                      </PopoverContent>
+                                    </Popover>
+                                    {(task.originTicketId || task.tags?.some(t => t.name === 'Ticket')) && (
+                                      <TooltipProvider>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <Ticket className={`h-4 w-4 flex-shrink-0 ${task.completed ? 'text-green-500' : 'text-red-500'}`} />
+                                          </TooltipTrigger>
+                                          <TooltipContent>
+                                            <p>This is a ticket</p>
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
+                                    )}
+                                    {renderAttachments(task, allAttachments)}
                                   </div>
                                 </div>
-                                <div className="flex justify-end gap-1 items-center mr-1">
-                                  <Popover>
-                                    <PopoverTrigger asChild>
-                                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={e => e.stopPropagation()}>
-                                        <SmilePlus className="h-4 w-4 text-muted-foreground hover:text-foreground" />
-                                      </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent onClick={e => e.stopPropagation()} className="p-1 w-auto rounded-full bg-background border shadow-lg">
-                                      <div className="flex items-center gap-1">
-                                        {commonEmojis.map(emoji => (
-                                          <button
-                                            key={emoji}
-                                            className="hover:bg-muted rounded-full p-1 transition-transform transform hover:scale-125"
-                                            onClick={() => handleEmojiSelect(emoji, task.id)}
-                                          >
-                                            <span className="text-xl">{emoji}</span>
-                                          </button>
-                                        ))}
-                                        <Popover>
-                                          <PopoverTrigger asChild>
-                                            <button className="hover:bg-muted rounded-full p-1.5 transition-transform transform hover:scale-125">
-                                              <SmilePlus className="h-5 w-5 text-muted-foreground" />
-                                            </button>
-                                          </PopoverTrigger>
-                                          <PopoverContent
-                                            onClick={(e) => e.stopPropagation()}
-                                            className="p-0 w-auto border-0"
-                                            side="bottom"
-                                            align="start"
-                                            sideOffset={8}
-                                          >
-                                            <EmojiPicker
-                                              onEmojiClick={(emojiObject) => {
-                                                handleEmojiSelect(emojiObject.emoji, task.id);
-                                              }}
-                                              emojiStyle={EmojiStyle.NATIVE}
-                                              previewConfig={{ showPreview: false }}
-                                              width={350}
-                                              height={400}
-                                            />
-                                          </PopoverContent>
-                                        </Popover>
-                                      </div>
-                                    </PopoverContent>
-                                  </Popover>
-                                  {(task.originTicketId || task.tags?.some(t => t.name === 'Ticket')) && (
-                                    <TooltipProvider>
-                                      <Tooltip>
-                                        <TooltipTrigger asChild>
-                                          <Ticket className={`h-4 w-4 flex-shrink-0 ${task.completed ? 'text-green-500' : 'text-red-500'}`} />
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                          <p>This is a ticket</p>
-                                        </TooltipContent>
-                                      </Tooltip>
-                                    </TooltipProvider>
-                                  )}
-                                  {renderAttachments(task, allAttachments)}
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        </DialogTrigger>
-                      </div>
-                    </TableCell>
-                    <TableCell className="w-[20%]">
-                      {task.project_name && task.project_name !== 'General Tasks' ? (
-                        <Link to={`/projects/${task.project_slug}`} className="hover:underline text-primary text-xs block max-w-[50ch] break-words">
-                          {task.project_name}
-                        </Link>
-                      ) : null}
-                    </TableCell>
-                    <TableCell>
-                      {task.due_date && isOverdue(task.due_date) && !task.completed ? (
-                        <Badge className="bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400 border-transparent">Overdue</Badge>
-                      ) : (
-                        <Badge className={cn(statusStyle.tw, 'border-transparent')}>{task.status}</Badge>
+                              )}
+                            </div>
+                          </DialogTrigger>
+                        </div>
+                      </TableCell>
+                      <TableCell className="w-[20%]">
+                        {task.project_name && task.project_name !== 'General Tasks' ? (
+                          <Link to={`/projects/${task.project_slug}`} className="hover:underline text-primary text-xs block max-w-[50ch] break-words">
+                            {task.project_name}
+                          </Link>
+                        ) : null}
+                      </TableCell>
+                      <TableCell>
+                        {task.due_date && isOverdue(task.due_date) && !task.completed ? (
+                          <Badge className="bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400 border-transparent">Overdue</Badge>
+                        ) : (
+                          <Badge className={cn(statusStyle.tw, 'border-transparent')}>{task.status}</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={priorityStyle.tw}>{effectivePriority}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        {task.due_date ? (
+                          <span className={getDueDateClassName(task.due_date, task.completed)}>
+                            {format(new Date(task.due_date), "MMM d, yyyy, p")}
+                          </span>
+                        ) : <span className="text-muted-foreground text-xs">No due date</span>}
+                      </TableCell>
+                      <TableCell>
+                        {task.updated_at ? (
+                          <span className="text-muted-foreground text-xs">
+                            {format(new Date(task.updated_at), "MMM d, yyyy, p")}
+                          </span>
+                        ) : <span className="text-muted-foreground text-xs">-</span>}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div onClick={(e) => e.stopPropagation()}>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onSelect={() => onEdit(task)}>
+                                <Edit className="mr-2 h-4 w-4" />
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onSelect={handleCopyLink}>
+                                <LinkIcon className="mr-2 h-4 w-4" />
+                                Copy Link
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                className="text-red-500"
+                                onSelect={() => onDelete(task.id)}
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                    <DialogContent>
+                      {selectedTask && (
+                        <TaskDetailCard
+                          task={selectedTask}
+                          onClose={() => setSelectedTask(null)}
+                          onEdit={onEdit}
+                          onDelete={onDelete}
+                        />
                       )}
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={priorityStyle.tw}>{effectivePriority}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      {task.due_date ? (
-                        <span className={getDueDateClassName(task.due_date, task.completed)}>
-                          {format(new Date(task.due_date), "MMM d, yyyy, p")}
-                        </span>
-                      ) : <span className="text-muted-foreground text-xs">No due date</span>}
-                    </TableCell>
-                    <TableCell>
-                      {task.updated_at ? (
-                        <span className="text-muted-foreground text-xs">
-                          {format(new Date(task.updated_at), "MMM d, yyyy, p")}
-                        </span>
-                      ) : <span className="text-muted-foreground text-xs">-</span>}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div onClick={(e) => e.stopPropagation()}>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onSelect={() => onEdit(task)}>
-                              <Edit className="mr-2 h-4 w-4" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onSelect={handleCopyLink}>
-                              <LinkIcon className="mr-2 h-4 w-4" />
-                              Copy Link
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              className="text-red-500"
-                              onSelect={() => onDelete(task.id)}
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                  <DialogContent>
-                    {selectedTask && (
-                      <TaskDetailCard
-                        task={selectedTask}
-                        onClose={() => setSelectedTask(null)}
-                        onEdit={onEdit}
-                        onDelete={onDelete}
-                      />
-                    )}
-                  </DialogContent>
-                </Dialog>
-              </React.Fragment>
-            )
-          })}
+                    </DialogContent>
+                  </Dialog>
+                </React.Fragment>
+              )
+            })}
         </TableBody>
       </Table>
     </div>
