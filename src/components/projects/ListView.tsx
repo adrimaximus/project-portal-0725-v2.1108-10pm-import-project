@@ -29,7 +29,7 @@ interface ListViewProps {
   isFetchingNextPage: boolean;
 }
 
-const ITEMS_PER_PAGE = 5;
+const DAYS_PER_PAGE = 7; // Show 7 days worth of projects at a time
 
 const formatProjectDateRange = (startDateStr: string | null | undefined, dueDateStr: string | null | undefined): string => {
   if (!startDateStr) return '-';
@@ -193,8 +193,8 @@ const DayEntry = ({ dateStr, projectsOnDay, showMonthHeader, onDeleteProject, na
 
 const ListView = ({ projects, onDeleteProject, onLoadMore, hasNextPage, isFetchingNextPage }: ListViewProps) => {
   const navigate = useNavigate();
-  const [visibleUpcomingCount, setVisibleUpcomingCount] = useState(ITEMS_PER_PAGE);
-  const [visiblePastCount, setVisiblePastCount] = useState(ITEMS_PER_PAGE);
+  const [visibleUpcomingDays, setVisibleUpcomingDays] = useState(DAYS_PER_PAGE);
+  const [visiblePastDays, setVisiblePastDays] = useState(DAYS_PER_PAGE);
 
   const { upcomingProjects, pastProjects } = useMemo(() => {
     const today = startOfToday();
@@ -211,12 +211,6 @@ const ListView = ({ projects, onDeleteProject, onLoadMore, hasNextPage, isFetchi
     return { upcomingProjects: upcoming, pastProjects: past };
   }, [projects]);
 
-  const visibleUpcomingProjects = upcomingProjects.slice(0, visibleUpcomingCount);
-  const hasMoreUpcoming = upcomingProjects.length > visibleUpcomingCount;
-
-  const visiblePastProjects = pastProjects.slice(0, visiblePastCount);
-  const hasMorePastLocally = pastProjects.length > visiblePastCount;
-
   const groupProjectsByDay = (projectList: Project[]) => {
     const grouped = projectList.reduce((acc, project) => {
       const dateKey = formatInJakarta(project.start_date!, 'yyyy-MM-dd');
@@ -226,19 +220,25 @@ const ListView = ({ projects, onDeleteProject, onLoadMore, hasNextPage, isFetchi
       acc[dateKey].push(project);
       return acc;
     }, {} as Record<string, Project[]>);
-    return Object.entries(grouped);
+    return Object.entries(grouped).sort((a, b) => new Date(a[0]).getTime() - new Date(b[0]).getTime());
   };
 
-  const upcomingDayEntries = useMemo(() => groupProjectsByDay(visibleUpcomingProjects), [visibleUpcomingProjects]);
-  const pastDayEntries = useMemo(() => groupProjectsByDay(visiblePastProjects), [visiblePastProjects]);
+  const upcomingDayEntries = useMemo(() => groupProjectsByDay(upcomingProjects), [upcomingProjects]);
+  const pastDayEntries = useMemo(() => groupProjectsByDay(pastProjects).sort((a, b) => new Date(b[0]).getTime() - new Date(a[0]).getTime()), [pastProjects]);
+
+  const visibleUpcomingDayEntries = upcomingDayEntries.slice(0, visibleUpcomingDays);
+  const hasMoreUpcoming = upcomingDayEntries.length > visibleUpcomingDays;
+
+  const visiblePastDayEntries = pastDayEntries.slice(0, visiblePastDays);
+  const hasMorePastLocally = pastDayEntries.length > visiblePastDays;
 
   const handleLoadMoreUpcoming = () => {
-    setVisibleUpcomingCount(prev => prev + ITEMS_PER_PAGE);
+    setVisibleUpcomingDays(prev => prev + DAYS_PER_PAGE);
   };
 
   const handleLoadMorePast = () => {
     if (hasMorePastLocally) {
-      setVisiblePastCount(prev => prev + ITEMS_PER_PAGE);
+      setVisiblePastDays(prev => prev + DAYS_PER_PAGE);
     } else if (hasNextPage) {
       onLoadMore();
     }
@@ -257,7 +257,7 @@ const ListView = ({ projects, onDeleteProject, onLoadMore, hasNextPage, isFetchi
 
   return (
     <div className="space-y-4">
-      {upcomingDayEntries.map(([dateStr, projectsOnDay]) => {
+      {visibleUpcomingDayEntries.map(([dateStr, projectsOnDay]) => {
         const currentMonth = formatInJakarta(new Date(`${dateStr}T00:00:00`), 'MMMM yyyy');
         const showMonthHeader = currentMonth !== lastUpcomingMonth;
         if (showMonthHeader) lastUpcomingMonth = currentMonth;
@@ -287,7 +287,7 @@ const ListView = ({ projects, onDeleteProject, onLoadMore, hasNextPage, isFetchi
         </div>
       )}
 
-      {pastDayEntries.map(([dateStr, projectsOnDay]) => {
+      {visiblePastDayEntries.map(([dateStr, projectsOnDay]) => {
         const currentMonth = formatInJakarta(new Date(`${dateStr}T00:00:00`), 'MMMM yyyy');
         const showMonthHeader = currentMonth !== lastPastMonth;
         if (showMonthHeader) lastPastMonth = currentMonth;
