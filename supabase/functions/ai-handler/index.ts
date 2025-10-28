@@ -327,7 +327,8 @@ const executeAction = async (actionData: any, context: any) => {
                     p_due_date: updates.due_date || project.due_date,
                     p_payment_status: updates.payment_status || project.payment_status,
                     p_payment_due_date: updates.payment_due_date || project.payment_due_date,
-                    p_members: project.assignedTo.map((m: any) => m.id), // This RPC requires all members, not just changes
+                    p_venue: updates.venue || project.venue,
+                    p_member_ids: project.assignedTo.map((m: any) => m.id), // This RPC requires all members, not just changes
                     p_service_titles: updates.services || project.services,
                     p_existing_tags: (updates.tags || project.tags || []).map((t: any) => t.id),
                     p_custom_tags: [],

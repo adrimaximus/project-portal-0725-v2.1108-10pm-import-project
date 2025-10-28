@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import { useState, useMemo } from "react";
 import { Project } from '@/types';
 import { useNavigate } from 'react-router-dom';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -9,11 +9,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Trash2, MapPin, CheckCircle, Clock, Loader2, ListChecks, Ticket } from 'lucide-react';
+import { MoreHorizontal, Clock, Trash2, MapPin, CheckCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { getProjectStatusStyles, formatInJakarta, generatePastelColor, getAvatarUrl } from '@/lib/utils';
-import { isSameDay, subDays, isBefore, startOfToday } from 'date-fns';
-import { toZonedTime } from 'date-fns-tz';
+import { format, isSameDay, subDays, isBefore, startOfToday } from 'date-fns';
 import {
   Tooltip,
   TooltipContent,
@@ -21,98 +20,29 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-interface ListViewProps {
-  projects: Project[];
-  onDeleteProject: (projectId: string) => void;
-  onLoadMore: () => void;
-  hasNextPage?: boolean;
-  isFetchingNextPage: boolean;
-}
-
-const DAYS_PER_PAGE = 7; // Show 7 days worth of projects at a time
-
-const formatProjectDateRange = (startDateStr: string | null | undefined, dueDateStr: string | null | undefined): string => {
-  if (!startDateStr) return '-';
-
-  const timeZone = 'Asia/Jakarta';
-  const startDate = new Date(startDateStr);
-  let dueDate = dueDateStr ? new Date(dueDateStr) : startDate;
-
-  const isExclusiveEndDate = 
-    dueDateStr &&
-    dueDate.getUTCHours() === 0 &&
-    dueDate.getUTCMinutes() === 0 &&
-    dueDate.getUTCSeconds() === 0 &&
-    dueDate.getUTCMilliseconds() === 0 &&
-    !isSameDay(startDate, dueDate);
-  
-  const zonedStartDate = toZonedTime(startDate, timeZone);
-  const zonedDueDateCheck = toZonedTime(dueDate, timeZone);
-
-  if (isExclusiveEndDate && !isSameDay(zonedStartDate, zonedDueDateCheck)) {
-    dueDate = subDays(dueDate, 1);
-  }
-
-  const finalZonedStartDate = toZonedTime(startDate, timeZone);
-  const finalZonedDueDate = toZonedTime(dueDate, timeZone);
-
-  if (isSameDay(finalZonedStartDate, finalZonedDueDate)) {
-    return formatInJakarta(startDate, 'd MMM yyyy');
-  }
-
-  const startMonth = new Date(finalZonedStartDate).getMonth();
-  const endMonth = new Date(finalZonedDueDate).getMonth();
-  const startYear = new Date(finalZonedStartDate).getFullYear();
-  const endYear = new Date(finalZonedDueDate).getFullYear();
-
-  if (startYear !== endYear) {
-    return `${formatInJakarta(startDate, 'd MMM yyyy')} - ${formatInJakarta(dueDate, 'd MMM yyyy')}`;
-  }
-
-  if (startMonth !== endMonth) {
-    return `${formatInJakarta(startDate, 'd MMM')} - ${formatInJakarta(dueDate, 'd MMM yyyy')}`;
-  }
-
-  return `${formatInJakarta(startDate, 'd')} - ${formatInJakarta(dueDate, 'd MMM yyyy')}`;
-};
-
-const formatVenue = (venue: string | null): { name: string; full: string } => {
-  if (!venue) return { name: "-", full: "-" };
-
-  let fullVenueString = venue;
-
-  try {
-    const venueObj = JSON.parse(venue);
-    const name = venueObj.name || '';
-    const address = venueObj.address || '';
-    fullVenueString = [name, address].filter(Boolean).join(' - ');
-  } catch (e) {
-    // It's already a string, do nothing
-  }
-
-  if (!fullVenueString) {
-    return { name: "-", full: "-" };
-  }
-
-  const separatorIndex = fullVenueString.indexOf(' - ');
-  
-  let displayName = fullVenueString;
-  if (separatorIndex > 0) {
-    displayName = fullVenueString.substring(0, separatorIndex).trim();
-  }
-
-  return { name: displayName, full: fullVenueString };
-};
-
 const DayEntry = ({ dateStr, projectsOnDay, showMonthHeader, onDeleteProject, navigate, isPast }: { dateStr: string, projectsOnDay: Project[], showMonthHeader: boolean, onDeleteProject: (id: string) => void, navigate: (path: string) => void, isPast?: boolean }) => {
   const date = new Date(`${dateStr}T00:00:00`);
+  const currentMonth = formatInJakarta(date, 'MMMM yyyy');
   const dayOfWeek = formatInJakarta(date, 'EEE');
   const dayOfMonth = formatInJakarta(date, 'dd');
+
+  const formatVenue = (venue: string | null): string => {
+    if (!venue) return "";
+    try {
+      const venueObj = JSON.parse(venue);
+      const name = venueObj.name || '';
+      const address = venueObj.address || '';
+      const parts = [name, address].filter(Boolean);
+      return parts.join(', ');
+    } catch (e) {
+      return venue;
+    }
+  };
 
   return (
     <div key={dateStr}>
       {showMonthHeader && (
-        <h2 className="text-lg font-semibold my-4 pl-2">{formatInJakarta(date, 'MMMM yyyy')}</h2>
+        <h2 className="text-lg font-semibold my-4 pl-2">{currentMonth}</h2>
       )}
       <div className="flex items-start space-x-2 sm:space-x-4">
         <div className="flex flex-col items-center w-10 sm:w-12 text-center flex-shrink-0">
@@ -121,7 +51,28 @@ const DayEntry = ({ dateStr, projectsOnDay, showMonthHeader, onDeleteProject, na
         </div>
         <div className="flex-1 space-y-3 pt-1 min-w-0">
           {projectsOnDay.map((project: Project) => {
-            const { name: venueName, full: fullVenue } = formatVenue(project.venue);
+            const startDate = project.start_date ? new Date(project.start_date) : null;
+            const dueDate = project.due_date ? new Date(project.due_date) : startDate;
+            let displayDueDate = dueDate;
+            let isMultiDay = false;
+
+            if (startDate && dueDate) {
+              const isExclusiveEndDate =
+                project.due_date &&
+                dueDate.getUTCHours() === 0 &&
+                dueDate.getUTCMinutes() === 0 &&
+                dueDate.getUTCSeconds() === 0 &&
+                dueDate.getUTCMilliseconds() === 0 &&
+                !isSameDay(startDate, dueDate);
+
+              const adjustedDueDate = isExclusiveEndDate ? subDays(dueDate, 1) : dueDate;
+              
+              isMultiDay = !isSameDay(startDate, adjustedDueDate);
+              displayDueDate = adjustedDueDate;
+            }
+            
+            const formattedVenue = formatVenue(project.venue);
+
             return (
               <div 
                 key={project.id} 
@@ -135,11 +86,11 @@ const DayEntry = ({ dateStr, projectsOnDay, showMonthHeader, onDeleteProject, na
                   <div className="w-32 text-sm text-muted-foreground hidden md:block">
                     <div className="flex items-center gap-2">
                       <Clock size={14} />
-                      <span>All-day</span>
+                      <span>Seharian</span>
                     </div>
-                    {project.start_date && project.due_date && !isSameDay(new Date(project.start_date), new Date(project.due_date)) && (
+                    {isMultiDay && displayDueDate && (
                       <Badge variant="outline" className="mt-1.5 font-normal text-xs">
-                        Until {formatInJakarta(subDays(new Date(project.due_date), 1), 'd MMM')}
+                        Hingga {formatInJakarta(displayDueDate, 'd MMM')}
                       </Badge>
                     )}
                   </div>
@@ -151,23 +102,9 @@ const DayEntry = ({ dateStr, projectsOnDay, showMonthHeader, onDeleteProject, na
                     {project.venue && (
                       <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-1">
                         <MapPin size={12} />
-                        <span className="truncate" title={fullVenue}>{venueName}</span>
+                        <span className="truncate" title={formattedVenue}>{formattedVenue}</span>
                       </div>
                     )}
-                    <div className="mt-2 flex items-center gap-4 text-xs text-muted-foreground">
-                      {(project.active_task_count ?? 0) > 0 && (
-                        <div className="flex items-center gap-1.5">
-                          <ListChecks size={14} />
-                          <span>{project.active_task_count} Active Task{project.active_task_count === 1 ? '' : 's'}</span>
-                        </div>
-                      )}
-                      {(project.active_ticket_count ?? 0) > 0 && (
-                        <div className="flex items-center gap-1.5">
-                          <Ticket size={14} />
-                          <span>{project.active_ticket_count} Active Ticket{project.active_ticket_count === 1 ? '' : 's'}</span>
-                        </div>
-                      )}
-                    </div>
                   </div>
                 </div>
                 
@@ -205,75 +142,72 @@ const DayEntry = ({ dateStr, projectsOnDay, showMonthHeader, onDeleteProject, na
   );
 };
 
-const ListView = ({ projects, onDeleteProject, onLoadMore, hasNextPage, isFetchingNextPage }: ListViewProps) => {
+const ListView = ({ projects, onDeleteProject }: { projects: Project[], onDeleteProject: (projectId: string) => void }) => {
   const navigate = useNavigate();
-  const [visibleUpcomingDays, setVisibleUpcomingDays] = useState(DAYS_PER_PAGE);
-  const [visiblePastDays, setVisiblePastDays] = useState(DAYS_PER_PAGE);
+  const [visibleUpcomingCount, setVisibleUpcomingCount] = useState(10);
+  const [visiblePastCount, setVisiblePastCount] = useState(5);
 
-  const { upcomingProjects, pastProjects } = useMemo(() => {
+  const { upcomingDayEntries, pastDayEntries } = useMemo(() => {
     const today = startOfToday();
     const projectsWithDates = projects.filter(p => p.start_date);
 
-    const upcoming = projectsWithDates
+    const upcomingProjects = projectsWithDates
       .filter(p => !isBefore(new Date(p.start_date!), today))
       .sort((a, b) => new Date(a.start_date!).getTime() - new Date(b.start_date!).getTime());
 
-    const past = projectsWithDates
+    const pastProjects = projectsWithDates
       .filter(p => isBefore(new Date(p.start_date!), today))
       .sort((a, b) => new Date(b.start_date!).getTime() - new Date(a.start_date!).getTime());
 
-    return { upcomingProjects: upcoming, pastProjects: past };
+    const groupProjectsByDay = (projectList: Project[]) => {
+      const grouped = projectList.reduce((acc, project) => {
+        const dateKey = formatInJakarta(project.start_date!, 'yyyy-MM-dd');
+        if (!acc[dateKey]) {
+          acc[dateKey] = [];
+        }
+        acc[dateKey].push(project);
+        return acc;
+      }, {} as Record<string, Project[]>);
+      return Object.entries(grouped);
+    };
+
+    return {
+      upcomingDayEntries: groupProjectsByDay(upcomingProjects),
+      pastDayEntries: groupProjectsByDay(pastProjects),
+    };
   }, [projects]);
-
-  const groupProjectsByDay = (projectList: Project[]) => {
-    const grouped = projectList.reduce((acc, project) => {
-      const dateKey = formatInJakarta(project.start_date!, 'yyyy-MM-dd');
-      if (!acc[dateKey]) {
-        acc[dateKey] = [];
-      }
-      acc[dateKey].push(project);
-      return acc;
-    }, {} as Record<string, Project[]>);
-    return Object.entries(grouped).sort((a, b) => new Date(a[0]).getTime() - new Date(b[0]).getTime());
-  };
-
-  const upcomingDayEntries = useMemo(() => groupProjectsByDay(upcomingProjects), [upcomingProjects]);
-  const pastDayEntries = useMemo(() => groupProjectsByDay(pastProjects).sort((a, b) => new Date(b[0]).getTime() - new Date(a[0]).getTime()), [pastProjects]);
-
-  const visibleUpcomingDayEntries = upcomingDayEntries; // Show all upcoming
-  
-  const visiblePastDayEntries = pastDayEntries.slice(0, visiblePastDays);
-  const hasMorePastLocally = pastDayEntries.length > visiblePastDays;
-
-  const handleLoadMorePast = () => {
-    if (hasMorePastLocally) {
-      setVisiblePastDays(prev => prev + DAYS_PER_PAGE);
-    } else if (hasNextPage) {
-      onLoadMore();
-    }
-  };
 
   let lastUpcomingMonth: string | null = null;
   let lastPastMonth: string | null = null;
 
-  if (projects.length === 0) {
+  if (projects.length > 0 && upcomingDayEntries.length === 0 && pastDayEntries.length === 0) {
     return (
       <div className="flex items-center justify-center h-40 text-muted-foreground">
-        No projects found for the selected filters.
+        Tidak ada proyek yang dijadwalkan.
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
-      {visibleUpcomingDayEntries.map(([dateStr, projectsOnDay]) => {
+      {upcomingDayEntries.slice(0, visibleUpcomingCount).map(([dateStr, projectsOnDay]) => {
         const currentMonth = formatInJakarta(new Date(`${dateStr}T00:00:00`), 'MMMM yyyy');
         const showMonthHeader = currentMonth !== lastUpcomingMonth;
         if (showMonthHeader) lastUpcomingMonth = currentMonth;
-        return (
-          <DayEntry key={dateStr} dateStr={dateStr} projectsOnDay={projectsOnDay} showMonthHeader={showMonthHeader} onDeleteProject={onDeleteProject} navigate={navigate} />
-        );
+        return <DayEntry key={dateStr} dateStr={dateStr} projectsOnDay={projectsOnDay} showMonthHeader={showMonthHeader} onDeleteProject={onDeleteProject} navigate={navigate} />;
       })}
+
+      {upcomingDayEntries.length > visibleUpcomingCount && (
+        <div className="text-center mt-6">
+          <Button 
+            variant="outline" 
+            onClick={() => setVisibleUpcomingCount(prev => prev + 10)}
+            className="border-primary text-primary hover:bg-primary/10"
+          >
+            Load More Upcoming
+          </Button>
+        </div>
+      )}
 
       {pastDayEntries.length > 0 && (
         <div className="relative my-8">
@@ -288,23 +222,21 @@ const ListView = ({ projects, onDeleteProject, onLoadMore, hasNextPage, isFetchi
         </div>
       )}
 
-      {visiblePastDayEntries.map(([dateStr, projectsOnDay]) => {
+      {pastDayEntries.slice(0, visiblePastCount).map(([dateStr, projectsOnDay]) => {
         const currentMonth = formatInJakarta(new Date(`${dateStr}T00:00:00`), 'MMMM yyyy');
         const showMonthHeader = currentMonth !== lastPastMonth;
         if (showMonthHeader) lastPastMonth = currentMonth;
-        return (
-          <DayEntry key={dateStr} dateStr={dateStr} projectsOnDay={projectsOnDay} showMonthHeader={showMonthHeader} onDeleteProject={onDeleteProject} navigate={navigate} isPast />
-        );
+        return <DayEntry key={dateStr} dateStr={dateStr} projectsOnDay={projectsOnDay} showMonthHeader={showMonthHeader} onDeleteProject={onDeleteProject} navigate={navigate} isPast />;
       })}
 
-      {(hasMorePastLocally || hasNextPage) && (
-        <div className="text-center py-4">
-          <Button variant="outline" onClick={handleLoadMorePast} disabled={isFetchingNextPage}>
-            {isFetchingNextPage ? (
-              <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading...</>
-            ) : (
-              'Load More Past'
-            )}
+      {pastDayEntries.length > visiblePastCount && (
+        <div className="text-center mt-6">
+          <Button 
+            variant="outline" 
+            onClick={() => setVisiblePastCount(prev => prev + 10)}
+            className="border-primary text-primary hover:bg-primary/10"
+          >
+            Load More Past
           </Button>
         </div>
       )}

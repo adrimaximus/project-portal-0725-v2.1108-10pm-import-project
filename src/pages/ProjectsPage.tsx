@@ -54,17 +54,8 @@ const ProjectsPage = () => {
     }
   }, [searchParams, setSearchParams, taskIdFromParams, navigate]);
 
-  const { 
-    data: projectsData = { pages: [], pageParams: [] }, 
-    isLoading: isLoadingProjects, 
-    refetch: refetchProjects,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage 
-  } = useProjects({ searchTerm });
+  const { data: projectsData = [], isLoading: isLoadingProjects, refetch: refetchProjects } = useProjects({ searchTerm });
   
-  const allProjects = useMemo(() => projectsData?.pages.flat() ?? [], [projectsData]);
-
   const [advancedFilters, setAdvancedFilters] = useState<AdvancedFiltersState>({
     selectedPeopleIds: [],
     status: [],
@@ -86,7 +77,7 @@ const ProjectsPage = () => {
   const {
     dateRange, setDateRange,
     sortConfig: projectSortConfig, requestSort: requestProjectSort, sortedProjects
-  } = useProjectFilters(allProjects, advancedFilters);
+  } = useProjectFilters(projectsData, advancedFilters);
 
   const [taskSortConfig, setTaskSortConfig] = useState<{ key: keyof ProjectTask | string; direction: 'asc' | 'desc' }>({ key: 'updated_at', direction: 'desc' });
 
@@ -175,9 +166,9 @@ const ProjectsPage = () => {
     if (isTaskView) {
       return tasksData || [];
     }
-    if (!allProjects) return [];
-    return allProjects.flatMap(p => p.tasks || []);
-  }, [allProjects, tasksData, isTaskView]);
+    if (!projectsData) return [];
+    return projectsData.flatMap(p => p.tasks || []);
+  }, [projectsData, tasksData, isTaskView]);
 
   const filteredTasks = useMemo(() => {
     let tasksToFilter = allTasks;
@@ -246,18 +237,18 @@ const ProjectsPage = () => {
       return projectId;
     },
     onSuccess: (deletedProjectId) => {
-      const deletedProject = allProjects.find(p => p.id === deletedProjectId);
+      const deletedProject = projectsData.find(p => p.id === deletedProjectId);
       toast.success(`Project "${deletedProject?.name || 'Project'}" has been deleted.`);
       queryClient.invalidateQueries({ queryKey: ['projects'] });
     },
     onError: (error: any, deletedProjectId) => {
-      const deletedProject = allProjects.find(p => p.id === deletedProjectId);
+      const deletedProject = projectsData.find(p => p.id === deletedProjectId);
       toast.error(`Failed to delete project "${deletedProject?.name || 'Project'}".`, { description: getErrorMessage(error) });
     }
   });
 
   const handleDeleteProject = (projectId: string) => {
-    const project = allProjects.find(p => p.id === projectId);
+    const project = projectsData.find(p => p.id === projectId);
     if (project) setProjectToDelete(project);
   };
 
@@ -396,9 +387,6 @@ const ProjectsPage = () => {
               tasksQueryKey={tasksQueryKey}
               highlightedTaskId={highlightedTaskId}
               onHighlightComplete={onHighlightComplete}
-              onLoadMore={fetchNextPage}
-              hasNextPage={hasNextPage}
-              isFetchingNextPage={isFetchingNextPage}
             />
           </div>
         </div>

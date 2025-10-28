@@ -1,20 +1,17 @@
-import { useInfiniteQuery, useQueryClient, InfiniteData } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Project } from '@/types';
 import { toast } from 'sonner';
 import { useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 
-const PROJECTS_PER_PAGE = 20;
-
-const fetchProjects = async ({ pageParam, queryKey }: { pageParam: unknown, queryKey: readonly (string | { searchTerm?: string, excludeOtherPersonal?: boolean } | undefined)[] }): Promise<Project[]> => {
-  const page = (pageParam as number) || 0;
+const fetchProjects = async ({ queryKey }: { queryKey: readonly (string | { searchTerm?: string, excludeOtherPersonal?: boolean } | undefined)[] }): Promise<Project[]> => {
   const [_key, _userId, options] = queryKey;
   const { searchTerm, excludeOtherPersonal } = (options as { searchTerm?: string, excludeOtherPersonal?: boolean }) || {};
   
   const { data, error } = await supabase.rpc('get_dashboard_projects', {
-    p_limit: PROJECTS_PER_PAGE,
-    p_offset: page * PROJECTS_PER_PAGE,
+    p_limit: 1000,
+    p_offset: 0,
     p_search_term: searchTerm || null,
     p_exclude_other_personal: excludeOtherPersonal || false,
   });
@@ -41,14 +38,16 @@ export const useProjects = (options: { searchTerm?: string, excludeOtherPersonal
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'project_members' },
-        () => {
+        (payload) => {
+          console.log('Project members change received, refetching projects.', payload);
           queryClient.invalidateQueries({ queryKey: ['projects'] });
         }
       )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'projects' },
-        () => {
+        (payload) => {
+          console.log('Projects table change received, refetching projects.', payload);
           queryClient.invalidateQueries({ queryKey: ['projects'] });
         }
       )
@@ -59,16 +58,9 @@ export const useProjects = (options: { searchTerm?: string, excludeOtherPersonal
     };
   }, [user, queryClient]);
 
-  return useInfiniteQuery<Project[], Error, InfiniteData<Project[]>, readonly (string | { searchTerm?: string; excludeOtherPersonal?: boolean; } | undefined)[] | undefined, number>({
+  return useQuery<Project[], Error>({
     queryKey: ['projects', user?.id, { searchTerm, excludeOtherPersonal }],
     queryFn: fetchProjects,
-    initialPageParam: 0,
-    getNextPageParam: (lastPage, allPages) => {
-      if (lastPage.length < PROJECTS_PER_PAGE) {
-        return undefined; // No more pages
-      }
-      return allPages.length;
-    },
     enabled: !!user,
   });
 };

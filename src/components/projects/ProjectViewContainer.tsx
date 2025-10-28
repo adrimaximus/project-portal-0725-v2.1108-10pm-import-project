@@ -30,28 +30,18 @@ interface ProjectViewContainerProps {
   tasksQueryKey: any[];
   highlightedTaskId: string | null;
   onHighlightComplete: () => void;
-  onLoadMore?: () => void;
-  hasNextPage?: boolean;
-  isFetchingNextPage?: boolean;
 }
 
 const ProjectViewContainer = ({
   view, projects, tasks, isLoading, isTasksLoading, onDeleteProject, sortConfig, requestSort, rowRefs,
   kanbanGroupBy, onEditTask, onDeleteTask, onToggleTaskCompletion, isToggling,
-  taskSortConfig, requestTaskSort, refetch, tasksQueryKey, highlightedTaskId, onHighlightComplete,
-  onLoadMore, hasNextPage, isFetchingNextPage
+  taskSortConfig, requestTaskSort, refetch, tasksQueryKey, highlightedTaskId, onHighlightComplete
 }: ProjectViewContainerProps) => {
   switch (view) {
     case 'table':
       return <TableView projects={projects} isLoading={isLoading} onDeleteProject={onDeleteProject} sortConfig={sortConfig} requestSort={requestSort} rowRefs={rowRefs} />;
     case 'list':
-      return <ListView 
-        projects={projects} 
-        onDeleteProject={onDeleteProject} 
-        onLoadMore={onLoadMore!}
-        hasNextPage={hasNextPage}
-        isFetchingNextPage={isFetchingNextPage!}
-      />;
+      return <ListView projects={projects} onDeleteProject={onDeleteProject} />;
     case 'kanban':
       return <KanbanView projects={projects} groupBy={kanbanGroupBy} />;
     case 'tasks':

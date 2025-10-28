@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
-import { useSearchParams, useNavigate, useParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { getDashboardProjects, createProject, updateProjectDetails, deleteProject } from '@/api/projects';
@@ -32,32 +32,22 @@ const ProjectsPage = () => {
   const queryClient = useQueryClient();
   const rowRefs = useRef(new Map<string, HTMLTableRowElement>());
   const { user } = useAuth();
-  const { taskId: taskIdFromParams } = useParams<{ taskId: string }>();
 
-  const viewFromUrl = searchParams.get('view') as ViewMode;
-  const view = taskIdFromParams ? 'tasks' : viewFromUrl || 'list';
-
+  const view = (searchParams.get('view') as ViewMode) || 'list';
   const [kanbanGroupBy, setKanbanGroupBy] = useState<'status' | 'payment_status'>('status');
   const [hideCompletedTasks, setHideCompletedTasks] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  
-  const highlightedTaskId = taskIdFromParams || searchParams.get('highlight');
+  const highlightedTaskId = searchParams.get('highlight');
 
   const onHighlightComplete = useCallback(() => {
-    if (taskIdFromParams) {
-      navigate('/projects?view=tasks', { replace: true });
-    } else {
-      const newSearchParams = new URLSearchParams(searchParams);
-      newSearchParams.delete('highlight');
-      setSearchParams(newSearchParams, { replace: true });
-    }
-  }, [searchParams, setSearchParams, taskIdFromParams, navigate]);
+    const newSearchParams = new URLSearchParams(searchParams);
+    newSearchParams.delete('highlight');
+    setSearchParams(newSearchParams, { replace: true });
+  }, [searchParams, setSearchParams]);
 
-  const { data: projectsData = { pages: [], pageParams: [] }, isLoading: isLoadingProjects, refetch: refetchProjects } = useProjects({ searchTerm });
+  const { data: projectsData = [], isLoading: isLoadingProjects, refetch: refetchProjects } = useProjects({ searchTerm });
   
-  const projects = useMemo(() => projectsData?.pages.flat() ?? [], [projectsData]);
-
   const [advancedFilters, setAdvancedFilters] = useState<AdvancedFiltersState>({
     selectedPeopleIds: [],
     status: [],
@@ -79,7 +69,7 @@ const ProjectsPage = () => {
   const {
     dateRange, setDateRange,
     sortConfig: projectSortConfig, requestSort: requestProjectSort, sortedProjects
-  } = useProjectFilters(projects, advancedFilters);
+  } = useProjectFilters(projectsData, advancedFilters);
 
   const [taskSortConfig, setTaskSortConfig] = useState<{ key: keyof ProjectTask | string; direction: 'asc' | 'desc' }>({ key: 'updated_at', direction: 'desc' });
 
@@ -99,20 +89,6 @@ const ProjectsPage = () => {
     hideCompleted: hideCompletedTasks,
     sortConfig: finalTaskSortConfig,
   });
-
-  useEffect(() => {
-    if (highlightedTaskId && tasksData.length > 0) {
-      const task = tasksData.find(t => t.id === highlightedTaskId);
-      if (task) {
-        const originalTitle = document.title;
-        document.title = `Task: ${task.title} | ${task.project_name || 'Project'}`;
-        
-        return () => {
-          document.title = originalTitle;
-        };
-      }
-    }
-  }, [highlightedTaskId, tasksData]);
 
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
   const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
@@ -168,9 +144,9 @@ const ProjectsPage = () => {
     if (isTaskView) {
       return tasksData || [];
     }
-    if (!projects) return [];
-    return projects.flatMap(p => p.tasks || []);
-  }, [projects, tasksData, isTaskView]);
+    if (!projectsData) return [];
+    return projectsData.flatMap(p => p.tasks || []);
+  }, [projectsData, tasksData, isTaskView]);
 
   const filteredTasks = useMemo(() => {
     let tasksToFilter = allTasks;
@@ -220,11 +196,7 @@ const ProjectsPage = () => {
 
   const handleViewChange = (newView: ViewMode | null) => {
     if (newView) {
-      if (taskIdFromParams) {
-        navigate(`/projects?view=${newView}`);
-      } else {
-        setSearchParams({ view: newView }, { replace: true });
-      }
+      setSearchParams({ view: newView }, { replace: true });
       if (scrollContainerRef.current) {
         scrollContainerRef.current.scrollTop = 0;
         scrollContainerRef.current.scrollLeft = 0;
@@ -239,18 +211,18 @@ const ProjectsPage = () => {
       return projectId;
     },
     onSuccess: (deletedProjectId) => {
-      const deletedProject = projects.find(p => p.id === deletedProjectId);
+      const deletedProject = projectsData.find(p => p.id === deletedProjectId);
       toast.success(`Project "${deletedProject?.name || 'Project'}" has been deleted.`);
       queryClient.invalidateQueries({ queryKey: ['projects'] });
     },
     onError: (error: any, deletedProjectId) => {
-      const deletedProject = projects.find(p => p.id === deletedProjectId);
+      const deletedProject = projectsData.find(p => p.id === deletedProjectId);
       toast.error(`Failed to delete project "${deletedProject?.name || 'Project'}".`, { description: getErrorMessage(error) });
     }
   });
 
   const handleDeleteProject = (projectId: string) => {
-    const project = projects.find(p => p.id === projectId);
+    const project = projectsData.find(p => p.id === projectId);
     if (project) setProjectToDelete(project);
   };
 
