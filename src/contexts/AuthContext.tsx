@@ -139,7 +139,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
 
     const updateActivity = debounce(async () => {
-      await newChannel.track({ ...trackPayload, last_active_at: new Date().toISOString() });
+      const lastActiveTimestamp = new Date().toISOString();
+      // Update presence for UI
+      await newChannel.track({ ...trackPayload, last_active_at: lastActiveTimestamp });
+      // Update profile for backend logic
+      if (user) {
+        await supabase
+          .from('profiles')
+          .update({ last_active_at: lastActiveTimestamp })
+          .eq('id', user.id);
+      }
     }, 30000, { leading: true, trailing: false });
 
     newChannel
@@ -152,7 +161,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       })
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
-          await newChannel.track({ ...trackPayload, last_active_at: new Date().toISOString() });
+          await updateActivity();
           window.addEventListener('mousemove', updateActivity);
           window.addEventListener('keydown', updateActivity);
           window.addEventListener('click', updateActivity);
@@ -163,7 +172,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setChannel(newChannel);
 
     const interval = setInterval(async () => {
-      await newChannel.track({ ...trackPayload, last_active_at: new Date().toISOString() });
+      await updateActivity();
     }, 4 * 60 * 1000);
 
     return () => {
