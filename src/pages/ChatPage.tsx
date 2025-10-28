@@ -1,4 +1,5 @@
 import { useRef, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import ChatList from "@/components/ChatList";
 import { ChatWindow } from "@/components/ChatWindow";
 import PortalLayout from "@/components/PortalLayout";
@@ -15,6 +16,8 @@ const ChatPageContent = () => {
   const isMobile = useIsMobile();
   const { selectedConversation, selectConversation, setIsChatPageActive } = useChatContext();
   const chatInputRef = useRef<HTMLTextAreaElement>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const highlightedId = searchParams.get('highlight');
 
   useEffect(() => {
     setIsChatPageActive(true);
@@ -31,11 +34,16 @@ const ChatPageContent = () => {
     }
   }, [selectedConversation]);
 
+  const onHighlightComplete = () => {
+    searchParams.delete('highlight');
+    setSearchParams(searchParams, { replace: true });
+  };
+
   if (isMobile) {
     return (
       <div className="flex-1 h-full">
         {!selectedConversation ? (
-          <ChatList />
+          <ChatList highlightedId={highlightedId} onHighlightComplete={onHighlightComplete} />
         ) : (
           <ChatWindow ref={chatInputRef} onBack={() => selectConversation(null)} />
         )}
@@ -49,7 +57,7 @@ const ChatPageContent = () => {
       className="flex-1 items-stretch"
     >
       <ResizablePanel defaultSize={35} minSize={25} maxSize={50} className="min-w-[400px]">
-        <ChatList />
+        <ChatList highlightedId={highlightedId} onHighlightComplete={onHighlightComplete} />
       </ResizablePanel>
       <ResizableHandle withHandle />
       <ResizablePanel defaultSize={65}>

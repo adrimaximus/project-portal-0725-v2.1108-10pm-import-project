@@ -146,7 +146,7 @@ const generateChatEmailHtml = (recipientName: string, messages: any[], conversat
         <div style="background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin-top: 24px; margin-bottom: 24px;">
             ${messageHtml}
         </div>
-        <a href="${APP_URL}/chat" style="display: inline-block; padding: 12px 24px; font-size: 16px; color: #ffffff; background-color: #008A9E; text-decoration: none; border-radius: 8px; font-weight: 600;">View Conversation</a>
+        <a href="${APP_URL}/chat?highlight=${conversationData.id}" style="display: inline-block; padding: 12px 24px; font-size: 16px; color: #ffffff; background-color: #008A9E; text-decoration: none; border-radius: 8px; font-weight: 600;">View Conversation</a>
         <p style="margin-top: 24px; font-size: 12px; color: #6b7280;">You are receiving this because you have email notifications enabled for new chat messages.</p>
     </div>
     `;
@@ -302,7 +302,7 @@ serve(async (req) => {
 
           if (typePref.whatsapp !== false && phoneToSend) {
             const messagesForPrompt = recentMessages.map(m => `${getFullName(m.sender)}: ${m.content}`).join('\n');
-            userPrompt = `Buat notifikasi ringkasan chat. Penerima: ${recipientName}. Pengirim: ${senderName}. Percakapan: "${conversationData.is_group ? conversationData.group_name : senderName}". Ada ${recentMessages.length} pesan baru. Ringkasan pesan: ${messagesForPrompt}. URL: ${APP_URL}/chat`;
+            userPrompt = `Buat notifikasi ringkasan chat. Penerima: ${recipientName}. Pengirim: ${senderName}. Percakapan: "${conversationData.is_group ? conversationData.group_name : senderName}". Ada ${recentMessages.length} pesan baru. Ringkasan pesan: ${messagesForPrompt}. URL: ${APP_URL}/chat?highlight=${notification.conversation_id}`;
             const aiMessage = await generateAiMessage(userPrompt);
             await sendWhatsappMessage(phoneToSend, aiMessage);
           }

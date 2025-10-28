@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -13,7 +13,12 @@ import { useChatContext } from "@/contexts/ChatContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
-const ChatList = () => {
+interface ChatListProps {
+  highlightedId?: string | null;
+  onHighlightComplete?: () => void;
+}
+
+const ChatList = ({ highlightedId, onHighlightComplete }: ChatListProps) => {
   const [isNewConversationOpen, setIsNewConversationOpen] = useState(false);
   const {
     conversations,
@@ -27,6 +32,22 @@ const ChatList = () => {
     unreadConversationIds,
   } = useChatContext();
   const { user: currentUser } = useAuth();
+  const itemRefs = useRef(new Map<string, HTMLDivElement>());
+
+  useEffect(() => {
+    if (highlightedId && conversations.length > 0) {
+      const element = itemRefs.current.get(highlightedId);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        element.classList.add('bg-primary/10');
+        const timer = setTimeout(() => {
+          element.classList.remove('bg-primary/10');
+          if (onHighlightComplete) onHighlightComplete();
+        }, 2500);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [highlightedId, onHighlightComplete, conversations]);
 
   const formatTimestamp = (timestamp: string) => {
     try {
@@ -105,6 +126,10 @@ const ChatList = () => {
           return (
             <div
               key={c.id}
+              ref={(el) => {
+                if (el) itemRefs.current.set(c.id, el);
+                else itemRefs.current.delete(c.id);
+              }}
               className={cn(
                 "flex w-full items-center gap-3 p-3 hover:bg-muted border-l-4 border-transparent transition-colors group",
                 selectedConversation?.id === c.id && "bg-muted border-l-primary"
