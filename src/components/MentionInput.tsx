@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { Popover, PopoverContent, PopoverAnchor } from '@/components/ui/popover';
 import { Command, CommandInput, CommandList, CommandEmpty, CommandItem, CommandGroup } from '@/components/ui/command';
 import { Textarea } from '@/components/ui/textarea';
@@ -42,16 +42,11 @@ const MentionInput = React.forwardRef<HTMLTextAreaElement, MentionInputProps>(
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
     const suggestions = activeTrigger === '@' ? userSuggestions : projectSuggestions;
-    const filteredSuggestions = suggestions || [];
+    const filteredSuggestions = (suggestions || []).filter(s =>
+      s.display.toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
-    const handleSearchChange = (newSearchTerm: string) => {
-      setSearchTerm(newSearchTerm);
-      if (onSearchTermChange && activeTrigger) {
-        onSearchTermChange(activeTrigger, newSearchTerm);
-      }
-    };
-
-    const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    const handleLocalKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
       if (open && filteredSuggestions.length > 0) {
         if (e.key === 'ArrowDown') {
           e.preventDefault();
@@ -80,15 +75,18 @@ const MentionInput = React.forwardRef<HTMLTextAreaElement, MentionInputProps>(
 
       const cursorPos = e.target.selectionStart;
       const textBeforeCursor = text.substring(0, cursorPos);
-      const match = textBeforeCursor.match(/([@\/])([\w\s-]*)$/);
+      const match = textBeforeCursor.match(/([@\/])([\w-]*)$/);
 
       if (match) {
         const trigger = match[1] as '@' | '/';
         const term = match[2];
         setOpen(true);
+        setSearchTerm(term);
         setActiveTrigger(trigger);
         setActiveIndex(0);
-        handleSearchChange(term);
+        if (onSearchTermChange) {
+          onSearchTermChange(trigger, term);
+        }
       } else {
         setOpen(false);
         setActiveTrigger(null);
@@ -111,7 +109,7 @@ const MentionInput = React.forwardRef<HTMLTextAreaElement, MentionInputProps>(
       let mentionText = '';
       if (activeTrigger === '@') {
         const user = suggestion as UserSuggestion;
-        mentionText = `@[${user.display}](${user.id}) `;
+        mentionText = `@${user.display} `;
       } else if (activeTrigger === '/') {
         const proj = suggestion as ProjectSuggestion;
         mentionText = `[${proj.display}](/projects/${proj.slug}) `;
@@ -126,10 +124,10 @@ const MentionInput = React.forwardRef<HTMLTextAreaElement, MentionInputProps>(
 
       onChange(newValue);
       setOpen(false);
-      setSearchTerm('');
-      setActiveTrigger(null);
+      setSearchTerm(''); // Reset search term
+      setActiveTrigger(null); // Reset active trigger
       if (onSearchTermChange) {
-        onSearchTermChange(null, '');
+        onSearchTermChange(null, ''); // Notify parent component to reset search state
       }
 
       setTimeout(() => {
@@ -151,18 +149,18 @@ const MentionInput = React.forwardRef<HTMLTextAreaElement, MentionInputProps>(
             ref={textareaRef}
             value={value}
             onChange={handleChange}
-            onKeyDown={handleKeyDown}
+            onKeyDown={handleLocalKeyDown}
             placeholder={placeholder}
             disabled={disabled}
             className={className}
           />
         </PopoverAnchor>
         <PopoverContent className="w-[300px] p-0" align="start">
-          <Command filter={() => 1}>
+          <Command>
             <CommandInput 
               placeholder={activeTrigger === '@' ? "Search user..." : "Search project..."}
               value={searchTerm}
-              onValueChange={handleSearchChange}
+              onValueChange={setSearchTerm}
               className="border-none focus:ring-0"
             />
             <CommandList>
