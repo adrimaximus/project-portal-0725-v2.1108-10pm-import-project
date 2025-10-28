@@ -21,9 +21,16 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ChevronsUpDown } from "lucide-react";
+import { ChevronsUpDown, ChevronDown } from "lucide-react";
 import { generatePastelColor, getAvatarUrl } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
 
 interface CollaboratorsListProps {
   projects: Project[];
@@ -32,7 +39,8 @@ interface CollaboratorsListProps {
 interface CollaboratorStat extends User {
   projectCount: number;
   upcomingProjectCount: number;
-  ongoingProjectCount: number;
+  onGoingProjectCount: number;
+  activeProjectCount: number;
   activeTaskCount: number;
   activeTicketCount: number;
   overdueBillCount: number;
@@ -42,6 +50,13 @@ interface CollaboratorStat extends User {
 const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [tasks, setTasks] = useState<any[]>([]);
+  const [filter, setFilter] = useState<'activeProject' | 'upcoming' | 'onGoing'>('activeProject');
+
+  const filterLabels = {
+    activeProject: 'Active Projects',
+    upcoming: 'Upcoming',
+    onGoing: 'On Going',
+  };
 
   useEffect(() => {
     const fetchTasks = async () => {
@@ -73,7 +88,8 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
                 ...user,
                 projectCount: 0,
                 upcomingProjectCount: 0,
-                ongoingProjectCount: 0,
+                onGoingProjectCount: 0,
+                activeProjectCount: 0,
                 activeTaskCount: 0,
                 activeTicketCount: 0,
                 overdueBillCount: 0,
@@ -89,8 +105,11 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
 
     projects.forEach(p => {
         const startDate = p.start_date ? new Date(p.start_date) : null;
+        const endDate = p.due_date ? new Date(p.due_date) : null;
+
         const isUpcoming = startDate ? startDate > today : false;
-        const isOngoing = !['Completed', 'Cancelled'].includes(p.status);
+        const isOnGoing = startDate ? (startDate <= today && (endDate ? endDate >= today : true)) : false;
+        const isActive = !['Completed', 'Cancelled', 'Bid Lost'].includes(p.status);
         
         const paymentDueDate = p.payment_due_date ? new Date(p.payment_due_date) : null;
         const isOverdue = paymentDueDate ? paymentDueDate < today && p.payment_status !== 'Paid' : false;
@@ -107,7 +126,8 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
             if (!userStat.countedProjectIds.has(p.id)) {
                 userStat.projectCount++;
                 if (isUpcoming) userStat.upcomingProjectCount++;
-                if (isOngoing) userStat.ongoingProjectCount++;
+                if (isOnGoing) userStat.onGoingProjectCount++;
+                if (isActive) userStat.activeProjectCount++;
                 if (isOverdue) userStat.overdueBillCount++;
                 userStat.countedProjectIds.add(p.id);
             }
@@ -151,6 +171,19 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
     return { collaboratorsByRole: orderedGrouped, allCollaborators: flatList };
   }, [projects, tasks]);
 
+  const getFilteredCount = (collaborator: CollaboratorStat) => {
+    switch (filter) {
+      case 'activeProject':
+        return collaborator.activeProjectCount;
+      case 'upcoming':
+        return collaborator.upcomingProjectCount;
+      case 'onGoing':
+        return collaborator.onGoingProjectCount;
+      default:
+        return 0;
+    }
+  };
+
   return (
     <Card>
       <TooltipProvider>
@@ -184,6 +217,21 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
             <CardContent className="px-6 pb-6 pt-0">
               {/* Mobile View */}
               <div className="md:hidden">
+                <div className="flex justify-end mb-4">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm">
+                        {filterLabels[filter]}
+                        <ChevronDown className="ml-2 h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onSelect={() => setFilter('activeProject')}>Active Projects</DropdownMenuItem>
+                      <DropdownMenuItem onSelect={() => setFilter('upcoming')}>Upcoming</DropdownMenuItem>
+                      <DropdownMenuItem onSelect={() => setFilter('onGoing')}>On Going</DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
                 {Object.entries(collaboratorsByRole).map(([role, collaboratorsInRole]) => (
                   <div key={role}>
                     <h3 className="text-sm font-semibold uppercase text-muted-foreground tracking-wider pt-6 pb-2">
@@ -202,10 +250,8 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
                           <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
                             <div className="text-muted-foreground">Total Projects</div>
                             <div className="text-right font-medium">{c.projectCount}</div>
-                            <div className="text-muted-foreground">Upcoming</div>
-                            <div className="text-right font-medium">{c.upcomingProjectCount}</div>
-                            <div className="text-muted-foreground">On Going</div>
-                            <div className="text-right font-medium">{c.ongoingProjectCount}</div>
+                            <div className="text-muted-foreground">{filterLabels[filter]}</div>
+                            <div className="text-right font-medium">{getFilteredCount(c)}</div>
                             <div className="text-muted-foreground">Active Tasks</div>
                             <div className="text-right font-medium">{c.activeTaskCount}</div>
                             <div className="text-muted-foreground">Active Tickets</div>
@@ -227,8 +273,21 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
                         <TableRow>
                             <TableHead>Collaborator</TableHead>
                             <TableHead className="text-right">Total Projects</TableHead>
-                            <TableHead className="text-right">Upcoming</TableHead>
-                            <TableHead className="text-right">On Going</TableHead>
+                            <TableHead className="text-right">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" className="px-2 -mr-2 h-8">
+                                    {filterLabels[filter]}
+                                    <ChevronDown className="ml-2 h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem onSelect={() => setFilter('activeProject')}>Active Projects</DropdownMenuItem>
+                                  <DropdownMenuItem onSelect={() => setFilter('upcoming')}>Upcoming</DropdownMenuItem>
+                                  <DropdownMenuItem onSelect={() => setFilter('onGoing')}>On Going</DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </TableHead>
                             <TableHead className="text-right">Active Tasks</TableHead>
                             <TableHead className="text-right">Active Tickets</TableHead>
                             <TableHead className="text-right">Overdue Bill</TableHead>
@@ -256,8 +315,7 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
                                         </div>
                                     </TableCell>
                                     <TableCell className="text-right font-medium">{c.projectCount}</TableCell>
-                                    <TableCell className="text-right font-medium">{c.upcomingProjectCount}</TableCell>
-                                    <TableCell className="text-right font-medium">{c.ongoingProjectCount}</TableCell>
+                                    <TableCell className="text-right font-medium">{getFilteredCount(c)}</TableCell>
                                     <TableCell className="text-right font-medium">{c.activeTaskCount}</TableCell>
                                     <TableCell className="text-right font-medium">{c.activeTicketCount}</TableCell>
                                     <TableCell className="text-right font-medium">{c.overdueBillCount}</TableCell>
