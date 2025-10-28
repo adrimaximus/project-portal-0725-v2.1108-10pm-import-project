@@ -14,6 +14,23 @@ interface RolesCardProps {
   isMasterAdmin: boolean;
 }
 
+const roleColors = [
+    'bg-blue-500', 'bg-green-500', 'bg-yellow-500', 'bg-purple-500',
+    'bg-pink-500', 'bg-indigo-500', 'bg-teal-500', 'bg-orange-500'
+];
+
+const getRoleColorClass = (roleName: string) => {
+    if (roleName === 'master admin') {
+        return 'bg-slate-700';
+    }
+    let hash = 0;
+    for (let i = 0; i < roleName.length; i++) {
+        hash = roleName.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const index = Math.abs(hash % roleColors.length);
+    return roleColors[index];
+};
+
 const RolesCard = ({ roles, onEditRole, onDeleteRole, onCreateRole, isMasterAdmin }: RolesCardProps) => {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -61,10 +78,14 @@ const RolesCard = ({ roles, onEditRole, onDeleteRole, onCreateRole, isMasterAdmi
                 {sortedRoles.map((role) => {
                   const canEdit = role.name !== 'master admin' && (!role.is_predefined || isMasterAdmin);
                   const canDelete = !role.is_predefined;
+                  const colorClass = getRoleColorClass(role.name);
 
                   return (
                     <TableRow key={role.id}>
-                      <TableCell className="font-medium">{role.name}</TableCell>
+                      <TableCell className="font-medium relative pl-6">
+                        <span className={`absolute left-2 top-1/2 -translate-y-1/2 h-4 w-1 rounded-full ${colorClass}`} />
+                        <span className="capitalize">{role.name}</span>
+                      </TableCell>
                       <TableCell>{role.description}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex gap-2 justify-end">
