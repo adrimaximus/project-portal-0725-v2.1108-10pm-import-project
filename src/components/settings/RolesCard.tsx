@@ -18,12 +18,20 @@ const getRoleColorStyle = (roleName: string): React.CSSProperties => {
     if (roleName === 'master admin') {
         return { backgroundColor: '#475569' }; // slate-600
     }
+    // A more robust hashing function to create a wider spread of values
     let hash = 0;
     for (let i = 0; i < roleName.length; i++) {
-        hash = roleName.charCodeAt(i) + ((hash << 5) - hash);
+        const char = roleName.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash |= 0; // Convert to 32bit integer
     }
-    const h = hash % 360;
-    return { backgroundColor: `hsl(${h}, 60%, 65%)` };
+    
+    // Use the golden angle for better color distribution
+    const hue = (hash * 137.508) % 360;
+    const saturation = 60;
+    const lightness = 70;
+
+    return { backgroundColor: `hsl(${hue}, ${saturation}%, ${lightness}%)` };
 };
 
 const RolesCard = ({ roles, onEditRole, onDeleteRole, onCreateRole, isMasterAdmin }: RolesCardProps) => {
