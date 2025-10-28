@@ -53,7 +53,7 @@ const ChatHeader = ({ conversation, onBack, typing = false, onLeaveGroup, onClea
   const { id, userName, userAvatar, isGroup, members, created_by } = conversation;
   const otherUser = !isGroup ? members?.find(m => m.id !== currentUser?.id) : null;
   const isOwner = currentUser?.id === created_by;
-  const isOtherUserOnline = otherUser ? onlineCollaborators.some(c => c.id === otherUser.id) : false;
+  const otherUserCollaborator = otherUser ? onlineCollaborators.find(c => c.id === otherUser.id) : null;
   const isAiAssistant = userName === "AI Assistant";
 
   const handleViewProfile = () => {
@@ -105,11 +105,18 @@ const ChatHeader = ({ conversation, onBack, typing = false, onLeaveGroup, onClea
             <p className="text-sm text-muted-foreground flex items-center gap-1.5">
               {typing ? (
                 "Typing..."
-              ) : isOtherUserOnline ? (
-                <>
-                  <span className="h-2 w-2 rounded-full bg-green-500"></span>
-                  Online
-                </>
+              ) : otherUserCollaborator ? (
+                otherUserCollaborator.isIdle ? (
+                  <>
+                    <span className="h-2 w-2 rounded-full bg-orange-400"></span>
+                    <span>Idle</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="h-2 w-2 rounded-full bg-green-500"></span>
+                    <span>Online</span>
+                  </>
+                )
               ) : (
                 "Offline"
               )}
