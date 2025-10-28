@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { AppNotification } from '@/types';
 import { toast } from 'sonner';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useMemo } from 'react';
 import { useChatContext } from '@/contexts/ChatContext';
 
 const NOTIFICATIONS_PER_PAGE = 20;
@@ -113,7 +113,7 @@ export const useNotifications = () => {
             if (Notification.permission === 'granted' && document.hidden) {
               new Notification(notificationData.title, {
                 body: notificationData.body,
-                icon: '/favicon.ico',
+                icon: "/favicon.ico",
               });
             }
 
@@ -146,7 +146,22 @@ export const useNotifications = () => {
   }, [user, queryClient]);
 
   const notifications = data?.pages.flatMap(page => page) ?? [];
-  const unreadCount = notifications.filter(n => !n.read).length;
+  
+  const { unreadCount, hasImportantUnread } = useMemo(() => {
+    const unreadNotifications = notifications.filter(n => !n.read);
+    const importantTypes = ['mention'];
+    const hasImportant = unreadNotifications.some(n => 
+      importantTypes.includes(n.type) ||
+      (n.type === 'project_update' && (
+        n.description.toLowerCase().includes('completed') || 
+        n.description.toLowerCase().includes('kepada anda') // "to you" in Indonesian for assignments/ownership transfers
+      ))
+    );
+    return {
+      unreadCount: unreadNotifications.length,
+      hasImportantUnread: hasImportant,
+    };
+  }, [notifications]);
 
   const updateNotificationStatus = (notificationId: string, read: boolean) => {
     queryClient.setQueryData<InfiniteData<AppNotification[]>>(queryKey, (oldData) => {
@@ -253,6 +268,7 @@ export const useNotifications = () => {
     isLoading,
     error,
     unreadCount,
+    hasImportantUnread,
     markAsRead: markAsReadMutation.mutate,
     markAsUnread: markAsUnreadMutation.mutate,
     markAllAsRead: markAllAsReadMutation.mutate,
