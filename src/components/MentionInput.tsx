@@ -158,7 +158,7 @@ const MentionInput = React.forwardRef<HTMLTextAreaElement, MentionInputProps>(
           />
         </PopoverAnchor>
         <PopoverContent className="w-[300px] p-0" align="start">
-          <Command>
+          <Command filter={() => 1}>
             <CommandInput 
               placeholder={activeTrigger === '@' ? "Search user..." : "Search project..."}
               value={searchTerm}
