@@ -55,3 +55,19 @@ export const PAYMENT_STATUS_OPTIONS = [
     { value: 'Paid', label: 'Paid' },
     { value: 'Overdue', label: 'Overdue' },
 ];
+
+export type TaskStatus = 'To do' | 'In Progress' | 'Done' | 'Cancelled';
+
+export const TASK_STATUS_OPTIONS: { value: TaskStatus; label: string }[] = [
+  { value: 'To do', label: 'To do' },
+  { value: 'In Progress', label: 'In Progress' },
+  { value: 'Done', label: 'Done' },
+  { value: 'Cancelled', label: 'Cancelled' },
+];
+
+export const TASK_PRIORITY_OPTIONS = [
+  { value: 'Urgent', label: 'Urgent' },
+  { value: 'High', label: 'High' },
+  { value: 'Normal', label: 'Normal' },
+  { value: 'Low', label: 'Low' },
+];
