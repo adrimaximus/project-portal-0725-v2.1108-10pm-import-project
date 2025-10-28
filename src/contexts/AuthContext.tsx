@@ -153,11 +153,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     newChannel
       .on('presence', { event: 'sync' }, () => {
-        const newState = newChannel.presenceState<Collaborator>();
-        const collaborators = Object.values(newState)
+        const newState = newChannel.presenceState<any>();
+        const fiveMinutesAgo = new Date().getTime() - 5 * 60 * 1000;
+
+        const collaborators: Collaborator[] = Object.values(newState)
           .flat()
-          .filter(c => c.id !== user.id);
-        setOnlineCollaborators(collaborators);
+          .filter(c => c.id !== user.id)
+          .map(c => {
+            const lastActive = c.last_active_at ? new Date(c.last_active_at).getTime() : 0;
+            const isIdle = lastActive < fiveMinutesAgo;
+            return { ...c, isIdle };
+          });
+        
+        const uniqueCollaborators = Array.from(new Map(collaborators.map(c => [c.id, c])).values());
+
+        setOnlineCollaborators(uniqueCollaborators);
       })
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {

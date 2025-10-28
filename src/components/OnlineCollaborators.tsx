@@ -16,22 +16,8 @@ const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
   const navigate = useNavigate();
   const { onlineCollaborators } = useAuth();
 
-  const uniqueCollaborators = useMemo(() => {
-    const map = new Map<string, Collaborator & { isIdle: boolean }>();
-    const fiveMinutesAgo = new Date().getTime() - 5 * 60 * 1000;
-
-    onlineCollaborators.forEach(c => {
-      if (!map.has(c.id)) {
-        const lastActive = c.last_active_at ? new Date(c.last_active_at).getTime() : 0;
-        const isIdle = lastActive < fiveMinutesAgo;
-        map.set(c.id, { ...c, isIdle });
-      }
-    });
-    return Array.from(map.values());
-  }, [onlineCollaborators]);
-
-  const activeCollaborators = useMemo(() => uniqueCollaborators.filter(c => !c.isIdle), [uniqueCollaborators]);
-  const idleCollaborators = useMemo(() => uniqueCollaborators.filter(c => c.isIdle), [uniqueCollaborators]);
+  const activeCollaborators = useMemo(() => onlineCollaborators.filter(c => !c.isIdle), [onlineCollaborators]);
+  const idleCollaborators = useMemo(() => onlineCollaborators.filter(c => c.isIdle), [onlineCollaborators]);
 
   const handleCollaboratorClick = (collaborator: Collaborator) => {
     navigate('/chat', { 
@@ -50,14 +36,14 @@ const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
               <div className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-primary md:h-8 md:w-8 relative cursor-pointer">
                 <Users className="h-5 w-5" />
                 <span className="absolute -top-1 -right-1 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-primary p-0 text-xs text-primary-foreground">
-                  {uniqueCollaborators.length}
+                  {onlineCollaborators.length}
                 </span>
               </div>
             </TooltipTrigger>
             <TooltipContent side="right">
-              <p className="font-semibold">{uniqueCollaborators.length} collaborators online</p>
+              <p className="font-semibold">{onlineCollaborators.length} collaborators online</p>
               <ul className="mt-1 text-sm text-muted-foreground">
-                {uniqueCollaborators.map(c => <li key={c.id}>{c.name}</li>)}
+                {onlineCollaborators.map(c => <li key={c.id}>{c.name}</li>)}
               </ul>
             </TooltipContent>
           </Tooltip>
@@ -77,7 +63,7 @@ const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
       <div>
         {isExpanded ? (
           <div className="space-y-1 px-3">
-            {uniqueCollaborators.map(c => (
+            {onlineCollaborators.map(c => (
               <div 
                 key={c.id} 
                 className="flex items-center gap-3 p-1.5 rounded-lg hover:bg-muted cursor-pointer transition-colors"

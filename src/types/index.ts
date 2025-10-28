@@ -20,6 +20,7 @@ export interface User {
 export interface Collaborator extends User {
   role?: string;
   last_active_at?: string;
+  isIdle?: boolean;
 }
 
 export interface Owner extends User {}
