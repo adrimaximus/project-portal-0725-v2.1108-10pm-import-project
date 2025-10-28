@@ -121,7 +121,7 @@ const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
                   </div>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <div className="relative pl-2">
+                      <div className="relative -ml-3 self-end">
                         <span className="block h-2.5 w-2.5 rounded-full bg-green-500 ring-2 ring-background" />
                       </div>
                     </TooltipTrigger>
@@ -155,7 +155,7 @@ const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
                   </div>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <div className="relative pl-2">
+                      <div className="relative -ml-3 self-end">
                         <span className="block h-2.5 w-2.5 rounded-full bg-orange-400 ring-2 ring-background" />
                       </div>
                     </TooltipTrigger>
