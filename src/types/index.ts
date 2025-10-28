@@ -266,8 +266,8 @@ export const TASK_PRIORITY_OPTIONS = [
   { value: 'Low', label: 'Low' },
 ];
 
-export type ContactPropertyType = 'text' | 'textarea' | 'number' | 'date' | 'email' | 'phone' | 'url' | 'image' | 'multi-image' | 'select' | 'multi-select' | 'checkbox';
-export const CONTACT_PROPERTY_TYPES: ContactPropertyType[] = ['text', 'textarea', 'number', 'date', 'email', 'phone', 'url', 'image', 'multi-image', 'select', 'multi-select', 'checkbox'];
+export const CONTACT_PROPERTY_TYPES = ['text', 'textarea', 'number', 'date', 'email', 'phone', 'url', 'image', 'multi-image', 'select', 'multi-select', 'checkbox'] as const;
+export type ContactPropertyType = typeof CONTACT_PROPERTY_TYPES[number];
 
 export interface ContactProperty {
   id: string;
@@ -278,8 +278,8 @@ export interface ContactProperty {
   is_default: boolean;
 }
 
-export type CompanyPropertyType = 'text' | 'textarea' | 'number' | 'date' | 'email' | 'phone' | 'url' | 'image' | 'select';
-export const COMPANY_PROPERTY_TYPES: CompanyPropertyType[] = ['text', 'textarea', 'number', 'date', 'email', 'phone', 'url', 'image', 'select'];
+export const COMPANY_PROPERTY_TYPES = ['text', 'textarea', 'number', 'date', 'email', 'phone', 'url', 'image', 'select'] as const;
+export type CompanyPropertyType = typeof COMPANY_PROPERTY_TYPES[number];
 
 export interface CompanyProperty {
   id: string;
