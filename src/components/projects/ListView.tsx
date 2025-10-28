@@ -154,6 +154,23 @@ const DayEntry = ({ dateStr, projectsOnDay, showMonthHeader, onDeleteProject, na
                         <span className="truncate" title={fullVenue}>{venueName}</span>
                       </div>
                     )}
+                    {project.briefFiles && project.briefFiles.length > 0 && (
+                      <div className="mt-2">
+                        <p className="text-xs font-semibold text-muted-foreground">Attachments:</p>
+                        <ul className="text-xs text-muted-foreground list-disc list-inside">
+                          {project.briefFiles.slice(0, 2).map(file => (
+                            <li key={file.id} className="truncate">
+                              <a href={file.url} target="_blank" rel="noopener noreferrer" className="hover:underline hover:text-primary">
+                                {file.name}
+                              </a>
+                            </li>
+                          ))}
+                          {project.briefFiles.length > 2 && (
+                            <li className="truncate">...and {project.briefFiles.length - 2} more</li>
+                          )}
+                        </ul>
+                      </div>
+                    )}
                   </div>
                 </div>
                 
@@ -226,15 +243,10 @@ const ListView = ({ projects, onDeleteProject, onLoadMore, hasNextPage, isFetchi
   const upcomingDayEntries = useMemo(() => groupProjectsByDay(upcomingProjects), [upcomingProjects]);
   const pastDayEntries = useMemo(() => groupProjectsByDay(pastProjects).sort((a, b) => new Date(b[0]).getTime() - new Date(a[0]).getTime()), [pastProjects]);
 
-  const visibleUpcomingDayEntries = upcomingDayEntries.slice(0, visibleUpcomingDays);
-  const hasMoreUpcoming = upcomingDayEntries.length > visibleUpcomingDays;
-
+  const visibleUpcomingDayEntries = upcomingDayEntries; // Show all upcoming
+  
   const visiblePastDayEntries = pastDayEntries.slice(0, visiblePastDays);
   const hasMorePastLocally = pastDayEntries.length > visiblePastDays;
-
-  const handleLoadMoreUpcoming = () => {
-    setVisibleUpcomingDays(prev => prev + DAYS_PER_PAGE);
-  };
 
   const handleLoadMorePast = () => {
     if (hasMorePastLocally) {
@@ -265,14 +277,6 @@ const ListView = ({ projects, onDeleteProject, onLoadMore, hasNextPage, isFetchi
           <DayEntry key={dateStr} dateStr={dateStr} projectsOnDay={projectsOnDay} showMonthHeader={showMonthHeader} onDeleteProject={onDeleteProject} navigate={navigate} />
         );
       })}
-
-      {hasMoreUpcoming && (
-        <div className="text-center py-4">
-          <Button variant="outline" onClick={handleLoadMoreUpcoming}>
-            Load More Upcoming
-          </Button>
-        </div>
-      )}
 
       {pastDayEntries.length > 0 && (
         <div className="relative my-8">
