@@ -24,6 +24,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ChevronsUpDown } from "lucide-react";
 import { generatePastelColor, getAvatarUrl } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface CollaboratorsListProps {
   projects: Project[];
@@ -42,6 +43,7 @@ interface CollaboratorStat extends User {
 const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [tasks, setTasks] = useState<any[]>([]);
+  const [groupBy, setGroupBy] = useState<'role' | 'project'>('role');
 
   useEffect(() => {
     const fetchTasks = async () => {
@@ -63,7 +65,7 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
     fetchTasks();
   }, [projects]);
 
-  const { collaboratorsByRole, allCollaborators } = useMemo(() => {
+  const { groupedData, allCollaborators } = useMemo(() => {
     const stats: Record<string, CollaboratorStat & { countedProjectIds: Set<string> }> = {};
     const roleHierarchy: Record<string, number> = { 'owner': 1, 'admin': 2, 'editor': 3, 'member': 4 };
 
@@ -126,30 +128,34 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
         }
     });
 
-    const collaborators = Object.values(stats)
-        .map(({ countedProjectIds, ...rest }) => rest)
-        .sort((a, b) => b.projectCount - a.projectCount);
+    const collaborators = Object.values(stats).map(({ countedProjectIds, ...rest }) => rest);
 
-    const grouped: Record<string, CollaboratorStat[]> = {};
-    collaborators.forEach(collab => {
-        const role = collab.role || 'member';
-        if (!grouped[role]) {
-            grouped[role] = [];
-        }
-        grouped[role].push(collab);
-    });
+    let groupedData: Record<string, CollaboratorStat[]> = {};
 
-    const orderedGrouped: Record<string, CollaboratorStat[]> = {};
-    Object.keys(roleHierarchy).forEach(role => {
-        if (grouped[role]) {
-            orderedGrouped[role] = grouped[role];
-        }
-    });
-    
-    const flatList = Object.values(orderedGrouped).flat();
+    if (groupBy === 'role') {
+      const groupedByRole: Record<string, CollaboratorStat[]> = {};
+      collaborators.forEach(collab => {
+          const role = collab.role || 'member';
+          if (!groupedByRole[role]) {
+              groupedByRole[role] = [];
+          }
+          groupedByRole[role].push(collab);
+      });
 
-    return { collaboratorsByRole: orderedGrouped, allCollaborators: flatList };
-  }, [projects, tasks]);
+      Object.keys(roleHierarchy).forEach(role => {
+          if (groupedByRole[role]) {
+              groupedData[role] = groupedByRole[role];
+          }
+      });
+    } else { // groupBy 'project'
+      const sortedProjects = [...projects].sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+      sortedProjects.forEach(project => {
+        groupedData[project.name] = project.assignedTo.map(member => stats[member.id]).filter(Boolean);
+      });
+    }
+
+    return { groupedData, allCollaborators: collaborators.sort((a, b) => b.projectCount - a.projectCount) };
+  }, [projects, tasks, groupBy]);
 
   return (
     <Card>
@@ -157,7 +163,20 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
         <Collapsible open={isOpen} onOpenChange={setIsOpen}>
           <CollapsibleTrigger className="w-full p-6">
             <div className="flex items-center justify-between">
-              <CardTitle>Collaborators</CardTitle>
+              <div className="flex items-center gap-4">
+                <CardTitle>Collaborators</CardTitle>
+                {isOpen && (
+                  <Select value={groupBy} onValueChange={(value) => setGroupBy(value as 'role' | 'project')}>
+                    <SelectTrigger className="w-[150px] h-8 text-xs">
+                      <SelectValue placeholder="Group by..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="role">Group by Role</SelectItem>
+                      <SelectItem value="project">Group by Project</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
               <div className="flex items-center gap-4">
                 {!isOpen && (
                   <div className="flex items-center -space-x-2">
@@ -184,13 +203,13 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
             <CardContent className="px-6 pb-6 pt-0">
               {/* Mobile View */}
               <div className="md:hidden">
-                {Object.entries(collaboratorsByRole).map(([role, collaboratorsInRole]) => (
-                  <div key={role}>
-                    <h3 className="text-sm font-semibold uppercase text-muted-foreground tracking-wider pt-6 pb-2">
-                      {role.replace('_', ' ')}
+                {Object.entries(groupedData).map(([groupName, collaboratorsInGroup]) => (
+                  <div key={groupName}>
+                    <h3 className="text-sm font-semibold uppercase text-muted-foreground tracking-wider pt-6 pb-2 capitalize">
+                      {groupName.replace('_', ' ')}
                     </h3>
                     <div className="space-y-4">
-                      {collaboratorsInRole.map(c => (
+                      {collaboratorsInGroup.map(c => (
                         <div key={c.id} className="bg-muted/50 p-4 rounded-lg">
                           <div className="flex items-center gap-3 mb-4">
                             <Avatar className="h-10 w-10">
@@ -235,16 +254,16 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {Object.entries(collaboratorsByRole).map(([role, collaboratorsInRole]) => (
-                          <React.Fragment key={role}>
+                        {Object.entries(groupedData).map(([groupName, collaboratorsInGroup]) => (
+                          <React.Fragment key={groupName}>
                             <TableRow className="border-b-0 hover:bg-transparent">
                               <TableCell colSpan={7} className="pt-6 pb-2">
-                                <h3 className="text-sm font-semibold uppercase text-muted-foreground tracking-wider">
-                                  {role.replace('_', ' ')}
+                                <h3 className="text-sm font-semibold uppercase text-muted-foreground tracking-wider capitalize">
+                                  {groupName.replace('_', ' ')}
                                 </h3>
                               </TableCell>
                             </TableRow>
-                            {collaboratorsInRole.map(c => (
+                            {collaboratorsInGroup.map(c => (
                                 <TableRow key={c.id}>
                                     <TableCell>
                                         <div className="flex items-center gap-3">
