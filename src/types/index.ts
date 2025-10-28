@@ -231,6 +231,8 @@ export interface Project {
   kanban_order?: number;
   payment_kanban_order?: number;
   reactions?: Reaction[];
+  active_task_count?: number;
+  active_ticket_count?: number;
 }
 
 export interface Invoice {

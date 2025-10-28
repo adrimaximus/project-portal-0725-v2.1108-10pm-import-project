@@ -9,7 +9,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Trash2, MapPin, CheckCircle, Clock, Loader2 } from 'lucide-react';
+import { MoreHorizontal, Trash2, MapPin, CheckCircle, Clock, Loader2, ListChecks, Ticket } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { getProjectStatusStyles, formatInJakarta, generatePastelColor, getAvatarUrl } from '@/lib/utils';
 import { isSameDay, subDays, isBefore, startOfToday } from 'date-fns';
@@ -154,23 +154,20 @@ const DayEntry = ({ dateStr, projectsOnDay, showMonthHeader, onDeleteProject, na
                         <span className="truncate" title={fullVenue}>{venueName}</span>
                       </div>
                     )}
-                    {project.briefFiles && project.briefFiles.length > 0 && (
-                      <div className="mt-2">
-                        <p className="text-xs font-semibold text-muted-foreground">Attachments:</p>
-                        <ul className="text-xs text-muted-foreground list-disc list-inside">
-                          {project.briefFiles.slice(0, 2).map(file => (
-                            <li key={file.id} className="truncate">
-                              <a href={file.url} target="_blank" rel="noopener noreferrer" className="hover:underline hover:text-primary">
-                                {file.name}
-                              </a>
-                            </li>
-                          ))}
-                          {project.briefFiles.length > 2 && (
-                            <li className="truncate">...and {project.briefFiles.length - 2} more</li>
-                          )}
-                        </ul>
-                      </div>
-                    )}
+                    <div className="mt-2 flex items-center gap-4 text-xs text-muted-foreground">
+                      {(project.active_task_count ?? 0) > 0 && (
+                        <div className="flex items-center gap-1.5">
+                          <ListChecks size={14} />
+                          <span>{project.active_task_count} Active Task{project.active_task_count === 1 ? '' : 's'}</span>
+                        </div>
+                      )}
+                      {(project.active_ticket_count ?? 0) > 0 && (
+                        <div className="flex items-center gap-1.5">
+                          <Ticket size={14} />
+                          <span>{project.active_ticket_count} Active Ticket{project.active_ticket_count === 1 ? '' : 's'}</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
                 
