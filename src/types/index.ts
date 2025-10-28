@@ -49,7 +49,7 @@ export interface Person {
   notes?: string | null;
   created_at: string;
   updated_at: string;
-  projects?: { id: string; name: string; slug: string }[];
+  projects?: { id: string; name: string; slug: string; status: string; }[];
   tags?: Tag[];
   avatar_url?: string;
   user_id?: string | null;
@@ -421,6 +421,7 @@ export interface KbArticle {
 
 export interface Invoice {
   id: string;
+  projectId: string;
   projectName: string;
   rawProjectId: string;
   amount: number;
