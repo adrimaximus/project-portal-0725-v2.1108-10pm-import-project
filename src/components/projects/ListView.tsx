@@ -29,7 +29,7 @@ interface ListViewProps {
   isFetchingNextPage: boolean;
 }
 
-const ITEMS_PER_PAGE = 10;
+const ITEMS_PER_PAGE = 5;
 
 const formatProjectDateRange = (startDateStr: string | null | undefined, dueDateStr: string | null | undefined): string => {
   if (!startDateStr) return '-';
