@@ -1,23 +1,8 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Task, TaskStatus, Reaction } from '@/types';
+import { Task, TaskStatus, Reaction, UpsertTaskPayload } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
-
-export type UpsertTaskPayload = {
-  id?: string;
-  project_id: string;
-  title: string;
-  description?: string;
-  due_date?: string | null;
-  priority?: string;
-  status?: string;
-  completed?: boolean;
-  assignee_ids?: string[];
-  tag_ids?: string[];
-  new_files?: File[];
-  deleted_files?: string[];
-};
 
 type UpdateTaskOrderPayload = {
   taskId: string;
@@ -186,6 +171,7 @@ export const useTaskMutations = (refetch?: () => void) => {
     { previousDataMap: Map<any[], any> }
   >({
     mutationFn: async ({ taskId, emoji }) => {
+      if (!user) throw new Error("User not authenticated");
       const { error } = await supabase.rpc('toggle_task_reaction', {
         p_task_id: taskId,
         p_emoji: emoji,

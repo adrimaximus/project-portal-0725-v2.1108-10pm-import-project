@@ -119,6 +119,21 @@ export interface Task {
   kanban_order?: number;
 }
 
+export type UpsertTaskPayload = {
+  id?: string;
+  project_id: string;
+  title: string;
+  description?: string;
+  due_date?: string | null;
+  priority?: string;
+  status?: string;
+  completed?: boolean;
+  assignee_ids?: string[];
+  tag_ids?: string[];
+  new_files?: File[];
+  deleted_files?: string[];
+};
+
 export interface Comment {
   id: string;
   text: string;
