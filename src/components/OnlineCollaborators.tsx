@@ -16,12 +16,15 @@ const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
   const navigate = useNavigate();
   const { onlineCollaborators } = useAuth();
 
-  // De-duplicate the list of online collaborators
   const uniqueCollaborators = useMemo(() => {
-    const map = new Map<string, Collaborator>();
+    const map = new Map<string, Collaborator & { isIdle: boolean }>();
+    const fiveMinutesAgo = new Date().getTime() - 5 * 60 * 1000;
+
     onlineCollaborators.forEach(c => {
       if (!map.has(c.id)) {
-        map.set(c.id, c);
+        const lastActive = c.last_active_at ? new Date(c.last_active_at).getTime() : 0;
+        const isIdle = lastActive < fiveMinutesAgo;
+        map.set(c.id, { ...c, isIdle });
       }
     });
     return Array.from(map.values());
@@ -85,7 +88,7 @@ const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
                     <AvatarImage src={getAvatarUrl(c.avatar_url, c.id)} alt={c.name} />
                     <AvatarFallback style={generatePastelColor(c.id)}>{c.initials}</AvatarFallback>
                   </Avatar>
-                  <span className="absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full bg-green-500 ring-2 ring-background" />
+                  <span className={`absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full ring-2 ring-background ${c.isIdle ? 'bg-orange-400' : 'bg-green-500'}`} />
                 </div>
                 <span className="text-sm text-foreground font-medium">{c.name}</span>
               </div>
@@ -105,9 +108,7 @@ const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
                         <AvatarImage src={getAvatarUrl(collaborator.avatar_url, collaborator.id)} alt={collaborator.name} />
                         <AvatarFallback style={generatePastelColor(collaborator.id)}>{collaborator.initials}</AvatarFallback>
                       </Avatar>
-                      {index === visibleCollaborators.length - 1 && remainingCount === 0 && (
-                        <span className="absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full bg-green-500 ring-2 ring-background" />
-                      )}
+                      <span className={`absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full ring-2 ring-background ${collaborator.isIdle ? 'bg-orange-400' : 'bg-green-500'}`} />
                     </div>
                   </TooltipTrigger>
                   <TooltipContent side="top" className="bg-primary text-primary-foreground">

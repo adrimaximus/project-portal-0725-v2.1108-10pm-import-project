@@ -6,6 +6,7 @@ import { RealtimeChannel, Session } from '@supabase/supabase-js';
 import { toast } from 'sonner';
 import SafeLocalStorage from '@/lib/localStorage';
 import { useNavigate, useLocation } from 'react-router-dom';
+import debounce from 'lodash.debounce';
 
 type AuthContextType = {
   user: User | null;
@@ -118,44 +119,66 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [user, isLoading, isUserLoading, session, navigate, location]);
 
   useEffect(() => {
-    if (user && !channel) {
-      const newChannel = supabase.channel(`online-users`, {
-        config: {
-          presence: {
-            key: user.id,
-          },
-        },
-      });
-
-      newChannel
-        .on('presence', { event: 'sync' }, () => {
-          const newState = newChannel.presenceState<Collaborator>();
-          const collaborators = Object.values(newState)
-            .flat()
-            .filter(c => c.id !== user.id);
-          setOnlineCollaborators(collaborators);
-        })
-        .subscribe(async (status) => {
-          if (status === 'SUBSCRIBED') {
-            await newChannel.track({
-              id: user.id,
-              name: `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email,
-              initials: `${user.first_name?.[0] || ''}${user.last_name?.[0] || ''}`.toUpperCase(),
-              avatar_url: user.avatar_url,
-            });
-          }
-        });
-      
-      setChannel(newChannel);
-    }
-
-    return () => {
+    if (!user) {
       if (channel) {
         supabase.removeChannel(channel);
         setChannel(null);
       }
+      return;
+    }
+
+    const newChannel = supabase.channel(`online-users`, {
+      config: { presence: { key: user.id } },
+    });
+
+    const trackPayload = {
+      id: user.id,
+      name: `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email,
+      initials: `${user.first_name?.[0] || ''}${user.last_name?.[0] || ''}`.toUpperCase(),
+      avatar_url: user.avatar_url,
     };
-  }, [user, channel]);
+
+    const updateActivity = debounce(async () => {
+      await newChannel.track({ ...trackPayload, last_active_at: new Date().toISOString() });
+    }, 30000, { leading: true, trailing: false });
+
+    newChannel
+      .on('presence', { event: 'sync' }, () => {
+        const newState = newChannel.presenceState<Collaborator>();
+        const collaborators = Object.values(newState)
+          .flat()
+          .filter(c => c.id !== user.id);
+        setOnlineCollaborators(collaborators);
+      })
+      .subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          await newChannel.track({ ...trackPayload, last_active_at: new Date().toISOString() });
+          window.addEventListener('mousemove', updateActivity);
+          window.addEventListener('keydown', updateActivity);
+          window.addEventListener('click', updateActivity);
+          window.addEventListener('scroll', updateActivity);
+        }
+      });
+
+    setChannel(newChannel);
+
+    const interval = setInterval(async () => {
+      await newChannel.track({ ...trackPayload, last_active_at: new Date().toISOString() });
+    }, 4 * 60 * 1000);
+
+    return () => {
+      window.removeEventListener('mousemove', updateActivity);
+      window.removeEventListener('keydown', updateActivity);
+      window.removeEventListener('click', updateActivity);
+      window.removeEventListener('scroll', updateActivity);
+      clearInterval(interval);
+      updateActivity.cancel();
+      if (newChannel) {
+        supabase.removeChannel(newChannel);
+      }
+      setChannel(null);
+    };
+  }, [user]);
 
   const logout = async () => {
     await supabase.auth.signOut({ scope: 'local' });
