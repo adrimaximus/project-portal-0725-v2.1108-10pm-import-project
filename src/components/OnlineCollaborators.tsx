@@ -30,8 +30,8 @@ const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
     return Array.from(map.values());
   }, [onlineCollaborators]);
 
-  const visibleCollaborators = uniqueCollaborators.slice(0, 3);
-  const remainingCount = uniqueCollaborators.length - visibleCollaborators.length;
+  const activeCollaborators = useMemo(() => uniqueCollaborators.filter(c => !c.isIdle), [uniqueCollaborators]);
+  const idleCollaborators = useMemo(() => uniqueCollaborators.filter(c => c.isIdle), [uniqueCollaborators]);
 
   const handleCollaboratorClick = (collaborator: Collaborator) => {
     navigate('/chat', { 
@@ -74,9 +74,9 @@ const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
       >
         <span>Online</span>
       </h3>
-      <div className="px-3">
+      <div>
         {isExpanded ? (
-          <div className="space-y-1">
+          <div className="space-y-1 px-3">
             {uniqueCollaborators.map(c => (
               <div 
                 key={c.id} 
@@ -96,41 +96,74 @@ const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
           </div>
         ) : (
           <TooltipProvider delayDuration={0}>
-            <div className="flex items-center cursor-pointer -space-x-3" onClick={() => setIsExpanded(true)}>
-              {visibleCollaborators.map((collaborator, index) => (
-                <Tooltip key={collaborator.id}>
-                  <TooltipTrigger asChild>
-                    <div
-                      className="relative transition-all duration-300 hover:z-40 hover:scale-110"
-                      style={{ zIndex: index }}
-                    >
-                      <Avatar className="h-9 w-9 border-2 border-background bg-background">
-                        <AvatarImage src={getAvatarUrl(collaborator.avatar_url, collaborator.id)} alt={collaborator.name} />
-                        <AvatarFallback style={generatePastelColor(collaborator.id)}>{collaborator.initials}</AvatarFallback>
-                      </Avatar>
-                      <span className={`absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full ring-2 ring-background ${collaborator.isIdle ? 'bg-orange-400' : 'bg-green-500'}`} />
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent side="top" className="bg-primary text-primary-foreground">
-                    <p>{collaborator.name}</p>
-                  </TooltipContent>
-                </Tooltip>
-              ))}
-              {remainingCount > 0 && (
-                 <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div 
-                      className="relative flex h-9 w-9 items-center justify-center rounded-full bg-muted text-muted-foreground border-2 border-background text-xs font-semibold hover:z-40 hover:scale-110 transition-transform"
-                      style={{ zIndex: visibleCollaborators.length }}
-                    >
-                      +{remainingCount}
-                      <span className="absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full bg-green-500 ring-2 ring-background" />
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent side="top" className="bg-primary text-primary-foreground">
-                    <p>{remainingCount} more online</p>
-                  </TooltipContent>
-                </Tooltip>
+            <div className="flex items-center space-x-4 cursor-pointer px-3" onClick={() => setIsExpanded(true)}>
+              {activeCollaborators.length > 0 && (
+                <div className="flex items-center">
+                  <div className="flex -space-x-3">
+                    {activeCollaborators.map((collaborator, index) => (
+                      <Tooltip key={collaborator.id}>
+                        <TooltipTrigger asChild>
+                          <div
+                            className="relative transition-all duration-300 hover:z-40 hover:scale-110"
+                            style={{ zIndex: index }}
+                          >
+                            <Avatar className="h-9 w-9 border-2 border-background bg-background">
+                              <AvatarImage src={getAvatarUrl(collaborator.avatar_url, collaborator.id)} alt={collaborator.name} />
+                              <AvatarFallback style={generatePastelColor(collaborator.id)}>{collaborator.initials}</AvatarFallback>
+                            </Avatar>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="bg-primary text-primary-foreground">
+                          <p>{collaborator.name}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    ))}
+                  </div>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="relative pl-2">
+                        <span className="block h-2.5 w-2.5 rounded-full bg-green-500 ring-2 ring-background" />
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="bg-primary text-primary-foreground">
+                      <p>{activeCollaborators.length} Active</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+              )}
+              {idleCollaborators.length > 0 && (
+                <div className="flex items-center">
+                  <div className="flex -space-x-3">
+                    {idleCollaborators.map((collaborator, index) => (
+                      <Tooltip key={collaborator.id}>
+                        <TooltipTrigger asChild>
+                          <div
+                            className="relative transition-all duration-300 hover:z-40 hover:scale-110"
+                            style={{ zIndex: index + activeCollaborators.length }}
+                          >
+                            <Avatar className="h-9 w-9 border-2 border-background bg-background">
+                              <AvatarImage src={getAvatarUrl(collaborator.avatar_url, collaborator.id)} alt={collaborator.name} />
+                              <AvatarFallback style={generatePastelColor(collaborator.id)}>{collaborator.initials}</AvatarFallback>
+                            </Avatar>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="bg-primary text-primary-foreground">
+                          <p>{collaborator.name}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    ))}
+                  </div>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="relative pl-2">
+                        <span className="block h-2.5 w-2.5 rounded-full bg-orange-400 ring-2 ring-background" />
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="bg-primary text-primary-foreground">
+                      <p>{idleCollaborators.length} Idle</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
               )}
             </div>
           </TooltipProvider>
