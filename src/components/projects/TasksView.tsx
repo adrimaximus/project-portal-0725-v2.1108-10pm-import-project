@@ -13,7 +13,7 @@ import { MoreHorizontal, Edit, Trash2, Ticket, Paperclip, SmilePlus, Link as Lin
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Checkbox } from "@/components/ui/checkbox";
 import TaskAttachmentList from './TaskAttachmentList';
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import TaskDetailCard from './TaskDetailCard';
@@ -354,7 +354,7 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
                     acc[reaction.emoji].users.push(reaction.user_name);
                     acc[reaction.emoji].userIds.push(reaction.user_id);
                     return acc;
-                }, {});
+                }, {} as Record<string, { users: string[]; userIds: string[] }>);
 
                 const taskMonthYear = task.due_date ? format(new Date(task.due_date), 'MMMM yyyy') : 'No Due Date';
                 let showMonthSeparator = false;
@@ -399,153 +399,155 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
                               disabled={isToggling}
                             />
                           </div>
-                          <div className="flex flex-col cursor-pointer text-sm md:text-base w-full" onClick={() => setSelectedTask(task)}>
-                            <div className="flex items-center gap-2">
-                              <div className={`${task.completed ? 'line-through text-muted-foreground' : ''}`}>
-                                <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ p: 'span' }}>
-                                  {formatTaskText(task.title)}
-                                </ReactMarkdown>
+                          <DialogTrigger asChild>
+                            <div className="flex flex-col cursor-pointer text-sm md:text-base w-full" onClick={() => setSelectedTask(task)}>
+                              <div className="flex items-center gap-2">
+                                <div className={`${task.completed ? 'line-through text-muted-foreground' : ''}`}>
+                                  <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ p: 'span' }}>
+                                    {formatTaskText(task.title)}
+                                  </ReactMarkdown>
+                                </div>
                               </div>
-                            </div>
-                            {task.originTicketId && task.created_by && (
-                              <p className="text-xs text-muted-foreground mt-1">
-                                From: {task.created_by.email}
-                              </p>
-                            )}
-                            {task.description && (
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <p className="text-xs text-muted-foreground mt-1">
-                                      {formatTaskText(task.description, 50)}
-                                    </p>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p className="max-w-xs">{formatTaskText(task.description)}</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            )}
-                            {hasBottomBar && (
-                              <div className="flex justify-between items-center border-t pt-1 mt-1">
-                                <div className="flex items-center gap-2">
-                                  {hasAssignees && (
-                                    <div className="flex items-center -space-x-2">
-                                      {task.assignedTo?.map((user) => (
-                                        <TooltipProvider key={user.id}>
-                                          <Tooltip>
-                                            <TooltipTrigger asChild>
-                                              <Link to="/chat" state={{ recipient: user }} onClick={(e) => e.stopPropagation()}>
-                                                <Avatar className="h-6 w-6 border-2 border-background">
-                                                  <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
-                                                  <AvatarFallback style={generatePastelColor(user.id)}>
-                                                    {getInitials([user.first_name, user.last_name].filter(Boolean).join(' '), user.email || undefined)}
-                                                  </AvatarFallback>
-                                                </Avatar>
-                                              </Link>
-                                            </TooltipTrigger>
-                                            <TooltipContent>
-                                              <p>{[user.first_name, user.last_name].filter(Boolean).join(' ')}</p>
-                                            </TooltipContent>
-                                          </Tooltip>
-                                        </TooltipProvider>
-                                      ))}
+                              {task.originTicketId && task.created_by && (
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  From: {task.created_by.email}
+                                </p>
+                              )}
+                              {task.description && (
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <p className="text-xs text-muted-foreground mt-1">
+                                        {formatTaskText(task.description, 50)}
+                                      </p>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p className="max-w-xs">{formatTaskText(task.description)}</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              )}
+                              {hasBottomBar && (
+                                <div className="flex justify-between items-center border-t pt-1 mt-1">
+                                  <div className="flex items-center gap-2">
+                                    {hasAssignees && (
+                                      <div className="flex items-center -space-x-2">
+                                        {task.assignedTo?.map((user) => (
+                                          <TooltipProvider key={user.id}>
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <Link to="/chat" state={{ recipient: user }} onClick={(e) => e.stopPropagation()}>
+                                                  <Avatar className="h-6 w-6 border-2 border-background">
+                                                    <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
+                                                    <AvatarFallback style={generatePastelColor(user.id)}>
+                                                      {getInitials([user.first_name, user.last_name].filter(Boolean).join(' '), user.email || undefined)}
+                                                    </AvatarFallback>
+                                                  </Avatar>
+                                                </Link>
+                                              </TooltipTrigger>
+                                              <TooltipContent>
+                                                <p>{[user.first_name, user.last_name].filter(Boolean).join(' ')}</p>
+                                              </TooltipContent>
+                                            </Tooltip>
+                                          </TooltipProvider>
+                                        ))}
+                                      </div>
+                                    )}
+                                    <div className="flex items-center gap-1 flex-wrap">
+                                      {Object.entries(groupedReactions).map(([emoji, { users, userIds }]) => {
+                                          const userHasReacted = user ? userIds.includes(user.id) : false;
+                                          return (
+                                              <TooltipProvider key={emoji}>
+                                                  <Tooltip>
+                                                      <TooltipTrigger asChild>
+                                                          <button
+                                                              onClick={(e) => {
+                                                                  e.stopPropagation();
+                                                                  handleEmojiSelect(emoji, task.id);
+                                                              }}
+                                                              className={cn(
+                                                                  "px-1.5 py-0.5 rounded-full text-xs flex items-center gap-1 transition-colors border",
+                                                                  userHasReacted
+                                                                  ? "bg-primary/20 border-primary/50"
+                                                                  : "bg-muted hover:bg-muted/80"
+                                                              )}
+                                                          >
+                                                              <span>{emoji}</span>
+                                                              <span className="font-medium text-xs">{users.length}</span>
+                                                          </button>
+                                                      </TooltipTrigger>
+                                                      <TooltipContent>
+                                                          <p>{users.join(', ')}</p>
+                                                      </TooltipContent>
+                                                  </Tooltip>
+                                              </TooltipProvider>
+                                          );
+                                      })}
                                     </div>
-                                  )}
-                                  <div className="flex items-center gap-1 flex-wrap">
-                                    {Object.entries(groupedReactions).map(([emoji, { users, userIds }]) => {
-                                        const userHasReacted = user ? userIds.includes(user.id) : false;
-                                        return (
-                                            <TooltipProvider key={emoji}>
-                                                <Tooltip>
-                                                    <TooltipTrigger asChild>
-                                                        <button
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                handleEmojiSelect(emoji, task.id);
-                                                            }}
-                                                            className={cn(
-                                                                "px-1.5 py-0.5 rounded-full text-xs flex items-center gap-1 transition-colors border",
-                                                                userHasReacted
-                                                                ? "bg-primary/20 border-primary/50"
-                                                                : "bg-muted hover:bg-muted/80"
-                                                            )}
-                                                        >
-                                                            <span>{emoji}</span>
-                                                            <span className="font-medium text-xs">{users.length}</span>
-                                                        </button>
-                                                    </TooltipTrigger>
-                                                    <TooltipContent>
-                                                        <p>{users.join(', ')}</p>
-                                                    </TooltipContent>
-                                                </Tooltip>
-                                            </TooltipProvider>
-                                        );
-                                    })}
+                                  </div>
+                                  <div className="flex justify-end gap-1 items-center mr-1">
+                                    <Popover>
+                                      <PopoverTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={e => e.stopPropagation()}>
+                                          <SmilePlus className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                                        </Button>
+                                      </PopoverTrigger>
+                                      <PopoverContent onClick={e => e.stopPropagation()} className="p-1 w-auto rounded-full bg-background border shadow-lg">
+                                        <div className="flex items-center gap-1">
+                                          {commonEmojis.map(emoji => (
+                                            <button
+                                              key={emoji}
+                                              className="hover:bg-muted rounded-full p-1 transition-transform transform hover:scale-125"
+                                              onClick={() => handleEmojiSelect(emoji, task.id)}
+                                            >
+                                              <span className="text-xl">{emoji}</span>
+                                            </button>
+                                          ))}
+                                          <Popover>
+                                            <PopoverTrigger asChild>
+                                              <button className="hover:bg-muted rounded-full p-1.5 transition-transform transform hover:scale-125">
+                                                <SmilePlus className="h-5 w-5 text-muted-foreground" />
+                                              </button>
+                                            </PopoverTrigger>
+                                            <PopoverContent
+                                              onClick={(e) => e.stopPropagation()}
+                                              className="p-0 w-auto border-0"
+                                              side="bottom"
+                                              align="start"
+                                              sideOffset={8}
+                                            >
+                                              <EmojiPicker
+                                                onEmojiClick={(emojiObject) => {
+                                                  handleEmojiSelect(emojiObject.emoji, task.id);
+                                                }}
+                                                emojiStyle={EmojiStyle.NATIVE}
+                                                previewConfig={{ showPreview: false }}
+                                                width={350}
+                                                height={400}
+                                              />
+                                            </PopoverContent>
+                                          </Popover>
+                                        </div>
+                                      </PopoverContent>
+                                    </Popover>
+                                    {(task.originTicketId || task.tags?.some(t => t.name === 'Ticket')) && (
+                                      <TooltipProvider>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <Ticket className={`h-4 w-4 flex-shrink-0 ${task.completed ? 'text-green-500' : 'text-red-500'}`} />
+                                          </TooltipTrigger>
+                                          <TooltipContent>
+                                            <p>This is a ticket</p>
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
+                                    )}
+                                    {renderAttachments(task, allAttachments)}
                                   </div>
                                 </div>
-                                <div className="flex justify-end gap-1 items-center mr-1">
-                                  <Popover>
-                                    <PopoverTrigger asChild>
-                                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={e => e.stopPropagation()}>
-                                        <SmilePlus className="h-4 w-4 text-muted-foreground hover:text-foreground" />
-                                      </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent onClick={e => e.stopPropagation()} className="p-1 w-auto rounded-full bg-background border shadow-lg">
-                                      <div className="flex items-center gap-1">
-                                        {commonEmojis.map(emoji => (
-                                          <button
-                                            key={emoji}
-                                            className="hover:bg-muted rounded-full p-1 transition-transform transform hover:scale-125"
-                                            onClick={() => handleEmojiSelect(emoji, task.id)}
-                                          >
-                                            <span className="text-xl">{emoji}</span>
-                                          </button>
-                                        ))}
-                                        <Popover>
-                                          <PopoverTrigger asChild>
-                                            <button className="hover:bg-muted rounded-full p-1.5 transition-transform transform hover:scale-125">
-                                              <SmilePlus className="h-5 w-5 text-muted-foreground" />
-                                            </button>
-                                          </PopoverTrigger>
-                                          <PopoverContent
-                                            onClick={(e) => e.stopPropagation()}
-                                            className="p-0 w-auto border-0"
-                                            side="bottom"
-                                            align="start"
-                                            sideOffset={8}
-                                          >
-                                            <EmojiPicker
-                                              onEmojiClick={(emojiObject) => {
-                                                handleEmojiSelect(emojiObject.emoji, task.id);
-                                              }}
-                                              emojiStyle={EmojiStyle.NATIVE}
-                                              previewConfig={{ showPreview: false }}
-                                              width={350}
-                                              height={400}
-                                            />
-                                          </PopoverContent>
-                                        </Popover>
-                                      </div>
-                                    </PopoverContent>
-                                  </Popover>
-                                  {(task.originTicketId || task.tags?.some(t => t.name === 'Ticket')) && (
-                                    <TooltipProvider>
-                                      <Tooltip>
-                                        <TooltipTrigger asChild>
-                                          <Ticket className={`h-4 w-4 flex-shrink-0 ${task.completed ? 'text-green-500' : 'text-red-500'}`} />
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                          <p>This is a ticket</p>
-                                        </TooltipContent>
-                                      </Tooltip>
-                                    </TooltipProvider>
-                                  )}
-                                  {renderAttachments(task, allAttachments)}
-                                </div>
-                              </div>
-                            )}
-                          </div>
+                              )}
+                            </div>
+                          </DialogTrigger>
                         </div>
                       </TableCell>
                       <TableCell className="w-[20%]">
