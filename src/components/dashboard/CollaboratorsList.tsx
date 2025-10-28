@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Project, User } from '@/types';
-import { Card, CardContent, CardTitle, CardHeader } from "@/components/ui/card";
+import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import {
   Collapsible,
   CollapsibleContent,
@@ -24,8 +24,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ChevronsUpDown } from "lucide-react";
 import { generatePastelColor, getAvatarUrl } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
-import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface CollaboratorsListProps {
   projects: Project[];
@@ -44,7 +42,6 @@ interface CollaboratorStat extends User {
 const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [tasks, setTasks] = useState<any[]>([]);
-  const [roleFilter, setRoleFilter] = useState<string>('All');
 
   useEffect(() => {
     const fetchTasks = async () => {
@@ -154,66 +151,42 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
     return { collaboratorsByRole: orderedGrouped, allCollaborators: flatList };
   }, [projects, tasks]);
 
-  const collaboratorsToDisplay = useMemo(() => {
-    if (roleFilter === 'All') {
-        return collaboratorsByRole;
-    }
-    return {
-        [roleFilter]: collaboratorsByRole[roleFilter] || []
-    };
-  }, [collaboratorsByRole, roleFilter]);
-
   return (
     <Card>
       <TooltipProvider>
         <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-          <CardHeader className="p-6">
+          <CollapsibleTrigger className="w-full p-6">
             <div className="flex items-center justify-between">
+              <CardTitle>Collaborators</CardTitle>
               <div className="flex items-center gap-4">
-                <CardTitle>Collaborators</CardTitle>
-                <Select value={roleFilter} onValueChange={setRoleFilter}>
-                  <SelectTrigger className="w-[180px] h-8">
-                    <SelectValue placeholder="Filter by role..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="All">All Roles</SelectItem>
-                    {Object.keys(collaboratorsByRole).map(role => (
-                      <SelectItem key={role} value={role} className="capitalize">{role.replace('_', ' ')}</SelectItem>
+                {!isOpen && (
+                  <div className="flex items-center -space-x-2">
+                    {allCollaborators.slice(0, 5).map(c => (
+                      <Tooltip key={c.id}>
+                        <TooltipTrigger asChild>
+                          <Avatar className="h-8 w-8 border-2 border-card">
+                            <AvatarImage src={getAvatarUrl(c.avatar_url, c.id)} alt={c.name} />
+                            <AvatarFallback style={generatePastelColor(c.id)}>{c.initials}</AvatarFallback>
+                          </Avatar>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{c.name}</p>
+                        </TooltipContent>
+                      </Tooltip>
                     ))}
-                  </SelectContent>
-                </Select>
+                  </div>
+                )}
+                <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />
               </div>
-              <CollapsibleTrigger asChild>
-                <Button variant="ghost" className="flex items-center gap-4 p-2 h-auto">
-                  {!isOpen && (
-                    <div className="flex items-center -space-x-2">
-                      {allCollaborators.slice(0, 5).map(c => (
-                        <Tooltip key={c.id}>
-                          <TooltipTrigger asChild>
-                            <Avatar className="h-8 w-8 border-2 border-card">
-                              <AvatarImage src={getAvatarUrl(c.avatar_url, c.id)} alt={c.name} />
-                              <AvatarFallback style={generatePastelColor(c.id)}>{c.initials}</AvatarFallback>
-                            </Avatar>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>{c.name}</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      ))}
-                    </div>
-                  )}
-                  <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />
-                </Button>
-              </CollapsibleTrigger>
             </div>
-          </CardHeader>
+          </CollapsibleTrigger>
           <CollapsibleContent>
             <CardContent className="px-6 pb-6 pt-0">
               {/* Mobile View */}
               <div className="md:hidden">
-                {Object.entries(collaboratorsToDisplay).map(([role, collaboratorsInRole]) => (
+                {Object.entries(collaboratorsByRole).map(([role, collaboratorsInRole]) => (
                   <div key={role}>
-                    <h3 className="text-sm font-semibold uppercase text-muted-foreground tracking-wider pt-6 pb-2 capitalize">
+                    <h3 className="text-sm font-semibold uppercase text-muted-foreground tracking-wider pt-6 pb-2">
                       {role.replace('_', ' ')}
                     </h3>
                     <div className="space-y-4">
@@ -262,11 +235,11 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {Object.entries(collaboratorsToDisplay).map(([role, collaboratorsInRole]) => (
+                        {Object.entries(collaboratorsByRole).map(([role, collaboratorsInRole]) => (
                           <React.Fragment key={role}>
                             <TableRow className="border-b-0 hover:bg-transparent">
                               <TableCell colSpan={7} className="pt-6 pb-2">
-                                <h3 className="text-sm font-semibold uppercase text-muted-foreground tracking-wider capitalize">
+                                <h3 className="text-sm font-semibold uppercase text-muted-foreground tracking-wider">
                                   {role.replace('_', ' ')}
                                 </h3>
                               </TableCell>
