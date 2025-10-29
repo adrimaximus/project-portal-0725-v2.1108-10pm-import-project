@@ -367,6 +367,46 @@ const ProjectsPage = () => {
     navigate(`/projects/${projectSlug}`);
   };
 
+  // Restore scroll position on mount
+  useEffect(() => {
+    if (!isLoadingProjects && !isLoadingTasks) {
+      const savedPosition = sessionStorage.getItem('projectsScrollPosition');
+      if (savedPosition && scrollContainerRef.current) {
+        scrollContainerRef.current.scrollTop = parseInt(savedPosition, 10);
+      }
+    }
+  }, [isLoadingProjects, isLoadingTasks]);
+
+  // Save scroll position on scroll
+  useEffect(() => {
+    const scrollContainer = scrollContainerRef.current;
+    let timeoutId: number | null = null;
+
+    const handleScroll = () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      timeoutId = window.setTimeout(() => {
+        if (scrollContainer) {
+          sessionStorage.setItem('projectsScrollPosition', String(scrollContainer.scrollTop));
+        }
+      }, 200); // Debounce saving scroll position
+    };
+
+    if (scrollContainer) {
+      scrollContainer.addEventListener('scroll', handleScroll);
+    }
+
+    return () => {
+      if (scrollContainer) {
+        scrollContainer.removeEventListener('scroll', handleScroll);
+      }
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, []);
+
   return (
     <PortalLayout disableMainScroll noPadding>
       <AlertDialog open={!!projectToDelete} onOpenChange={(open) => !open && setProjectToDelete(null)}>
