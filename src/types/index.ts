@@ -261,7 +261,7 @@ export interface Invoice {
   clientCompanyName: string | null;
   projectOwner: Owner | null;
   assignedMembers: Member[];
-  invoiceAttachments?: InvoiceAttachment[];
+  invoiceAttachments: InvoiceAttachment[];
   payment_terms?: any[];
 }
 
