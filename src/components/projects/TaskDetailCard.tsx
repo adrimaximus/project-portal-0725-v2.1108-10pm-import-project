@@ -15,8 +15,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/
 import { useTaskMutations } from '@/hooks/useTaskMutations';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import TaskDiscussion from './TaskDiscussion';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
+import TaskFooter from './TaskFooter';
 
 interface TaskDetailCardProps {
   task: Task;
@@ -251,9 +251,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
             </div>
           )}
 
-          <div className="border-t pt-3 sm:pt-4">
-            <TaskDiscussion task={task} onToggleReaction={handleToggleReaction} />
-          </div>
+          <TaskFooter task={task} onToggleReaction={handleToggleReaction} />
         </div>
       </div>
     </DialogContent>
