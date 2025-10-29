@@ -7,11 +7,11 @@ import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Briefcase, Cake, Edit, Instagram, Linkedin, Mail, MapPin, MoreVertical, Phone, Twitter, User as UserIcon, Users, Trash2, Loader2 } from 'lucide-react';
+import { ArrowLeft, Briefcase, Cake, Edit, Instagram, Linkedin, Mail, MapPin, MoreVertical, Phone, Twitter, User as UserIcon, Users, Trash2, Loader2, MessageSquare } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { formatInJakarta, generatePastelColor, getInitials, getAvatarUrl, formatPhoneNumberForApi } from '@/lib/utils';
 import PeopleFormDialog from '@/components/people/PersonFormDialog';
-import { Person as BasePerson, ContactProperty, User } from '@/types';
+import { Person as BasePerson, ContactProperty, User, Collaborator } from '@/types';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import WhatsappIcon from '@/components/icons/WhatsappIcon';
@@ -33,6 +33,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import StatusBadge from '@/components/StatusBadge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 type Person = BasePerson & { company_id?: string | null };
 
@@ -232,6 +233,14 @@ const PersonProfilePage = () => {
     return !isPersonalEmail && !isPhone2;
   });
 
+  const collaboratorForChat: Collaborator | undefined = person.user_id ? {
+    id: person.user_id,
+    name: person.full_name,
+    avatar_url: person.avatar_url,
+    initials: getInitials(person.full_name, person.email),
+    email: person.email || '',
+  } : undefined;
+
   return (
     <PortalLayout>
       <div className="space-y-6">
@@ -268,8 +277,33 @@ const PersonProfilePage = () => {
                     <UserIcon className="h-10 w-10 text-white" />
                   </AvatarFallback>
                 </Avatar>
-                <h2 className="text-2xl font-bold">{person.full_name}</h2>
+                <h2 className="text-2xl font-bold flex items-center gap-2">
+                  {person.full_name}
+                  {person.user_id && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Badge variant="secondary">
+                            <UserIcon className="h-3 w-3 mr-1.5" />
+                            Platform User
+                          </Badge>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>This contact is a registered user on the platform.</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
+                </h2>
                 <p className="text-muted-foreground">{person.job_title || 'No title'}</p>
+                {collaboratorForChat && collaboratorForChat.id !== currentUser?.id && (
+                  <Button asChild variant="outline" className="mt-4 w-full">
+                    <Link to="/chat" state={{ selectedCollaborator: collaboratorForChat }}>
+                      <MessageSquare className="mr-2 h-4 w-4" />
+                      Chat with {person.full_name.split(' ')[0]}
+                    </Link>
+                  </Button>
+                )}
               </CardContent>
             </Card>
 
