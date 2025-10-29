@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Project, User } from "@/types";
+import { Project, User, ConversationMessage } from "@/types";
 import {
   CommandDialog,
   CommandEmpty,
@@ -30,11 +30,6 @@ type SearchResults = {
   goals: Goal[];
   bills: Bill[];
   tasks: Task[];
-};
-
-type ConversationMessage = {
-  sender: 'user' | 'ai';
-  content: string;
 };
 
 export function GlobalSearch() {
