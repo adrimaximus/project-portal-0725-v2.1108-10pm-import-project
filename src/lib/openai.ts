@@ -2,9 +2,21 @@ import { supabase } from '@/integrations/supabase/client';
 import { ConversationMessage, Goal } from '@/types';
 import { FunctionsHttpError } from '@supabase/supabase-js';
 
-export async function analyzeProjects(message: string, conversationHistory: ConversationMessage[]): Promise<string> {
-  const { data, error } = await supabase.functions.invoke('analyze-projects', {
-    body: { query: message, conversationHistory },
+export async function analyzeProjects(
+  message: string, 
+  conversationHistory: ConversationMessage[] | undefined, 
+  attachmentUrl?: string | null, 
+  attachmentType?: string | null
+): Promise<string> {
+  const { data, error } = await supabase.functions.invoke('ai-handler', {
+    body: { 
+      feature: 'analyze-projects',
+      payload: {
+        request: message,
+        attachmentUrl,
+        attachmentType,
+      }
+    },
   });
 
   if (error) {

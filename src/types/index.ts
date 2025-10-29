@@ -19,7 +19,7 @@ export interface User {
 export type Collaborator = {
   id: string;
   name: string;
-  avatar_url: string | null;
+  avatar_url?: string | null;
   initials: string;
   isIdle?: boolean;
   last_active_at?: string | null;
@@ -32,6 +32,7 @@ export interface Project {
   slug: string;
   description: string;
   status: string;
+  category: string;
   progress: number;
   budget: number;
   start_date: string;
@@ -323,6 +324,7 @@ export interface Comment {
   attachment_url?: string;
   attachment_name?: string;
   attachments_jsonb?: any[];
+  reactions?: Reaction[];
 }
 
 export interface Reaction {
