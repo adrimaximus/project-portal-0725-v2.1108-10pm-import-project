@@ -215,11 +215,15 @@ export interface ContactProperty {
   options?: string[];
 }
 
+export const COMPANY_PROPERTY_TYPES = [
+  'text', 'textarea', 'number', 'date', 'email', 'phone', 'url', 'image', 'select'
+] as const;
+
 export interface CompanyProperty {
   id: string;
   name: string;
   label: string;
-  type: string;
+  type: typeof COMPANY_PROPERTY_TYPES[number];
   options?: any;
   is_default?: boolean;
 }
