@@ -187,18 +187,18 @@ const ProjectsPage = () => {
   }, [allTasks, searchTerm, advancedFilters.selectedPeopleIds]);
 
   useEffect(() => {
-    if (view === 'table' && !initialTableScrollDone.current && sortedProjects.length > 0) {
-      const todayStr = formatInJakarta(new Date(), 'yyyy-MM-dd');
-      let targetProject = sortedProjects.find(p => p.start_date && formatInJakarta(p.start_date, 'yyyy-MM-dd') >= todayStr);
-      if (!targetProject && sortedProjects.length > 0) {
-        targetProject = sortedProjects[sortedProjects.length - 1];
-      }
-      if (targetProject) {
-        setScrollToProjectId(targetProject.id);
-        initialTableScrollDone.current = true;
+    const highlightedSlug = searchParams.get('highlight');
+    if (highlightedSlug && sortedProjects.length > 0) {
+      const projectToHighlight = sortedProjects.find(p => p.slug === highlightedSlug);
+      if (projectToHighlight) {
+        setScrollToProjectId(projectToHighlight.id);
+        handleViewChange('table');
+        const newSearchParams = new URLSearchParams(searchParams);
+        newSearchParams.delete('highlight');
+        setSearchParams(newSearchParams, { replace: true });
       }
     }
-  }, [sortedProjects, view]);
+  }, [searchParams, sortedProjects, setSearchParams]);
 
   useEffect(() => {
     if (scrollToProjectId) {

@@ -81,7 +81,7 @@ const NavLink = ({ item, isCollapsed }: { item: NavItem, isCollapsed: boolean })
 
 const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
   const { user, hasPermission } = useAuth();
-  const { hasImportantUnread } = useNotifications();
+  const { notifications, hasImportantUnread } = useNotifications();
   const { unreadConversationIds } = useChatContext();
   const queryClient = useQueryClient();
   const backfillAttempted = useRef(false);
@@ -224,7 +224,17 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
         let href: string;
         let badge;
 
-        if (item.type === 'multi_embed') {
+        const itemNameLower = item.name.toLowerCase();
+
+        if (itemNameLower === 'projects' && hasUnreadProjectActivity) {
+          const latestProjectNotif = notifications.find(n => !n.read && (n.type === 'project_update' || n.type === 'mention'));
+          if (latestProjectNotif && latestProjectNotif.link) {
+            const slug = latestProjectNotif.link.split('/').pop();
+            href = `/projects?view=table&highlight=${slug}`;
+          } else {
+            href = item.url;
+          }
+        } else if (item.type === 'multi_embed') {
           href = `/multipage/${item.slug}`;
         } else if (item.url.startsWith('/')) {
           href = item.url;
@@ -238,7 +248,6 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
           href = '/dashboard';
         }
 
-        const itemNameLower = item.name.toLowerCase();
         if (itemNameLower === 'knowledge base' && href !== '/knowledge-base') {
             href = '/knowledge-base';
         }
@@ -267,7 +276,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
     const otherItems = allItems.filter(item => item.href !== '/settings');
 
     return { navItems: otherItems, settingsItem: settings };
-  }, [customNavItems, hasImportantUnread, navItemsError, foldersError, hasPermission, unreadConversationIds, hasUnreadProjectActivity]);
+  }, [customNavItems, hasImportantUnread, navItemsError, foldersError, hasPermission, unreadConversationIds, hasUnreadProjectActivity, notifications]);
 
   const topLevelItems = useMemo(() => navItems.filter(item => !item.folder_id), [navItems]);
 
