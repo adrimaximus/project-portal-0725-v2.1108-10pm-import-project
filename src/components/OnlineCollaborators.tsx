@@ -82,7 +82,7 @@ const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
                     <AvatarImage src={getAvatarUrl(c.avatar_url, c.id)} alt={c.name} />
                     <AvatarFallback style={generatePastelColor(c.id)}>{c.initials}</AvatarFallback>
                   </Avatar>
-                  <span className={`absolute top-0 right-0 block h-2.5 w-2.5 rounded-full ring-2 ring-background ${c.isIdle ? 'bg-orange-400' : 'bg-green-500'}`} />
+                  <span className={`absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full ring-2 ring-background ${c.isIdle ? 'bg-orange-400' : 'bg-green-500'}`} />
                 </div>
                 <span className="text-sm text-foreground font-medium">{c.name}</span>
               </div>
