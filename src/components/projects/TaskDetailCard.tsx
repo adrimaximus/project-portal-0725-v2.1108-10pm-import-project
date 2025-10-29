@@ -7,7 +7,7 @@ import { Button } from '../ui/button';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { generatePastelColor, getPriorityStyles, getTaskStatusStyles, isOverdue, cn, getAvatarUrl, getInitials, formatTaskText } from '@/lib/utils';
-import { Edit, Trash2, Ticket, Paperclip, User as UserIcon, Calendar, Tag, Briefcase, Link as LinkIcon } from 'lucide-react';
+import { Edit, Trash2, Ticket, Paperclip, User as UserIcon, Calendar, Tag, Briefcase, Link as LinkIcon, MoreHorizontal } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import TaskAttachmentList from './TaskAttachmentList';
@@ -16,6 +16,7 @@ import { useTaskMutations } from '@/hooks/useTaskMutations';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import TaskDiscussion from './TaskDiscussion';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
 
 interface TaskDetailCardProps {
   task: Task;
@@ -127,15 +128,24 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
               </p>
             </div>
             <div className="flex items-center gap-0 sm:gap-1 flex-shrink-0">
-              <Button variant="ghost" size="icon" className="hover:bg-accent h-7 w-7 sm:h-8 sm:w-8" onClick={handleCopyLink}>
-                <LinkIcon className="h-3 w-3 sm:h-4 sm:w-4" />
-              </Button>
-              <Button variant="ghost" size="icon" className="hover:bg-accent h-7 w-7 sm:h-8 sm:w-8" onClick={() => { onEdit(task); onClose(); }}>
-                <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
-              </Button>
-              <Button variant="ghost" size="icon" className="hover:bg-destructive hover:text-destructive-foreground h-7 w-7 sm:h-8 sm:w-8" onClick={() => { onDelete(task.id); onClose(); }}>
-                <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onSelect={() => { onEdit(task); onClose(); }}>
+                    <Edit className="mr-2 h-4 w-4" /> Edit
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={handleCopyLink}>
+                    <LinkIcon className="mr-2 h-4 w-4" /> Copy Link
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => { onDelete(task.id); onClose(); }} className="text-destructive">
+                    <Trash2 className="mr-2 h-4 w-4" /> Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </DialogHeader>
