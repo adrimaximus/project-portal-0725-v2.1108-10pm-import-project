@@ -106,38 +106,47 @@ serve(async (req) => {
       return new Response(JSON.stringify({ message: "No users to notify via email." }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    // 8. DEBOUNCE CHECK: Prevent duplicate emails for the same comment to the same users
-    // We'll create a simple tracking mechanism or use a timestamp-based check
-    // For simplicity, we'll check if we've sent an email for this comment_id to these users in the last 2 minutes
     const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000).toISOString();
-    
-    // Create a temporary tracking mechanism using the comment's updated_at or a custom field
-    // Since we don't have a dedicated tracking table, we'll use a different approach:
-    // Check if there's already a recent notification in pending_whatsapp_notifications for this comment
-    const { data: recentNotifications } = await supabaseAdmin
-      .from('pending_whatsapp_notifications')
-      .select('recipient_id')
-      .eq('notification_type', 'discussion_mention')
-      .eq('context_data->>comment_id', comment_id)
-      .gte('created_at', twoMinutesAgo);
-
-    const alreadyNotifiedUserIds = new Set(recentNotifications?.map(n => n.recipient_id) || []);
-
-    // Filter out users who were already notified recently
-    const usersToActuallyNotify = usersToNotify.filter(p => !alreadyNotifiedUserIds.has(p.id));
-
-    if (usersToActuallyNotify.length === 0) {
-      console.log("All users were already notified recently for this comment. Skipping duplicate emails.");
-      return new Response(JSON.stringify({ message: "Duplicate email prevention: All users already notified." }), { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200 
-      });
-    }
-
-    // 9. Send emails only to users who haven't been notified recently
     const attachmentHtml = generateAttachmentHtml(attachments);
+    let sentCount = 0;
+    let skippedCount = 0;
 
-    const emailPromises = usersToActuallyNotify.map(async (profile) => {
+    const emailPromises = usersToNotify.map(async (profile) => {
+      // DEBOUNCE CHECK
+      const { data: recentNotifications, error: checkError } = await supabaseAdmin
+        .from('pending_whatsapp_notifications')
+        .select('id', { count: 'exact', head: true })
+        .in('notification_type', ['discussion_mention', 'discussion_mention_email'])
+        .eq('context_data->>comment_id', comment_id)
+        .eq('recipient_id', profile.id)
+        .gte('created_at', twoMinutesAgo);
+
+      if (checkError) {
+        console.error(`Debounce check failed for ${profile.email}:`, checkError.message);
+      }
+
+      if (recentNotifications && recentNotifications.count > 0) {
+        console.log(`Debounce: Notification for comment ${comment_id} to ${profile.email} already processed. Skipping email.`);
+        skippedCount++;
+        return;
+      }
+
+      // INSERT DEBOUNCE RECORD
+      const { error: insertError } = await supabaseAdmin
+        .from('pending_whatsapp_notifications')
+        .insert({
+          recipient_id: profile.id,
+          notification_type: 'discussion_mention_email',
+          context_data: { comment_id },
+          send_at: new Date().toISOString(),
+          status: 'processed',
+        });
+
+      if (insertError) {
+        console.warn(`Could not insert debounce record for ${profile.email} (might be a race condition, which is OK):`, insertError.message);
+      }
+
+      // SEND EMAIL
       const subject = `You were mentioned in the project: ${project_name}`;
       const projectUrl = project_slug === 'general-tasks' 
         ? `${SITE_URL}/projects?view=tasks` 
@@ -166,19 +175,14 @@ serve(async (req) => {
           "Authorization": `Bearer ${EMAILIT_API_KEY}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          from: EMAIL_FROM,
-          to: profile.email,
-          subject,
-          html,
-          text,
-        }),
+        body: JSON.stringify({ from: EMAIL_FROM, to: profile.email, subject, html, text }),
       });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         console.error(`Failed to send email to ${profile.email}:`, errorData);
       } else {
+        sentCount++;
         console.log(`Email notification sent to ${profile.email} for comment ${comment_id}`);
       }
     });
@@ -186,7 +190,7 @@ serve(async (req) => {
     await Promise.all(emailPromises);
 
     return new Response(JSON.stringify({ 
-      message: `Email notifications sent to ${usersToActuallyNotify.length} user(s). ${usersToNotify.length - usersToActuallyNotify.length} duplicate(s) prevented.` 
+      message: `Email notifications processed. Sent: ${sentCount}, Skipped (duplicates): ${skippedCount}.` 
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
