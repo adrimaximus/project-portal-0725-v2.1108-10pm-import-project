@@ -12,6 +12,8 @@ type OnlineCollaboratorsProps = {
   isCollapsed: boolean;
 };
 
+const MAX_VISIBLE_AVATARS = 5;
+
 const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const navigate = useNavigate();
@@ -19,6 +21,15 @@ const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
 
   const activeCollaborators = useMemo(() => onlineCollaborators.filter(c => !c.isIdle), [onlineCollaborators]);
   const idleCollaborators = useMemo(() => onlineCollaborators.filter(c => c.isIdle), [onlineCollaborators]);
+
+  const visibleCollaborators = useMemo(() => {
+    const combined = [...activeCollaborators, ...idleCollaborators];
+    return combined.slice(0, MAX_VISIBLE_AVATARS);
+  }, [activeCollaborators, idleCollaborators]);
+
+  const hiddenCount = useMemo(() => {
+    return onlineCollaborators.length - visibleCollaborators.length;
+  }, [onlineCollaborators, visibleCollaborators]);
 
   const handleCollaboratorClick = (collaborator: Collaborator) => {
     navigate('/chat', { 
@@ -91,70 +102,53 @@ const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
         ) : (
           <TooltipProvider delayDuration={0}>
             <div className="flex items-center space-x-4 cursor-pointer px-3" onClick={() => setIsExpanded(true)}>
-              {activeCollaborators.length > 0 && (
-                <div className="flex items-center">
-                  <div className="flex -space-x-3">
-                    {activeCollaborators.map((collaborator, index) => (
-                      <Tooltip key={collaborator.id}>
-                        <TooltipTrigger asChild>
-                          <div
-                            className="relative transition-all duration-300 hover:z-40 hover:scale-110"
-                            style={{ zIndex: index }}
-                          >
-                            <Avatar className="h-9 w-9 border-2 border-background bg-background">
-                              <AvatarImage src={getAvatarUrl(collaborator.avatar_url, collaborator.id)} alt={collaborator.name} />
-                              <AvatarFallback style={generatePastelColor(collaborator.id)}>{collaborator.initials}</AvatarFallback>
-                            </Avatar>
-                            {index === activeCollaborators.length - 1 && (
-                              <span className="absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full ring-2 ring-background bg-green-500" />
-                            )}
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent side="top" className="bg-primary text-primary-foreground">
-                          <p className="font-semibold">{collaborator.name}</p>
-                          {collaborator.last_active_at && (
-                            <p className="text-xs capitalize">
-                              {formatDistanceToNow(new Date(collaborator.last_active_at))} active
-                            </p>
-                          )}
-                        </TooltipContent>
-                      </Tooltip>
-                    ))}
-                  </div>
+              <div className="flex items-center">
+                <div className="flex -space-x-3">
+                  {visibleCollaborators.map((collaborator, index) => (
+                    <Tooltip key={collaborator.id}>
+                      <TooltipTrigger asChild>
+                        <div
+                          className="relative transition-all duration-300 hover:z-40 hover:scale-110"
+                          style={{ zIndex: index }}
+                        >
+                          <Avatar className="h-9 w-9 border-2 border-background bg-background">
+                            <AvatarImage src={getAvatarUrl(collaborator.avatar_url, collaborator.id)} alt={collaborator.name} />
+                            <AvatarFallback style={generatePastelColor(collaborator.id)}>{collaborator.initials}</AvatarFallback>
+                          </Avatar>
+                          <span className={`absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full ring-2 ring-background ${collaborator.isIdle ? 'bg-orange-400' : 'bg-green-500'}`} />
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="bg-primary text-primary-foreground">
+                        <p className="font-semibold">{collaborator.name}</p>
+                        {collaborator.last_active_at && (
+                          <p className="text-xs capitalize">
+                            {formatDistanceToNow(new Date(collaborator.last_active_at))} {collaborator.isIdle ? 'idle' : 'active'}
+                          </p>
+                        )}
+                      </TooltipContent>
+                    </Tooltip>
+                  ))}
+                  {hiddenCount > 0 && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div
+                          className="relative transition-all duration-300 hover:z-40 hover:scale-110"
+                          style={{ zIndex: visibleCollaborators.length }}
+                        >
+                          <Avatar className="h-9 w-9 border-2 border-background bg-background">
+                            <AvatarFallback className="bg-muted text-muted-foreground text-xs">
+                              +{hiddenCount}
+                            </AvatarFallback>
+                          </Avatar>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="bg-primary text-primary-foreground">
+                        <p>{hiddenCount} more {hiddenCount > 1 ? 'people' : 'person'}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  )}
                 </div>
-              )}
-              {idleCollaborators.length > 0 && (
-                <div className="flex items-center">
-                  <div className="flex -space-x-3">
-                    {idleCollaborators.map((collaborator, index) => (
-                      <Tooltip key={collaborator.id}>
-                        <TooltipTrigger asChild>
-                          <div
-                            className="relative transition-all duration-300 hover:z-40 hover:scale-110"
-                            style={{ zIndex: index + activeCollaborators.length }}
-                          >
-                            <Avatar className="h-9 w-9 border-2 border-background bg-background">
-                              <AvatarImage src={getAvatarUrl(collaborator.avatar_url, collaborator.id)} alt={collaborator.name} />
-                              <AvatarFallback style={generatePastelColor(collaborator.id)}>{collaborator.initials}</AvatarFallback>
-                            </Avatar>
-                             {index === idleCollaborators.length - 1 && (
-                               <span className="absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full ring-2 ring-background bg-orange-400" />
-                             )}
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent side="top" className="bg-primary text-primary-foreground">
-                          <p className="font-semibold">{collaborator.name}</p>
-                          {collaborator.last_active_at && (
-                            <p className="text-xs capitalize">
-                              {formatDistanceToNow(new Date(collaborator.last_active_at))} idle
-                            </p>
-                          )}
-                        </TooltipContent>
-                      </Tooltip>
-                    ))}
-                  </div>
-                </div>
-              )}
+              </div>
             </div>
           </TooltipProvider>
         )}
