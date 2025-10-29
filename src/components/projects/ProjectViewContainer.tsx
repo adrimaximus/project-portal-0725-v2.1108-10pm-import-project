@@ -1,73 +1,69 @@
-import React from 'react';
-import { Project } from '@/types';
-import { Task } from '@/types';
-import TableView from './TableView';
 import ListView from './ListView';
+import TableView from './TableView';
 import KanbanView from './KanbanView';
 import TasksView from './TasksView';
 import TasksKanbanView from './TasksKanbanView';
+import { Project, Task as ProjectTask } from '@/types';
+import { SortConfig } from '@/hooks/useSort';
 
-type ViewMode = 'table' | 'list' | 'kanban' | 'tasks' | 'tasks-kanban';
-
-interface ProjectViewContainerProps {
-  view: ViewMode;
+type ProjectViewContainerProps = {
+  view: 'table' | 'list' | 'kanban' | 'tasks' | 'tasks-kanban';
   projects: Project[];
-  tasks: Task[];
+  tasks: ProjectTask[];
   isLoading: boolean;
   isTasksLoading: boolean;
   onDeleteProject: (projectId: string) => void;
-  sortConfig: { key: keyof Project | null; direction: 'ascending' | 'descending' };
+  sortConfig: SortConfig<Project>;
   requestSort: (key: keyof Project) => void;
   rowRefs: React.MutableRefObject<Map<string, HTMLTableRowElement>>;
   kanbanGroupBy: 'status' | 'payment_status';
-  onEditTask: (task: Task) => void;
+  onEditTask: (task: ProjectTask) => void;
   onDeleteTask: (taskId: string) => void;
-  onToggleTaskCompletion: (task: Task, completed: boolean) => void;
+  onToggleTaskCompletion: (task: ProjectTask, completed: boolean) => void;
   isToggling: boolean;
   taskSortConfig: { key: string; direction: 'asc' | 'desc' };
   requestTaskSort: (key: string) => void;
   refetch: () => void;
-  tasksQueryKey: any[];
+  tasksQueryKey: (string | { projectIds: undefined; hideCompleted: boolean; sortConfig: { key: string; direction: "asc" | "desc"; }; })[];
   highlightedTaskId: string | null;
   onHighlightComplete: () => void;
-}
+  unreadProjectIds: Set<string>;
+  onProjectClick: (projectId: string, projectSlug: string) => void;
+};
 
-const ProjectViewContainer = ({
-  view, projects, tasks, isLoading, isTasksLoading, onDeleteProject, sortConfig, requestSort, rowRefs,
-  kanbanGroupBy, onEditTask, onDeleteTask, onToggleTaskCompletion, isToggling,
-  taskSortConfig, requestTaskSort, refetch, tasksQueryKey, highlightedTaskId, onHighlightComplete
-}: ProjectViewContainerProps) => {
+const ProjectViewContainer = (props: ProjectViewContainerProps) => {
+  const { view, projects, tasks, isLoading, isTasksLoading, onDeleteProject, sortConfig, requestSort, rowRefs, kanbanGroupBy, onEditTask, onDeleteTask, onToggleTaskCompletion, isToggling, taskSortConfig, requestTaskSort, refetch, tasksQueryKey, highlightedTaskId, onHighlightComplete, unreadProjectIds, onProjectClick } = props;
+
   switch (view) {
     case 'table':
       return <TableView projects={projects} isLoading={isLoading} onDeleteProject={onDeleteProject} sortConfig={sortConfig} requestSort={requestSort} rowRefs={rowRefs} />;
     case 'list':
-      return <ListView projects={projects} onDeleteProject={onDeleteProject} />;
+      return <ListView projects={projects} onDeleteProject={onDeleteProject} unreadProjectIds={unreadProjectIds} onProjectClick={onProjectClick} />;
     case 'kanban':
-      return <KanbanView projects={projects} groupBy={kanbanGroupBy} />;
+      return <KanbanView projects={projects} isLoading={isLoading} groupBy={kanbanGroupBy} />;
     case 'tasks':
       return <TasksView 
         tasks={tasks} 
         isLoading={isTasksLoading} 
-        onEdit={onEditTask}
-        onDelete={onDeleteTask}
-        onToggleTaskCompletion={onToggleTaskCompletion}
+        onEditTask={onEditTask} 
+        onDeleteTask={onDeleteTask} 
+        onToggleTaskCompletion={onToggleTaskCompletion} 
         isToggling={isToggling}
         sortConfig={taskSortConfig}
         requestSort={requestTaskSort}
-        rowRefs={rowRefs}
         highlightedTaskId={highlightedTaskId}
         onHighlightComplete={onHighlightComplete}
       />;
     case 'tasks-kanban':
       return <TasksKanbanView 
         tasks={tasks} 
-        onEdit={onEditTask}
-        onDelete={onDeleteTask}
-        refetch={refetch}
+        isLoading={isTasksLoading} 
+        refetch={refetch} 
         tasksQueryKey={tasksQueryKey}
+        onEditTask={onEditTask}
       />;
     default:
-      return null;
+      return <ListView projects={projects} onDeleteProject={onDeleteProject} unreadProjectIds={unreadProjectIds} onProjectClick={onProjectClick} />;
   }
 };
 

@@ -22,6 +22,7 @@ import { useTaskMutations } from '@/hooks/useTaskMutations';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import PortalLayout from '@/components/PortalLayout';
 import { getErrorMessage, formatInJakarta } from '@/lib/utils';
+import { useNotifications } from '@/hooks/useNotifications';
 
 type ViewMode = 'table' | 'list' | 'kanban' | 'tasks' | 'tasks-kanban';
 type SortConfig<T> = { key: keyof T | null; direction: 'ascending' | 'descending' };
@@ -33,6 +34,7 @@ const ProjectsPage = () => {
   const rowRefs = useRef(new Map<string, HTMLTableRowElement>());
   const { user } = useAuth();
   const { taskId: taskIdFromParams } = useParams<{ taskId: string }>();
+  const { notifications } = useNotifications();
 
   const viewFromUrl = searchParams.get('view') as ViewMode;
   const view = taskIdFromParams ? 'tasks' : viewFromUrl || 'list';
@@ -315,6 +317,35 @@ const ProjectsPage = () => {
     sortConfig: finalTaskSortConfig 
   }];
 
+  const unreadProjectIds = useMemo(() => {
+    return new Set(
+      notifications
+        .filter(n => !n.read_at && (n.type === 'project_update' || n.type === 'mention') && (n.resource_type === 'project' || n.resource_type === 'task' || n.resource_type === 'comment') && n.resource_id)
+        .map(n => n.resource_id)
+    );
+  }, [notifications]);
+
+  const markProjectNotificationsAsRead = useMutation({
+    mutationFn: async (projectId: string) => {
+      const { error } = await supabase.rpc('mark_project_notifications_as_read', { p_project_id: projectId });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['hasUnreadProjectActivity', user?.id] });
+    },
+    onError: (error) => {
+      console.error("Error marking project notifications as read:", error);
+    }
+  });
+
+  const handleProjectClick = (projectId: string, projectSlug: string) => {
+    if (unreadProjectIds.has(projectId)) {
+      markProjectNotificationsAsRead.mutate(projectId);
+    }
+    navigate(`/projects/${projectSlug}`);
+  };
+
   return (
     <PortalLayout disableMainScroll noPadding>
       <AlertDialog open={!!projectToDelete} onOpenChange={(open) => !open && setProjectToDelete(null)}>
@@ -387,6 +418,8 @@ const ProjectsPage = () => {
               tasksQueryKey={tasksQueryKey}
               highlightedTaskId={highlightedTaskId}
               onHighlightComplete={onHighlightComplete}
+              unreadProjectIds={unreadProjectIds}
+              onProjectClick={handleProjectClick}
             />
           </div>
         </div>
