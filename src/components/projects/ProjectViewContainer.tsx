@@ -4,7 +4,8 @@ import KanbanView from './KanbanView';
 import TasksView from './TasksView';
 import TasksKanbanView from './TasksKanbanView';
 import { Project, Task as ProjectTask } from '@/types';
-import { SortConfig } from '@/hooks/useSort';
+
+type SortConfig<T> = { key: keyof T | null; direction: 'ascending' | 'descending' };
 
 type ProjectViewContainerProps = {
   view: 'table' | 'list' | 'kanban' | 'tasks' | 'tasks-kanban';
@@ -40,17 +41,18 @@ const ProjectViewContainer = (props: ProjectViewContainerProps) => {
     case 'list':
       return <ListView projects={projects} onDeleteProject={onDeleteProject} unreadProjectIds={unreadProjectIds} onProjectClick={onProjectClick} />;
     case 'kanban':
-      return <KanbanView projects={projects} isLoading={isLoading} groupBy={kanbanGroupBy} />;
+      return <KanbanView projects={projects} groupBy={kanbanGroupBy} />;
     case 'tasks':
       return <TasksView 
         tasks={tasks} 
         isLoading={isTasksLoading} 
-        onEditTask={onEditTask} 
-        onDeleteTask={onDeleteTask} 
+        onEdit={onEditTask} 
+        onDelete={onDeleteTask} 
         onToggleTaskCompletion={onToggleTaskCompletion} 
         isToggling={isToggling}
         sortConfig={taskSortConfig}
         requestSort={requestTaskSort}
+        rowRefs={rowRefs}
         highlightedTaskId={highlightedTaskId}
         onHighlightComplete={onHighlightComplete}
       />;
@@ -60,7 +62,10 @@ const ProjectViewContainer = (props: ProjectViewContainerProps) => {
         isLoading={isTasksLoading} 
         refetch={refetch} 
         tasksQueryKey={tasksQueryKey}
-        onEditTask={onEditTask}
+        onEdit={onEditTask}
+        onDelete={onDeleteTask}
+        highlightedTaskId={highlightedTaskId}
+        onHighlightComplete={onHighlightComplete}
       />;
     default:
       return <ListView projects={projects} onDeleteProject={onDeleteProject} unreadProjectIds={unreadProjectIds} onProjectClick={onProjectClick} />;
