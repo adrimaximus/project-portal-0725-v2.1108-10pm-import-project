@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { Separator } from "@/components/ui/separator";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { useAuth } from "@/hooks/useAuth";
 
 interface ProjectTasksProps {
   tasks: Task[];
@@ -38,7 +39,7 @@ const formatBytes = (bytes?: number, decimals = 2) => {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
 }
 
-const TaskRow = ({ task, onToggleTaskCompletion, onEditTask, onDeleteTask, handleToggleReaction, setRef, onTitleClick }: {
+const TaskRow = ({ task, onToggleTaskCompletion, onEditTask, onDeleteTask, handleToggleReaction, setRef, onTitleClick, currentUserId }: {
   task: Task;
   onToggleTaskCompletion: (task: Task, completed: boolean) => void;
   onEditTask: (task: Task) => void;
@@ -46,6 +47,7 @@ const TaskRow = ({ task, onToggleTaskCompletion, onEditTask, onDeleteTask, handl
   handleToggleReaction: (taskId: string, emoji: string) => void;
   setRef: (el: HTMLDivElement | null) => void;
   onTitleClick: (task: Task) => void;
+  currentUserId?: string;
 }) => {
   const allAttachments = useMemo(() => {
     let attachments: TaskAttachment[] = [...(task.attachments || [])];
@@ -61,10 +63,18 @@ const TaskRow = ({ task, onToggleTaskCompletion, onEditTask, onDeleteTask, handl
   const attachmentCount = allAttachments.length;
   const hasAttachments = attachmentCount > 0;
 
+  const isAssignedToCurrentUser = useMemo(() => {
+    if (!currentUserId || !task.assignedTo) return false;
+    return task.assignedTo.some(assignee => assignee.id === currentUserId);
+  }, [currentUserId, task.assignedTo]);
+
   return (
     <div 
       ref={setRef}
-      className="flex items-start space-x-3 p-2 rounded-md hover:bg-muted group transition-colors duration-500"
+      className={cn(
+        "flex items-start space-x-3 p-2 rounded-md hover:bg-muted group transition-colors duration-500",
+        isAssignedToCurrentUser && "bg-primary/10"
+      )}
     >
       <Checkbox
         id={`task-${task.id}`}
@@ -180,6 +190,7 @@ const TaskRow = ({ task, onToggleTaskCompletion, onEditTask, onDeleteTask, handl
 const ProjectTasks = ({ tasks, projectId, onAddTask, onEditTask, onDeleteTask, onToggleTaskCompletion, highlightedTaskId, onHighlightComplete }: ProjectTasksProps) => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const { toggleTaskReaction } = useTaskMutations();
   const taskRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const [isCompletedOpen, setIsCompletedOpen] = useState(true);
@@ -259,6 +270,7 @@ const ProjectTasks = ({ tasks, projectId, onAddTask, onEditTask, onDeleteTask, o
             onDeleteTask={onDeleteTask}
             handleToggleReaction={handleToggleReaction}
             onTitleClick={handleTitleClick}
+            currentUserId={user?.id}
             setRef={(el) => {
               if (el) taskRefs.current.set(task.id, el);
               else taskRefs.current.delete(task.id);
@@ -288,6 +300,7 @@ const ProjectTasks = ({ tasks, projectId, onAddTask, onEditTask, onDeleteTask, o
                     onDeleteTask={onDeleteTask}
                     handleToggleReaction={handleToggleReaction}
                     onTitleClick={handleTitleClick}
+                    currentUserId={user?.id}
                     setRef={(el) => {
                       if (el) taskRefs.current.set(task.id, el);
                       else taskRefs.current.delete(task.id);
