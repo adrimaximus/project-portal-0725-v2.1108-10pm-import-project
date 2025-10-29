@@ -332,7 +332,7 @@ const ProjectsPage = () => {
 
         const projectIds = new Set<string>();
         data.forEach(item => {
-            const notification = item.notifications as { resource_id: string, resource_type: string } | null;
+            const notification = item.notifications as unknown as { resource_id: string, resource_type: string } | null;
             if (notification && notification.resource_id && (notification.resource_type === 'project' || notification.resource_type === 'task' || notification.resource_type === 'comment')) {
                 projectIds.add(notification.resource_id);
             }
@@ -370,16 +370,16 @@ const ProjectsPage = () => {
   // Restore scroll position on mount
   useEffect(() => {
     if (!isLoadingProjects && !isLoadingTasks) {
-      const savedPosition = sessionStorage.getItem('projectsScrollPosition');
+      const savedPosition = sessionStorage.getItem(`projectsScrollPosition-${view}`);
       if (savedPosition && scrollContainerRef.current) {
         setTimeout(() => {
           if (scrollContainerRef.current) {
             scrollContainerRef.current.scrollTop = parseInt(savedPosition, 10);
           }
-        }, 0);
+        }, 100);
       }
     }
-  }, [isLoadingProjects, isLoadingTasks, sortedProjects]);
+  }, [isLoadingProjects, isLoadingTasks, sortedProjects, view]);
 
   // Save scroll position on scroll
   useEffect(() => {
@@ -392,7 +392,7 @@ const ProjectsPage = () => {
       }
       timeoutId = window.setTimeout(() => {
         if (scrollContainer) {
-          sessionStorage.setItem('projectsScrollPosition', String(scrollContainer.scrollTop));
+          sessionStorage.setItem(`projectsScrollPosition-${view}`, String(scrollContainer.scrollTop));
         }
       }, 200); // Debounce saving scroll position
     };
@@ -409,7 +409,7 @@ const ProjectsPage = () => {
         clearTimeout(timeoutId);
       }
     };
-  }, []);
+  }, [view]);
 
   return (
     <PortalLayout disableMainScroll noPadding>
