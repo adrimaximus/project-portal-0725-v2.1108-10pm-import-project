@@ -25,9 +25,8 @@ const NewConversationDialog = ({
   onStartNewChat,
   onStartNewGroupChat,
 }: NewConversationDialogProps) => {
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, onlineCollaborators } = useAuth();
   const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
-  const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
   const [selectedCollaborators, setSelectedCollaborators] = useState<Collaborator[]>([]);
   const [groupName, setGroupName] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
@@ -63,19 +62,6 @@ const NewConversationDialog = ({
     };
 
     fetchCollaborators();
-
-    const channel = supabase.channel('online-users');
-    channel
-      .on('presence', { event: 'sync' }, () => {
-        const presenceState = channel.presenceState<any>();
-        const onlineIds = Object.keys(presenceState);
-        setOnlineUsers(new Set(onlineIds));
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
   }, [open, currentUser]);
 
   const handleSelectCollaborator = (collaborator: Collaborator, isSelected: boolean) => {
@@ -125,27 +111,34 @@ const NewConversationDialog = ({
           />
           <ScrollArea className="h-[300px] pr-4">
             <div className="space-y-2">
-              {filteredCollaborators.map(collaborator => (
-                <div
-                  key={collaborator.id}
-                  className="flex items-center justify-between p-2 rounded-md hover:bg-muted"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="relative">
-                      <Avatar>
-                        <AvatarImage src={collaborator.avatar_url} />
-                        <AvatarFallback style={generatePastelColor(collaborator.id)}>{collaborator.initials}</AvatarFallback>
-                      </Avatar>
-                      <span className={`absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full ring-2 ring-background ${onlineUsers.has(collaborator.id) ? 'bg-green-500' : 'bg-slate-500'}`} />
+              {filteredCollaborators.map(collaborator => {
+                const onlineStatus = onlineCollaborators.find(c => c.id === collaborator.id);
+                const isOnline = onlineStatus && !onlineStatus.isIdle;
+                const isIdle = onlineStatus && onlineStatus.isIdle;
+                return (
+                  <div
+                    key={collaborator.id}
+                    className="flex items-center justify-between p-2 rounded-md hover:bg-muted"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="relative">
+                        <Avatar>
+                          <AvatarImage src={collaborator.avatar_url} />
+                          <AvatarFallback style={generatePastelColor(collaborator.id)}>{collaborator.initials}</AvatarFallback>
+                        </Avatar>
+                        {(isOnline || isIdle) && (
+                          <span className={`absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full ring-2 ring-background ${isIdle ? 'bg-orange-400' : 'bg-green-500'}`} />
+                        )}
+                      </div>
+                      <span className="font-medium">{collaborator.name}</span>
                     </div>
-                    <span className="font-medium">{collaborator.name}</span>
+                    <Checkbox
+                      checked={selectedCollaborators.some(c => c.id === collaborator.id)}
+                      onCheckedChange={(checked) => handleSelectCollaborator(collaborator, !!checked)}
+                    />
                   </div>
-                  <Checkbox
-                    checked={selectedCollaborators.some(c => c.id === collaborator.id)}
-                    onCheckedChange={(checked) => handleSelectCollaborator(collaborator, !!checked)}
-                  />
-                </div>
-              ))}
+                )
+              })}
             </div>
           </ScrollArea>
           {isGroupChat && (
