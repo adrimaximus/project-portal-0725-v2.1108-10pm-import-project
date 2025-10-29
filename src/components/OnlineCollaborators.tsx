@@ -19,17 +19,28 @@ const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
   const navigate = useNavigate();
   const { onlineCollaborators } = useAuth();
 
-  const activeCollaborators = useMemo(() => onlineCollaborators.filter(c => !c.isIdle), [onlineCollaborators]);
-  const idleCollaborators = useMemo(() => onlineCollaborators.filter(c => c.isIdle), [onlineCollaborators]);
+  // Sort collaborators: active first, then idle
+  const sortedCollaborators = useMemo(() => {
+    const active = onlineCollaborators.filter(c => !c.isIdle);
+    const idle = onlineCollaborators.filter(c => c.isIdle);
+    return [...active, ...idle];
+  }, [onlineCollaborators]);
 
+  // Determine which collaborators are visible and which are hidden
   const visibleCollaborators = useMemo(() => {
-    const combined = [...activeCollaborators, ...idleCollaborators];
-    return combined.slice(0, MAX_VISIBLE_AVATARS);
-  }, [activeCollaborators, idleCollaborators]);
+    return sortedCollaborators.slice(0, MAX_VISIBLE_AVATARS);
+  }, [sortedCollaborators]);
 
-  const hiddenCount = useMemo(() => {
-    return onlineCollaborators.length - visibleCollaborators.length;
-  }, [onlineCollaborators, visibleCollaborators]);
+  const hiddenCollaborators = useMemo(() => {
+    return sortedCollaborators.slice(MAX_VISIBLE_AVATARS);
+  }, [sortedCollaborators]);
+
+  const hiddenCount = hiddenCollaborators.length;
+
+  // Check if there's at least one active user in the hidden group to determine dot color
+  const hasActiveInHidden = useMemo(() => {
+    return hiddenCollaborators.some(c => !c.isIdle);
+  }, [hiddenCollaborators]);
 
   const handleCollaboratorClick = (collaborator: Collaborator) => {
     navigate('/chat', { 
@@ -140,6 +151,7 @@ const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
                               +{hiddenCount}
                             </AvatarFallback>
                           </Avatar>
+                          <span className={`absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full ring-2 ring-background ${hasActiveInHidden ? 'bg-green-500' : 'bg-orange-400'}`} />
                         </div>
                       </TooltipTrigger>
                       <TooltipContent side="top" className="bg-primary text-primary-foreground">
