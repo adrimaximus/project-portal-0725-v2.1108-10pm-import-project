@@ -193,7 +193,7 @@ const ProjectTasks = ({ tasks, projectId, onAddTask, onEditTask, onDeleteTask, o
   const { user } = useAuth();
   const { toggleTaskReaction } = useTaskMutations();
   const taskRefs = useRef<Map<string, HTMLDivElement>>(new Map());
-  const [isCompletedOpen, setIsCompletedOpen] = useState(true);
+  const [isCompletedOpen, setIsCompletedOpen] = useState(false);
 
   useEffect(() => {
     if (highlightedTaskId) {
