@@ -21,8 +21,8 @@ export type Collaborator = {
   name: string;
   avatar_url: string | null;
   initials: string;
-  isIdle: boolean;
-  last_active_at: string | null;
+  isIdle?: boolean;
+  last_active_at?: string | null;
 };
 
 // Projects
