@@ -19,6 +19,7 @@ import CommentAttachmentItem from '../CommentAttachmentItem';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Link } from 'react-router-dom';
+import CommentReactions from '../CommentReactions';
 
 interface TaskDiscussionProps {
   task: Task;
@@ -37,7 +38,7 @@ const TaskDiscussion = ({ task, onToggleReaction }: TaskDiscussionProps) => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('comments')
-        .select('*, author:profiles(*)')
+        .select('*, author:profiles(*), reactions:comment_reactions(*, profiles(first_name, last_name))')
         .eq('task_id', task.id)
         .order('created_at', { ascending: true });
       if (error) throw error;
@@ -96,6 +97,18 @@ const TaskDiscussion = ({ task, onToggleReaction }: TaskDiscussionProps) => {
     onError: (error: any) => toast.error("Failed to add comment.", { description: error.message }),
   });
 
+  const updateCommentMutation = useMutation({
+    mutationFn: async ({ commentId, text }: { commentId: string, text: string }) => {
+      const { error } = await supabase.from('comments').update({ text }).eq('id', commentId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Comment updated.");
+      queryClient.invalidateQueries({ queryKey: ['task-comments', task.id] });
+    },
+    onError: (error: any) => toast.error("Failed to update comment.", { description: error.message }),
+  });
+
   const deleteCommentMutation = useMutation({
     mutationFn: async (commentId: string) => {
       const { error } = await supabase.from('comments').delete().eq('id', commentId);
@@ -108,8 +121,36 @@ const TaskDiscussion = ({ task, onToggleReaction }: TaskDiscussionProps) => {
     onError: (error: any) => toast.error("Failed to delete comment.", { description: error.message }),
   });
 
+  const toggleCommentReactionMutation = useMutation({
+    mutationFn: async ({ commentId, emoji }: { commentId: string, emoji: string }) => {
+      const { error } = await supabase.rpc('toggle_comment_reaction', { p_comment_id: commentId, p_emoji: emoji });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['task-comments', task.id] });
+    },
+    onError: (error: any) => toast.error("Failed to update reaction.", { description: error.message }),
+  });
+
   const handleAddComment = (text: string, attachments: File[] | null, mentionedUserIds: string[]) => {
     addCommentMutation.mutate({ text, attachments, mentionedUserIds });
+  };
+
+  const handleEditClick = (comment: CommentType) => {
+    setEditingCommentId(comment.id);
+    setEditedText(comment.text || '');
+  };
+
+  const handleCancelEdit = () => {
+    setEditingCommentId(null);
+    setEditedText('');
+  };
+
+  const handleSaveEdit = () => {
+    if (editingCommentId) {
+      updateCommentMutation.mutate({ commentId: editingCommentId, text: editedText });
+    }
+    handleCancelEdit();
   };
 
   const handleDeleteConfirm = () => {
@@ -117,6 +158,10 @@ const TaskDiscussion = ({ task, onToggleReaction }: TaskDiscussionProps) => {
       deleteCommentMutation.mutate(commentToDelete.id);
       setCommentToDelete(null);
     }
+  };
+
+  const handleToggleCommentReaction = (commentId: string, emoji: string) => {
+    toggleCommentReactionMutation.mutate({ commentId, emoji });
   };
 
   return (
@@ -154,6 +199,9 @@ const TaskDiscussion = ({ task, onToggleReaction }: TaskDiscussionProps) => {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
+                            <DropdownMenuItem onSelect={() => handleEditClick(comment)}>
+                              <Edit className="mr-2 h-4 w-4" /> Edit
+                            </DropdownMenuItem>
                             <DropdownMenuItem onSelect={() => setCommentToDelete(comment)} className="text-destructive">
                               <Trash2 className="mr-2 h-4 w-4" /> Delete
                             </DropdownMenuItem>
@@ -162,28 +210,43 @@ const TaskDiscussion = ({ task, onToggleReaction }: TaskDiscussionProps) => {
                       )}
                     </div>
                   </div>
-                  <div className="prose prose-sm dark:prose-invert max-w-none mt-1 break-words">
-                    <ReactMarkdown
-                      remarkPlugins={[remarkGfm]}
-                      components={{
-                        a: ({ node, ...props }) => {
-                          const href = props.href || '';
-                          if (href.startsWith('/')) {
-                            return <Link to={href} {...props} className="text-primary hover:underline" />;
-                          }
-                          return <a {...props} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline" />;
-                        }
-                      }}
-                    >
-                      {formatMentionsForDisplay(comment.text)}
-                    </ReactMarkdown>
-                  </div>
-                  {attachments.length > 0 && (
+                  {editingCommentId === comment.id ? (
                     <div className="mt-2 space-y-2">
-                      {attachments.map((file: any, index: number) => (
-                        <CommentAttachmentItem key={file.id || index} file={file} />
-                      ))}
+                      <Textarea value={editedText} onChange={(e) => setEditedText(e.target.value)} autoFocus />
+                      <div className="flex justify-end gap-2">
+                        <Button variant="ghost" size="sm" onClick={handleCancelEdit}>Cancel</Button>
+                        <Button size="sm" onClick={handleSaveEdit}>Save</Button>
+                      </div>
                     </div>
+                  ) : (
+                    <>
+                      <div className="prose prose-sm dark:prose-invert max-w-none mt-1 break-words">
+                        <ReactMarkdown
+                          remarkPlugins={[remarkGfm]}
+                          components={{
+                            a: ({ node, ...props }) => {
+                              const href = props.href || '';
+                              if (href.startsWith('/')) {
+                                return <Link to={href} {...props} className="text-primary hover:underline" />;
+                              }
+                              return <a {...props} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline" />;
+                            }
+                          }}
+                        >
+                          {formatMentionsForDisplay(comment.text)}
+                        </ReactMarkdown>
+                      </div>
+                      {attachments.length > 0 && (
+                        <div className="mt-2 space-y-2">
+                          {attachments.map((file: any, index: number) => (
+                            <CommentAttachmentItem key={file.id || index} file={file} />
+                          ))}
+                        </div>
+                      )}
+                      <div className="mt-2">
+                        <CommentReactions reactions={comment.reactions || []} onToggleReaction={(emoji) => handleToggleCommentReaction(comment.id, emoji)} />
+                      </div>
+                    </>
                   )}
                 </div>
               </div>
