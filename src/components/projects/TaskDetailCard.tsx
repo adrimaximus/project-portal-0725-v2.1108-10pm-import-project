@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Task, TaskAttachment, Reaction, User } from '@/types';
 import { DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
@@ -7,7 +7,7 @@ import { Button } from '../ui/button';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { generatePastelColor, getPriorityStyles, getTaskStatusStyles, isOverdue, cn, getAvatarUrl, getInitials, formatTaskText } from '@/lib/utils';
-import { Edit, Trash2, Ticket, Paperclip, User as UserIcon, Calendar, Tag, Briefcase, Link as LinkIcon, MoreHorizontal } from 'lucide-react';
+import { Edit, Trash2, Ticket, Paperclip, User as UserIcon, Calendar, Tag, Briefcase, Link as LinkIcon, MoreHorizontal, ChevronDown } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import TaskAttachmentList from './TaskAttachmentList';
@@ -17,6 +17,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import TaskDiscussion from './TaskDiscussion';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 interface TaskDetailCardProps {
   task: Task;
@@ -81,6 +82,8 @@ const getDueDateClassName = (dueDateStr: string | null, completed: boolean): str
 const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, onDelete }) => {
   const queryClient = useQueryClient();
   const { toggleTaskReaction } = useTaskMutations();
+  const descriptionIsLong = task.description && task.description.length > 200;
+  const [isDescriptionOpen, setIsDescriptionOpen] = useState(!descriptionIsLong);
 
   const allAttachments = useMemo(() => {
     if (!task) return [];
@@ -152,14 +155,23 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
         
         <div className="p-3 sm:p-4 space-y-3 sm:space-y-4 text-xs sm:text-sm">
           {task.description && (
-            <div className="border-b pb-3 sm:pb-4">
-              <h4 className="font-semibold mb-2 text-xs sm:text-sm">Description</h4>
-              <div className="prose prose-sm dark:prose-invert max-w-none text-muted-foreground break-all">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                  {formatTaskText(task.description)}
-                </ReactMarkdown>
-              </div>
-            </div>
+            <Collapsible
+              open={isDescriptionOpen}
+              onOpenChange={setIsDescriptionOpen}
+              className="border-b"
+            >
+              <CollapsibleTrigger className="flex w-full items-center justify-between py-2 text-left text-xs sm:text-sm">
+                <h4 className="font-semibold">Description</h4>
+                <ChevronDown className={`h-4 w-4 shrink-0 transition-transform duration-200 ${isDescriptionOpen ? 'rotate-180' : ''}`} />
+              </CollapsibleTrigger>
+              <CollapsibleContent className="pb-3 sm:pb-4">
+                <div className="prose prose-sm dark:prose-invert max-w-none text-muted-foreground break-all">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {formatTaskText(task.description)}
+                  </ReactMarkdown>
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
           )}
 
           <div className="grid grid-cols-2 gap-3 sm:gap-4">
