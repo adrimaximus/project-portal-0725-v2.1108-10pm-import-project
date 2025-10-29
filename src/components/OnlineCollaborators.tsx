@@ -6,6 +6,8 @@ import { Users } from "lucide-react";
 import { Collaborator } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { generatePastelColor, getAvatarUrl } from "@/lib/utils";
+import { formatDistanceToNow } from 'date-fns';
+import { id } from 'date-fns/locale';
 
 type OnlineCollaboratorsProps = {
   isCollapsed: boolean;
@@ -42,8 +44,15 @@ const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
             </TooltipTrigger>
             <TooltipContent side="right">
               <p className="font-semibold">{onlineCollaborators.length} collaborators online</p>
-              <ul className="mt-1 text-sm text-muted-foreground">
-                {onlineCollaborators.map(c => <li key={c.id}>{c.name}</li>)}
+              <ul className="mt-2 text-sm text-muted-foreground space-y-1.5">
+                {onlineCollaborators.map(c => (
+                  <li key={c.id} className="flex items-center gap-2">
+                    <span className={`h-2 w-2 rounded-full ${c.isIdle ? 'bg-orange-400' : 'bg-green-500'}`} />
+                    <span>
+                      {c.name} - {c.isIdle ? 'Idle' : 'Active'} for {c.last_active_at ? formatDistanceToNow(new Date(c.last_active_at), { locale: id }) : 'a while'}
+                    </span>
+                  </li>
+                ))}
               </ul>
             </TooltipContent>
           </Tooltip>
@@ -100,7 +109,12 @@ const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
                           </div>
                         </TooltipTrigger>
                         <TooltipContent side="top" className="bg-primary text-primary-foreground">
-                          <p>{collaborator.name}</p>
+                          <p className="font-semibold">{collaborator.name}</p>
+                          {collaborator.last_active_at && (
+                            <p className="text-xs">
+                              Active for {formatDistanceToNow(new Date(collaborator.last_active_at), { locale: id })}
+                            </p>
+                          )}
                         </TooltipContent>
                       </Tooltip>
                     ))}
@@ -134,7 +148,12 @@ const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
                           </div>
                         </TooltipTrigger>
                         <TooltipContent side="top" className="bg-primary text-primary-foreground">
-                          <p>{collaborator.name}</p>
+                          <p className="font-semibold">{collaborator.name}</p>
+                          {collaborator.last_active_at && (
+                            <p className="text-xs">
+                              Idle for {formatDistanceToNow(new Date(collaborator.last_active_at), { locale: id })}
+                            </p>
+                          )}
                         </TooltipContent>
                       </Tooltip>
                     ))}
