@@ -1,12 +1,12 @@
 import { Task, User, TaskAttachment, Reaction } from "@/types";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ListChecks, Plus, MoreHorizontal, Edit, Trash2, Ticket, Paperclip, Eye, Download, File as FileIconLucide } from "lucide-react";
+import { ListChecks, Plus, MoreHorizontal, Edit, Trash2, Ticket, Paperclip, Eye, Download, File as FileIconLucide, ChevronDown } from "lucide-react";
 import { Button } from "../ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { useMemo, useRef, useEffect } from "react";
+import { useMemo, useRef, useEffect, useState } from "react";
 import FileIcon from "../FileIcon";
 import TaskReactions from '../projects/TaskReactions';
 import { useTaskMutations } from '@/hooks/useTaskMutations';
@@ -15,6 +15,8 @@ import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import TaskAttachmentList from '../projects/TaskAttachmentList';
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
+import { Separator } from "@/components/ui/separator";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 interface ProjectTasksProps {
   tasks: Task[];
@@ -180,6 +182,7 @@ const ProjectTasks = ({ tasks, projectId, onAddTask, onEditTask, onDeleteTask, o
   const queryClient = useQueryClient();
   const { toggleTaskReaction } = useTaskMutations();
   const taskRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const [isCompletedOpen, setIsCompletedOpen] = useState(true);
 
   useEffect(() => {
     if (highlightedTaskId) {
@@ -208,6 +211,22 @@ const ProjectTasks = ({ tasks, projectId, onAddTask, onEditTask, onDeleteTask, o
   const handleTitleClick = (task: Task) => {
     navigate(`/projects?view=tasks&highlight=${task.id}`);
   };
+
+  const { undoneTasks, doneTasks } = useMemo(() => {
+    const undone: Task[] = [];
+    const done: Task[] = [];
+    (tasks || []).forEach(task => {
+      if (task.completed) {
+        done.push(task);
+      } else {
+        undone.push(task);
+      }
+    });
+    const sortByDate = (a: Task, b: Task) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+    undone.sort(sortByDate);
+    done.sort(sortByDate);
+    return { undoneTasks: undone, doneTasks: done };
+  }, [tasks]);
   
   if (!tasks || tasks.length === 0) {
     return (
@@ -231,7 +250,7 @@ const ProjectTasks = ({ tasks, projectId, onAddTask, onEditTask, onDeleteTask, o
         </Button>
       </div>
       <TooltipProvider>
-        {tasks.map((task) => (
+        {undoneTasks.map((task) => (
           <TaskRow
             key={task.id}
             task={task}
@@ -247,6 +266,39 @@ const ProjectTasks = ({ tasks, projectId, onAddTask, onEditTask, onDeleteTask, o
           />
         ))}
       </TooltipProvider>
+
+      {doneTasks.length > 0 && (
+        <>
+          <Separator className="my-4" />
+          <Collapsible open={isCompletedOpen} onOpenChange={setIsCompletedOpen}>
+            <CollapsibleTrigger className="flex items-center justify-between w-full p-2 rounded-md hover:bg-muted group">
+              <div className="flex items-center gap-2">
+                <ChevronDown className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                <h4 className="font-semibold text-sm">Completed ({doneTasks.length})</h4>
+              </div>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-1 pt-2">
+              <TooltipProvider>
+                {doneTasks.map((task) => (
+                  <TaskRow
+                    key={task.id}
+                    task={task}
+                    onToggleTaskCompletion={onToggleTaskCompletion}
+                    onEditTask={onEditTask}
+                    onDeleteTask={onDeleteTask}
+                    handleToggleReaction={handleToggleReaction}
+                    onTitleClick={handleTitleClick}
+                    setRef={(el) => {
+                      if (el) taskRefs.current.set(task.id, el);
+                      else taskRefs.current.delete(task.id);
+                    }}
+                  />
+                ))}
+              </TooltipProvider>
+            </CollapsibleContent>
+          </Collapsible>
+        </>
+      )}
     </div>
   );
 };
