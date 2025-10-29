@@ -1,5 +1,5 @@
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient } from 'npm:@supabase/supabase-js@2.54.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -107,7 +107,7 @@ serve(async (req) => {
     }
 
     // 8. DEBOUNCE CHECK: Prevent duplicate emails for the same comment to the same users
-    // We'll create a simple tracking table or use a timestamp-based check
+    // We'll create a simple tracking mechanism or use a timestamp-based check
     // For simplicity, we'll check if we've sent an email for this comment_id to these users in the last 2 minutes
     const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000).toISOString();
     
