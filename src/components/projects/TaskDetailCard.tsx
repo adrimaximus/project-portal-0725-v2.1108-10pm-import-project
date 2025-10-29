@@ -139,7 +139,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
         </div>
       </DialogHeader>
       
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto min-h-0">
         <div className="grid gap-3 sm:gap-4 p-3 sm:p-4 text-xs sm:text-sm">
           {task.description && (
             <div className="border-b pb-3 sm:pb-4">
