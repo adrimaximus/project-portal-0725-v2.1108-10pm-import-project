@@ -120,7 +120,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
         if (!unread) return false;
 
         return unread.some(item => {
-            const notification = item.notifications as { type: string } | null;
+            const notification = Array.isArray(item.notifications) ? item.notifications[0] : item.notifications as { type: string } | null;
             if (!notification) return false;
             return notification.type === 'project_update' || notification.type === 'mention';
         });
@@ -149,7 +149,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
         }
 
         if (data && data.length > 0) {
-            const notification = data[0].notifications as { resource_id: string };
+            const notification = Array.isArray(data[0].notifications) ? data[0].notifications[0] : data[0].notifications as { resource_id: string };
             return { hasUnread: true, latestTaskId: notification.resource_id };
         }
         return { hasUnread: false, latestTaskId: null };
@@ -241,9 +241,9 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
         const itemNameLower = item.name.toLowerCase();
 
         if (itemNameLower === 'projects' && hasUnreadProjectActivity) {
-          const latestProjectNotif = notifications.find(n => !n.read_at && (n.type === 'project_update' || n.type === 'mention'));
-          if (latestProjectNotif && latestProjectNotif.data?.link) {
-            const slug = (latestProjectNotif.data.link as string).split('/').pop();
+          const latestProjectNotif = notifications.find(n => !n.read && (n.type === 'project_update' || n.type === 'mention'));
+          if (latestProjectNotif && latestProjectNotif.link && latestProjectNotif.link !== '#') {
+            const slug = latestProjectNotif.link.split('/').pop();
             href = `/projects?view=list&highlight=${slug}`;
           } else {
             href = item.url;
