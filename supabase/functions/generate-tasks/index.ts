@@ -3,11 +3,28 @@
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts"
 import Anthropic from 'npm:@anthropic-ai/sdk@^0.22.0';
+import { createClient } from 'npm:@supabase/supabase-js@2.54.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
+
+const getAnthropicClient = async (supabaseAdmin: any) => {
+  const apiKeyFromEnv = Deno.env.get('ANTHROPIC_API_KEY');
+  if (apiKeyFromEnv) {
+    return new Anthropic({ apiKey: apiKeyFromEnv });
+  }
+  const { data: config, error: configError } = await supabaseAdmin
+    .from('app_config')
+    .select('value')
+    .eq('key', 'ANTHROPIC_API_KEY')
+    .single();
+  if (configError || !config?.value) {
+    throw new Error("Anthropic API key is not configured.");
+  }
+  return new Anthropic({ apiKey: config.value });
+};
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -16,15 +33,12 @@ serve(async (req) => {
 
   try {
     const { projectName, venue, services, description, existingTasks } = await req.json();
-    const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
-
-    if (!apiKey) {
-      throw new Error("ANTHROPIC_API_KEY is not set in Supabase secrets.");
-    }
-
-    const anthropic = new Anthropic({
-      apiKey: apiKey,
-    });
+    
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    );
+    const anthropic = await getAnthropicClient(supabaseAdmin);
 
     const serviceList = Array.isArray(services) && services.length > 0 ? services.join(', ') : 'Not specified';
     const existingTasksList = Array.isArray(existingTasks) && existingTasks.length > 0 ? `The following tasks already exist, so do not generate them again: ${existingTasks.join(', ')}.` : '';
