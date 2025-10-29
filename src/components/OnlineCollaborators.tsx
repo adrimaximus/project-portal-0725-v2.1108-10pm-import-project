@@ -7,7 +7,6 @@ import { Collaborator } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { generatePastelColor, getAvatarUrl } from "@/lib/utils";
 import { formatDistanceToNow } from 'date-fns';
-import { id } from 'date-fns/locale';
 
 type OnlineCollaboratorsProps = {
   isCollapsed: boolean;
@@ -48,8 +47,8 @@ const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
                 {onlineCollaborators.map(c => (
                   <li key={c.id} className="flex items-center gap-2">
                     <span className={`h-2 w-2 rounded-full ${c.isIdle ? 'bg-orange-400' : 'bg-green-500'}`} />
-                    <span>
-                      {c.name} - {c.isIdle ? 'Idle' : 'Active'} for {c.last_active_at ? formatDistanceToNow(new Date(c.last_active_at), { locale: id }) : 'a while'}
+                    <span className="capitalize">
+                      {c.name} - {c.last_active_at ? `${formatDistanceToNow(new Date(c.last_active_at))} ${c.isIdle ? 'idle' : 'active'}` : (c.isIdle ? 'Idle' : 'Active')}
                     </span>
                   </li>
                 ))}
@@ -111,8 +110,8 @@ const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
                         <TooltipContent side="top" className="bg-primary text-primary-foreground">
                           <p className="font-semibold">{collaborator.name}</p>
                           {collaborator.last_active_at && (
-                            <p className="text-xs">
-                              Active for {formatDistanceToNow(new Date(collaborator.last_active_at), { locale: id })}
+                            <p className="text-xs capitalize">
+                              {formatDistanceToNow(new Date(collaborator.last_active_at))} active
                             </p>
                           )}
                         </TooltipContent>
@@ -150,8 +149,8 @@ const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
                         <TooltipContent side="top" className="bg-primary text-primary-foreground">
                           <p className="font-semibold">{collaborator.name}</p>
                           {collaborator.last_active_at && (
-                            <p className="text-xs">
-                              Idle for {formatDistanceToNow(new Date(collaborator.last_active_at), { locale: id })}
+                            <p className="text-xs capitalize">
+                              {formatDistanceToNow(new Date(collaborator.last_active_at))} idle
                             </p>
                           )}
                         </TooltipContent>
