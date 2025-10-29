@@ -26,6 +26,7 @@ const TagsSettingsPage = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [mainTab, setMainTab] = useState('tags');
+  const [activeTagTab, setActiveTagTab] = useState('personal');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [tagToEdit, setTagToEdit] = useState<Tag | null>(null);
   const [tagToDelete, setTagToDelete] = useState<Tag | null>(null);
@@ -37,16 +38,31 @@ const TagsSettingsPage = () => {
   const [tagSort, setTagSort] = useState<{ column: SortableTagColumns; direction: SortDirection }>({ column: 'name', direction: 'asc' });
   const [groupSort, setGroupSort] = useState<{ column: SortableGroupColumns; direction: SortDirection }>({ column: 'name', direction: 'asc' });
 
+  const isAdmin = user?.role === 'admin' || user?.role === 'master admin';
+
   const { data: tags = [], isLoading } = useQuery({
     queryKey: ['tags', user?.id],
     queryFn: async () => {
       if (!user) return [];
-      const { data, error } = await supabase.from('tags').select('*').eq('user_id', user.id);
+      const { data, error } = await supabase.from('tags').select('*');
       if (error) throw error;
       return data as Tag[];
     },
     enabled: !!user,
   });
+
+  const { personalTags, globalTags } = useMemo(() => {
+    const personal: Tag[] = [];
+    const global: Tag[] = [];
+    tags.forEach(tag => {
+      if (tag.user_id) {
+        personal.push(tag);
+      } else {
+        global.push(tag);
+      }
+    });
+    return { personalTags: personal, globalTags: global };
+  }, [tags]);
 
   const tagGroups = [...new Set(tags.map(tag => tag.type || 'general'))];
   const groupCounts = tags.reduce((acc, tag) => {
@@ -69,20 +85,23 @@ const TagsSettingsPage = () => {
     }));
   };
 
-  const sortedTags = [...tags]
-    .filter(tag => {
-      const query = searchQuery.toLowerCase();
-      const nameMatch = tag.name.toLowerCase().includes(query);
-      const groupMatch = (tag.type || 'general').toLowerCase().includes(query);
-      return nameMatch || groupMatch;
-    })
-    .sort((a, b) => {
-      const aVal = a[tagSort.column] || (tagSort.column === 'type' ? 'general' : (tagSort.column === 'lead_time' ? 0 : ''));
-      const bVal = b[tagSort.column] || (tagSort.column === 'type' ? 'general' : (tagSort.column === 'lead_time' ? 0 : ''));
-      if (aVal < bVal) return tagSort.direction === 'asc' ? -1 : 1;
-      if (aVal > bVal) return tagSort.direction === 'asc' ? 1 : -1;
-      return 0;
-    });
+  const sortedTags = useMemo(() => {
+    const tagsToProcess = activeTagTab === 'personal' ? personalTags : globalTags;
+    return [...tagsToProcess]
+      .filter(tag => {
+        const query = searchQuery.toLowerCase();
+        const nameMatch = tag.name.toLowerCase().includes(query);
+        const groupMatch = (tag.type || 'general').toLowerCase().includes(query);
+        return nameMatch || groupMatch;
+      })
+      .sort((a, b) => {
+        const aVal = a[tagSort.column] || (tagSort.column === 'type' ? 'general' : (tagSort.column === 'lead_time' ? 0 : ''));
+        const bVal = b[tagSort.column] || (tagSort.column === 'type' ? 'general' : (tagSort.column === 'lead_time' ? 0 : ''));
+        if (aVal < bVal) return tagSort.direction === 'asc' ? -1 : 1;
+        if (aVal > bVal) return tagSort.direction === 'asc' ? 1 : -1;
+        return 0;
+      });
+  }, [personalTags, globalTags, activeTagTab, searchQuery, tagSort]);
 
   const sortedTagGroups = [...tagGroups].sort((a, b) => {
     const aVal = groupSort.column === 'name' ? a : groupCounts[a] || 0;
@@ -105,7 +124,8 @@ const TagsSettingsPage = () => {
   const handleSave = async (tagData: Omit<Tag, 'id' | 'user_id'>) => {
     if (!user) return;
     setIsSaving(true);
-    const upsertData = { ...tagData, user_id: user.id, id: tagToEdit?.id, type: tagData.type || 'general' };
+    const userIdForTag = tagToEdit ? tagToEdit.user_id : (activeTagTab === 'global' && isAdmin ? null : user.id);
+    const upsertData = { ...tagData, user_id: userIdForTag, id: tagToEdit?.id, type: tagData.type || 'general' };
 
     const { error } = await supabase.from('tags').upsert(upsertData);
     setIsSaving(false);
@@ -204,6 +224,54 @@ const TagsSettingsPage = () => {
     return result;
   };
 
+  const renderTagsTable = (tagsToRender: Tag[], isEditable: boolean) => (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <SortableHeader column="name" label="Name" onSort={handleTagSort} sortConfig={tagSort} />
+          <SortableHeader column="type" label="Group" onSort={handleTagSort} sortConfig={tagSort} />
+          <SortableHeader column="color" label="Color" onSort={handleTagSort} sortConfig={tagSort} />
+          <SortableHeader column="lead_time" label="Lead Time (hours)" onSort={handleTagSort} sortConfig={tagSort} />
+          <TableHead className="text-right">Actions</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {isLoading ? (
+          <TableRow><TableCell colSpan={5} className="text-center">Loading tags...</TableCell></TableRow>
+        ) : tagsToRender.length === 0 ? (
+          <TableRow><TableCell colSpan={5} className="text-center h-24">
+            {searchQuery ? `No tags found for "${searchQuery}"` : `No tags in this category.`}
+          </TableCell></TableRow>
+        ) : tagsToRender.map(tag => (
+          <TableRow key={tag.id}>
+            <TableCell className="font-medium">{tag.name}</TableCell>
+            <TableCell className="capitalize">{tag.type || 'general'}</TableCell>
+            <TableCell>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded-full" style={{ backgroundColor: tag.color }} />
+                <span className="font-mono text-sm hidden sm:inline">{tag.color}</span>
+              </div>
+            </TableCell>
+            <TableCell className="text-center">{formatLeadTime(tag.lead_time)}</TableCell>
+            <TableCell className="text-right">
+              {isEditable && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onSelect={() => handleEdit(tag)}><Edit className="mr-2 h-4 w-4" /> Edit</DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => setTagToDelete(tag)} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Delete</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  );
+
   return (
     <PortalLayout>
       <div className="space-y-6">
@@ -226,11 +294,6 @@ const TagsSettingsPage = () => {
               <TabsTrigger value="tags">Tags</TabsTrigger>
               <TabsTrigger value="groups">Groups</TabsTrigger>
             </TabsList>
-            {mainTab === 'tags' && (
-              <Button onClick={handleAddNew} size="sm">
-                <PlusCircle className="mr-2 h-4 w-4" /> New Tag
-              </Button>
-            )}
           </div>
 
           <TabsContent value="tags" className="mt-4">
@@ -253,49 +316,23 @@ const TagsSettingsPage = () => {
                 </div>
               </CardHeader>
               <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <SortableHeader column="name" label="Name" onSort={handleTagSort} sortConfig={tagSort} />
-                      <SortableHeader column="type" label="Group" onSort={handleTagSort} sortConfig={tagSort} />
-                      <SortableHeader column="color" label="Color" onSort={handleTagSort} sortConfig={tagSort} />
-                      <SortableHeader column="lead_time" label="Lead Time (hours)" onSort={handleTagSort} sortConfig={tagSort} />
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {isLoading ? (
-                      <TableRow><TableCell colSpan={5} className="text-center">Loading tags...</TableCell></TableRow>
-                    ) : sortedTags.length === 0 ? (
-                      <TableRow><TableCell colSpan={5} className="text-center h-24">
-                        {searchQuery ? `No tags found for "${searchQuery}"` : `You haven't created any tags yet.`}
-                      </TableCell></TableRow>
-                    ) : sortedTags.map(tag => (
-                      <TableRow key={tag.id}>
-                        <TableCell className="font-medium">{tag.name}</TableCell>
-                        <TableCell className="capitalize">{tag.type || 'general'}</TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <div className="w-4 h-4 rounded-full" style={{ backgroundColor: tag.color }} />
-                            <span className="font-mono text-sm hidden sm:inline">{tag.color}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-center">{formatLeadTime(tag.lead_time)}</TableCell>
-                        <TableCell className="text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onSelect={() => handleEdit(tag)}><Edit className="mr-2 h-4 w-4" /> Edit</DropdownMenuItem>
-                              <DropdownMenuItem onSelect={() => setTagToDelete(tag)} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Delete</DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                <Tabs value={activeTagTab} onValueChange={setActiveTagTab} defaultValue="personal">
+                  <div className="flex justify-between items-end">
+                    <TabsList>
+                      <TabsTrigger value="personal">Personal</TabsTrigger>
+                      <TabsTrigger value="global">Global</TabsTrigger>
+                    </TabsList>
+                    <Button onClick={handleAddNew} size="sm">
+                      <PlusCircle className="mr-2 h-4 w-4" /> New {activeTagTab === 'global' && isAdmin ? 'Global' : 'Personal'} Tag
+                    </Button>
+                  </div>
+                  <TabsContent value="personal" className="mt-4">
+                    {renderTagsTable(sortedTags, true)}
+                  </TabsContent>
+                  <TabsContent value="global" className="mt-4">
+                    {renderTagsTable(sortedTags, isAdmin)}
+                  </TabsContent>
+                </Tabs>
               </CardContent>
             </Card>
           </TabsContent>
