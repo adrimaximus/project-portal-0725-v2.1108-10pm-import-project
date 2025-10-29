@@ -274,15 +274,15 @@ const executeAction = async (actionData: any, context: any) => {
                 const { name, description, start_date, due_date, venue, budget, services, members } = actionData.project_details;
                 if (!name) return "I need a name to create a project.";
 
-                const { data: newProject, error: projectError } = await userSupabase.from('projects').insert({
-                    name,
-                    description,
-                    start_date,
-                    due_date,
-                    venue,
-                    budget,
-                    created_by: user.id,
-                }).select().single();
+                const { data: newProject, error: projectError } = await userSupabase.rpc('create_project', {
+                    p_name: name,
+                    p_description: description,
+                    p_start_date: start_date,
+                    p_due_date: due_date,
+                    p_venue: venue,
+                    p_budget: budget,
+                    p_category: 'General', // Default category for AI-created projects
+                }).single();
 
                 if (projectError) return `I failed to create the project. The database said: ${projectError.message}`;
                 if (!newProject) return `I tried to create the project, but the database didn't confirm it was created. Please check your projects list.`;
@@ -328,7 +328,7 @@ const executeAction = async (actionData: any, context: any) => {
                     p_payment_status: updates.payment_status || project.payment_status,
                     p_payment_due_date: updates.payment_due_date || project.payment_due_date,
                     p_venue: updates.venue || project.venue,
-                    p_member_ids: project.assignedTo.map((m: any) => m.id), // This RPC requires all members, not just changes
+                    p_members: project.assignedTo.map((m: any) => m.id), // This RPC requires all members, not just changes
                     p_service_titles: updates.services || project.services,
                     p_existing_tags: (updates.tags || project.tags || []).map((t: any) => t.id),
                     p_custom_tags: [],
@@ -394,7 +394,7 @@ const executeAction = async (actionData: any, context: any) => {
                 return `I've created the folder "${newFolder.name}". You can view it at /knowledge-base/folders/${newFolder.slug}`;
             }
             case 'CREATE_ARTICLE': {
-                const { title, content, folder_name, header_image_search_query } = actionData.article_details;
+                const { title, content, folder_name, header_image_search_query, tags } = actionData.article_details;
                 let folder_id = folders.find((f: any) => f.name.toLowerCase() === folder_name?.toLowerCase())?.id;
                 let header_image_url = null;
 
@@ -407,13 +407,21 @@ const executeAction = async (actionData: any, context: any) => {
                 }
 
                 if (!folder_id) {
-                    const { data: defaultFolderData, error: folderError } = await userSupabase.rpc('create_default_kb_folder').single();
-                    if (folderError || !defaultFolderData) return `I couldn't find or create a default folder for the article: ${folderError?.message}`;
-                    folder_id = defaultFolderData.id;
+                    const { data: defaultFolderId, error: folderError } = await userSupabase.rpc('create_default_kb_folder');
+                    if (folderError || !defaultFolderId) return `I couldn't find or create a default folder for the article: ${folderError?.message}`;
+                    folder_id = defaultFolderId;
                 }
 
-                const { data: newArticle, error } = await userSupabase.from('kb_articles').insert({
-                    title, content: { html: content }, folder_id, user_id: user.id, header_image_url
+                const customTags = (tags || []).map((t: any) => ({ name: t.name, color: t.color }));
+
+                const { data: newArticle, error } = await userSupabase.rpc('upsert_article_with_tags', {
+                    p_id: null,
+                    p_title: title,
+                    p_content: { html: content },
+                    p_folder_id: folder_id,
+                    p_header_image_url: header_image_url,
+                    p_tags: [],
+                    p_custom_tags: customTags.length > 0 ? customTags : null,
                 }).select().single();
 
                 if (error) return `I failed to create the article. The database said: ${error.message}`;
@@ -434,15 +442,18 @@ const executeAction = async (actionData: any, context: any) => {
                     }
                 }
 
-                const { error } = await userSupabase.from('kb_articles').update({
-                    title: updates.title,
-                    content: updates.content ? { html: updates.content } : undefined,
-                    folder_id: updates.folder_name ? folders.find((f: any) => f.name.toLowerCase() === updates.folder_name.toLowerCase())?.id : undefined,
-                    header_image_url,
-                }).eq('id', article.id);
+                const { error } = await userSupabase.rpc('upsert_article_with_tags', {
+                    p_id: article.id,
+                    p_title: updates.title || article.title,
+                    p_content: updates.content ? { html: updates.content } : article.content,
+                    p_folder_id: updates.folder_name ? folders.find((f: any) => f.name.toLowerCase() === updates.folder_name.toLowerCase())?.id : article.folder_id,
+                    p_header_image_url: header_image_url,
+                    p_tags: (updates.tags || article.tags || []).map((t: any) => t.id),
+                    p_custom_tags: [],
+                });
 
                 if (error) return `I failed to update the article. The database said: ${error.message}`;
-                return `I've updated the article "${article.title}".`;
+                return `I've updated the article "${updates.title || article.title}".`;
             }
             case 'DELETE_ARTICLE': {
                 const { article_title } = actionData;
@@ -561,7 +572,6 @@ async function sendEmail(to: string, subject: string, html: string, text?: strin
 }
 
 async function analyzeProjects(payload: any, context: any) {
-  console.log("[DIAGNOSTIC] analyzeProjects: Starting analysis.");
   const { openai, user, userSupabase, supabaseAdmin } = context;
   let { request, attachmentUrl, attachmentType, replyToMessageId } = payload;
   
@@ -625,6 +635,16 @@ async function analyzeProjects(payload: any, context: any) {
     }
   }
 
+  let actionContext;
+  try {
+      console.log("[DIAGNOSTIC] analyzeProjects: Building context...");
+      actionContext = await buildContext(userSupabase, user);
+      console.log("[DIAGNOSTIC] analyzeProjects: Context built successfully.");
+  } catch (contextError) {
+      console.error("[DIAGNOSTIC] analyzeProjects: CRITICAL ERROR building context:", contextError.stack || contextError.message);
+      throw new Error(`Failed to build context for AI: ${contextError.message}`);
+  }
+
   const { data: history, error: historyError } = await userSupabase
     .from('ai_chat_history')
     .select('sender, content')
@@ -634,7 +654,6 @@ async function analyzeProjects(payload: any, context: any) {
   if (historyError) throw historyError;
   console.log("[DIAGNOSTIC] analyzeProjects: Fetched chat history.");
 
-  const actionContext = await buildContext(userSupabase, user);
   const currentUserProfile = actionContext.userList.find((u: any) => u.id === user.id);
   const currentUserName = currentUserProfile ? currentUserProfile.name : 'there';
   const systemPrompt = getAnalyzeProjectsSystemPrompt(actionContext, currentUserName);
@@ -699,7 +718,7 @@ async function analyzeProjects(payload: any, context: any) {
       <p>${aiAnswer.replace(/\n/g, '<br>')}</p>
     `;
     
-    await sendEmail('adri@7inked.com', emailSubject, emailHtml);
+    await sendEmail(userSupabase, 'adri@7inked.com', emailSubject, emailHtml);
   }
 
   try {
@@ -1032,11 +1051,16 @@ serve(async (req) => {
     return new Response('ok', { headers: corsHeaders });
   }
 
+  let feature = 'unknown';
   try {
-    const { feature, payload } = await req.json();
+    const body = await req.json();
+    feature = body.feature;
+    const { payload } = body;
+
     if (!feature || !featureMap[feature]) {
       throw new Error(`Unknown or missing feature: ${feature}`);
     }
+    console.log(`[ai-handler] INFO: Received feature: ${feature}`);
 
     const supabaseAdmin = createSupabaseAdmin();
     const openai = await getOpenAIClient(supabaseAdmin);
@@ -1050,10 +1074,12 @@ serve(async (req) => {
       user,
       userSupabase,
       supabaseAdmin,
-      feature, // Pass feature for functions that handle multiple sub-features
+      feature,
     };
 
+    console.log(`[ai-handler] INFO: Executing feature '${feature}'...`);
     const result = await featureMap[feature](payload, context);
+    console.log(`[ai-handler] INFO: Feature '${feature}' executed successfully.`);
 
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -1061,7 +1087,7 @@ serve(async (req) => {
     });
 
   } catch (error) {
-    console.error(`Error in ai-handler for feature:`, error.message);
+    console.error(`[ai-handler] ERROR: Error in ai-handler for feature '${feature}':`, error.stack || error.message);
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,
