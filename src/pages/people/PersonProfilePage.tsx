@@ -204,7 +204,7 @@ const PersonProfilePage = () => {
     }
   };
 
-  if (isLoading) return <PersonProfileSkeleton />;
+  if (isLoading || isLoadingCustomProperties) return <PersonProfileSkeleton />;
 
   if (error || !person) {
     toast.error("Could not load person's profile.");
@@ -215,7 +215,16 @@ const PersonProfilePage = () => {
   const firstPhone = person.contact?.phones?.[0] || person.phone;
   const whatsappLink = firstPhone ? `https://wa.me/${formatPhoneNumberForApi(firstPhone)}` : null;
 
-  const customPropertiesWithValue = customProperties.filter(prop => person.custom_properties && person.custom_properties[prop.name] && prop.id !== (customProperties.find(p => p.label.toLowerCase() === 'email pribadi' || p.label.toLowerCase() === 'personal email'))?.id && prop.id !== (customProperties.find(p => p.label.toLowerCase() === 'phone 2' || p.label.toLowerCase() === 'phone-2'))?.id);
+  const customPropertiesWithValue = customProperties.filter(prop => {
+    const hasValue = person.custom_properties && typeof person.custom_properties[prop.name] !== 'undefined' && person.custom_properties[prop.name] !== null && person.custom_properties[prop.name] !== '';
+    if (!hasValue) return false;
+
+    const labelLower = prop.label.toLowerCase();
+    const isPersonalEmail = labelLower === 'email pribadi' || labelLower === 'personal email';
+    const isPhone2 = labelLower === 'phone 2' || labelLower === 'phone-2';
+
+    return !isPersonalEmail && !isPhone2;
+  });
 
   return (
     <PortalLayout>
@@ -261,16 +270,12 @@ const PersonProfilePage = () => {
             <Card>
               <CardHeader><CardTitle>Contact Info</CardTitle></CardHeader>
               <CardContent className="space-y-3 text-sm">
-                {isLoadingCustomProperties ? <Loader2 className="h-4 w-4 animate-spin" /> : (
-                  <>
-                    {person.contact?.emails?.map((email, index) => (
-                      email && <div key={index} className="flex items-center gap-3"><Mail className="h-4 w-4 text-muted-foreground" /><a href={`mailto:${email}`} className="truncate hover:underline">{email}</a></div>
-                    ))}
-                    {personalEmail && <div className="flex items-center gap-3"><Mail className="h-4 w-4 text-muted-foreground" /><a href={`mailto:${personalEmail}`} className="truncate hover:underline flex items-center gap-2">{personalEmail} <Badge variant="outline" className="text-xs">Pribadi</Badge></a></div>}
-                    {whatsappLink && <div className="flex items-center gap-3"><WhatsappIcon className="h-4 w-4 text-muted-foreground" /><a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="truncate hover:underline text-primary">{firstPhone}</a></div>}
-                    {phone2 && <div className="flex items-center gap-3"><Phone className="h-4 w-4 text-muted-foreground" /><a href={`tel:${phone2}`} className="truncate hover:underline">{phone2}</a></div>}
-                  </>
-                )}
+                {person.contact?.emails?.map((email, index) => (
+                  email && <div key={index} className="flex items-center gap-3"><Mail className="h-4 w-4 text-muted-foreground" /><a href={`mailto:${email}`} className="truncate hover:underline">{email}</a></div>
+                ))}
+                {personalEmail && <div className="flex items-center gap-3"><Mail className="h-4 w-4 text-muted-foreground" /><a href={`mailto:${personalEmail}`} className="truncate hover:underline flex items-center gap-2">{personalEmail} <Badge variant="outline" className="text-xs">Pribadi</Badge></a></div>}
+                {whatsappLink && <div className="flex items-center gap-3"><WhatsappIcon className="h-4 w-4 text-muted-foreground" /><a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="truncate hover:underline text-primary">{firstPhone}</a></div>}
+                {phone2 && <div className="flex items-center gap-3"><Phone className="h-4 w-4 text-muted-foreground" /><a href={`tel:${phone2}`} className="truncate hover:underline">{phone2}</a></div>}
                 {addressObject && (addressObject.address || addressObject.name) && (
                   <div className="flex items-start gap-3">
                     <MapPin className="h-4 w-4 mt-1 text-muted-foreground flex-shrink-0" />
