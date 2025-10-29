@@ -34,10 +34,16 @@ const getOpenAIClient = async (supabaseAdmin: any) => {
     .from('app_config')
     .select('value')
     .eq('key', 'OPENAI_API_KEY')
+    .limit(1) // Ensure we only get one row, even if there are duplicates
     .single();
 
-  if (configError || !config?.value) {
-    // 3. If not found in either place, throw an error.
+  if (configError) {
+    // Log the detailed error for debugging but don't expose it to the user.
+    console.error("Error fetching OpenAI key from DB:", configError.message);
+  }
+  
+  if (!config || !config.value) {
+    // 3. If not found in either place, throw a clear, user-friendly error.
     throw new Error("OpenAI API key is not configured. Please set it in your application settings or as a Supabase secret.");
   }
   
