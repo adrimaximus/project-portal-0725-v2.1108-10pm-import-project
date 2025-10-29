@@ -22,7 +22,6 @@ import { useTaskMutations } from '@/hooks/useTaskMutations';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import PortalLayout from '@/components/PortalLayout';
 import { getErrorMessage, formatInJakarta } from '@/lib/utils';
-import { useNotifications } from '@/hooks/useNotifications';
 
 type ViewMode = 'table' | 'list' | 'kanban' | 'tasks' | 'tasks-kanban';
 type SortConfig<T> = { key: keyof T | null; direction: 'ascending' | 'descending' };
@@ -34,7 +33,6 @@ const ProjectsPage = () => {
   const rowRefs = useRef(new Map<string, HTMLTableRowElement>());
   const { user } = useAuth();
   const { taskId: taskIdFromParams } = useParams<{ taskId: string }>();
-  const { notifications } = useNotifications();
 
   const viewFromUrl = searchParams.get('view') as ViewMode;
   const view = taskIdFromParams ? 'tasks' : viewFromUrl || 'list';
@@ -317,13 +315,35 @@ const ProjectsPage = () => {
     sortConfig: finalTaskSortConfig 
   }];
 
-  const unreadProjectIds = useMemo(() => {
-    return new Set(
-      notifications
-        .filter(n => !n.read_at && (n.type === 'project_update' || n.type === 'mention') && (n.resource_type === 'project' || n.resource_type === 'task' || n.resource_type === 'comment') && n.resource_id)
-        .map(n => n.resource_id)
-    );
-  }, [notifications]);
+  const { data: unreadProjectIdsSet } = useQuery({
+    queryKey: ['unreadProjectIds', user?.id],
+    queryFn: async () => {
+        if (!user) return new Set<string>();
+        const { data, error } = await supabase
+            .from('notification_recipients')
+            .select('notifications!inner(resource_id, resource_type)')
+            .eq('user_id', user.id)
+            .is('read_at', null);
+
+        if (error) {
+            console.error("Error fetching unread project IDs:", error);
+            return new Set<string>();
+        }
+
+        const projectIds = new Set<string>();
+        data.forEach(item => {
+            const notification = item.notifications as { resource_id: string, resource_type: string } | null;
+            if (notification && notification.resource_id && (notification.resource_type === 'project' || notification.resource_type === 'task' || notification.resource_type === 'comment')) {
+                projectIds.add(notification.resource_id);
+            }
+        });
+        return projectIds;
+    },
+    enabled: !!user,
+    staleTime: 60000, // 1 minute
+  });
+
+  const unreadProjectIds = unreadProjectIdsSet || new Set<string>();
 
   const markProjectNotificationsAsRead = useMutation({
     mutationFn: async (projectId: string) => {
@@ -333,6 +353,7 @@ const ProjectsPage = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications', user?.id] });
       queryClient.invalidateQueries({ queryKey: ['hasUnreadProjectActivity', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['unreadProjectIds', user?.id] });
     },
     onError: (error) => {
       console.error("Error marking project notifications as read:", error);
