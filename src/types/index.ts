@@ -242,6 +242,7 @@ export const PAYMENT_STATUS_OPTIONS = [
 
 export interface Invoice {
   id: string;
+  projectId: string;
   projectName: string;
   rawProjectId: string;
   amount: number;
@@ -278,11 +279,15 @@ export type Member = {
   id: string;
   name: string;
   role: string;
+  avatar_url?: string | null;
+  initials?: string;
 };
 
 export type Owner = {
   id: string;
   name: string;
+  avatar_url?: string | null;
+  initials?: string;
 };
 
 // Chat & Comments
