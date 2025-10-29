@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import PortalLayout from "@/components/PortalLayout";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import { Link } from "react-router-dom";
@@ -18,7 +18,7 @@ import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import RenameGroupDialog from '@/components/settings/RenameGroupDialog';
 
-type SortableTagColumns = 'name' | 'type' | 'color';
+type SortableTagColumns = 'name' | 'type' | 'color' | 'lead_time';
 type SortableGroupColumns = 'name' | 'count';
 type SortDirection = 'asc' | 'desc';
 
@@ -72,8 +72,8 @@ const TagsSettingsPage = () => {
   const sortedTags = [...tags]
     .filter(tag => tag.name.toLowerCase().includes(searchQuery.toLowerCase()))
     .sort((a, b) => {
-      const aVal = a[tagSort.column] || (tagSort.column === 'type' ? 'general' : '');
-      const bVal = b[tagSort.column] || (tagSort.column === 'type' ? 'general' : '');
+      const aVal = a[tagSort.column] || (tagSort.column === 'type' ? 'general' : (tagSort.column === 'lead_time' ? 0 : ''));
+      const bVal = b[tagSort.column] || (tagSort.column === 'type' ? 'general' : (tagSort.column === 'lead_time' ? 0 : ''));
       if (aVal < bVal) return tagSort.direction === 'asc' ? -1 : 1;
       if (aVal > bVal) return tagSort.direction === 'asc' ? 1 : -1;
       return 0;
@@ -233,14 +233,15 @@ const TagsSettingsPage = () => {
                       <SortableHeader column="name" label="Name" onSort={handleTagSort} sortConfig={tagSort} />
                       <SortableHeader column="type" label="Group" onSort={handleTagSort} sortConfig={tagSort} />
                       <SortableHeader column="color" label="Color" onSort={handleTagSort} sortConfig={tagSort} />
+                      <SortableHeader column="lead_time" label="Lead Time (days)" onSort={handleTagSort} sortConfig={tagSort} />
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {isLoading ? (
-                      <TableRow><TableCell colSpan={4} className="text-center">Loading tags...</TableCell></TableRow>
+                      <TableRow><TableCell colSpan={5} className="text-center">Loading tags...</TableCell></TableRow>
                     ) : sortedTags.length === 0 ? (
-                      <TableRow><TableCell colSpan={4} className="text-center h-24">
+                      <TableRow><TableCell colSpan={5} className="text-center h-24">
                         {searchQuery ? `No tags found for "${searchQuery}"` : `You haven't created any tags yet.`}
                       </TableCell></TableRow>
                     ) : sortedTags.map(tag => (
@@ -253,6 +254,7 @@ const TagsSettingsPage = () => {
                             <span className="font-mono text-sm hidden sm:inline">{tag.color}</span>
                           </div>
                         </TableCell>
+                        <TableCell className="text-center">{tag.lead_time ?? '-'}</TableCell>
                         <TableCell className="text-right">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>

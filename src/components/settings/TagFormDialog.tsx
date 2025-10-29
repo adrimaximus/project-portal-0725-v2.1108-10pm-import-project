@@ -24,6 +24,7 @@ const tagSchema = z.object({
   name: z.string().min(1, "Tag name is required."),
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Must be a valid hex color."),
   type: z.string().optional(),
+  lead_time: z.coerce.number().int().optional().nullable(),
 });
 
 type TagFormValues = z.infer<typeof tagSchema>;
@@ -38,9 +39,9 @@ const TagFormDialog = ({ open, onOpenChange, onSave, tag, isSaving, groups }: Ta
   useEffect(() => {
     if (open) {
       if (tag) {
-        form.reset({ name: tag.name, color: tag.color, type: tag.type || 'general' });
+        form.reset({ name: tag.name, color: tag.color, type: tag.type || 'general', lead_time: tag.lead_time });
       } else {
-        form.reset({ name: '', color: '#6b7280', type: 'general' });
+        form.reset({ name: '', color: '#6b7280', type: 'general', lead_time: null });
       }
     }
   }, [tag, open, form]);
@@ -83,6 +84,25 @@ const TagFormDialog = ({ open, onOpenChange, onSave, tag, isSaving, groups }: Ta
                 <FormMessage />
               </FormItem>
             )} />
+            <FormField
+              control={form.control}
+              name="lead_time"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Lead Time (days)</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      placeholder="e.g., 7"
+                      {...field}
+                      value={field.value ?? ''}
+                      onChange={event => field.onChange(event.target.value === '' ? null : +event.target.value)}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <DialogFooter className="pt-4">
               <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={isSaving}>Cancel</Button>
               <Button type="submit" disabled={isSaving}>

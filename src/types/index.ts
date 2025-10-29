@@ -35,6 +35,7 @@ export interface Tag {
   user_id?: string | null;
   isNew?: boolean;
   type?: string;
+  lead_time?: number | null;
 }
 
 export interface Person {
