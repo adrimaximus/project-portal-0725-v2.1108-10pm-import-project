@@ -105,7 +105,9 @@ const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
                               <AvatarImage src={getAvatarUrl(collaborator.avatar_url, collaborator.id)} alt={collaborator.name} />
                               <AvatarFallback style={generatePastelColor(collaborator.id)}>{collaborator.initials}</AvatarFallback>
                             </Avatar>
-                            <span className="absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full ring-2 ring-background bg-green-500" />
+                            {index === activeCollaborators.length - 1 && (
+                              <span className="absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full ring-2 ring-background bg-green-500" />
+                            )}
                           </div>
                         </TooltipTrigger>
                         <TooltipContent side="top" className="bg-primary text-primary-foreground">
@@ -135,7 +137,9 @@ const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
                               <AvatarImage src={getAvatarUrl(collaborator.avatar_url, collaborator.id)} alt={collaborator.name} />
                               <AvatarFallback style={generatePastelColor(collaborator.id)}>{collaborator.initials}</AvatarFallback>
                             </Avatar>
-                             <span className="absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full ring-2 ring-background bg-orange-400" />
+                             {index === idleCollaborators.length - 1 && (
+                               <span className="absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full ring-2 ring-background bg-orange-400" />
+                             )}
                           </div>
                         </TooltipTrigger>
                         <TooltipContent side="top" className="bg-primary text-primary-foreground">
