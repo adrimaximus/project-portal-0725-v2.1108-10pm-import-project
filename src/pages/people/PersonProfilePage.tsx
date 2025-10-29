@@ -75,10 +75,16 @@ const PersonProfilePage = () => {
     if (!person?.custom_properties || customProperties.length === 0) {
       return { personalEmail: null, phone2: null };
     }
-    const personalEmailProp = customProperties.find(p => p.label.toLowerCase() === 'email pribadi' || p.label.toLowerCase() === 'personal email');
+    const personalEmailProp = customProperties.find(p => {
+        const labelLower = p.label.toLowerCase().trim();
+        return labelLower === 'email pribadi' || labelLower === 'personal email';
+    });
     const email = personalEmailProp ? person.custom_properties[personalEmailProp.name] : null;
 
-    const phone2Prop = customProperties.find(p => p.label.toLowerCase() === 'phone 2' || p.label.toLowerCase() === 'phone-2');
+    const phone2Prop = customProperties.find(p => {
+        const labelLower = p.label.toLowerCase().trim();
+        return labelLower === 'phone 2' || labelLower === 'phone-2' || labelLower === 'phone -2';
+    });
     const phone = phone2Prop ? person.custom_properties[phone2Prop.name] : null;
 
     return { personalEmail: email, phone2: phone };
@@ -219,9 +225,9 @@ const PersonProfilePage = () => {
     const hasValue = person.custom_properties && typeof person.custom_properties[prop.name] !== 'undefined' && person.custom_properties[prop.name] !== null && person.custom_properties[prop.name] !== '';
     if (!hasValue) return false;
 
-    const labelLower = prop.label.toLowerCase();
+    const labelLower = prop.label.toLowerCase().trim();
     const isPersonalEmail = labelLower === 'email pribadi' || labelLower === 'personal email';
-    const isPhone2 = labelLower === 'phone 2' || labelLower === 'phone-2';
+    const isPhone2 = labelLower === 'phone 2' || labelLower === 'phone-2' || labelLower === 'phone -2';
 
     return !isPersonalEmail && !isPhone2;
   });
