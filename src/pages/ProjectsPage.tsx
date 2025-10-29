@@ -186,13 +186,27 @@ const ProjectsPage = () => {
     );
   }, [allTasks, searchTerm, advancedFilters.selectedPeopleIds]);
 
+  const handleViewChange = (newView: ViewMode | null) => {
+    if (newView) {
+      if (taskIdFromParams) {
+        navigate(`/projects?view=${newView}`);
+      } else {
+        setSearchParams({ view: newView }, { replace: true });
+      }
+      if (scrollContainerRef.current) {
+        scrollContainerRef.current.scrollTop = 0;
+        scrollContainerRef.current.scrollLeft = 0;
+      }
+    }
+  };
+
   useEffect(() => {
     const highlightedSlug = searchParams.get('highlight');
     if (highlightedSlug && sortedProjects.length > 0) {
       const projectToHighlight = sortedProjects.find(p => p.slug === highlightedSlug);
       if (projectToHighlight) {
         setScrollToProjectId(projectToHighlight.id);
-        handleViewChange('table');
+        handleViewChange('list');
         const newSearchParams = new URLSearchParams(searchParams);
         newSearchParams.delete('highlight');
         setSearchParams(newSearchParams, { replace: true });
@@ -215,20 +229,6 @@ const ProjectsPage = () => {
       }
     }
   }, [scrollToProjectId]);
-
-  const handleViewChange = (newView: ViewMode | null) => {
-    if (newView) {
-      if (taskIdFromParams) {
-        navigate(`/projects?view=${newView}`);
-      } else {
-        setSearchParams({ view: newView }, { replace: true });
-      }
-      if (scrollContainerRef.current) {
-        scrollContainerRef.current.scrollTop = 0;
-        scrollContainerRef.current.scrollLeft = 0;
-      }
-    }
-  };
 
   const deleteProjectMutation = useMutation({
     mutationFn: async (projectId: string) => {

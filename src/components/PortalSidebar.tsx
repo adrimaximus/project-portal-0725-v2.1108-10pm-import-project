@@ -227,10 +227,10 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
         const itemNameLower = item.name.toLowerCase();
 
         if (itemNameLower === 'projects' && hasUnreadProjectActivity) {
-          const latestProjectNotif = notifications.find(n => !n.read && (n.type === 'project_update' || n.type === 'mention'));
-          if (latestProjectNotif && latestProjectNotif.link) {
-            const slug = latestProjectNotif.link.split('/').pop();
-            href = `/projects?view=table&highlight=${slug}`;
+          const latestProjectNotif = notifications.find(n => !n.read_at && (n.type === 'project_update' || n.type === 'mention'));
+          if (latestProjectNotif && latestProjectNotif.data?.link) {
+            const slug = (latestProjectNotif.data.link as string).split('/').pop();
+            href = `/projects?view=list&highlight=${slug}`;
           } else {
             href = item.url;
           }
