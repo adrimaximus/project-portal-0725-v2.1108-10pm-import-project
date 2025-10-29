@@ -62,7 +62,9 @@ const TaskDiscussion = ({ task, onToggleReaction }: TaskDiscussionProps) => {
           if (uploadError) throw new Error(`Failed to upload ${file.name}: ${uploadError.message}`);
           
           const { data: urlData } = supabase.storage.from('project-files').getPublicUrl(filePath);
-          if (!urlData || !urlData.publicUrl) throw new Error(`Failed to get public URL for ${file.name}.`);
+          if (!urlData || !urlData.publicUrl) {
+            throw new Error(`Failed to get public URL for ${file.name}.`);
+          }
           
           return { 
             id: fileId,
