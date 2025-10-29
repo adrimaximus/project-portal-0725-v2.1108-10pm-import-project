@@ -151,6 +151,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
       
       <div className="flex-1 overflow-y-auto">
         <div className="p-3 sm:p-4 space-y-3 sm:space-y-4 text-xs sm:text-sm">
+          <div></div>
           {task.description && (
             <div className="border-b pb-3 sm:pb-4">
               <h4 className="font-semibold mb-2 text-xs sm:text-sm">Description</h4>
