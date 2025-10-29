@@ -37,7 +37,7 @@ const ProjectViewContainer = (props: ProjectViewContainerProps) => {
 
   switch (view) {
     case 'table':
-      return <TableView projects={projects} isLoading={isLoading} onDeleteProject={onDeleteProject} sortConfig={sortConfig} requestSort={requestSort} rowRefs={rowRefs} />;
+      return <TableView projects={projects} isLoading={isLoading} onDeleteProject={onDeleteProject} sortConfig={sortConfig} requestSort={requestSort} rowRefs={rowRefs} unreadProjectIds={unreadProjectIds} onProjectClick={onProjectClick} />;
     case 'list':
       return <ListView projects={projects} onDeleteProject={onDeleteProject} unreadProjectIds={unreadProjectIds} onProjectClick={onProjectClick} />;
     case 'kanban':
