@@ -105,6 +105,7 @@ const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
                               <AvatarImage src={getAvatarUrl(collaborator.avatar_url, collaborator.id)} alt={collaborator.name} />
                               <AvatarFallback style={generatePastelColor(collaborator.id)}>{collaborator.initials}</AvatarFallback>
                             </Avatar>
+                            <span className="absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full ring-2 ring-background bg-green-500" />
                           </div>
                         </TooltipTrigger>
                         <TooltipContent side="top" className="bg-primary text-primary-foreground">
@@ -118,16 +119,6 @@ const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
                       </Tooltip>
                     ))}
                   </div>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div className="relative -ml-3 self-start">
-                        <span className="block h-2.5 w-2.5 rounded-full bg-green-500 ring-2 ring-background" />
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent side="top" className="bg-primary text-primary-foreground">
-                      <p>{activeCollaborators.length} Active</p>
-                    </TooltipContent>
-                  </Tooltip>
                 </div>
               )}
               {idleCollaborators.length > 0 && (
@@ -144,6 +135,7 @@ const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
                               <AvatarImage src={getAvatarUrl(collaborator.avatar_url, collaborator.id)} alt={collaborator.name} />
                               <AvatarFallback style={generatePastelColor(collaborator.id)}>{collaborator.initials}</AvatarFallback>
                             </Avatar>
+                             <span className="absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full ring-2 ring-background bg-orange-400" />
                           </div>
                         </TooltipTrigger>
                         <TooltipContent side="top" className="bg-primary text-primary-foreground">
@@ -157,16 +149,6 @@ const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
                       </Tooltip>
                     ))}
                   </div>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div className="relative -ml-3 self-start">
-                        <span className="block h-2.5 w-2.5 rounded-full bg-orange-400 ring-2 ring-background" />
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent side="top" className="bg-primary text-primary-foreground">
-                      <p>{idleCollaborators.length} Idle</p>
-                    </TooltipContent>
-                  </Tooltip>
                 </div>
               )}
             </div>
