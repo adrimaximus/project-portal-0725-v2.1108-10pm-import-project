@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Project } from '@/types';
 import { useNavigate } from 'react-router-dom';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -145,8 +145,21 @@ const DayEntry = ({ dateStr, projectsOnDay, showMonthHeader, onDeleteProject, on
 };
 
 const ListView = ({ projects, onDeleteProject, unreadProjectIds, onProjectClick }: { projects: Project[], onDeleteProject: (projectId: string) => void, unreadProjectIds: Set<string>, onProjectClick: (projectId: string, projectSlug: string) => void }) => {
-  const [visibleUpcomingCount, setVisibleUpcomingCount] = useState(10);
-  const [visiblePastCount, setVisiblePastCount] = useState(5);
+  const getInitialCount = (key: string, defaultValue: number) => {
+    const saved = sessionStorage.getItem(key);
+    return saved ? parseInt(saved, 10) : defaultValue;
+  };
+
+  const [visibleUpcomingCount, setVisibleUpcomingCount] = useState(() => getInitialCount('visibleUpcomingCount', 10));
+  const [visiblePastCount, setVisiblePastCount] = useState(() => getInitialCount('visiblePastCount', 5));
+
+  useEffect(() => {
+    sessionStorage.setItem('visibleUpcomingCount', String(visibleUpcomingCount));
+  }, [visibleUpcomingCount]);
+
+  useEffect(() => {
+    sessionStorage.setItem('visiblePastCount', String(visiblePastCount));
+  }, [visiblePastCount]);
 
   const { upcomingDayEntries, pastDayEntries } = useMemo(() => {
     const today = startOfToday();

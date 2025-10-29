@@ -372,10 +372,14 @@ const ProjectsPage = () => {
     if (!isLoadingProjects && !isLoadingTasks) {
       const savedPosition = sessionStorage.getItem('projectsScrollPosition');
       if (savedPosition && scrollContainerRef.current) {
-        scrollContainerRef.current.scrollTop = parseInt(savedPosition, 10);
+        setTimeout(() => {
+          if (scrollContainerRef.current) {
+            scrollContainerRef.current.scrollTop = parseInt(savedPosition, 10);
+          }
+        }, 0);
       }
     }
-  }, [isLoadingProjects, isLoadingTasks]);
+  }, [isLoadingProjects, isLoadingTasks, sortedProjects]);
 
   // Save scroll position on scroll
   useEffect(() => {
