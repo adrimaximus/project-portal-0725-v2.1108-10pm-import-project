@@ -117,7 +117,7 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task, proj
     if (ticketAttachments.length > 0) {
         const existingUrls = new Set(combined.map(a => a.file_url));
         const uniqueTicketAttachments = ticketAttachments.filter(
-            (ticketAtt) => !existingUrls.has(ticketAtt.file_url)
+            (ticketAtt) => ticketAtt.file_url && !existingUrls.has(ticketAtt.file_url)
         );
         combined = [...combined, ...uniqueTicketAttachments];
     }
@@ -458,14 +458,20 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task, proj
               field.onChange(null);
               return;
             }
-            const currentVal = field.value || new Date();
+            const currentVal = field.value;
             const newDate = new Date(day);
-            newDate.setHours(currentVal.getHours());
-            newDate.setMinutes(currentVal.getMinutes());
+            if (currentVal) {
+              newDate.setHours(currentVal.getHours());
+              newDate.setMinutes(currentVal.getMinutes());
+            } else {
+              // Default to midnight when a date is picked for the first time
+              newDate.setHours(0, 0, 0, 0);
+            }
             field.onChange(newDate);
           };
 
           const handleTimeChange = (part: 'h' | 'm' | 'p', value: string) => {
+            // If no date is set, set it to today before changing time
             const date = field.value || new Date();
             let h = date.getHours();
             let m = date.getMinutes();
@@ -497,6 +503,7 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task, proj
 
           const hour = field.value ? field.value.getHours() : 0;
           const minute = field.value ? field.value.getMinutes() : 0;
+          const roundedMinute = Math.floor(minute / 5) * 5;
           const period = hour >= 12 ? 'PM' : 'AM';
           const displayHour = hour % 12 === 0 ? 12 : hour % 12;
 
@@ -546,11 +553,11 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task, proj
                       </Select>
                       <span className="text-muted-foreground">:</span>
                       <Select
-                        value={String(minute).padStart(2, '0')}
+                        value={String(roundedMinute).padStart(2, '0')}
                         onValueChange={(value) => handleTimeChange('m', value)}
                       >
                         <SelectTrigger className="w-[70px]">
-                          <SelectValue />
+                          <SelectValue placeholder="00" />
                         </SelectTrigger>
                         <SelectContent>
                           {['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'].map(m => (
