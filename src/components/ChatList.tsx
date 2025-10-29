@@ -31,7 +31,7 @@ const ChatList = ({ highlightedId, onHighlightComplete }: ChatListProps) => {
     deleteConversation,
     unreadConversationIds,
   } = useChatContext();
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, onlineCollaborators } = useAuth();
   const itemRefs = useRef(new Map<string, HTMLDivElement>());
 
   useEffect(() => {
@@ -122,6 +122,9 @@ const ChatList = ({ highlightedId, onHighlightComplete }: ChatListProps) => {
           const avatarSeed = otherUser?.id || c.id;
           const finalAvatarUrl = getAvatarUrl(c.userAvatar, avatarSeed);
           const isUnread = unreadConversationIds.has(c.id);
+          const onlineStatus = otherUser ? onlineCollaborators.find(onlineUser => onlineUser.id === otherUser.id) : null;
+          const isOnline = onlineStatus && !onlineStatus.isIdle;
+          const isIdle = onlineStatus && onlineStatus.isIdle;
 
           return (
             <div
@@ -139,10 +142,15 @@ const ChatList = ({ highlightedId, onHighlightComplete }: ChatListProps) => {
                 className="flex-1 flex items-center gap-3 cursor-pointer"
                 onClick={() => selectConversation(c.id)}
               >
-                <Avatar>
-                  <AvatarImage src={finalAvatarUrl} />
-                  <AvatarFallback style={generatePastelColor(otherUser?.id || c.id)}>{getInitials(c.userName)}</AvatarFallback>
-                </Avatar>
+                <div className="relative">
+                  <Avatar>
+                    <AvatarImage src={finalAvatarUrl} />
+                    <AvatarFallback style={generatePastelColor(otherUser?.id || c.id)}>{getInitials(c.userName)}</AvatarFallback>
+                  </Avatar>
+                  {otherUser && (isOnline || isIdle) && (
+                    <span className={`absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full ring-2 ring-background ${isIdle ? 'bg-orange-400' : 'bg-green-500'}`} />
+                  )}
+                </div>
                 <div className="flex-1 overflow-hidden">
                   <div className="flex items-center justify-between gap-2">
                     <p className={cn("font-semibold truncate", isUnread && "text-primary")}>{c.userName}</p>
