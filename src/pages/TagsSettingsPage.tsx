@@ -70,7 +70,12 @@ const TagsSettingsPage = () => {
   };
 
   const sortedTags = [...tags]
-    .filter(tag => tag.name.toLowerCase().includes(searchQuery.toLowerCase()))
+    .filter(tag => {
+      const query = searchQuery.toLowerCase();
+      const nameMatch = tag.name.toLowerCase().includes(query);
+      const groupMatch = (tag.type || 'general').toLowerCase().includes(query);
+      return nameMatch || groupMatch;
+    })
     .sort((a, b) => {
       const aVal = a[tagSort.column] || (tagSort.column === 'type' ? 'general' : (tagSort.column === 'lead_time' ? 0 : ''));
       const bVal = b[tagSort.column] || (tagSort.column === 'type' ? 'general' : (tagSort.column === 'lead_time' ? 0 : ''));
@@ -239,7 +244,7 @@ const TagsSettingsPage = () => {
                   <div className="relative w-full md:max-w-xs">
                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
-                      placeholder="Search tags..."
+                      placeholder="Search by name or group..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       className="pl-8 w-full md:w-64"
