@@ -182,6 +182,15 @@ const PersonProfilePage = () => {
     [personalEmailProperty, person?.custom_properties]
   );
 
+  const phone2Property = useMemo(() =>
+    customProperties.find(p => p.label.toLowerCase() === 'phone 2' || p.label.toLowerCase() === 'phone-2'),
+    [customProperties]
+  );
+  const phone2 = useMemo(() =>
+    phone2Property && person?.custom_properties ? person.custom_properties[phone2Property.name] : null,
+    [phone2Property, person?.custom_properties]
+  );
+
   const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'master admin';
 
   const handleDelete = async () => {
@@ -244,7 +253,7 @@ const PersonProfilePage = () => {
   const firstPhone = person.contact?.phones?.[0] || person.phone;
   const whatsappLink = firstPhone ? `https://wa.me/${formatPhoneNumberForApi(firstPhone)}` : null;
 
-  const customPropertiesWithValue = customProperties.filter(prop => person.custom_properties && person.custom_properties[prop.name] && prop.id !== personalEmailProperty?.id);
+  const customPropertiesWithValue = customProperties.filter(prop => person.custom_properties && person.custom_properties[prop.name] && prop.id !== personalEmailProperty?.id && prop.id !== phone2Property?.id);
 
   return (
     <PortalLayout>
@@ -295,6 +304,7 @@ const PersonProfilePage = () => {
                 ))}
                 {personalEmail && <div className="flex items-center gap-3"><Mail className="h-4 w-4 text-muted-foreground" /><a href={`mailto:${personalEmail}`} className="truncate hover:underline flex items-center gap-2">{personalEmail} <Badge variant="outline" className="text-xs">Pribadi</Badge></a></div>}
                 {whatsappLink && <div className="flex items-center gap-3"><WhatsappIcon className="h-4 w-4 text-muted-foreground" /><a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="truncate hover:underline text-primary">{firstPhone}</a></div>}
+                {phone2 && <div className="flex items-center gap-3"><Phone className="h-4 w-4 text-muted-foreground" /><a href={`tel:${phone2}`} className="truncate hover:underline">{phone2}</a></div>}
                 {addressObject && (addressObject.address || addressObject.name) && (
                   <div className="flex items-start gap-3">
                     <MapPin className="h-4 w-4 mt-1 text-muted-foreground flex-shrink-0" />
