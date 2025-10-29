@@ -84,6 +84,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
   const { toggleTaskReaction } = useTaskMutations();
   const descriptionIsLong = task.description && task.description.length > 200;
   const [isDescriptionOpen, setIsDescriptionOpen] = useState(!descriptionIsLong);
+  const [isAttachmentsOpen, setIsAttachmentsOpen] = useState(false);
 
   const allAttachments = useMemo(() => {
     if (!task) return [];
@@ -257,10 +258,22 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
           </div>
 
           {allAttachments.length > 0 && (
-            <div className="border-t pt-3 sm:pt-4">
-              <h4 className="font-semibold mb-2 flex items-center gap-2 text-xs sm:text-sm"><Paperclip className="h-3 w-3 sm:h-4 sm:w-4" /> Attachments ({allAttachments.length})</h4>
-              <TaskAttachmentList attachments={allAttachments} />
-            </div>
+            <Collapsible
+              open={isAttachmentsOpen}
+              onOpenChange={setIsAttachmentsOpen}
+              className="border-t"
+            >
+              <CollapsibleTrigger className="flex w-full items-center justify-between py-3 sm:py-4 text-left text-xs sm:text-sm">
+                <h4 className="font-semibold flex items-center gap-2">
+                  <Paperclip className="h-3 w-3 sm:h-4 sm:w-4" /> 
+                  Attachments ({allAttachments.length})
+                </h4>
+                <ChevronDown className={`h-4 w-4 shrink-0 transition-transform duration-200 ${isAttachmentsOpen ? 'rotate-180' : ''}`} />
+              </CollapsibleTrigger>
+              <CollapsibleContent className="pb-3 sm:pb-4">
+                <TaskAttachmentList attachments={allAttachments} />
+              </CollapsibleContent>
+            </Collapsible>
           )}
 
           <div className="border-t pt-3 sm:pt-4">
