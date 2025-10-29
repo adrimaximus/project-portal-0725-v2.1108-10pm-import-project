@@ -89,11 +89,11 @@ const TagFormDialog = ({ open, onOpenChange, onSave, tag, isSaving, groups }: Ta
               name="lead_time"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Lead Time (days)</FormLabel>
+                  <FormLabel>Lead Time (hours)</FormLabel>
                   <FormControl>
                     <Input
                       type="number"
-                      placeholder="e.g., 7"
+                      placeholder="e.g., 36"
                       {...field}
                       value={field.value ?? ''}
                       onChange={event => field.onChange(event.target.value === '' ? null : +event.target.value)}

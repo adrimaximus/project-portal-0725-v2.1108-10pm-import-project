@@ -178,6 +178,27 @@ const TagsSettingsPage = () => {
     </TableHead>
   );
 
+  const formatLeadTime = (hours: number | null | undefined): string => {
+    if (hours === null || typeof hours === 'undefined' || hours < 0) {
+      return '-';
+    }
+    if (hours === 0) {
+      return '0h';
+    }
+    const days = Math.floor(hours / 24);
+    const remainingHours = hours % 24;
+    
+    let result = '';
+    if (days > 0) {
+      result += `${days}d`;
+    }
+    if (remainingHours > 0) {
+      result += `${result ? ' ' : ''}${remainingHours}h`;
+    }
+    
+    return result;
+  };
+
   return (
     <PortalLayout>
       <div className="space-y-6">
@@ -233,7 +254,7 @@ const TagsSettingsPage = () => {
                       <SortableHeader column="name" label="Name" onSort={handleTagSort} sortConfig={tagSort} />
                       <SortableHeader column="type" label="Group" onSort={handleTagSort} sortConfig={tagSort} />
                       <SortableHeader column="color" label="Color" onSort={handleTagSort} sortConfig={tagSort} />
-                      <SortableHeader column="lead_time" label="Lead Time (days)" onSort={handleTagSort} sortConfig={tagSort} />
+                      <SortableHeader column="lead_time" label="Lead Time (hours)" onSort={handleTagSort} sortConfig={tagSort} />
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -254,7 +275,7 @@ const TagsSettingsPage = () => {
                             <span className="font-mono text-sm hidden sm:inline">{tag.color}</span>
                           </div>
                         </TableCell>
-                        <TableCell className="text-center">{tag.lead_time ?? '-'}</TableCell>
+                        <TableCell className="text-center">{formatLeadTime(tag.lead_time)}</TableCell>
                         <TableCell className="text-right">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
