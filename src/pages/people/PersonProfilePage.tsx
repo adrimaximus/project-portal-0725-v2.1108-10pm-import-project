@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Briefcase, Cake, Edit, Instagram, Linkedin, Mail, MapPin, MoreVertical, Phone, Twitter, User as UserIcon, Users, Trash2 } from 'lucide-react';
+import { ArrowLeft, Briefcase, Cake, Edit, Instagram, Linkedin, Mail, MapPin, MoreVertical, Phone, Twitter, User as UserIcon, Users, Trash2, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { formatInJakarta, generatePastelColor, getInitials, getAvatarUrl, formatPhoneNumberForApi } from '@/lib/utils';
 import PeopleFormDialog from '@/components/people/PersonFormDialog';
@@ -36,29 +36,6 @@ import StatusBadge from '@/components/StatusBadge';
 
 type Person = BasePerson & { company_id?: string | null };
 
-const fetchUserProfile = async (userId: string): Promise<User | null> => {
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', userId)
-    .single();
-  if (error) {
-    console.error('Error fetching user profile:', error);
-    return null;
-  }
-  const fullName = `${data.first_name || ''} ${data.last_name || ''}`.trim();
-  return {
-    id: data.id,
-    name: fullName || data.email,
-    email: data.email,
-    avatar_url: getAvatarUrl(data.avatar_url, data.id),
-    initials: getInitials(fullName, data.email) || 'NN',
-    role: data.role,
-    first_name: data.first_name,
-    last_name: data.last_name,
-  };
-};
-
 const PersonProfileSkeleton = () => (
   <PortalLayout>
     <Skeleton className="h-8 w-32 mb-6" />
@@ -85,7 +62,28 @@ const PersonProfilePage = () => {
   const { user: currentUser } = useAuth();
   const queryClient = useQueryClient();
 
-  // Helper to parse address, which can be a JSON string or an object
+  const { data: customProperties = [], isLoading: isLoadingCustomProperties } = useQuery<ContactProperty[]>({
+    queryKey: ['contact_properties'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('contact_properties').select('*');
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  const { personalEmail, phone2 } = useMemo(() => {
+    if (!person?.custom_properties || customProperties.length === 0) {
+      return { personalEmail: null, phone2: null };
+    }
+    const personalEmailProp = customProperties.find(p => p.label.toLowerCase() === 'email pribadi' || p.label.toLowerCase() === 'personal email');
+    const email = personalEmailProp ? person.custom_properties[personalEmailProp.name] : null;
+
+    const phone2Prop = customProperties.find(p => p.label.toLowerCase() === 'phone 2' || p.label.toLowerCase() === 'phone-2');
+    const phone = phone2Prop ? person.custom_properties[phone2Prop.name] : null;
+
+    return { personalEmail: email, phone2: phone };
+  }, [person?.custom_properties, customProperties]);
+
   const addressObject = useMemo(() => {
     if (!person?.address) return null;
     if (typeof person.address === 'object' && person.address !== null) {
@@ -100,15 +98,6 @@ const PersonProfilePage = () => {
     }
     return null;
   }, [person?.address]);
-
-  const { data: companyProperties = [] } = useQuery({
-    queryKey: ['company_properties'],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('company_properties').select('*');
-      if (error) throw error;
-      return data;
-    }
-  });
 
   const { data: company } = useQuery({
     queryKey: ['company_details_for_person', person?.id],
@@ -156,40 +145,13 @@ const PersonProfilePage = () => {
 
   const companyLogoUrl = useMemo(() => {
     if (!company) return null;
-    const logoProperty = companyProperties.find(p => p.label === 'Logo Image');
+    const logoProperty = customProperties.find(p => p.label === 'Logo Image');
     if (logoProperty && company.custom_properties) {
         const customLogo = company.custom_properties[logoProperty.name];
         if (customLogo) return customLogo;
     }
     return company.logo_url;
-  }, [company, companyProperties]);
-
-  const { data: customProperties = [] } = useQuery({
-    queryKey: ['contact_properties'],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('contact_properties').select('*');
-      if (error) throw error;
-      return data as ContactProperty[];
-    }
-  });
-
-  const personalEmailProperty = useMemo(() => 
-    customProperties.find(p => p.label.toLowerCase() === 'email pribadi' || p.label.toLowerCase() === 'personal email'),
-    [customProperties]
-  );
-  const personalEmail = useMemo(() => 
-    personalEmailProperty && person?.custom_properties ? person.custom_properties[personalEmailProperty.name] : null,
-    [personalEmailProperty, person?.custom_properties]
-  );
-
-  const phone2Property = useMemo(() =>
-    customProperties.find(p => p.label.toLowerCase() === 'phone 2' || p.label.toLowerCase() === 'phone-2'),
-    [customProperties]
-  );
-  const phone2 = useMemo(() =>
-    phone2Property && person?.custom_properties ? person.custom_properties[phone2Property.name] : null,
-    [phone2Property, person?.custom_properties]
-  );
+  }, [company, customProperties]);
 
   const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'master admin';
 
@@ -253,7 +215,7 @@ const PersonProfilePage = () => {
   const firstPhone = person.contact?.phones?.[0] || person.phone;
   const whatsappLink = firstPhone ? `https://wa.me/${formatPhoneNumberForApi(firstPhone)}` : null;
 
-  const customPropertiesWithValue = customProperties.filter(prop => person.custom_properties && person.custom_properties[prop.name] && prop.id !== personalEmailProperty?.id && prop.id !== phone2Property?.id);
+  const customPropertiesWithValue = customProperties.filter(prop => person.custom_properties && person.custom_properties[prop.name] && prop.id !== (customProperties.find(p => p.label.toLowerCase() === 'email pribadi' || p.label.toLowerCase() === 'personal email'))?.id && prop.id !== (customProperties.find(p => p.label.toLowerCase() === 'phone 2' || p.label.toLowerCase() === 'phone-2'))?.id);
 
   return (
     <PortalLayout>
@@ -299,12 +261,16 @@ const PersonProfilePage = () => {
             <Card>
               <CardHeader><CardTitle>Contact Info</CardTitle></CardHeader>
               <CardContent className="space-y-3 text-sm">
-                {person.contact?.emails?.map((email, index) => (
-                  email && <div key={index} className="flex items-center gap-3"><Mail className="h-4 w-4 text-muted-foreground" /><a href={`mailto:${email}`} className="truncate hover:underline">{email}</a></div>
-                ))}
-                {personalEmail && <div className="flex items-center gap-3"><Mail className="h-4 w-4 text-muted-foreground" /><a href={`mailto:${personalEmail}`} className="truncate hover:underline flex items-center gap-2">{personalEmail} <Badge variant="outline" className="text-xs">Pribadi</Badge></a></div>}
-                {whatsappLink && <div className="flex items-center gap-3"><WhatsappIcon className="h-4 w-4 text-muted-foreground" /><a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="truncate hover:underline text-primary">{firstPhone}</a></div>}
-                {phone2 && <div className="flex items-center gap-3"><Phone className="h-4 w-4 text-muted-foreground" /><a href={`tel:${phone2}`} className="truncate hover:underline">{phone2}</a></div>}
+                {isLoadingCustomProperties ? <Loader2 className="h-4 w-4 animate-spin" /> : (
+                  <>
+                    {person.contact?.emails?.map((email, index) => (
+                      email && <div key={index} className="flex items-center gap-3"><Mail className="h-4 w-4 text-muted-foreground" /><a href={`mailto:${email}`} className="truncate hover:underline">{email}</a></div>
+                    ))}
+                    {personalEmail && <div className="flex items-center gap-3"><Mail className="h-4 w-4 text-muted-foreground" /><a href={`mailto:${personalEmail}`} className="truncate hover:underline flex items-center gap-2">{personalEmail} <Badge variant="outline" className="text-xs">Pribadi</Badge></a></div>}
+                    {whatsappLink && <div className="flex items-center gap-3"><WhatsappIcon className="h-4 w-4 text-muted-foreground" /><a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="truncate hover:underline text-primary">{firstPhone}</a></div>}
+                    {phone2 && <div className="flex items-center gap-3"><Phone className="h-4 w-4 text-muted-foreground" /><a href={`tel:${phone2}`} className="truncate hover:underline">{phone2}</a></div>}
+                  </>
+                )}
                 {addressObject && (addressObject.address || addressObject.name) && (
                   <div className="flex items-start gap-3">
                     <MapPin className="h-4 w-4 mt-1 text-muted-foreground flex-shrink-0" />
