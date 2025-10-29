@@ -32,14 +32,16 @@ const PeopleGridView = ({ people, onEditPerson, onDeletePerson, onViewProfile }:
             {companyName === 'Uncategorized' ? 'No Company' : companyName}
           </h2>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
-            {groupedByCompany[companyName].map(person => (
-              <PersonCard 
-                key={person.id} 
-                person={person} 
-                onEdit={onEditPerson} 
-                onDelete={onDeletePerson} 
-                onViewProfile={onViewProfile}
-              />
+            {groupedByCompany[companyName]
+              .sort((a, b) => a.full_name.localeCompare(b.full_name))
+              .map(person => (
+                <PersonCard 
+                  key={person.id} 
+                  person={person} 
+                  onEdit={onEditPerson} 
+                  onDelete={onDeletePerson} 
+                  onViewProfile={onViewProfile}
+                />
             ))}
           </div>
         </div>
