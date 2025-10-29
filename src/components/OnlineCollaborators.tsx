@@ -42,6 +42,9 @@ const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
     return hiddenCollaborators.some(c => !c.isIdle);
   }, [hiddenCollaborators]);
 
+  // Check if there's any active user at all (for the rightmost avatar dot)
+  const hasAnyActive = useMemo(() => onlineCollaborators.some(c => !c.isIdle), [onlineCollaborators]);
+
   const handleCollaboratorClick = (collaborator: Collaborator) => {
     navigate('/chat', { 
       state: { 
@@ -126,7 +129,9 @@ const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
                             <AvatarImage src={getAvatarUrl(collaborator.avatar_url, collaborator.id)} alt={collaborator.name} />
                             <AvatarFallback style={generatePastelColor(collaborator.id)}>{collaborator.initials}</AvatarFallback>
                           </Avatar>
-                          <span className={`absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full ring-2 ring-background ${collaborator.isIdle ? 'bg-orange-400' : 'bg-green-500'}`} />
+                          {hiddenCount === 0 && index === visibleCollaborators.length - 1 && (
+                             <span className={`absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full ring-2 ring-background ${hasAnyActive ? 'bg-green-500' : 'bg-orange-400'}`} />
+                          )}
                         </div>
                       </TooltipTrigger>
                       <TooltipContent side="top" className="bg-primary text-primary-foreground">
