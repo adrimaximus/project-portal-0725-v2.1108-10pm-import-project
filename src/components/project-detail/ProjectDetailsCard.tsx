@@ -36,6 +36,7 @@ interface ProjectDetailsCardProps {
 const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetailsCardProps) => {
   const { hasPermission } = useAuth();
   const canViewValue = hasPermission('projects:view_value');
+  const hasOpenTasks = project.tasks?.some(task => !task.completed);
 
   const client = project.people?.[0];
 
@@ -210,7 +211,6 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetail
   };
 
   const paymentBadgeColor = getPaymentStatusStyles(project.payment_status).tw;
-  const hasOpenTasks = project.tasks?.some(task => !task.completed);
   const selectedValue = project.person_ids?.[0] || (project.client_company_id ? `company-${project.client_company_id}` : '');
 
   return (

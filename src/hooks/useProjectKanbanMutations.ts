@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Project } from '@/types';
+import { getErrorMessage } from '@/lib/utils';
 
 type GroupBy = 'status' | 'payment_status';
 
@@ -40,7 +41,7 @@ export const useProjectKanbanMutations = () => {
             if (context?.previousProjects) {
                 queryClient.setQueryData(['projects'], context.previousProjects);
             }
-            toast.error(`Failed to move project: ${err.message}`);
+            toast.error(`Failed to move project`, { description: getErrorMessage(err) });
         },
         onSuccess: (_, { activeProjectName, newStatusLabel, movedColumns }) => {
             if (movedColumns) {

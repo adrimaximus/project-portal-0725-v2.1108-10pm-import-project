@@ -190,6 +190,9 @@ export const getErrorMessage = (error: any, defaultMessage: string = "An unknown
   let message = error.message || JSON.stringify(error);
 
   // Prettify common Supabase errors
+  if (message.includes('masih ada tugas yang belum selesai')) { // "still has unfinished tasks"
+    return "This project cannot be marked as complete because there are still open tasks.";
+  }
   if (message.includes('violates row-level security policy')) {
     return "Permission Denied: You do not have the required permissions for this action.";
   }
