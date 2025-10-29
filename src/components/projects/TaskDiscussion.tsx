@@ -132,7 +132,7 @@ const TaskDiscussion = ({ task, onToggleReaction }: TaskDiscussionProps) => {
     onError: (error: any) => toast.error("Failed to update reaction.", { description: error.message }),
   });
 
-  const handleAddComment = (text: string, attachments: File[] | null, mentionedUserIds: string[]) => {
+  const handleAddComment = (text: string, isTicket: boolean, attachments: File[] | null, mentionedUserIds: string[]) => {
     addCommentMutation.mutate({ text, attachments, mentionedUserIds });
   };
 
