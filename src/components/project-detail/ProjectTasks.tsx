@@ -74,7 +74,7 @@ const TaskRow = ({ task, onToggleTaskCompletion, onEditTask, onDeleteTask, handl
       className={cn(
         "flex items-start space-x-3 p-2 rounded-md hover:bg-muted group transition-colors duration-500",
         isAssignedToCurrentUser && "bg-primary/10",
-        task.priority?.toLowerCase() === 'urgent' && "bg-destructive/5"
+        task.priority?.toLowerCase() === 'urgent' && "bg-destructive/10"
       )}
     >
       <Checkbox
