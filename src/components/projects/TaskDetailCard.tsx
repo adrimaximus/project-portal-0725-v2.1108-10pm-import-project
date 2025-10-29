@@ -12,10 +12,10 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import TaskAttachmentList from './TaskAttachmentList';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
-import TaskReactions from './TaskReactions';
 import { useTaskMutations } from '@/hooks/useTaskMutations';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import TaskDiscussion from './TaskDiscussion';
 
 interface TaskDetailCardProps {
   task: Task;
@@ -221,7 +221,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
         )}
 
         <div className="border-t pt-3 sm:pt-4">
-          <TaskReactions reactions={task.reactions || []} onToggleReaction={handleToggleReaction} />
+          <TaskDiscussion task={task} onToggleReaction={handleToggleReaction} />
         </div>
       </div>
     </DialogContent>
