@@ -23,6 +23,7 @@ export type Collaborator = {
   initials: string;
   isIdle?: boolean;
   last_active_at?: string | null;
+  email?: string;
 };
 
 // Projects
@@ -73,7 +74,7 @@ export interface Project {
 }
 
 export type ProjectStatus = 'Idea' | 'Requested' | 'On Track' | 'In Progress' | 'In Review' | 'On Hold' | 'At Risk' | 'Off Track' | 'Completed' | 'Cancelled';
-export const PROJECT_STATUS_OPTIONS = [
+export const PROJECT_STATUS_OPTIONS: { value: ProjectStatus; label: string }[] = [
   { value: 'Idea', label: 'Idea' },
   { value: 'Requested', label: 'Requested' },
   { value: 'On Track', label: 'On Track' },
@@ -231,7 +232,7 @@ export interface CompanyProperty {
 
 // Billing
 export type PaymentStatus = 'Proposed' | 'Unpaid' | 'Due' | 'Overdue' | 'In Process' | 'Paid' | 'Cancelled';
-export const PAYMENT_STATUS_OPTIONS = [
+export const PAYMENT_STATUS_OPTIONS: { value: PaymentStatus; label: string }[] = [
   { value: 'Proposed', label: 'Proposed' },
   { value: 'Unpaid', label: 'Unpaid' },
   { value: 'Due', label: 'Due' },
@@ -263,7 +264,7 @@ export interface Invoice {
   projectOwner: Owner | null;
   assignedMembers: Member[];
   invoiceAttachments: InvoiceAttachment[];
-  payment_terms?: any[];
+  payment_terms: any[];
 }
 
 export interface InvoiceAttachment {
