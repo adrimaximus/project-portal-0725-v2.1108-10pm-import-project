@@ -1029,6 +1029,25 @@ Your rules are:
   return { result };
 }
 
+async function generateIcon(payload: any, context: any) {
+  const { openai } = context;
+  const { prompt } = payload;
+  if (!prompt) throw new Error("A prompt is required to generate an icon.");
+
+  const response = await openai.images.generate({
+    model: "dall-e-2",
+    prompt: `A simple, clean, modern icon for a goal tracking app. The icon should represent: "${prompt}". Flat design, vector style, on a plain white background.`,
+    n: 1,
+    size: "256x256",
+    response_format: "url",
+  });
+
+  const imageUrl = response.data[0].url;
+  if (!imageUrl) throw new Error("Failed to generate image.");
+
+  return { result: imageUrl };
+}
+
 // --- END INLINED SHARED CODE ---
 
 const featureMap: { [key: string]: (payload: any, context: any) => Promise<any> } = {
@@ -1044,6 +1063,7 @@ const featureMap: { [key: string]: (payload: any, context: any) => Promise<any> 
   'suggest-icon': suggestIcon,
   'generate-insight': generateInsight,
   'ai-select-calendar-events': aiSelectCalendarEvents,
+  'generate-icon': generateIcon,
 };
 
 serve(async (req) => {

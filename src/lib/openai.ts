@@ -63,3 +63,29 @@ export async function generateAiInsight(goal: Goal, context: any): Promise<strin
 
   return data.result;
 }
+
+export async function generateAiIcon(prompt: string): Promise<string> {
+  const { data, error } = await supabase.functions.invoke('ai-handler', {
+    body: {
+      feature: 'generate-icon',
+      payload: { prompt },
+    },
+  });
+
+  if (error) {
+    console.error('Edge function invocation error for generateAiIcon:', error);
+    if (error instanceof FunctionsHttpError) {
+      try {
+        const errorData = await error.context.json();
+        if (errorData.error) {
+          throw new Error(errorData.error);
+        }
+      } catch (e) {
+        throw new Error(error.message);
+      }
+    }
+    throw error;
+  }
+
+  return data.result;
+}

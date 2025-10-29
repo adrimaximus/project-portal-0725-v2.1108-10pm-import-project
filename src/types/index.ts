@@ -20,7 +20,7 @@ export type Collaborator = {
   id: string;
   name: string;
   avatar_url?: string | null;
-  initials: string;
+  initials?: string;
   isIdle?: boolean;
   last_active_at?: string | null;
   email?: string;
@@ -67,7 +67,7 @@ export interface Project {
   hardcopy_sending_date?: string;
   channel?: string;
   invoice_attachments?: InvoiceAttachment[];
-  payment_terms?: any[];
+  payment_terms: any[];
   personal_for_user_id?: string;
   created_at: string;
   updated_at: string;
