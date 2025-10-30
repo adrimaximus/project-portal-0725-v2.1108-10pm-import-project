@@ -5,6 +5,7 @@ import OpenAI from 'npm:openai@4.29.2';
 import { createApi } from 'https://esm.sh/unsplash-js@7.0.19';
 import * as pdfjs from 'https://esm.sh/pdfjs-dist@4.4.168';
 import mammoth from 'https://esm.sh/mammoth@1.7.2';
+import Anthropic from 'npm:@anthropic-ai/sdk@^0.22.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -48,6 +49,22 @@ const getOpenAIClient = async (supabaseAdmin: any) => {
   }
   
   return new OpenAI({ apiKey: config.value });
+};
+
+const getAnthropicClient = async (supabaseAdmin: any) => {
+  const apiKeyFromEnv = Deno.env.get('ANTHROPIC_API_KEY');
+  if (apiKeyFromEnv) {
+    return new Anthropic({ apiKey: apiKeyFromEnv });
+  }
+  const { data: config, error: configError } = await supabaseAdmin
+    .from('app_config')
+    .select('value')
+    .eq('key', 'ANTHROPIC_API_KEY')
+    .single();
+  if (configError || !config?.value) {
+    throw new Error("Anthropic API key is not configured.");
+  }
+  return new Anthropic({ apiKey: config.value });
 };
 
 const createSupabaseUserClient = (req: Request) => {
@@ -896,27 +913,54 @@ async function articleWriter(payload: any, context: any) {
 }
 
 async function generateCaption(payload: any, context: any) {
-  const { openai } = context;
+  const { supabaseAdmin } = context;
   const { altText } = payload;
   if (!altText) {
-    throw new Error("altText is required for generating a caption.");
+    return { caption: null };
   }
 
   const systemPrompt = `You are an AI that generates a short, inspiring, one-line caption for an image. The caption should be suitable for a professional dashboard related to events, marketing, and project management. Respond with ONLY the caption, no extra text or quotes. Keep it under 12 words.`;
   const userPrompt = `Generate a caption for an image described as: "${altText}"`;
 
-  const response = await openai.chat.completions.create({
-    model: "gpt-3.5-turbo",
-    messages: [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: userPrompt }
-    ],
-    temperature: 0.7,
-    max_tokens: 30,
-  });
+  // Try OpenAI first
+  try {
+    const openai = await getOpenAIClient(supabaseAdmin);
+    const response = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt }
+      ],
+      temperature: 0.7,
+      max_tokens: 30,
+    });
+    const caption = response.choices[0].message.content?.trim().replace(/"/g, '');
+    if (caption) {
+      return { caption };
+    }
+  } catch (openaiError) {
+    console.warn("OpenAI failed for caption generation, trying Anthropic.", openaiError.message);
+  }
 
-  const caption = response.choices[0].message.content?.trim().replace(/"/g, '');
-  return { caption };
+  // Fallback to Anthropic
+  try {
+    const anthropic = await getAnthropicClient(supabaseAdmin);
+    const response = await anthropic.messages.create({
+      model: "claude-3-haiku-20240307",
+      system: systemPrompt,
+      messages: [{ role: "user", content: userPrompt }],
+      max_tokens: 30,
+    });
+    const caption = response.content[0].text.trim().replace(/"/g, '');
+    if (caption) {
+      return { caption };
+    }
+  } catch (anthropicError) {
+    console.error("Anthropic also failed for caption generation.", anthropicError.message);
+  }
+
+  // If both fail, return the original altText as a fallback caption.
+  return { caption: altText };
 }
 
 async function generateMoodInsight(payload: any, context: any) {
