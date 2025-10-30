@@ -1,6 +1,6 @@
 import { Project } from "@/types";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Pencil, Loader2, MoreVertical, Trash2, CheckCircle, Link as LinkIcon } from "lucide-react";
+import { ArrowLeft, Pencil, Loader2, MoreVertical, Trash2, CheckCircle, Link as LinkIcon, XCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import StatusBadge from "../StatusBadge";
 import { getProjectStatusStyles, cn } from "@/lib/utils";
@@ -43,6 +43,7 @@ const ProjectHeader = ({
 
   const statusStyles = getProjectStatusStyles(project.status);
   const isCompleted = project.status === 'Completed';
+  const isCancelledOrLost = project.status === 'Cancelled' || project.status === 'Bid Lost' || project.payment_status === 'Cancelled';
   const hasOpenTasks = project.tasks?.some(task => !task.completed);
 
   const handleCopyLink = () => {
@@ -91,28 +92,39 @@ const ProjectHeader = ({
                   <LinkIcon className="h-4 w-4" />
                   <span className="sr-only">Copy link</span>
                 </Button>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div className="inline-block">
-                        <Button
-                          variant={isCompleted ? "default" : "outline"}
-                          onClick={onToggleComplete}
-                          disabled={!isCompleted && hasOpenTasks}
-                          className={cn(isCompleted && "bg-green-600 hover:bg-green-700")}
-                        >
-                          <CheckCircle className="mr-2 h-4 w-4" />
-                          {isCompleted ? "Completed" : "Mark Complete"}
-                        </Button>
-                      </div>
-                    </TooltipTrigger>
-                    {hasOpenTasks && !isCompleted && (
-                      <TooltipContent>
-                        <p>Complete all tasks before marking the project as complete.</p>
-                      </TooltipContent>
-                    )}
-                  </Tooltip>
-                </TooltipProvider>
+                {isCancelledOrLost ? (
+                  <Button
+                    variant="secondary"
+                    disabled
+                    className="bg-gray-800 text-red-500 hover:bg-gray-800 cursor-not-allowed"
+                  >
+                    <XCircle className="mr-2 h-4 w-4 text-red-500" />
+                    {project.status === 'Bid Lost' ? 'Bid Lost' : 'Cancelled'}
+                  </Button>
+                ) : (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="inline-block">
+                          <Button
+                            variant={isCompleted ? "default" : "outline"}
+                            onClick={onToggleComplete}
+                            disabled={!isCompleted && hasOpenTasks}
+                            className={cn(isCompleted && "bg-green-600 hover:bg-green-700")}
+                          >
+                            <CheckCircle className="mr-2 h-4 w-4" />
+                            {isCompleted ? "Completed" : "Mark Complete"}
+                          </Button>
+                        </div>
+                      </TooltipTrigger>
+                      {hasOpenTasks && !isCompleted && (
+                        <TooltipContent>
+                          <p>Complete all tasks before marking the project as complete.</p>
+                        </TooltipContent>
+                      )}
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon">
