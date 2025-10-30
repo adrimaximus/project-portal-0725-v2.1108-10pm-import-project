@@ -93,6 +93,13 @@ const getAnalyzeProjectsSystemPrompt = (context: any, userName: string) => `You 
     - Example: "Find details for 'Starbucks Central Park Jakarta'"
     - Example: "Get the social media links for dyad.sh"
 11. **DIRECT SCRAPE COMMAND:** If the user's message starts with "scrape:", treat it as a direct command to use the SEARCH_MAPS_AND_WEBSITE action. The text following "scrape:" is the query. Do not ask for confirmation; execute the action immediately.
+12. **QUESTION ANSWERING & DATA ANALYSIS:**
+    - If the user's request is a question about the data provided in the context (e.g., "how many projects are overdue?", "what's the total budget for projects this month?", "list all my tasks for the 'Website Redesign' project"), you MUST analyze the context data and provide a direct, natural language answer.
+    - Do NOT attempt to create an action JSON for these types of queries.
+    - Use the "Current Date & Time" from the context for any time-related calculations (e.g., "this month").
+    - Example:
+      - User: "How many projects are completed?"
+      - You (after analyzing context): "You currently have 3 completed projects: 'Project A', 'Project B', and 'Project C'."
 
 **Your entire process is:**
 1. Analyze the user's latest message and any attached image or document.
@@ -1123,9 +1130,11 @@ serve(async (req) => {
 
   } catch (error) {
     console.error(`[ai-handler] ERROR: Error in ai-handler for feature '${feature}':`, error.stack || error.message);
+    const status = error.message.includes('Unauthorized') ? 401 : 
+                   error.message.includes('Forbidden') ? 403 : 500;
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 500,
+      status,
     });
   }
 });

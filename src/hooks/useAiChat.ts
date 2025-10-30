@@ -215,26 +215,9 @@ export const useAiChat = (currentUser: User | null) => {
       }
   
     } catch (error: any) {
-      let description = "An unknown error occurred. Please check the console.";
-      
-      if (error.context && typeof error.context.json === 'function') {
-        try {
-          const errorBody = await error.context.json();
-          if (errorBody.error) {
-            description = errorBody.error;
-          } else {
-            description = "The server returned an error without a specific message.";
-          }
-        } catch (e) {
-          description = "Failed to parse the error response from the server.";
-        }
-      } else {
-        description = error.message || "The server returned an error.";
-      }
-      
       const errorMessage: Message = {
         id: uuidv4(),
-        text: `Sorry, I'm having trouble: ${description}`,
+        text: `Sorry, I encountered an error: ${error.message}`,
         timestamp: new Date().toISOString(),
         sender: AI_ASSISTANT_USER,
       };
