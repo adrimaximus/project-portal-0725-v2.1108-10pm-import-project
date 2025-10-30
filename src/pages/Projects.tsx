@@ -7,28 +7,80 @@ import { useNavigate } from "react-router-dom";
 import ProjectAdvancedFilters, { AdvancedFiltersState } from "@/components/projects/ProjectAdvancedFilters";
 import ListView from "@/components/projects/ListView";
 import { Button } from "@/components/ui/button";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 const Projects = () => {
   const { data: projects = [], isLoading: isLoadingProjects } = useProjects();
   const { data: profiles = [], isLoading: isLoadingProfiles } = useProfiles();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
 
-  const [unreadProjectIds, setUnreadProjectIds] = useState<Set<string>>(() => new Set());
+  const [displayedUnreadIds, setDisplayedUnreadIds] = useState<Set<string>>(new Set());
 
-  useEffect(() => {
-    // Mock logic to determine unread projects. In a real app, this would
-    // be based on user's last_viewed_at vs project's updated_at.
-    // For now, we'll consider projects updated in the last 2 days as "unread".
-    const twoDaysAgo = new Date();
-    twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
-    const newUnread = new Set<string>();
-    projects.forEach(p => {
-      if (p.updated_at && new Date(p.updated_at) > twoDaysAgo) {
-        newUnread.add(p.id);
-      }
-    });
-    setUnreadProjectIds(newUnread);
-  }, [projects]);
+  const { data: unreadProjectIdsSet } = useQuery({
+    queryKey: ['unreadProjectIds', user?.id],
+    queryFn: async () => {
+        if (!user) return new Set<string>();
+        const { data, error } = await supabase
+            .from('notification_recipients')
+            .select('notifications!inner(resource_id, resource_type)')
+            .eq('user_id', user.id)
+            .is('read_at', null);
+
+        if (error) {
+            console.error("Error fetching unread project IDs:", error);
+            return new Set<string>();
+        }
+
+        const projectIds = new Set<string>();
+        data.forEach(item => {
+            const notification = item.notifications as unknown as { resource_id: string, resource_type: string } | null;
+            if (notification && notification.resource_id && (notification.resource_type === 'project' || notification.resource_type === 'task' || notification.resource_type === 'comment')) {
+                projectIds.add(notification.resource_id);
+            }
+        });
+        return projectIds;
+    },
+    enabled: !!user,
+    staleTime: 60000, // 1 minute
+  });
+
+  const unreadProjectIds = unreadProjectIdsSet || new Set<string>();
+
+  const markProjectNotificationsAsRead = useMutation({
+    mutationFn: async (projectId: string) => {
+      const { error } = await supabase.rpc('mark_project_notifications_as_read', { p_project_id: projectId });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['hasUnreadProjectActivity', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['unreadProjectIds', user?.id] });
+    },
+    onError: (error) => {
+      console.error("Error marking project notifications as read:", error);
+    }
+  });
+
+  const markMultipleProjectNotificationsAsRead = useMutation({
+    mutationFn: async (projectIds: string[]) => {
+        if (projectIds.length === 0) return;
+        const { error } = await supabase.rpc('mark_multiple_project_notifications_as_read', { p_project_ids: projectIds });
+        if (error) throw error;
+    },
+    onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['notifications', user?.id] });
+        queryClient.invalidateQueries({ queryKey: ['hasUnreadProjectActivity', user?.id] });
+        queryClient.invalidateQueries({ queryKey: ['unreadProjectIds', user?.id] });
+    },
+    onError: (error) => {
+        console.error("Error marking multiple project notifications as read:", error);
+    }
+  });
 
   const [advancedFilters, setAdvancedFilters] = useState<AdvancedFiltersState>(() => {
     try {
@@ -59,6 +111,17 @@ const Projects = () => {
     }
   }, [advancedFilters]);
 
+  useEffect(() => {
+    if (advancedFilters.showUnreadOnly) {
+      setDisplayedUnreadIds(unreadProjectIds);
+      if (unreadProjectIds.size > 0) {
+        markMultipleProjectNotificationsAsRead.mutate(Array.from(unreadProjectIds));
+      }
+    } else {
+      setDisplayedUnreadIds(new Set());
+    }
+  }, [advancedFilters.showUnreadOnly, unreadProjectIds, markMultipleProjectNotificationsAsRead]);
+
   const allPeople = useMemo(() => {
     if (!profiles) return [];
     return profiles.map(p => ({ 
@@ -71,7 +134,7 @@ const Projects = () => {
     return projects.filter(project => {
       const { selectedPeopleIds, status, showUnreadOnly } = advancedFilters;
 
-      if (showUnreadOnly && !unreadProjectIds.has(project.id)) {
+      if (showUnreadOnly && !displayedUnreadIds.has(project.id)) {
         return false;
       }
       
@@ -82,10 +145,13 @@ const Projects = () => {
       
       return statusMatch && assigneeMatch;
     });
-  }, [projects, advancedFilters, unreadProjectIds]);
+  }, [projects, advancedFilters, displayedUnreadIds]);
 
   const handleProjectClick = (projectId: string, projectSlug: string) => {
-    setUnreadProjectIds(prev => {
+    if (unreadProjectIds.has(projectId)) {
+      markProjectNotificationsAsRead.mutate(projectId);
+    }
+    setDisplayedUnreadIds(prev => {
       const newSet = new Set(prev);
       newSet.delete(projectId);
       return newSet;
