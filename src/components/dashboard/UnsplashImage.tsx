@@ -4,7 +4,6 @@ import { Random } from 'unsplash-js/dist/methods/photos/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CameraOff, ExternalLink } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 
 const UnsplashImage = () => {
@@ -31,21 +30,7 @@ const UnsplashImage = () => {
         setPhoto(fetchedPhoto);
 
         if (fetchedPhoto.alt_description) {
-          setCaption(''); // Clear old caption
-          try {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (!session) throw new Error("Not authenticated");
-
-            const { data, error: captionError } = await supabase.functions.invoke('ai-handler', {
-              headers: { Authorization: `Bearer ${session.access_token}` },
-              body: { feature: 'generate-caption', payload: { altText: fetchedPhoto.alt_description } },
-            });
-            if (captionError) throw captionError;
-            setCaption(data.caption);
-          } catch (captionErr: any) {
-            console.warn("Failed to generate AI caption, falling back to alt description.", captionErr);
-            setCaption(fetchedPhoto.alt_description);
-          }
+          setCaption(fetchedPhoto.alt_description);
         } else {
           setCaption(''); // No description available
         }
