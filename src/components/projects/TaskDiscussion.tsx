@@ -20,6 +20,7 @@ import remarkGfm from 'remark-gfm';
 import { Link } from 'react-router-dom';
 import CommentReactions from '../CommentReactions';
 import CommentReactionPicker from '../CommentReactionPicker';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface TaskDiscussionProps {
   task: Task;
@@ -52,7 +53,7 @@ const TaskDiscussion = ({ task, onToggleReaction }: TaskDiscussionProps) => {
     let currentGroup: { author: User; comments: CommentType[] } | null = null;
 
     comments.forEach(comment => {
-      if (currentGroup && currentGroup.author.id === comment.author_id) {
+      if (currentGroup && currentGroup.author.id === comment.author.id) {
         currentGroup.comments.push(comment);
       } else {
         if (currentGroup) {
@@ -209,7 +210,7 @@ const TaskDiscussion = ({ task, onToggleReaction }: TaskDiscussionProps) => {
                 <p className="font-semibold">{fullName}</p>
                 <div>
                   {group.comments.map(comment => {
-                    const canManageComment = user && (comment.author_id === user.id || user.role === 'admin' || user.role === 'master admin');
+                    const canManageComment = user && (comment.author.id === user.id || user.role === 'admin' || user.role === 'master admin');
                     const attachments = comment.attachments_jsonb || [];
 
                     return (
@@ -246,10 +247,30 @@ const TaskDiscussion = ({ task, onToggleReaction }: TaskDiscussionProps) => {
                                 )}
                               </div>
                               <div className="flex-shrink-0 flex items-center gap-1 text-xs text-muted-foreground">
-                                {comment.is_ticket && <Ticket className="h-4 w-4" title="This comment is a ticket" />}
-                                {attachments.length > 0 && <Paperclip className="h-4 w-4" title={`${attachments.length} attachment(s)`} />}
+                                <TooltipProvider>
+                                  {comment.isTicket && (
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Ticket className="h-4 w-4" />
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p>This comment is a ticket</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  )}
+                                  {attachments.length > 0 && (
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Paperclip className="h-4 w-4" />
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p>{`${attachments.length} attachment(s)`}</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  )}
+                                </TooltipProvider>
                                 <span>
-                                  {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
+                                  {formatDistanceToNow(new Date(comment.timestamp), { addSuffix: true })}
                                 </span>
                                 <CommentReactions reactions={comment.reactions || []} onToggleReaction={(emoji) => handleToggleCommentReaction(comment.id, emoji)} />
                                 <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
