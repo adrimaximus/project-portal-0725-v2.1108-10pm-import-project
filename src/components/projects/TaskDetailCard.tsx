@@ -1,17 +1,13 @@
-import React, { useMemo, useState, useRef, useEffect } from 'react';
-import { Task, TaskAttachment, Reaction, User } from '@/types';
+import React, { useMemo, useState } from 'react';
+import { Task, TaskAttachment } from '@/types';
 import { DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '../ui/button';
-import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
-import { generatePastelColor, getPriorityStyles, getTaskStatusStyles, isOverdue, cn, getAvatarUrl, getInitials, formatTaskText } from '@/lib/utils';
-import { Edit, Trash2, Ticket, Paperclip, User as UserIcon, Calendar, Tag, Briefcase, Link as LinkIcon, MoreHorizontal, ChevronDown } from 'lucide-react';
+import { cn, formatTaskText } from '@/lib/utils';
+import { Edit, Trash2, Ticket, Paperclip, Link as LinkIcon, MoreHorizontal, ChevronDown } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import TaskAttachmentList from './TaskAttachmentList';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 import { useTaskMutations } from '@/hooks/useTaskMutations';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -20,6 +16,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { motion, useDragControls } from 'framer-motion';
 import TaskReactions from './TaskReactions';
+import TaskDetailsSection from './TaskDetailsSection';
 
 interface TaskDetailCardProps {
   task: Task;
@@ -60,27 +57,6 @@ const aggregateAttachments = (task: Task): TaskAttachment[] => {
   return attachments;
 };
 
-const getDueDateClassName = (dueDateStr: string | null, completed: boolean): string => {
-  if (!dueDateStr || completed) {
-    return "text-muted-foreground text-xs";
-  }
-
-  const dueDate = new Date(dueDateStr);
-  const now = new Date();
-  const diffHours = (dueDate.getTime() - now.getTime()) / (1000 * 60 * 60);
-
-  if (diffHours < 0) {
-    return "text-red-600 font-bold text-xs"; // Overdue
-  }
-  if (diffHours <= 1) {
-    return "text-primary font-bold text-xs"; // Due within 1 hour
-  }
-  if (diffHours <= 24) {
-    return "text-primary text-xs"; // Due within 1 day
-  }
-  return "text-muted-foreground text-xs"; // Not due soon
-};
-
 const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, onDelete }) => {
   const queryClient = useQueryClient();
   const { toggleTaskReaction } = useTaskMutations();
@@ -111,9 +87,6 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
     navigator.clipboard.writeText(textToCopy);
     toast.success("Link to task copied to clipboard!");
   };
-
-  const statusStyle = getTaskStatusStyles(task.status);
-  const priorityStyle = getPriorityStyles(task.priority);
 
   return (
     <DialogContent 
@@ -191,87 +164,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
               </Collapsible>
             )}
 
-            <div className="grid grid-cols-2 gap-3 sm:gap-4">
-              <div className="flex items-center gap-2">
-                <TooltipProvider><Tooltip><TooltipTrigger><Briefcase className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" /></TooltipTrigger><TooltipContent><p>Project</p></TooltipContent></Tooltip></TooltipProvider>
-                {task.project_name && task.project_name !== 'General Tasks' ? (
-                  <Link to={`/projects/${task.project_slug}`} className="hover:underline text-primary break-words" onClick={onClose}>
-                    {task.project_name}
-                  </Link>
-                ) : <span className="text-muted-foreground">General Tasks</span>}
-              </div>
-              <div className="flex items-center gap-2">
-                <TooltipProvider><Tooltip><TooltipTrigger><Calendar className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" /></TooltipTrigger><TooltipContent><p>Due Date</p></TooltipContent></Tooltip></TooltipProvider>
-                {task.due_date ? (
-                  <span className={cn(getDueDateClassName(task.due_date, task.completed))}>
-                    {format(new Date(task.due_date), "MMM d, yyyy, p")}
-                  </span>
-                ) : <span className="text-muted-foreground">No due date</span>}
-              </div>
-              <div className="flex items-center gap-2">
-                <h4 className="font-semibold">Status</h4>
-                <Badge className={cn(statusStyle.tw, 'border-transparent text-xs')}>{task.status}</Badge>
-              </div>
-              <div className="flex items-center gap-2">
-                <h4 className="font-semibold">Priority</h4>
-                <Badge className={cn(priorityStyle.tw, 'text-xs')}>{task.priority || 'Low'}</Badge>
-              </div>
-            </div>
-
-            {task.tags && task.tags.length > 0 && (
-              <div className="flex items-start gap-2">
-                <TooltipProvider><Tooltip><TooltipTrigger><Tag className="h-3 w-3 sm:h-4 sm:w-4 mt-1 text-muted-foreground" /></TooltipTrigger><TooltipContent><p>Tags</p></TooltipContent></Tooltip></TooltipProvider>
-                <div className="flex gap-1 flex-wrap">
-                  {task.tags.map(tag => (
-                    <Badge key={tag.id} variant="outline" style={{ borderColor: tag.color, color: tag.color }} className="text-xs">{tag.name}</Badge>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div className="grid grid-cols-2 gap-3 sm:gap-4">
-              <div>
-                {task.created_by && (
-                  <div className="flex items-center gap-2">
-                    <h4 className="font-semibold">Created By</h4>
-                    <Avatar className="h-6 w-6 sm:h-8 sm:w-8">
-                      <AvatarImage src={getAvatarUrl(task.created_by.avatar_url, task.created_by.id)} />
-                      <AvatarFallback style={generatePastelColor(task.created_by.id)}>
-                        {getInitials([task.created_by.first_name, task.created_by.last_name].filter(Boolean).join(' '), task.created_by.email || undefined)}
-                      </AvatarFallback>
-                    </Avatar>
-                  </div>
-                )}
-              </div>
-              <div>
-                {task.assignedTo && task.assignedTo.length > 0 && (
-                  <div className="flex items-center gap-2">
-                    <h4 className="font-semibold flex items-center gap-2 flex-shrink-0"><UserIcon className="h-3 w-3 sm:h-4 sm:w-4" /> Assignees</h4>
-                    <div className="flex -space-x-2">
-                      {task.assignedTo.map((user) => (
-                        <TooltipProvider key={user.id}>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Link to="/chat" state={{ selectedCollaborator: user }}>
-                                <Avatar className="h-6 w-6 sm:h-8 sm:w-8 border-2 border-background">
-                                  <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
-                                  <AvatarFallback style={generatePastelColor(user.id)}>
-                                    {getInitials([user.first_name, user.last_name].filter(Boolean).join(' '), user.email || undefined)}
-                                  </AvatarFallback>
-                                </Avatar>
-                              </Link>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>{[user.first_name, user.last_name].filter(Boolean).join(' ')}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
+            <TaskDetailsSection task={task} onClose={onClose} />
 
             {allAttachments.length > 0 && (
               <Collapsible
