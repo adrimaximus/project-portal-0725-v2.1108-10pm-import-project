@@ -1,5 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { Project, User } from '@/types';
+import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import {
   Collapsible,
@@ -23,7 +22,6 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ChevronsUpDown, ChevronDown } from "lucide-react";
 import { generatePastelColor, getAvatarUrl } from '@/lib/utils';
-import { supabase } from '@/integrations/supabase/client';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -31,26 +29,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import { useCollaboratorStats, CollaboratorStat } from '@/hooks/useCollaboratorStats';
+import { formatDistanceToNow } from 'date-fns';
 
-interface CollaboratorsListProps {
-  projects: Project[];
-}
-
-interface CollaboratorStat extends User {
-  projectCount: number;
-  upcomingProjectCount: number;
-  onGoingProjectCount: number;
-  activeProjectCount: number;
-  activeTaskCount: number;
-  activeTicketCount: number;
-  overdueBillCount: number;
-  role: string;
-}
-
-const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
+const CollaboratorsList = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [tasks, setTasks] = useState<any[]>([]);
   const [filter, setFilter] = useState<'activeProject' | 'upcoming' | 'onGoing'>('activeProject');
+  const { data: collaborators = [], isLoading } = useCollaboratorStats();
 
   const filterLabels = {
     activeProject: 'Active Projects',
@@ -58,98 +43,9 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
     onGoing: 'On Going',
   };
 
-  useEffect(() => {
-    const fetchTasks = async () => {
-      if (!projects || projects.length === 0) {
-        setTasks([]);
-        return;
-      }
-      const projectIds = projects.map(p => p.id);
-      const { data, error } = await supabase.rpc('get_project_tasks', { p_project_ids: projectIds });
-      
-      if (error) {
-        console.error("Error fetching project tasks:", error);
-        setTasks([]);
-      } else {
-        setTasks(data || []);
-      }
-    };
-
-    fetchTasks();
-  }, [projects]);
-
   const { collaboratorsByRole, allCollaborators } = useMemo(() => {
-    const stats: Record<string, CollaboratorStat & { countedProjectIds: Set<string> }> = {};
     const roleHierarchy: Record<string, number> = { 'owner': 1, 'admin': 2, 'editor': 3, 'member': 4 };
-
-    const ensureUser = (user: User) => {
-        if (!stats[user.id]) {
-            stats[user.id] = {
-                ...user,
-                projectCount: 0,
-                upcomingProjectCount: 0,
-                onGoingProjectCount: 0,
-                activeProjectCount: 0,
-                activeTaskCount: 0,
-                activeTicketCount: 0,
-                overdueBillCount: 0,
-                role: user.role || 'member',
-                countedProjectIds: new Set(),
-            };
-        }
-        return stats[user.id];
-    };
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    projects.forEach(p => {
-        const startDate = p.start_date ? new Date(p.start_date) : null;
-        const endDate = p.due_date ? new Date(p.due_date) : null;
-
-        const isUpcoming = startDate ? startDate > today : false;
-        const isOnGoing = startDate ? (startDate <= today && (endDate ? endDate >= today : true)) : false;
-        const isActive = !['Completed', 'Cancelled', 'Bid Lost'].includes(p.status);
-        
-        const paymentDueDate = p.payment_due_date ? new Date(p.payment_due_date) : null;
-        const isOverdue = paymentDueDate ? paymentDueDate < today && p.payment_status !== 'Paid' : false;
-
-        p.assignedTo.forEach(user => {
-            const userStat = ensureUser(user);
-            
-            const currentRolePriority = roleHierarchy[userStat.role] || 99;
-            const newRolePriority = roleHierarchy[user.role || 'member'] || 99;
-            if (newRolePriority < currentRolePriority) {
-                userStat.role = user.role || 'member';
-            }
-
-            if (!userStat.countedProjectIds.has(p.id)) {
-                userStat.projectCount++;
-                if (isUpcoming) userStat.upcomingProjectCount++;
-                if (isOnGoing) userStat.onGoingProjectCount++;
-                if (isActive) userStat.activeProjectCount++;
-                if (isOverdue) userStat.overdueBillCount++;
-                userStat.countedProjectIds.add(p.id);
-            }
-        });
-    });
-
-    (tasks || []).forEach(task => {
-        if (!task.completed) {
-            (task.assignedTo || []).forEach((assignee: User) => {
-                const userStat = ensureUser(assignee);
-                userStat.activeTaskCount++;
-                if (task.origin_ticket_id) {
-                    userStat.activeTicketCount++;
-                }
-            });
-        }
-    });
-
-    const collaborators = Object.values(stats)
-        .map(({ countedProjectIds, ...rest }) => rest)
-        .sort((a, b) => b.projectCount - a.projectCount);
-
+    
     const grouped: Record<string, CollaboratorStat[]> = {};
     collaborators.forEach(collab => {
         const role = collab.role || 'member';
@@ -162,23 +58,23 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
     const orderedGrouped: Record<string, CollaboratorStat[]> = {};
     Object.keys(roleHierarchy).forEach(role => {
         if (grouped[role]) {
-            orderedGrouped[role] = grouped[role];
+            orderedGrouped[role] = grouped[role].sort((a, b) => b.project_count - a.project_count);
         }
     });
     
     const flatList = Object.values(orderedGrouped).flat();
 
     return { collaboratorsByRole: orderedGrouped, allCollaborators: flatList };
-  }, [projects, tasks]);
+  }, [collaborators]);
 
   const getFilteredCount = (collaborator: CollaboratorStat) => {
     switch (filter) {
       case 'activeProject':
-        return collaborator.activeProjectCount;
+        return collaborator.ongoing_project_count;
       case 'upcoming':
-        return collaborator.upcomingProjectCount;
+        return collaborator.upcoming_project_count;
       case 'onGoing':
-        return collaborator.onGoingProjectCount;
+        return collaborator.ongoing_project_count;
       default:
         return 0;
     }
@@ -249,15 +145,15 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
                           </div>
                           <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
                             <div className="text-muted-foreground">Total Projects</div>
-                            <div className="text-right font-medium">{c.projectCount}</div>
+                            <div className="text-right font-medium">{c.project_count}</div>
                             <div className="text-muted-foreground">{filterLabels[filter]}</div>
                             <div className="text-right font-medium">{getFilteredCount(c)}</div>
                             <div className="text-muted-foreground">Active Tasks</div>
-                            <div className="text-right font-medium">{c.activeTaskCount}</div>
+                            <div className="text-right font-medium">{c.active_task_count}</div>
                             <div className="text-muted-foreground">Active Tickets</div>
-                            <div className="text-right font-medium">{c.activeTicketCount}</div>
+                            <div className="text-right font-medium">{c.active_ticket_count}</div>
                             <div className="text-muted-foreground">Overdue Bill</div>
-                            <div className="text-right font-medium">{c.overdueBillCount}</div>
+                            <div className="text-right font-medium">{c.overdue_bill_count}</div>
                           </div>
                         </div>
                       ))}
@@ -314,11 +210,11 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
                                             <span className="font-medium whitespace-nowrap">{c.name}</span>
                                         </div>
                                     </TableCell>
-                                    <TableCell className="text-right font-medium">{c.projectCount}</TableCell>
+                                    <TableCell className="text-right font-medium">{c.project_count}</TableCell>
                                     <TableCell className="text-right font-medium">{getFilteredCount(c)}</TableCell>
-                                    <TableCell className="text-right font-medium">{c.activeTaskCount}</TableCell>
-                                    <TableCell className="text-right font-medium">{c.activeTicketCount}</TableCell>
-                                    <TableCell className="text-right font-medium">{c.overdueBillCount}</TableCell>
+                                    <TableCell className="text-right font-medium">{c.active_task_count}</TableCell>
+                                    <TableCell className="text-right font-medium">{c.active_ticket_count}</TableCell>
+                                    <TableCell className="text-right font-medium">{c.overdue_bill_count}</TableCell>
                                 </TableRow>
                             ))}
                           </React.Fragment>
