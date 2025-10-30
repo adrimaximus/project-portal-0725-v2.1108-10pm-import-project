@@ -233,32 +233,40 @@ const articleWriterFeaturePrompts = {
 const buildContext = async (supabaseClient: any, user: any) => {
   console.log("[DIAGNOSTIC] buildContext: Starting context build.");
   try {
-    const [
-      projectsRes,
-      usersRes,
-      goalsRes,
-      allTagsRes,
-      articlesRes,
-      foldersRes
-    ] = await Promise.all([
-      supabaseClient.rpc('get_dashboard_projects', { p_limit: 1000, p_offset: 0 }),
-      supabaseClient.from('profiles').select('id, first_name, last_name, email'),
-      supabaseClient.rpc('get_user_goals'),
-      supabaseClient.from('tags').select('id, name'),
-      supabaseClient.from('kb_articles').select('id, title, slug, folder_id'),
-      supabaseClient.from('kb_folders').select('id, name')
-    ]);
-    console.log("[DIAGNOSTIC] buildContext: All parallel fetches completed.");
+    const promises = {
+      projects: supabaseClient.rpc('get_dashboard_projects', { p_limit: 1000, p_offset: 0 }),
+      users: supabaseClient.from('profiles').select('id, first_name, last_name, email'),
+      goals: supabaseClient.rpc('get_user_goals'),
+      allTags: supabaseClient.from('tags').select('id, name'),
+      articles: supabaseClient.from('kb_articles').select('id, title, slug, folder_id'),
+      folders: supabaseClient.from('kb_folders').select('id, name')
+    };
 
-    if (projectsRes.error) throw new Error(`Failed to fetch project data for analysis: ${projectsRes.error.message}`);
-    if (usersRes.error) throw new Error(`Failed to fetch users for context: ${usersRes.error.message}`);
-    if (goalsRes.error) throw new Error(`Failed to fetch goals for context: ${goalsRes.error.message}`);
-    if (allTagsRes.error) throw new Error(`Failed to fetch tags for context: ${allTagsRes.error.message}`);
-    if (articlesRes.error) throw new Error(`Failed to fetch articles for context: ${articlesRes.error.message}`);
-    if (foldersRes.error) throw new Error(`Failed to fetch folders for context: ${foldersRes.error.message}`);
-    console.log("[DIAGNOSTIC] buildContext: All data fetches successful.");
+    const results = await Promise.allSettled(Object.values(promises));
+    const [projectsRes, usersRes, goalsRes, allTagsRes, articlesRes, foldersRes] = results;
 
-    const summarizedProjects = projectsRes.data.map((p: any) => ({
+    const handleResult = (result: PromiseSettledResult<any>, name: string) => {
+      if (result.status === 'rejected') {
+        console.error(`[DIAGNOSTIC] buildContext: Promise rejected for ${name}:`, result.reason?.message || result.reason);
+        return { data: [], error: { message: result.reason?.message || `Promise rejected for ${name}` } };
+      }
+      if (result.value.error) {
+        console.error(`[DIAGNOSTIC] buildContext: Supabase error for ${name}:`, result.value.error.message);
+        return { data: [], error: result.value.error };
+      }
+      return { data: result.value.data, error: null };
+    };
+
+    const projects = handleResult(projectsRes, 'projects');
+    const users = handleResult(usersRes, 'users');
+    const goals = handleResult(goalsRes, 'goals');
+    const allTags = handleResult(allTagsRes, 'allTags');
+    const articles = handleResult(articlesRes, 'articles');
+    const folders = handleResult(foldersRes, 'folders');
+
+    console.log("[DIAGNOSTIC] buildContext: All parallel fetches settled.");
+
+    const summarizedProjects = (projects.data || []).map((p: any) => ({
         name: p.name,
         status: p.status,
         tags: (p.tags || []).map((t: any) => t.name),
@@ -268,26 +276,26 @@ const buildContext = async (supabaseClient: any, user: any) => {
             assignedTo: (t.assignedTo || []).map((a: any) => a.name)
         }))
     }));
-    const summarizedGoals = goalsRes.data.map((g: any) => ({
+    const summarizedGoals = (goals.data || []).map((g: any) => ({
         title: g.title,
         type: g.type,
         progress: g.completions ? g.completions.length : 0,
         tags: g.tags ? g.tags.map((t: any) => t.name) : []
     }));
-    const userList = usersRes.data.map((u: any) => ({ id: u.id, name: `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email }));
+    const userList = (users.data || []).map((u: any) => ({ id: u.id, name: `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email }));
     const serviceList = [ "3D Graphic Design", "Accommodation", "Award Ceremony", "Branding", "Content Creation", "Digital Marketing", "Entertainment", "Event Decoration", "Event Equipment", "Event Gamification", "Exhibition Booth", "Food & Beverage", "Keyvisual Graphic Design", "LED Display", "Lighting System", "Logistics", "Man Power", "Merchandise", "Motiongraphic Video", "Multimedia System", "Payment Advance", "Photo Documentation", "Plaque & Trophy", "Prints", "Professional Security", "Professional video production for commercial ads", "Show Management", "Slido", "Sound System", "Stage Production", "Talent", "Ticket Management System", "Transport", "Venue", "Video Documentation", "VIP Services", "Virtual Events", "Awards System", "Brand Ambassadors", "Electricity & Genset", "Event Consultation", "Workshop" ];
-    const iconList = [ 'Target', 'Flag', 'BookOpen', 'Dumbbell', 'TrendingUp', 'Star', 'Heart', 'Rocket', 'DollarSign', 'FileText', 'ImageIcon', 'Award', 'BarChart', 'Calendar', 'CheckCircle', 'Users', 'Activity', 'Anchor', 'Aperture', 'Bike', 'Briefcase', 'Brush', 'Camera', 'Car', 'ClipboardCheck', 'Cloud', 'Code', 'Coffee', 'Compass', 'Cpu', 'CreditCard', 'Crown', 'Database', 'Diamond', 'Feather', 'Film', 'Flame', 'Flower', 'Gift', 'Globe', 'GraduationCap', 'Headphones', 'Home', 'Key', 'Laptop', 'Leaf', 'Lightbulb', 'Link', 'Map', 'Medal', 'Mic', 'Moon', 'MousePointer', 'Music', 'Paintbrush', 'Palette', 'PenTool', 'Phone', 'PieChart', 'Plane', 'Puzzle', 'Save', 'Scale', 'Scissors', 'Settings', 'Shield', 'Ship', 'ShoppingBag', 'Smile', 'Speaker', 'Sun', 'Sunrise', 'Sunset', 'Sword', 'Tag', 'Trophy', 'Truck', 'Umbrella', 'Video', 'Wallet', 'Watch', 'Wind', 'Wrench', 'Zap' ];
-    const summarizedArticles = articlesRes.data.map((a: any) => ({ title: a.title, folder: foldersRes.data.find((f: any) => f.id === a.folder_id)?.name }));
-    const summarizedFolders = foldersRes.data.map((f: any) => f.name);
+    const iconList = [ 'Target', 'Flag', 'BookOpen', 'Dumbbell', 'TrendingUp', 'Star', 'Heart', 'Rocket', 'DollarSign', 'FileText', 'ImageIcon', 'Award', 'BarChart', 'Calendar', 'CheckCircle', 'Users', 'Activity', 'Anchor', 'Aperture', 'Bike', 'Briefcase', 'Brush', 'Camera', 'Car', 'ClipboardCheck', 'Cloud', 'Code', 'Coffee', 'Compass', 'Cpu', 'CreditCard', 'Crown', 'Database', 'Diamond', 'Feather', 'Film', 'Flame', 'Flower', 'Gift', 'Globe', 'GraduationCap', 'Headphones', 'Home', 'Key', 'Laptop', 'Leaf', 'Lightbulb', 'Link', 'Map', 'Medal', 'Mic', 'Moon', 'MountainSnow', 'MousePointer', 'Music', 'Paintbrush', 'Palette', 'PenTool', 'Phone', 'PieChart', 'Plane', 'Puzzle', 'Save', 'Scale', 'Scissors', 'Settings', 'Shield', 'Ship', 'ShoppingBag', 'Smile', 'Speaker', 'Sun', 'Sunrise', 'Sunset', 'Sword', 'Tag', 'Trophy', 'Truck', 'Umbrella', 'Video', 'Wallet', 'Watch', 'Wind', 'Wrench', 'Zap' ];
+    const summarizedArticles = (articles.data || []).map((a: any) => ({ title: a.title, folder: (folders.data || []).find((f: any) => f.id === a.folder_id)?.name }));
+    const summarizedFolders = (folders.data || []).map((f: any) => f.name);
     console.log("[DIAGNOSTIC] buildContext: Data summarization complete.");
 
     return {
-      projects: projectsRes.data,
-      users: usersRes.data,
-      goals: goalsRes.data,
-      allTags: allTagsRes.data,
-      articles: articlesRes.data,
-      folders: foldersRes.data,
+      projects: projects.data || [],
+      users: users.data || [],
+      goals: goals.data || [],
+      allTags: allTags.data || [],
+      articles: articles.data || [],
+      folders: folders.data || [],
       summarizedProjects,
       summarizedGoals,
       userList,
