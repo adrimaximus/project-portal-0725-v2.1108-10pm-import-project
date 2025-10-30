@@ -163,3 +163,26 @@ export const isOverdue = (dueDateStr: string | null): boolean => {
   const now = new Date();
   return dueDate < now;
 };
+
+export const getTaskStatusStyles = (status: string) => {
+  switch (status) {
+    case 'Done':
+      return { tw: 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400', hex: '#10B981' };
+    case 'In Progress':
+      return { tw: 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400', hex: '#3B82F6' };
+    case 'Cancelled':
+      return { tw: 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400', hex: '#EF4444' };
+    case 'To do':
+    default:
+      return { tw: 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400', hex: '#6B7280' };
+  }
+};
+
+export const getColorForTag = (tag: string): string => {
+  let hash = 0;
+  for (let i = 0; i < tag.length; i++) {
+    hash = tag.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const h = hash % 360;
+  return `hsl(${h}, 70%, 80%)`; // Pastel color
+};
