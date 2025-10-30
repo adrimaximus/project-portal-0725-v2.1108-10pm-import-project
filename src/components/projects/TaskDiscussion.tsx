@@ -41,11 +41,13 @@ const TaskDiscussion = ({ task, onToggleReaction }: TaskDiscussionProps) => {
       const { data, error } = await supabase
         .rpc('get_task_comments', { p_task_id: task.id });
       if (error) throw error;
-      // Map created_at to timestamp to match CommentType
-      return (data as any[]).map(c => ({
-        ...c,
-        timestamp: c.created_at,
-      })) as CommentType[];
+      // Filter out comments with no author and map timestamp
+      return (data as any[])
+        .filter(c => c.author && c.author.id)
+        .map(c => ({
+          ...c,
+          timestamp: c.created_at,
+        })) as CommentType[];
     },
     enabled: !!task.id,
   });
