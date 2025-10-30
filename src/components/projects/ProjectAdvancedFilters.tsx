@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Filter, X, ChevronsUpDown, Check } from "lucide-react";
@@ -31,12 +31,35 @@ export interface AdvancedFiltersState {
 }
 
 interface ProjectAdvancedFiltersProps {
-  filters: AdvancedFiltersState;
   onFiltersChange: (filters: AdvancedFiltersState) => void;
   allPeople: Person[];
 }
 
-const ProjectAdvancedFilters = ({ filters, onFiltersChange, allPeople }: ProjectAdvancedFiltersProps) => {
+const ProjectAdvancedFilters = ({ onFiltersChange, allPeople }: ProjectAdvancedFiltersProps) => {
+  const [filters, setFilters] = useState<AdvancedFiltersState>(() => {
+    try {
+      const savedFilters = localStorage.getItem('projectAdvancedFilters');
+      if (savedFilters) {
+        const parsed = JSON.parse(savedFilters);
+        if (parsed.dueDate && parsed.dueDate.from) parsed.dueDate.from = new Date(parsed.dueDate.from);
+        if (parsed.dueDate && parsed.dueDate.to) parsed.dueDate.to = new Date(parsed.dueDate.to);
+        return parsed;
+      }
+    } catch (error) {
+      console.error("Failed to parse filters from localStorage", error);
+    }
+    return { selectedPeopleIds: [], status: [], dueDate: null };
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('projectAdvancedFilters', JSON.stringify(filters));
+      onFiltersChange(filters);
+    } catch (error) {
+      console.error("Failed to save filters to localStorage", error);
+    }
+  }, [filters, onFiltersChange]);
+
   const [open, setOpen] = useState(false);
   const isDesktop = useMediaQuery("(min-width: 768px)");
   const [assigneePopoverOpen, setAssigneePopoverOpen] = useState(false);
@@ -47,7 +70,7 @@ const ProjectAdvancedFilters = ({ filters, onFiltersChange, allPeople }: Project
     const newSelectedPeopleIds = isSelected
       ? filters.selectedPeopleIds.filter(id => id !== personId)
       : [...filters.selectedPeopleIds, personId];
-    onFiltersChange({ ...filters, selectedPeopleIds: newSelectedPeopleIds });
+    setFilters({ ...filters, selectedPeopleIds: newSelectedPeopleIds });
   };
 
   const handleProjectStatusToggle = (statusValue: string) => {
@@ -55,13 +78,13 @@ const ProjectAdvancedFilters = ({ filters, onFiltersChange, allPeople }: Project
     const newStatus = isSelected
       ? filters.status.filter(s => s !== statusValue)
       : [...filters.status, statusValue];
-    onFiltersChange({ ...filters, status: newStatus });
+    setFilters({ ...filters, status: newStatus });
   };
 
   const activeFilterCount = filters.selectedPeopleIds.length + filters.status.length;
 
   const clearFilters = () => {
-    onFiltersChange({ selectedPeopleIds: [], status: [], dueDate: null });
+    setFilters({ selectedPeopleIds: [], status: [], dueDate: null });
   };
 
   const triggerButton = (
