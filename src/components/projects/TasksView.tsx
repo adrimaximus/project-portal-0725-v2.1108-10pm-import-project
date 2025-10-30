@@ -21,7 +21,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import EmojiPicker, { EmojiStyle } from "emoji-picker-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/hooks/useSession";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 interface TasksViewProps {
@@ -77,6 +77,60 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
   const queryClient = useQueryClient();
   const commonEmojis = ['👍', '❤️', '😂', '🎉', '🙏', '😢'];
   const initialSortSet = useRef(false);
+
+  const { data: unreadTaskIds = [] } = useQuery<string[]>({
+    queryKey: ['unreadTaskIds', user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      const { data, error } = await supabase
+        .from('notification_recipients')
+        .select('notifications!inner(resource_id)')
+        .eq('user_id', user.id)
+        .is('read_at', null)
+        .eq('notifications.resource_type', 'task');
+      
+      if (error) {
+        console.error("Error fetching unread task IDs:", error);
+        return [];
+      }
+      
+      return data
+        .map(item => {
+          const notification = Array.isArray(item.notifications) ? item.notifications[0] : item.notifications;
+          return notification?.resource_id;
+        })
+        .filter((id): id is string => !!id);
+    },
+    enabled: !!user,
+    staleTime: 60000,
+    refetchInterval: 60000,
+  });
+
+  const markAsReadMutation = useMutation({
+    mutationFn: async (taskId: string) => {
+      const { error } = await supabase.rpc('mark_task_notification_as_read', { p_task_id: taskId });
+      if (error) {
+        console.error('Error marking task notification as read:', error);
+        throw error;
+      }
+      return taskId;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['unreadTaskIds', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['unreadTaskInfo', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['hasUnreadProjectActivity', user?.id] });
+    },
+    onError: () => {
+      toast.error("Could not mark notification as read.");
+    }
+  });
+
+  const handleTaskClick = (task: ProjectTask) => {
+    setSelectedTask(task);
+    if (unreadTaskIds.includes(task.id)) {
+      markAsReadMutation.mutate(task.id);
+    }
+  };
 
   useEffect(() => {
     if (highlightedTaskId && tasks.length > 0) {
@@ -346,6 +400,7 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
                 const hasAssignees = task.assignedTo && task.assignedTo.length > 0;
                 const reactions = task.reactions || [];
                 const hasBottomBar = hasAssignees || reactions.length > 0 || (task.originTicketId || task.tags?.some(t => t.name === 'Ticket')) || allAttachments.length > 0;
+                const isUnread = unreadTaskIds.includes(task.id);
 
                 const groupedReactions: Record<string, { users: string[]; userIds: string[] }> = reactions.reduce((acc, reaction) => {
                     if (!acc[reaction.emoji]) {
@@ -400,8 +455,9 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
                             />
                           </div>
                           <DialogTrigger asChild>
-                            <div className="flex flex-col cursor-pointer text-sm md:text-base w-full" onClick={() => setSelectedTask(task)}>
+                            <div className="flex flex-col cursor-pointer text-sm md:text-base w-full" onClick={() => handleTaskClick(task)}>
                               <div className="flex items-center gap-2">
+                                {isUnread && <div className="h-2 w-2 rounded-full bg-red-500 flex-shrink-0" title="Unread notification" />}
                                 <div className={`${task.completed ? 'line-through text-muted-foreground' : ''}`}>
                                   <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ p: 'span' }}>
                                     {formatTaskText(task.title)}
