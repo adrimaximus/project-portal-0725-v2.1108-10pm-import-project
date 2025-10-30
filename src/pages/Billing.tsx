@@ -4,13 +4,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useProjects } from "@/hooks/useProjects";
 import { PaymentStatus, Project, Invoice, Member, Owner } from "@/types";
 import { isPast } from "date-fns";
-import { Loader2 } from "lucide-react";
+import { Loader2, ChevronDown } from "lucide-react";
 import { EditInvoiceDialog } from "@/components/billing/EditInvoiceDialog";
 import BillingStats from "@/components/billing/BillingStats";
 import BillingToolbar from "@/components/billing/BillingToolbar";
 import BillingTable from "@/components/billing/BillingTable";
 import BillingKanbanView from "@/components/billing/BillingKanbanView";
 import { DateRange } from "react-day-picker";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 const Billing = () => {
   const { data: projects = [], isLoading } = useProjects();
@@ -21,6 +22,7 @@ const Billing = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [viewMode, setViewMode] = useState<'table' | 'kanban'>('table');
+  const [isCompletedOpen, setIsCompletedOpen] = useState(false);
   
   const invoices: Invoice[] = useMemo(() => projects
     .map(project => {
@@ -121,6 +123,19 @@ const Billing = () => {
     });
   }, [filteredInvoices, sortColumn, sortDirection]);
 
+  const { ongoingInvoices, completedInvoices } = useMemo(() => {
+    const ongoing: Invoice[] = [];
+    const completed: Invoice[] = [];
+    sortedInvoices.forEach(invoice => {
+      if (['Paid', 'Cancelled'].includes(invoice.status)) {
+        completed.push(invoice);
+      } else {
+        ongoing.push(invoice);
+      }
+    });
+    return { ongoingInvoices: ongoing, completedInvoices: completed };
+  }, [sortedInvoices]);
+
   const handleEdit = (invoice: Invoice) => {
     setSelectedInvoice(invoice);
     setIsFormOpen(true);
@@ -159,21 +174,47 @@ const Billing = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle>Invoice History</CardTitle>
+            <CardTitle>Ongoing Invoices</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             {viewMode === 'table' ? (
               <BillingTable
-                invoices={sortedInvoices}
+                invoices={ongoingInvoices}
                 onEdit={handleEdit}
                 sortColumn={sortColumn}
                 sortDirection={sortDirection}
                 handleSort={handleSort}
               />
             ) : (
-              <BillingKanbanView invoices={sortedInvoices} onEditInvoice={handleEdit} />
+              <BillingKanbanView invoices={ongoingInvoices} onEditInvoice={handleEdit} />
             )}
           </CardContent>
+
+          <Collapsible open={isCompletedOpen} onOpenChange={setIsCompletedOpen}>
+            <CollapsibleTrigger asChild>
+              <div className="border-t">
+                <CardHeader className="flex flex-row items-center justify-between cursor-pointer hover:bg-muted/50">
+                  <CardTitle>Completed Invoices ({completedInvoices.length})</CardTitle>
+                  <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform ${isCompletedOpen ? 'rotate-180' : ''}`} />
+                </CardHeader>
+              </div>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <CardContent className="p-0">
+                {viewMode === 'table' ? (
+                  <BillingTable
+                    invoices={completedInvoices}
+                    onEdit={handleEdit}
+                    sortColumn={sortColumn}
+                    sortDirection={sortDirection}
+                    handleSort={handleSort}
+                  />
+                ) : (
+                  <BillingKanbanView invoices={completedInvoices} onEditInvoice={handleEdit} />
+                )}
+              </CardContent>
+            </CollapsibleContent>
+          </Collapsible>
         </Card>
       </div>
       <EditInvoiceDialog
