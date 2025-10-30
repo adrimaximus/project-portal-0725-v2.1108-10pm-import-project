@@ -1,13 +1,13 @@
 import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { List, LayoutGrid, KanbanSquare, ListChecks, CheckSquare, PlusCircle, Download, RefreshCw, ListPlus } from "lucide-react";
+import { List, LayoutGrid, KanbanSquare, ListChecks, PlusCircle, Download, RefreshCw, ListPlus } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { DateRange } from "react-day-picker";
 import ProjectAdvancedFilters, { AdvancedFiltersState } from './ProjectAdvancedFilters';
 
-type ViewMode = 'table' | 'list' | 'kanban' | 'tasks' | 'tasks-kanban';
+type ViewMode = 'table' | 'list' | 'kanban' | 'tasks';
 
 interface Person {
   id: string;
@@ -57,7 +57,6 @@ const ProjectsToolbar = ({
           <ToggleGroupItem value="table" aria-label="Table view"><LayoutGrid className="h-4 w-4" /></ToggleGroupItem>
           <ToggleGroupItem value="kanban" aria-label="Kanban view"><KanbanSquare className="h-4 w-4" /></ToggleGroupItem>
           <ToggleGroupItem value="tasks" aria-label="Tasks list view"><ListChecks className="h-4 w-4" /></ToggleGroupItem>
-          <ToggleGroupItem value="tasks-kanban" aria-label="Tasks kanban view"><CheckSquare className="h-4 w-4" /></ToggleGroupItem>
         </ToggleGroup>
 
         {view === 'kanban' && (
