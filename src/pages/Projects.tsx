@@ -111,16 +111,18 @@ const Projects = () => {
     }
   }, [advancedFilters]);
 
-  useEffect(() => {
-    if (advancedFilters.showUnreadOnly) {
+  const handleFiltersChange = (newFilters: AdvancedFiltersState) => {
+    if (newFilters.showUnreadOnly && !advancedFilters.showUnreadOnly) {
       setDisplayedUnreadIds(unreadProjectIds);
       if (unreadProjectIds.size > 0) {
         markMultipleProjectNotificationsAsRead.mutate(Array.from(unreadProjectIds));
       }
-    } else {
+    }
+    else if (!newFilters.showUnreadOnly) {
       setDisplayedUnreadIds(new Set());
     }
-  }, [advancedFilters.showUnreadOnly, unreadProjectIds, markMultipleProjectNotificationsAsRead]);
+    setAdvancedFilters(newFilters);
+  };
 
   const allPeople = useMemo(() => {
     if (!profiles) return [];
@@ -151,11 +153,6 @@ const Projects = () => {
     if (unreadProjectIds.has(projectId)) {
       markProjectNotificationsAsRead.mutate(projectId);
     }
-    setDisplayedUnreadIds(prev => {
-      const newSet = new Set(prev);
-      newSet.delete(projectId);
-      return newSet;
-    });
     navigate(`/projects/${projectSlug}`);
   };
 
@@ -182,7 +179,7 @@ const Projects = () => {
           <div className="flex items-center gap-2">
             <ProjectAdvancedFilters
               filters={advancedFilters}
-              onFiltersChange={setAdvancedFilters}
+              onFiltersChange={handleFiltersChange}
               allPeople={allPeople}
             />
             <Button><Plus className="mr-2 h-4 w-4" /> New Project</Button>
