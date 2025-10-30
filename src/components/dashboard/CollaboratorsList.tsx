@@ -42,7 +42,7 @@ const CollaboratorsList = () => {
   };
 
   const { collaboratorsByRole, allCollaborators } = useMemo(() => {
-    const roleHierarchy: Record<string, number> = { 'owner': 1, 'admin': 2, 'editor': 3, 'member': 4 };
+    const roleHierarchy: Record<string, number> = { 'master admin': 0, 'admin': 1, 'owner': 2, 'editor': 3, 'member': 4, 'client': 5 };
     
     const grouped: Record<string, CollaboratorStat[]> = {};
     collaborators.forEach(collab => {
@@ -54,9 +54,9 @@ const CollaboratorsList = () => {
     });
 
     const orderedGrouped: Record<string, CollaboratorStat[]> = {};
-    Object.keys(roleHierarchy).forEach(role => {
+    Object.keys(grouped).sort((a, b) => (roleHierarchy[a] ?? 99) - (roleHierarchy[b] ?? 99)).forEach(role => {
         if (grouped[role]) {
-            orderedGrouped[role] = grouped[role].sort((a, b) => b.project_count - a.project_count);
+            orderedGrouped[role] = grouped[role].sort((a, b) => a.name.localeCompare(b.name));
         }
     });
     
