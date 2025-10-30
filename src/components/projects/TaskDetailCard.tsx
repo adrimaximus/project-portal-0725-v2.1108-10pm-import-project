@@ -89,14 +89,14 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
 
   return (
     <DialogContent 
-      className="bg-transparent border-none shadow-none p-0 w-auto max-w-[650px] h-auto max-h-[85vh]"
+      className="bg-transparent border-none shadow-none p-0 w-auto max-w-[650px] h-[85vh]"
     >
       <motion.div
         drag
         dragMomentum={false}
         dragControls={dragControls}
         dragListener={false}
-        className="w-[90vw] max-w-[650px] max-h-[85vh] rounded-lg overflow-hidden bg-background border shadow-lg flex flex-col"
+        className="w-[90vw] max-w-[650px] h-full rounded-lg overflow-hidden bg-background border shadow-lg flex flex-col"
       >
         <DialogHeader 
           onPointerDown={(e) => dragControls.start(e)}
