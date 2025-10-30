@@ -46,7 +46,7 @@ const TaskAttachmentList = ({ attachments }: TaskAttachmentListProps) => {
   };
 
   return (
-    <ul className="space-y-1 max-h-96 overflow-y-auto pr-1">
+    <ul className="space-y-1 pr-1">
       {attachments.map((file) => (
         <li key={file.id} className="flex items-center justify-between p-1.5 rounded-md hover:bg-muted">
           <div className="flex items-center gap-2 truncate flex-1">
