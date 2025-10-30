@@ -1,7 +1,7 @@
 export const defaultNavItems = [
   { name: 'Dashboard', url: '/dashboard', icon: 'LayoutDashboard', folder_id: null },
   { name: 'Projects', url: '/projects?view=list', icon: 'Briefcase', folder_id: null },
-  { name: 'Tasks', url: '/projects?view=tasks-kanban', icon: 'ListChecks', folder_id: null },
+  { name: 'Tasks', url: '/projects?view=tasks', icon: 'ListChecks', folder_id: null },
   { name: 'Requests', url: '/request', icon: 'Mail', folder_id: null },
   { name: 'Chat', url: '/chat', icon: 'MessageSquare', folder_id: null },
   { name: 'Mood Trackers', url: '/mood-tracker', icon: 'Smile', folder_id: null },

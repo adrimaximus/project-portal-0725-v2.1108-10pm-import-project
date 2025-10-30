@@ -249,7 +249,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
             href = item.url;
           }
         } else if (itemNameLower === 'tasks' && unreadTaskInfo?.hasUnread) {
-          href = `/projects?view=tasks-kanban&highlight=${unreadTaskInfo.latestTaskId}`;
+          href = `/projects?view=tasks&highlight=${unreadTaskInfo.latestTaskId}`;
         } else if (item.type === 'multi_embed') {
           href = `/multipage/${item.slug}`;
         } else if (item.url.startsWith('/')) {
