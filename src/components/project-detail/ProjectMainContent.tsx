@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Project, Task, Reaction } from "@/types";
+import { useState, useEffect } from 'react';
+import { Project, Task } from "@/types";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ProjectComments from '@/components/ProjectComments';
 import { useAuth } from '@/contexts/AuthContext';
@@ -40,6 +40,20 @@ const ProjectMainContent = ({
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState(defaultTab);
   const [lastViewedDiscussion, setLastViewedDiscussion] = useState(() => new Date());
+
+  useEffect(() => {
+    // Automatically update status to 'In Progress' if tasks or activities are added
+    // to a project that hasn't been started yet.
+    if (project.status === 'Not Started') {
+      const hasTasks = project.tasks && project.tasks.length > 0;
+      // The first activity is project creation, so we check for more than one.
+      const hasMeaningfulActivity = project.activities && project.activities.length > 1;
+
+      if (hasTasks || hasMeaningfulActivity) {
+        onFieldChange('status', 'In Progress');
+      }
+    }
+  }, [project.tasks, project.activities, project.status, onFieldChange]);
 
   if (!user) {
     return null;
