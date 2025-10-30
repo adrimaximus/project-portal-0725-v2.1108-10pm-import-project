@@ -922,7 +922,24 @@ async function generateCaption(payload: any, context: any) {
   const systemPrompt = `You are an AI that generates a short, inspiring, one-line caption for an image. The caption should be suitable for a professional dashboard related to events, marketing, and project management. Respond with ONLY the caption, no extra text or quotes. Keep it under 12 words.`;
   const userPrompt = `Generate a caption for an image described as: "${altText}"`;
 
-  // Try OpenAI first
+  // Try Anthropic first
+  try {
+    const anthropic = await getAnthropicClient(supabaseAdmin);
+    const response = await anthropic.messages.create({
+      model: "claude-3-haiku-20240307",
+      system: systemPrompt,
+      messages: [{ role: "user", content: userPrompt }],
+      max_tokens: 30,
+    });
+    const caption = response.content[0].text.trim().replace(/"/g, '');
+    if (caption) {
+      return { caption };
+    }
+  } catch (anthropicError) {
+    console.warn("Anthropic failed for caption generation, trying OpenAI.", anthropicError.message);
+  }
+
+  // Fallback to OpenAI
   try {
     const openai = await getOpenAIClient(supabaseAdmin);
     const response = await openai.chat.completions.create({
@@ -939,24 +956,7 @@ async function generateCaption(payload: any, context: any) {
       return { caption };
     }
   } catch (openaiError) {
-    console.warn("OpenAI failed for caption generation, trying Anthropic.", openaiError.message);
-  }
-
-  // Fallback to Anthropic
-  try {
-    const anthropic = await getAnthropicClient(supabaseAdmin);
-    const response = await anthropic.messages.create({
-      model: "claude-3-haiku-20240307",
-      system: systemPrompt,
-      messages: [{ role: "user", content: userPrompt }],
-      max_tokens: 30,
-    });
-    const caption = response.content[0].text.trim().replace(/"/g, '');
-    if (caption) {
-      return { caption };
-    }
-  } catch (anthropicError) {
-    console.error("Anthropic also failed for caption generation.", anthropicError.message);
+    console.error("OpenAI also failed for caption generation.", openaiError.message);
   }
 
   // If both fail, return the original altText as a fallback caption.
