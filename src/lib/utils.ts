@@ -34,6 +34,14 @@ export function getInitials(name?: string, fallback?: string): string {
 }
 
 export function generatePastelColor(seed: string): { backgroundColor: string; color: string } {
+  if (!seed) {
+    const h = 0;
+    const s = 0;
+    const l = 80;
+    const backgroundColor = `hsl(${h}, ${s}%, ${l}%)`; // A neutral gray
+    const color = `hsl(${h}, ${s}%, 20%)`;
+    return { backgroundColor, color };
+  }
   let hash = 0;
   for (let i = 0; i < seed.length; i++) {
     hash = seed.charCodeAt(i) + ((hash << 5) - hash);
