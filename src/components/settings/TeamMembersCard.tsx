@@ -12,10 +12,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { User } from '@/types';
 import { Role } from './RoleManagerDialog';
-import { formatDistanceToNow } from 'date-fns';
-import { id } from 'date-fns/locale';
 import { useAuth } from '@/contexts/AuthContext';
-import { getAvatarUrl } from '@/lib/utils';
+import { getAvatarUrl, safeFormatDistanceToNow } from '@/lib/utils';
 
 interface TeamMembersCardProps {
   members: User[];
@@ -127,23 +125,25 @@ const TeamMembersCard = ({
   return (
     <Card>
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-        <CardHeader>
-          <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-            <CollapsibleTrigger className="flex-grow text-left flex justify-between items-center">
-              <div>
-                  <CardTitle>Current Members</CardTitle>
-                  <CardDescription>Review and manage existing team members.</CardDescription>
-              </div>
-              <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />
-            </CollapsibleTrigger>
-            <div className="relative w-full sm:w-auto sm:max-w-xs" onClick={(e) => e.stopPropagation()}>
-              <Search className="absolute left-2.5 top-3 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Search by name..." className="pl-8 w-full" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-            </div>
+        <div className="flex items-center justify-between p-6">
+          <div>
+            <CardTitle>Current Members</CardTitle>
+            <CardDescription>Review and manage existing team members.</CardDescription>
           </div>
-        </CardHeader>
+          <div className="flex items-center gap-2">
+            <Button onClick={onCreateRole}>
+              <PlusCircle className="mr-2 h-4 w-4" /> Create Role
+            </Button>
+            <CollapsibleTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-9 w-9">
+                <ChevronsUpDown className="h-4 w-4" />
+                <span className="sr-only">Toggle</span>
+              </Button>
+            </CollapsibleTrigger>
+          </div>
+        </div>
         <CollapsibleContent>
-          <CardContent>
+          <CardContent className="pt-0">
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
@@ -178,7 +178,7 @@ const TeamMembersCard = ({
                           <Badge variant={getStatusBadgeVariant(member.status)}>Pending invite</Badge>
                         ) : (
                           <span className="text-muted-foreground">
-                            {member.updated_at ? formatDistanceToNow(new Date(member.updated_at), { addSuffix: true, locale: id }) : 'N/A'}
+                            {safeFormatDistanceToNow(member.updated_at) || 'N/A'}
                           </span>
                         )}
                       </TableCell>

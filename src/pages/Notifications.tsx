@@ -3,12 +3,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { notificationIcons } from "@/data/notifications";
 import { cn } from "@/lib/utils";
-import { formatDistanceToNow } from 'date-fns';
 import { Link } from "react-router-dom";
 import { Bell, CheckCheck, Loader2, AlertTriangle } from "lucide-react";
 import { useNotifications } from "@/hooks/useNotifications";
-import { id } from 'date-fns/locale';
 import { Skeleton } from "@/components/ui/skeleton";
+import { safeFormatDistanceToNow } from "@/lib/utils";
 
 const NotificationSkeleton = () => (
   <div className="flex items-start gap-4 p-4">
@@ -100,7 +99,7 @@ const NotificationsPage = () => {
                         </Link>
                         <p className="text-sm text-muted-foreground">{notification.description}</p>
                         <p className="text-xs text-muted-foreground mt-1">
-                          {notification.timestamp ? formatDistanceToNow(new Date(notification.timestamp), { addSuffix: true, locale: id }) : ''}
+                          {safeFormatDistanceToNow(notification.timestamp)}
                         </p>
                       </div>
                       {notification.read ? (

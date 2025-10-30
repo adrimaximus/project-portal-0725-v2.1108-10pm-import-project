@@ -1,7 +1,7 @@
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
-import { format } from 'date-fns';
-import { id } from 'date-fns/locale';
+import { format, formatDistanceToNow as formatDistanceToNowFns, Locale } from 'date-fns';
+import { id, id as idLocale } from 'date-fns/locale';
 import { isSameDay, subDays, isPast as isPastDate } from 'date-fns';
 import { colors } from "@/data/colors";
 
@@ -207,4 +207,19 @@ export const getErrorMessage = (error: any, defaultMessage: string = "An unknown
   }
 
   return message;
+};
+
+export const safeFormatDistanceToNow = (dateInput: string | Date | null | undefined, options?: { addSuffix?: boolean, locale?: Locale }): string => {
+  if (!dateInput) return '';
+  try {
+    const date = new Date(dateInput);
+    if (isNaN(date.getTime())) {
+      console.warn(`Invalid date value provided to safeFormatDistanceToNow: ${dateInput}`);
+      return '';
+    }
+    return formatDistanceToNowFns(date, { addSuffix: true, locale: idLocale, ...options });
+  } catch (e) {
+    console.error("Error in safeFormatDistanceToNow:", e);
+    return '';
+  }
 };

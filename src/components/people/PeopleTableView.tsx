@@ -5,13 +5,12 @@ import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { MoreHorizontal, Edit, Trash2, User as UserIcon, Briefcase, MapPin, Mail, Instagram, Twitter, Linkedin } from 'lucide-react';
-import { generatePastelColor, getAvatarUrl, getInitials, formatPhoneNumberForApi } from '@/lib/utils';
+import { generatePastelColor, getAvatarUrl, getInitials, formatPhoneNumberForApi, safeFormatDistanceToNow } from '@/lib/utils';
 import { Badge } from '../ui/badge';
 import WhatsappIcon from '../icons/WhatsappIcon';
 import { toast } from 'sonner';
 import { useIsMobile } from '@/hooks/use-mobile';
 import PersonListCard from './PersonListCard';
-import { formatDistanceToNow } from 'date-fns';
 
 interface PeopleTableViewProps {
   people: Person[];
@@ -168,7 +167,7 @@ const PeopleTableView: React.FC<PeopleTableViewProps> = ({ people, isLoading, on
                       </div>
                     </TableCell>
                     <TableCell className="hidden lg:table-cell text-sm text-muted-foreground cursor-pointer" onClick={() => onViewProfile(person)}>
-                      {formatDistanceToNow(new Date(person.updated_at), { addSuffix: true })}
+                      {safeFormatDistanceToNow(person.updated_at)}
                     </TableCell>
                     <TableCell className="text-right sticky right-0 bg-card z-10">
                       <DropdownMenu>
