@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { Task, TaskAttachment, Reaction, User } from '@/types';
 import { DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
@@ -18,7 +18,7 @@ import { toast } from 'sonner';
 import TaskDiscussion from './TaskDiscussion';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { motion } from 'framer-motion';
+import { motion, useDragControls } from 'framer-motion';
 
 interface TaskDetailCardProps {
   task: Task;
@@ -61,7 +61,7 @@ const aggregateAttachments = (task: Task): TaskAttachment[] => {
 
 const getDueDateClassName = (dueDateStr: string | null, completed: boolean): string => {
   if (!dueDateStr || completed) {
-    return "text-muted-foreground";
+    return "text-muted-foreground text-xs";
   }
 
   const dueDate = new Date(dueDateStr);
@@ -69,15 +69,15 @@ const getDueDateClassName = (dueDateStr: string | null, completed: boolean): str
   const diffHours = (dueDate.getTime() - now.getTime()) / (1000 * 60 * 60);
 
   if (diffHours < 0) {
-    return "text-red-600 font-bold"; // Overdue
+    return "text-red-600 font-bold text-xs"; // Overdue
   }
   if (diffHours <= 1) {
-    return "text-primary font-bold"; // Due within 1 hour
+    return "text-primary font-bold text-xs"; // Due within 1 hour
   }
   if (diffHours <= 24) {
-    return "text-primary"; // Due within 1 day
+    return "text-primary text-xs"; // Due within 1 day
   }
-  return "text-muted-foreground"; // Not due soon
+  return "text-muted-foreground text-xs"; // Not due soon
 };
 
 const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, onDelete }) => {
@@ -86,6 +86,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
   const descriptionIsLong = task.description && task.description.length > 200;
   const [isDescriptionOpen, setIsDescriptionOpen] = useState(!descriptionIsLong);
   const [isAttachmentsOpen, setIsAttachmentsOpen] = useState(false);
+  const dragControls = useDragControls();
 
   const allAttachments = useMemo(() => {
     if (!task) return [];
@@ -120,10 +121,14 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
       <motion.div
         drag
         dragMomentum={false}
-        dragHandle=".drag-handle"
+        dragControls={dragControls}
+        dragListener={false}
         className="w-[90vw] max-w-[650px] max-h-[85vh] rounded-lg overflow-hidden bg-background border shadow-lg flex flex-col"
       >
-        <DialogHeader className="p-3 sm:p-4 border-b-[3px] border-primary sticky top-0 bg-background z-10 cursor-grab active:cursor-grabbing drag-handle">
+        <DialogHeader 
+          onPointerDown={(e) => dragControls.start(e)}
+          className="p-3 sm:p-4 border-b-[3px] border-primary sticky top-0 bg-background z-10 cursor-grab active:cursor-grabbing drag-handle"
+        >
           <div className="flex justify-between items-start gap-2 sm:gap-4">
             <div className="flex-1 min-w-0">
               <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
