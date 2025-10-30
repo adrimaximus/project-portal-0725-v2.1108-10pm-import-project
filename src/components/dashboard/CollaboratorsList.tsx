@@ -20,7 +20,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ChevronsUpDown, ChevronDown, Users } from "lucide-react";
+import { ChevronsUpDown, ChevronDown, Users, Briefcase, Hourglass, ListChecks, Ticket, CreditCard } from "lucide-react";
 import { generatePastelColor, getAvatarUrl, safeFormatDistanceToNow } from '@/lib/utils';
 import {
   DropdownMenu,
@@ -147,17 +147,27 @@ const CollaboratorsList = () => {
                                 </Avatar>
                                 <span className="font-medium">{c.name}</span>
                               </div>
-                              <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                                <div className="text-muted-foreground">Total Projects</div>
-                                <div className="text-right font-medium">{c.project_count}</div>
-                                <div className="text-muted-foreground">{filterLabels[filter]}</div>
-                                <div className="text-right font-medium">{getFilteredCount(c)}</div>
-                                <div className="text-muted-foreground">Active Tasks</div>
-                                <div className="text-right font-medium">{c.active_task_count}</div>
-                                <div className="text-muted-foreground">Active Tickets</div>
-                                <div className="text-right font-medium">{c.active_ticket_count}</div>
-                                <div className="text-muted-foreground">Overdue Bill</div>
-                                <div className="text-right font-medium">{c.overdue_bill_count}</div>
+                              <div className="space-y-3 text-sm">
+                                <div className="flex justify-between items-center">
+                                  <span className="flex items-center gap-2 text-muted-foreground"><Briefcase className="h-4 w-4" /> Total Projects</span>
+                                  <span className="font-medium">{c.project_count}</span>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                  <span className="flex items-center gap-2 text-muted-foreground"><Hourglass className="h-4 w-4" /> {filterLabels[filter]}</span>
+                                  <span className="font-medium">{getFilteredCount(c)}</span>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                  <span className="flex items-center gap-2 text-muted-foreground"><ListChecks className="h-4 w-4" /> Active Tasks</span>
+                                  <span className="font-medium">{c.active_task_count}</span>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                  <span className="flex items-center gap-2 text-muted-foreground"><Ticket className="h-4 w-4" /> Active Tickets</span>
+                                  <span className="font-medium">{c.active_ticket_count}</span>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                  <span className="flex items-center gap-2 text-muted-foreground"><CreditCard className="h-4 w-4" /> Overdue Bill</span>
+                                  <span className="font-medium">{c.overdue_bill_count}</span>
+                                </div>
                               </div>
                             </div>
                           ))}
@@ -187,8 +197,7 @@ const CollaboratorsList = () => {
                                     </DropdownMenuContent>
                                   </DropdownMenu>
                                 </TableHead>
-                                <TableHead className="text-right">Active Tasks</TableHead>
-                                <TableHead className="text-right">Active Tickets</TableHead>
+                                <TableHead className="text-right">Active Work (Tasks / Tickets)</TableHead>
                                 <TableHead className="text-right">Overdue Bill</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -202,7 +211,10 @@ const CollaboratorsList = () => {
                                     </h3>
                                   </TableCell>
                                 </TableRow>
-                                {collaboratorsInRole.map(c => (
+                                {collaboratorsInRole.map(c => {
+                                  const ticketPercentage = c.active_task_count > 0 ? (c.active_ticket_count / c.active_task_count) * 100 : 0;
+                                  const nonTicketTasks = c.active_task_count - c.active_ticket_count;
+                                  return (
                                     <TableRow key={c.id}>
                                         <TableCell>
                                             <div className="flex items-center gap-3">
@@ -215,11 +227,28 @@ const CollaboratorsList = () => {
                                         </TableCell>
                                         <TableCell className="text-right font-medium">{c.project_count}</TableCell>
                                         <TableCell className="text-right font-medium">{getFilteredCount(c)}</TableCell>
-                                        <TableCell className="text-right font-medium">{c.active_task_count}</TableCell>
-                                        <TableCell className="text-right font-medium">{c.active_ticket_count}</TableCell>
+                                        <TableCell className="text-right font-medium">
+                                          <TooltipProvider>
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <div className="flex items-center justify-end gap-2">
+                                                  <span>{c.active_task_count}</span>
+                                                  <div className="w-16 h-2 bg-muted rounded-full overflow-hidden flex">
+                                                    <div style={{ width: `${ticketPercentage}%` }} className="bg-destructive h-full"></div>
+                                                  </div>
+                                                </div>
+                                              </TooltipTrigger>
+                                              <TooltipContent>
+                                                <p>{c.active_ticket_count} ticket(s)</p>
+                                                <p>{nonTicketTasks} other task(s)</p>
+                                              </TooltipContent>
+                                            </Tooltip>
+                                          </TooltipProvider>
+                                        </TableCell>
                                         <TableCell className="text-right font-medium">{c.overdue_bill_count}</TableCell>
                                     </TableRow>
-                                ))}
+                                  )
+                                })}
                               </React.Fragment>
                             ))}
                         </TableBody>
