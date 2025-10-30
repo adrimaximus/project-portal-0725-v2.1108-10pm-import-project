@@ -116,7 +116,6 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
   return (
     <DialogContent 
       className="bg-transparent border-none shadow-none p-0 w-auto max-w-[650px] h-auto max-h-[85vh]"
-      onInteractOutside={(e) => e.preventDefault()}
     >
       <motion.div
         drag
