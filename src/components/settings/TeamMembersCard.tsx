@@ -131,9 +131,6 @@ const TeamMembersCard = ({
             <CardDescription>Review and manage existing team members.</CardDescription>
           </div>
           <div className="flex items-center gap-2">
-            <Button onClick={onCreateRole}>
-              <PlusCircle className="mr-2 h-4 w-4" /> Create Role
-            </Button>
             <CollapsibleTrigger asChild>
               <Button variant="ghost" size="icon" className="h-9 w-9">
                 <ChevronsUpDown className="h-4 w-4" />
@@ -144,6 +141,15 @@ const TeamMembersCard = ({
         </div>
         <CollapsibleContent>
           <CardContent className="pt-0">
+            <div className="relative mb-4">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by name or email..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-8"
+              />
+            </div>
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
