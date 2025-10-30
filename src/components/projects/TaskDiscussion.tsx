@@ -250,25 +250,26 @@ const TaskDiscussion = ({ task, onToggleReaction }: TaskDiscussionProps) => {
                                 <span>
                                   {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
                                 </span>
-                                {canManageComment && (
-                                  <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <DropdownMenu>
-                                      <DropdownMenuTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="h-6 w-6">
-                                          <MoreHorizontal className="h-4 w-4" />
-                                        </Button>
-                                      </DropdownMenuTrigger>
-                                      <DropdownMenuContent align="end">
-                                        <DropdownMenuItem onSelect={() => handleEditClick(comment)}>
-                                          <Edit className="mr-2 h-4 w-4" /> Edit
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem onSelect={() => setCommentToDelete(comment)} className="text-destructive">
-                                          <Trash2 className="mr-2 h-4 w-4" /> Delete
-                                        </DropdownMenuItem>
-                                      </DropdownMenuContent>
-                                    </DropdownMenu>
-                                  </div>
-                                )}
+                                <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <CommentReactions reactions={comment.reactions || []} onToggleReaction={(emoji) => handleToggleCommentReaction(comment.id, emoji)} />
+                                  {canManageComment && (
+                                      <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                          <Button variant="ghost" size="icon" className="h-6 w-6">
+                                            <MoreHorizontal className="h-4 w-4" />
+                                          </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end">
+                                          <DropdownMenuItem onSelect={() => handleEditClick(comment)}>
+                                            <Edit className="mr-2 h-4 w-4" /> Edit
+                                          </DropdownMenuItem>
+                                          <DropdownMenuItem onSelect={() => setCommentToDelete(comment)} className="text-destructive">
+                                            <Trash2 className="mr-2 h-4 w-4" /> Delete
+                                          </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                      </DropdownMenu>
+                                  )}
+                                </div>
                               </div>
                             </div>
                             {attachments.length > 0 && (
@@ -278,9 +279,6 @@ const TaskDiscussion = ({ task, onToggleReaction }: TaskDiscussionProps) => {
                                 ))}
                               </div>
                             )}
-                            <div className="mt-1 flex items-center gap-2">
-                              <CommentReactions reactions={comment.reactions || []} onToggleReaction={(emoji) => handleToggleCommentReaction(comment.id, emoji)} />
-                            </div>
                           </>
                         )}
                       </div>
