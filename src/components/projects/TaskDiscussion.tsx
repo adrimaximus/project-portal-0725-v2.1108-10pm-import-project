@@ -38,7 +38,7 @@ const TaskDiscussion = ({ task, onToggleReaction }: TaskDiscussionProps) => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('comments')
-        .select('*, author:profiles(*), reactions:comment_reactions(*, profiles!inner(first_name, last_name))')
+        .select('*, author:profiles(*), reactions:comment_reactions(*, profiles(*))')
         .eq('task_id', task.id)
         .order('created_at', { ascending: true });
       if (error) throw error;
