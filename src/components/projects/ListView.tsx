@@ -9,7 +9,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Clock, Trash2, MapPin, CheckCircle } from 'lucide-react';
+import { MoreHorizontal, Clock, Trash2, MapPin, CheckCircle, XCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { getProjectStatusStyles, formatInJakarta, generatePastelColor, getAvatarUrl } from '@/lib/utils';
 import { format, isSameDay, subDays, isBefore, startOfToday } from 'date-fns';
@@ -73,6 +73,7 @@ const DayEntry = ({ dateStr, projectsOnDay, showMonthHeader, onDeleteProject, on
             
             const formattedVenue = formatVenue(project.venue);
             const hasUnread = unreadProjectIds.has(project.id);
+            const isCancelledOrLost = project.status === 'Cancelled' || project.status === 'Bid Lost' || project.payment_status === 'Cancelled';
 
             return (
               <div 
@@ -98,7 +99,11 @@ const DayEntry = ({ dateStr, projectsOnDay, showMonthHeader, onDeleteProject, on
                   <div className="flex-1 min-w-0">
                     <div className="font-medium flex items-center gap-2">
                       {hasUnread && <span className="h-2 w-2 rounded-full bg-red-500 flex-shrink-0" title="Unread activity" />}
-                      {project.status === 'Completed' && <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />}
+                      {isCancelledOrLost ? (
+                        <XCircle className="h-4 w-4 text-red-500 flex-shrink-0" />
+                      ) : project.status === 'Completed' ? (
+                        <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />
+                      ) : null}
                       <p className="truncate" title={project.name}>{project.name}</p>
                     </div>
                     {project.venue && (
