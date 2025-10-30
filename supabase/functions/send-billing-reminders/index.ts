@@ -88,7 +88,7 @@ serve(async (req) => {
       let reminderType: string | null = null;
       if (overdueDays === 0) reminderType = 'due_date';
       else if (overdueDays === 3) reminderType = 'overdue_3_days';
-      else if (overdueDays > 3 && (daysOverdue - 3) % 7 === 0) reminderType = 'overdue_weekly';
+      else if (overdueDays > 3 && (overdueDays - 3) % 7 === 0) reminderType = 'overdue_weekly';
 
       if (!reminderType) continue;
 
