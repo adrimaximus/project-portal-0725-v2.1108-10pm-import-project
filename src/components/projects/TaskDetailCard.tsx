@@ -167,7 +167,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
           </div>
         </DialogHeader>
         
-        <div className="h-full overflow-y-auto">
+        <div className="flex-1 overflow-y-auto min-h-0">
           <div className="p-3 sm:p-4 space-y-3 sm:space-y-4 text-xs sm:text-sm">
             {task.description && (
               <Collapsible
