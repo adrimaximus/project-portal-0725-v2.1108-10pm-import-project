@@ -521,8 +521,8 @@ const ProjectsPage = () => {
       />
 
       <GoogleCalendarImportDialog
-        isOpen={isImportDialogOpen}
-        onClose={() => setIsImportDialogOpen(false)}
+        open={isImportDialogOpen}
+        onOpenChange={setIsImportDialogOpen}
         onImport={(events) => importEventsMutation.mutate(events)}
         isImporting={importEventsMutation.isPending}
       />
