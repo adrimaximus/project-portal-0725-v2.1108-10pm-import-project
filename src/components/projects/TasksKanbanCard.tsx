@@ -135,26 +135,29 @@ const TasksKanbanCard = ({ task, onEdit, onDelete, isHighlighted = false, onHigh
                 {formatTaskText(task.title)}
               </ReactMarkdown>
             </CardTitle>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild onClick={handleDropdownClick}>
-                <Button variant="ghost" size="icon" className="h-6 w-6 flex-shrink-0">
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" onClick={handleDropdownClick}>
-                <DropdownMenuItem onClick={() => onEdit(task)}>
-                  <Edit className="mr-2 h-4 w-4" />
-                  Edit
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  className="text-red-500"
-                  onClick={() => onDelete(task.id)}
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Delete
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <div className="flex items-center gap-1 flex-shrink-0">
+              <TaskReactions reactions={task.reactions || []} onToggleReaction={handleToggleReaction} />
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild onClick={handleDropdownClick}>
+                  <Button variant="ghost" size="icon" className="h-6 w-6 flex-shrink-0">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" onClick={handleDropdownClick}>
+                  <DropdownMenuItem onClick={() => onEdit(task)}>
+                    <Edit className="mr-2 h-4 w-4" />
+                    Edit
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="text-red-500"
+                    onClick={() => onDelete(task.id)}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="p-3 pt-0">
@@ -180,13 +183,15 @@ const TasksKanbanCard = ({ task, onEdit, onDelete, isHighlighted = false, onHigh
                   return (
                     <TooltipProvider key={user.id}>
                       <Tooltip>
-                        <TooltipTrigger>
-                          <Avatar className="h-6 w-6 border-2 border-background">
-                            <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
-                            <AvatarFallback style={generatePastelColor(user.id)}>
-                              {getInitials([user.first_name, user.last_name].filter(Boolean).join(' '), user.email || undefined)}
-                            </AvatarFallback>
-                          </Avatar>
+                        <TooltipTrigger asChild>
+                          <Link to="/chat" state={{ recipient: user }} onClick={(e) => e.stopPropagation()}>
+                            <Avatar className="h-6 w-6 border-2 border-background">
+                              <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
+                              <AvatarFallback style={generatePastelColor(user.id)}>
+                                {getInitials([user.first_name, user.last_name].filter(Boolean).join(' '), user.email || undefined)}
+                              </AvatarFallback>
+                            </Avatar>
+                          </Link>
                         </TooltipTrigger>
                         <TooltipContent>
                           <p>{[user.first_name, user.last_name].filter(Boolean).join(' ')}</p>
@@ -218,9 +223,6 @@ const TasksKanbanCard = ({ task, onEdit, onDelete, isHighlighted = false, onHigh
                 </div>
               )}
             </div>
-          </div>
-          <div className="mt-2 pt-2 border-t">
-            <TaskReactions reactions={task.reactions || []} onToggleReaction={handleToggleReaction} />
           </div>
         </CardContent>
       </Card>
