@@ -19,6 +19,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Link } from 'react-router-dom';
 import CommentReactions from '../CommentReactions';
+import CommentReactionPicker from '../CommentReactionPicker';
 
 interface TaskDiscussionProps {
   task: Task;
@@ -250,8 +251,11 @@ const TaskDiscussion = ({ task, onToggleReaction }: TaskDiscussionProps) => {
                                 <span>
                                   {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
                                 </span>
+                                <CommentReactions reactions={comment.reactions || []} onToggleReaction={(emoji) => handleToggleCommentReaction(comment.id, emoji)} />
                                 <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <CommentReactions reactions={comment.reactions || []} onToggleReaction={(emoji) => handleToggleCommentReaction(comment.id, emoji)} />
+                                  <div onClick={(e) => e.stopPropagation()}>
+                                    <CommentReactionPicker onSelect={(emoji) => handleToggleCommentReaction(comment.id, emoji)} />
+                                  </div>
                                   {canManageComment && (
                                       <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
