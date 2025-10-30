@@ -2,7 +2,7 @@ import { KbFolder } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Link } from 'react-router-dom';
 import { getIconComponent } from '@/data/icons';
-import { formatDistanceToNow } from 'date-fns';
+import { safeFormatDistanceToNow } from '@/lib/utils';
 import { Badge } from '../ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
 import { Button } from '../ui/button';
@@ -48,7 +48,7 @@ const FolderListView = ({ folders, onEdit, onDelete, requestSort }: FolderListVi
                   {folder.category ? <Badge variant="secondary">{folder.category}</Badge> : '-'}
                 </TableCell>
                 <TableCell className="text-muted-foreground">
-                  {folder.updated_at ? formatDistanceToNow(new Date(folder.updated_at), { addSuffix: true }) : ''}
+                  {safeFormatDistanceToNow(folder.updated_at)}
                 </TableCell>
                 <TableCell className="text-right">
                   <DropdownMenu>

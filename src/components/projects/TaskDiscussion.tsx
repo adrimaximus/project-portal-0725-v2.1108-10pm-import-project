@@ -7,7 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { v4 as uuidv4 } from 'uuid';
 import CommentInput from '../CommentInput';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
-import { formatDistanceToNow } from 'date-fns';
+import { safeFormatDistanceToNow } from '@/lib/utils';
 import { getInitials, generatePastelColor, formatMentionsForDisplay, getAvatarUrl } from '@/lib/utils';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
 import { Button } from '../ui/button';
@@ -270,7 +270,7 @@ const TaskDiscussion = ({ task, onToggleReaction }: TaskDiscussionProps) => {
                                   )}
                                 </TooltipProvider>
                                 <span>
-                                  {formatDistanceToNow(new Date(comment.timestamp), { addSuffix: true })}
+                                  {safeFormatDistanceToNow(comment.timestamp)}
                                 </span>
                                 <CommentReactions reactions={comment.reactions || []} onToggleReaction={(emoji) => handleToggleCommentReaction(comment.id, emoji)} />
                                 <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">

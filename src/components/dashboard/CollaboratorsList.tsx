@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ChevronsUpDown, ChevronDown } from "lucide-react";
-import { generatePastelColor, getAvatarUrl } from '@/lib/utils';
+import { generatePastelColor, getAvatarUrl, safeFormatDistanceToNow } from '@/lib/utils';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,7 +30,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { useCollaboratorStats, CollaboratorStat } from '@/hooks/useCollaboratorStats';
-import { formatDistanceToNow } from 'date-fns';
 
 const CollaboratorsList = () => {
   const [isOpen, setIsOpen] = useState(false);
