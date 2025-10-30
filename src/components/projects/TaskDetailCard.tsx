@@ -62,7 +62,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
   const { toggleTaskReaction } = useTaskMutations();
   const descriptionIsLong = task.description && task.description.length > 200;
   const [isDescriptionOpen, setIsDescriptionOpen] = useState(!descriptionIsLong);
-  const [isAttachmentsOpen, setIsAttachmentsOpen] = useState(false);
+  const [isAttachmentsOpen, setIsAttachmentsOpen] = useState(true);
   const dragControls = useDragControls();
 
   const allAttachments = useMemo(() => {
