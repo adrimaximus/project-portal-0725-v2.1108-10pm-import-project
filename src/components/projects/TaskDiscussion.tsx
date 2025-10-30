@@ -38,7 +38,7 @@ const TaskDiscussion = ({ task, onToggleReaction }: TaskDiscussionProps) => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('comments')
-        .select('*, author:profiles(*), reactions:comment_reactions(*, profiles(first_name, last_name))')
+        .select('*, author:profiles(*), reactions:comment_reactions(*, profiles!inner(first_name, last_name))')
         .eq('task_id', task.id)
         .order('created_at', { ascending: true });
       if (error) throw error;
@@ -189,7 +189,7 @@ const TaskDiscussion = ({ task, onToggleReaction }: TaskDiscussionProps) => {
                     <p className="font-semibold">{fullName}</p>
                     <div className="flex items-center gap-1">
                       <span className="text-xs text-muted-foreground">
-                        {formatDistanceToNow(new Date(comment.timestamp), { addSuffix: true })}
+                        {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
                       </span>
                       {canManageComment && (
                         <DropdownMenu>
