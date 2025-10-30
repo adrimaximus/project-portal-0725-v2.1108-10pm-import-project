@@ -153,7 +153,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
                 <h4 className="font-semibold">Description</h4>
                 <ChevronDown className={`h-4 w-4 shrink-0 transition-transform duration-200 ${isDescriptionOpen ? 'rotate-180' : ''}`} />
               </CollapsibleTrigger>
-              <CollapsibleContent className="pb-3 sm:pb-4">
+              <CollapsibleContent className="pb-3 sm:pb-4" forceMount>
                 <div className="prose prose-sm dark:prose-invert max-w-none text-muted-foreground break-all">
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>
                     {formatTaskText(task.description)}
@@ -178,7 +178,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
                 </h4>
                 <ChevronDown className={`h-4 w-4 shrink-0 transition-transform duration-200 ${isAttachmentsOpen ? 'rotate-180' : ''}`} />
               </CollapsibleTrigger>
-              <CollapsibleContent className="pb-3 sm:pb-4">
+              <CollapsibleContent className="pb-3 sm:pb-4" forceMount>
                 <TaskAttachmentList attachments={allAttachments} />
               </CollapsibleContent>
             </Collapsible>
