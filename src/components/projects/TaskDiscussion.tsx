@@ -167,7 +167,7 @@ const TaskDiscussion = ({ task, onToggleReaction }: TaskDiscussionProps) => {
       <TaskReactions reactions={task.reactions || []} onToggleReaction={onToggleReaction} />
       <div className="border-t pt-4">
         <h4 className="font-semibold mb-4">Discussion</h4>
-        <div className="space-y-4 pr-2 pb-4">
+        <div className="max-h-80 overflow-y-auto space-y-4 pr-2 pb-4">
           {isLoadingComments ? <p>Loading comments...</p> : comments.map(comment => {
             const author = comment.author as User;
             const fullName = `${author.first_name || ''} ${author.last_name || ''}`.trim() || author.email;
