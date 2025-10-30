@@ -36,11 +36,9 @@ const TaskDiscussion = ({ task, onToggleReaction }: TaskDiscussionProps) => {
   const { data: comments = [], isLoading: isLoadingComments } = useQuery({
     queryKey: ['task-comments', task.id],
     queryFn: async () => {
+      if (!task.id) return [];
       const { data, error } = await supabase
-        .from('comments')
-        .select('*, author:profiles(*), reactions:comment_reactions(*, profiles(*))')
-        .eq('task_id', task.id)
-        .order('created_at', { ascending: true });
+        .rpc('get_task_comments', { p_task_id: task.id });
       if (error) throw error;
       return data as CommentType[];
     },
@@ -171,9 +169,9 @@ const TaskDiscussion = ({ task, onToggleReaction }: TaskDiscussionProps) => {
         <h4 className="font-semibold mb-4">Discussion</h4>
         <div className="space-y-4 pr-2 pb-4">
           {isLoadingComments ? <p>Loading comments...</p> : comments.map(comment => {
-            const author = comment.author;
+            const author = comment.author as User;
             const fullName = `${author.first_name || ''} ${author.last_name || ''}`.trim() || author.email;
-            const canManageComment = user && (comment.author.id === user.id || user.role === 'admin' || user.role === 'master admin');
+            const canManageComment = user && (comment.author_id === user.id || user.role === 'admin' || user.role === 'master admin');
             const attachments = comment.attachments_jsonb || [];
 
             return (
