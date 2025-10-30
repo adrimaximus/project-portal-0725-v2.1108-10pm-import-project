@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Task, Comment as CommentType, User } from "@/types";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -7,7 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { v4 as uuidv4 } from 'uuid';
 import CommentInput from '../CommentInput';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
-import { formatDistanceToNow } from 'date-fns';
+import { format, formatDistanceToNow } from 'date-fns';
 import { getInitials, generatePastelColor, formatMentionsForDisplay, getAvatarUrl } from '@/lib/utils';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
 import { Button } from '../ui/button';
@@ -43,6 +43,34 @@ const TaskDiscussion = ({ task, onToggleReaction }: TaskDiscussionProps) => {
     },
     enabled: !!task.id,
   });
+
+  const groupedComments = useMemo(() => {
+    if (!comments || comments.length === 0) return [];
+
+    const groups: { author: User, messages: CommentType[] }[] = [];
+    let currentGroup: { author: User, messages: CommentType[] } | null = null;
+
+    for (const comment of comments) {
+      const timeDiff = currentGroup ? new Date(comment.created_at).getTime() - new Date(currentGroup.messages[currentGroup.messages.length - 1].created_at).getTime() : Infinity;
+      const fiveMinutes = 5 * 60 * 1000;
+
+      if (currentGroup && currentGroup.author.id === comment.author_id && timeDiff < fiveMinutes) {
+        currentGroup.messages.push(comment);
+      } else {
+        if (currentGroup) {
+          groups.push(currentGroup);
+        }
+        currentGroup = {
+          author: comment.author as User,
+          messages: [comment],
+        };
+      }
+    }
+    if (currentGroup) {
+      groups.push(currentGroup);
+    }
+    return groups;
+  }, [comments]);
 
   const addCommentMutation = useMutation({
     mutationFn: async ({ text, attachments, mentionedUserIds }: { text: string, attachments: File[] | null, mentionedUserIds: string[] }) => {
@@ -165,14 +193,12 @@ const TaskDiscussion = ({ task, onToggleReaction }: TaskDiscussionProps) => {
     <div>
       <h4 className="font-semibold mb-4">Discussion</h4>
       <div className="space-y-4 pr-2 pb-4">
-        {isLoadingComments ? <p>Loading comments...</p> : comments.map(comment => {
-          const author = comment.author as User;
+        {isLoadingComments ? <p>Loading comments...</p> : groupedComments.map((group, groupIndex) => {
+          const author = group.author;
           const fullName = `${author.first_name || ''} ${author.last_name || ''}`.trim() || author.email;
-          const canManageComment = user && (comment.author_id === user.id || user.role === 'admin' || user.role === 'master admin');
-          const attachments = comment.attachments_jsonb || [];
 
           return (
-            <div key={comment.id} className="flex items-start space-x-4">
+            <div key={groupIndex} className="flex items-start space-x-4">
               <Avatar>
                 <AvatarImage src={getAvatarUrl(author.avatar_url, author.id)} />
                 <AvatarFallback style={generatePastelColor(author.id)}>
@@ -180,75 +206,80 @@ const TaskDiscussion = ({ task, onToggleReaction }: TaskDiscussionProps) => {
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between">
-                  <p className="font-semibold">{fullName}</p>
-                  <div className="flex items-center gap-1">
-                    <span className="text-xs text-muted-foreground">
-                      {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
-                    </span>
-                    {canManageComment && (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-6 w-6">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onSelect={() => handleEditClick(comment)}>
-                            <Edit className="mr-2 h-4 w-4" /> Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onSelect={() => setCommentToDelete(comment)} className="text-destructive">
-                            <Trash2 className="mr-2 h-4 w-4" /> Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )}
-                  </div>
+                <p className="font-semibold">{fullName}</p>
+                <div className="space-y-1 mt-1">
+                  {group.messages.map(comment => {
+                    const canManageComment = user && (comment.author_id === user.id || user.role === 'admin' || user.role === 'master admin');
+                    const attachments = comment.attachments_jsonb || [];
+
+                    return (
+                      <div key={comment.id} className="group relative">
+                        {editingCommentId === comment.id ? (
+                          <div className="mt-2 space-y-2">
+                            <Textarea value={editedText} onChange={(e) => setEditedText(e.target.value)} autoFocus />
+                            <div className="flex justify-end gap-2">
+                              <Button variant="ghost" size="sm" onClick={handleCancelEdit}>Cancel</Button>
+                              <Button size="sm" onClick={handleSaveEdit}>Save</Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-between gap-2 p-2 rounded-md hover:bg-muted">
+                            <div className="flex-1 min-w-0">
+                              {comment.text && (
+                                <div className="prose prose-sm dark:prose-invert max-w-none break-words">
+                                  <ReactMarkdown
+                                    remarkPlugins={[remarkGfm]}
+                                    components={{
+                                      a: ({ node, ...props }) => {
+                                        const href = props.href || '';
+                                        if (href.startsWith('/')) {
+                                          return <Link to={href} {...props} className="text-primary hover:underline" />;
+                                        }
+                                        return <a {...props} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline" />;
+                                      }
+                                    }}
+                                  >
+                                    {formatMentionsForDisplay(comment.text)}
+                                  </ReactMarkdown>
+                                </div>
+                              )}
+                              {attachments.length > 0 && (
+                                <div className="mt-2 space-y-2">
+                                  {attachments.map((file: any, index: number) => (
+                                    <CommentAttachmentItem key={file.id || index} file={file} />
+                                  ))}
+                                </div>
+                              )}
+                              <CommentReactions reactions={comment.reactions || []} onToggleReaction={(emoji) => handleToggleCommentReaction(comment.id, emoji)} />
+                            </div>
+                            <div className="flex-shrink-0 self-start flex items-center gap-1">
+                              <span className="text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
+                                {format(new Date(comment.created_at), 'p')}
+                              </span>
+                              {canManageComment && (
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100">
+                                      <MoreHorizontal className="h-4 w-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuItem onSelect={() => handleEditClick(comment)}>
+                                      <Edit className="mr-2 h-4 w-4" /> Edit
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onSelect={() => setCommentToDelete(comment)} className="text-destructive">
+                                      <Trash2 className="mr-2 h-4 w-4" /> Delete
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
-                {editingCommentId === comment.id ? (
-                  <div className="mt-2 space-y-2">
-                    <Textarea value={editedText} onChange={(e) => setEditedText(e.target.value)} autoFocus />
-                    <div className="flex justify-end gap-2">
-                      <Button variant="ghost" size="sm" onClick={handleCancelEdit}>Cancel</Button>
-                      <Button size="sm" onClick={handleSaveEdit}>Save</Button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex justify-between items-start gap-4">
-                    <div className="flex-1 min-w-0">
-                      {comment.text && (
-                        <div className="prose prose-sm dark:prose-invert max-w-none mt-1 break-words">
-                          <ReactMarkdown
-                            remarkPlugins={[remarkGfm]}
-                            components={{
-                              a: ({ node, ...props }) => {
-                                const href = props.href || '';
-                                if (href.startsWith('/')) {
-                                  return <Link to={href} {...props} className="text-primary hover:underline" />;
-                                }
-                                return <a {...props} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline" />;
-                              }
-                            }}
-                          >
-                            {formatMentionsForDisplay(comment.text)}
-                          </ReactMarkdown>
-                        </div>
-                      )}
-                      {attachments.length > 0 && (
-                        <div className="mt-2 space-y-2">
-                          {attachments.map((file: any, index: number) => (
-                            <CommentAttachmentItem key={file.id || index} file={file} />
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex-shrink-0 mt-1 flex items-center gap-2">
-                      {comment.is_ticket && <Ticket className="h-4 w-4 text-muted-foreground" title="This comment is a ticket" />}
-                      {attachments.length > 0 && <Paperclip className="h-4 w-4 text-muted-foreground" title={`${attachments.length} attachment(s)`} />}
-                      <CommentReactions reactions={comment.reactions || []} onToggleReaction={(emoji) => handleToggleCommentReaction(comment.id, emoji)} />
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
           );
