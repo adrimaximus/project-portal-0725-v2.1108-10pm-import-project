@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Task, Comment as CommentType, User, Reaction } from "@/types";
+import { Task, Comment as CommentType, User } from "@/types";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -11,7 +11,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { getInitials, generatePastelColor, formatMentionsForDisplay, getAvatarUrl } from '@/lib/utils';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
 import { Button } from '../ui/button';
-import { MoreHorizontal, Edit, Trash2 } from 'lucide-react';
+import { MoreHorizontal, Edit, Trash2, Ticket, Paperclip } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../ui/alert-dialog';
 import { Textarea } from '../ui/textarea';
 import CommentAttachmentItem from '../CommentAttachmentItem';
@@ -214,34 +214,40 @@ const TaskDiscussion = ({ task, onToggleReaction }: TaskDiscussionProps) => {
                     </div>
                   </div>
                 ) : (
-                  <>
-                    <div className="prose prose-sm dark:prose-invert max-w-none mt-1 break-words">
-                      <ReactMarkdown
-                        remarkPlugins={[remarkGfm]}
-                        components={{
-                          a: ({ node, ...props }) => {
-                            const href = props.href || '';
-                            if (href.startsWith('/')) {
-                              return <Link to={href} {...props} className="text-primary hover:underline" />;
-                            }
-                            return <a {...props} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline" />;
-                          }
-                        }}
-                      >
-                        {formatMentionsForDisplay(comment.text)}
-                      </ReactMarkdown>
+                  <div className="flex justify-between items-start gap-4">
+                    <div className="flex-1 min-w-0">
+                      {comment.text && (
+                        <div className="prose prose-sm dark:prose-invert max-w-none mt-1 break-words">
+                          <ReactMarkdown
+                            remarkPlugins={[remarkGfm]}
+                            components={{
+                              a: ({ node, ...props }) => {
+                                const href = props.href || '';
+                                if (href.startsWith('/')) {
+                                  return <Link to={href} {...props} className="text-primary hover:underline" />;
+                                }
+                                return <a {...props} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline" />;
+                              }
+                            }}
+                          >
+                            {formatMentionsForDisplay(comment.text)}
+                          </ReactMarkdown>
+                        </div>
+                      )}
+                      {attachments.length > 0 && (
+                        <div className="mt-2 space-y-2">
+                          {attachments.map((file: any, index: number) => (
+                            <CommentAttachmentItem key={file.id || index} file={file} />
+                          ))}
+                        </div>
+                      )}
                     </div>
-                    {attachments.length > 0 && (
-                      <div className="mt-2 space-y-2">
-                        {attachments.map((file: any, index: number) => (
-                          <CommentAttachmentItem key={file.id || index} file={file} />
-                        ))}
-                      </div>
-                    )}
-                    <div className="mt-2 flex justify-end">
+                    <div className="flex-shrink-0 mt-1 flex items-center gap-2">
+                      {comment.is_ticket && <Ticket className="h-4 w-4 text-muted-foreground" title="This comment is a ticket" />}
+                      {attachments.length > 0 && <Paperclip className="h-4 w-4 text-muted-foreground" title={`${attachments.length} attachment(s)`} />}
                       <CommentReactions reactions={comment.reactions || []} onToggleReaction={(emoji) => handleToggleCommentReaction(comment.id, emoji)} />
                     </div>
-                  </>
+                  </div>
                 )}
               </div>
             </div>
