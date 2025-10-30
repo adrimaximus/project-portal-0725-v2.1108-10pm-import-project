@@ -100,7 +100,7 @@ const ProjectsPage = () => {
     setTaskSortConfig(prevConfig => {
       let direction: 'asc' | 'desc' = 'asc';
       if (prevConfig.key === key && prevConfig.direction === 'asc') {
-        direction = 'descending';
+        direction = 'desc';
       }
       return { key, direction };
     });
@@ -215,11 +215,57 @@ const ProjectsPage = () => {
 
   const unreadProjectIds = unreadProjectIdsSet || new Set<string>();
 
+  const markProjectNotificationsAsRead = useMutation({
+    mutationFn: async (projectId: string) => {
+      const { error } = await supabase.rpc('mark_project_notifications_as_read', { p_project_id: projectId });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['hasUnreadProjectActivity', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['unreadProjectIds', user?.id] });
+    },
+    onError: (error) => {
+      console.error("Error marking project notifications as read:", error);
+    }
+  });
+
+  const markMultipleProjectNotificationsAsRead = useMutation({
+    mutationFn: async (projectIds: string[]) => {
+        if (projectIds.length === 0) return;
+        const { error } = await supabase.rpc('mark_multiple_project_notifications_as_read', { p_project_ids: projectIds });
+        if (error) throw error;
+    },
+    onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['notifications', user?.id] });
+        queryClient.invalidateQueries({ queryKey: ['hasUnreadProjectActivity', user?.id] });
+        queryClient.invalidateQueries({ queryKey: ['unreadProjectIds', user?.id] });
+    },
+    onError: (error) => {
+        console.error("Error marking multiple project notifications as read:", error);
+    }
+  });
+
+  const [displayedUnreadIds, setDisplayedUnreadIds] = useState<Set<string>>(new Set());
+
+  const handleFiltersChange = (newFilters: AdvancedFiltersState) => {
+    if (newFilters.showUnreadOnly && !advancedFilters.showUnreadOnly) {
+      setDisplayedUnreadIds(unreadProjectIds);
+      if (unreadProjectIds.size > 0) {
+        markMultipleProjectNotificationsAsRead.mutate(Array.from(unreadProjectIds));
+      }
+    }
+    else if (!newFilters.showUnreadOnly) {
+      setDisplayedUnreadIds(new Set());
+    }
+    setAdvancedFilters(newFilters);
+  };
+
   const filteredProjects = useMemo(() => {
     return projectsData.filter(project => {
       const { selectedPeopleIds, status, showUnreadOnly } = advancedFilters;
 
-      if (showUnreadOnly && !unreadProjectIds.has(project.id)) {
+      if (showUnreadOnly && !displayedUnreadIds.has(project.id)) {
         return false;
       }
       
@@ -230,7 +276,7 @@ const ProjectsPage = () => {
       
       return statusMatch && assigneeMatch;
     });
-  }, [projectsData, advancedFilters, unreadProjectIds]);
+  }, [projectsData, advancedFilters, displayedUnreadIds]);
 
   const sortedProjects = useMemo(() => {
     let sortableItems = [...filteredProjects];
@@ -399,28 +445,12 @@ const ProjectsPage = () => {
     sortConfig: finalTaskSortConfig 
   }];
 
-  const markMultipleProjectNotificationsAsRead = useMutation({
-    mutationFn: async (projectIds: string[]) => {
-        if (projectIds.length === 0) return;
-        const { error } = await supabase.rpc('mark_multiple_project_notifications_as_read', { p_project_ids: projectIds });
-        if (error) throw error;
-    },
-    onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ['notifications', user?.id] });
-        queryClient.invalidateQueries({ queryKey: ['hasUnreadProjectActivity', user?.id] });
-        queryClient.invalidateQueries({ queryKey: ['unreadProjectIds', user?.id] });
-    },
-    onError: (error) => {
-        console.error("Error marking multiple project notifications as read:", error);
-    }
-  });
-
-  const handleProjectClick = (projectId: string, projectSlug: string) => {
+  const handleProjectClick = useCallback((projectId: string, projectSlug: string) => {
     if (unreadProjectIds.has(projectId)) {
       markProjectNotificationsAsRead.mutate(projectId);
     }
     navigate(`/projects/${projectSlug}`);
-  };
+  }, [unreadProjectIds, markProjectNotificationsAsRead, navigate]);
 
   // Restore scroll position on mount
   useEffect(() => {
@@ -491,8 +521,8 @@ const ProjectsPage = () => {
       />
 
       <GoogleCalendarImportDialog
-        open={isImportDialogOpen}
-        onOpenChange={setIsImportDialogOpen}
+        isOpen={isImportDialogOpen}
+        onClose={() => setIsImportDialogOpen(false)}
         onImport={(events) => importEventsMutation.mutate(events)}
         isImporting={importEventsMutation.isPending}
       />
