@@ -191,7 +191,7 @@ const TaskDiscussion = ({ task, onToggleReaction }: TaskDiscussionProps) => {
   return (
     <div>
       <h4 className="font-semibold mb-4">Discussion</h4>
-      <div className="space-y-4 pr-2 pb-4">
+      <div className="space-y-3 pr-2 pb-4">
         {isLoadingComments ? <p>Loading comments...</p> : groupedComments.map((group, groupIndex) => {
           const author = group.author;
           const fullName = `${author.first_name || ''} ${author.last_name || ''}`.trim() || author.email;
@@ -206,7 +206,7 @@ const TaskDiscussion = ({ task, onToggleReaction }: TaskDiscussionProps) => {
               </Avatar>
               <div className="flex-1 min-w-0">
                 <p className="font-semibold">{fullName}</p>
-                <div className="space-y-2 mt-1">
+                <div className="space-y-0.5">
                   {group.comments.map(comment => {
                     const canManageComment = user && (comment.author_id === user.id || user.role === 'admin' || user.role === 'master admin');
                     const attachments = comment.attachments_jsonb || [];
