@@ -19,6 +19,7 @@ import TaskDiscussion from './TaskDiscussion';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { motion, useDragControls } from 'framer-motion';
+import TaskReactions from './TaskReactions';
 
 interface TaskDetailCardProps {
   task: Task;
@@ -145,6 +146,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
               </p>
             </div>
             <div className="flex items-center gap-0 sm:gap-1 flex-shrink-0">
+              <TaskReactions reactions={task.reactions || []} onToggleReaction={handleToggleReaction} />
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8">
