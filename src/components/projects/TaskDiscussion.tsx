@@ -198,7 +198,7 @@ const TaskDiscussion = ({ task, onToggleReaction }: TaskDiscussionProps) => {
 
           return (
             <div key={`${author.id}-${groupIndex}`} className="flex items-start space-x-4">
-              <Avatar>
+              <Avatar className="h-6 w-6 sm:h-8 sm:w-8">
                 <AvatarImage src={getAvatarUrl(author.avatar_url, author.id)} />
                 <AvatarFallback style={generatePastelColor(author.id)}>
                   {getInitials(fullName, author.email)}
