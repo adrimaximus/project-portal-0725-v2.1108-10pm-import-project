@@ -65,14 +65,14 @@ export const getProjectStatusStyles = (status: string) => {
   switch (status) {
     case 'On Track':
     case 'Completed':
-      return { tw: 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400', hex: '#10B981' };
+      return { tw: 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400', hex: '#10B981', bgHexLight: '#D1FAE5', bgHexDark: '#064E3B' };
     case 'At Risk':
     case 'Off Track':
-      return { tw: 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400', hex: '#EF4444' };
+      return { tw: 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400', hex: '#EF4444', bgHexLight: '#FEE2E2', bgHexDark: '#7F1D1D' };
     case 'On Hold':
-      return { tw: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400', hex: '#F59E0B' };
+      return { tw: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400', hex: '#F59E0B', bgHexLight: '#FEF3C7', bgHexDark: '#78350F' };
     default:
-      return { tw: 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400', hex: '#6B7280' };
+      return { tw: 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400', hex: '#6B7280', bgHexLight: '#F3F4F6', bgHexDark: '#374151' };
   }
 };
 
