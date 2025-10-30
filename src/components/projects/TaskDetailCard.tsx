@@ -101,7 +101,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
       >
         <DialogHeader 
           onPointerDown={(e) => dragControls.start(e)}
-          className="p-3 sm:p-4 border-b-[3px] border-primary sticky top-0 bg-background z-10 cursor-grab active:cursor-grabbing drag-handle"
+          className="p-3 sm:p-4 border-b-[3px] border-primary flex-shrink-0 bg-background z-10 cursor-grab active:cursor-grabbing drag-handle"
         >
           <div className="flex justify-between items-start gap-2 sm:gap-4">
             <div className="flex-1 min-w-0">
@@ -142,52 +142,50 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
           </div>
         </DialogHeader>
         
-        <div className="flex-1 min-h-0 relative">
-          <div className="absolute inset-0 overflow-y-auto p-3 sm:p-4 space-y-3 sm:space-y-4 text-xs sm:text-sm">
-            {task.description && (
-              <Collapsible
-                open={isDescriptionOpen}
-                onOpenChange={setIsDescriptionOpen}
-                className="border-b"
-              >
-                <CollapsibleTrigger className="flex w-full items-center justify-between py-2 text-left text-xs sm:text-sm">
-                  <h4 className="font-semibold">Description</h4>
-                  <ChevronDown className={`h-4 w-4 shrink-0 transition-transform duration-200 ${isDescriptionOpen ? 'rotate-180' : ''}`} />
-                </CollapsibleTrigger>
-                <CollapsibleContent className="pb-3 sm:pb-4">
-                  <div className="prose prose-sm dark:prose-invert max-w-none text-muted-foreground break-all">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                      {formatTaskText(task.description)}
-                    </ReactMarkdown>
-                  </div>
-                </CollapsibleContent>
-              </Collapsible>
-            )}
+        <div className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-4 space-y-3 sm:space-y-4 text-xs sm:text-sm">
+          {task.description && (
+            <Collapsible
+              open={isDescriptionOpen}
+              onOpenChange={setIsDescriptionOpen}
+              className="border-b"
+            >
+              <CollapsibleTrigger className="flex w-full items-center justify-between py-2 text-left text-xs sm:text-sm">
+                <h4 className="font-semibold">Description</h4>
+                <ChevronDown className={`h-4 w-4 shrink-0 transition-transform duration-200 ${isDescriptionOpen ? 'rotate-180' : ''}`} />
+              </CollapsibleTrigger>
+              <CollapsibleContent className="pb-3 sm:pb-4">
+                <div className="prose prose-sm dark:prose-invert max-w-none text-muted-foreground break-all">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {formatTaskText(task.description)}
+                  </ReactMarkdown>
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+          )}
 
-            <TaskDetailsSection task={task} onClose={onClose} />
+          <TaskDetailsSection task={task} onClose={onClose} />
 
-            {allAttachments.length > 0 && (
-              <Collapsible
-                open={isAttachmentsOpen}
-                onOpenChange={setIsAttachmentsOpen}
-                className="border-t"
-              >
-                <CollapsibleTrigger className="flex w-full items-center justify-between py-3 sm:py-4 text-left text-xs sm:text-sm">
-                  <h4 className="font-semibold flex items-center gap-2">
-                    <Paperclip className="h-3 w-3 sm:h-4 sm:w-4" /> 
-                    Attachments ({allAttachments.length})
-                  </h4>
-                  <ChevronDown className={`h-4 w-4 shrink-0 transition-transform duration-200 ${isAttachmentsOpen ? 'rotate-180' : ''}`} />
-                </CollapsibleTrigger>
-                <CollapsibleContent className="pb-3 sm:pb-4">
-                  <TaskAttachmentList attachments={allAttachments} />
-                </CollapsibleContent>
-              </Collapsible>
-            )}
+          {allAttachments.length > 0 && (
+            <Collapsible
+              open={isAttachmentsOpen}
+              onOpenChange={setIsAttachmentsOpen}
+              className="border-t"
+            >
+              <CollapsibleTrigger className="flex w-full items-center justify-between py-3 sm:py-4 text-left text-xs sm:text-sm">
+                <h4 className="font-semibold flex items-center gap-2">
+                  <Paperclip className="h-3 w-3 sm:h-4 sm:w-4" /> 
+                  Attachments ({allAttachments.length})
+                </h4>
+                <ChevronDown className={`h-4 w-4 shrink-0 transition-transform duration-200 ${isAttachmentsOpen ? 'rotate-180' : ''}`} />
+              </CollapsibleTrigger>
+              <CollapsibleContent className="pb-3 sm:pb-4">
+                <TaskAttachmentList attachments={allAttachments} />
+              </CollapsibleContent>
+            </Collapsible>
+          )}
 
-            <div className="border-t pt-3 sm:pt-4">
-              <TaskDiscussion task={task} onToggleReaction={handleToggleReaction} />
-            </div>
+          <div className="border-t pt-3 sm:pt-4">
+            <TaskDiscussion task={task} onToggleReaction={handleToggleReaction} />
           </div>
         </div>
       </motion.div>
