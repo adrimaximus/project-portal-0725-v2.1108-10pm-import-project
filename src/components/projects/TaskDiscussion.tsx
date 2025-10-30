@@ -238,7 +238,7 @@ const TaskDiscussion = ({ task, onToggleReaction }: TaskDiscussionProps) => {
                         ))}
                       </div>
                     )}
-                    <div className="mt-2">
+                    <div className="mt-2 flex justify-end">
                       <CommentReactions reactions={comment.reactions || []} onToggleReaction={(emoji) => handleToggleCommentReaction(comment.id, emoji)} />
                     </div>
                   </>
