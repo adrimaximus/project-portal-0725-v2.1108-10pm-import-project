@@ -20,8 +20,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ChevronsUpDown, ChevronDown, Users, Briefcase, Hourglass, ListChecks, Ticket, CreditCard } from "lucide-react";
-import { generatePastelColor, getAvatarUrl, safeFormatDistanceToNow } from '@/lib/utils';
+import { ChevronsUpDown, ChevronDown, Users, Briefcase, Hourglass, ListChecks, Ticket, CreditCard, ArrowUpDown } from "lucide-react";
+import { generatePastelColor, getAvatarUrl } from '@/lib/utils';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -31,10 +31,15 @@ import {
 import { Button } from "@/components/ui/button";
 import { useCollaboratorStats, CollaboratorStat } from '@/hooks/useCollaboratorStats';
 import { Link } from 'react-router-dom';
+import { Badge } from '@/components/ui/badge';
+
+type SortField = 'name' | 'project_count' | 'ongoing_project_count' | 'upcoming_project_count' | 'active_task_count' | 'overdue_bill_count';
 
 const CollaboratorsList = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [filter, setFilter] = useState<'ongoing' | 'upcoming'>('ongoing');
+  const [sortField, setSortField] = useState<SortField>('project_count');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const { data: collaborators = [], isLoading } = useCollaboratorStats();
 
   const filterLabels = {
@@ -42,8 +47,25 @@ const CollaboratorsList = () => {
     upcoming: 'Upcoming Projects',
   };
 
-  const { collaboratorsByRole, allCollaborators } = useMemo(() => {
-    const roleHierarchy: Record<string, number> = { 'master admin': 0, 'admin': 1, 'owner': 2, 'editor': 3, 'member': 4, 'client': 5 };
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('desc');
+    }
+  };
+
+  const { collaboratorsByRole, allCollaborators, sortedCollaborators } = useMemo(() => {
+    const roleHierarchy: Record<string, number> = { 
+      'master admin': 0, 
+      'admin': 1, 
+      'BD': 2,
+      'owner': 3, 
+      'editor': 4, 
+      'member': 5, 
+      'client': 6 
+    };
     
     const grouped: Record<string, CollaboratorStat[]> = {};
     collaborators.forEach(collab => {
@@ -63,8 +85,31 @@ const CollaboratorsList = () => {
     
     const flatList = Object.values(orderedGrouped).flat();
 
-    return { collaboratorsByRole: orderedGrouped, allCollaborators: flatList };
-  }, [collaborators]);
+    // Apply sorting
+    const sorted = [...flatList].sort((a, b) => {
+      let aValue: any = a[sortField];
+      let bValue: any = b[sortField];
+
+      if (sortField === 'name') {
+        aValue = a.name.toLowerCase();
+        bValue = b.name.toLowerCase();
+        return sortDirection === 'asc' 
+          ? aValue.localeCompare(bValue)
+          : bValue.localeCompare(aValue);
+      }
+
+      // Numeric sorting
+      const numA = Number(aValue) || 0;
+      const numB = Number(bValue) || 0;
+      return sortDirection === 'asc' ? numA - numB : numB - numA;
+    });
+
+    return { 
+      collaboratorsByRole: orderedGrouped, 
+      allCollaborators: flatList,
+      sortedCollaborators: sorted
+    };
+  }, [collaborators, sortField, sortDirection]);
 
   const getFilteredCount = (collaborator: CollaboratorStat) => {
     switch (filter) {
@@ -76,13 +121,27 @@ const CollaboratorsList = () => {
     }
   };
 
+  const totalStats = useMemo(() => {
+    return allCollaborators.reduce((acc, c) => ({
+      projects: acc.projects + c.project_count,
+      ongoing: acc.ongoing + c.ongoing_project_count,
+      upcoming: acc.upcoming + c.upcoming_project_count,
+      tasks: acc.tasks + c.active_task_count,
+      tickets: acc.tickets + c.active_ticket_count,
+      overdue: acc.overdue + c.overdue_bill_count,
+    }), { projects: 0, ongoing: 0, upcoming: 0, tasks: 0, tickets: 0, overdue: 0 });
+  }, [allCollaborators]);
+
   return (
     <Card>
       <TooltipProvider>
         <Collapsible open={isOpen} onOpenChange={setIsOpen}>
           <CollapsibleTrigger className="w-full p-6">
             <div className="flex items-center justify-between">
-              <CardTitle>Collaborators</CardTitle>
+              <div className="flex items-center gap-3">
+                <CardTitle>Collaborators</CardTitle>
+                <Badge variant="secondary">{allCollaborators.length}</Badge>
+              </div>
               <div className="flex items-center gap-4">
                 {!isOpen && (
                   <div className="flex items-center -space-x-2">
@@ -99,6 +158,11 @@ const CollaboratorsList = () => {
                         </TooltipContent>
                       </Tooltip>
                     ))}
+                    {allCollaborators.length > 5 && (
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-card bg-muted text-xs font-medium">
+                        +{allCollaborators.length - 5}
+                      </div>
+                    )}
                   </div>
                 )}
                 <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />
@@ -117,9 +181,51 @@ const CollaboratorsList = () => {
                 </div>
               ) : (
                 <>
+                  {/* Summary Stats */}
+                  <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-6 p-4 bg-muted/50 rounded-lg">
+                    <div className="text-center">
+                      <p className="text-2xl font-bold">{totalStats.projects}</p>
+                      <p className="text-xs text-muted-foreground">Total Projects</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-2xl font-bold">{totalStats.ongoing}</p>
+                      <p className="text-xs text-muted-foreground">Ongoing</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-2xl font-bold">{totalStats.upcoming}</p>
+                      <p className="text-xs text-muted-foreground">Upcoming</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-2xl font-bold">{totalStats.tasks}</p>
+                      <p className="text-xs text-muted-foreground">Active Tasks</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-2xl font-bold">{totalStats.tickets}</p>
+                      <p className="text-xs text-muted-foreground">Tickets</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-2xl font-bold text-destructive">{totalStats.overdue}</p>
+                      <p className="text-xs text-muted-foreground">Overdue Bills</p>
+                    </div>
+                  </div>
+
                   {/* Mobile View */}
                   <div className="md:hidden">
-                    <div className="flex justify-end mb-4">
+                    <div className="flex justify-between items-center mb-4">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="outline" size="sm">
+                            <ArrowUpDown className="mr-2 h-4 w-4" />
+                            Sort
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start">
+                          <DropdownMenuItem onSelect={() => handleSort('name')}>Name</DropdownMenuItem>
+                          <DropdownMenuItem onSelect={() => handleSort('project_count')}>Total Projects</DropdownMenuItem>
+                          <DropdownMenuItem onSelect={() => handleSort('ongoing_project_count')}>Ongoing</DropdownMenuItem>
+                          <DropdownMenuItem onSelect={() => handleSort('active_task_count')}>Tasks</DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="outline" size="sm">
@@ -133,48 +239,46 @@ const CollaboratorsList = () => {
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
-                    {Object.entries(collaboratorsByRole).map(([role, collaboratorsInRole]) => (
-                      <div key={role}>
-                        <h3 className="text-sm font-semibold uppercase text-muted-foreground tracking-wider pt-6 pb-2">
-                          {role.replace('_', ' ')}
-                        </h3>
-                        <div className="space-y-4">
-                          {collaboratorsInRole.map(c => (
-                            <div key={c.id} className="bg-muted/50 p-4 rounded-lg">
-                              <Link to={c.slug ? `/people/${c.slug}` : `/users/${c.id}`} className="flex items-center gap-3 mb-4">
-                                <Avatar className="h-10 w-10">
-                                  <AvatarImage src={getAvatarUrl(c.avatar_url, c.id)} alt={c.name} />
-                                  <AvatarFallback style={generatePastelColor(c.id)}>{c.initials}</AvatarFallback>
-                                </Avatar>
-                                <span className="font-medium">{c.name}</span>
-                              </Link>
-                              <div className="space-y-3 text-sm">
-                                <div className="flex justify-between items-center">
-                                  <span className="flex items-center gap-2 text-muted-foreground"><Briefcase className="h-4 w-4" /> Total Projects</span>
-                                  <span className="font-medium">{c.project_count}</span>
-                                </div>
-                                <div className="flex justify-between items-center">
-                                  <span className="flex items-center gap-2 text-muted-foreground"><Hourglass className="h-4 w-4" /> {filterLabels[filter]}</span>
-                                  <span className="font-medium">{getFilteredCount(c)}</span>
-                                </div>
-                                <div className="flex justify-between items-center">
-                                  <span className="flex items-center gap-2 text-muted-foreground"><ListChecks className="h-4 w-4" /> Active Tasks</span>
-                                  <span className="font-medium">{c.active_task_count}</span>
-                                </div>
-                                <div className="flex justify-between items-center">
-                                  <span className="flex items-center gap-2 text-muted-foreground"><Ticket className="h-4 w-4" /> Active Tickets</span>
-                                  <span className="font-medium">{c.active_ticket_count}</span>
-                                </div>
-                                <div className="flex justify-between items-center">
-                                  <span className="flex items-center gap-2 text-muted-foreground"><CreditCard className="h-4 w-4" /> Overdue Bill</span>
-                                  <span className="font-medium">{c.overdue_bill_count}</span>
-                                </div>
-                              </div>
+                    <div className="space-y-4">
+                      {sortedCollaborators.map(c => (
+                        <div key={c.id} className="bg-muted/50 p-4 rounded-lg">
+                          <Link to={c.slug ? `/people/${c.slug}` : `/users/${c.id}`} className="flex items-center gap-3 mb-4">
+                            <Avatar className="h-10 w-10">
+                              <AvatarImage src={getAvatarUrl(c.avatar_url, c.id)} alt={c.name} />
+                              <AvatarFallback style={generatePastelColor(c.id)}>{c.initials}</AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1">
+                              <span className="font-medium block">{c.name}</span>
+                              <Badge variant="outline" className="text-xs capitalize mt-1">{c.role}</Badge>
                             </div>
-                          ))}
+                          </Link>
+                          <div className="grid grid-cols-2 gap-3 text-sm">
+                            <div className="flex justify-between items-center">
+                              <span className="flex items-center gap-2 text-muted-foreground"><Briefcase className="h-4 w-4" /> Total</span>
+                              <span className="font-medium">{c.project_count}</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="flex items-center gap-2 text-muted-foreground"><Hourglass className="h-4 w-4" /> {filter === 'ongoing' ? 'Ongoing' : 'Upcoming'}</span>
+                              <span className="font-medium">{getFilteredCount(c)}</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="flex items-center gap-2 text-muted-foreground"><ListChecks className="h-4 w-4" /> Tasks</span>
+                              <span className="font-medium">{c.active_task_count}</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="flex items-center gap-2 text-muted-foreground"><Ticket className="h-4 w-4" /> Tickets</span>
+                              <span className="font-medium">{c.active_ticket_count}</span>
+                            </div>
+                            {c.overdue_bill_count > 0 && (
+                              <div className="col-span-2 flex justify-between items-center bg-destructive/10 p-2 rounded">
+                                <span className="flex items-center gap-2 text-destructive"><CreditCard className="h-4 w-4" /> Overdue Bills</span>
+                                <span className="font-bold text-destructive">{c.overdue_bill_count}</span>
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
 
                   {/* Desktop View */}
@@ -182,12 +286,22 @@ const CollaboratorsList = () => {
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Collaborator</TableHead>
-                                <TableHead className="text-right">Total Projects</TableHead>
+                                <TableHead>
+                                  <Button variant="ghost" onClick={() => handleSort('name')} className="px-2 h-8">
+                                    Collaborator
+                                    {sortField === 'name' && <ArrowUpDown className="ml-2 h-4 w-4" />}
+                                  </Button>
+                                </TableHead>
+                                <TableHead className="text-right">
+                                  <Button variant="ghost" onClick={() => handleSort('project_count')} className="px-2 h-8">
+                                    Total Projects
+                                    {sortField === 'project_count' && <ArrowUpDown className="ml-2 h-4 w-4" />}
+                                  </Button>
+                                </TableHead>
                                 <TableHead className="text-right">
                                   <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
-                                      <Button variant="ghost" className="px-2 -mr-2 h-8">
+                                      <Button variant="ghost" className="px-2 h-8">
                                         {filterLabels[filter]}
                                         <ChevronDown className="ml-2 h-4 w-4" />
                                       </Button>
@@ -198,60 +312,81 @@ const CollaboratorsList = () => {
                                     </DropdownMenuContent>
                                   </DropdownMenu>
                                 </TableHead>
-                                <TableHead className="text-right">Active Work (Tasks / Tickets)</TableHead>
-                                <TableHead className="text-right">Overdue Bill</TableHead>
+                                <TableHead className="text-right">
+                                  <Button variant="ghost" onClick={() => handleSort('active_task_count')} className="px-2 h-8">
+                                    Active Work
+                                    {sortField === 'active_task_count' && <ArrowUpDown className="ml-2 h-4 w-4" />}
+                                  </Button>
+                                </TableHead>
+                                <TableHead className="text-right">
+                                  <Button variant="ghost" onClick={() => handleSort('overdue_bill_count')} className="px-2 h-8">
+                                    Overdue Bills
+                                    {sortField === 'overdue_bill_count' && <ArrowUpDown className="ml-2 h-4 w-4" />}
+                                  </Button>
+                                </TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {Object.entries(collaboratorsByRole).map(([role, collaboratorsInRole]) => (
-                              <React.Fragment key={role}>
-                                <TableRow className="border-b-0 hover:bg-transparent">
-                                  <TableCell colSpan={7} className="pt-6 pb-2">
-                                    <h3 className="text-sm font-semibold uppercase text-muted-foreground tracking-wider">
-                                      {role.replace('_', ' ')}
-                                    </h3>
-                                  </TableCell>
-                                </TableRow>
-                                {collaboratorsInRole.map(c => {
-                                  const ticketPercentage = c.active_task_count > 0 ? (c.active_ticket_count / c.active_task_count) * 100 : 0;
-                                  const nonTicketTasks = c.active_task_count - c.active_ticket_count;
-                                  return (
-                                    <TableRow key={c.id}>
-                                        <TableCell>
-                                            <Link to={c.slug ? `/people/${c.slug}` : `/users/${c.id}`} className="flex items-center gap-3 hover:underline">
-                                                <Avatar className="h-8 w-8">
-                                                    <AvatarImage src={getAvatarUrl(c.avatar_url, c.id)} alt={c.name} />
-                                                    <AvatarFallback style={generatePastelColor(c.id)}>{c.initials}</AvatarFallback>
-                                                </Avatar>
-                                                <span className="font-medium whitespace-nowrap">{c.name}</span>
-                                            </Link>
-                                        </TableCell>
-                                        <TableCell className="text-right font-medium">{c.project_count}</TableCell>
-                                        <TableCell className="text-right font-medium">{getFilteredCount(c)}</TableCell>
-                                        <TableCell className="text-right font-medium">
-                                          <TooltipProvider>
-                                            <Tooltip>
-                                              <TooltipTrigger asChild>
-                                                <div className="flex items-center justify-end gap-2">
-                                                  <span>{c.active_task_count}</span>
+                            {sortedCollaborators.map((c, index) => {
+                              const ticketPercentage = c.active_task_count > 0 ? (c.active_ticket_count / c.active_task_count) * 100 : 0;
+                              const nonTicketTasks = c.active_task_count - c.active_ticket_count;
+                              const prevCollaborator = sortedCollaborators[index - 1];
+                              const showRoleSeparator = !prevCollaborator || prevCollaborator.role !== c.role;
+                              
+                              return (
+                                <React.Fragment key={c.id}>
+                                  {showRoleSeparator && (
+                                    <TableRow className="border-b-0 hover:bg-transparent">
+                                      <TableCell colSpan={5} className="pt-6 pb-2">
+                                        <h3 className="text-sm font-semibold uppercase text-muted-foreground tracking-wider">
+                                          {c.role.replace('_', ' ')}
+                                        </h3>
+                                      </TableCell>
+                                    </TableRow>
+                                  )}
+                                  <TableRow>
+                                      <TableCell>
+                                          <Link to={c.slug ? `/people/${c.slug}` : `/users/${c.id}`} className="flex items-center gap-3 hover:underline">
+                                              <Avatar className="h-8 w-8">
+                                                  <AvatarImage src={getAvatarUrl(c.avatar_url, c.id)} alt={c.name} />
+                                                  <AvatarFallback style={generatePastelColor(c.id)}>{c.initials}</AvatarFallback>
+                                              </Avatar>
+                                              <span className="font-medium whitespace-nowrap">{c.name}</span>
+                                          </Link>
+                                      </TableCell>
+                                      <TableCell className="text-right font-medium">{c.project_count}</TableCell>
+                                      <TableCell className="text-right font-medium">{getFilteredCount(c)}</TableCell>
+                                      <TableCell className="text-right font-medium">
+                                        <TooltipProvider>
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <div className="flex items-center justify-end gap-2">
+                                                <span>{c.active_task_count}</span>
+                                                {c.active_task_count > 0 && (
                                                   <div className="w-16 h-2 bg-muted rounded-full overflow-hidden flex">
                                                     <div style={{ width: `${ticketPercentage}%` }} className="bg-destructive h-full"></div>
                                                   </div>
-                                                </div>
-                                              </TooltipTrigger>
-                                              <TooltipContent>
-                                                <p>{c.active_ticket_count} ticket(s)</p>
-                                                <p>{nonTicketTasks} other task(s)</p>
-                                              </TooltipContent>
-                                            </Tooltip>
-                                          </TooltipProvider>
-                                        </TableCell>
-                                        <TableCell className="text-right font-medium">{c.overdue_bill_count}</TableCell>
-                                    </TableRow>
-                                  )
-                                })}
-                              </React.Fragment>
-                            ))}
+                                                )}
+                                              </div>
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                              <p>{c.active_ticket_count} ticket(s)</p>
+                                              <p>{nonTicketTasks} other task(s)</p>
+                                            </TooltipContent>
+                                          </Tooltip>
+                                        </TooltipProvider>
+                                      </TableCell>
+                                      <TableCell className="text-right">
+                                        {c.overdue_bill_count > 0 ? (
+                                          <span className="font-bold text-destructive">{c.overdue_bill_count}</span>
+                                        ) : (
+                                          <span className="text-muted-foreground">-</span>
+                                        )}
+                                      </TableCell>
+                                  </TableRow>
+                                </React.Fragment>
+                              );
+                            })}
                         </TableBody>
                     </Table>
                   </div>
