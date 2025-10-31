@@ -37,7 +37,7 @@ serve(async (req) => {
     }
 
     // 1. Fetch devices
-    const devicesResponse = await fetch('https://wbiztool.com/api/v1/get-devices/', {
+    const devicesResponse = await fetch('https://wbiztool.com/api/get-devices/', {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -66,7 +66,7 @@ serve(async (req) => {
     }
 
     // 2. Send message using the device
-    const messageResponse = await fetch('https://wbiztool.com/api/v1/send_msg/', {
+    const messageResponse = await fetch('https://wbiztool.com/api/send_msg/', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
