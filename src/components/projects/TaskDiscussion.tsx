@@ -258,7 +258,7 @@ const TaskDiscussion = ({ task, onToggleReaction }: TaskDiscussionProps) => {
             );
           })}
         </div>
-        <CommentInput project={task as any} onAddCommentOrTicket={handleAddComment} />
+        <CommentInput project={task as any} onAddCommentOrTicket={handleAddComment} allUsers={allUsers} />
       </div>
       <AlertDialog open={!!commentToDelete} onOpenChange={() => setCommentToDelete(null)}>
         <AlertDialogContent>
