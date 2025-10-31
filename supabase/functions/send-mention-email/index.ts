@@ -29,6 +29,47 @@ function generateAttachmentHtml(attachments: any[]) {
     `;
 }
 
+// Helper to send Email
+const sendEmail = async (supabaseAdmin, to: string, subject: string, html: string, text: string, attachments: any[]) => {
+    const { data: config, error: configError } = await supabaseAdmin
+        .from('app_config')
+        .select('value')
+        .eq('key', 'EMAILIT_API_KEY')
+        .single();
+
+    if (configError || !config?.value) {
+        throw new Error("Email service is not configured on the server (EMAILIT_API_KEY is missing).");
+    }
+    const emailitApiKey = config.value;
+
+    const emailPayload = {
+      from: EMAIL_FROM,
+      to, subject, html, text,
+      attachments: (attachments || []).map((att: any) => ({
+        filename: att.file_name || 'attachment',
+        content_url: att.file_url,
+      })),
+    };
+
+    const response = await fetch("https://api.emailit.com/v1/emails", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${emailitApiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(emailPayload),
+    });
+
+    const data = await response.json().catch(() => ({}));
+    
+    if (!response.ok) {
+        console.error("Emailit API Error:", response.status, data);
+        throw new Error(data.message || `Emailit API failed with status ${response.status}`);
+    }
+    return data;
+};
+
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -56,19 +97,7 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // 4. Fetch Emailit API key from app_config
-    const { data: config, error: configError } = await supabaseAdmin
-      .from('app_config')
-      .select('value')
-      .eq('key', 'EMAILIT_API_KEY')
-      .single();
-
-    if (configError || !config?.value) {
-      throw new Error("Email service is not configured on the server (EMAILIT_API_KEY is missing).");
-    }
-    const EMAILIT_API_KEY = config.value;
-
-    // 5. Fetch comment details to get attachments_jsonb
+    // 4. Fetch comment details to get attachments_jsonb
     const { data: commentData, error: commentError } = await supabaseAdmin
         .from('comments')
         .select('attachments_jsonb')
@@ -78,7 +107,7 @@ serve(async (req) => {
     if (commentError) throw commentError;
     const attachments = commentData?.attachments_jsonb || [];
 
-    // 6. Fetch profiles of mentioned users
+    // 5. Fetch profiles of mentioned users
     const { data: profiles, error: profileError } = await supabaseAdmin
       .from('profiles')
       .select('id, email, first_name, notification_preferences')
@@ -91,7 +120,7 @@ serve(async (req) => {
       return new Response(JSON.stringify({ message: "No users to notify." }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    // 7. Filter users who have email notifications for mentions enabled
+    // 6. Filter users who have email notifications for mentions enabled
     const usersToNotify = profiles.filter(p => {
       const prefs = p.notification_preferences || {};
       const mentionPref = prefs.mention;
@@ -131,7 +160,7 @@ serve(async (req) => {
         return;
       }
 
-      // INSERT DEBOUNCE RECORD
+      // INSERT DEBOUNCE RECORD (to prevent duplicate emails/WA from other triggers)
       const { error: insertError } = await supabaseAdmin
         .from('pending_whatsapp_notifications')
         .insert({
@@ -169,21 +198,12 @@ serve(async (req) => {
       `;
       const text = `Hi, ${mentioner_name} mentioned you in a comment on the project ${project_name}. View it here: ${projectUrl}`;
 
-      const response = await fetch("https://api.emailit.com/v1/emails", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${EMAILIT_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ from: EMAIL_FROM, to: profile.email, subject, html, text }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error(`Failed to send email to ${profile.email}:`, errorData);
-      } else {
+      try {
+        await sendEmail(supabaseAdmin, profile.email, subject, html, text, attachments);
         sentCount++;
         console.log(`Email notification sent to ${profile.email} for comment ${comment_id}`);
+      } catch (e) {
+        console.error(`Failed to send email to ${profile.email}:`, e.message);
       }
     });
 
