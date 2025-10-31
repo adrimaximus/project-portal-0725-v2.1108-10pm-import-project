@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts'
 import { createClient } from 'npm:@supabase/supabase-js@2.54.0'
 
@@ -25,7 +26,7 @@ serve(async (req) => {
       const { clientId, apiKey } = await req.json()
       if (!clientId || !apiKey) throw new Error('Client ID and API Key are required.')
 
-      const wbizResponse = await fetch('https://wbiztool.com/api/devices', {
+      const wbizResponse = await fetch('https://wbiztool.com/api/v1/get-devices/', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -86,7 +87,7 @@ serve(async (req) => {
         })
       }
 
-      const wbizResponse = await fetch('https://wbiztool.com/api/devices', {
+      const wbizResponse = await fetch('https://wbiztool.com/api/v1/get-devices/', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
