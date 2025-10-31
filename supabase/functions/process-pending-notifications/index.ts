@@ -63,7 +63,7 @@ const sendWhatsappMessage = async (phone: string, message: string) => {
 
   if (!activeDevice) throw new Error('No active WBIZTOOL device found.');
 
-  const messageResponse = await fetch('https://wbiztool.com/api/send_msg/', {
+  const messageResponse = await fetch('https://wbiztool.com/api/send-message', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-client-id': config.clientId, 'x-api-key': config.apiKey },
     body: JSON.stringify({ phone: formattedPhone, message: message, device_id: activeDevice.id }),
