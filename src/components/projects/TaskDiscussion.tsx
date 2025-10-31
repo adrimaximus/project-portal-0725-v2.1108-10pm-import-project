@@ -12,7 +12,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { getInitials, generatePastelColor, formatMentionsForDisplay, getAvatarUrl } from '@/lib/utils';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
 import { Button } from '../ui/button';
-import { MoreHorizontal, Edit, Trash2 } from 'lucide-react';
+import { MoreHorizontal, Edit, Trash2, Ticket, Paperclip, X, Loader2, SmilePlus } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../ui/alert-dialog';
 import { Textarea } from '../ui/textarea';
 import CommentAttachmentItem from '../CommentAttachmentItem';
@@ -32,17 +32,21 @@ const TaskDiscussion = ({ task, onToggleReaction }: TaskDiscussionProps) => {
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editedText, setEditedText] = useState('');
   const [commentToDelete, setCommentToDelete] = useState<CommentType | null>(null);
+  const [newAttachments, setNewAttachments] = useState<File[]>([]);
+  const [isConvertingToTicket, setIsConvertingToTicket] = useState(false);
+  const editFileInputRef = useRef<HTMLInputElement>(null);
+  const { data: allUsers = [] } = useProfiles();
 
   const { data: comments = [], isLoading: isLoadingComments } = useQuery({
     queryKey: ['task-comments', task.id],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('comments')
-        .select('*, author:profiles(*), reactions:comment_reactions(*, profiles(first_name, last_name))')
-        .eq('task_id', task.id)
-        .order('created_at', { ascending: true });
+        .rpc('get_task_comments', { p_task_id: task.id });
       if (error) throw error;
-      return data as CommentType[];
+      return (data as any[]).map(c => ({
+        ...c,
+        isTicket: c.is_ticket,
+      })) as CommentType[];
     },
     enabled: !!task.id,
   });
@@ -64,7 +68,7 @@ const TaskDiscussion = ({ task, onToggleReaction }: TaskDiscussionProps) => {
           
           const { data: urlData } = supabase.storage.from('project-files').getPublicUrl(filePath);
           if (!urlData || !urlData.publicUrl) {
-            throw new Error(`Failed to get public URL for ${file.name}.`);
+            throw new Error(`Failed to get public URL for uploaded file ${file.name}.`);
           }
           
           return { 
@@ -189,9 +193,9 @@ const TaskDiscussion = ({ task, onToggleReaction }: TaskDiscussionProps) => {
                     <p className="font-semibold">{fullName}</p>
                     <div className="flex items-center gap-1">
                       <span className="text-xs text-muted-foreground">
-                        {formatDistanceToNow(new Date(comment.timestamp), { addSuffix: true })}
+                        {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true, locale: id })}
                       </span>
-                      {canManageComment && (
+                      {canManageComment && editingCommentId !== comment.id && (
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="icon" className="h-6 w-6">
@@ -260,7 +264,7 @@ const TaskDiscussion = ({ task, onToggleReaction }: TaskDiscussionProps) => {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete the comment. This action cannot be undone.
+              This will permanently delete the comment. If this is a ticket, the associated task will also be deleted. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

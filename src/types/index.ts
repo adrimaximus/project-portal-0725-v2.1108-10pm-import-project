@@ -319,7 +319,7 @@ export interface Attachment {
 export interface Comment {
   id: string;
   text: string;
-  timestamp: string;
+  created_at: string;
   author: User;
   isTicket: boolean;
   attachment_url?: string;

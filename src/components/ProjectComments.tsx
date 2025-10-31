@@ -137,7 +137,7 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
                     <p className="font-semibold">{fullName}</p>
                     <div className="flex items-center gap-1">
                       <span className="text-xs text-muted-foreground">
-                        {formatDistanceToNow(new Date(comment.timestamp), { addSuffix: true, locale: id })}
+                        {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true, locale: id })}
                       </span>
                       {canManageComment && editingCommentId !== comment.id && (
                         <DropdownMenu>
