@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Task, TaskStatus, Reaction, UpsertTaskPayload } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
+import { getErrorMessage } from '@/lib/utils';
 
 type UpdateTaskOrderPayload = {
   taskId: string;
@@ -260,5 +261,19 @@ export const useTaskMutations = (refetch?: () => void) => {
     },
   });
 
-  return { upsertTask, isUpserting, deleteTask, toggleTaskCompletion, isToggling, updateTaskStatusAndOrder, toggleTaskReaction };
+  const { mutate: sendReminder, isPending: isSendingReminder } = useMutation({
+    mutationFn: async (taskId: string) => {
+      const { error } = await supabase.rpc('manually_trigger_task_reminder', { p_task_id: taskId });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Reminder sent!");
+      invalidateQueries();
+    },
+    onError: (error: any) => {
+      toast.error("Failed to send reminder.", { description: getErrorMessage(error) });
+    }
+  });
+
+  return { upsertTask, isUpserting, deleteTask, toggleTaskCompletion, isToggling, updateTaskStatusAndOrder, toggleTaskReaction, sendReminder, isSendingReminder };
 };

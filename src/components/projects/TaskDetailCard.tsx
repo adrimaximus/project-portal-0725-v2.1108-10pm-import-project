@@ -80,7 +80,7 @@ const getDueDateClassName = (dueDateStr: string | null, completed: boolean): str
 
 const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, onDelete }) => {
   const queryClient = useQueryClient();
-  const { toggleTaskReaction } = useTaskMutations();
+  const { toggleTaskReaction, sendReminder, isSendingReminder } = useTaskMutations();
 
   const allAttachments = useMemo(() => {
     if (!task) return [];
@@ -103,6 +103,10 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
     const textToCopy = `${task.project_name || 'Project'} | ${task.title}\n${url}`;
     navigator.clipboard.writeText(textToCopy);
     toast.success("Link to task copied to clipboard!");
+  };
+
+  const handleSendReminder = () => {
+    sendReminder(task.id);
   };
 
   const statusStyle = getTaskStatusStyles(task.status);
@@ -141,6 +145,9 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
                   </DropdownMenuItem>
                   <DropdownMenuItem onSelect={handleCopyLink}>
                     <LinkIcon className="mr-2 h-4 w-4" /> Copy Link
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={handleSendReminder} disabled={!isOverdue(task.due_date) || task.completed || isSendingReminder}>
+                    <BellRing className="mr-2 h-4 w-4" /> Send Reminder
                   </DropdownMenuItem>
                   <DropdownMenuItem onSelect={() => { onDelete(task.id); onClose(); }} className="text-destructive">
                     <Trash2 className="mr-2 h-4 w-4" /> Delete
