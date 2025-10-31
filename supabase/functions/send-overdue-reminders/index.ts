@@ -46,9 +46,8 @@ serve(async (req) => {
   }
 
   try {
-    // Security check for cron job
-    const cronSecret = req.headers.get('Authorization')?.replace('Bearer ', '');
-    if (cronSecret !== Deno.env.get('CRON_SECRET')) {
+    const authHeader = req.headers.get('Authorization')?.replace('Bearer ', '');
+    if (authHeader !== Deno.env.get('CRON_SECRET')) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: corsHeaders });
     }
 
@@ -107,7 +106,7 @@ serve(async (req) => {
 
       const dueDate = new Date(project.payment_due_date);
       const today = new Date();
-      const overdueDays = Math.max(0, Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24)));
+      const overdueDays = Math.max(0, Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 3600 * 24)));
 
       let urgency = 'sedikit mendesak';
       if (overdueDays > 30) {
@@ -150,12 +149,26 @@ Buat pesan pengingat yang sopan dan profesional sesuai dengan tingkat urgensi ya
           const { data: wbizConfig } = await supabaseAdmin.from('app_config').select('key, value').in('key', ['WBIZTOOL_CLIENT_ID', 'WBIZTOOL_API_KEY']);
           const clientId = wbizConfig?.find(c => c.key === 'WBIZTOOL_CLIENT_ID')?.value;
           const apiKey = wbizConfig?.find(c => c.key === 'WBIZTOOL_API_KEY')?.value;
-          const whatsappClientId = Deno.env.get('WBIZTOOL_WHATSAPP_CLIENT_ID');
-          if (!clientId || !apiKey || !whatsappClientId) throw new Error("WBIZTOOL credentials not configured.");
+          if (!clientId || !apiKey) throw new Error("WBIZTOOL credentials not configured.");
 
-          const wbizPayload = { client_id: parseInt(clientId, 10), api_key: apiKey, whatsapp_client: parseInt(whatsappClientId, 10), phone: recipientPhone, message: aiMessage };
+          const devicesResponse = await fetch('https://wbiztool.com/api/v2/devices', {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json', 'x-client-id': clientId, 'x-api-key': apiKey },
+          });
+          if (!devicesResponse.ok) {
+            const errorData = await devicesResponse.json().catch(() => ({}));
+            throw new Error(`WBIZTOOL API Error (devices): ${errorData.message || 'Invalid credentials'}`);
+          }
+          const devicesData = await devicesResponse.json();
+          const activeDevice = devicesData.data?.find((d: any) => d.status === 'connected');
+          if (!activeDevice) throw new Error('No active WBIZTOOL device found.');
 
-          const wbizResponse = await fetch("https://wbiztool.com/api/v1/send_msg/", { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Client-ID': clientId, 'X-Api-Key': apiKey }, body: JSON.stringify(wbizPayload) });
+          const wbizResponse = await fetch('https://wbiztool.com/api/v2/messages', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-client-id': clientId, 'x-api-key': apiKey },
+            body: JSON.stringify({ phone: recipientPhone, message: aiMessage, device_id: activeDevice.id }),
+          });
+
           if (!wbizResponse.ok) {
               const errorData = await wbizResponse.json().catch(() => ({}));
               throw new Error(`WBIZTOOL API Error (${wbizResponse.status}): ${errorData.message || 'Unknown error'}`);

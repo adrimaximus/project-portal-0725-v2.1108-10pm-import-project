@@ -48,32 +48,50 @@ const sendWhatsappMessage = async (phone: string, message: string) => {
     console.warn(`Invalid phone number format: ${phone}. Skipping.`);
     return;
   }
-  const response = await fetch("https://wbiztool.com/api/v1/send_msg/", {
+
+  // 1. Fetch devices
+  const devicesResponse = await fetch('https://wbiztool.com/api/v2/devices', {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-client-id': config.clientId,
+      'x-api-key': config.apiKey,
+    },
+  });
+
+  if (!devicesResponse.ok) {
+    const errorData = await devicesResponse.json().catch(() => ({}));
+    throw new Error(`WBIZTOOL API Error (devices): ${errorData.message || 'Invalid credentials'}`);
+  }
+  
+  const devicesData = await devicesResponse.json();
+  const activeDevice = devicesData.data?.find((d: any) => d.status === 'connected');
+
+  if (!activeDevice) {
+    throw new Error('No active WBIZTOOL device found.');
+  }
+
+  // 2. Send message using the device
+  const messageResponse = await fetch('https://wbiztool.com/api/v2/messages', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'X-Client-ID': config.clientId,
-      'X-Api-Key': config.apiKey,
+      'x-client-id': config.clientId,
+      'x-api-key': config.apiKey,
     },
     body: JSON.stringify({
-      client_id: parseInt(config.clientId, 10),
-      api_key: config.apiKey,
-      whatsapp_client: parseInt(config.whatsappClientId, 10),
       phone: formattedPhone,
       message: message,
+      device_id: activeDevice.id,
     }),
   });
-  if (!response.ok) {
-    const errText = await response.text();
-    let errorData;
-    try {
-      errorData = JSON.parse(errText);
-    } catch (e) {
-      errorData = { message: errText };
-    }
-    throw new Error(`WBIZTOOL API Error (${response.status}): ${errorData.message || 'Unknown error'}`);
+
+  if (!messageResponse.ok) {
+    const errorData = await messageResponse.json().catch(() => ({}));
+    throw new Error(`WBIZTOOL API Error (messages): ${errorData.message || 'Failed to send message'}`);
   }
-  return response.json();
+
+  return messageResponse.json();
 };
 
 const getSystemPrompt = () => `Anda adalah asisten AI untuk platform manajemen proyek bernama 7i Portal. Tugas Anda adalah membuat pesan notifikasi WhatsApp yang singkat, ramah, dan profesional dalam Bahasa Indonesia.
