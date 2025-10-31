@@ -4,12 +4,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Link } from "react-router-dom";
-import { format } from "date-fns";
+import { format, isAfter, subHours } from "date-fns";
 import { generatePastelColor, getPriorityStyles, getTaskStatusStyles, isOverdue, cn, getAvatarUrl, getInitials, formatTaskText } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "../ui/button";
-import { MoreHorizontal, Edit, Trash2, Ticket, Paperclip, SmilePlus, Link as LinkIcon } from "lucide-react";
+import { MoreHorizontal, Edit, Trash2, Ticket, Paperclip, SmilePlus, Link as LinkIcon, BellRing } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Checkbox } from "@/components/ui/checkbox";
 import TaskAttachmentList from './TaskAttachmentList';
@@ -348,6 +348,7 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
                 const hasAssignees = task.assignedTo && task.assignedTo.length > 0;
                 const reactions = task.reactions || [];
                 const hasBottomBar = hasAssignees || reactions.length > 0 || (task.originTicketId || task.tags?.some(t => t.name === 'Ticket')) || allAttachments.length > 0;
+                const wasReminderSentRecently = task.last_reminder_sent_at && isAfter(new Date(task.last_reminder_sent_at), subHours(new Date(), 25));
 
                 const groupedReactions: Record<string, { users: string[]; userIds: string[] }> = reactions.reduce((acc, reaction) => {
                     if (!acc[reaction.emoji]) {
@@ -588,9 +589,23 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
                       </TableCell>
                       <TableCell>
                         {task.due_date ? (
-                          <span className={getDueDateClassName(task.due_date, task.completed)}>
-                            {format(new Date(task.due_date), "MMM d, yyyy, p")}
-                          </span>
+                          <div className="flex items-center gap-1.5">
+                            <span className={getDueDateClassName(task.due_date, task.completed)}>
+                              {format(new Date(task.due_date), "MMM d, yyyy, p")}
+                            </span>
+                            {wasReminderSentRecently && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger>
+                                    <BellRing className="h-3.5 w-3.5 text-blue-500" />
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>A reminder was sent recently.</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
+                          </div>
                         ) : <span className="text-muted-foreground text-xs">No due date</span>}
                       </TableCell>
                       <TableCell>

@@ -5,9 +5,9 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '../ui/button';
 import { Link } from 'react-router-dom';
-import { format } from 'date-fns';
+import { format, isAfter, subHours } from 'date-fns';
 import { generatePastelColor, getPriorityStyles, getTaskStatusStyles, isOverdue, cn, getAvatarUrl, getInitials, formatTaskText } from '@/lib/utils';
-import { Edit, Trash2, Ticket, Paperclip, User as UserIcon, Calendar, Tag, Briefcase, Link as LinkIcon, MoreHorizontal } from 'lucide-react';
+import { Edit, Trash2, Ticket, Paperclip, User as UserIcon, Calendar, Tag, Briefcase, Link as LinkIcon, MoreHorizontal, BellRing } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import TaskAttachmentList from './TaskAttachmentList';
@@ -107,6 +107,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
 
   const statusStyle = getTaskStatusStyles(task.status);
   const priorityStyle = getPriorityStyles(task.priority);
+  const wasReminderSentRecently = task.last_reminder_sent_at && isAfter(new Date(task.last_reminder_sent_at), subHours(new Date(), 25));
 
   return (
     <DialogContent className="w-[90vw] max-w-[650px] max-h-[85vh] p-0 rounded-lg overflow-hidden">
@@ -174,9 +175,23 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
             <div className="flex items-center gap-2">
               <TooltipProvider><Tooltip><TooltipTrigger><Calendar className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" /></TooltipTrigger><TooltipContent><p>Due Date</p></TooltipContent></Tooltip></TooltipProvider>
               {task.due_date ? (
-                <span className={cn(getDueDateClassName(task.due_date, task.completed))}>
-                  {format(new Date(task.due_date), "MMM d, yyyy, p")}
-                </span>
+                <div className="flex items-center gap-1.5">
+                  <span className={cn(getDueDateClassName(task.due_date, task.completed))}>
+                    {format(new Date(task.due_date), "MMM d, yyyy, p")}
+                  </span>
+                  {wasReminderSentRecently && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <BellRing className="h-3.5 w-3.5 text-blue-500" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>A reminder was sent recently.</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
+                </div>
               ) : <span className="text-muted-foreground">No due date</span>}
             </div>
             <div className="flex items-center gap-2">

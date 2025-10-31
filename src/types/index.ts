@@ -139,6 +139,7 @@ export interface Task {
   ticket_attachments?: TaskAttachment[];
   reactions: Reaction[];
   kanban_order?: number;
+  last_reminder_sent_at?: string | null;
 }
 
 export interface TaskAttachment {
