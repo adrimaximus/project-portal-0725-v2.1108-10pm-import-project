@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { useCollaboratorStats, CollaboratorStat } from '@/hooks/useCollaboratorStats';
+import { useDashboardStats } from '@/hooks/useDashboardStats';
 import { Link } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 
@@ -41,6 +42,7 @@ const CollaboratorsList = () => {
   const [sortField, setSortField] = useState<SortField>('project_count');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const { data: collaborators = [], isLoading } = useCollaboratorStats();
+  const { data: dashboardStats, isLoading: isLoadingStats } = useDashboardStats();
 
   const filterLabels = {
     ongoing: 'Ongoing Projects',
@@ -121,17 +123,6 @@ const CollaboratorsList = () => {
     }
   };
 
-  const totalStats = useMemo(() => {
-    return allCollaborators.reduce((acc, c) => ({
-      projects: acc.projects + c.project_count,
-      ongoing: acc.ongoing + c.ongoing_project_count,
-      upcoming: acc.upcoming + c.upcoming_project_count,
-      tasks: acc.tasks + c.active_task_count,
-      tickets: acc.tickets + c.active_ticket_count,
-      overdue: acc.overdue + c.overdue_bill_count,
-    }), { projects: 0, ongoing: 0, upcoming: 0, tasks: 0, tickets: 0, overdue: 0 });
-  }, [allCollaborators]);
-
   return (
     <Card>
       <TooltipProvider>
@@ -171,7 +162,7 @@ const CollaboratorsList = () => {
           </CollapsibleTrigger>
           <CollapsibleContent>
             <CardContent className="px-6 pb-6 pt-0">
-              {isLoading ? (
+              {isLoading || isLoadingStats ? (
                 <div className="text-center text-muted-foreground py-8">Loading collaborators...</div>
               ) : allCollaborators.length === 0 ? (
                 <div className="text-center text-muted-foreground py-8">
@@ -181,33 +172,35 @@ const CollaboratorsList = () => {
                 </div>
               ) : (
                 <>
-                  {/* Summary Stats */}
-                  <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-6 p-4 bg-muted/50 rounded-lg">
-                    <div className="text-center">
-                      <p className="text-2xl font-bold">{totalStats.projects}</p>
-                      <p className="text-xs text-muted-foreground">Total Projects</p>
+                  {/* Summary Stats - Using actual app statistics */}
+                  {dashboardStats && (
+                    <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-6 p-4 bg-muted/50 rounded-lg">
+                      <div className="text-center">
+                        <p className="text-2xl font-bold">{dashboardStats.totalProjects}</p>
+                        <p className="text-xs text-muted-foreground">Total Projects</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-2xl font-bold">{dashboardStats.ongoingProjects}</p>
+                        <p className="text-xs text-muted-foreground">Ongoing</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-2xl font-bold">{dashboardStats.upcomingProjects}</p>
+                        <p className="text-xs text-muted-foreground">Upcoming</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-2xl font-bold">{dashboardStats.activeTasks}</p>
+                        <p className="text-xs text-muted-foreground">Active Tasks</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-2xl font-bold">{dashboardStats.activeTickets}</p>
+                        <p className="text-xs text-muted-foreground">Tickets</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-2xl font-bold text-destructive">{dashboardStats.overdueBills}</p>
+                        <p className="text-xs text-muted-foreground">Overdue Bills</p>
+                      </div>
                     </div>
-                    <div className="text-center">
-                      <p className="text-2xl font-bold">{totalStats.ongoing}</p>
-                      <p className="text-xs text-muted-foreground">Ongoing</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-2xl font-bold">{totalStats.upcoming}</p>
-                      <p className="text-xs text-muted-foreground">Upcoming</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-2xl font-bold">{totalStats.tasks}</p>
-                      <p className="text-xs text-muted-foreground">Active Tasks</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-2xl font-bold">{totalStats.tickets}</p>
-                      <p className="text-xs text-muted-foreground">Tickets</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-2xl font-bold text-destructive">{totalStats.overdue}</p>
-                      <p className="text-xs text-muted-foreground">Overdue Bills</p>
-                    </div>
-                  </div>
+                  )}
 
                   {/* Mobile View */}
                   <div className="md:hidden">
