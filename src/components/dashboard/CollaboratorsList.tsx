@@ -93,8 +93,13 @@ const CollaboratorsList = () => {
 
     const flatList = Object.values(grouped).flat();
 
-    // Function to sort members within a group or the flat list
-    const sortMembers = (members: CollaboratorStat[]) => {
+    // Function to sort members within a group by Name (A-Z)
+    const sortMembersByName = (members: CollaboratorStat[]) => {
+        return [...members].sort((a, b) => a.name.localeCompare(b.name));
+    };
+
+    // Function to sort the flat list based on user-selected criteria
+    const sortFlatList = (members: CollaboratorStat[]) => {
         return [...members].sort((a, b) => {
             let aValue: any = a[sortField];
             let bValue: any = b[sortField];
@@ -120,11 +125,11 @@ const CollaboratorsList = () => {
     // 2. Create the strictly grouped and sorted structure (for desktop view)
     const groupedAndSorted: { roleName: string, members: CollaboratorStat[] }[] = roleKeys.map(role => ({
         roleName: role,
-        members: sortMembers(grouped[role]!) // Sort members within each role group
+        members: sortMembersByName(grouped[role]!) // Sort members within each role group by name
     }));
     
     // 3. Create the fully flat sorted list (for mobile view)
-    const sortedCollaborators = sortMembers(flatList);
+    const sortedCollaborators = sortFlatList(flatList);
 
 
     return { 
