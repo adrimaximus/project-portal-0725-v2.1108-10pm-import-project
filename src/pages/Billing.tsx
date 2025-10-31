@@ -11,6 +11,12 @@ import BillingToolbar from "@/components/billing/BillingToolbar";
 import BillingTable from "@/components/billing/BillingTable";
 import BillingKanbanView from "@/components/billing/BillingKanbanView";
 import { DateRange } from "react-day-picker";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 const Billing = () => {
   const { data: projects = [], isLoading } = useProjects();
@@ -121,6 +127,22 @@ const Billing = () => {
     });
   }, [filteredInvoices, sortColumn, sortDirection]);
 
+  const { activeInvoices, archivedInvoices } = useMemo(() => {
+    const active: Invoice[] = [];
+    const archived: Invoice[] = [];
+    const archivedStatuses: PaymentStatus[] = ['Paid', 'Cancelled', 'Bid Lost'];
+
+    sortedInvoices.forEach(invoice => {
+      if (archivedStatuses.includes(invoice.status)) {
+        archived.push(invoice);
+      } else {
+        active.push(invoice);
+      }
+    });
+
+    return { activeInvoices: active, archivedInvoices: archived };
+  }, [sortedInvoices]);
+
   const handleEdit = (invoice: Invoice) => {
     setSelectedInvoice(invoice);
     setIsFormOpen(true);
@@ -159,22 +181,47 @@ const Billing = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle>Invoice History</CardTitle>
+            <CardTitle>Pending Invoices</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             {viewMode === 'table' ? (
               <BillingTable
-                invoices={sortedInvoices}
+                invoices={activeInvoices}
                 onEdit={handleEdit}
                 sortColumn={sortColumn}
                 sortDirection={sortDirection}
                 handleSort={handleSort}
               />
             ) : (
-              <BillingKanbanView invoices={sortedInvoices} onEditInvoice={handleEdit} />
+              <BillingKanbanView invoices={activeInvoices} onEditInvoice={handleEdit} />
             )}
           </CardContent>
         </Card>
+
+        <Accordion type="single" collapsible className="w-full">
+          <AccordionItem value="item-1">
+            <AccordionTrigger>
+              <h2 className="text-lg font-semibold">Archived Invoices ({archivedInvoices.length})</h2>
+            </AccordionTrigger>
+            <AccordionContent>
+              <Card>
+                <CardContent className="p-0">
+                  {viewMode === 'table' ? (
+                    <BillingTable
+                      invoices={archivedInvoices}
+                      onEdit={handleEdit}
+                      sortColumn={sortColumn}
+                      sortDirection={sortDirection}
+                      handleSort={handleSort}
+                    />
+                  ) : (
+                    <BillingKanbanView invoices={archivedInvoices} onEditInvoice={handleEdit} />
+                  )}
+                </CardContent>
+              </Card>
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
       </div>
       <EditInvoiceDialog
         isOpen={isFormOpen}
