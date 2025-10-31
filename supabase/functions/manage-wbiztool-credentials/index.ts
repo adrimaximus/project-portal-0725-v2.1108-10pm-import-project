@@ -25,7 +25,6 @@ serve(async (req) => {
       const { clientId, apiKey } = await req.json()
       if (!clientId || !apiKey) throw new Error('Client ID and API Key are required.')
 
-      console.log(`[WBIZTOOL-AUTH] Validating credentials for Client ID: ${clientId}`);
       const wbizResponse = await fetch('https://wbiztool.com/api/v2/devices', {
         method: 'GET',
         headers: {
@@ -35,20 +34,18 @@ serve(async (req) => {
         },
       })
       
-      console.log(`[WBIZTOOL-AUTH] WBIZTOOL API response status: ${wbizResponse.status}`);
-
       if (!wbizResponse.ok) {
+        const status = wbizResponse.status;
         const errorText = await wbizResponse.text();
-        let errorMessage = 'An unknown error occurred with the WBIZTOOL API.';
+        let errorMessage = `An unknown error occurred (Status: ${status}).`;
         try {
           const errorJson = JSON.parse(errorText);
           errorMessage = errorJson.message || JSON.stringify(errorJson);
         } catch (e) {
-          errorMessage = errorText.replace(/<[^>]*>?/gm, '').trim() || 'Received an invalid error response from WBIZTOOL.';
+          errorMessage = errorText.replace(/<[^>]*>?/gm, '').trim() || `Received an empty error response (Status: ${status}).`;
         }
         throw new Error(`WBIZTOOL API Error: ${errorMessage}`);
       }
-      console.log('[WBIZTOOL-AUTH] Credentials validated successfully.');
 
       const { error: upsertError } = await supabaseClient
         .from('wbiztool_credentials')

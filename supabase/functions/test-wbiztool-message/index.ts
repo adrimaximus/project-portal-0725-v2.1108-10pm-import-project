@@ -32,7 +32,6 @@ serve(async (req) => {
     if (credsError || !creds) throw new Error('WBIZTOOL credentials not found.')
 
     // 1. Fetch devices
-    console.log(`[WBIZTOOL-TEST] Fetching devices for Client ID: ${creds.client_id}`);
     const devicesResponse = await fetch('https://wbiztool.com/api/v2/devices', {
       method: 'GET',
       headers: {
@@ -41,31 +40,27 @@ serve(async (req) => {
         'x-api-key': creds.api_key,
       },
     })
-    console.log(`[WBIZTOOL-TEST] Devices API response status: ${devicesResponse.status}`);
     if (!devicesResponse.ok) {
+        const status = devicesResponse.status;
         const errorText = await devicesResponse.text();
-        let errorMessage = 'An unknown error occurred with the WBIZTOOL API.';
+        let errorMessage = `An unknown error occurred (Status: ${status}).`;
         try {
           const errorJson = JSON.parse(errorText);
           errorMessage = errorJson.message || JSON.stringify(errorJson);
         } catch (e) {
-          errorMessage = errorText.replace(/<[^>]*>?/gm, '').trim() || 'Received an invalid error response from WBIZTOOL.';
+          errorMessage = errorText.replace(/<[^>]*>?/gm, '').trim() || `Received an empty error response (Status: ${status}).`;
         }
         throw new Error(`Failed to fetch WBIZTOOL devices: ${errorMessage}`);
     }
     
     const devicesData = await devicesResponse.json()
-    console.log(`[WBIZTOOL-TEST] Found ${devicesData.data?.length || 0} devices.`);
     const activeDevice = devicesData.data?.find((d: any) => d.status === 'connected')
 
     if (!activeDevice) {
-        console.error('[WBIZTOOL-TEST] No active device found. All devices:', devicesData.data);
         throw new Error('No active WBIZTOOL device found. Please ensure your WhatsApp device is connected in the WBIZTOOL dashboard.');
     }
-    console.log(`[WBIZTOOL-TEST] Using active device ID: ${activeDevice.id}`);
 
     // 2. Send message using the device
-    console.log(`[WBIZTOOL-TEST] Sending message to ${phone}`);
     const messageResponse = await fetch('https://wbiztool.com/api/v2/messages', {
       method: 'POST',
       headers: {
@@ -79,21 +74,21 @@ serve(async (req) => {
         device_id: activeDevice.id,
       }),
     })
-    console.log(`[WBIZTOOL-TEST] Send message API response status: ${messageResponse.status}`);
     
     if (!messageResponse.ok) {
+      const status = messageResponse.status;
       const errorText = await messageResponse.text();
-      let errorMessage = 'Failed to send message.';
+      let errorMessage = `Failed to send message (Status: ${status}).`;
       try {
         const errorJson = JSON.parse(errorText);
         errorMessage = errorJson.message || JSON.stringify(errorJson);
       } catch (e) {
-        errorMessage = errorText.replace(/<[^>]*>?/gm, '').trim() || 'Received an invalid error response from WBIZTOOL.';
+        errorMessage = errorText.replace(/<[^>]*>?/gm, '').trim() || `Received an empty error response (Status: ${status}).`;
       }
       throw new Error(`WBIZTOOL API Error: ${errorMessage}`)
     }
 
-    const messageData = await messageResponse.json()
+    await messageResponse.json()
 
     return new Response(JSON.stringify({ message: 'Message queued successfully by WBIZTOOL.' }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
