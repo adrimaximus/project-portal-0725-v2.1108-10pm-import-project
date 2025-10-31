@@ -50,12 +50,17 @@ export const ChatMessageActions = ({
   onReply,
   className,
 }: ChatMessageActionsProps) => {
-  const { deleteMessage, toggleReaction, openForwardDialog } = useChatContext();
+  const { deleteMessage, toggleReaction, openForwardDialog, focusInput } = useChatContext();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editedText, setEditedText] = useState(message.text || '');
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
   const { theme } = useTheme();
+
+  const handleReplyClick = () => {
+    onReply(message);
+    focusInput();
+  };
 
   const handleCopy = () => {
     if (message.text) {
@@ -98,7 +103,7 @@ export const ChatMessageActions = ({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align={isCurrentUser ? "end" : "start"} onClick={(e) => e.stopPropagation()}>
-            <DropdownMenuItem onClick={() => onReply(message)}>
+            <DropdownMenuItem onClick={handleReplyClick}>
               <CornerUpLeft className="mr-2 h-4 w-4" />
               <span>Reply</span>
             </DropdownMenuItem>
