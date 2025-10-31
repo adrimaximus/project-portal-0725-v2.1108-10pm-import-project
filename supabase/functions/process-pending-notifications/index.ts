@@ -13,7 +13,6 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const APP_URL = Deno.env.get("SITE_URL")! || Deno.env.get("VITE_APP_URL")!;
 const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
-const CRON_SECRET = Deno.env.get("CRON_SECRET");
 
 const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
@@ -188,13 +187,9 @@ serve(async (req) => {
   }
 
   try {
-    // Security check
+    // Security check for cron job
     const userAgent = req.headers.get('user-agent');
-    const cronHeader = req.headers.get('X-Cron-Secret');
-    const cronSecret = Deno.env.get('CRON_SECRET');
-
-    // Allow requests from pg_net (internal cron) or with the correct secret for external triggers
-    if (userAgent !== 'pg_net/0.19.5' && cronHeader !== cronSecret) {
+    if (!userAgent || !userAgent.startsWith('pg_net')) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: corsHeaders });
     }
 

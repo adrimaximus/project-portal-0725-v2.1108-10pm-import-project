@@ -20,10 +20,7 @@ serve(async (req) => {
   try {
     // Security check for cron job
     const userAgent = req.headers.get('user-agent');
-    const authHeader = req.headers.get('Authorization')?.replace('Bearer ', '');
-    const cronSecret = Deno.env.get('CRON_SECRET');
-
-    if (userAgent !== 'pg_net/0.19.5' && authHeader !== cronSecret) {
+    if (!userAgent || !userAgent.startsWith('pg_net')) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: corsHeaders });
     }
 
