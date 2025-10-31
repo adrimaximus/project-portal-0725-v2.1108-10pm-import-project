@@ -19,13 +19,12 @@ serve(async (req) => {
 
   try {
     // Security check for cron job
-    const cronSecret = req.headers.get('x-cron-secret');
-    if (cronSecret !== Deno.env.get('CRON_SECRET')) {
-      // Check for the Authorization header as a fallback for local testing
-      const authHeader = req.headers.get('Authorization');
-      if (!authHeader || authHeader !== `Bearer ${Deno.env.get('CRON_SECRET')}`) {
-        return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: corsHeaders });
-      }
+    const userAgent = req.headers.get('user-agent');
+    const authHeader = req.headers.get('Authorization')?.replace('Bearer ', '');
+    const cronSecret = Deno.env.get('CRON_SECRET');
+
+    if (userAgent !== 'pg_net/0.19.5' && authHeader !== cronSecret) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: corsHeaders });
     }
 
     // 1. Get all users with Google Calendar tokens

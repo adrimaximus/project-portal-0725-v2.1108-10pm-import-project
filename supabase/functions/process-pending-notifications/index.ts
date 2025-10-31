@@ -189,29 +189,12 @@ serve(async (req) => {
 
   try {
     // Security check
-    const internalHeader = req.headers.get('X-Internal-Request');
-    const authHeader = req.headers.get('Authorization');
+    const userAgent = req.headers.get('user-agent');
+    const authHeader = req.headers.get('Authorization')?.replace('Bearer ', '');
     const cronSecret = Deno.env.get('CRON_SECRET');
-    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
-    let isAuthorized = false;
-
-    // Path 1: Internal call from pg_net (cron job)
-    if (internalHeader === 'true') {
-      isAuthorized = true;
-    } 
-    // Path 2: External call with a secret
-    else if (authHeader) {
-      const token = authHeader.replace('Bearer ', '');
-      if (token === cronSecret || token === serviceRoleKey) {
-        isAuthorized = true;
-      }
-    }
-
-    if (!isAuthorized) {
-      console.error("Unauthorized cron trigger attempt.", {
-        headers: Object.fromEntries(req.headers.entries()),
-      });
+    // Allow requests from pg_net (internal cron) or with the correct secret
+    if (userAgent !== 'pg_net/0.19.5' && authHeader !== cronSecret) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: corsHeaders });
     }
 
