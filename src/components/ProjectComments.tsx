@@ -6,6 +6,7 @@ import { Ticket, MoreHorizontal, Edit, Trash2, FileText, Paperclip, X, Loader2, 
 import { Badge } from "@/components/ui/badge";
 import { getInitials, generatePastelColor, parseMentions, formatMentionsForDisplay, cn } from "@/lib/utils";
 import { formatDistanceToNow } from 'date-fns';
+import { id } from 'date-fns/locale';
 import CommentInput from "./CommentInput";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
