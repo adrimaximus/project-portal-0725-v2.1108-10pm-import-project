@@ -38,15 +38,15 @@ serve(async (req) => {
       console.log(`[WBIZTOOL-AUTH] WBIZTOOL API response status: ${wbizResponse.status}`);
 
       if (!wbizResponse.ok) {
-        let errorData;
+        const errorText = await wbizResponse.text();
+        let errorMessage = 'An unknown error occurred with the WBIZTOOL API.';
         try {
-          errorData = await wbizResponse.json();
-          console.error('[WBIZTOOL-AUTH] WBIZTOOL API Error Response:', errorData);
+          const errorJson = JSON.parse(errorText);
+          errorMessage = errorJson.message || JSON.stringify(errorJson);
         } catch (e) {
-          console.error('[WBIZTOOL-AUTH] Failed to parse WBIZTOOL error response.');
-          errorData = { message: 'Received an invalid error response from WBIZTOOL.' };
+          errorMessage = errorText.replace(/<[^>]*>?/gm, '').trim() || 'Received an invalid error response from WBIZTOOL.';
         }
-        throw new Error(`WBIZTOOL API Error: ${errorData.message || 'Invalid credentials or unknown error'}`);
+        throw new Error(`WBIZTOOL API Error: ${errorMessage}`);
       }
       console.log('[WBIZTOOL-AUTH] Credentials validated successfully.');
 

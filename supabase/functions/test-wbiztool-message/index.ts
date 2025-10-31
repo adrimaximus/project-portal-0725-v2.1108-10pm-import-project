@@ -43,8 +43,15 @@ serve(async (req) => {
     })
     console.log(`[WBIZTOOL-TEST] Devices API response status: ${devicesResponse.status}`);
     if (!devicesResponse.ok) {
-        const errorData = await devicesResponse.json().catch(() => ({}));
-        throw new Error(`Failed to fetch WBIZTOOL devices: ${errorData.message || 'API request failed'}`);
+        const errorText = await devicesResponse.text();
+        let errorMessage = 'An unknown error occurred with the WBIZTOOL API.';
+        try {
+          const errorJson = JSON.parse(errorText);
+          errorMessage = errorJson.message || JSON.stringify(errorJson);
+        } catch (e) {
+          errorMessage = errorText.replace(/<[^>]*>?/gm, '').trim() || 'Received an invalid error response from WBIZTOOL.';
+        }
+        throw new Error(`Failed to fetch WBIZTOOL devices: ${errorMessage}`);
     }
     
     const devicesData = await devicesResponse.json()
@@ -73,12 +80,20 @@ serve(async (req) => {
       }),
     })
     console.log(`[WBIZTOOL-TEST] Send message API response status: ${messageResponse.status}`);
-    const messageData = await messageResponse.json()
-
+    
     if (!messageResponse.ok) {
-      console.error('[WBIZTOOL-TEST] Send message API error response:', messageData);
-      throw new Error(`WBIZTOOL API Error: ${messageData.message || 'Failed to send message'}`)
+      const errorText = await messageResponse.text();
+      let errorMessage = 'Failed to send message.';
+      try {
+        const errorJson = JSON.parse(errorText);
+        errorMessage = errorJson.message || JSON.stringify(errorJson);
+      } catch (e) {
+        errorMessage = errorText.replace(/<[^>]*>?/gm, '').trim() || 'Received an invalid error response from WBIZTOOL.';
+      }
+      throw new Error(`WBIZTOOL API Error: ${errorMessage}`)
     }
+
+    const messageData = await messageResponse.json()
 
     return new Response(JSON.stringify({ message: 'Message queued successfully by WBIZTOOL.' }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
