@@ -395,8 +395,21 @@ const CollaboratorsList = () => {
                                                         </div>
                                                       </TooltipTrigger>
                                                       <TooltipContent>
-                                                        <p>{c.active_ticket_count} ticket(s)</p>
-                                                        <p>{nonTicketTasks} other task(s)</p>
+                                                        <p className="font-semibold mb-1">Active Work Breakdown</p>
+                                                        <div className="space-y-1 text-sm">
+                                                          <div className="flex justify-between">
+                                                            <span className="text-muted-foreground">Total Assigned:</span>
+                                                            <span className="font-medium">{c.active_task_count}</span>
+                                                          </div>
+                                                          <div className="flex justify-between">
+                                                            <span className="text-muted-foreground flex items-center gap-1"><Ticket className="h-3 w-3 text-destructive" /> Assigned Tickets:</span>
+                                                            <span className="font-medium text-destructive">{c.active_ticket_count}</span>
+                                                          </div>
+                                                          <div className="flex justify-between">
+                                                            <span className="text-muted-foreground flex items-center gap-1"><ListChecks className="h-3 w-3" /> Other Tasks:</span>
+                                                            <span className="font-medium">{nonTicketTasks}</span>
+                                                          </div>
+                                                        </div>
                                                       </TooltipContent>
                                                     </Tooltip>
                                                   </TooltipProvider>
