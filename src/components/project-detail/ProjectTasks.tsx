@@ -17,6 +17,8 @@ import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { Separator } from "@/components/ui/separator";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { supabase } from "@/integrations/supabase/client";
+import { User as AuthUser } from '@supabase/supabase-js';
 
 interface ProjectTasksProps {
   tasks: Task[];
@@ -38,7 +40,7 @@ const formatBytes = (bytes?: number, decimals = 2) => {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
 }
 
-const TaskRow = ({ task, onToggleTaskCompletion, onEditTask, onDeleteTask, handleToggleReaction, setRef, onTitleClick }: {
+const TaskRow = ({ task, onToggleTaskCompletion, onEditTask, onDeleteTask, handleToggleReaction, setRef, onTitleClick, currentUserId }: {
   task: Task;
   onToggleTaskCompletion: (task: Task, completed: boolean) => void;
   onEditTask: (task: Task) => void;
@@ -46,6 +48,7 @@ const TaskRow = ({ task, onToggleTaskCompletion, onEditTask, onDeleteTask, handl
   handleToggleReaction: (taskId: string, emoji: string) => void;
   setRef: (el: HTMLDivElement | null) => void;
   onTitleClick: (task: Task) => void;
+  currentUserId?: string;
 }) => {
   const allAttachments = useMemo(() => {
     let attachments: TaskAttachment[] = [...(task.attachments || [])];
@@ -61,10 +64,20 @@ const TaskRow = ({ task, onToggleTaskCompletion, onEditTask, onDeleteTask, handl
   const attachmentCount = allAttachments.length;
   const hasAttachments = attachmentCount > 0;
 
+  const isAssignedToCurrentUser = useMemo(() => {
+    if (!currentUserId) return false;
+    return task.assignedTo?.some(assignee => assignee.id === currentUserId);
+  }, [task.assignedTo, currentUserId]);
+
+  const isUrgent = task.priority?.toLowerCase() === 'urgent';
+
   return (
-    <div 
+    <div
       ref={setRef}
-      className="flex items-start space-x-3 p-2 rounded-md hover:bg-muted group transition-colors duration-500"
+      className={cn(
+        "flex items-start space-x-3 p-2 rounded-md hover:bg-muted group transition-colors duration-500",
+        isUrgent ? "bg-red-500/10" : isAssignedToCurrentUser ? "bg-primary/10" : ""
+      )}
     >
       <Checkbox
         id={`task-${task.id}`}
@@ -75,11 +88,11 @@ const TaskRow = ({ task, onToggleTaskCompletion, onEditTask, onDeleteTask, handl
       <div
         className={`flex-1 min-w-0 text-sm flex items-center gap-2 ${task.completed ? 'text-muted-foreground' : 'text-card-foreground'}`}
       >
-        <span 
+        <span
           className={cn(
             "break-words cursor-pointer hover:underline",
             task.completed && "line-through"
-          )} 
+          )}
           title={task.title}
           onClick={() => onTitleClick(task)}
         >
@@ -183,6 +196,15 @@ const ProjectTasks = ({ tasks, projectId, onAddTask, onEditTask, onDeleteTask, o
   const { toggleTaskReaction } = useTaskMutations();
   const taskRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const [isCompletedOpen, setIsCompletedOpen] = useState(true);
+  const [user, setUser] = useState<AuthUser | null>(null);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUser(user);
+    };
+    fetchUser();
+  }, []);
 
   useEffect(() => {
     if (highlightedTaskId) {
@@ -227,7 +249,7 @@ const ProjectTasks = ({ tasks, projectId, onAddTask, onEditTask, onDeleteTask, o
     done.sort(sortByDate);
     return { undoneTasks: undone, doneTasks: done };
   }, [tasks]);
-  
+
   if (!tasks || tasks.length === 0) {
     return (
       <div className="text-center text-muted-foreground py-4">
@@ -259,6 +281,7 @@ const ProjectTasks = ({ tasks, projectId, onAddTask, onEditTask, onDeleteTask, o
             onDeleteTask={onDeleteTask}
             handleToggleReaction={handleToggleReaction}
             onTitleClick={handleTitleClick}
+            currentUserId={user?.id}
             setRef={(el) => {
               if (el) taskRefs.current.set(task.id, el);
               else taskRefs.current.delete(task.id);
@@ -288,6 +311,7 @@ const ProjectTasks = ({ tasks, projectId, onAddTask, onEditTask, onDeleteTask, o
                     onDeleteTask={onDeleteTask}
                     handleToggleReaction={handleToggleReaction}
                     onTitleClick={handleTitleClick}
+                    currentUserId={user?.id}
                     setRef={(el) => {
                       if (el) taskRefs.current.set(task.id, el);
                       else taskRefs.current.delete(task.id);
