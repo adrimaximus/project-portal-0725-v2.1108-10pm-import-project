@@ -386,6 +386,14 @@ Buat pesan pengingat yang sopan dan profesional sesuai dengan tingkat urgensi ya
                 userPrompt = `Buat notifikasi pembaruan progres goal. Penerima: ${recipientName}. Yang memperbarui: ${getFullName(updaterData)}. Goal: "${goalData.title}". Progres baru dicatat. URL: ${APP_URL}/goals/${goalData.slug}`;
                 break;
               }
+              case 'task_overdue': {
+                const { task_title, project_name, project_slug, task_id, days_overdue } = context;
+                if (!task_title || !project_name || !project_slug || !task_id || days_overdue === undefined) {
+                  throw new Error('Missing context data for task_overdue notification');
+                }
+                userPrompt = `Buat notifikasi tugas yang telah jatuh tempo. Penerima: ${recipientName}. Judul tugas: "${task_title}". Proyek: "${project_name}". Tugas ini telah terlambat *${days_overdue} hari*. URL: ${APP_URL}/projects/${project_slug}?tab=tasks&task=${task_id}`;
+                break;
+              }
               default:
                 throw new Error(`Unsupported notification type: ${notification.notification_type}`);
             }
