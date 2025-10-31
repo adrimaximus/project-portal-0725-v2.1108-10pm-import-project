@@ -1,6 +1,5 @@
 import React from 'react';
-import { Project } from '@/types';
-import { Task } from '@/types';
+import { Project, Task as ProjectTask, TaskStatus } from '@/types';
 import TableView from './TableView';
 import ListView from './ListView';
 import KanbanView from './KanbanView';
@@ -12,7 +11,7 @@ type ViewMode = 'table' | 'list' | 'kanban' | 'tasks' | 'tasks-kanban';
 interface ProjectViewContainerProps {
   view: ViewMode;
   projects: Project[];
-  tasks: Task[];
+  tasks: ProjectTask[];
   isLoading: boolean;
   isTasksLoading: boolean;
   onDeleteProject: (projectId: string) => void;
@@ -20,9 +19,10 @@ interface ProjectViewContainerProps {
   requestSort: (key: keyof Project) => void;
   rowRefs: React.MutableRefObject<Map<string, HTMLTableRowElement>>;
   kanbanGroupBy: 'status' | 'payment_status';
-  onEditTask: (task: Task) => void;
+  onEditTask: (task: ProjectTask) => void;
   onDeleteTask: (taskId: string) => void;
-  onToggleTaskCompletion: (task: Task, completed: boolean) => void;
+  onToggleTaskCompletion: (task: ProjectTask, completed: boolean) => void;
+  onTaskStatusChange: (task: ProjectTask, newStatus: TaskStatus) => void;
   isToggling: boolean;
   taskSortConfig: { key: string; direction: 'asc' | 'desc' };
   requestTaskSort: (key: string) => void;
@@ -34,7 +34,7 @@ interface ProjectViewContainerProps {
 
 const ProjectViewContainer = ({
   view, projects, tasks, isLoading, isTasksLoading, onDeleteProject, sortConfig, requestSort, rowRefs,
-  kanbanGroupBy, onEditTask, onDeleteTask, onToggleTaskCompletion, isToggling,
+  kanbanGroupBy, onEditTask, onDeleteTask, onToggleTaskCompletion, onTaskStatusChange, isToggling,
   taskSortConfig, requestTaskSort, refetch, tasksQueryKey, highlightedTaskId, onHighlightComplete
 }: ProjectViewContainerProps) => {
   switch (view) {
@@ -51,6 +51,7 @@ const ProjectViewContainer = ({
         onEdit={onEditTask}
         onDelete={onDeleteTask}
         onToggleTaskCompletion={onToggleTaskCompletion}
+        onStatusChange={onTaskStatusChange}
         isToggling={isToggling}
         sortConfig={taskSortConfig}
         requestSort={requestTaskSort}

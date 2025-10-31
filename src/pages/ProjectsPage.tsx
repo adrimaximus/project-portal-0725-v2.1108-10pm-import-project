@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { getDashboardProjects, createProject, updateProjectDetails, deleteProject } from '@/api/projects';
 import { getProjectTasks, upsertTask, deleteTask, toggleTaskCompletion } from '@/api/tasks';
 import { getPeople } from '@/api/people';
-import { Project, Task as ProjectTask, Person, UpsertTaskPayload } from '@/types';
+import { Project, Task as ProjectTask, Person, UpsertTaskPayload, TaskStatus } from '@/types';
 import { toast } from 'sonner';
 
 import ProjectsToolbar from '@/components/projects/ProjectsToolbar';
@@ -301,6 +301,20 @@ const ProjectsPage = () => {
     toggleTaskCompletion({ task, completed });
   };
 
+  const handleTaskStatusChange = (task: ProjectTask, newStatus: TaskStatus) => {
+    upsertTask({
+        id: task.id,
+        project_id: task.project_id,
+        title: task.title,
+        status: newStatus,
+        completed: newStatus === 'Done',
+    }, {
+        onSuccess: () => {
+            toast.success(`Task "${task.title}" status updated to "${newStatus}"`);
+        }
+    });
+  };
+
   const toggleHideCompleted = () => {
     setHideCompletedTasks(prev => {
       const newState = !prev;
@@ -380,6 +394,7 @@ const ProjectsPage = () => {
               onEditTask={handleEditTask}
               onDeleteTask={handleDeleteTask}
               onToggleTaskCompletion={handleToggleTaskCompletion}
+              onTaskStatusChange={handleTaskStatusChange}
               isToggling={isToggling}
               taskSortConfig={taskSortConfig}
               requestTaskSort={requestTaskSort}

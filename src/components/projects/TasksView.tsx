@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Task as ProjectTask, TaskAttachment, Reaction, User } from '@/types';
+import { Task as ProjectTask, TaskAttachment, Reaction, User, TaskStatus, TASK_STATUS_OPTIONS } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -23,6 +23,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/hooks/useSession";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface TasksViewProps {
   tasks: ProjectTask[];
@@ -30,6 +31,7 @@ interface TasksViewProps {
   onEdit: (task: ProjectTask) => void;
   onDelete: (taskId: string) => void;
   onToggleTaskCompletion: (task: ProjectTask, completed: boolean) => void;
+  onStatusChange: (task: ProjectTask, newStatus: TaskStatus) => void;
   isToggling: boolean;
   sortConfig: { key: string; direction: 'asc' | 'desc' };
   requestSort: (key: string) => void;
@@ -70,7 +72,7 @@ const aggregateAttachments = (task: ProjectTask): TaskAttachment[] => {
   return attachments;
 };
 
-const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTaskCompletion, isToggling, sortConfig, requestSort, rowRefs, highlightedTaskId, onHighlightComplete }: TasksViewProps) => {
+const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTaskCompletion, onStatusChange, isToggling, sortConfig, requestSort, rowRefs, highlightedTaskId, onHighlightComplete }: TasksViewProps) => {
   const [selectedTask, setSelectedTask] = useState<ProjectTask | null>(null);
   const { user } = useSession();
   const [tasks, setTasks] = useState<ProjectTask[]>(tasksProp);
@@ -313,7 +315,7 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[40%] sm:w-[30%] cursor-pointer hover:bg-muted/50 sticky left-0 bg-background z-10" onClick={() => requestSort('title')}>
+              <TableHead className="w-[40%] sm:w-[30%] cursor-pointer hover:bg-muted/50 sticky left-0 bg-card z-10" onClick={() => requestSort('title')}>
                 Task
               </TableHead>
               <TableHead className="w-[20%]">Project</TableHead>
@@ -558,11 +560,28 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
                         ) : null}
                       </TableCell>
                       <TableCell>
-                        {task.due_date && isOverdue(task.due_date) && !task.completed ? (
-                          <Badge className="bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400 border-transparent">Overdue</Badge>
-                        ) : (
-                          <Badge className={cn(statusStyle.tw, 'border-transparent')}>{task.status}</Badge>
-                        )}
+                        <Select
+                          value={task.status}
+                          onValueChange={(newStatus: TaskStatus) => onStatusChange(task, newStatus)}
+                        >
+                          <SelectTrigger className={cn(
+                            "h-auto border-0 focus:ring-0 focus:ring-offset-0 shadow-none bg-transparent p-0 w-auto",
+                            isOverdue(task.due_date) && !task.completed && "ring-2 ring-destructive rounded-md px-1"
+                          )}>
+                            <SelectValue>
+                              <Badge variant="outline" className={cn(statusStyle.tw, 'border-transparent')}>
+                                {task.status}
+                              </Badge>
+                            </SelectValue>
+                          </SelectTrigger>
+                          <SelectContent>
+                            {TASK_STATUS_OPTIONS.map(option => (
+                              <SelectItem key={option.value} value={option.value}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </TableCell>
                       <TableCell>
                         <Badge className={priorityStyle.tw}>{effectivePriority}</Badge>
@@ -585,9 +604,7 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
                         <div onClick={(e) => e.stopPropagation()}>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
+                              <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                               <DropdownMenuItem onSelect={() => onEdit(task)}>
