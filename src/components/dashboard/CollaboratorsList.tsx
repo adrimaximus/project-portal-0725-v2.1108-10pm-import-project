@@ -250,6 +250,7 @@ const CollaboratorsList = () => {
                           <DropdownMenuItem onSelect={() => handleSort('project_count')}>Total Projects</DropdownMenuItem>
                           <DropdownMenuItem onSelect={() => handleSort('ongoing_project_count')}>Ongoing</DropdownMenuItem>
                           <DropdownMenuItem onSelect={() => handleSort('active_task_count')}>Tasks</DropdownMenuItem>
+                          <DropdownMenuItem onSelect={() => handleSort('overdue_bill_count')}>Overdue Bills</DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                       <DropdownMenu>
