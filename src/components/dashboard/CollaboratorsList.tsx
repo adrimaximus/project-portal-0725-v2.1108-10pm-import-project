@@ -409,6 +409,10 @@ const CollaboratorsList = () => {
                                                             <span className="text-muted-foreground flex items-center gap-1"><ListChecks className="h-3 w-3" /> Other Tasks:</span>
                                                             <span className="font-medium">{nonTicketTasks}</span>
                                                           </div>
+                                                          <div className="flex justify-between">
+                                                            <span className="text-muted-foreground flex items-center gap-1"><ListChecks className="h-3 w-3" /> Tasks Created:</span>
+                                                            <span className="font-medium">{c.created_task_count}</span>
+                                                          </div>
                                                         </div>
                                                       </TooltipContent>
                                                     </Tooltip>
