@@ -13,6 +13,7 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const APP_URL = Deno.env.get("SITE_URL")! || Deno.env.get("VITE_APP_URL")!;
 const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
+const CRON_SECRET = Deno.env.get("CRON_SECRET");
 
 const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
@@ -47,14 +48,9 @@ const sendWhatsappMessage = async (phone: string, message: string) => {
     return;
   }
 
-  // 1. Fetch devices
   const devicesResponse = await fetch('https://wbiztool.com/api/v2/devices', {
     method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-client-id': config.clientId,
-      'x-api-key': config.apiKey,
-    },
+    headers: { 'Content-Type': 'application/json', 'x-client-id': config.clientId, 'x-api-key': config.apiKey },
   });
 
   if (!devicesResponse.ok) {
@@ -65,23 +61,12 @@ const sendWhatsappMessage = async (phone: string, message: string) => {
   const devicesData = await devicesResponse.json();
   const activeDevice = devicesData.data?.find((d: any) => d.status === 'connected');
 
-  if (!activeDevice) {
-    throw new Error('No active WBIZTOOL device found.');
-  }
+  if (!activeDevice) throw new Error('No active WBIZTOOL device found.');
 
-  // 2. Send message using the device
   const messageResponse = await fetch('https://wbiztool.com/api/v2/messages', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-client-id': config.clientId,
-      'x-api-key': config.apiKey,
-    },
-    body: JSON.stringify({
-      phone: formattedPhone,
-      message: message,
-      device_id: activeDevice.id,
-    }),
+    headers: { 'Content-Type': 'application/json', 'x-client-id': config.clientId, 'x-api-key': config.apiKey },
+    body: JSON.stringify({ phone: formattedPhone, message: message, device_id: activeDevice.id }),
   });
 
   if (!messageResponse.ok) {
@@ -108,15 +93,8 @@ Anda akan diberikan konteks untuk setiap notifikasi. Gunakan konteks tersebut un
 const getFullName = (profile: any) => `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email;
 
 const getOpenAIClient = async (supabaseAdmin: any) => {
-  const { data: config, error: configError } = await supabaseAdmin
-    .from('app_config')
-    .select('value')
-    .eq('key', 'OPENAI_API_KEY')
-    .single();
-
-  if (configError || !config?.value) {
-    return null;
-  }
+  const { data: config, error: configError } = await supabaseAdmin.from('app_config').select('value').eq('key', 'OPENAI_API_KEY').single();
+  if (configError || !config?.value) return null;
   return new OpenAI({ apiKey: config.value });
 };
 
@@ -136,12 +114,8 @@ const generateAiMessage = async (userPrompt: string): Promise<string> => {
     try {
       const aiResponse = await openai.chat.completions.create({
         model: "gpt-3.5-turbo",
-        messages: [
-          { role: "system", content: getSystemPrompt() },
-          { role: "user", content: userPrompt }
-        ],
-        temperature: 0.7,
-        max_tokens: 150,
+        messages: [{ role: "system", content: getSystemPrompt() }, { role: "user", content: userPrompt }],
+        temperature: 0.7, max_tokens: 150,
       });
       return aiResponse.choices[0].message.content || '';
     } catch (openaiError) {
@@ -187,9 +161,12 @@ serve(async (req) => {
   }
 
   try {
-    // Security check for cron job
     const userAgent = req.headers.get('user-agent');
-    if (!userAgent || !userAgent.startsWith('pg_net')) {
+    const cronHeader = req.headers.get('X-Cron-Secret');
+    const isCron = userAgent?.startsWith('pg_net');
+    const isAuthorized = cronHeader && cronHeader === CRON_SECRET;
+
+    if (!isCron && !isAuthorized) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: corsHeaders });
     }
 
@@ -210,9 +187,7 @@ serve(async (req) => {
     const { data: peopleData } = await supabaseAdmin.from('people').select('user_id, contact').in('user_id', recipientIds);
     const peopleContactMap = new Map(peopleData?.map(p => [p.user_id, p.contact]) || []);
 
-    let successCount = 0;
-    let failureCount = 0;
-    let skippedCount = 0;
+    let successCount = 0, failureCount = 0, skippedCount = 0;
 
     const userIds = new Set<string>();
     const projectIds = new Set<string>();
