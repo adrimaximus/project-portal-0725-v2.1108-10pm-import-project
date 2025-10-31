@@ -73,7 +73,7 @@ export interface Project {
   updated_at: string;
 }
 
-export type ProjectStatus = 'Idea' | 'Requested' | 'On Track' | 'In Progress' | 'In Review' | 'On Hold' | 'At Risk' | 'Off Track' | 'Completed' | 'Cancelled';
+export type ProjectStatus = 'Idea' | 'Requested' | 'On Track' | 'In Progress' | 'In Review' | 'On Hold' | 'At Risk' | 'Off Track' | 'Completed' | 'Cancelled' | 'Bid Lost';
 export const PROJECT_STATUS_OPTIONS: { value: ProjectStatus; label: string }[] = [
   { value: 'Idea', label: 'Idea' },
   { value: 'Requested', label: 'Requested' },
@@ -85,6 +85,7 @@ export const PROJECT_STATUS_OPTIONS: { value: ProjectStatus; label: string }[] =
   { value: 'Off Track', label: 'Off Track' },
   { value: 'Completed', label: 'Completed' },
   { value: 'Cancelled', label: 'Cancelled' },
+  { value: 'Bid Lost', label: 'Bid Lost' },
 ];
 
 export interface ProjectFile {
