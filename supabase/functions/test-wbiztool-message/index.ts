@@ -32,7 +32,7 @@ serve(async (req) => {
     if (credsError || !creds) throw new Error('WBIZTOOL credentials not found.')
 
     // 1. Fetch devices
-    const devicesResponse = await fetch('https://wbiztool.com/api/v3/devices', {
+    const devicesResponse = await fetch('https://api.wbiztool.com/v3/devices', {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -61,7 +61,7 @@ serve(async (req) => {
     }
 
     // 2. Send message using the device
-    const messageResponse = await fetch('https://wbiztool.com/api/v3/messages', {
+    const messageResponse = await fetch('https://api.wbiztool.com/v3/messages', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

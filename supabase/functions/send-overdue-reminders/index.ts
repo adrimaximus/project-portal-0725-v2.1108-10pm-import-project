@@ -133,7 +133,7 @@ Buat pesan pengingat yang sopan dan profesional sesuai dengan tingkat urgensi ya
           const apiKey = wbizConfig?.find(c => c.key === 'WBIZTOOL_API_KEY')?.value;
           if (!clientId || !apiKey) throw new Error("WBIZTOOL credentials not configured.");
 
-          const devicesResponse = await fetch('https://wbiztool.com/api/v2/devices', {
+          const devicesResponse = await fetch('https://api.wbiztool.com/v3/devices', {
             method: 'GET',
             headers: { 'Content-Type': 'application/json', 'x-client-id': clientId, 'x-api-key': apiKey },
           });
@@ -145,7 +145,7 @@ Buat pesan pengingat yang sopan dan profesional sesuai dengan tingkat urgensi ya
           const activeDevice = devicesData.data?.find((d: any) => d.status === 'connected');
           if (!activeDevice) throw new Error('No active WBIZTOOL device found.');
 
-          const wbizResponse = await fetch('https://wbiztool.com/api/v2/messages', {
+          const wbizResponse = await fetch('https://api.wbiztool.com/v3/messages', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'x-client-id': clientId, 'x-api-key': apiKey },
             body: JSON.stringify({ phone: profile.phone, message: aiMessage, device_id: activeDevice.id }),
