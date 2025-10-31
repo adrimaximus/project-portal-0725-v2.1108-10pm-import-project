@@ -13,7 +13,6 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const APP_URL = Deno.env.get("SITE_URL")! || Deno.env.get("VITE_APP_URL")!;
 const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
-const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
 const CRON_SECRET = Deno.env.get("CRON_SECRET");
 
 const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
@@ -109,6 +108,19 @@ Anda akan diberikan konteks untuk setiap notifikasi. Gunakan konteks tersebut un
 
 const getFullName = (profile: any) => `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email;
 
+const getOpenAIClient = async (supabaseAdmin: any) => {
+  const { data: config, error: configError } = await supabaseAdmin
+    .from('app_config')
+    .select('value')
+    .eq('key', 'OPENAI_API_KEY')
+    .single();
+
+  if (configError || !config?.value) {
+    return null;
+  }
+  return new OpenAI({ apiKey: config.value });
+};
+
 const generateAiMessage = async (userPrompt: string): Promise<string> => {
   if (ANTHROPIC_API_KEY) {
     try {
@@ -120,9 +132,9 @@ const generateAiMessage = async (userPrompt: string): Promise<string> => {
     }
   }
 
-  if (OPENAI_API_KEY) {
+  const openai = await getOpenAIClient(supabaseAdmin);
+  if (openai) {
     try {
-      const openai = new OpenAI({ apiKey: OPENAI_API_KEY });
       const aiResponse = await openai.chat.completions.create({
         model: "gpt-3.5-turbo",
         messages: [
