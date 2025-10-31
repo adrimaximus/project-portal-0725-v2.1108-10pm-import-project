@@ -18,6 +18,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import CommentAttachmentItem from './CommentAttachmentItem';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import CommentReactionPicker from './CommentReactionPicker';
+import { useProfiles } from '@/hooks/useProfiles';
 
 interface Reaction {
   id: string;
@@ -33,7 +34,7 @@ interface CommentWithReactions extends CommentType {
 interface ProjectCommentsProps {
   project: Project;
   onAddCommentOrTicket: (text: string, isTicket: boolean, attachments: File[] | null, mentionedUserIds: string[]) => void;
-  onUpdateComment: (commentId: string, text: string, attachments: File[] | null, isConvertingToTicket: boolean, mentionedUserIds: string[]) => void;
+  onUpdateComment: (project: Project, commentId: string, text: string, attachments: File[] | null, isConvertingToTicket: boolean, mentionedUserIds: string[]) => void;
   onDeleteComment: (commentId: string) => void;
   onToggleCommentReaction: (commentId: string, emoji: string) => void;
   isUpdatingComment?: boolean;
@@ -41,13 +42,14 @@ interface ProjectCommentsProps {
 }
 
 const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDeleteComment, onToggleCommentReaction, isUpdatingComment, updatedCommentId }: ProjectCommentsProps) => {
-  const { user: currentUser } = useAuth();
+  const { user } = useAuth();
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editedText, setEditedText] = useState('');
   const [commentToDelete, setCommentToDelete] = useState<CommentType | null>(null);
   const [newAttachments, setNewAttachments] = useState<File[]>([]);
   const [isConvertingToTicket, setIsConvertingToTicket] = useState(false);
   const editFileInputRef = useRef<HTMLInputElement>(null);
+  const { data: allUsers = [] } = useProfiles();
 
   const handleEditClick = (comment: CommentType) => {
     const textWithoutAttachments = comment.text?.replace(/\n\n\*\*Attachments:\*\*[\s\S]*$/, '').trim() || '';
@@ -67,7 +69,7 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
   const handleSaveEdit = () => {
     if (editingCommentId) {
       const mentionedUserIds = parseMentions(editedText);
-      onUpdateComment(editingCommentId, editedText, newAttachments, isConvertingToTicket, mentionedUserIds);
+      onUpdateComment(project, editingCommentId, editedText, newAttachments, isConvertingToTicket, mentionedUserIds);
     }
     handleCancelEdit();
   };
@@ -95,14 +97,14 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
   return (
     <>
       <div className="space-y-6">
-        <CommentInput project={project} onAddCommentOrTicket={onAddCommentOrTicket} />
+        <CommentInput project={project} onAddCommentOrTicket={onAddCommentOrTicket} allUsers={allUsers} />
         <div className="space-y-4 h-[300px] overflow-y-auto pr-4">
           {comments.map((comment) => {
             const author = comment.author;
             const fullName = `${author.first_name || ''} ${author.last_name || ''}`.trim() || author.email;
             const isTicket = comment.isTicket;
             const ticketTask = isTicket ? tasks.find((t) => t.originTicketId === comment.id) : null;
-            const canManageComment = currentUser && (comment.author.id === currentUser.id || currentUser.role === 'admin' || currentUser.role === 'master admin');
+            const canManageComment = user && (comment.author.id === user.id || user.role === 'admin' || user.role === 'master admin');
             
             const textWithoutAttachments = comment.text?.replace(/\n\n\*\*Attachments:\*\*[\s\S]*$/, '').trim() || '';
             const mainText = textWithoutAttachments;
@@ -134,7 +136,7 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
                     <p className="font-semibold">{fullName}</p>
                     <div className="flex items-center gap-1">
                       <span className="text-xs text-muted-foreground">
-                        {formatDistanceToNow(new Date(comment.timestamp), { addSuffix: true })}
+                        {formatDistanceToNow(new Date(comment.timestamp), { addSuffix: true, locale: id })}
                       </span>
                       {canManageComment && editingCommentId !== comment.id && (
                         <DropdownMenu>
@@ -277,7 +279,7 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
                         {(comment.reactions && comment.reactions.length > 0) && (
                           <div className="flex flex-wrap items-center gap-1">
                             {Object.entries(groupedReactions).map(([emoji, { users, userIds }]) => {
-                                const hasReacted = currentUser ? userIds.includes(currentUser.id) : false;
+                                const hasReacted = user ? userIds.includes(user.id) : false;
                                 return (
                                     <TooltipProvider key={emoji}>
                                         <Tooltip>

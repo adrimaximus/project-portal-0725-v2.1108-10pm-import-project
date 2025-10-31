@@ -190,7 +190,7 @@ export const useProjectMutations = (slug: string) => {
             let finalCommentText = text;
             let firstAttachmentUrl: string | null = null;
             let firstAttachmentName: string | null = null;
-            let attachmentsJsonb: any[] = []; // Array untuk menyimpan metadata lampiran
+            let attachmentsJsonb: any[] = []; // Array to store attachment metadata
 
             if (attachments && attachments.length > 0) {
                 const uploadPromises = attachments.map(async (file) => {
@@ -235,7 +235,7 @@ export const useProjectMutations = (slug: string) => {
                 is_ticket: isTicket, 
                 attachment_url: firstAttachmentUrl, 
                 attachment_name: firstAttachmentName,
-                attachments_jsonb: attachmentsJsonb, // <-- Memasukkan data lampiran lengkap
+                attachments_jsonb: attachmentsJsonb, // <-- Insert full attachment data
             }).select().single();
             
             if (commentError) throw commentError;
@@ -272,6 +272,24 @@ export const useProjectMutations = (slug: string) => {
                 if (taskError) throw new Error(`Ticket created, but failed to create task: ${taskError.message}`);
     
                 if (newTask && mentionedUserIds.length > 0) {
+                    // Add mentioned users to the project if they aren't already members
+                    const projectMemberIds = project.assignedTo.map(m => m.id);
+                    const newMemberIds = mentionedUserIds.filter(id => !projectMemberIds.includes(id));
+
+                    if (newMemberIds.length > 0) {
+                        const newMembers = newMemberIds.map(userId => ({
+                            project_id: project.id,
+                            user_id: userId,
+                            role: 'member' as const
+                        }));
+                        const { error: memberError } = await supabase.from('project_members').insert(newMembers);
+                        if (memberError) {
+                            console.warn('Failed to add mentioned users to project:', memberError);
+                            toast.warning("Couldn't add some mentioned users to the project team.");
+                        }
+                    }
+
+                    // Assign users to the task
                     const assignments = mentionedUserIds.map(userId => ({
                         task_id: newTask.id,
                         user_id: userId,
@@ -292,7 +310,7 @@ export const useProjectMutations = (slug: string) => {
     });
 
     const updateComment = useMutation({
-        mutationFn: async ({ commentId, text, attachments, isConvertingToTicket, mentionedUserIds }: { commentId: string, text: string, attachments: File[] | null, isConvertingToTicket: boolean, mentionedUserIds: string[] }) => {
+        mutationFn: async ({ project, commentId, text, attachments, isConvertingToTicket, mentionedUserIds }: { project: Project, commentId: string, text: string, attachments: File[] | null, isConvertingToTicket: boolean, mentionedUserIds: string[] }) => {
             const { data: originalComment, error: fetchError } = await supabase
                 .from('comments')
                 .select('text, is_ticket, project_id, attachment_url, attachment_name, attachments_jsonb')
@@ -408,6 +426,22 @@ export const useProjectMutations = (slug: string) => {
                 }
 
                 if (newTask && mentionedUserIds.length > 0) {
+                    const projectMemberIds = project.assignedTo.map(m => m.id);
+                    const newMemberIds = mentionedUserIds.filter(id => !projectMemberIds.includes(id));
+
+                    if (newMemberIds.length > 0) {
+                        const newMembers = newMemberIds.map(userId => ({
+                            project_id: project.id,
+                            user_id: userId,
+                            role: 'member' as const
+                        }));
+                        const { error: memberError } = await supabase.from('project_members').insert(newMembers);
+                        if (memberError) {
+                            console.warn('Failed to add mentioned users to project:', memberError);
+                            toast.warning("Couldn't add some mentioned users to the project team.");
+                        }
+                    }
+
                     const assignments = mentionedUserIds.map(userId => ({
                         task_id: newTask.id,
                         user_id: userId,

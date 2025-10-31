@@ -63,8 +63,8 @@ const ProjectMainContent = ({
     mutations.addComment.mutate({ project, user, text, isTicket, attachments, mentionedUserIds });
   };
 
-  const handleUpdateComment = (commentId: string, text: string, attachments: File[] | null, isConvertingToTicket: boolean, mentionedUserIds: string[]) => {
-    mutations.updateComment.mutate({ commentId, text, attachments, isConvertingToTicket, mentionedUserIds });
+  const handleUpdateComment = (project: Project, commentId: string, text: string, attachments: File[] | null, isConvertingToTicket: boolean, mentionedUserIds: string[]) => {
+    mutations.updateComment.mutate({ project, commentId, text, attachments, isConvertingToTicket, mentionedUserIds });
   };
 
   const handleDeleteComment = (commentId: string) => {
