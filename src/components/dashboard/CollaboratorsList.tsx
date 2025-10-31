@@ -36,6 +36,14 @@ import { Badge } from '@/components/ui/badge';
 
 type SortField = 'name' | 'project_count' | 'ongoing_project_count' | 'upcoming_project_count' | 'active_task_count' | 'overdue_bill_count';
 
+const capitalizeWords = (str: string) => {
+  if (!str) return '';
+  return str
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+};
+
 const CollaboratorsList = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [filter, setFilter] = useState<'ongoing' | 'upcoming'>('ongoing');
@@ -242,7 +250,7 @@ const CollaboratorsList = () => {
                             </Avatar>
                             <div className="flex-1">
                               <span className="font-medium block">{c.name}</span>
-                              <Badge variant="outline" className="text-xs capitalize mt-1">{c.role}</Badge>
+                              <Badge variant="outline" className="text-xs capitalize mt-1">{capitalizeWords(c.role)}</Badge>
                             </div>
                           </Link>
                           <div className="grid grid-cols-2 gap-3 text-sm">
@@ -332,7 +340,7 @@ const CollaboratorsList = () => {
                                     <TableRow className="border-b-0 hover:bg-transparent">
                                       <TableCell colSpan={5} className="pt-6 pb-2">
                                         <h3 className="text-sm font-semibold uppercase text-muted-foreground tracking-wider">
-                                          {c.role.replace('_', ' ')}
+                                          {capitalizeWords(c.role)}
                                         </h3>
                                       </TableCell>
                                     </TableRow>

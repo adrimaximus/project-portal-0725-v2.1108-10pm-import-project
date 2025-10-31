@@ -26,6 +26,15 @@ interface TeamMembersCardProps {
   onResendInvite: (member: User) => void;
 }
 
+const capitalizeWords = (str: string) => {
+  if (!str) return '';
+  // Handle roles like 'master admin' or 'BD' which might be all caps or mixed case
+  return str
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+};
+
 const TeamMembersCard = ({
   members,
   roles,
@@ -47,17 +56,6 @@ const TeamMembersCard = ({
     setLocalMembers(members);
   }, [members]);
 
-  const capitalizeWords = (str: string) => {
-    if (!str) return '';
-    if (str === str.toUpperCase()) {
-      return str;
-    }
-    return str
-      .split(' ')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-      .join(' ');
-  };
-
   const processedRoles = useMemo(() => {
     return [...roles]
       .map(role => ({
@@ -72,6 +70,11 @@ const TeamMembersCard = ({
         return a.displayName.localeCompare(b.displayName);
       });
   }, [roles]);
+
+  const getRoleDisplayName = (roleName: string) => {
+    const role = processedRoles.find(r => r.name === roleName);
+    return role ? role.displayName : capitalizeWords(roleName);
+  };
 
   const handleRoleChange = (memberId: string, newRole: string) => {
     setLocalMembers(prevMembers =>
@@ -192,14 +195,14 @@ const TeamMembersCard = ({
                         {member.status === 'suspended' ? (
                           <Badge variant={getStatusBadgeVariant(member.status)}>Suspended</Badge>
                         ) : member.status === 'Pending invite' ? (
-                          <span className="text-muted-foreground capitalize">{member.role}</span>
+                          <span className="text-muted-foreground capitalize">{getRoleDisplayName(member.role || 'member')}</span>
                         ) : isRoleChangeDisabled ? (
                           <TooltipProvider><Tooltip><TooltipTrigger asChild>
                                 <div className="w-full">
                                   <Select value={member.role || undefined} disabled>
                                     <SelectTrigger className="w-full h-9 border-none focus:ring-0 focus:ring-offset-0 shadow-none bg-transparent disabled:cursor-not-allowed disabled:opacity-50">
                                       <SelectValue placeholder="No role assigned">
-                                        {processedRoles.find(r => r.name === member.role)?.displayName || member.role}
+                                        {getRoleDisplayName(member.role || 'member')}
                                       </SelectValue>
                                     </SelectTrigger>
                                   </Select>
