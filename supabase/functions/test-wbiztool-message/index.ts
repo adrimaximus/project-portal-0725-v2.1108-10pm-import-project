@@ -15,29 +15,34 @@ serve(async (req) => {
     const { phone, message } = await req.json()
     if (!phone || !message) throw new Error('Phone number and message are required.')
 
-    const supabaseClient = createClient(
+    const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
-    )
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
 
-    const { data: { user } } = await supabaseClient.auth.getUser()
-    if (!user) throw new Error('User not found')
+    const { data: credsData, error: credsError } = await supabaseAdmin
+      .from('app_config')
+      .select('key, value')
+      .in('key', ['WBIZTOOL_CLIENT_ID', 'WBIZTOOL_API_KEY']);
 
-    const { data: creds, error: credsError } = await supabaseClient
-      .from('wbiztool_credentials')
-      .select('client_id, api_key')
-      .single()
+    if (credsError || !credsData || credsData.length < 2) {
+      throw new Error('WBIZTOOL credentials not found in app configuration.');
+    }
 
-    if (credsError || !creds) throw new Error('WBIZTOOL credentials not found.')
+    const clientId = credsData.find(c => c.key === 'WBIZTOOL_CLIENT_ID')?.value;
+    const apiKey = credsData.find(c => c.key === 'WBIZTOOL_API_KEY')?.value;
+
+    if (!clientId || !apiKey) {
+      throw new Error('WBIZTOOL credentials not fully configured.');
+    }
 
     // 1. Fetch devices
     const devicesResponse = await fetch('https://wbiztool.com/api/v1/get-devices/', {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        'x-client-id': creds.client_id,
-        'x-api-key': creds.api_key,
+        'x-client-id': clientId,
+        'x-api-key': apiKey,
       },
     })
     if (!devicesResponse.ok) {
@@ -65,8 +70,8 @@ serve(async (req) => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-client-id': creds.client_id,
-        'x-api-key': creds.api_key,
+        'x-client-id': clientId,
+        'x-api-key': apiKey,
       },
       body: JSON.stringify({
         phone,
