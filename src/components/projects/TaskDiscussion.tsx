@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Task, Comment as CommentType, User, Reaction } from "@/types";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -20,6 +20,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Link } from 'react-router-dom';
 import CommentReactions from '../CommentReactions';
+import { useProfiles } from '@/hooks/useProfiles';
 
 interface TaskDiscussionProps {
   task: Task;
