@@ -9,7 +9,6 @@ import TaskReactions from './TaskReactions';
 import CommentInput from '../CommentInput';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { formatDistanceToNow } from 'date-fns';
-import { id } from 'date-fns/locale';
 import { getInitials, generatePastelColor, formatMentionsForDisplay, getAvatarUrl } from '@/lib/utils';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
 import { Button } from '../ui/button';
@@ -195,7 +194,7 @@ const TaskDiscussion = ({ task, onToggleReaction }: TaskDiscussionProps) => {
                     <p className="font-semibold">{fullName}</p>
                     <div className="flex items-center gap-1">
                       <span className="text-xs text-muted-foreground">
-                        {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true, locale: id })}
+                        {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
                       </span>
                       {canManageComment && editingCommentId !== comment.id && (
                         <DropdownMenu>
