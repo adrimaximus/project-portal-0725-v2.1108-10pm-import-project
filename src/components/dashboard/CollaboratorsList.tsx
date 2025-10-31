@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { useCollaboratorStats, CollaboratorStat } from '@/hooks/useCollaboratorStats';
+import { Link } from 'react-router-dom';
 
 const CollaboratorsList = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -140,13 +141,13 @@ const CollaboratorsList = () => {
                         <div className="space-y-4">
                           {collaboratorsInRole.map(c => (
                             <div key={c.id} className="bg-muted/50 p-4 rounded-lg">
-                              <div className="flex items-center gap-3 mb-4">
+                              <Link to={c.slug ? `/people/${c.slug}` : `/users/${c.id}`} className="flex items-center gap-3 mb-4">
                                 <Avatar className="h-10 w-10">
                                   <AvatarImage src={getAvatarUrl(c.avatar_url, c.id)} alt={c.name} />
                                   <AvatarFallback style={generatePastelColor(c.id)}>{c.initials}</AvatarFallback>
                                 </Avatar>
                                 <span className="font-medium">{c.name}</span>
-                              </div>
+                              </Link>
                               <div className="space-y-3 text-sm">
                                 <div className="flex justify-between items-center">
                                   <span className="flex items-center gap-2 text-muted-foreground"><Briefcase className="h-4 w-4" /> Total Projects</span>
@@ -217,13 +218,13 @@ const CollaboratorsList = () => {
                                   return (
                                     <TableRow key={c.id}>
                                         <TableCell>
-                                            <div className="flex items-center gap-3">
+                                            <Link to={c.slug ? `/people/${c.slug}` : `/users/${c.id}`} className="flex items-center gap-3 hover:underline">
                                                 <Avatar className="h-8 w-8">
                                                     <AvatarImage src={getAvatarUrl(c.avatar_url, c.id)} alt={c.name} />
                                                     <AvatarFallback style={generatePastelColor(c.id)}>{c.initials}</AvatarFallback>
                                                 </Avatar>
                                                 <span className="font-medium whitespace-nowrap">{c.name}</span>
-                                            </div>
+                                            </Link>
                                         </TableCell>
                                         <TableCell className="text-right font-medium">{c.project_count}</TableCell>
                                         <TableCell className="text-right font-medium">{getFilteredCount(c)}</TableCell>

@@ -11,6 +11,7 @@ type CollaboratorStatData = {
   active_task_count: number;
   active_ticket_count: number;
   overdue_bill_count: number;
+  slug: string | null;
 };
 
 export type CollaboratorStat = User & CollaboratorStatData;
@@ -40,6 +41,7 @@ const fetchCollaboratorStats = async (): Promise<CollaboratorStat[]> => {
       avatar_url: profile?.avatar_url,
       role: profile?.role || 'member',
       initials: getInitials(fullName, profile?.email) || 'NN',
+      slug: stat.slug,
     };
   });
 };
