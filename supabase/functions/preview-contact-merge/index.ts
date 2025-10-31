@@ -8,14 +8,7 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
-const getOpenAIClient = async (supabaseAdmin: any) => {
-  // 1. Try to get the key from environment variables first.
-  const apiKeyFromEnv = Deno.env.get('OPENAI_API_KEY');
-  if (apiKeyFromEnv) {
-    return new OpenAI({ apiKey: apiKeyFromEnv });
-  }
-
-  // 2. If not in env, fall back to the database.
+const getOpenAIClient = async (supabaseAdmin) => {
   const { data: config, error: configError } = await supabaseAdmin
     .from('app_config')
     .select('value')
@@ -23,10 +16,8 @@ const getOpenAIClient = async (supabaseAdmin: any) => {
     .single();
 
   if (configError || !config?.value) {
-    // 3. If not found in either place, throw an error.
-    throw new Error("OpenAI API key is not configured. Please set it in your application settings or as a Supabase secret.");
+    throw new Error("OpenAI API key is not configured by an administrator.");
   }
-  
   return new OpenAI({ apiKey: config.value });
 };
 

@@ -2,6 +2,7 @@ import { Reaction } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
+import CommentReactionPicker from './CommentReactionPicker';
 
 interface CommentReactionsProps {
   reactions: Reaction[];
@@ -11,17 +12,21 @@ interface CommentReactionsProps {
 const CommentReactions = ({ reactions, onToggleReaction }: CommentReactionsProps) => {
   const { user: currentUser } = useAuth();
 
-  const groupedReactions = (reactions || []).reduce((acc, reaction) => {
+  if (!reactions) {
+    return (
+      <div onClick={(e) => e.stopPropagation()}>
+        <CommentReactionPicker onSelect={onToggleReaction} />
+      </div>
+    );
+  }
+
+  const groupedReactions = reactions.reduce((acc, reaction) => {
     if (!acc[reaction.emoji]) {
       acc[reaction.emoji] = [];
     }
     acc[reaction.emoji].push(reaction);
     return acc;
   }, {} as Record<string, Reaction[]>);
-
-  if (Object.keys(groupedReactions).length === 0) {
-    return null;
-  }
 
   return (
     <div className="flex flex-wrap items-center gap-1">
@@ -53,6 +58,9 @@ const CommentReactions = ({ reactions, onToggleReaction }: CommentReactionsProps
           </TooltipProvider>
         );
       })}
+      <div onClick={(e) => e.stopPropagation()}>
+        <CommentReactionPicker onSelect={onToggleReaction} />
+      </div>
     </div>
   );
 };

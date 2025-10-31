@@ -15,7 +15,7 @@ import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import TaskDetailCard from './TaskDetailCard';
-import { useMemo, useRef, useEffect } from 'react';
+import { useMemo } from 'react';
 import TaskReactions from './TaskReactions';
 import { useTaskMutations } from '@/hooks/useTaskMutations';
 import { useQueryClient } from '@tanstack/react-query';
@@ -24,8 +24,6 @@ interface TasksKanbanCardProps {
   task: Task;
   onEdit: (task: Task) => void;
   onDelete: (taskId: string) => void;
-  isHighlighted?: boolean;
-  onHighlightComplete?: () => void;
 }
 
 // Utility function to aggregate attachments
@@ -60,26 +58,13 @@ const aggregateAttachments = (task: Task): TaskAttachment[] => {
   return attachments;
 };
 
-const TasksKanbanCard = ({ task, onEdit, onDelete, isHighlighted = false, onHighlightComplete = () => {} }: TasksKanbanCardProps) => {
+const TasksKanbanCard = ({ task, onEdit, onDelete }: TasksKanbanCardProps) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id });
   const queryClient = useQueryClient();
   const { toggleTaskReaction } = useTaskMutations(() => {
     queryClient.invalidateQueries({ queryKey: ['tasks'] });
     queryClient.invalidateQueries({ queryKey: ['project'] });
   });
-  const cardRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (isHighlighted && cardRef.current) {
-      cardRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      cardRef.current.classList.add('ring-2', 'ring-primary', 'ring-offset-2', 'transition-shadow', 'duration-1000');
-      const timer = setTimeout(() => {
-        cardRef.current?.classList.remove('ring-2', 'ring-primary', 'ring-offset-2');
-        onHighlightComplete();
-      }, 2500);
-      return () => clearTimeout(timer);
-    }
-  }, [isHighlighted, onHighlightComplete]);
 
   const priorityStyle = getPriorityStyles(task.priority);
   const allAttachments = useMemo(() => aggregateAttachments(task), [task]);
@@ -125,106 +110,110 @@ const TasksKanbanCard = ({ task, onEdit, onDelete, isHighlighted = false, onHigh
   };
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners} className={cn(isDragging && "opacity-30")}>
-      <Card ref={cardRef} className="mb-4 bg-card border-l-4 cursor-grab active:cursor-grabbing card-element">
-        <CardHeader className="p-3">
-          <div className="flex justify-between items-start">
-            <CardTitle className="text-sm leading-snug flex items-center gap-1.5 pr-2">
-              {task.status === 'Done' && <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />}
-              <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ p: 'span' }}>
-                {formatTaskText(task.title)}
-              </ReactMarkdown>
-            </CardTitle>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild onClick={handleDropdownClick}>
-                <Button variant="ghost" size="icon" className="h-6 w-6 flex-shrink-0">
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" onClick={handleDropdownClick}>
-                <DropdownMenuItem onClick={() => onEdit(task)}>
-                  <Edit className="mr-2 h-4 w-4" />
-                  Edit
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  className="text-red-500"
-                  onClick={() => onDelete(task.id)}
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Delete
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+    <Card 
+      ref={setNodeRef} 
+      style={style} 
+      {...attributes} 
+      {...listeners}
+      className="mb-4 bg-card border-l-4 cursor-grab active:cursor-grabbing"
+    >
+      <CardHeader className="p-3">
+        <div className="flex justify-between items-start">
+          <CardTitle className="text-sm leading-snug flex items-center gap-1.5 pr-2">
+            {task.status === 'Done' && <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />}
+            <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ p: 'span' }}>
+              {formatTaskText(task.title)}
+            </ReactMarkdown>
+          </CardTitle>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild onClick={handleDropdownClick}>
+              <Button variant="ghost" size="icon" className="h-6 w-6 flex-shrink-0">
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" onClick={handleDropdownClick}>
+              <DropdownMenuItem onClick={() => onEdit(task)}>
+                <Edit className="mr-2 h-4 w-4" />
+                Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="text-red-500"
+                onClick={() => onDelete(task.id)}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </CardHeader>
+      <CardContent className="p-3 pt-0">
+        <div className="space-y-2">
+          {task.project_name && task.project_name !== 'General Tasks' && (
+            <div className="text-xs text-muted-foreground">
+              <Link to={`/projects/${task.project_slug}`} className="hover:underline text-primary break-words">
+                {task.project_name}
+              </Link>
+            </div>
+          )}
+          {task.description && (
+            <p className="text-xs text-muted-foreground line-clamp-2" title={formatTaskText(task.description)}>
+              {formatTaskText(task.description)}
+            </p>
+          )}
+        </div>
+        <div className="flex items-center justify-between mt-2">
+          <div className="flex items-center -space-x-2">
+            {(task.assignedTo && task.assignedTo.length > 0)
+              ? task.assignedTo.map((user) => {
+                const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email || (user as any).name;
+                return (
+                  <TooltipProvider key={user.id}>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <Avatar className="h-6 w-6 border-2 border-background">
+                          <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
+                          <AvatarFallback style={generatePastelColor(user.id)}>
+                            {getInitials([user.first_name, user.last_name].filter(Boolean).join(' '), user.email || undefined)}
+                          </AvatarFallback>
+                        </Avatar>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{[user.first_name, user.last_name].filter(Boolean).join(' ')}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )
+              })
+              : <div className="h-6 w-6" />
+            }
           </div>
-        </CardHeader>
-        <CardContent className="p-3 pt-0">
-          <div className="space-y-2">
-            {task.project_name && task.project_name !== 'General Tasks' && (
-              <div className="text-xs text-muted-foreground">
-                <Link to={`/projects/${task.project_slug}`} className="hover:underline text-primary break-words">
-                  {task.project_name}
-                </Link>
+          <div className="flex items-center gap-2">
+            {(task.originTicketId || task.tags?.some(t => t.name === 'Ticket')) && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Ticket className={cn("h-4 w-4 flex-shrink-0", task.status === 'Done' ? 'text-green-500' : 'text-red-500')} />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>This is a ticket</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+            {renderAttachments()}
+            {task.due_date && (
+              <div className={cn("text-xs text-muted-foreground", isOverdue(task.due_date) && "text-red-600 font-bold")}>
+                due {format(new Date(task.due_date), "MMM d")}
               </div>
             )}
-            {task.description && (
-              <p className="text-xs text-muted-foreground line-clamp-2" title={formatTaskText(task.description)}>
-                {formatTaskText(task.description)}
-              </p>
-            )}
           </div>
-          <div className="flex items-center justify-between mt-2">
-            <div className="flex items-center -space-x-2">
-              {(task.assignedTo && task.assignedTo.length > 0)
-                ? task.assignedTo.map((user) => {
-                  const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email || (user as any).name;
-                  return (
-                    <TooltipProvider key={user.id}>
-                      <Tooltip>
-                        <TooltipTrigger>
-                          <Avatar className="h-6 w-6 border-2 border-background">
-                            <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
-                            <AvatarFallback style={generatePastelColor(user.id)}>
-                              {getInitials([user.first_name, user.last_name].filter(Boolean).join(' '), user.email || undefined)}
-                            </AvatarFallback>
-                          </Avatar>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>{[user.first_name, user.last_name].filter(Boolean).join(' ')}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  )
-                })
-                : <div className="h-6 w-6" />
-              }
-            </div>
-            <div className="flex items-center gap-2">
-              {(task.originTicketId || task.tags?.some(t => t.name === 'Ticket')) && (
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Ticket className={cn("h-4 w-4 flex-shrink-0", task.status === 'Done' ? 'text-green-500' : 'text-red-500')} />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>This is a ticket</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              )}
-              {renderAttachments()}
-              {task.due_date && (
-                <div className={cn("text-xs text-muted-foreground", isOverdue(task.due_date) && "text-red-600 font-bold")}>
-                  due {format(new Date(task.due_date), "MMM d")}
-                </div>
-              )}
-            </div>
-          </div>
-          <div className="mt-2 pt-2 border-t">
-            <TaskReactions reactions={task.reactions || []} onToggleReaction={handleToggleReaction} />
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+        </div>
+        <div className="mt-2 pt-2 border-t">
+          <TaskReactions reactions={task.reactions || []} onToggleReaction={handleToggleReaction} />
+        </div>
+      </CardContent>
+    </Card>
   );
 };
 

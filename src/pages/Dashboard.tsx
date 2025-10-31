@@ -79,7 +79,7 @@ const Index = () => {
               <UnsplashImage />
             </div>
             <DashboardStatsGrid projects={filteredProjects} />
-            <CollaboratorsList />
+            <CollaboratorsList projects={filteredProjects} />
         </div>
       </div>
     </PortalLayout>

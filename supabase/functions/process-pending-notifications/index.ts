@@ -89,10 +89,7 @@ const getSystemPrompt = () => `Anda adalah asisten AI untuk platform manajemen p
 
 Anda akan diberikan konteks untuk setiap notifikasi. Gunakan konteks tersebut untuk membuat pesan yang sesuai.`;
 
-const getFullName = (profile: any) => {
-  if (!profile) return 'seorang pengguna';
-  return `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email || 'Pengguna Tanpa Nama';
-};
+const getFullName = (profile: any) => `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email;
 
 const generateAiMessage = async (userPrompt: string): Promise<string> => {
   if (ANTHROPIC_API_KEY) {
@@ -162,10 +159,26 @@ serve(async (req) => {
 
   try {
     // Security check
-    const authHeader = req.headers.get('Authorization')?.replace('Bearer ', '');
+    const internalHeader = req.headers.get('X-Internal-Request');
+    const authHeader = req.headers.get('Authorization');
     const cronSecret = Deno.env.get('CRON_SECRET');
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
-    if (authHeader !== cronSecret) {
+    let isAuthorized = false;
+
+    // Path 1: Internal call from pg_net (cron job)
+    if (internalHeader === 'true') {
+      isAuthorized = true;
+    } 
+    // Path 2: External call with a secret
+    else if (authHeader) {
+      const token = authHeader.replace('Bearer ', '');
+      if (token === cronSecret || token === serviceRoleKey) {
+        isAuthorized = true;
+      }
+    }
+
+    if (!isAuthorized) {
       console.error("Unauthorized cron trigger attempt.", {
         headers: Object.fromEntries(req.headers.entries()),
       });

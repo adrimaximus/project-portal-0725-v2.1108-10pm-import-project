@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { Project } from '@/types';
 import { useNavigate } from 'react-router-dom';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -9,7 +9,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Clock, Trash2, MapPin, CheckCircle, XCircle } from 'lucide-react';
+import { MoreHorizontal, Clock, Trash2, MapPin, CheckCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { getProjectStatusStyles, formatInJakarta, generatePastelColor, getAvatarUrl } from '@/lib/utils';
 import { format, isSameDay, subDays, isBefore, startOfToday } from 'date-fns';
@@ -20,7 +20,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-const DayEntry = ({ dateStr, projectsOnDay, showMonthHeader, onDeleteProject, onProjectClick, isPast, unreadProjectIds }: { dateStr: string, projectsOnDay: Project[], showMonthHeader: boolean, onDeleteProject: (id: string) => void, onProjectClick: (projectId: string, projectSlug: string) => void, isPast?: boolean, unreadProjectIds: Set<string> }) => {
+const DayEntry = ({ dateStr, projectsOnDay, showMonthHeader, onDeleteProject, navigate, isPast }: { dateStr: string, projectsOnDay: Project[], showMonthHeader: boolean, onDeleteProject: (id: string) => void, navigate: (path: string) => void, isPast?: boolean }) => {
   const date = new Date(`${dateStr}T00:00:00`);
   const currentMonth = formatInJakarta(date, 'MMMM yyyy');
   const dayOfWeek = formatInJakarta(date, 'EEE');
@@ -72,8 +72,6 @@ const DayEntry = ({ dateStr, projectsOnDay, showMonthHeader, onDeleteProject, on
             }
             
             const formattedVenue = formatVenue(project.venue);
-            const hasUnread = unreadProjectIds.has(project.id);
-            const isCancelledOrLost = project.status === 'Cancelled' || project.status === 'Bid Lost' || project.payment_status === 'Cancelled';
 
             return (
               <div 
@@ -83,7 +81,7 @@ const DayEntry = ({ dateStr, projectsOnDay, showMonthHeader, onDeleteProject, on
               >
                 <div 
                   className="flex-1 flex items-center space-x-3 cursor-pointer min-w-0"
-                  onClick={() => onProjectClick(project.id, project.slug)}
+                  onClick={() => navigate(`/projects/${project.slug}`)}
                 >
                   <div className="w-32 text-sm text-muted-foreground hidden md:block">
                     <div className="flex items-center gap-2">
@@ -97,15 +95,10 @@ const DayEntry = ({ dateStr, projectsOnDay, showMonthHeader, onDeleteProject, on
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="font-medium flex items-center gap-2">
-                      {hasUnread && <span className="h-2 w-2 rounded-full bg-red-500 flex-shrink-0" title="Unread activity" />}
-                      {isCancelledOrLost ? (
-                        <XCircle className="h-4 w-4 text-red-500 flex-shrink-0" />
-                      ) : project.status === 'Completed' ? (
-                        <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />
-                      ) : null}
-                      <p className="truncate" title={project.name}>{project.name}</p>
-                    </div>
+                    <p className="font-medium truncate flex items-center gap-2" title={project.name}>
+                      {project.status === 'Completed' && <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />}
+                      {project.name}
+                    </p>
                     {project.venue && (
                       <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-1">
                         <MapPin size={12} />
@@ -149,22 +142,10 @@ const DayEntry = ({ dateStr, projectsOnDay, showMonthHeader, onDeleteProject, on
   );
 };
 
-const ListView = ({ projects, onDeleteProject, unreadProjectIds, onProjectClick }: { projects: Project[], onDeleteProject: (projectId: string) => void, unreadProjectIds: Set<string>, onProjectClick: (projectId: string, projectSlug: string) => void }) => {
-  const getInitialCount = (key: string, defaultValue: number) => {
-    const saved = sessionStorage.getItem(key);
-    return saved ? parseInt(saved, 10) : defaultValue;
-  };
-
-  const [visibleUpcomingCount, setVisibleUpcomingCount] = useState(() => getInitialCount('visibleUpcomingCount', 10));
-  const [visiblePastCount, setVisiblePastCount] = useState(() => getInitialCount('visiblePastCount', 5));
-
-  useEffect(() => {
-    sessionStorage.setItem('visibleUpcomingCount', String(visibleUpcomingCount));
-  }, [visibleUpcomingCount]);
-
-  useEffect(() => {
-    sessionStorage.setItem('visiblePastCount', String(visiblePastCount));
-  }, [visiblePastCount]);
+const ListView = ({ projects, onDeleteProject }: { projects: Project[], onDeleteProject: (projectId: string) => void }) => {
+  const navigate = useNavigate();
+  const [visibleUpcomingCount, setVisibleUpcomingCount] = useState(10);
+  const [visiblePastCount, setVisiblePastCount] = useState(5);
 
   const { upcomingDayEntries, pastDayEntries } = useMemo(() => {
     const today = startOfToday();
@@ -213,7 +194,7 @@ const ListView = ({ projects, onDeleteProject, unreadProjectIds, onProjectClick 
         const currentMonth = formatInJakarta(new Date(`${dateStr}T00:00:00`), 'MMMM yyyy');
         const showMonthHeader = currentMonth !== lastUpcomingMonth;
         if (showMonthHeader) lastUpcomingMonth = currentMonth;
-        return <DayEntry key={dateStr} dateStr={dateStr} projectsOnDay={projectsOnDay} showMonthHeader={showMonthHeader} onDeleteProject={onDeleteProject} onProjectClick={onProjectClick} unreadProjectIds={unreadProjectIds} />;
+        return <DayEntry key={dateStr} dateStr={dateStr} projectsOnDay={projectsOnDay} showMonthHeader={showMonthHeader} onDeleteProject={onDeleteProject} navigate={navigate} />;
       })}
 
       {upcomingDayEntries.length > visibleUpcomingCount && (
@@ -245,7 +226,7 @@ const ListView = ({ projects, onDeleteProject, unreadProjectIds, onProjectClick 
         const currentMonth = formatInJakarta(new Date(`${dateStr}T00:00:00`), 'MMMM yyyy');
         const showMonthHeader = currentMonth !== lastPastMonth;
         if (showMonthHeader) lastPastMonth = currentMonth;
-        return <DayEntry key={dateStr} dateStr={dateStr} projectsOnDay={projectsOnDay} showMonthHeader={showMonthHeader} onDeleteProject={onDeleteProject} onProjectClick={onProjectClick} isPast unreadProjectIds={unreadProjectIds} />;
+        return <DayEntry key={dateStr} dateStr={dateStr} projectsOnDay={projectsOnDay} showMonthHeader={showMonthHeader} onDeleteProject={onDeleteProject} navigate={navigate} isPast />;
       })}
 
       {pastDayEntries.length > visiblePastCount && (

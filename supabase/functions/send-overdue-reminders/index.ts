@@ -9,22 +9,6 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
-const getAnthropicClient = async (supabaseAdmin: any) => {
-  const apiKeyFromEnv = Deno.env.get('ANTHROPIC_API_KEY');
-  if (apiKeyFromEnv) {
-    return new Anthropic({ apiKey: apiKeyFromEnv });
-  }
-  const { data: config, error: configError } = await supabaseAdmin
-    .from('app_config')
-    .select('value')
-    .eq('key', 'ANTHROPIC_API_KEY')
-    .single();
-  if (configError || !config?.value) {
-    throw new Error("Anthropic API key is not configured.");
-  }
-  return new Anthropic({ apiKey: config.value });
-};
-
 const formatPhoneNumberForApi = (phone: string): string | null => {
     if (!phone) return null;
     let cleaned = phone.trim().replace(/\D/g, '');
@@ -159,7 +143,7 @@ serve(async (req) => {
 Buat pesan pengingat yang sopan dan profesional sesuai dengan tingkat urgensi yang diberikan.`;
 
         try {
-          const anthropic = await getAnthropicClient(supabaseAdmin);
+          const anthropic = new Anthropic({ apiKey: Deno.env.get('ANTHROPIC_API_KEY') });
           const aiResponse = await anthropic.messages.create({ model: "claude-3-haiku-20240307", max_tokens: 200, system: getSystemPrompt(), messages: [{ role: "user", content: userPrompt }] });
           const aiMessage = aiResponse.content[0].text;
 

@@ -18,7 +18,6 @@ import {
   DrawerClose
 } from "@/components/ui/drawer";
 import { DateRange } from "react-day-picker";
-import { Switch } from "@/components/ui/switch";
 
 interface Person {
   id: string;
@@ -29,7 +28,6 @@ export interface AdvancedFiltersState {
   selectedPeopleIds: string[];
   status: string[];
   dueDate: DateRange | null;
-  showUnreadOnly: boolean;
 }
 
 interface ProjectAdvancedFiltersProps {
@@ -60,14 +58,10 @@ const ProjectAdvancedFilters = ({ filters, onFiltersChange, allPeople }: Project
     onFiltersChange({ ...filters, status: newStatus });
   };
 
-  const handleUnreadToggle = (checked: boolean) => {
-    onFiltersChange({ ...filters, showUnreadOnly: checked });
-  };
-
-  const activeFilterCount = filters.selectedPeopleIds.length + filters.status.length + (filters.showUnreadOnly ? 1 : 0);
+  const activeFilterCount = filters.selectedPeopleIds.length + filters.status.length;
 
   const clearFilters = () => {
-    onFiltersChange({ selectedPeopleIds: [], status: [], dueDate: null, showUnreadOnly: false });
+    onFiltersChange({ selectedPeopleIds: [], status: [], dueDate: null });
   };
 
   const triggerButton = (
@@ -84,20 +78,6 @@ const ProjectAdvancedFilters = ({ filters, onFiltersChange, allPeople }: Project
 
   const filterContent = (
     <div className="grid gap-4">
-      <div className="flex items-center justify-between rounded-lg border p-3">
-        <Label htmlFor="unread-filter" className="flex flex-col space-y-1">
-          <span>Show Unread Only</span>
-          <span className="font-normal leading-snug text-muted-foreground text-xs">
-            Only display projects with unread activity.
-          </span>
-        </Label>
-        <Switch
-          id="unread-filter"
-          checked={filters.showUnreadOnly}
-          onCheckedChange={handleUnreadToggle}
-        />
-      </div>
-
       <div className="space-y-2">
         <Label>Filter by Assignee</Label>
         <Popover open={assigneePopoverOpen} onOpenChange={setAssigneePopoverOpen}>

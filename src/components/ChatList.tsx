@@ -4,7 +4,9 @@ import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Search, MessageSquarePlus, MoreHorizontal, Trash2, Sparkles } from "lucide-react";
 import NewConversationDialog from "./NewConversationDialog";
-import { cn, getInitials, generatePastelColor, getAvatarUrl, safeFormatDistanceToNow } from "@/lib/utils";
+import { cn, getInitials, generatePastelColor, getAvatarUrl } from "@/lib/utils";
+import { formatDistanceToNow } from 'date-fns';
+import { id } from 'date-fns/locale';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "./ui/alert-dialog";
 import { useChatContext } from "@/contexts/ChatContext";
@@ -46,6 +48,17 @@ const ChatList = ({ highlightedId, onHighlightComplete }: ChatListProps) => {
       }
     }
   }, [highlightedId, onHighlightComplete, conversations]);
+
+  const formatTimestamp = (timestamp: string) => {
+    try {
+      const date = new Date(timestamp);
+      if (isNaN(date.getTime()) || date.getFullYear() < 2000) return "";
+      return formatDistanceToNow(date, { addSuffix: true, locale: id });
+    } catch (e) {
+      console.error("Error formatting date:", e);
+      return "";
+    }
+  };
 
   const formatLastMessage = (message: string) => {
     if (!message) return "";
@@ -141,7 +154,7 @@ const ChatList = ({ highlightedId, onHighlightComplete }: ChatListProps) => {
                 <div className="flex-1 overflow-hidden">
                   <div className="flex items-center justify-between gap-2">
                     <p className={cn("font-semibold truncate", isUnread && "text-primary")}>{c.userName}</p>
-                    <span className="text-xs text-muted-foreground flex-shrink-0">{safeFormatDistanceToNow(c.lastMessageTimestamp)}</span>
+                    <span className="text-xs text-muted-foreground flex-shrink-0">{formatTimestamp(c.lastMessageTimestamp)}</span>
                   </div>
                   <div className="flex items-center justify-between gap-2">
                     <p className={cn("text-sm text-muted-foreground", isUnread && "text-foreground font-medium")}>

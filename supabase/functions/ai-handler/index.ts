@@ -5,7 +5,6 @@ import OpenAI from 'npm:openai@4.29.2';
 import { createApi } from 'https://esm.sh/unsplash-js@7.0.19';
 import * as pdfjs from 'https://esm.sh/pdfjs-dist@4.4.168';
 import mammoth from 'https://esm.sh/mammoth@1.7.2';
-import Anthropic from 'npm:@anthropic-ai/sdk@^0.22.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -24,47 +23,16 @@ const createSupabaseAdmin = () => {
 };
 
 const getOpenAIClient = async (supabaseAdmin: any) => {
-  // 1. Try to get the key from environment variables first.
-  const apiKeyFromEnv = Deno.env.get('OPENAI_API_KEY');
-  if (apiKeyFromEnv) {
-    return new OpenAI({ apiKey: apiKeyFromEnv });
-  }
-
-  // 2. If not in env, fall back to the database.
   const { data: config, error: configError } = await supabaseAdmin
     .from('app_config')
     .select('value')
     .eq('key', 'OPENAI_API_KEY')
-    .limit(1) // Ensure we only get one row, even if there are duplicates
     .single();
 
-  if (configError) {
-    // Log the detailed error for debugging but don't expose it to the user.
-    console.error("Error fetching OpenAI key from DB:", configError.message);
-  }
-  
-  if (!config || !config.value) {
-    // 3. If not found in either place, throw a clear, user-friendly error.
-    throw new Error("OpenAI API key is not configured. Please set it in your application settings or as a Supabase secret.");
-  }
-  
-  return new OpenAI({ apiKey: config.value });
-};
-
-const getAnthropicClient = async (supabaseAdmin: any) => {
-  const apiKeyFromEnv = Deno.env.get('ANTHROPIC_API_KEY');
-  if (apiKeyFromEnv) {
-    return new Anthropic({ apiKey: apiKeyFromEnv });
-  }
-  const { data: config, error: configError } = await supabaseAdmin
-    .from('app_config')
-    .select('value')
-    .eq('key', 'ANTHROPIC_API_KEY')
-    .single();
   if (configError || !config?.value) {
-    throw new Error("Anthropic API key is not configured.");
+    throw new Error("OpenAI API key is not configured by an administrator.");
   }
-  return new Anthropic({ apiKey: config.value });
+  return new OpenAI({ apiKey: config.value });
 };
 
 const createSupabaseUserClient = (req: Request) => {
@@ -110,13 +78,6 @@ const getAnalyzeProjectsSystemPrompt = (context: any, userName: string) => `You 
     - Example: "Find details for 'Starbucks Central Park Jakarta'"
     - Example: "Get the social media links for dyad.sh"
 11. **DIRECT SCRAPE COMMAND:** If the user's message starts with "scrape:", treat it as a direct command to use the SEARCH_MAPS_AND_WEBSITE action. The text following "scrape:" is the query. Do not ask for confirmation; execute the action immediately.
-12. **QUESTION ANSWERING & DATA ANALYSIS:**
-    - If the user's request is a question about the data provided in the context (e.g., "how many projects are overdue?", "what's the total budget for projects this month?", "list all my tasks for the 'Website Redesign' project"), you MUST analyze the context data and provide a direct, natural language answer.
-    - Do NOT attempt to create an action JSON for these types of queries.
-    - Use the "Current Date & Time" from the context for any time-related calculations (e.g., "this month").
-    - Example:
-      - User: "How many projects are completed?"
-      - You (after analyzing context): "You currently have 3 completed projects: 'Project A', 'Project B', and 'Project C'."
 
 **Your entire process is:**
 1. Analyze the user's latest message and any attached image or document.
@@ -233,40 +194,32 @@ const articleWriterFeaturePrompts = {
 const buildContext = async (supabaseClient: any, user: any) => {
   console.log("[DIAGNOSTIC] buildContext: Starting context build.");
   try {
-    const promises = {
-      projects: supabaseClient.rpc('get_dashboard_projects', { p_limit: 1000, p_offset: 0 }),
-      users: supabaseClient.from('profiles').select('id, first_name, last_name, email'),
-      goals: supabaseClient.rpc('get_user_goals'),
-      allTags: supabaseClient.from('tags').select('id, name'),
-      articles: supabaseClient.from('kb_articles').select('id, title, slug, folder_id'),
-      folders: supabaseClient.from('kb_folders').select('id, name')
-    };
+    const [
+      projectsRes,
+      usersRes,
+      goalsRes,
+      allTagsRes,
+      articlesRes,
+      foldersRes
+    ] = await Promise.all([
+      supabaseClient.rpc('get_dashboard_projects', { p_limit: 1000, p_offset: 0 }),
+      supabaseClient.from('profiles').select('id, first_name, last_name, email'),
+      supabaseClient.rpc('get_user_goals'),
+      supabaseClient.from('tags').select('id, name'),
+      supabaseClient.from('kb_articles').select('id, title, slug, folder_id'),
+      supabaseClient.from('kb_folders').select('id, name')
+    ]);
+    console.log("[DIAGNOSTIC] buildContext: All parallel fetches completed.");
 
-    const results = await Promise.allSettled(Object.values(promises));
-    const [projectsRes, usersRes, goalsRes, allTagsRes, articlesRes, foldersRes] = results;
+    if (projectsRes.error) throw new Error(`Failed to fetch project data for analysis: ${projectsRes.error.message}`);
+    if (usersRes.error) throw new Error(`Failed to fetch users for context: ${usersRes.error.message}`);
+    if (goalsRes.error) throw new Error(`Failed to fetch goals for context: ${goalsRes.error.message}`);
+    if (allTagsRes.error) throw new Error(`Failed to fetch tags for context: ${allTagsRes.error.message}`);
+    if (articlesRes.error) throw new Error(`Failed to fetch articles for context: ${articlesRes.error.message}`);
+    if (foldersRes.error) throw new Error(`Failed to fetch folders for context: ${foldersRes.error.message}`);
+    console.log("[DIAGNOSTIC] buildContext: All data fetches successful.");
 
-    const handleResult = (result: PromiseSettledResult<any>, name: string) => {
-      if (result.status === 'rejected') {
-        console.error(`[DIAGNOSTIC] buildContext: Promise rejected for ${name}:`, result.reason?.message || result.reason);
-        return { data: [], error: { message: result.reason?.message || `Promise rejected for ${name}` } };
-      }
-      if (result.value.error) {
-        console.error(`[DIAGNOSTIC] buildContext: Supabase error for ${name}:`, result.value.error.message);
-        return { data: [], error: result.value.error };
-      }
-      return { data: result.value.data, error: null };
-    };
-
-    const projects = handleResult(projectsRes, 'projects');
-    const users = handleResult(usersRes, 'users');
-    const goals = handleResult(goalsRes, 'goals');
-    const allTags = handleResult(allTagsRes, 'allTags');
-    const articles = handleResult(articlesRes, 'articles');
-    const folders = handleResult(foldersRes, 'folders');
-
-    console.log("[DIAGNOSTIC] buildContext: All parallel fetches settled.");
-
-    const summarizedProjects = (projects.data || []).map((p: any) => ({
+    const summarizedProjects = projectsRes.data.map((p: any) => ({
         name: p.name,
         status: p.status,
         tags: (p.tags || []).map((t: any) => t.name),
@@ -276,26 +229,26 @@ const buildContext = async (supabaseClient: any, user: any) => {
             assignedTo: (t.assignedTo || []).map((a: any) => a.name)
         }))
     }));
-    const summarizedGoals = (goals.data || []).map((g: any) => ({
+    const summarizedGoals = goalsRes.data.map((g: any) => ({
         title: g.title,
         type: g.type,
         progress: g.completions ? g.completions.length : 0,
         tags: g.tags ? g.tags.map((t: any) => t.name) : []
     }));
-    const userList = (users.data || []).map((u: any) => ({ id: u.id, name: `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email }));
+    const userList = usersRes.data.map((u: any) => ({ id: u.id, name: `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email }));
     const serviceList = [ "3D Graphic Design", "Accommodation", "Award Ceremony", "Branding", "Content Creation", "Digital Marketing", "Entertainment", "Event Decoration", "Event Equipment", "Event Gamification", "Exhibition Booth", "Food & Beverage", "Keyvisual Graphic Design", "LED Display", "Lighting System", "Logistics", "Man Power", "Merchandise", "Motiongraphic Video", "Multimedia System", "Payment Advance", "Photo Documentation", "Plaque & Trophy", "Prints", "Professional Security", "Professional video production for commercial ads", "Show Management", "Slido", "Sound System", "Stage Production", "Talent", "Ticket Management System", "Transport", "Venue", "Video Documentation", "VIP Services", "Virtual Events", "Awards System", "Brand Ambassadors", "Electricity & Genset", "Event Consultation", "Workshop" ];
-    const iconList = [ 'Target', 'Flag', 'BookOpen', 'Dumbbell', 'TrendingUp', 'Star', 'Heart', 'Rocket', 'DollarSign', 'FileText', 'ImageIcon', 'Award', 'BarChart', 'Calendar', 'CheckCircle', 'Users', 'Activity', 'Anchor', 'Aperture', 'Bike', 'Briefcase', 'Brush', 'Camera', 'Car', 'ClipboardCheck', 'Cloud', 'Code', 'Coffee', 'Compass', 'Cpu', 'CreditCard', 'Crown', 'Database', 'Diamond', 'Feather', 'Film', 'Flame', 'Flower', 'Gift', 'Globe', 'GraduationCap', 'Headphones', 'Home', 'Key', 'Laptop', 'Leaf', 'Lightbulb', 'Link', 'Map', 'Medal', 'Mic', 'Moon', 'MountainSnow', 'MousePointer', 'Music', 'Paintbrush', 'Palette', 'PenTool', 'Phone', 'PieChart', 'Plane', 'Puzzle', 'Save', 'Scale', 'Scissors', 'Settings', 'Shield', 'Ship', 'ShoppingBag', 'Smile', 'Speaker', 'Sun', 'Sunrise', 'Sunset', 'Sword', 'Tag', 'Trophy', 'Truck', 'Umbrella', 'Video', 'Wallet', 'Watch', 'Wind', 'Wrench', 'Zap' ];
-    const summarizedArticles = (articles.data || []).map((a: any) => ({ title: a.title, folder: (folders.data || []).find((f: any) => f.id === a.folder_id)?.name }));
-    const summarizedFolders = (folders.data || []).map((f: any) => f.name);
+    const iconList = [ 'Target', 'Flag', 'BookOpen', 'Dumbbell', 'TrendingUp', 'Star', 'Heart', 'Rocket', 'DollarSign', 'FileText', 'ImageIcon', 'Award', 'BarChart', 'Calendar', 'CheckCircle', 'Users', 'Activity', 'Anchor', 'Aperture', 'Bike', 'Briefcase', 'Brush', 'Camera', 'Car', 'ClipboardCheck', 'Cloud', 'Code', 'Coffee', 'Compass', 'Cpu', 'CreditCard', 'Crown', 'Database', 'Diamond', 'Feather', 'Film', 'Flame', 'Flower', 'Gift', 'Globe', 'GraduationCap', 'Headphones', 'Home', 'Key', 'Laptop', 'Leaf', 'Lightbulb', 'Link', 'Map', 'Medal', 'Mic', 'Moon', 'MousePointer', 'Music', 'Paintbrush', 'Palette', 'PenTool', 'Phone', 'PieChart', 'Plane', 'Puzzle', 'Save', 'Scale', 'Scissors', 'Settings', 'Shield', 'Ship', 'ShoppingBag', 'Smile', 'Speaker', 'Sun', 'Sunrise', 'Sunset', 'Sword', 'Tag', 'Trophy', 'Truck', 'Umbrella', 'Video', 'Wallet', 'Watch', 'Wind', 'Wrench', 'Zap' ];
+    const summarizedArticles = articlesRes.data.map((a: any) => ({ title: a.title, folder: foldersRes.data.find((f: any) => f.id === a.folder_id)?.name }));
+    const summarizedFolders = foldersRes.data.map((f: any) => f.name);
     console.log("[DIAGNOSTIC] buildContext: Data summarization complete.");
 
     return {
-      projects: projects.data || [],
-      users: users.data || [],
-      goals: goals.data || [],
-      allTags: allTags.data || [],
-      articles: articles.data || [],
-      folders: folders.data || [],
+      projects: projectsRes.data,
+      users: usersRes.data,
+      goals: goalsRes.data,
+      allTags: allTagsRes.data,
+      articles: articlesRes.data,
+      folders: foldersRes.data,
       summarizedProjects,
       summarizedGoals,
       userList,
@@ -921,54 +874,27 @@ async function articleWriter(payload: any, context: any) {
 }
 
 async function generateCaption(payload: any, context: any) {
-  const { supabaseAdmin } = context;
+  const { openai } = context;
   const { altText } = payload;
   if (!altText) {
-    return { caption: null };
+    throw new Error("altText is required for generating a caption.");
   }
 
   const systemPrompt = `You are an AI that generates a short, inspiring, one-line caption for an image. The caption should be suitable for a professional dashboard related to events, marketing, and project management. Respond with ONLY the caption, no extra text or quotes. Keep it under 12 words.`;
   const userPrompt = `Generate a caption for an image described as: "${altText}"`;
 
-  // Try Anthropic first
-  try {
-    const anthropic = await getAnthropicClient(supabaseAdmin);
-    const response = await anthropic.messages.create({
-      model: "claude-3-haiku-20240307",
-      system: systemPrompt,
-      messages: [{ role: "user", content: userPrompt }],
-      max_tokens: 30,
-    });
-    const caption = response.content[0].text.trim().replace(/"/g, '');
-    if (caption) {
-      return { caption };
-    }
-  } catch (anthropicError) {
-    console.warn("Anthropic failed for caption generation, trying OpenAI.", anthropicError.message);
-  }
+  const response = await openai.chat.completions.create({
+    model: "gpt-3.5-turbo",
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userPrompt }
+    ],
+    temperature: 0.7,
+    max_tokens: 30,
+  });
 
-  // Fallback to OpenAI
-  try {
-    const openai = await getOpenAIClient(supabaseAdmin);
-    const response = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt }
-      ],
-      temperature: 0.7,
-      max_tokens: 30,
-    });
-    const caption = response.choices[0].message.content?.trim().replace(/"/g, '');
-    if (caption) {
-      return { caption };
-    }
-  } catch (openaiError) {
-    console.error("OpenAI also failed for caption generation.", openaiError.message);
-  }
-
-  // If both fail, return the original altText as a fallback caption.
-  return { caption: altText };
+  const caption = response.choices[0].message.content?.trim().replace(/"/g, '');
+  return { caption };
 }
 
 async function generateMoodInsight(payload: any, context: any) {
@@ -1103,6 +1029,25 @@ Your rules are:
   return { result };
 }
 
+async function generateIcon(payload: any, context: any) {
+  const { openai } = context;
+  const { prompt } = payload;
+  if (!prompt) throw new Error("A prompt is required to generate an icon.");
+
+  const response = await openai.images.generate({
+    model: "dall-e-2",
+    prompt: `A simple, clean, modern icon for a goal tracking app. The icon should represent: "${prompt}". Flat design, vector style, on a plain white background.`,
+    n: 1,
+    size: "256x256",
+    response_format: "url",
+  });
+
+  const imageUrl = response.data[0].url;
+  if (!imageUrl) throw new Error("Failed to generate image.");
+
+  return { result: imageUrl };
+}
+
 // --- END INLINED SHARED CODE ---
 
 const featureMap: { [key: string]: (payload: any, context: any) => Promise<any> } = {
@@ -1118,6 +1063,7 @@ const featureMap: { [key: string]: (payload: any, context: any) => Promise<any> 
   'suggest-icon': suggestIcon,
   'generate-insight': generateInsight,
   'ai-select-calendar-events': aiSelectCalendarEvents,
+  'generate-icon': generateIcon,
 };
 
 serve(async (req) => {
@@ -1162,11 +1108,9 @@ serve(async (req) => {
 
   } catch (error) {
     console.error(`[ai-handler] ERROR: Error in ai-handler for feature '${feature}':`, error.stack || error.message);
-    const status = error.message.includes('Unauthorized') ? 401 : 
-                   error.message.includes('Forbidden') ? 403 : 500;
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status,
+      status: 500,
     });
   }
 });

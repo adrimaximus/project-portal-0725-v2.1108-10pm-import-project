@@ -2,28 +2,11 @@
 
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts'
 import Anthropic from 'npm:@anthropic-ai/sdk@^0.22.0';
-import { createClient } from 'npm:@supabase/supabase-js@2.54.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
-
-const getAnthropicClient = async (supabaseAdmin: any) => {
-  const apiKeyFromEnv = Deno.env.get('ANTHROPIC_API_KEY');
-  if (apiKeyFromEnv) {
-    return new Anthropic({ apiKey: apiKeyFromEnv });
-  }
-  const { data: config, error: configError } = await supabaseAdmin
-    .from('app_config')
-    .select('value')
-    .eq('key', 'ANTHROPIC_API_KEY')
-    .single();
-  if (configError || !config?.value) {
-    throw new Error("Anthropic API key is not configured.");
-  }
-  return new Anthropic({ apiKey: config.value });
-};
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -40,11 +23,9 @@ serve(async (req) => {
       });
     }
 
-    const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    );
-    const anthropic = await getAnthropicClient(supabaseAdmin);
+    const anthropic = new Anthropic({
+      apiKey: Deno.env.get('ANTHROPIC_API_KEY'),
+    });
 
     const formattedStartDate = startDate ? new Date(startDate).toLocaleDateString('id-ID', { month: 'long', day: 'numeric', year: 'numeric' }) : 'Belum ditentukan';
     const formattedDueDate = dueDate ? new Date(dueDate).toLocaleDateString('id-ID', { month: 'long', day: 'numeric', year: 'numeric' }) : 'Belum ditentukan';

@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
 import { Project } from "@/types";
+import { Link } from "react-router-dom";
 import { MoreHorizontal, Trash2 } from "lucide-react";
 import { Button } from "../ui/button";
 import {
@@ -36,8 +37,6 @@ interface TableViewProps {
   sortConfig: { key: keyof Project | null; direction: 'ascending' | 'descending' };
   requestSort: (key: keyof Project) => void;
   rowRefs: React.MutableRefObject<Map<string, HTMLTableRowElement>>;
-  unreadProjectIds: Set<string>;
-  onProjectClick: (projectId: string, projectSlug: string) => void;
 }
 
 const formatProjectDateRange = (startDateStr: string | null | undefined, dueDateStr: string | null | undefined): string => {
@@ -118,11 +117,9 @@ interface ProjectRowProps {
   project: Project;
   onDeleteProject: (projectId: string) => void;
   rowRefs: React.MutableRefObject<Map<string, HTMLTableRowElement>>;
-  hasUnread: boolean;
-  onProjectClick: (projectId: string, projectSlug: string) => void;
 }
 
-const ProjectRow = ({ project, onDeleteProject, rowRefs, hasUnread, onProjectClick }: ProjectRowProps) => {
+const ProjectRow = ({ project, onDeleteProject, rowRefs }: ProjectRowProps) => {
   const paymentBadgeColor = getPaymentStatusStyles(project.payment_status).tw;
   const { name: venueName, full: fullVenue } = formatVenue(project.venue);
 
@@ -134,14 +131,11 @@ const ProjectRow = ({ project, onDeleteProject, rowRefs, hasUnread, onProjectCli
         if (el) rowRefs.current.set(project.id, el);
         else rowRefs.current.delete(project.id);
       }}
-      onClick={() => onProjectClick(project.id, project.slug)}
-      className="cursor-pointer"
     >
       <TableCell style={{ borderLeft: `4px solid ${getProjectStatusStyles(project.status).hex}` }}>
-        <div className="font-medium text-primary hover:underline flex items-center gap-2">
-          {hasUnread && <span className="h-2 w-2 rounded-full bg-red-500 flex-shrink-0" title="Unread activity" />}
-          <span>{project.name}</span>
-        </div>
+        <Link to={`/projects/${project.slug}`} className="font-medium text-primary hover:underline">
+          {project.name}
+        </Link>
         <div className="text-sm text-muted-foreground">{project.category}</div>
       </TableCell>
       <TableCell>
@@ -195,7 +189,7 @@ const ProjectRow = ({ project, onDeleteProject, rowRefs, hasUnread, onProjectCli
   );
 };
 
-const TableView = ({ projects, isLoading, onDeleteProject, sortConfig, requestSort, rowRefs, unreadProjectIds, onProjectClick }: TableViewProps) => {
+const TableView = ({ projects, isLoading, onDeleteProject, sortConfig, requestSort, rowRefs }: TableViewProps) => {
   const [visibleUpcomingCount, setVisibleUpcomingCount] = useState(10);
   const [visiblePastCount, setVisiblePastCount] = useState(15);
 
@@ -316,13 +310,7 @@ const TableView = ({ projects, isLoading, onDeleteProject, sortConfig, requestSo
                       </TableCell>
                     </TableRow>
                   )}
-                  <ProjectRow 
-                    project={project} 
-                    onDeleteProject={onDeleteProject} 
-                    rowRefs={rowRefs} 
-                    hasUnread={unreadProjectIds.has(project.id)}
-                    onProjectClick={onProjectClick}
-                  />
+                  <ProjectRow project={project} onDeleteProject={onDeleteProject} rowRefs={rowRefs} />
                 </React.Fragment>
               );
             })}
@@ -368,13 +356,7 @@ const TableView = ({ projects, isLoading, onDeleteProject, sortConfig, requestSo
                       </TableCell>
                     </TableRow>
                   )}
-                  <ProjectRow 
-                    project={project} 
-                    onDeleteProject={onDeleteProject} 
-                    rowRefs={rowRefs} 
-                    hasUnread={unreadProjectIds.has(project.id)}
-                    onProjectClick={onProjectClick}
-                  />
+                  <ProjectRow project={project} onDeleteProject={onDeleteProject} rowRefs={rowRefs} />
                 </React.Fragment>
               );
             })}

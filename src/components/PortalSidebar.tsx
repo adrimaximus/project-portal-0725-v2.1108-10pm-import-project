@@ -46,8 +46,6 @@ const NavLink = ({ item, isCollapsed }: { item: NavItem, isCollapsed: boolean })
 
   const isChatLink = item.label.toLowerCase() === 'chat';
   const isNotificationsLink = item.label.toLowerCase() === 'notifications';
-  const isProjectsLink = item.label.toLowerCase() === 'projects';
-  const isTasksLink = item.label.toLowerCase() === 'tasks';
 
   if (isCollapsed) {
     return (
@@ -56,7 +54,7 @@ const NavLink = ({ item, isCollapsed }: { item: NavItem, isCollapsed: boolean })
           <Link to={item.href} className={cn("flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-primary md:h-8 md:w-8 relative", isActive && "bg-muted text-primary")}>
             <item.icon className="h-5 w-5" />
             <span className="sr-only">{item.label}</span>
-            {(isChatLink || isNotificationsLink || isProjectsLink || isTasksLink) && item.badge ? (
+            {(isChatLink || isNotificationsLink) && item.badge ? (
               <span className="absolute top-1.5 right-1.5 block h-2 w-2 rounded-full bg-red-500 ring-1 ring-background" />
             ) : (
               item.badge && <Badge className="absolute -top-1 -right-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full p-0 text-xs">{item.badge}</Badge>
@@ -71,7 +69,7 @@ const NavLink = ({ item, isCollapsed }: { item: NavItem, isCollapsed: boolean })
     <Link to={item.href} className={cn("flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary group", isActive && "bg-muted text-primary")}>
       <item.icon className="h-4 w-4" />
       {item.label}
-      {(isChatLink || isNotificationsLink || isProjectsLink || isTasksLink) && item.badge ? (
+      {(isChatLink || isNotificationsLink) && item.badge ? (
         <span className="ml-auto block h-2 w-2 rounded-full bg-red-500" />
       ) : (
         item.badge && <Badge className="ml-auto flex h-6 w-6 shrink-0 items-center justify-center rounded-full">{item.badge}</Badge>
@@ -82,7 +80,7 @@ const NavLink = ({ item, isCollapsed }: { item: NavItem, isCollapsed: boolean })
 
 const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
   const { user, hasPermission } = useAuth();
-  const { notifications, hasImportantUnread } = useNotifications();
+  const { hasImportantUnread } = useNotifications();
   const { unreadConversationIds } = useChatContext();
   const queryClient = useQueryClient();
   const backfillAttempted = useRef(false);
@@ -102,62 +100,22 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
     retry: false,
   });
 
-  const { data: hasUnreadProjectActivity } = useQuery({
-    queryKey: ['hasUnreadProjectActivity', user?.id],
-    queryFn: async () => {
-        if (!user) return false;
-        const { data: unread, error: unreadError } = await supabase
-            .from('notification_recipients')
-            .select(`notifications (type)`)
-            .eq('user_id', user.id)
-            .is('read_at', null);
-
-        if (unreadError) {
-            console.error("Error fetching unread notifications for project indicator:", unreadError);
-            return false;
-        }
-
-        if (!unread) return false;
-
-        return unread.some(item => {
-            const notification = Array.isArray(item.notifications) ? item.notifications[0] : item.notifications as { type: string } | null;
-            if (!notification) return false;
-            return notification.type === 'project_update' || notification.type === 'mention';
-        });
-    },
-    enabled: !!user,
-    staleTime: 60000,
-    refetchInterval: 60000,
-  });
-
-  const { data: unreadTaskInfo } = useQuery({
-    queryKey: ['unreadTaskInfo', user?.id],
-    queryFn: async () => {
-        if (!user) return { hasUnread: false, latestTaskId: null };
-        const { data, error } = await supabase
-            .from('notification_recipients')
-            .select('notifications!inner(resource_id, resource_type, created_at)')
-            .eq('user_id', user.id)
-            .is('read_at', null)
-            .eq('notifications.resource_type', 'task')
-            .order('created_at', { foreignTable: 'notifications', ascending: false })
-            .limit(1);
-
+  useEffect(() => {
+    if (user && !isLoadingItems && customNavItems.length === 0 && !backfillAttempted.current) {
+      backfillAttempted.current = true; // Attempt only once per session
+      const backfill = async () => {
+        console.log("No navigation items found for user, attempting to backfill...");
+        const { error } = await supabase.rpc('ensure_user_navigation_items', { p_user_id: user.id });
         if (error) {
-            console.error("Error fetching unread task notifications:", error);
-            return { hasUnread: false, latestTaskId: null };
+          toast.error("Could not set up default navigation.", { description: error.message });
+        } else {
+          toast.info("Setting up your navigation menu...");
+          refetch();
         }
-
-        if (data && data.length > 0) {
-            const notification = Array.isArray(data[0].notifications) ? data[0].notifications[0] : data[0].notifications as { resource_id: string };
-            return { hasUnread: true, latestTaskId: notification.resource_id };
-        }
-        return { hasUnread: false, latestTaskId: null };
-    },
-    enabled: !!user,
-    staleTime: 60000,
-    refetchInterval: 60000,
-  });
+      };
+      backfill();
+    }
+  }, [user, isLoadingItems, customNavItems, refetch]);
 
   const { data: folders = [], error: foldersError } = useQuery({ 
     queryKey: ['navigation_folders', user?.id], 
@@ -182,10 +140,6 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'navigation_folders', filter: `user_id=eq.${user.id}` }, () => {
         queryClient.invalidateQueries({ queryKey: ['navigation_folders', user.id] });
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'notification_recipients', filter: `user_id=eq.${user.id}` }, () => {
-        queryClient.invalidateQueries({ queryKey: ['hasUnreadProjectActivity', user.id] });
-        queryClient.invalidateQueries({ queryKey: ['unreadTaskInfo', user.id] });
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
@@ -238,19 +192,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
         let href: string;
         let badge;
 
-        const itemNameLower = item.name.toLowerCase();
-
-        if (itemNameLower === 'projects' && hasUnreadProjectActivity) {
-          const latestProjectNotif = notifications.find(n => !n.read && (n.type === 'project_update' || n.type === 'mention'));
-          if (latestProjectNotif && latestProjectNotif.link && latestProjectNotif.link !== '#') {
-            const slug = latestProjectNotif.link.split('/').pop();
-            href = `/projects?view=list&highlight=${slug}`;
-          } else {
-            href = item.url;
-          }
-        } else if (itemNameLower === 'tasks' && unreadTaskInfo?.hasUnread) {
-          href = `/projects?view=tasks&highlight=${unreadTaskInfo.latestTaskId}`;
-        } else if (item.type === 'multi_embed') {
+        if (item.type === 'multi_embed') {
           href = `/multipage/${item.slug}`;
         } else if (item.url.startsWith('/')) {
           href = item.url;
@@ -264,6 +206,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
           href = '/dashboard';
         }
 
+        const itemNameLower = item.name.toLowerCase();
         if (itemNameLower === 'knowledge base' && href !== '/knowledge-base') {
             href = '/knowledge-base';
         }
@@ -276,8 +219,6 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
 
         if (itemNameLower === 'chat') badge = hasUnreadChat ? 1 : undefined;
         if (itemNameLower === 'notifications') badge = hasImportantUnread ? 1 : undefined;
-        if (itemNameLower === 'projects') badge = hasUnreadProjectActivity ? 1 : undefined;
-        if (itemNameLower === 'tasks') badge = unreadTaskInfo?.hasUnread ? 1 : undefined;
         
         return {
           id: item.id,
@@ -293,7 +234,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
     const otherItems = allItems.filter(item => item.href !== '/settings');
 
     return { navItems: otherItems, settingsItem: settings };
-  }, [customNavItems, hasImportantUnread, navItemsError, foldersError, hasPermission, unreadConversationIds, hasUnreadProjectActivity, notifications, unreadTaskInfo]);
+  }, [customNavItems, hasImportantUnread, navItemsError, foldersError, hasPermission, unreadConversationIds]);
 
   const topLevelItems = useMemo(() => navItems.filter(item => !item.folder_id), [navItems]);
 

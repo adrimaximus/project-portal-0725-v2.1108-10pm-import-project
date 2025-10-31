@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef, useCallback } from "react";
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { useSearchParams, useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -56,25 +56,10 @@ const ProjectsPage = () => {
 
   const { data: projectsData = [], isLoading: isLoadingProjects, refetch: refetchProjects } = useProjects({ searchTerm });
   
-  const [advancedFilters, setAdvancedFilters] = useState<AdvancedFiltersState>(() => {
-    try {
-      const savedFilters = localStorage.getItem('projectAdvancedFilters');
-      if (savedFilters) {
-        const parsed = JSON.parse(savedFilters);
-        if (parsed.dueDate && parsed.dueDate.from) parsed.dueDate.from = new Date(parsed.dueDate.from);
-        if (parsed.dueDate && parsed.dueDate.to) parsed.dueDate.to = new Date(parsed.dueDate.to);
-        return {
-          selectedPeopleIds: [],
-          status: [],
-          dueDate: null,
-          showUnreadOnly: false,
-          ...parsed,
-        };
-      }
-    } catch (error) {
-      console.error("Failed to parse filters from localStorage", error);
-    }
-    return { selectedPeopleIds: [], status: [], dueDate: null, showUnreadOnly: false };
+  const [advancedFilters, setAdvancedFilters] = useState<AdvancedFiltersState>({
+    selectedPeopleIds: [],
+    status: [],
+    dueDate: null,
   });
 
   const { data: peopleData } = useQuery<Person[]>({
@@ -91,7 +76,7 @@ const ProjectsPage = () => {
 
   const {
     dateRange, setDateRange,
-    sortConfig: projectSortConfig, requestSort: requestProjectSort,
+    sortConfig: projectSortConfig, requestSort: requestProjectSort, sortedProjects
   } = useProjectFilters(projectsData, advancedFilters);
 
   const [taskSortConfig, setTaskSortConfig] = useState<{ key: keyof ProjectTask | string; direction: 'asc' | 'desc' }>({ key: 'updated_at', direction: 'desc' });
@@ -185,121 +170,6 @@ const ProjectsPage = () => {
     return projectsData.flatMap(p => p.tasks || []);
   }, [projectsData, tasksData, isTaskView]);
 
-  const { data: unreadProjectIdsSet } = useQuery({
-    queryKey: ['unreadProjectIds', user?.id],
-    queryFn: async () => {
-        if (!user) return new Set<string>();
-        const { data, error } = await supabase
-            .from('notification_recipients')
-            .select('notifications!inner(resource_id, resource_type)')
-            .eq('user_id', user.id)
-            .is('read_at', null);
-
-        if (error) {
-            console.error("Error fetching unread project IDs:", error);
-            return new Set<string>();
-        }
-
-        const projectIds = new Set<string>();
-        data.forEach(item => {
-            const notification = item.notifications as unknown as { resource_id: string, resource_type: string } | null;
-            if (notification && notification.resource_id && (notification.resource_type === 'project' || notification.resource_type === 'task' || notification.resource_type === 'comment')) {
-                projectIds.add(notification.resource_id);
-            }
-        });
-        return projectIds;
-    },
-    enabled: !!user,
-    staleTime: 60000, // 1 minute
-  });
-
-  const unreadProjectIds = unreadProjectIdsSet || new Set<string>();
-
-  const markProjectNotificationsAsRead = useMutation({
-    mutationFn: async (projectId: string) => {
-      const { error } = await supabase.rpc('mark_project_notifications_as_read', { p_project_id: projectId });
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['notifications', user?.id] });
-      queryClient.invalidateQueries({ queryKey: ['hasUnreadProjectActivity', user?.id] });
-      queryClient.invalidateQueries({ queryKey: ['unreadProjectIds', user?.id] });
-    },
-    onError: (error) => {
-      console.error("Error marking project notifications as read:", error);
-    }
-  });
-
-  const markMultipleProjectNotificationsAsRead = useMutation({
-    mutationFn: async (projectIds: string[]) => {
-        if (projectIds.length === 0) return;
-        const { error } = await supabase.rpc('mark_multiple_project_notifications_as_read', { p_project_ids: projectIds });
-        if (error) throw error;
-    },
-    onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ['notifications', user?.id] });
-        queryClient.invalidateQueries({ queryKey: ['hasUnreadProjectActivity', user?.id] });
-        queryClient.invalidateQueries({ queryKey: ['unreadProjectIds', user?.id] });
-    },
-    onError: (error) => {
-        console.error("Error marking multiple project notifications as read:", error);
-    }
-  });
-
-  const [displayedUnreadIds, setDisplayedUnreadIds] = useState<Set<string>>(new Set());
-
-  const handleFiltersChange = (newFilters: AdvancedFiltersState) => {
-    if (newFilters.showUnreadOnly && !advancedFilters.showUnreadOnly) {
-      setDisplayedUnreadIds(unreadProjectIds);
-      if (unreadProjectIds.size > 0) {
-        markMultipleProjectNotificationsAsRead.mutate(Array.from(unreadProjectIds));
-      }
-    }
-    else if (!newFilters.showUnreadOnly) {
-      setDisplayedUnreadIds(new Set());
-    }
-    setAdvancedFilters(newFilters);
-  };
-
-  const filteredProjects = useMemo(() => {
-    return projectsData.filter(project => {
-      const { selectedPeopleIds, status, showUnreadOnly } = advancedFilters;
-
-      if (showUnreadOnly && !displayedUnreadIds.has(project.id)) {
-        return false;
-      }
-      
-      const statusMatch = status.length === 0 || status.includes(project.status);
-      
-      const assigneeMatch = selectedPeopleIds.length === 0 || 
-        (project.assignedTo && project.assignedTo.some(assignee => selectedPeopleIds.includes(assignee.id)));
-      
-      return statusMatch && assigneeMatch;
-    });
-  }, [projectsData, advancedFilters, displayedUnreadIds]);
-
-  const sortedProjects = useMemo(() => {
-    let sortableItems = [...filteredProjects];
-    if (projectSortConfig.key !== null) {
-      sortableItems.sort((a, b) => {
-        const aValue = a[projectSortConfig.key!];
-        const bValue = b[projectSortConfig.key!];
-
-        if (aValue === null || aValue === undefined) return 1;
-        if (bValue === null || bValue === undefined) return -1;
-
-        if (String(aValue).toLowerCase() < String(bValue).toLowerCase()) {
-          return projectSortConfig.direction === 'ascending' ? -1 : 1;
-        }
-        if (String(aValue).toLowerCase() > String(bValue).toLowerCase()) {
-          return projectSortConfig.direction === 'ascending' ? 1 : -1;
-        }
-        return 0;
-      });
-    }
-    return sortableItems;
-  }, [filteredProjects, projectSortConfig]);
-
   const filteredTasks = useMemo(() => {
     let tasksToFilter = allTasks;
     if (advancedFilters.selectedPeopleIds.length > 0) {
@@ -316,33 +186,19 @@ const ProjectsPage = () => {
     );
   }, [allTasks, searchTerm, advancedFilters.selectedPeopleIds]);
 
-  const handleViewChange = (newView: ViewMode | null) => {
-    if (newView) {
-      if (taskIdFromParams) {
-        navigate(`/projects?view=${newView}`);
-      } else {
-        setSearchParams({ view: newView }, { replace: true });
-      }
-      if (scrollContainerRef.current) {
-        scrollContainerRef.current.scrollTop = 0;
-        scrollContainerRef.current.scrollLeft = 0;
-      }
-    }
-  };
-
   useEffect(() => {
-    const highlightedSlug = searchParams.get('highlight');
-    if (highlightedSlug && sortedProjects.length > 0) {
-      const projectToHighlight = sortedProjects.find(p => p.slug === highlightedSlug);
-      if (projectToHighlight) {
-        setScrollToProjectId(projectToHighlight.id);
-        handleViewChange('list');
-        const newSearchParams = new URLSearchParams(searchParams);
-        newSearchParams.delete('highlight');
-        setSearchParams(newSearchParams, { replace: true });
+    if (view === 'table' && !initialTableScrollDone.current && sortedProjects.length > 0) {
+      const todayStr = formatInJakarta(new Date(), 'yyyy-MM-dd');
+      let targetProject = sortedProjects.find(p => p.start_date && formatInJakarta(p.start_date, 'yyyy-MM-dd') >= todayStr);
+      if (!targetProject && sortedProjects.length > 0) {
+        targetProject = sortedProjects[sortedProjects.length - 1];
+      }
+      if (targetProject) {
+        setScrollToProjectId(targetProject.id);
+        initialTableScrollDone.current = true;
       }
     }
-  }, [searchParams, sortedProjects, setSearchParams]);
+  }, [sortedProjects, view]);
 
   useEffect(() => {
     if (scrollToProjectId) {
@@ -359,6 +215,20 @@ const ProjectsPage = () => {
       }
     }
   }, [scrollToProjectId]);
+
+  const handleViewChange = (newView: ViewMode | null) => {
+    if (newView) {
+      if (taskIdFromParams) {
+        navigate(`/projects?view=${newView}`);
+      } else {
+        setSearchParams({ view: newView }, { replace: true });
+      }
+      if (scrollContainerRef.current) {
+        scrollContainerRef.current.scrollTop = 0;
+        scrollContainerRef.current.scrollLeft = 0;
+      }
+    }
+  };
 
   const deleteProjectMutation = useMutation({
     mutationFn: async (projectId: string) => {
@@ -445,57 +315,6 @@ const ProjectsPage = () => {
     sortConfig: finalTaskSortConfig 
   }];
 
-  const handleProjectClick = useCallback((projectId: string, projectSlug: string) => {
-    if (unreadProjectIds.has(projectId)) {
-      markProjectNotificationsAsRead.mutate(projectId);
-    }
-    navigate(`/projects/${projectSlug}`);
-  }, [unreadProjectIds, markProjectNotificationsAsRead, navigate]);
-
-  // Restore scroll position on mount
-  useEffect(() => {
-    if (!isLoadingProjects && !isLoadingTasks) {
-      const savedPosition = sessionStorage.getItem(`projectsScrollPosition-${view}`);
-      if (savedPosition && scrollContainerRef.current) {
-        setTimeout(() => {
-          if (scrollContainerRef.current) {
-            scrollContainerRef.current.scrollTop = parseInt(savedPosition, 10);
-          }
-        }, 100);
-      }
-    }
-  }, [isLoadingProjects, isLoadingTasks, sortedProjects, view]);
-
-  // Save scroll position on scroll
-  useEffect(() => {
-    const scrollContainer = scrollContainerRef.current;
-    let timeoutId: number | null = null;
-
-    const handleScroll = () => {
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
-      timeoutId = window.setTimeout(() => {
-        if (scrollContainer) {
-          sessionStorage.setItem(`projectsScrollPosition-${view}`, String(scrollContainer.scrollTop));
-        }
-      }, 200); // Debounce saving scroll position
-    };
-
-    if (scrollContainer) {
-      scrollContainer.addEventListener('scroll', handleScroll);
-    }
-
-    return () => {
-      if (scrollContainer) {
-        scrollContainer.removeEventListener('scroll', handleScroll);
-      }
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
-    };
-  }, [view]);
-
   return (
     <PortalLayout disableMainScroll noPadding>
       <AlertDialog open={!!projectToDelete} onOpenChange={(open) => !open && setProjectToDelete(null)}>
@@ -568,8 +387,6 @@ const ProjectsPage = () => {
               tasksQueryKey={tasksQueryKey}
               highlightedTaskId={highlightedTaskId}
               onHighlightComplete={onHighlightComplete}
-              unreadProjectIds={unreadProjectIds}
-              onProjectClick={handleProjectClick}
             />
           </div>
         </div>

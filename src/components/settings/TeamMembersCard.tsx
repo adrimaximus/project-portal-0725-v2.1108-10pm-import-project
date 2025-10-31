@@ -12,8 +12,10 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { User } from '@/types';
 import { Role } from './RoleManagerDialog';
+import { formatDistanceToNow } from 'date-fns';
+import { id } from 'date-fns/locale';
 import { useAuth } from '@/contexts/AuthContext';
-import { getAvatarUrl, safeFormatDistanceToNow } from '@/lib/utils';
+import { getAvatarUrl } from '@/lib/utils';
 
 interface TeamMembersCardProps {
   members: User[];
@@ -25,15 +27,6 @@ interface TeamMembersCardProps {
   onDeleteMember: (member: User) => void;
   onResendInvite: (member: User) => void;
 }
-
-const capitalizeWords = (str: string) => {
-  if (!str) return '';
-  // Handle roles like 'master admin' or 'BD' which might be all caps or mixed case
-  return str
-    .split(' ')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join(' ');
-};
 
 const TeamMembersCard = ({
   members,
@@ -56,6 +49,17 @@ const TeamMembersCard = ({
     setLocalMembers(members);
   }, [members]);
 
+  const capitalizeWords = (str: string) => {
+    if (!str) return '';
+    if (str === str.toUpperCase()) {
+      return str;
+    }
+    return str
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+  };
+
   const processedRoles = useMemo(() => {
     return [...roles]
       .map(role => ({
@@ -70,11 +74,6 @@ const TeamMembersCard = ({
         return a.displayName.localeCompare(b.displayName);
       });
   }, [roles]);
-
-  const getRoleDisplayName = (roleName: string) => {
-    const role = processedRoles.find(r => r.name === roleName);
-    return role ? role.displayName : capitalizeWords(roleName);
-  };
 
   const handleRoleChange = (memberId: string, newRole: string) => {
     setLocalMembers(prevMembers =>
@@ -128,31 +127,23 @@ const TeamMembersCard = ({
   return (
     <Card>
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-        <div className="flex items-center justify-between p-6">
-          <div>
-            <CardTitle>Current Members</CardTitle>
-            <CardDescription>Review and manage existing team members.</CardDescription>
-          </div>
-          <div className="flex items-center gap-2">
-            <CollapsibleTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-9 w-9">
-                <ChevronsUpDown className="h-4 w-4" />
-                <span className="sr-only">Toggle</span>
-              </Button>
+        <CardHeader>
+          <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+            <CollapsibleTrigger className="flex-grow text-left flex justify-between items-center">
+              <div>
+                  <CardTitle>Current Members</CardTitle>
+                  <CardDescription>Review and manage existing team members.</CardDescription>
+              </div>
+              <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />
             </CollapsibleTrigger>
-          </div>
-        </div>
-        <CollapsibleContent>
-          <CardContent className="pt-0">
-            <div className="relative mb-4">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search by name or email..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-8"
-              />
+            <div className="relative w-full sm:w-auto sm:max-w-xs" onClick={(e) => e.stopPropagation()}>
+              <Search className="absolute left-2.5 top-3 h-4 w-4 text-muted-foreground" />
+              <Input placeholder="Search by name..." className="pl-8 w-full" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
             </div>
+          </div>
+        </CardHeader>
+        <CollapsibleContent>
+          <CardContent>
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
@@ -187,7 +178,7 @@ const TeamMembersCard = ({
                           <Badge variant={getStatusBadgeVariant(member.status)}>Pending invite</Badge>
                         ) : (
                           <span className="text-muted-foreground">
-                            {safeFormatDistanceToNow(member.updated_at) || 'N/A'}
+                            {member.updated_at ? formatDistanceToNow(new Date(member.updated_at), { addSuffix: true, locale: id }) : 'N/A'}
                           </span>
                         )}
                       </TableCell>
@@ -195,14 +186,14 @@ const TeamMembersCard = ({
                         {member.status === 'suspended' ? (
                           <Badge variant={getStatusBadgeVariant(member.status)}>Suspended</Badge>
                         ) : member.status === 'Pending invite' ? (
-                          <span className="text-muted-foreground capitalize">{getRoleDisplayName(member.role || 'member')}</span>
+                          <span className="text-muted-foreground capitalize">{member.role}</span>
                         ) : isRoleChangeDisabled ? (
                           <TooltipProvider><Tooltip><TooltipTrigger asChild>
                                 <div className="w-full">
                                   <Select value={member.role || undefined} disabled>
                                     <SelectTrigger className="w-full h-9 border-none focus:ring-0 focus:ring-offset-0 shadow-none bg-transparent disabled:cursor-not-allowed disabled:opacity-50">
                                       <SelectValue placeholder="No role assigned">
-                                        {getRoleDisplayName(member.role || 'member')}
+                                        {processedRoles.find(r => r.name === member.role)?.displayName || member.role}
                                       </SelectValue>
                                     </SelectTrigger>
                                   </Select>

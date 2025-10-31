@@ -54,8 +54,8 @@ const CommentInput = ({ project, onAddCommentOrTicket }: CommentInputProps) => {
   }));
 
   return (
-    <div className="sticky bottom-0 bg-background pt-4 border-t -mx-3 sm:-mx-4 px-3 sm:px-4 -mb-3 sm:-mb-4 pb-3 sm:pb-4 z-10 flex items-start space-x-4">
-      <Avatar className="h-6 w-6 sm:h-8 sm:w-8">
+    <div className="flex items-start space-x-4">
+      <Avatar>
         <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
         <AvatarFallback style={generatePastelColor(user.id)}>
           {getInitials(fullName, user.email)}

@@ -9,15 +9,14 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Company, CompanyProperty } from '@/types';
+import { Company } from '@/types';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import CompanyFormDialog from '@/components/people/CompanyFormDialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { Input } from '@/components/ui/input';
-import { safeFormatDistanceToNow } from '@/lib/utils';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { formatDistanceToNow } from 'date-fns';
 
 const useCompanies = () => {
   return useQuery({
@@ -62,13 +61,11 @@ const CompaniesPage = () => {
 
   const handleDelete = async () => {
     if (!companyToDelete) return;
-
     const { error } = await supabase.from('companies').delete().eq('id', companyToDelete.id);
-
     if (error) {
-      toast.error(`Failed to delete ${companyToDelete.name}.`, { description: error.message });
+      toast.error(`Failed to delete company: ${error.message}`);
     } else {
-      toast.success(`${companyToDelete.name} has been deleted.`);
+      toast.success(`Company "${companyToDelete.name}" deleted.`);
       queryClient.invalidateQueries({ queryKey: ['companies'] });
     }
     setCompanyToDelete(null);
@@ -78,7 +75,7 @@ const CompaniesPage = () => {
     if (!props) return null;
     for (const key in props) {
         const value = props[key];
-        if (typeof value === 'string' && value.includes('supabase.co') && value.includes('image_company')) {
+        if (typeof value === 'string' && value.includes('supabase.co') && value.includes('company-logos')) {
             return value;
         }
     }
@@ -108,7 +105,7 @@ const CompaniesPage = () => {
 
         <Card>
           <CardHeader>
-            <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-4">
+            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
               <div>
                 <CardTitle>Company Directory</CardTitle>
                 <CardDescription>A list of all companies in your database.</CardDescription>
@@ -156,7 +153,7 @@ const CompaniesPage = () => {
                       </TableCell>
                       <TableCell>{company.legal_name || '-'}</TableCell>
                       <TableCell>{company.address || '-'}</TableCell>
-                      <TableCell>{safeFormatDistanceToNow(company.updated_at)}</TableCell>
+                      <TableCell>{company.updated_at ? formatDistanceToNow(new Date(company.updated_at), { addSuffix: true }) : '-'}</TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>

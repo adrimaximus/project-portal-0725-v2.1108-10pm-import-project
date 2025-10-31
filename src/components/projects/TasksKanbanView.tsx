@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect, useRef } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { Task, TaskStatus, TASK_STATUS_OPTIONS } from '@/types';
 import TasksKanbanColumn from './TasksKanbanColumn';
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, MouseSensor, TouchSensor, useSensor, useSensors, DragOverEvent } from '@dnd-kit/core';
@@ -8,39 +8,17 @@ import { useTaskMutations } from '@/hooks/useTaskMutations';
 
 interface TasksKanbanViewProps {
   tasks: Task[];
-  isLoading: boolean;
   onEdit: (task: Task) => void;
   onDelete: (taskId: string) => void;
   refetch: () => void;
   tasksQueryKey: any[];
-  highlightedTaskId: string | null;
-  onHighlightComplete: () => void;
 }
 
-const TasksKanbanView = ({ tasks, isLoading, onEdit, onDelete, refetch, tasksQueryKey, highlightedTaskId, onHighlightComplete }: TasksKanbanViewProps) => {
+const TasksKanbanView = ({ tasks, onEdit, onDelete, refetch, tasksQueryKey }: TasksKanbanViewProps) => {
   const [collapsedColumns, setCollapsedColumns] = useState<Set<TaskStatus>>(new Set());
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const { updateTaskStatusAndOrder } = useTaskMutations(refetch);
   const [tasksByStatus, setTasksByStatus] = useState<Record<TaskStatus, Task[]>>({} as Record<TaskStatus, Task[]>);
-  const taskCardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
-
-  useEffect(() => {
-    if (highlightedTaskId && taskCardRefs.current.has(highlightedTaskId)) {
-      const element = taskCardRefs.current.get(highlightedTaskId);
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        const cardElement = element.querySelector('.card-element');
-        if (cardElement) {
-          cardElement.classList.add('ring-2', 'ring-primary', 'ring-offset-2');
-          const timer = setTimeout(() => {
-            cardElement.classList.remove('ring-2', 'ring-primary', 'ring-offset-2');
-            onHighlightComplete();
-          }, 2500);
-          return () => clearTimeout(timer);
-        }
-      }
-    }
-  }, [highlightedTaskId, onHighlightComplete, tasksByStatus]);
 
   useEffect(() => {
     if (!activeTask) {

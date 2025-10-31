@@ -46,19 +46,16 @@ Deno.serve(async (req) => {
       .in('id', userProjects ? userProjects.map(p => p.id) : []);
     diagnostics.projectsWithNullDates = nullDateError ? 'unknown' : projectsWithNullDates?.length || 0;
 
-    let apiKey = Deno.env.get('OPENAI_API_KEY');
-    if (!apiKey) {
-        const { data: config, error: configError } = await supabaseAdmin
-            .from('app_config')
-            .select('value')
-            .eq('key', 'OPENAI_API_KEY')
-            .single();
-        if (configError || !config?.value) {
-            throw new Error("OpenAI API key is not configured. Please set it in your application settings or as a Supabase secret.");
-        }
-        apiKey = config.value;
+    const { data: config, error: configError } = await supabaseAdmin
+      .from('app_config')
+      .select('value')
+      .eq('key', 'OPENAI_API_KEY')
+      .single();
+
+    if (configError || !config?.value) {
+      throw new Error("OpenAI API key is not configured by an administrator.");
     }
-    const openai = new OpenAI({ apiKey });
+    const openai = new OpenAI({ apiKey: config.value });
 
     const systemPrompt = `You are an expert Supabase and application support AI. Your goal is to help a user diagnose why their projects might not be showing up in the UI. You will be given a JSON object with diagnostic results. Interpret these results and provide a clear, friendly, and actionable explanation in markdown format.
 
