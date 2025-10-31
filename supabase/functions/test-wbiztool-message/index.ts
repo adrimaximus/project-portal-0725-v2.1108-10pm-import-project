@@ -32,6 +32,7 @@ serve(async (req) => {
     if (credsError || !creds) throw new Error('WBIZTOOL credentials not found.')
 
     // 1. Fetch devices
+    console.log(`[WBIZTOOL-TEST] Fetching devices for Client ID: ${creds.client_id}`);
     const devicesResponse = await fetch('https://wbiztool.com/api/v2/devices', {
       method: 'GET',
       headers: {
@@ -40,15 +41,24 @@ serve(async (req) => {
         'x-api-key': creds.api_key,
       },
     })
-
-    if (!devicesResponse.ok) throw new Error('Failed to fetch WBIZTOOL devices.')
+    console.log(`[WBIZTOOL-TEST] Devices API response status: ${devicesResponse.status}`);
+    if (!devicesResponse.ok) {
+        const errorData = await devicesResponse.json().catch(() => ({}));
+        throw new Error(`Failed to fetch WBIZTOOL devices: ${errorData.message || 'API request failed'}`);
+    }
     
     const devicesData = await devicesResponse.json()
+    console.log(`[WBIZTOOL-TEST] Found ${devicesData.data?.length || 0} devices.`);
     const activeDevice = devicesData.data?.find((d: any) => d.status === 'connected')
 
-    if (!activeDevice) throw new Error('No active WBIZTOOL device found.')
+    if (!activeDevice) {
+        console.error('[WBIZTOOL-TEST] No active device found. All devices:', devicesData.data);
+        throw new Error('No active WBIZTOOL device found. Please ensure your WhatsApp device is connected in the WBIZTOOL dashboard.');
+    }
+    console.log(`[WBIZTOOL-TEST] Using active device ID: ${activeDevice.id}`);
 
     // 2. Send message using the device
+    console.log(`[WBIZTOOL-TEST] Sending message to ${phone}`);
     const messageResponse = await fetch('https://wbiztool.com/api/v2/messages', {
       method: 'POST',
       headers: {
@@ -62,10 +72,11 @@ serve(async (req) => {
         device_id: activeDevice.id,
       }),
     })
-
+    console.log(`[WBIZTOOL-TEST] Send message API response status: ${messageResponse.status}`);
     const messageData = await messageResponse.json()
 
     if (!messageResponse.ok) {
+      console.error('[WBIZTOOL-TEST] Send message API error response:', messageData);
       throw new Error(`WBIZTOOL API Error: ${messageData.message || 'Failed to send message'}`)
     }
 
