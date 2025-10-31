@@ -189,10 +189,12 @@ serve(async (req) => {
 
   try {
     // Security check
+    const userAgent = req.headers.get('user-agent');
     const cronHeader = req.headers.get('X-Cron-Secret');
     const cronSecret = Deno.env.get('CRON_SECRET');
 
-    if (cronHeader !== cronSecret) {
+    // Allow requests from pg_net (internal cron) or with the correct secret for external triggers
+    if (userAgent !== 'pg_net/0.19.5' && cronHeader !== cronSecret) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: corsHeaders });
     }
 
