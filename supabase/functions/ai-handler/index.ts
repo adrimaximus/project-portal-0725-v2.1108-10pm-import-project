@@ -2,6 +2,7 @@
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
 import { createClient as createSupabaseClient } from 'npm:@supabase/supabase-js@2.54.0';
 import OpenAI from 'npm:openai@4.29.2';
+import Anthropic from 'npm:@anthropic-ai/sdk@^0.22.0';
 import { createApi } from 'https://esm.sh/unsplash-js@7.0.19';
 import * as pdfjs from 'https://esm.sh/pdfjs-dist@4.4.168';
 import mammoth from 'https://esm.sh/mammoth@1.7.2';
@@ -11,6 +12,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
+
+const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
 
 // --- START INLINED SHARED CODE ---
 
@@ -30,7 +33,7 @@ const getOpenAIClient = async (supabaseAdmin: any) => {
     .single();
 
   if (configError || !config?.value) {
-    throw new Error("OpenAI API key is not configured by an administrator.");
+    return null;
   }
   return new OpenAI({ apiKey: config.value });
 };
@@ -237,7 +240,7 @@ const buildContext = async (supabaseClient: any, user: any) => {
     }));
     const userList = usersRes.data.map((u: any) => ({ id: u.id, name: `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email }));
     const serviceList = [ "3D Graphic Design", "Accommodation", "Award Ceremony", "Branding", "Content Creation", "Digital Marketing", "Entertainment", "Event Decoration", "Event Equipment", "Event Gamification", "Exhibition Booth", "Food & Beverage", "Keyvisual Graphic Design", "LED Display", "Lighting System", "Logistics", "Man Power", "Merchandise", "Motiongraphic Video", "Multimedia System", "Payment Advance", "Photo Documentation", "Plaque & Trophy", "Prints", "Professional Security", "Professional video production for commercial ads", "Show Management", "Slido", "Sound System", "Stage Production", "Talent", "Ticket Management System", "Transport", "Venue", "Video Documentation", "VIP Services", "Virtual Events", "Awards System", "Brand Ambassadors", "Electricity & Genset", "Event Consultation", "Workshop" ];
-    const iconList = [ 'Target', 'Flag', 'BookOpen', 'Dumbbell', 'TrendingUp', 'Star', 'Heart', 'Rocket', 'DollarSign', 'FileText', 'ImageIcon', 'Award', 'BarChart', 'Calendar', 'CheckCircle', 'Users', 'Activity', 'Anchor', 'Aperture', 'Bike', 'Briefcase', 'Brush', 'Camera', 'Car', 'ClipboardCheck', 'Cloud', 'Code', 'Coffee', 'Compass', 'Cpu', 'CreditCard', 'Crown', 'Database', 'Diamond', 'Feather', 'Film', 'Flame', 'Flower', 'Gift', 'Globe', 'GraduationCap', 'Headphones', 'Home', 'Key', 'Laptop', 'Leaf', 'Lightbulb', 'Link', 'Map', 'Medal', 'Mic', 'Moon', 'MousePointer', 'Music', 'Paintbrush', 'Palette', 'PenTool', 'Phone', 'PieChart', 'Plane', 'Puzzle', 'Save', 'Scale', 'Scissors', 'Settings', 'Shield', 'Ship', 'ShoppingBag', 'Smile', 'Speaker', 'Sun', 'Sunrise', 'Sunset', 'Sword', 'Tag', 'Trophy', 'Truck', 'Umbrella', 'Video', 'Wallet', 'Watch', 'Wind', 'Wrench', 'Zap' ];
+    const iconList = [ 'Target', 'Flag', 'BookOpen', 'Dumbbell', 'TrendingUp', 'Star', 'Heart', 'Rocket', 'DollarSign', 'FileText', 'ImageIcon', 'Award', 'BarChart', 'Calendar', 'CheckCircle', 'Users', 'Activity', 'Anchor', 'Aperture', 'Bike', 'Briefcase', 'Brush', 'Camera', 'Car', 'ClipboardCheck', 'Cloud', 'Code', 'Coffee', 'Compass', 'Cpu', 'CreditCard', 'Crown', 'Database', 'Diamond', 'Feather', 'Film', 'Flame', 'Flower', 'Gamepad2', 'Gift', 'Globe', 'GraduationCap', 'Headphones', 'Home', 'Key', 'Laptop', 'Leaf', 'Lightbulb', 'Link', 'Map', 'Medal', 'Mic', 'Moon', 'MousePointer', 'Music', 'Paintbrush', 'Palette', 'PenTool', 'Phone', 'PieChart', 'Plane', 'Puzzle', 'Save', 'Scale', 'Scissors', 'Settings', 'Shield', 'Ship', 'ShoppingBag', 'Smile', 'Speaker', 'Sun', 'Sunrise', 'Sunset', 'Sword', 'Tag', 'Trophy', 'Truck', 'Umbrella', 'Video', 'Wallet', 'Watch', 'Wind', 'Wrench', 'Zap' ];
     const summarizedArticles = articlesRes.data.map((a: any) => ({ title: a.title, folder: foldersRes.data.find((f: any) => f.id === a.folder_id)?.name }));
     const summarizedFolders = foldersRes.data.map((f: any) => f.name);
     console.log("[DIAGNOSTIC] buildContext: Data summarization complete.");
@@ -572,7 +575,7 @@ async function sendEmail(to: string, subject: string, html: string, text?: strin
 }
 
 async function analyzeProjects(payload: any, context: any) {
-  const { openai, user, userSupabase, supabaseAdmin } = context;
+  const { openai, anthropic, user, userSupabase, supabaseAdmin } = context;
   let { request, attachmentUrl, attachmentType, replyToMessageId } = payload;
   
   if (!request && !attachmentUrl) {
@@ -674,22 +677,33 @@ async function analyzeProjects(payload: any, context: any) {
   }
 
   const messages = [
-    { role: "system", content: systemPrompt },
     ...(history || []).map((msg: any) => ({ role: msg.sender === 'ai' ? 'assistant' : 'user', content: msg.content })),
     { role: "user", content: userContent }
   ];
 
-  console.log("[DIAGNOSTIC] analyzeProjects: Sending request to OpenAI.");
-  const response = await openai.chat.completions.create({
+  console.log("[DIAGNOSTIC] analyzeProjects: Sending request to AI provider.");
+  let responseText;
+  if (anthropic) {
+    const completion = await anthropic.messages.create({
+      model: 'claude-3-haiku-20240307',
+      max_tokens: 1024,
+      system: systemPrompt,
+      messages: messages,
+    });
+    responseText = completion.content[0].text;
+  } else if (openai) {
+    const response = await openai.chat.completions.create({
       model: "gpt-4o",
-      messages,
+      messages: [{ role: 'system', content: systemPrompt }, ...messages],
       temperature: 0.1,
       max_tokens: 1000,
-  });
-  console.log("[DIAGNOSTIC] analyzeProjects: Received response from OpenAI.");
+    });
+    responseText = response.choices[0].message.content;
+  } else {
+    throw new Error("No AI provider configured.");
+  }
+  console.log("[DIAGNOSTIC] analyzeProjects: Received response from AI provider.");
 
-  const responseText = response.choices[0].message.content;
-  
   if (responseText) {
     await userSupabase.from('ai_chat_history').insert({ 
       user_id: user.id, 
@@ -745,7 +759,7 @@ async function analyzeProjects(payload: any, context: any) {
 }
 
 async function analyzeDuplicates(payload: any, context: any) {
-  const { openai } = context;
+  const { openai, anthropic } = context;
   const { duplicates } = payload;
   if (!duplicates) {
     throw new Error("Duplicates data is required for analysis.");
@@ -754,21 +768,35 @@ async function analyzeDuplicates(payload: any, context: any) {
   const systemPrompt = `You are a data quality assistant. Here is a list of potential duplicate contacts. Summarize the findings in a friendly, concise paragraph in markdown format. Mention the total number of pairs found and the common reasons (e.g., 'similar names or shared emails'). Then, recommend that the user review and merge them to keep their contact list clean.`;
   const userPrompt = `Analyze these potential duplicates:\n${JSON.stringify(duplicates, null, 2)}`;
 
-  const response = await openai.chat.completions.create({
-    model: "gpt-4-turbo",
-    messages: [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: userPrompt }
-    ],
-    temperature: 0.3,
-    max_tokens: 250,
-  });
-
-  return { result: response.choices[0].message.content };
+  let result;
+  if (anthropic) {
+    const response = await anthropic.messages.create({
+      model: "claude-3-haiku-20240307",
+      messages: [{ role: "user", content: userPrompt }],
+      system: systemPrompt,
+      temperature: 0.3,
+      max_tokens: 250,
+    });
+    result = response.content[0].text;
+  } else if (openai) {
+    const response = await openai.chat.completions.create({
+      model: "gpt-4-turbo",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt }
+      ],
+      temperature: 0.3,
+      max_tokens: 250,
+    });
+    result = response.choices[0].message.content;
+  } else {
+    throw new Error("No AI provider configured.");
+  }
+  return { result };
 }
 
 async function aiMergeContacts(payload: any, context: any) {
-  const { supabaseAdmin, openai } = context;
+  const { supabaseAdmin, openai, anthropic } = context;
   const { primary_person_id, secondary_person_id } = payload;
   if (!primary_person_id || !secondary_person_id) {
     throw new Error("Primary and secondary person IDs are required.");
@@ -786,41 +814,45 @@ async function aiMergeContacts(payload: any, context: any) {
   const secondaryPerson = peopleData.find((p: any) => p.id === secondary_person_id);
 
   // Ask AI to merge
-  const systemPrompt = `You are an intelligent contact merging assistant. Your task is to merge two JSON objects representing two people into a single, consolidated JSON object. Follow these rules carefully:
-
-1.  **Primary Record**: The user will designate one record as "primary". You should prioritize data from this record but intelligently incorporate data from the "secondary" record.
-2.  **No Data Deletion**: Do not discard information from the secondary record. If a field from the secondary record conflicts with the primary (e.g., a different job title), and cannot be combined, add the secondary information to the 'notes' field in a structured way, like "Also worked as: [Job Title] at [Company]".
-3.  **Field Merging Logic**:
-    *   **user_id**: This is the most important field. If the primary record has a user_id, keep it. If the primary does not but the secondary does, the merged record MUST inherit the user_id from the secondary record. If both have different user_ids, this is a conflict; keep the primary's user_id and add a note like "This contact was merged with another registered user (ID: [secondary_user_id])".
-    *   **full_name, email**: If the merged record has a user_id, these fields should be taken from the record that provided the user_id, as they are managed by the user's profile.
-    *   **avatar_url, company, job_title, department, birthday**: If both records have a value, prefer the primary record's value. Add the secondary record's value to the 'notes' if it's different and seems important (e.g., a different company or job title).
-    *   **contact (emails, phones)**: Combine the arrays, ensuring all unique values are kept. Do not duplicate entries.
-    *   **social_media**: Merge the two JSON objects. If a key exists in both (e.g., 'linkedin'), the primary record's value takes precedence.
-    *   **notes**: Intelligently combine the notes from both records. Do not simply concatenate them. Summarize if possible, remove redundancy, and add a separator like "--- Merged Notes ---" if you are combining distinct blocks of text. Also, add any conflicting information from other fields here.
-4.  **Output Format**: Your response MUST be ONLY the final, merged JSON object representing the person. Do not include any explanations, markdown formatting, or other text. The JSON should be a valid object that can be parsed directly.`;
-
-  const response = await openai.chat.completions.create({
-    model: "gpt-4-turbo",
-    messages: [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: `Merge these two contacts. \n\nPrimary Contact:\n${JSON.stringify(primaryPerson, null, 2)}\n\nSecondary Contact:\n${JSON.stringify(secondaryPerson, null, 2)}` }
-    ],
-    temperature: 0.2,
-    response_format: { type: "json_object" },
-  });
-
-  const mergedPersonJSON = response.choices[0].message.content;
+  let mergedPersonJSON;
+  if (anthropic) {
+    const response = await anthropic.messages.create({
+      model: "claude-3-opus-20240229",
+      messages: [
+        { role: "user", content: `Merge these two contacts. \n\nPrimary Contact:\n${JSON.stringify(primaryPerson, null, 2)}\n\nSecondary Contact:\n${JSON.stringify(secondaryPerson, null, 2)}` }
+      ],
+      system: systemPrompt,
+      temperature: 0.2,
+      max_tokens: 2048,
+    });
+    const responseText = response.content[0].text;
+    const jsonMatch = responseText.match(/{[\s\S]*}/);
+    if (!jsonMatch) throw new Error("AI response was not valid JSON.");
+    mergedPersonJSON = jsonMatch[0];
+  } else if (openai) {
+    const response = await openai.chat.completions.create({
+      model: "gpt-4-turbo",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: `Merge these two contacts. \n\nPrimary Contact:\n${JSON.stringify(primaryPerson, null, 2)}\n\nSecondary Contact:\n${JSON.stringify(secondaryPerson, null, 2)}` }
+      ],
+      temperature: 0.2,
+      response_format: { type: "json_object" },
+    });
+    mergedPersonJSON = response.choices[0].message.content;
+  } else {
+    throw new Error("No AI provider configured.");
+  }
+  
   if (!mergedPersonJSON) {
       throw new Error("AI failed to return a merged contact.");
   }
   const mergedPerson = JSON.parse(mergedPersonJSON);
 
   // --- Database Operations ---
-  // Combine unique project and tag IDs from both original records
   const allProjectIds = [...new Set([...(primaryPerson.projects || []).map((p: any) => p.id), ...(secondaryPerson.projects || []).map((p: any) => p.id)])];
   const allTagIds = [...new Set([...(primaryPerson.tags || []).map((t: any) => t.id), ...(secondaryPerson.tags || []).map((t: any) => t.id)])];
 
-  // Use the upsert RPC to update the primary person and their relations
   const { error: upsertError } = await supabaseAdmin.rpc('upsert_person_with_details', {
       p_id: primary_person_id,
       p_full_name: mergedPerson.full_name,
@@ -835,17 +867,15 @@ async function aiMergeContacts(payload: any, context: any) {
       p_address: mergedPerson.address,
       p_project_ids: allProjectIds,
       p_existing_tag_ids: allTagIds,
-      p_custom_tags: [], // We are not creating new tags here
+      p_custom_tags: [],
   });
 
   if (upsertError) {
       throw new Error(`Failed to update primary contact: ${upsertError.message}`);
   }
 
-  // Delete the secondary person
   const { error: deleteError } = await supabaseAdmin.from('people').delete().eq('id', secondary_person_id);
   if (deleteError) {
-      // This is not ideal, but we should log it. The primary contact is updated.
       console.error(`Failed to delete secondary contact ${secondary_person_id}: ${deleteError.message}`);
   }
 
@@ -853,28 +883,43 @@ async function aiMergeContacts(payload: any, context: any) {
 }
 
 async function articleWriter(payload: any, context: any) {
-  const { openai, feature } = context;
+  const { openai, anthropic, feature } = context;
   const promptConfig = articleWriterFeaturePrompts[feature];
 
   if (!promptConfig) {
     throw new Error(`Unknown article writer feature: ${feature}`);
   }
 
-  const response = await openai.chat.completions.create({
-    model: "gpt-4-turbo",
-    messages: [
-      { role: "system", content: promptConfig.system },
-      { role: "user", content: promptConfig.user(payload) }
-    ],
-    temperature: 0.7,
-    max_tokens: promptConfig.max_tokens,
-  });
+  let result;
+  if (anthropic) {
+    const response = await anthropic.messages.create({
+      model: "claude-3-opus-20240229",
+      messages: [{ role: "user", content: promptConfig.user(payload) }],
+      system: promptConfig.system,
+      temperature: 0.7,
+      max_tokens: promptConfig.max_tokens,
+    });
+    result = response.content[0].text;
+  } else if (openai) {
+    const response = await openai.chat.completions.create({
+      model: "gpt-4-turbo",
+      messages: [
+        { role: "system", content: promptConfig.system },
+        { role: "user", content: promptConfig.user(payload) }
+      ],
+      temperature: 0.7,
+      max_tokens: promptConfig.max_tokens,
+    });
+    result = response.choices[0].message.content;
+  } else {
+    throw new Error("No AI provider configured.");
+  }
 
-  return { result: response.choices[0].message.content?.trim() };
+  return { result: result?.trim() };
 }
 
 async function generateCaption(payload: any, context: any) {
-  const { openai } = context;
+  const { openai, anthropic } = context;
   const { altText } = payload;
   if (!altText) {
     throw new Error("altText is required for generating a caption.");
@@ -883,22 +928,36 @@ async function generateCaption(payload: any, context: any) {
   const systemPrompt = `You are an AI that generates a short, inspiring, one-line caption for an image. The caption should be suitable for a professional dashboard related to events, marketing, and project management. Respond with ONLY the caption, no extra text or quotes. Keep it under 12 words.`;
   const userPrompt = `Generate a caption for an image described as: "${altText}"`;
 
-  const response = await openai.chat.completions.create({
-    model: "gpt-3.5-turbo",
-    messages: [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: userPrompt }
-    ],
-    temperature: 0.7,
-    max_tokens: 30,
-  });
+  let caption;
+  if (anthropic) {
+    const response = await anthropic.messages.create({
+      model: "claude-3-haiku-20240307",
+      messages: [{ role: "user", content: userPrompt }],
+      system: systemPrompt,
+      temperature: 0.7,
+      max_tokens: 30,
+    });
+    caption = response.content[0].text;
+  } else if (openai) {
+    const response = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt }
+      ],
+      temperature: 0.7,
+      max_tokens: 30,
+    });
+    caption = response.choices[0].message.content;
+  } else {
+    throw new Error("No AI provider configured.");
+  }
 
-  const caption = response.choices[0].message.content?.trim().replace(/"/g, '');
-  return { caption };
+  return { caption: caption?.trim().replace(/"/g, '') };
 }
 
 async function generateMoodInsight(payload: any, context: any) {
-  const { openai } = context;
+  const { openai, anthropic } = context;
   const { prompt, userName, conversationHistory } = payload;
   if (!prompt) {
     throw new Error("Prompt is required for generating mood insights.");
@@ -907,7 +966,6 @@ async function generateMoodInsight(payload: any, context: any) {
   const systemPrompt = `Anda adalah seorang teman AI yang suportif, empatik, dan berwawasan luas. Tujuan Anda adalah untuk terlibat dalam percakapan yang mendukung dengan pengguna tentang suasana hati dan perasaan mereka. Anda akan menerima riwayat percakapan. Tugas Anda adalah memberikan respons berikutnya dalam percakapan tersebut. Pertahankan nada yang positif dan memotivasi. Sapa pengguna dengan nama mereka jika ini adalah awal percakapan. Jaga agar respons tetap sangat ringkas, maksimal 2 kalimat, dan terasa seperti percakapan alami. Jangan mengulangi diri sendiri. Fokus percakapan ini adalah murni pada kesejahteraan emosional. Jangan membahas topik lain seperti proyek, tugas, atau tujuan kerja kecuali jika pengguna secara eksplisit mengungkitnya terlebih dahulu dalam konteks perasaan mereka. Selalu berikan respons dalam Bahasa Indonesia.`;
 
   const messages = [
-    { role: "system", content: systemPrompt },
     ...(conversationHistory || []).map((msg: any) => ({
       role: msg.sender === 'ai' ? 'assistant' : 'user',
       content: msg.content
@@ -919,18 +977,33 @@ async function generateMoodInsight(payload: any, context: any) {
     messages.splice(messages.length-2, 1);
   }
 
-  const response = await openai.chat.completions.create({
-    model: "gpt-4-turbo",
-    messages: messages,
-    temperature: 0.7,
-    max_tokens: 200,
-  });
+  let result;
+  if (anthropic) {
+    const response = await anthropic.messages.create({
+      model: "claude-3-haiku-20240307",
+      messages: messages,
+      system: systemPrompt,
+      temperature: 0.7,
+      max_tokens: 200,
+    });
+    result = response.content[0].text;
+  } else if (openai) {
+    const response = await openai.chat.completions.create({
+      model: "gpt-4-turbo",
+      messages: [{ role: "system", content: systemPrompt }, ...messages.filter(m => m.role !== 'system')],
+      temperature: 0.7,
+      max_tokens: 200,
+    });
+    result = response.choices[0].message.content;
+  } else {
+    throw new Error("No AI provider configured.");
+  }
 
-  return { result: response.choices[0].message.content };
+  return { result };
 }
 
 async function suggestIcon(payload: any, context: any) {
-  const { openai } = context;
+  const { openai, anthropic } = context;
   const { title, icons } = payload;
   if (!title || !icons || !Array.isArray(icons)) {
     throw new Error("Title and a list of icons are required.");
@@ -939,21 +1012,36 @@ async function suggestIcon(payload: any, context: any) {
   const systemPrompt = `You are an AI assistant that suggests the best icon for a given title from a list. Your response must be ONLY the name of the icon from the list provided, with no extra text, explanation, or punctuation.`;
   const userPrompt = `Title: "${title}"\n\nIcons: [${icons.join(', ')}]`;
 
-  const response = await openai.chat.completions.create({
-    model: "gpt-4-turbo",
-    messages: [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: userPrompt }
-    ],
-    temperature: 0,
-    max_tokens: 20,
-  });
+  let result;
+  if (anthropic) {
+    const response = await anthropic.messages.create({
+      model: "claude-3-haiku-20240307",
+      messages: [{ role: "user", content: userPrompt }],
+      system: systemPrompt,
+      temperature: 0,
+      max_tokens: 20,
+    });
+    result = response.content[0].text;
+  } else if (openai) {
+    const response = await openai.chat.completions.create({
+      model: "gpt-4-turbo",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt }
+      ],
+      temperature: 0,
+      max_tokens: 20,
+    });
+    result = response.choices[0].message.content;
+  } else {
+    throw new Error("No AI provider configured.");
+  }
 
-  return { result: response.choices[0].message.content?.trim() };
+  return { result: result?.trim() };
 }
 
 async function generateInsight(payload: any, context: any) {
-  const { openai } = context;
+  const { openai, anthropic } = context;
   const { goal, context: progressContext } = payload;
   if (!goal || !progressContext) {
     throw new Error("Goal and context are required for generating insights.");
@@ -984,21 +1072,36 @@ async function generateInsight(payload: any, context: any) {
 Tujuan: ${JSON.stringify(modifiedGoal, null, 2)}
 Konteks Kemajuan: ${JSON.stringify(progressContext, null, 2)}`;
 
-  const response = await openai.chat.completions.create({
-    model: "gpt-4-turbo",
-    messages: [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: userPrompt }
-    ],
-    temperature: 0.7,
-    max_tokens: 200,
-  });
+  let result;
+  if (anthropic) {
+    const response = await anthropic.messages.create({
+      model: "claude-3-haiku-20240307",
+      messages: [{ role: "user", content: userPrompt }],
+      system: systemPrompt,
+      temperature: 0.7,
+      max_tokens: 200,
+    });
+    result = response.content[0].text;
+  } else if (openai) {
+    const response = await openai.chat.completions.create({
+      model: "gpt-4-turbo",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt }
+      ],
+      temperature: 0.7,
+      max_tokens: 200,
+    });
+    result = response.choices[0].message.content;
+  } else {
+    throw new Error("No AI provider configured.");
+  }
 
-  return { result: response.choices[0].message.content };
+  return { result };
 }
 
 async function aiSelectCalendarEvents(payload: any, context: any) {
-  const { openai } = context;
+  const { openai, anthropic } = context;
   const { events, existingProjects } = payload;
   if (!events || !Array.isArray(events)) {
     throw new Error("A list of calendar events is required.");
@@ -1015,17 +1118,34 @@ Your rules are:
 
   const userPrompt = `Existing Projects:\n${JSON.stringify(existingProjects, null, 2)}\n\nCalendar Events to Analyze:\n${JSON.stringify(events.map((e: any) => ({id: e.id, summary: e.summary, description: e.description})), null, 2)}`;
 
-  const response = await openai.chat.completions.create({
-    model: "gpt-4-turbo",
-    messages: [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: userPrompt }
-    ],
-    temperature: 0.1,
-    response_format: { type: "json_object" },
-  });
+  let result;
+  if (anthropic) {
+    const response = await anthropic.messages.create({
+      model: "claude-3-haiku-20240307",
+      messages: [{ role: "user", content: userPrompt }],
+      system: systemPrompt,
+      temperature: 0.1,
+      max_tokens: 1024,
+    });
+    const responseText = response.content[0].text;
+    const jsonMatch = responseText.match(/{[\s\S]*}/);
+    if (!jsonMatch) throw new Error("AI response was not valid JSON.");
+    result = JSON.parse(jsonMatch[0]);
+  } else if (openai) {
+    const response = await openai.chat.completions.create({
+      model: "gpt-4-turbo",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt }
+      ],
+      temperature: 0.1,
+      response_format: { type: "json_object" },
+    });
+    result = JSON.parse(response.choices[0].message.content);
+  } else {
+    throw new Error("No AI provider configured.");
+  }
 
-  const result = JSON.parse(response.choices[0].message.content);
   return { result };
 }
 
@@ -1033,6 +1153,10 @@ async function generateIcon(payload: any, context: any) {
   const { openai } = context;
   const { prompt } = payload;
   if (!prompt) throw new Error("A prompt is required to generate an icon.");
+
+  if (!openai) {
+    throw new Error("OpenAI (DALL-E) is required for image generation and is not configured.");
+  }
 
   const response = await openai.images.generate({
     model: "dall-e-2",
@@ -1084,6 +1208,12 @@ serve(async (req) => {
 
     const supabaseAdmin = createSupabaseAdmin();
     const openai = await getOpenAIClient(supabaseAdmin);
+    const anthropic = ANTHROPIC_API_KEY ? new Anthropic({ apiKey: ANTHROPIC_API_KEY }) : null;
+
+    if (!openai && !anthropic) {
+      throw new Error("No AI provider is configured. Please set up OpenAI or Anthropic API keys.");
+    }
+    
     const userSupabase = createSupabaseUserClient(req);
     
     const { data: { user } } = await userSupabase.auth.getUser();
@@ -1091,6 +1221,7 @@ serve(async (req) => {
 
     const context = {
       openai,
+      anthropic,
       user,
       userSupabase,
       supabaseAdmin,

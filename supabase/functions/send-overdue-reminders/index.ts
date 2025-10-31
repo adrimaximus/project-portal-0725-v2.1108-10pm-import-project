@@ -9,21 +9,6 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
-const formatPhoneNumberForApi = (phone: string): string | null => {
-    if (!phone) return null;
-    let cleaned = phone.trim().replace(/\D/g, '');
-    if (cleaned.startsWith('0')) {
-      return '62' + cleaned.substring(1);
-    }
-    if (cleaned.startsWith('62')) {
-      return cleaned;
-    }
-    if (cleaned.length > 8 && cleaned.startsWith('8')) {
-      return '62' + cleaned;
-    }
-    return cleaned;
-};
-
 const getSystemPrompt = () => `Anda adalah asisten keuangan yang profesional, sopan, dan proaktif. Tugas Anda adalah membuat pesan pengingat WhatsApp tentang invoice yang telah jatuh tempo.
 
 **Aturan Penting:**
@@ -46,8 +31,10 @@ serve(async (req) => {
   }
 
   try {
-    const authHeader = req.headers.get('Authorization')?.replace('Bearer ', '');
-    if (authHeader !== Deno.env.get('CRON_SECRET')) {
+    const cronHeader = req.headers.get('X-Cron-Secret');
+    const cronSecret = Deno.env.get('CRON_SECRET');
+
+    if (cronHeader !== cronSecret) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: corsHeaders });
     }
 
@@ -117,14 +104,8 @@ serve(async (req) => {
 
       for (const userId of recipients) {
         const profile = profileMap.get(userId);
-        if (!profile) {
-          console.warn(`[send-overdue-reminders] Profile not found for user ${userId}. Skipping.`);
-          continue;
-        }
-
-        const recipientPhone = formatPhoneNumberForApi(profile.phone);
-        if (!recipientPhone) {
-          console.warn(`[send-overdue-reminders] No valid phone for ${profile.email}. Skipping.`);
+        if (!profile || !profile.phone) {
+          console.warn(`[send-overdue-reminders] No phone for ${profile?.email || userId}. Skipping.`);
           continue;
         }
 
@@ -166,7 +147,7 @@ Buat pesan pengingat yang sopan dan profesional sesuai dengan tingkat urgensi ya
           const wbizResponse = await fetch('https://wbiztool.com/api/v2/messages', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'x-client-id': clientId, 'x-api-key': apiKey },
-            body: JSON.stringify({ phone: recipientPhone, message: aiMessage, device_id: activeDevice.id }),
+            body: JSON.stringify({ phone: profile.phone, message: aiMessage, device_id: activeDevice.id }),
           });
 
           if (!wbizResponse.ok) {

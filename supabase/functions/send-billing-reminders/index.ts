@@ -31,8 +31,10 @@ serve(async (req) => {
   }
 
   try {
-    const authHeader = req.headers.get('Authorization')?.replace('Bearer ', '');
-    if (authHeader !== Deno.env.get('CRON_SECRET')) {
+    const cronHeader = req.headers.get('X-Cron-Secret');
+    const cronSecret = Deno.env.get('CRON_SECRET');
+
+    if (cronHeader !== cronSecret) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: corsHeaders });
     }
 
@@ -88,7 +90,7 @@ serve(async (req) => {
       let reminderType: string | null = null;
       if (overdueDays === 0) reminderType = 'due_date';
       else if (overdueDays === 3) reminderType = 'overdue_3_days';
-      else if (overdueDays > 3 && (daysOverdue - 3) % 7 === 0) reminderType = 'overdue_weekly';
+      else if (overdueDays > 3 && (overdueDays - 3) % 7 === 0) reminderType = 'overdue_weekly';
 
       if (!reminderType) continue;
 
