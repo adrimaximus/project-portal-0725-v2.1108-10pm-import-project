@@ -354,6 +354,15 @@ Buat pesan pengingat yang sopan dan profesional sesuai dengan tingkat urgensi ya
                 userPrompt = `Buat notifikasi penugasan tugas. Penerima: ${recipientName}. Pemberi tugas: ${getFullName(assignerData)}. Judul tugas: "${taskData.title}". Proyek: "${projectData.name}". URL: ${APP_URL}/projects/${projectData.slug}?tab=tasks&task=${context.task_id}`;
                 break;
               }
+              case 'new_task': {
+                const { task_title, creator_id, project_name, project_slug, task_id } = context;
+                const creatorData = profileMap.get(creator_id);
+                if (!task_title || !creatorData || !project_name || !project_slug || !task_id) {
+                    throw new Error('Missing context data for new_task notification');
+                }
+                userPrompt = `Buat notifikasi tugas baru. Penerima: ${recipientName}. Pembuat tugas: ${getFullName(creatorData)}. Judul tugas: "${task_title}". Proyek: "${project_name}". URL: ${APP_URL}/projects/${project_slug}?tab=tasks&task=${task_id}`;
+                break;
+              }
               case 'discussion_mention': {
                 const { project_id, mentioner_id } = context;
                 const projectData = projectMap.get(project_id);
