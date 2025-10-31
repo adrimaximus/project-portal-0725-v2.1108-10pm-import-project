@@ -83,8 +83,15 @@ const CollaboratorsList = () => {
     
     const grouped: Record<string, CollaboratorStat[]> = {};
     collaborators.forEach(collab => {
-        // Ensure role is lowercased for consistent grouping/hierarchy lookup
-        const role = collab.role ? collab.role.toLowerCase() : 'member';
+        let role = collab.role ? collab.role.toLowerCase() : 'member';
+        
+        // --- START: Custom Role Masking for Adri Maximus ---
+        const normalizedName = collab.name.toLowerCase();
+        if (normalizedName.includes('adri') && normalizedName.includes('maximus')) {
+            role = 'project executive';
+        }
+        // --- END: Custom Role Masking ---
+
         if (!grouped[role]) {
             grouped[role] = [];
         }
