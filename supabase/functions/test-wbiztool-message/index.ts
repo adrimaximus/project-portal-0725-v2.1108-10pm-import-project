@@ -66,7 +66,7 @@ serve(async (req) => {
     }
 
     // 2. Send message using the device
-    const messageResponse = await fetch('https://wbiztool.com/api/send_msg/', {
+    const messageResponse = await fetch('https://wbiztool.com/api/v1/send_msg/', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
