@@ -12,9 +12,10 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/t
 interface CommentInputProps {
   project: Project;
   onAddCommentOrTicket: (text: string, isTicket: boolean, attachments: File[] | null, mentionedUserIds: string[]) => void;
+  allUsers: User[];
 }
 
-const CommentInput = ({ project, onAddCommentOrTicket }: CommentInputProps) => {
+const CommentInput = ({ project, onAddCommentOrTicket, allUsers }: CommentInputProps) => {
   const { user } = useAuth();
   const [text, setText] = useState('');
   const [isTicket, setIsTicket] = useState(false);
@@ -47,7 +48,7 @@ const CommentInput = ({ project, onAddCommentOrTicket }: CommentInputProps) => {
   
   const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email;
 
-  const mentionData = (project.assignedTo || []).map(member => ({
+  const mentionData = (allUsers || []).map(member => ({
     id: member.id,
     display: member.name,
     ...member

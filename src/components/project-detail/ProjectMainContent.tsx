@@ -53,7 +53,7 @@ const ProjectMainContent = ({
   };
 
   const newCommentsCount = project.comments?.filter(
-    comment => user && comment.author.id !== user.id && new Date(comment.timestamp) > lastViewedDiscussion
+    comment => user && comment.author.id !== user.id && new Date(comment.created_at) > lastViewedDiscussion
   ).length ?? 0;
 
   const uncompletedTasksCount = project.tasks?.filter(task => !task.completed).length ?? 0;
