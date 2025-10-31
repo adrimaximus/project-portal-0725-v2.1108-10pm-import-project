@@ -66,58 +66,71 @@ const CollaboratorsList = () => {
     }
   };
 
-  const { collaboratorsByRole, allCollaborators, sortedCollaborators } = useMemo(() => {
+  const { groupedAndSortedCollaborators, allCollaborators, sortedCollaborators } = useMemo(() => {
+    // Define role hierarchy including new roles
     const roleHierarchy: Record<string, number> = { 
       'master admin': 0, 
       'admin': 1, 
-      'BD': 2,
-      'owner': 3, 
-      'editor': 4, 
-      'member': 5, 
-      'client': 6 
+      'project executive': 2, // Added
+      'project admin': 3,     // Added
+      'BD': 4,
+      'owner': 5, 
+      'editor': 6, 
+      'creative': 7,          // Added
+      'member': 8, 
+      'client': 9 
     };
     
     const grouped: Record<string, CollaboratorStat[]> = {};
     collaborators.forEach(collab => {
-        const role = collab.role || 'member';
+        // Ensure role is lowercased for consistent grouping/hierarchy lookup
+        const role = collab.role ? collab.role.toLowerCase() : 'member';
         if (!grouped[role]) {
             grouped[role] = [];
         }
         grouped[role].push(collab);
     });
 
-    const orderedGrouped: Record<string, CollaboratorStat[]> = {};
-    Object.keys(grouped).sort((a, b) => (roleHierarchy[a] ?? 99) - (roleHierarchy[b] ?? 99)).forEach(role => {
-        if (grouped[role]) {
-            orderedGrouped[role] = grouped[role].sort((a, b) => a.name.localeCompare(b.name));
-        }
-    });
+    const flatList = Object.values(grouped).flat();
+
+    // Function to sort members within a group or the flat list
+    const sortMembers = (members: CollaboratorStat[]) => {
+        return [...members].sort((a, b) => {
+            let aValue: any = a[sortField];
+            let bValue: any = b[sortField];
+
+            if (sortField === 'name') {
+                aValue = a.name.toLowerCase();
+                bValue = b.name.toLowerCase();
+                return sortDirection === 'asc' 
+                    ? aValue.localeCompare(bValue)
+                    : bValue.localeCompare(aValue);
+            }
+
+            // Numeric sorting
+            const numA = Number(aValue) || 0;
+            const numB = Number(bValue) || 0;
+            return sortDirection === 'asc' ? numA - numB : numB - numA;
+        });
+    };
+
+    // 1. Get role keys and sort them by hierarchy
+    const roleKeys = Object.keys(grouped).sort((a, b) => (roleHierarchy[a] ?? 99) - (roleHierarchy[b] ?? 99));
+
+    // 2. Create the strictly grouped and sorted structure (for desktop view)
+    const groupedAndSorted: { roleName: string, members: CollaboratorStat[] }[] = roleKeys.map(role => ({
+        roleName: role,
+        members: sortMembers(grouped[role]!) // Sort members within each role group
+    }));
     
-    const flatList = Object.values(orderedGrouped).flat();
+    // 3. Create the fully flat sorted list (for mobile view)
+    const sortedCollaborators = sortMembers(flatList);
 
-    // Apply sorting
-    const sorted = [...flatList].sort((a, b) => {
-      let aValue: any = a[sortField];
-      let bValue: any = b[sortField];
-
-      if (sortField === 'name') {
-        aValue = a.name.toLowerCase();
-        bValue = b.name.toLowerCase();
-        return sortDirection === 'asc' 
-          ? aValue.localeCompare(bValue)
-          : bValue.localeCompare(aValue);
-      }
-
-      // Numeric sorting
-      const numA = Number(aValue) || 0;
-      const numB = Number(bValue) || 0;
-      return sortDirection === 'asc' ? numA - numB : numB - numA;
-    });
 
     return { 
-      collaboratorsByRole: orderedGrouped, 
+      groupedAndSortedCollaborators: groupedAndSorted, 
       allCollaborators: flatList,
-      sortedCollaborators: sorted
+      sortedCollaborators: sortedCollaborators
     };
   }, [collaborators, sortField, sortDirection]);
 
@@ -241,6 +254,7 @@ const CollaboratorsList = () => {
                       </DropdownMenu>
                     </div>
                     <div className="space-y-4">
+                      {/* Use sortedCollaborators for mobile view */}
                       {sortedCollaborators.map(c => (
                         <div key={c.id} className="bg-muted/50 p-4 rounded-lg">
                           <Link to={c.slug ? `/people/${c.slug}` : `/users/${c.id}`} className="flex items-center gap-3 mb-4">
@@ -328,66 +342,65 @@ const CollaboratorsList = () => {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {sortedCollaborators.map((c, index) => {
-                              const ticketPercentage = c.active_task_count > 0 ? (c.active_ticket_count / c.active_task_count) * 100 : 0;
-                              const nonTicketTasks = c.active_task_count - c.active_ticket_count;
-                              const prevCollaborator = sortedCollaborators[index - 1];
-                              const showRoleSeparator = !prevCollaborator || prevCollaborator.role !== c.role;
-                              
-                              return (
-                                <React.Fragment key={c.id}>
-                                  {showRoleSeparator && (
+                            {/* Iterate over grouped and sorted roles */}
+                            {groupedAndSortedCollaborators.map(group => (
+                                <React.Fragment key={group.roleName}>
                                     <TableRow className="border-b-0 hover:bg-transparent">
-                                      <TableCell colSpan={5} className="pt-6 pb-2">
-                                        <h3 className="text-sm font-semibold uppercase text-muted-foreground tracking-wider">
-                                          {capitalizeWords(c.role)}
-                                        </h3>
-                                      </TableCell>
+                                        <TableCell colSpan={5} className="pt-6 pb-2">
+                                            <h3 className="text-sm font-semibold uppercase text-muted-foreground tracking-wider">
+                                                {capitalizeWords(group.roleName)}
+                                            </h3>
+                                        </TableCell>
                                     </TableRow>
-                                  )}
-                                  <TableRow>
-                                      <TableCell>
-                                          <Link to={c.slug ? `/people/${c.slug}` : `/users/${c.id}`} className="flex items-center gap-3 hover:underline">
-                                              <Avatar className="h-8 w-8">
-                                                  <AvatarImage src={getAvatarUrl(c.avatar_url, c.id)} alt={c.name} />
-                                                  <AvatarFallback style={generatePastelColor(c.id)}>{c.initials}</AvatarFallback>
-                                              </Avatar>
-                                              <span className="font-medium whitespace-nowrap">{c.name}</span>
-                                          </Link>
-                                      </TableCell>
-                                      <TableCell className="text-right font-medium">{c.project_count}</TableCell>
-                                      <TableCell className="text-right font-medium">{getFilteredCount(c)}</TableCell>
-                                      <TableCell className="text-right font-medium">
-                                        <TooltipProvider>
-                                          <Tooltip>
-                                            <TooltipTrigger asChild>
-                                              <div className="flex items-center justify-end gap-2">
-                                                <span>{c.active_task_count}</span>
-                                                {c.active_task_count > 0 && (
-                                                  <div className="w-16 h-2 bg-muted rounded-full overflow-hidden flex">
-                                                    <div style={{ width: `${ticketPercentage}%` }} className="bg-destructive h-full"></div>
-                                                  </div>
-                                                )}
-                                              </div>
-                                            </TooltipTrigger>
-                                            <TooltipContent>
-                                              <p>{c.active_ticket_count} ticket(s)</p>
-                                              <p>{nonTicketTasks} other task(s)</p>
-                                            </TooltipContent>
-                                          </Tooltip>
-                                        </TooltipProvider>
-                                      </TableCell>
-                                      <TableCell className="text-right">
-                                        {c.overdue_bill_count > 0 ? (
-                                          <span className="font-bold text-destructive">{c.overdue_bill_count}</span>
-                                        ) : (
-                                          <span className="text-muted-foreground">-</span>
-                                        )}
-                                      </TableCell>
-                                  </TableRow>
+                                    {group.members.map(c => {
+                                        const ticketPercentage = c.active_task_count > 0 ? (c.active_ticket_count / c.active_task_count) * 100 : 0;
+                                        const nonTicketTasks = c.active_task_count - c.active_ticket_count;
+                                        
+                                        return (
+                                            <TableRow key={c.id}>
+                                                <TableCell>
+                                                    <Link to={c.slug ? `/people/${c.slug}` : `/users/${c.id}`} className="flex items-center gap-3 hover:underline">
+                                                        <Avatar className="h-8 w-8">
+                                                            <AvatarImage src={getAvatarUrl(c.avatar_url, c.id)} alt={c.name} />
+                                                            <AvatarFallback style={generatePastelColor(c.id)}>{c.initials}</AvatarFallback>
+                                                        </Avatar>
+                                                        <span className="font-medium whitespace-nowrap">{c.name}</span>
+                                                    </Link>
+                                                </TableCell>
+                                                <TableCell className="text-right font-medium">{c.project_count}</TableCell>
+                                                <TableCell className="text-right font-medium">{getFilteredCount(c)}</TableCell>
+                                                <TableCell className="text-right font-medium">
+                                                  <TooltipProvider>
+                                                    <Tooltip>
+                                                      <TooltipTrigger asChild>
+                                                        <div className="flex items-center justify-end gap-2">
+                                                          <span>{c.active_task_count}</span>
+                                                          {c.active_task_count > 0 && (
+                                                            <div className="w-16 h-2 bg-muted rounded-full overflow-hidden flex">
+                                                              <div style={{ width: `${ticketPercentage}%` }} className="bg-destructive h-full"></div>
+                                                            </div>
+                                                          )}
+                                                        </div>
+                                                      </TooltipTrigger>
+                                                      <TooltipContent>
+                                                        <p>{c.active_ticket_count} ticket(s)</p>
+                                                        <p>{nonTicketTasks} other task(s)</p>
+                                                      </TooltipContent>
+                                                    </Tooltip>
+                                                  </TooltipProvider>
+                                                </TableCell>
+                                                <TableCell className="text-right">
+                                                  {c.overdue_bill_count > 0 ? (
+                                                    <span className="font-bold text-destructive">{c.overdue_bill_count}</span>
+                                                  ) : (
+                                                    <span className="text-muted-foreground">-</span>
+                                                  )}
+                                                </TableCell>
+                                            </TableRow>
+                                        );
+                                    })}
                                 </React.Fragment>
-                              );
-                            })}
+                            ))}
                         </TableBody>
                     </Table>
                   </div>
