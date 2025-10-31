@@ -55,7 +55,24 @@ const WbiztoolPage = () => {
       setClientId("");
       setApiKey("");
     } catch (error: any) {
-      toast.error("Failed to connect", { description: error.message });
+      let description = "An unknown error occurred. Please check the console.";
+      
+      if (error.context && typeof error.context.json === 'function') {
+        try {
+          const errorBody = await error.context.json();
+          if (errorBody.error) {
+            description = errorBody.error;
+          } else {
+            description = "The server returned an error without a specific message.";
+          }
+        } catch (e) {
+          description = "Failed to parse the error response from the server.";
+        }
+      } else {
+        description = error.message || "The server returned an error.";
+      }
+      
+      toast.error("Failed to connect", { description });
     } finally {
       setIsLoading(false);
     }
@@ -93,7 +110,23 @@ const WbiztoolPage = () => {
       setTestPhone("");
       setTestMessage("");
     } catch (error: any) {
-      toast.error("Failed to send test message", { description: error.message });
+      let description = "An unknown error occurred. Please check the console.";
+      
+      if (error.context && typeof error.context.json === 'function') {
+        try {
+          const errorBody = await error.context.json();
+          if (errorBody.error) {
+            description = errorBody.error;
+          } else {
+            description = "The server returned an error without a specific message.";
+          }
+        } catch (e) {
+          description = "Failed to parse the error response from the server.";
+        }
+      } else {
+        description = error.message || "The server returned an error.";
+      }
+      toast.error("Failed to send test message", { description });
     } finally {
       setIsSendingTest(false);
     }
