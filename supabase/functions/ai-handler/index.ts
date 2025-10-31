@@ -1210,6 +1210,9 @@ serve(async (req) => {
     const openai = await getOpenAIClient(supabaseAdmin);
     const anthropic = ANTHROPIC_API_KEY ? new Anthropic({ apiKey: ANTHROPIC_API_KEY }) : null;
 
+    console.log(`[ai-handler] DIAGNOSTIC: Anthropic Key available: ${!!ANTHROPIC_API_KEY}`);
+    console.log(`[ai-handler] DIAGNOSTIC: OpenAI Client configured: ${!!openai}`);
+
     if (!openai && !anthropic) {
       console.error("[ai-handler] CRITICAL: No AI provider is configured. Check ANTHROPIC_API_KEY env var and OpenAI key in app_config table.");
       throw new Error("No AI provider is configured. Please set up OpenAI or Anthropic API keys.");

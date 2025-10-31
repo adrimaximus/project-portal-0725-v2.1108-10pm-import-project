@@ -167,6 +167,7 @@ serve(async (req) => {
     const isAuthorized = cronHeader && cronHeader === CRON_SECRET;
 
     if (!isCron && !isAuthorized) {
+      console.error('Unauthorized cron attempt:', { userAgent, hasCronHeader: !!cronHeader });
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: corsHeaders });
     }
 
