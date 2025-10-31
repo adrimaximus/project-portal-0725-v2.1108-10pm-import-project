@@ -6,7 +6,6 @@ import { Search, MessageSquarePlus, MoreHorizontal, Trash2, Sparkles } from "luc
 import NewConversationDialog from "./NewConversationDialog";
 import { cn, getInitials, generatePastelColor, getAvatarUrl } from "@/lib/utils";
 import { formatDistanceToNow } from 'date-fns';
-import { id } from 'date-fns/locale';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "./ui/alert-dialog";
 import { useChatContext } from "@/contexts/ChatContext";
@@ -53,7 +52,7 @@ const ChatList = ({ highlightedId, onHighlightComplete }: ChatListProps) => {
     try {
       const date = new Date(timestamp);
       if (isNaN(date.getTime()) || date.getFullYear() < 2000) return "";
-      return formatDistanceToNow(date, { addSuffix: true, locale: id });
+      return formatDistanceToNow(date, { addSuffix: true });
     } catch (e) {
       console.error("Error formatting date:", e);
       return "";

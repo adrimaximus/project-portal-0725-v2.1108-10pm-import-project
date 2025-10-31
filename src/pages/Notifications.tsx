@@ -7,7 +7,6 @@ import { formatDistanceToNow } from 'date-fns';
 import { Link } from "react-router-dom";
 import { Bell, CheckCheck, Loader2, AlertTriangle } from "lucide-react";
 import { useNotifications } from "@/hooks/useNotifications";
-import { id } from 'date-fns/locale';
 import { Skeleton } from "@/components/ui/skeleton";
 
 const NotificationSkeleton = () => (
@@ -100,7 +99,7 @@ const NotificationsPage = () => {
                         </Link>
                         <p className="text-sm text-muted-foreground">{notification.description}</p>
                         <p className="text-xs text-muted-foreground mt-1">
-                          {notification.timestamp ? formatDistanceToNow(new Date(notification.timestamp), { addSuffix: true, locale: id }) : ''}
+                          {notification.timestamp ? formatDistanceToNow(new Date(notification.timestamp), { addSuffix: true }) : ''}
                         </p>
                       </div>
                       {notification.read ? (

@@ -1,6 +1,5 @@
 import { Activity } from "@/types";
 import { formatDistanceToNow } from "date-fns";
-import { id } from "date-fns/locale";
 import { History } from "lucide-react";
 import ActivityIcon from "./ActivityIcon";
 
@@ -109,7 +108,6 @@ const ProjectActivityFeed = ({ activities }: ProjectActivityFeedProps) => {
                       <time dateTime={activity.timestamp}>
                         {activity.timestamp ? formatDistanceToNow(new Date(activity.timestamp), {
                           addSuffix: true,
-                          locale: id,
                         }) : ''}
                       </time>
                     </div>

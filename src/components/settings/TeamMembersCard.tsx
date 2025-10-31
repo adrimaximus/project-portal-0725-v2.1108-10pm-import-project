@@ -13,7 +13,6 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { User } from '@/types';
 import { Role } from './RoleManagerDialog';
 import { formatDistanceToNow } from 'date-fns';
-import { id } from 'date-fns/locale';
 import { useAuth } from '@/contexts/AuthContext';
 import { getAvatarUrl } from '@/lib/utils';
 
@@ -178,7 +177,7 @@ const TeamMembersCard = ({
                           <Badge variant={getStatusBadgeVariant(member.status)}>Pending invite</Badge>
                         ) : (
                           <span className="text-muted-foreground">
-                            {member.updated_at ? formatDistanceToNow(new Date(member.updated_at), { addSuffix: true, locale: id }) : 'N/A'}
+                            {member.updated_at ? formatDistanceToNow(new Date(member.updated_at), { addSuffix: true }) : 'N/A'}
                           </span>
                         )}
                       </TableCell>
