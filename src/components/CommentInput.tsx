@@ -1,11 +1,9 @@
 import { useState, useRef } from 'react';
-import { Project, Comment as CommentType, Task, User, ProjectFile } from "@/types";
+import { Project, User } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
-import { Ticket, MoreHorizontal, Edit, Trash2, FileText, Paperclip, X, Loader2, SmilePlus } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Ticket, Paperclip, X } from "lucide-react";
 import { getInitials, generatePastelColor, parseMentions, getAvatarUrl } from "@/lib/utils";
-import { formatDistanceToNow } from 'date-fns';
 import { MentionsInput, Mention, SuggestionDataItem } from 'react-mentions';
 import '@/styles/mentions.css';
 import { useAuth } from '@/contexts/AuthContext';
@@ -14,10 +12,9 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/t
 interface CommentInputProps {
   project: Project;
   onAddCommentOrTicket: (text: string, isTicket: boolean, attachments: File[] | null, mentionedUserIds: string[]) => void;
-  allUsers: User[];
 }
 
-const CommentInput = ({ project, onAddCommentOrTicket, allUsers }: CommentInputProps) => {
+const CommentInput = ({ project, onAddCommentOrTicket }: CommentInputProps) => {
   const { user } = useAuth();
   const [text, setText] = useState('');
   const [isTicket, setIsTicket] = useState(false);
@@ -50,7 +47,7 @@ const CommentInput = ({ project, onAddCommentOrTicket, allUsers }: CommentInputP
   
   const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email;
 
-  const mentionData = (allUsers || []).map(member => ({
+  const mentionData = (project.assignedTo || []).map(member => ({
     id: member.id,
     display: member.name,
     ...member
