@@ -27,7 +27,8 @@ export type PaymentStatus =
   | 'Partially Paid'
   | 'Paid'
   | 'Cancelled'
-  | 'Bid Lost';
+  | 'Bid Lost'
+  | 'Unpaid';
 
 export const PAYMENT_STATUS_OPTIONS: { value: PaymentStatus; label: string }[] = [
   { value: 'Requested', label: 'Requested' },
@@ -39,6 +40,7 @@ export const PAYMENT_STATUS_OPTIONS: { value: PaymentStatus; label: string }[] =
   { value: 'Partially Paid', label: 'Partially Paid' },
   { value: 'Paid', label: 'Paid' },
   { value: 'Overdue', label: 'Overdue' },
+  { value: 'Unpaid', label: 'Unpaid' },
   { value: 'Cancelled', label: 'Cancelled' },
   { value: 'Bid Lost', label: 'Bid Lost' },
 ];
