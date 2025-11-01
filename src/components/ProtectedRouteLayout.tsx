@@ -3,6 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import LoadingScreen from "./LoadingScreen";
 import React from "react";
 import { ChatProvider } from "@/contexts/ChatContext";
+import { FeaturesProvider } from "@/contexts/FeaturesContext";
 
 const ProtectedRouteLayout = () => {
   const { session, user, isLoading } = useAuth();
@@ -21,9 +22,11 @@ const ProtectedRouteLayout = () => {
   }
 
   return (
-    <ChatProvider>
-      <Outlet />
-    </ChatProvider>
+    <FeaturesProvider>
+      <ChatProvider>
+        <Outlet />
+      </ChatProvider>
+    </FeaturesProvider>
   );
 };
 
