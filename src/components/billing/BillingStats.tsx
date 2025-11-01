@@ -46,11 +46,11 @@ const BillingStats = ({ invoices }: { invoices: Invoice[] }) => {
 
   const stats = useMemo(() => {
     const outstandingBalance = invoices
-      .filter(inv => ['Due', 'Overdue', 'Unpaid', 'Pending', 'In Process'].includes(inv.status))
+      .filter(inv => ['Overdue', 'Proposed', 'Pending', 'In Process'].includes(inv.status))
       .reduce((sum, inv) => sum + inv.amount, 0);
 
     const nextDueDate = invoices
-      .filter(inv => ['Due', 'Unpaid', 'Pending', 'In Process'].includes(inv.status))
+      .filter(inv => ['Proposed', 'Pending', 'In Process'].includes(inv.status))
       .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())[0]?.dueDate;
 
     const overdueInvoicesCount = invoices.filter(inv => inv.status === 'Overdue').length;

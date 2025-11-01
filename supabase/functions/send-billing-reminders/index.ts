@@ -49,7 +49,7 @@ serve(async (req) => {
     const { data: projects, error: projectsError } = await supabaseAdmin
       .from('projects')
       .select('id, name, slug, invoice_number, payment_due_date, payment_status, created_by')
-      .in('payment_status', ['Unpaid', 'Overdue', 'Pending', 'In Process'])
+      .in('payment_status', ['Proposed', 'Overdue', 'Pending', 'In Process'])
       .not('payment_due_date', 'is', null);
 
     if (projectsError) throw projectsError;
