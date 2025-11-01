@@ -253,27 +253,27 @@ const TableView = ({ projects, isLoading, onDeleteProject, sortConfig, requestSo
               Project
             </Button>
           </TableHead>
-          <TableHead className="p-2">
+          <TableHead className="w-[140px] p-2">
             <Button variant="ghost" onClick={() => requestSort('status')} className="w-full justify-start px-2 group">
               Status
             </Button>
           </TableHead>
-          <TableHead className="p-2">
+          <TableHead className="w-[120px] p-2">
             <Button variant="ghost" onClick={() => requestSort('payment_status')} className="w-full justify-start px-2 group">
               Payment
             </Button>
           </TableHead>
-          <TableHead className="p-2">
+          <TableHead className="w-[150px] p-2">
             <Button variant="ghost" onClick={() => requestSort('progress')} className="w-full justify-start px-2 group">
               Progress
             </Button>
           </TableHead>
-          <TableHead className="p-2">
+          <TableHead className="w-[180px] p-2">
             <Button variant="ghost" onClick={() => requestSort('start_date')} className="w-full justify-start px-2 group">
               Date
             </Button>
           </TableHead>
-          <TableHead className="p-2">
+          <TableHead className="w-[200px] p-2">
             <Button variant="ghost" onClick={() => requestSort('venue')} className="w-full justify-start px-2 group">
               Lokasi
             </Button>
