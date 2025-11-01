@@ -6,20 +6,6 @@ export type Person = Database['public']['Tables']['people']['Row'];
 export type Company = Database['public']['Tables']['companies']['Row'];
 export type User = Database['public']['Tables']['profiles']['Row'] & { permissions?: string[] };
 export type Reaction = Database['public']['Tables']['comment_reactions']['Row'] & { user_name?: string };
-export type UpsertTaskPayload = {
-  id?: string;
-  project_id: string;
-  title: string;
-  description?: string;
-  due_date?: string;
-  priority?: string;
-  status?: string;
-  completed?: boolean;
-  assignee_ids?: string[];
-  tag_ids?: string[];
-  new_files?: File[];
-  deleted_files?: string[];
-};
 
 export const PROJECT_STATUSES = [
   "Requested",
@@ -60,3 +46,28 @@ export const TASK_STATUS_OPTIONS: { value: TaskStatus; label: string }[] = [
     { value: "In review", label: "In review" },
     { value: "Done", label: "Done" },
 ];
+
+export const TASK_PRIORITIES = ["Urgent", "High", "Medium", "Normal", "Low"] as const;
+export type TaskPriority = typeof TASK_PRIORITIES[number];
+export const TASK_PRIORITY_OPTIONS: { value: TaskPriority; label: string }[] = [
+    { value: "Urgent", label: "Urgent" },
+    { value: "High", label: "High" },
+    { value: "Medium", label: "Medium" },
+    { value: "Normal", label: "Normal" },
+    { value: "Low", label: "Low" },
+];
+
+export type UpsertTaskPayload = {
+  id?: string;
+  project_id: string;
+  title: string;
+  description?: string;
+  due_date?: string | null;
+  priority?: TaskPriority | null;
+  status?: TaskStatus;
+  completed?: boolean;
+  assignee_ids?: string[];
+  tag_ids?: string[];
+  new_files?: File[];
+  deleted_files?: string[];
+};
