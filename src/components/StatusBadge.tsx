@@ -6,9 +6,10 @@ import { PROJECT_STATUS_OPTIONS, ProjectStatus } from "@/types";
 interface StatusBadgeProps {
   status: string;
   onStatusChange?: (newStatus: ProjectStatus) => void;
+  hasOpenTasks?: boolean;
 }
 
-const StatusBadge = ({ status, onStatusChange }: StatusBadgeProps) => {
+const StatusBadge = ({ status, onStatusChange, hasOpenTasks }: StatusBadgeProps) => {
   if (!status) {
     return null;
   }
@@ -26,7 +27,11 @@ const StatusBadge = ({ status, onStatusChange }: StatusBadgeProps) => {
         </SelectTrigger>
         <SelectContent>
           {PROJECT_STATUS_OPTIONS.map(option => (
-            <SelectItem key={option.value} value={option.value}>
+            <SelectItem 
+              key={option.value} 
+              value={option.value}
+              disabled={option.value === 'Completed' && hasOpenTasks}
+            >
               {option.label}
             </SelectItem>
           ))}

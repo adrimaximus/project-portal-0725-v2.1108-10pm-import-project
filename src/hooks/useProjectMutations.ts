@@ -17,6 +17,23 @@ export const useProjectMutations = (slug: string) => {
         queryClient.invalidateQueries({ queryKey: ['projects'] });
     };
 
+    const updateProjectStatus = useMutation({
+        mutationFn: async ({ projectId, status }: { projectId: string, status: string }) => {
+            const { error } = await supabase.rpc('update_project_status', {
+                p_project_id: projectId,
+                p_new_status: status,
+            });
+            if (error) throw error;
+        },
+        onSuccess: () => {
+            toast.success('Project status updated');
+            invalidateProjectQueries();
+        },
+        onError: (err: any) => {
+            toast.error('Failed to update project status', { description: getErrorMessage(err) });
+        }
+    });
+
     const updateProject = useMutation({
         mutationFn: async (editedProject: Project) => {
             const { id, person_ids, ...projectDetails } = editedProject as any;
@@ -360,7 +377,7 @@ export const useProjectMutations = (slug: string) => {
                 }
             }
 
-            const attachmentsRegex = /\n\n\*\*Attachments:\*\*\n((?:\* \[.+\]\(.+\)\n?)+)/s;
+            const attachmentsRegex = /\n\n\*\*Attachments:\*\*[\s\S]*$/s;
             let finalCommentText = text;
 
             if (existingAttachmentsJsonb.length > 0) {
@@ -554,5 +571,6 @@ export const useProjectMutations = (slug: string) => {
         deleteComment,
         deleteProject,
         toggleCommentReaction,
+        updateProjectStatus,
     };
 };

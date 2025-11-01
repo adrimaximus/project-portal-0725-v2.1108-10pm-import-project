@@ -1,4 +1,4 @@
-import { Project } from "@/types";
+import { Project, ProjectStatus } from "@/types";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Pencil, Loader2, MoreVertical, Trash2, CheckCircle, Link as LinkIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -25,6 +25,8 @@ interface ProjectHeaderProps {
   onToggleComplete: () => void;
   onDeleteProject: () => void;
   onFieldChange: (field: keyof Project, value: any) => void;
+  onStatusChange?: (newStatus: ProjectStatus) => void;
+  hasOpenTasks: boolean;
 }
 
 const ProjectHeader = ({
@@ -38,12 +40,13 @@ const ProjectHeader = ({
   onToggleComplete,
   onDeleteProject,
   onFieldChange,
+  onStatusChange,
+  hasOpenTasks,
 }: ProjectHeaderProps) => {
   const navigate = useNavigate();
 
   const statusStyles = getProjectStatusStyles(project.status);
   const isCompleted = project.status === 'Completed';
-  const hasOpenTasks = project.tasks?.some(task => !task.completed);
 
   const handleCopyLink = () => {
     const title = `*${project.name}*`;
@@ -71,7 +74,7 @@ const ProjectHeader = ({
           ) : (
             <h1 className="text-3xl font-bold tracking-tight">{project.name}</h1>
           )}
-          {project.status && <StatusBadge status={project.status} />}
+          {project.status && <StatusBadge status={project.status} onStatusChange={onStatusChange} hasOpenTasks={hasOpenTasks} />}
         </div>
         {canEdit && (
           <div className="lg:col-span-1 flex justify-start lg:justify-end items-center gap-2">

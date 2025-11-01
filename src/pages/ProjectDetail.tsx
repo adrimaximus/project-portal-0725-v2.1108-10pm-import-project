@@ -21,7 +21,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useProject } from "@/hooks/useProject";
 import { useProjectMutations } from "@/hooks/useProjectMutations";
 import { toast } from "sonner";
-import { Project, Task, UpsertTaskPayload } from "@/types";
+import { Project, Task, UpsertTaskPayload, ProjectStatus } from "@/types";
 import TaskFormDialog from "@/components/projects/TaskFormDialog";
 import { useTaskMutations } from "@/hooks/useTaskMutations";
 import { useTasks } from "@/hooks/useTasks";
@@ -66,7 +66,7 @@ const ProjectDetail = () => {
     sortConfig: { key: 'created_at', direction: 'asc' }
   });
   const mutations = useProjectMutations(slug!);
-  const { upsertTask, deleteTask, toggleTaskCompletion, isUpserting } = useTaskMutations();
+  const { upsertTask, deleteTask, toggleTaskCompletion, isUpserting, updateProjectStatus } = useTaskMutations();
 
   const highlightedTaskId = searchParams.get('task');
   const defaultTab = highlightedTaskId ? 'tasks' : (searchParams.get('tab') || 'overview');
@@ -107,12 +107,22 @@ const ProjectDetail = () => {
     }
   }, [project?.tasks, editingTask?.id]);
 
-  // FIXED: Improved permission check for edit access
   const canEdit = user && (
-    user.id === project?.created_by.id || // Owner can edit
-    hasPermission('projects:edit_all') || // Users with edit_all permission can edit any project
-    (hasPermission('projects:edit') && project?.assignedTo.some(member => member.id === user.id)) // Users with edit permission can edit projects they're members of
+    user.id === project?.created_by.id ||
+    hasPermission('projects:edit_all') ||
+    (hasPermission('projects:edit') && project?.assignedTo.some(member => member.id === user.id))
   );
+
+  const hasOpenTasks = project?.tasks?.some(task => !task.completed) ?? false;
+
+  const handleStatusChange = (newStatus: ProjectStatus) => {
+    if (!project) return;
+    if (newStatus === 'Completed' && hasOpenTasks) {
+        toast.error("Cannot mark project as 'Completed' while there are still open tasks.");
+        return;
+    }
+    updateProjectStatus.mutate({ projectId: project.id, status: newStatus });
+  };
 
   const handleFieldChange = (field: keyof Project, value: any) => {
     setEditedProject(prev => prev ? { ...prev, [field]: value } : null);
@@ -133,7 +143,7 @@ const ProjectDetail = () => {
   const handleToggleComplete = () => {
     if (!editedProject) return;
     const newStatus = project?.status === 'Completed' ? 'In Progress' : 'Completed';
-    mutations.updateProject.mutate({ ...editedProject, status: newStatus });
+    handleStatusChange(newStatus);
   };
 
   const handleDeleteProject = () => {
@@ -202,6 +212,8 @@ const ProjectDetail = () => {
           onToggleComplete={handleToggleComplete}
           onDeleteProject={() => setIsDeleteDialogOpen(true)}
           onFieldChange={handleFieldChange}
+          onStatusChange={canEdit ? handleStatusChange : undefined}
+          hasOpenTasks={hasOpenTasks}
         />
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
           <div className="lg:col-span-2 space-y-6">
@@ -209,6 +221,8 @@ const ProjectDetail = () => {
               project={editedProject}
               isEditing={isEditing}
               onFieldChange={handleFieldChange}
+              onStatusChange={canEdit ? handleStatusChange : undefined}
+              hasOpenTasks={hasOpenTasks}
             />
             <div ref={mainContentRef}>
               <ProjectMainContent

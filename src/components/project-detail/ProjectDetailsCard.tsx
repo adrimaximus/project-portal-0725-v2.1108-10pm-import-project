@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Project as BaseProject, PROJECT_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS, Person, Company } from "@/types";
+import { Project as BaseProject, PROJECT_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS, Person, Company, ProjectStatus } from "@/types";
 import { Calendar, Wallet, Briefcase, MapPin, ListTodo, CreditCard, User, Building, ChevronsUpDown } from "lucide-react";
 import { isSameDay, subDays } from "date-fns";
 import { DateRangePicker } from "../DateRangePicker";
@@ -31,12 +31,13 @@ interface ProjectDetailsCardProps {
   project: Project;
   isEditing: boolean;
   onFieldChange: (field: keyof Project, value: any) => void;
+  onStatusChange?: (newStatus: ProjectStatus) => void;
+  hasOpenTasks: boolean;
 }
 
-const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetailsCardProps) => {
+const ProjectDetailsCard = ({ project, isEditing, onFieldChange, onStatusChange, hasOpenTasks }: ProjectDetailsCardProps) => {
   const { hasPermission } = useAuth();
   const canViewValue = hasPermission('projects:view_value');
-  const hasOpenTasks = project.tasks?.some(task => !task.completed);
 
   const client = project.people?.[0];
 
@@ -178,12 +179,9 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetail
 
     try {
       const parsed = JSON.parse(project.venue);
-      venueName = parsed.name || '';
-      venueAddress = parsed.address || '';
-      const parts = [venueName, venueAddress].filter(Boolean);
-      if (parts.length > 0) {
-        displayVenue = parts.join(' - ');
-        fullQuery = `${venueName}, ${venueAddress}`;
+      if (parsed.name && parsed.address) {
+        displayVenue = `${parsed.name} - ${parsed.address}`;
+        fullQuery = `${parsed.name}, ${parsed.address}`;
       }
     } catch (e) {
       // Not a JSON string, use as is
@@ -198,14 +196,7 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetail
         rel="noopener noreferrer"
         className="hover:underline group"
       >
-        {venueName && venueAddress ? (
-          <div>
-            <p className="font-semibold text-foreground group-hover:text-primary">{venueName}</p>
-            <p className="text-muted-foreground">{venueAddress}</p>
-          </div>
-        ) : (
-          <p className="text-muted-foreground group-hover:text-primary">{displayVenue}</p>
-        )}
+        <p className="text-muted-foreground group-hover:text-primary">{displayVenue}</p>
       </a>
     );
   };
@@ -327,7 +318,7 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetail
                     </Select>
                   ) : (
                     <div className="pt-1">
-                      <StatusBadge status={project.status} />
+                      <StatusBadge status={project.status} onStatusChange={onStatusChange} hasOpenTasks={hasOpenTasks} />
                     </div>
                   )}
                 </div>
