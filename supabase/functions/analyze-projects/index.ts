@@ -7,11 +7,15 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const SYSTEM_PROMPT = `You are an AI assistant integrated into a project management tool. Your goal is to help users by understanding their natural language requests and translating them into executable Supabase RPC calls.
+const getSystemPrompt = (pageContext: any) => `You are an AI assistant integrated into a project management tool. Your goal is to help users by understanding their natural language requests and translating them into executable Supabase RPC calls.
+
+**CONTEXT AWARENESS:**
+1.  **CURRENT PAGE:** ${pageContext ? `The user is currently on the page "${pageContext.pathname}". The text content of this page is provided below. Use this to answer questions like "What is this page about?" or "Summarize this for me."\nPAGE CONTENT:\n---\n${pageContext.pageContent}\n---\n` : "No page context provided."}
+2.  **CONVERSATION HISTORY:** You MUST leverage the conversation history to maintain context.
 
 You have access to the database schema and a list of available RPC functions. When a user makes a request, you must:
 1.  Analyze the request to determine the user's intent.
-2.  If the intent is to read data, formulate a question to the user to clarify what they want to know.
+2.  If the intent is to read data (especially about the current page), answer it based on the provided context.
 3.  If the intent is to modify data (create, update, delete), identify the appropriate RPC function.
 4.  Construct the precise JSON object with the parameters required by that function.
 5.  If you cannot determine the intent or the necessary parameters, ask clarifying questions.
@@ -27,8 +31,7 @@ Example RPC call format:
   }
 }
 
-Do not hallucinate functions or parameters. Stick to the provided schema and function list.
-If you need to find a project or user, and the user provides a name but not an ID, you MUST inform the user that you need more specific information and cannot proceed without an ID.
+Do not hallucinate functions or parameters.
 If you are making a modification, always confirm with the user before generating the RPC call. For this interaction, assume the user has already confirmed.
 Your response should ONLY be the JSON object or the text response, nothing else.`;
 
@@ -38,24 +41,26 @@ serve(async (req: Request) => {
   }
 
   try {
-    const { query, conversationHistory } = await req.json();
+    const { query, conversationHistory, pageContext } = await req.json();
 
     const anthropic = new Anthropic({
       apiKey: Deno.env.get('ANTHROPIC_API_KEY'),
     });
 
     const messages = [
-      ...conversationHistory.map((msg: { sender: string; content: string }) => ({
+      ...(conversationHistory || []).map((msg: { sender: string; content: string }) => ({
         role: msg.sender === 'user' ? 'user' : 'assistant',
         content: msg.content,
       })),
       { role: 'user', content: query },
     ];
 
+    const systemPrompt = getSystemPrompt(pageContext);
+
     const completion = await anthropic.messages.create({
       model: 'claude-3-haiku-20240307',
       max_tokens: 1024,
-      system: SYSTEM_PROMPT,
+      system: systemPrompt,
       messages: messages,
     });
 

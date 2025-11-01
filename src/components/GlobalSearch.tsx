@@ -134,9 +134,13 @@ export function GlobalSearch() {
     setResults({ projects: [], users: [], goals: [], bills: [], tasks: [] });
     setLoading(false);
   
+    const mainContentElement = document.querySelector('main');
+    const pageContent = mainContentElement ? mainContentElement.innerText : document.body.innerText;
+
     const pageContext = {
       pathname: location.pathname,
       search: location.search,
+      pageContent: pageContent.substring(0, 4000) // Limit to avoid huge payloads
     };
 
     try {

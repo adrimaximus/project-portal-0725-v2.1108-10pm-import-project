@@ -4,7 +4,7 @@ import { ConversationMessage, Goal } from '@/types';
 export async function analyzeProjects(
   message: string,
   conversationHistory?: ConversationMessage[],
-  pageContext?: { pathname: string; search: string; },
+  pageContext?: { pathname: string; search: string; pageContent?: string },
   attachmentUrl?: string | null,
   attachmentType?: string | null,
 ): Promise<string> {
