@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { cn, getProjectStatusStyles } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -10,18 +11,31 @@ interface StatusBadgeProps {
 }
 
 const StatusBadge = ({ status, onStatusChange, hasOpenTasks }: StatusBadgeProps) => {
-  if (!status) {
+  const [localStatus, setLocalStatus] = useState(status);
+
+  useEffect(() => {
+    setLocalStatus(status);
+  }, [status]);
+
+  if (!localStatus) {
     return null;
   }
-  const styles = getProjectStatusStyles(status);
+  const styles = getProjectStatusStyles(localStatus);
+
+  const handleStatusChange = (newStatus: ProjectStatus) => {
+    setLocalStatus(newStatus);
+    if (onStatusChange) {
+      onStatusChange(newStatus);
+    }
+  };
 
   if (onStatusChange) {
     return (
-      <Select value={status} onValueChange={onStatusChange}>
+      <Select value={localStatus} onValueChange={handleStatusChange}>
         <SelectTrigger className="h-auto p-0 border-0 focus:ring-0 focus:ring-offset-0 w-auto bg-transparent shadow-none">
           <SelectValue>
             <Badge className={cn(styles.tw)}>
-              {status}
+              {localStatus}
             </Badge>
           </SelectValue>
         </SelectTrigger>
@@ -42,7 +56,7 @@ const StatusBadge = ({ status, onStatusChange, hasOpenTasks }: StatusBadgeProps)
 
   return (
     <Badge className={cn(styles.tw)}>
-      {status}
+      {localStatus}
     </Badge>
   );
 };
