@@ -6,7 +6,6 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 import { format, getMonth } from 'date-fns';
 import { getProjectStatusStyles, getPaymentStatusStyles } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
-import { useTheme } from '@/contexts/ThemeProvider';
 
 type ChartType = 'quantity' | 'value' | 'project_status' | 'payment_status' | 'company_quantity' | 'company_value';
 
@@ -103,17 +102,6 @@ const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
   const { hasPermission } = useAuth();
   const canViewValue = hasPermission('projects:view_value');
   const [chartType, setChartType] = useState<ChartType>('quantity');
-  const { theme } = useTheme();
-  const [isDarkMode, setIsDarkMode] = useState(false);
-
-  useEffect(() => {
-    const observer = new MutationObserver(() => {
-        setIsDarkMode(document.documentElement.classList.contains('dark'));
-    });
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
-    setIsDarkMode(document.documentElement.classList.contains('dark')); // Initial check
-    return () => observer.disconnect();
-  }, []);
 
   useEffect(() => {
     if (!canViewValue && (chartType === 'value' || chartType === 'company_value')) {
@@ -224,7 +212,7 @@ const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
                   key={status.value} 
                   dataKey={status.value} 
                   stackId="a" 
-                  fill={isDarkMode ? styles.bgHexDark : styles.bgHexLight} 
+                  fill={styles.hex} 
                   name={status.label} 
                   shape={<RoundedBar options={PROJECT_STATUS_OPTIONS} />} 
                 />
@@ -247,7 +235,7 @@ const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
                   key={status.value} 
                   dataKey={status.value} 
                   stackId="a" 
-                  fill={isDarkMode ? styles.bgHexDark : styles.bgHexLight} 
+                  fill={styles.hex} 
                   name={status.label} 
                   shape={<RoundedBar options={PAYMENT_STATUS_OPTIONS} />} 
                 />
