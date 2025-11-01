@@ -964,90 +964,6 @@ async function articleWriter(payload: any, context: any) {
   return { result: result?.trim() };
 }
 
-async function generateCaption(payload: any, context: any) {
-  const { openai, anthropic } = context;
-  const { altText } = payload;
-  if (!altText) {
-    throw new Error("altText is required for generating a caption.");
-  }
-
-  const systemPrompt = `You are an AI that generates a short, inspiring, one-line caption for an image. The caption should be suitable for a professional dashboard related to events, marketing, and project management. Respond with ONLY the caption, no extra text or quotes. Keep it under 12 words.`;
-  const userPrompt = `Generate a caption for an image described as: "${altText}"`;
-
-  let caption;
-  if (anthropic) {
-    const response = await anthropic.messages.create({
-      model: "claude-3-haiku-20240307",
-      messages: [{ role: "user", content: userPrompt }],
-      system: systemPrompt,
-      temperature: 0.7,
-      max_tokens: 30,
-    });
-    caption = response.content[0].text;
-  } else if (openai) {
-    const response = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt }
-      ],
-      temperature: 0.7,
-      max_tokens: 30,
-    });
-    caption = response.choices[0].message.content;
-  } else {
-    throw new Error("No AI provider configured.");
-  }
-
-  return { caption: caption?.trim().replace(/"/g, '') };
-}
-
-async function generateMoodInsight(payload: any, context: any) {
-  const { openai, anthropic } = context;
-  const { prompt, userName, conversationHistory } = payload;
-  if (!prompt) {
-    throw new Error("Prompt is required for generating mood insights.");
-  }
-
-  const systemPrompt = `Anda adalah seorang teman AI yang suportif, empatik, dan berwawasan luas. Tujuan Anda adalah untuk terlibat dalam percakapan yang mendukung dengan pengguna tentang suasana hati dan perasaan mereka. Anda akan menerima riwayat percakapan. Tugas Anda adalah memberikan respons berikutnya dalam percakapan tersebut. Pertahankan nada yang positif dan memotivasi. Sapa pengguna dengan nama mereka jika ini adalah awal percakapan. Jaga agar respons tetap sangat ringkas, maksimal 2 kalimat, dan terasa seperti percakapan alami. Jangan mengulangi diri sendiri. Fokus percakapan ini adalah murni pada kesejahteraan emosional. Jangan membahas topik lain seperti proyek, tugas, atau tujuan kerja kecuali jika pengguna secara eksplisit mengungkitnya terlebih dahulu dalam konteks perasaan mereka. Selalu berikan respons dalam Bahasa Indonesia.`;
-
-  const messages = [
-    ...(conversationHistory || []).map((msg: any) => ({
-      role: msg.sender === 'ai' ? 'assistant' : 'user',
-      content: msg.content
-    })),
-    { role: "user", content: prompt }
-  ];
-  
-  if (messages.length > 2 && messages[messages.length-2].role === 'user' && messages[messages.length-2].content === prompt) {
-    messages.splice(messages.length-2, 1);
-  }
-
-  let result;
-  if (anthropic) {
-    const response = await anthropic.messages.create({
-      model: "claude-3-haiku-20240307",
-      messages: messages,
-      system: systemPrompt,
-      temperature: 0.7,
-      max_tokens: 200,
-    });
-    result = response.content[0].text;
-  } else if (openai) {
-    const response = await openai.chat.completions.create({
-      model: "gpt-4-turbo",
-      messages: [{ role: "system", content: systemPrompt }, ...messages.filter(m => m.role !== 'system')],
-      temperature: 0.7,
-      max_tokens: 200,
-    });
-    result = response.choices[0].message.content;
-  } else {
-    throw new Error("No AI provider configured.");
-  }
-
-  return { result };
-}
-
 async function suggestIcon(payload: any, context: any) {
   const { openai, anthropic } = context;
   const { title, icons } = payload;
@@ -1226,8 +1142,6 @@ const featureMap: { [key: string]: (payload: any, context: any) => Promise<any> 
   'expand-article-text': articleWriter,
   'improve-article-content': articleWriter,
   'summarize-article-content': articleWriter,
-  'generate-caption': generateCaption,
-  'generate-mood-insight': generateMoodInsight,
   'suggest-icon': suggestIcon,
   'generate-insight': generateInsight,
   'ai-select-calendar-events': aiSelectCalendarEvents,

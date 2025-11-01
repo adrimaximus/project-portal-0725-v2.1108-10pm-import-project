@@ -36,9 +36,9 @@ const UnsplashImage = () => {
             const { data: { session } } = await supabase.auth.getSession();
             if (!session) throw new Error("Not authenticated");
 
-            const { data, error: captionError } = await supabase.functions.invoke('ai-handler', {
+            const { data, error: captionError } = await supabase.functions.invoke('generate-caption', {
               headers: { Authorization: `Bearer ${session.access_token}` },
-              body: { feature: 'generate-caption', payload: { altText: fetchedPhoto.alt_description } },
+              body: { altText: fetchedPhoto.alt_description },
             });
             if (captionError) throw captionError;
             setCaption(data.caption);
