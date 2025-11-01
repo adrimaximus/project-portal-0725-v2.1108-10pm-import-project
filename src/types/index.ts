@@ -36,7 +36,20 @@ export interface TaskAttachment {
 }
 
 export type TaskStatus = 'To do' | 'In progress' | 'In review' | 'Done';
+export const TASK_STATUS_OPTIONS: { value: TaskStatus; label: string }[] = [
+  { value: 'To do', label: 'To do' },
+  { value: 'In progress', label: 'In Progress' },
+  { value: 'In review', label: 'In Review' },
+  { value: 'Done', label: 'Done' },
+];
+
 export type TaskPriority = 'Low' | 'Normal' | 'High' | 'Urgent';
+export const TASK_PRIORITY_OPTIONS: { value: TaskPriority; label: string }[] = [
+  { value: 'Low', label: 'Low' },
+  { value: 'Normal', label: 'Normal' },
+  { value: 'High', label: 'High' },
+  { value: 'Urgent', label: 'Urgent' },
+];
 
 export interface Task {
   id: string;
@@ -95,6 +108,7 @@ export const PAYMENT_STATUS_OPTIONS: { value: PaymentStatus; label: string }[] =
     { value: 'In Process', label: 'In Process' },
     { value: 'Proposed', label: 'Proposed' },
     { value: 'Cancelled', label: 'Cancelled' },
+    { value: 'Bid Lost', label: 'Bid Lost' },
 ];
 
 export interface UpsertTaskPayload {
