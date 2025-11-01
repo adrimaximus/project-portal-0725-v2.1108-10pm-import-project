@@ -420,6 +420,11 @@ export interface Conversation {
   created_by: string;
 }
 
+export type ConversationMessage = {
+  sender: 'user' | 'ai';
+  content: string;
+};
+
 // Notifications
 export interface AppNotification {
   id: string;
