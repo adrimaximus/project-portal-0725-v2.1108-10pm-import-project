@@ -5,7 +5,6 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { RealtimeChannel, Session } from '@supabase/supabase-js';
 import { toast } from 'sonner';
 import SafeLocalStorage from '@/lib/localStorage';
-import { useNavigate, useLocation } from 'react-router-dom';
 import debounce from 'lodash.debounce';
 
 type AuthContextType = {
@@ -33,8 +32,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [channel, setChannel] = useState<RealtimeChannel | null>(null);
   const [isImpersonating, setIsImpersonating] = useState(false);
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
-  const location = useLocation();
 
   const fetchUserProfile = async (userId: string | undefined) => {
     if (!userId) return null;
@@ -93,9 +90,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (_event === 'PASSWORD_RECOVERY') {
-        navigate('/reset-password', { replace: true });
-      }
       if (_event === 'SIGNED_OUT') {
         SafeLocalStorage.removeItem(IMPERSONATION_KEY);
         SafeLocalStorage.removeItem(ORIGINAL_SESSION_KEY);
@@ -107,16 +101,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
 
     return () => subscription.unsubscribe();
-  }, [navigate]);
-
-  useEffect(() => {
-    if (!isLoading && !isUserLoading && user && session) {
-      const from = (location.state as any)?.from?.pathname || '/dashboard';
-      if (location.pathname === '/login' || location.pathname === '/' || location.pathname === '/auth/callback') {
-        navigate(from, { replace: true });
-      }
-    }
-  }, [user, isLoading, isUserLoading, session, navigate, location]);
+  }, []);
 
   useEffect(() => {
     if (!user) {

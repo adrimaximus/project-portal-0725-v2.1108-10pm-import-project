@@ -6,18 +6,21 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AuthProvider } from './contexts/AuthContext.tsx'
 import { ThemeProvider } from './contexts/ThemeProvider.tsx'
 import { Toaster } from 'sonner'
+import { BrowserRouter as Router } from 'react-router-dom';
 
 const queryClient = new QueryClient()
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <ThemeProvider>
-          <App />
-          <Toaster />
-        </ThemeProvider>
-      </AuthProvider>
+      <Router>
+        <AuthProvider>
+          <ThemeProvider>
+            <App />
+            <Toaster />
+          </ThemeProvider>
+        </AuthProvider>
+      </Router>
     </QueryClientProvider>
   </React.StrictMode>,
 )
