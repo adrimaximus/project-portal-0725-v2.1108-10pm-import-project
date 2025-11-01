@@ -136,9 +136,13 @@ export const useAiChat = (currentUser: User | null) => {
     let attachmentForUi: Attachment | undefined = undefined;
     if (attachmentFile) {
       attachmentForUi = {
-        name: attachmentFile.name,
-        url: URL.createObjectURL(attachmentFile),
-        type: attachmentFile.type,
+        id: `temp-${uuidv4()}`,
+        file_name: attachmentFile.name,
+        file_url: URL.createObjectURL(attachmentFile),
+        file_type: attachmentFile.type,
+        file_size: attachmentFile.size,
+        storage_path: '',
+        created_at: new Date().toISOString(),
       };
     }
 

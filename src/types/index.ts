@@ -173,7 +173,7 @@ export type Person = {
   notes?: string | null;
   created_at: string;
   updated_at: string;
-  projects?: { id: string; name: string; slug: string }[] | null;
+  projects?: { id: string; name: string; slug: string; status: string; }[] | null;
   tags?: Tag[] | null;
   avatar_url?: string | null;
   user_id?: string | null;
