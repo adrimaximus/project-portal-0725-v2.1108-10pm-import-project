@@ -1,210 +1,55 @@
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
-import { format } from 'date-fns';
-import { id } from 'date-fns/locale';
-import { isSameDay, subDays, isPast as isPastDate } from 'date-fns';
-import { colors } from "@/data/colors";
+import { format, utcToZonedTime } from 'date-fns-tz';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export const getAvatarUrl = (avatarUrl: string | null | undefined, seed?: string): string => {
-  if (avatarUrl) {
-    return avatarUrl;
-  }
-  
-  const effectiveSeed = seed || 'default-seed';
-  // Logika sederhana untuk memilih gaya avatar secara bervariasi berdasarkan seed
-  const style = (parseInt(effectiveSeed.slice(-1), 16) % 2 === 0) ? 'lorelei' : 'micah';
-  const backgroundColorPalette = 'b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf';
-
-  return `https://api.dicebear.com/8.x/${style}/svg?seed=${effectiveSeed}&backgroundColor=${backgroundColorPalette}`;
-};
-
-export const generatePastelColor = (seed: string) => {
-  if (!seed) {
-    return { backgroundColor: `hsl(200, 70%, 85%)` };
-  }
-  let hash = 0;
-  for (let i = 0; i < seed.length; i++) {
-    hash = seed.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  const h = hash % 360;
-  return { backgroundColor: `hsl(${h}, 70%, 85%)` };
-};
-
-export const formatInJakarta = (date: string | Date, formatString: string) => {
-  return format(new Date(date), formatString, { locale: id });
-};
-
-export const getProjectStatusStyles = (status: string) => {
+export function getProjectStatusStyles(status: string) {
   switch (status) {
-    case 'Completed':
-    case 'Done':
-    case 'On Track':
-      return { tw: 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300', hex: '#22c55e', bgHexLight: '#4ade80', bgHexDark: '#22c55e' };
-    case 'In Progress':
-    case 'In Review':
-      return { tw: 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300', hex: '#3b82f6', bgHexLight: '#60a5fa', bgHexDark: '#3b82f6' };
-    case 'At Risk':
-    case 'On Hold':
-      return { tw: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300', hex: '#f59e0b', bgHexLight: '#fbbf24', bgHexDark: '#f59e0b' };
-    case 'Off Track':
-    case 'Cancelled':
-      return { tw: 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300', hex: '#ef4444', bgHexLight: '#f87171', bgHexDark: '#ef4444' };
-    case 'Requested':
-    case 'Idea':
+    case "Completed":
+      return { hex: "#22c55e", tw: "bg-green-100 text-green-800 border-green-200" };
+    case "In Progress":
+      return { hex: "#3b82f6", tw: "bg-blue-100 text-blue-800 border-blue-200" };
+    case "On Hold":
+      return { hex: "#f97316", tw: "bg-orange-100 text-orange-800 border-orange-200" };
+    case "Reschedule":
+      return { hex: "#eab308", tw: "bg-yellow-100 text-yellow-800 border-yellow-200" };
+    case "Cancelled":
+      return { hex: "#ef4444", tw: "bg-red-100 text-red-800 border-red-200" };
+    case "Bid Lost":
+      return { hex: "#dc2626", tw: "bg-red-200 text-red-900 border-red-300" };
+    case "Requested":
+      return { hex: "#60a5fa", tw: "bg-sky-100 text-sky-800 border-sky-200" };
+    case "Archived":
     default:
-      return { tw: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300', hex: '#6b7280', bgHexLight: '#9ca3af', bgHexDark: '#6b7280' };
+      return { hex: "#64748b", tw: "bg-slate-100 text-slate-800 border-slate-200" };
   }
-};
+}
 
-export const getPaymentStatusStyles = (status: string) => {
+export function getPaymentStatusStyles(status: string) {
   switch (status) {
     case 'Paid':
-      return { tw: 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300', hex: '#22c55e', bgHexLight: '#4ade80', bgHexDark: '#22c55e' };
+      return { tw: 'bg-green-100 text-green-800' };
+    case 'Partially Paid':
+      return { tw: 'bg-yellow-100 text-yellow-800' };
     case 'Overdue':
-      return { tw: 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300', hex: '#ef4444', bgHexLight: '#f87171', bgHexDark: '#ef4444' };
-    case 'Due':
+      return { tw: 'bg-red-100 text-red-800' };
     case 'Unpaid':
-      return { tw: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300', hex: '#f59e0b', bgHexLight: '#fbbf24', bgHexDark: '#f59e0b' };
-    case 'Pending':
-    case 'In Process':
-      return { tw: 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300', hex: '#3b82f6', bgHexLight: '#60a5fa', bgHexDark: '#3b82f6' };
-    case 'Proposed':
-      return { tw: 'bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300', hex: '#8b5cf6', bgHexLight: '#a78bfa', bgHexDark: '#8b5cf6' };
-    case 'Cancelled':
     default:
-      return { tw: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300', hex: '#6b7280', bgHexLight: '#9ca3af', bgHexDark: '#6b7280' };
+      return { tw: 'bg-gray-100 text-gray-800' };
   }
+}
+
+export const formatInJakarta = (date: string | Date, formatString: string) => {
+  const timeZone = 'Asia/Jakarta';
+  const zonedDate = utcToZonedTime(date, timeZone);
+  return format(zonedDate, formatString, { timeZone });
 };
 
-export const getTaskStatusStyles = (status: string) => {
-  switch (status) {
-    case 'Done':
-      return { tw: 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300' };
-    case 'In Progress':
-      return { tw: 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300' };
-    case 'Cancelled':
-      return { tw: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300' };
-    case 'To do':
-    default:
-      return { tw: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300' };
-  }
-};
-
-export const getPriorityStyles = (priority: string | null | undefined) => {
-  switch (priority) {
-    case 'Urgent':
-      return { tw: 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300', hex: '#ef4444' };
-    case 'High':
-      return { tw: 'bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-300', hex: '#f97316' };
-    case 'Normal':
-      return { tw: 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300', hex: '#3b82f6' };
-    case 'Low':
-    default:
-      return { tw: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300', hex: '#6b7280' };
-  }
-};
-
-export const getInitials = (name?: string | null, email?: string | null): string => {
-  if (name) {
-    const nameParts = name.split(' ').filter(Boolean);
-    if (nameParts.length > 1) {
-      return `${nameParts[0][0]}${nameParts[nameParts.length - 1][0]}`.toUpperCase();
-    }
-    if (nameParts.length === 1 && nameParts[0].length > 1) {
-      return nameParts[0].substring(0, 2).toUpperCase();
-    }
-  }
-  if (email) {
-    return email.substring(0, 2).toUpperCase();
-  }
-  return 'NN';
-};
-
-export const formatTaskText = (text: string | null | undefined, maxLength?: number): string => {
-  if (!text) return '';
-  let processedText = text.replace(/@\[([^\]]+)\]\(([^)]+)\)/g, '@$1');
-  if (maxLength && processedText.length > maxLength) {
-    return processedText.substring(0, maxLength) + '...';
-  }
-  return processedText;
-};
-
-export const isOverdue = (dueDate: string | null): boolean => {
-  if (!dueDate) return false;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0); // Set to start of day
-  return new Date(dueDate) < today;
-};
-
-export const formatPhoneNumberForApi = (phone: string): string => {
-  if (!phone) return '';
-  let cleaned = String(phone).trim().replace(/\D/g, '');
-  
-  if (cleaned.startsWith('62')) {
-    return cleaned;
-  }
-  if (cleaned.startsWith('0')) {
-    return '62' + cleaned.substring(1);
-  }
-  if (cleaned.length > 8 && cleaned.startsWith('8')) { // Common Indonesian mobile format
-    return '62' + cleaned;
-  }
-  return cleaned;
-};
-
-export const getColorForTag = (tagName: string): string => {
-  if (!tagName) {
-    return colors[0];
-  }
-  let hash = 0;
-  for (let i = 0; i < tagName.length; i++) {
-    hash = tagName.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  const index = Math.abs(hash % colors.length);
-  return colors[index];
-};
-
-export const parseMentions = (text: string): string[] => {
-  const mentionRegex = /@\[([^\]]+)\]\(([^)]+)\)/g;
-  const userIds = new Set<string>();
-  let match;
-  while ((match = mentionRegex.exec(text)) !== null) {
-    userIds.add(match[2]);
-  }
-  return Array.from(userIds);
-};
-
-export const formatMentionsForDisplay = (text: string | null | undefined): string => {
-  if (!text) return '';
-  // Replaces @[Display Name](user-id) with @Display Name
-  return text.replace(/@\[([^\]]+)\]\(([^)]+)\)/g, "@$1");
-};
-
-export const getErrorMessage = (error: any, defaultMessage: string = "An unknown error occurred"): string => {
-  if (!error) return defaultMessage;
-
-  let message = error.message || JSON.stringify(error);
-
-  // Prettify common Supabase errors
-  if (message.includes('masih ada tugas yang belum selesai')) { // "still has unfinished tasks"
-    return "This project cannot be marked as complete because there are still open tasks.";
-  }
-  if (message.includes('violates row-level security policy')) {
-    return "Permission Denied: You do not have the required permissions for this action.";
-  }
-  if (message.includes('permission denied for table')) {
-    return "Permission Denied: You are not authorized to access this data.";
-  }
-  if (message.includes('duplicate key value violates unique constraint')) {
-    return "This item already exists or conflicts with an existing one.";
-  }
-  if (message.includes('NetworkError when attempting to fetch resource')) {
-    return "Network error. Please check your internet connection and try again.";
-  }
-
-  return message;
+export const getErrorMessage = (error: any, defaultMessage = "An unexpected error occurred.") => {
+  if (typeof error === 'string') return error;
+  if (error && typeof error.message === 'string') return error.message;
+  return defaultMessage;
 };
