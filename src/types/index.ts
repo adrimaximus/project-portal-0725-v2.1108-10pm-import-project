@@ -472,6 +472,17 @@ export interface KbFolder {
   last_modified_by: string | null;
 }
 
+export interface ArticleReaction {
+  id: string;
+  emoji: string;
+  user_id: string;
+  profiles: {
+    id: string;
+    first_name: string | null;
+    last_name: string | null;
+  } | null;
+}
+
 export interface KbArticle {
   id: string;
   folder_id: string;
@@ -488,5 +499,5 @@ export interface KbArticle {
   };
   tags: Tag[];
   creator: User;
-  kb_article_reactions: Reaction[];
+  kb_article_reactions: ArticleReaction[];
 }

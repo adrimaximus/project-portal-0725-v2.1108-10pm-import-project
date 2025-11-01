@@ -9,23 +9,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { ArticleReaction } from '@/types';
 
 const EMOJIS = ['👍', '❤️', '😂', '😮', '💡', '🤔'];
 
-type RawReaction = {
-  id: string;
-  emoji: string;
-  user_id: string;
-  profiles: {
-    id: string;
-    first_name: string | null;
-    last_name: string | null;
-  } | null;
-};
-
 type ArticleReactionsProps = {
   articleId: string;
-  rawReactions: RawReaction[];
+  rawReactions: ArticleReaction[];
   articleSlug: string;
 };
 
@@ -94,7 +84,7 @@ const ArticleReactions = ({ articleId, rawReactions = [], articleSlug }: Article
     acc[reaction.emoji] = acc[reaction.emoji] || [];
     acc[reaction.emoji].push(reaction);
     return acc;
-  }, {} as Record<string, RawReaction[]>);
+  }, {} as Record<string, ArticleReaction[]>);
 
   return (
     <div className="flex items-center gap-2">

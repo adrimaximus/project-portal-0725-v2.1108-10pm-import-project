@@ -79,7 +79,7 @@ const Page = () => {
     );
   }
 
-  const articleContentHtml = article.content?.html || article.content || "";
+  const articleContentHtml = (typeof article.content === 'object' && article.content?.html) || (typeof article.content === 'string' ? article.content : '') || "";
 
   return (
     <PortalLayout>

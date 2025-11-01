@@ -22,7 +22,7 @@ const extractTextFromHtml = (html: string | undefined): string => {
 };
 
 export function KBCard({ article, onEdit, onDelete }: KBCardProps) {
-  const contentHtml = article.content?.html || (typeof article.content === 'string' ? article.content : '');
+  const contentHtml = (typeof article.content === 'object' && article.content?.html) || (typeof article.content === 'string' ? article.content : '');
   const description = extractTextFromHtml(contentHtml);
 
   return (
