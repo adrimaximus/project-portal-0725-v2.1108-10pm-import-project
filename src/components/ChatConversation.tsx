@@ -216,9 +216,9 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                                       a: ({ node, ...props }) => {
                                         const href = props.href || '';
                                         if (href.startsWith('/')) {
-                                          return <Link to={href} {...props} className="text-inherit hover:text-inherit font-medium underline" />;
+                                          return <Link to={href} {...props} className="font-medium underline" />;
                                         }
-                                        return <a {...props} target="_blank" rel="noopener noreferrer" className="text-inherit hover:text-inherit font-medium underline" />;
+                                        return <a {...props} target="_blank" rel="noopener noreferrer" className="font-medium underline" />;
                                       }
                                     }}
                                   >
