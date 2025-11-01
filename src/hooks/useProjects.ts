@@ -22,7 +22,19 @@ const fetchProjects = async ({ queryKey }: { queryKey: readonly (string | { sear
     throw new Error(error.message);
   }
   
-  return data as Project[];
+  // Manually parse JSONB fields which might be returned as strings by RPC
+  return (data as any[]).map(p => ({
+    ...p,
+    assignedTo: p.assignedTo || [],
+    tags: p.tags || [],
+    tasks: p.tasks || [],
+    comments: p.comments || [],
+    briefFiles: p.briefFiles || [],
+    activities: p.activities || [],
+    reactions: p.reactions || [],
+    invoice_attachments: p.invoice_attachments || [],
+    services: p.services || [],
+  })) as Project[];
 };
 
 export const useProjects = (options: { searchTerm?: string, excludeOtherPersonal?: boolean } = {}) => {

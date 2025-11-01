@@ -182,3 +182,12 @@ export const isOverdue = (dueDateStr: string | null | undefined): boolean => {
   const now = new Date();
   return now > dueDate;
 };
+
+export const getColorForTag = (tagName: string): string => {
+  let hash = 0;
+  for (let i = 0; i < tagName.length; i++) {
+    hash = tagName.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const h = hash % 360;
+  return `hsl(${h}, 50%, 70%)`;
+};

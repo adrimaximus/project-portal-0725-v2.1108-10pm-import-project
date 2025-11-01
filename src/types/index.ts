@@ -1,7 +1,5 @@
 import { Database } from './supabase';
 
-export type Project = Database['public']['Functions']['get_dashboard_projects']['Returns'][0];
-
 export type ProjectStatus = "Requested" | "On Hold" | "Reschedule" | "In Progress" | "Billing Process" | "Completed" | "Cancelled" | "Bid Lost" | "Archived";
 
 export const PROJECT_STATUS_OPTIONS: { value: ProjectStatus; label: string }[] = [
@@ -455,4 +453,26 @@ export type Comment = {
   attachments_jsonb: ProjectFile[] | null;
   author: User;
   reactions?: Reaction[];
+};
+
+export type Activity = {
+  id: string;
+  type: string;
+  details: {
+    description: string;
+  };
+  timestamp: string;
+  user: User;
+};
+
+type BaseProject = Database['public']['Functions']['get_dashboard_projects']['Returns'][0];
+export type Project = Omit<BaseProject, 'activities' | 'assignedTo' | 'tasks' | 'comments' | 'briefFiles' | 'tags' | 'reactions' | 'services'> & {
+  activities: Activity[];
+  assignedTo: AssignedUser[];
+  tasks: Task[];
+  comments: Comment[];
+  briefFiles: ProjectFile[];
+  tags: Tag[];
+  reactions: Reaction[];
+  services: string[];
 };

@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { PROJECT_STATUS_OPTIONS, ProjectStatus } from "@/types";
 
 interface StatusBadgeProps {
-  status: string;
+  status: ProjectStatus;
   onStatusChange?: (newStatus: ProjectStatus) => void;
   hasOpenTasks?: boolean;
 }

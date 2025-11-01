@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, Clock, Trash2, MapPin, CheckCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { getProjectStatusStyles, formatInJakarta, generatePastelColor, getAvatarUrl } from '@/lib/utils';
+import { getProjectStatusStyles, cn, formatInJakarta, generatePastelColor, getAvatarUrl } from '@/lib/utils';
 import { format, isSameDay, subDays, isBefore, startOfToday } from 'date-fns';
 import {
   Tooltip,
@@ -201,7 +201,7 @@ const ListView = ({ projects, onDeleteProject }: { projects: Project[], onDelete
         <div className="text-center mt-6">
           <Button 
             variant="outline" 
-            onClick={() => setVisibleUpcomingCount(prev => prev + 10)}
+            onClick={() => setVisibleUpcomingCount(upcomingDayEntries.length)}
             className="border-primary text-primary hover:bg-primary/10"
           >
             Load More Upcoming
@@ -233,7 +233,7 @@ const ListView = ({ projects, onDeleteProject }: { projects: Project[], onDelete
         <div className="text-center mt-6">
           <Button 
             variant="outline" 
-            onClick={() => setVisiblePastCount(prev => prev + 10)}
+            onClick={() => setVisiblePastCount(pastDayEntries.length)}
             className="border-primary text-primary hover:bg-primary/10"
           >
             Load More Past

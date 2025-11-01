@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
-import { Message, Attachment, User, ConversationMessage } from '@/types';
+import { Message, ChatMessageAttachment, User, ConversationMessage } from '@/types';
 import { analyzeProjects } from '@/lib/openai';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -133,16 +133,12 @@ export const useAiChat = (currentUser: User | null) => {
       return;
     }
 
-    let attachmentForUi: Attachment | undefined = undefined;
+    let attachmentForUi: ChatMessageAttachment | undefined = undefined;
     if (attachmentFile) {
       attachmentForUi = {
-        id: `temp-${uuidv4()}`,
-        file_name: attachmentFile.name,
-        file_url: URL.createObjectURL(attachmentFile),
-        file_type: attachmentFile.type,
-        file_size: attachmentFile.size,
-        storage_path: '',
-        created_at: new Date().toISOString(),
+        name: attachmentFile.name,
+        url: URL.createObjectURL(attachmentFile),
+        type: attachmentFile.type,
       };
     }
 
