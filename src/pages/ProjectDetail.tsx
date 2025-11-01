@@ -1,295 +1,176 @@
-import { useEffect, useState, useRef } from "react";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import PortalLayout from "@/components/PortalLayout";
-import ProjectHeader from "@/components/project-detail/ProjectHeader";
-import ProjectMainContent from "@/components/project-detail/ProjectMainContent";
-import { Skeleton } from "@/components/ui/skeleton";
-import ProjectProgressCard from "@/components/project-detail/ProjectProgressCard";
-import ProjectTeamCard from "@/components/project-detail/ProjectTeamCard";
-import ProjectDetailsCard from "@/components/project-detail/ProjectDetailsCard";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { useAuth } from "@/contexts/AuthContext";
-import { useProject } from "@/hooks/useProject";
-import { useProjectMutations } from "@/hooks/useProjectMutations";
-import { toast } from "sonner";
-import { Project, Task, UpsertTaskPayload, ProjectStatus } from "@/types";
-import TaskFormDialog from "@/components/projects/TaskFormDialog";
-import { useTaskMutations } from "@/hooks/useTaskMutations";
-import { useTasks } from "@/hooks/useTasks";
-import { Loader2 } from "lucide-react";
-
-const ProjectDetailSkeleton = () => (
-  <PortalLayout>
-    <div className="space-y-4">
-      <Skeleton className="h-16 w-full" />
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-4">
-          <Skeleton className="h-96" />
-        </div>
-        <div className="space-y-4">
-          <Skeleton className="h-28" />
-          <Skeleton className="h-32" />
-          <Skeleton className="h-48" />
-        </div>
-      </div>
-    </div>
-  </PortalLayout>
-);
+import { useParams } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
+import { Loader2 } from 'lucide-react';
+import PortalLayout from '@/components/PortalLayout';
+import ProjectDescription from '@/components/project-detail/ProjectDescription';
+import ProjectBrief, { ProjectFile } from '@/components/project-detail/ProjectBrief';
+import { Button } from '@/components/ui/button';
+import { useAuth } from '@/hooks/useAuth';
 
 const ProjectDetail = () => {
   const { slug } = useParams<{ slug: string }>();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const { user, isLoading: authLoading, hasPermission } = useAuth();
-  const navigate = useNavigate();
-  const [isEditing, setIsEditing] = useState(false);
-  const [editedProject, setEditedProject] = useState<Project | null>(null);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const mainContentRef = useRef<HTMLDivElement>(null);
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
 
-  const [isTaskFormOpen, setIsTaskFormOpen] = useState(false);
-  const [editingTask, setEditingTask] = useState<Task | null>(null);
-  const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
+  const [isEditingDescription, setIsEditingDescription] = useState(false);
+  const [isEditingBrief, setIsEditingBrief] = useState(false);
+  const [description, setDescription] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
 
-  const { data: project, isLoading, error } = useProject(slug!);
-  const { data: tasks, isLoading: isLoadingTasks } = useTasks({
-    projectIds: project ? [project.id] : [],
-    enabled: !!project,
-    sortConfig: { key: 'created_at', direction: 'asc' }
+  const { data: project, isLoading, isError } = useQuery({
+    queryKey: ['project', slug],
+    queryFn: async () => {
+      if (!slug) return null;
+      const { data, error } = await supabase
+        .rpc('get_project_by_slug', { p_slug: slug })
+        .single();
+      if (error) throw new Error(error.message);
+      return data;
+    },
+    enabled: !!slug,
   });
-  const mutations = useProjectMutations(slug!);
-  const { upsertTask, deleteTask, toggleTaskCompletion, isUpserting, updateProjectStatus } = useTaskMutations();
-
-  const highlightedTaskId = searchParams.get('task');
-  const defaultTab = highlightedTaskId ? 'tasks' : (searchParams.get('tab') || 'overview');
 
   useEffect(() => {
     if (project) {
-      setEditedProject({ ...project, tasks: tasks || [] });
+      setDescription(project.description || '');
     }
-  }, [project, tasks]);
+  }, [project]);
 
-  useEffect(() => {
-    const taskParam = searchParams.get('task');
-    const tabParam = searchParams.get('tab');
-    if (taskParam && tabParam === 'tasks' && mainContentRef.current && !isLoading) {
-      setTimeout(() => {
-        mainContentRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }, 100);
-    }
-  }, [searchParams, isLoading, project]);
+  const updateProjectMutation = useMutation({
+    mutationFn: async (updatedData: { description?: string }) => {
+      if (!project) return;
+      const { error } = await supabase
+        .from('projects')
+        .update(updatedData)
+        .eq('id', project.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Project updated successfully.');
+      queryClient.invalidateQueries({ queryKey: ['project', slug] });
+      setIsEditingDescription(false);
+    },
+    onError: (error: any) => {
+      toast.error('Failed to update project.', { description: error.message });
+    },
+  });
 
-  useEffect(() => {
-    if (!isLoading && !error && !project) {
-      toast.error("Project not found or you do not have access.");
-      navigate("/projects");
-    }
-    if (error) {
-      toast.error("Failed to load project", { description: "Please check the URL or try again later." });
-      navigate("/projects");
-    }
-  }, [isLoading, error, project, navigate]);
+  const handleDescriptionSave = () => {
+    updateProjectMutation.mutate({ description });
+  };
 
-  useEffect(() => {
-    if (editingTask && project?.tasks) {
-      const updatedTask = project.tasks.find(t => t.id === editingTask.id);
-      if (updatedTask) {
-        setEditingTask(updatedTask);
+  const handleFilesChange = async (files: File[]) => {
+    if (!project || !user) return;
+    setIsUploading(true);
+    
+    for (const file of files) {
+      const filePath = `${project.id}/${Date.now()}-${file.name}`;
+      const { error: uploadError } = await supabase.storage
+        .from('project-files')
+        .upload(filePath, file);
+
+      if (uploadError) {
+        toast.error(`Failed to upload ${file.name}: ${uploadError.message}`);
+        continue;
+      }
+
+      const { data: publicUrlData } = supabase.storage.from('project-files').getPublicUrl(filePath);
+
+      const { error: insertError } = await supabase.from('project_files').insert({
+        project_id: project.id,
+        user_id: user.id,
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        url: publicUrlData.publicUrl,
+        storage_path: filePath,
+      });
+
+      if (insertError) {
+        toast.error(`Failed to save ${file.name} record: ${insertError.message}`);
+        // Clean up uploaded file if db insert fails
+        await supabase.storage.from('project-files').remove([filePath]);
       }
     }
-  }, [project?.tasks, editingTask?.id]);
+    
+    setIsUploading(false);
+    queryClient.invalidateQueries({ queryKey: ['project', slug] });
+    toast.success('Files uploaded successfully.');
+  };
 
-  const canEdit = user && (
-    user.id === project?.created_by.id ||
-    hasPermission('projects:edit_all') ||
-    (hasPermission('projects:edit') && project?.assignedTo.some(member => member.id === user.id))
-  );
-
-  const hasOpenTasks = project?.tasks?.some(task => !task.completed) ?? false;
-
-  const handleStatusChange = (newStatus: ProjectStatus) => {
+  const handleFileDelete = async (storagePath: string) => {
     if (!project) return;
-    if (newStatus === 'Completed' && hasOpenTasks) {
-        toast.error("Cannot mark project as 'Completed' while there are still open tasks.");
-        return;
+
+    const { error: deleteStorageError } = await supabase.storage
+      .from('project-files')
+      .remove([storagePath]);
+
+    if (deleteStorageError) {
+      toast.error(`Failed to delete file from storage: ${deleteStorageError.message}`);
+      return;
     }
-    updateProjectStatus.mutate({ projectId: project.id, status: newStatus });
-  };
 
-  const handleFieldChange = (field: keyof Project, value: any) => {
-    setEditedProject(prev => prev ? { ...prev, [field]: value } : null);
-  };
+    const { error: deleteDbError } = await supabase
+      .from('project_files')
+      .delete()
+      .eq('storage_path', storagePath);
 
-  const handleSaveChanges = () => {
-    if (!editedProject) return;
-    mutations.updateProject.mutate(editedProject, {
-      onSuccess: () => setIsEditing(false),
-    });
-  };
-
-  const handleCancelChanges = () => {
-    setEditedProject(project ? { ...project, tasks: tasks || [] } : null);
-    setIsEditing(false);
-  };
-
-  const handleToggleComplete = () => {
-    if (!editedProject) return;
-    const newStatus = project?.status === 'Completed' ? 'In Progress' : 'Completed';
-    handleStatusChange(newStatus);
-  };
-
-  const handleDeleteProject = () => {
-    if (!project) return;
-    mutations.deleteProject.mutate(project.id);
-    setIsDeleteDialogOpen(false);
-  };
-
-  const handleCreateTask = () => {
-    setEditingTask(null);
-    setIsTaskFormOpen(true);
-  };
-
-  const handleEditTask = (task: Task) => {
-    setEditingTask(task);
-    setIsTaskFormOpen(true);
-  };
-
-  const handleDeleteTask = (task: Task) => {
-    setTaskToDelete(task);
-  };
-
-  const confirmDeleteTask = () => {
-    if (taskToDelete) {
-      deleteTask(taskToDelete.id, {
-        onSuccess: () => {
-          toast.success(`Task "${taskToDelete.title}" deleted.`);
-        },
-      });
-      setTaskToDelete(null);
+    if (deleteDbError) {
+      toast.error(`Failed to delete file record: ${deleteDbError.message}`);
+      // Maybe try to re-upload if this fails? For now, just notify.
+    } else {
+      toast.success('File deleted successfully.');
     }
+
+    queryClient.invalidateQueries({ queryKey: ['project', slug] });
   };
 
-  const handleTaskFormSubmit = (data: UpsertTaskPayload) => {
-    upsertTask(data, {
-      onSuccess: () => {
-        setIsTaskFormOpen(false);
-        setEditingTask(null);
-      },
-    });
-  };
+  if (isLoading) {
+    return <PortalLayout><div className="flex justify-center items-center h-64"><Loader2 className="h-8 w-8 animate-spin" /></div></PortalLayout>;
+  }
 
-  const handleToggleTaskCompletion = (task: Task, completed: boolean) => {
-    toggleTaskCompletion({ task, completed });
-  };
-
-  const handleToggleCommentReaction = (commentId: string, emoji: string) => {
-    mutations.toggleCommentReaction.mutate({ commentId, emoji });
-  };
-
-  if (authLoading || isLoading || isLoadingTasks || !project || !editedProject) {
-    return <ProjectDetailSkeleton />;
+  if (isError || !project) {
+    return <PortalLayout><div>Error loading project or project not found.</div></PortalLayout>;
   }
 
   return (
     <PortalLayout>
       <div className="space-y-6">
-        <ProjectHeader
-          project={editedProject}
-          isEditing={isEditing}
-          isSaving={mutations.updateProject.isPending}
-          canEdit={canEdit}
-          onEditToggle={() => setIsEditing(true)}
-          onSaveChanges={handleSaveChanges}
-          onCancelChanges={handleCancelChanges}
-          onToggleComplete={handleToggleComplete}
-          onDeleteProject={() => setIsDeleteDialogOpen(true)}
-          onFieldChange={handleFieldChange}
-          onStatusChange={canEdit ? handleStatusChange : undefined}
-          hasOpenTasks={hasOpenTasks}
-        />
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-          <div className="lg:col-span-2 space-y-6">
-            <ProjectDetailsCard
-              project={editedProject}
-              isEditing={isEditing}
-              onFieldChange={handleFieldChange}
-              onStatusChange={canEdit ? handleStatusChange : undefined}
-              hasOpenTasks={hasOpenTasks}
-            />
-            <div ref={mainContentRef}>
-              <ProjectMainContent
-                project={editedProject}
-                isEditing={isEditing}
-                onFieldChange={handleFieldChange}
-                mutations={mutations}
-                defaultTab={defaultTab}
-                highlightedTaskId={highlightedTaskId}
-                onTaskHighlightComplete={() => {
-                  searchParams.delete('task');
-                  setSearchParams(searchParams, { replace: true });
-                }}
-                onAddTask={handleCreateTask}
-                onEditTask={handleEditTask}
-                onDeleteTask={handleDeleteTask}
-                onToggleTaskCompletion={handleToggleTaskCompletion}
-                onToggleCommentReaction={handleToggleCommentReaction}
-              />
+        <h1 className="text-2xl font-bold">{project.name}</h1>
+        
+        <div>
+          <h2 className="text-lg font-semibold mb-2">Description</h2>
+          <ProjectDescription
+            description={description}
+            isEditing={isEditingDescription}
+            onDescriptionChange={setDescription}
+            onSetIsEditing={setIsEditingDescription}
+          />
+          {isEditingDescription && (
+            <div className="mt-2 flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setIsEditingDescription(false)}>Cancel</Button>
+              <Button onClick={handleDescriptionSave} disabled={updateProjectMutation.isPending}>
+                {updateProjectMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Save Description
+              </Button>
             </div>
-          </div>
-          <div className="lg:col-span-1 space-y-6">
-            <ProjectProgressCard project={editedProject} />
-            <ProjectTeamCard
-              project={editedProject}
-            />
-          </div>
+          )}
+        </div>
+
+        <div>
+          <ProjectBrief
+            files={project.briefFiles as ProjectFile[] || []}
+            isEditing={isEditingBrief}
+            onSetIsEditing={setIsEditingBrief}
+            onFilesChange={handleFilesChange}
+            onFileDelete={handleFileDelete}
+            isUploading={isUploading}
+          />
         </div>
       </div>
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the project and all its associated data.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteProject}>Delete</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <TaskFormDialog
-        open={isTaskFormOpen}
-        onOpenChange={setIsTaskFormOpen}
-        onSubmit={handleTaskFormSubmit}
-        isSubmitting={isUpserting}
-        task={editingTask}
-        project={project}
-      />
-
-      <AlertDialog open={!!taskToDelete} onOpenChange={() => setTaskToDelete(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete the task "{taskToDelete?.title}". This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDeleteTask}>Delete</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </PortalLayout>
   );
 };

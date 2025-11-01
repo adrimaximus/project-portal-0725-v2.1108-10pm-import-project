@@ -1,94 +1,121 @@
-import { Button } from "@/components/ui/button";
-import { Plus, Trash2, Download, Eye } from "lucide-react";
-import React, { useRef } from "react";
-import FileIcon from "../FileIcon";
-import { ProjectFile } from "@/types";
+import { Paperclip, FileText, Trash2, UploadCloud, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { useDropzone } from 'react-dropzone';
+import { useCallback } from 'react';
+import { cn } from '@/lib/utils';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
+
+// This should match the type from your API
+export interface ProjectFile {
+  id: string;
+  name: string;
+  url: string;
+  storage_path: string;
+  size: number;
+  type: string;
+}
 
 interface ProjectBriefProps {
   files: ProjectFile[];
   isEditing: boolean;
-  onFilesAdd: (files: File[]) => void;
-  onFileDelete: (fileId: string) => void;
+  onSetIsEditing: (isEditing: boolean) => void;
+  onFilesChange: (files: File[]) => void;
+  onFileDelete: (filePath: string) => void;
+  isUploading: boolean;
 }
 
-const ProjectBrief = ({ files, isEditing, onFilesAdd, onFileDelete }: ProjectBriefProps) => {
-  const fileInputRef = useRef<HTMLInputElement>(null);
+const formatFileSize = (bytes: number) => {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+};
 
-  const handleFileAdd = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files) {
-      const newFiles = Array.from(event.target.files);
-      onFilesAdd(newFiles);
-    }
-  };
+const ProjectBrief = ({ files, isEditing, onSetIsEditing, onFilesChange, onFileDelete, isUploading }: ProjectBriefProps) => {
+  const onDrop = useCallback((acceptedFiles: File[]) => {
+    onFilesChange(acceptedFiles);
+  }, [onFilesChange]);
 
-  const handleAddClick = () => {
-    fileInputRef.current?.click();
-  };
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop, disabled: isUploading });
+
+  if (isEditing) {
+    return (
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between py-3 px-4">
+          <div className="flex items-center gap-2">
+            <Paperclip className="h-4 w-4" />
+            <h3 className="font-semibold">Brief & Attachments</h3>
+          </div>
+          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onSetIsEditing(false)}>
+            <X className="h-4 w-4" />
+          </Button>
+        </CardHeader>
+        <CardContent className="p-4">
+          <div {...getRootProps()} className={cn(
+            "border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors",
+            isDragActive ? 'border-primary bg-primary/10' : 'border-border hover:border-primary/50',
+            isUploading && 'cursor-not-allowed opacity-50'
+          )}>
+            <input {...getInputProps()} />
+            <div className="flex flex-col items-center gap-2 text-muted-foreground">
+              <UploadCloud className="h-8 w-8" />
+              {isUploading ? (
+                <p>Uploading files...</p>
+              ) : isDragActive ? (
+                <p>Drop the files here ...</p>
+              ) : (
+                <p>Drag 'n' drop files here, or click to select</p>
+              )}
+            </div>
+          </div>
+          <div className="mt-4 space-y-2">
+            {files && files.map((file) => (
+              <div key={file.id || file.name} className="flex items-center justify-between p-2 bg-muted rounded-md text-sm">
+                <div className="flex items-center gap-3 overflow-hidden">
+                  <FileText className="h-4 w-4 flex-shrink-0" />
+                  <a href={file.url} target="_blank" rel="noopener noreferrer" className="hover:underline truncate" title={file.name}>
+                    {file.name}
+                  </a>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <span className="text-xs text-muted-foreground">{formatFileSize(file.size)}</span>
+                  <Button variant="ghost" size="icon" onClick={() => onFileDelete(file.storage_path)} className="h-6 w-6">
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
-    <div className="space-y-4">
-      {files.length > 0 ? (
-        <div className="max-h-48 overflow-y-auto pr-2">
-          <ul className="space-y-2">
-            {files.map((file) => (
-              <li key={file.id} className="flex items-center justify-between p-2 rounded-md border bg-background">
-                <div className="flex items-center gap-3 truncate">
-                  <FileIcon fileType={file.type || ''} className="h-5 w-5 flex-shrink-0 text-muted-foreground" />
-                  <span className="truncate text-sm font-medium">{file.name}</span>
-                </div>
-                <div className="flex items-center flex-shrink-0">
-                  <a
-                    href={file.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    title={`Preview ${file.name}`}
-                  >
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <Eye className="h-4 w-4" />
-                      <span className="sr-only">Preview file</span>
-                    </Button>
-                  </a>
-                  <a
-                    href={file.url}
-                    download={file.name}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    title={`Download ${file.name}`}
-                  >
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <Download className="h-4 w-4" />
-                      <span className="sr-only">Download file</span>
-                    </Button>
-                  </a>
-                  {isEditing && (
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => onFileDelete(file.id)}>
-                      <Trash2 className="h-4 w-4" />
-                      <span className="sr-only">Remove file</span>
-                    </Button>
-                  )}
-                </div>
-              </li>
-            ))}
-          </ul>
+    <div 
+      className="bg-[#f6f7f3] dark:bg-stone-900 p-4 rounded-lg group cursor-pointer transition-colors hover:bg-gray-200 dark:hover:bg-stone-800 min-h-[100px]"
+      onClick={() => onSetIsEditing(true)}
+    >
+      <div className="flex items-center gap-2 mb-2">
+        <Paperclip className="h-4 w-4" />
+        <h3 className="font-semibold">Brief & Attachments</h3>
+      </div>
+      {files && files.length > 0 ? (
+        <div className="space-y-2">
+          {files.map((file) => (
+            <div key={file.id || file.name} className="flex items-center gap-3 p-2 bg-background rounded-md text-sm">
+              <FileText className="h-4 w-4 flex-shrink-0" />
+              <a href={file.url} target="_blank" rel="noopener noreferrer" className="hover:underline truncate" title={file.name}>
+                {file.name}
+              </a>
+            </div>
+          ))}
         </div>
       ) : (
-        <p className="text-sm text-muted-foreground text-center py-4">No files attached.</p>
-      )}
-
-      {isEditing && (
-        <>
-          <input
-            type="file"
-            multiple
-            ref={fileInputRef}
-            onChange={handleFileAdd}
-            className="hidden"
-          />
-          <Button variant="outline" className="w-full" onClick={handleAddClick}>
-            <Plus className="mr-2 h-4 w-4" />
-            Add Files
-          </Button>
-        </>
+        <div className="text-center flex items-center justify-center h-full pt-4">
+          <p className="text-muted-foreground group-hover:text-foreground">Click to add brief files.</p>
+        </div>
       )}
     </div>
   );

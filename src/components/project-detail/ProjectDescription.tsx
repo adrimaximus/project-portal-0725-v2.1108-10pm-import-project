@@ -11,10 +11,11 @@ interface ProjectDescriptionProps {
   description: string;
   isEditing: boolean;
   onDescriptionChange: (value: string) => void;
+  onSetIsEditing: (isEditing: boolean) => void;
   aiOptions?: AIOptions;
 }
 
-const ProjectDescription = ({ description, isEditing, onDescriptionChange, aiOptions }: ProjectDescriptionProps) => {
+const ProjectDescription = ({ description, isEditing, onDescriptionChange, onSetIsEditing, aiOptions }: ProjectDescriptionProps) => {
   if (isEditing) {
     return (
       <RichTextEditor
@@ -29,7 +30,10 @@ const ProjectDescription = ({ description, isEditing, onDescriptionChange, aiOpt
   }
 
   return (
-    <div className="bg-[#f6f7f3] dark:bg-stone-900 p-4 rounded-lg">
+    <div 
+      className="bg-[#f6f7f3] dark:bg-stone-900 p-4 rounded-lg group cursor-pointer transition-colors hover:bg-gray-200 dark:hover:bg-stone-800 min-h-[100px]"
+      onClick={() => onSetIsEditing(true)}
+    >
       {description ? (
         <div className="ql-snow !border-none">
           <div 
@@ -38,7 +42,9 @@ const ProjectDescription = ({ description, isEditing, onDescriptionChange, aiOpt
           />
         </div>
       ) : (
-        <p className="text-muted-foreground">No description provided.</p>
+        <div className="text-center flex items-center justify-center h-full">
+          <p className="text-muted-foreground group-hover:text-foreground">Click to add a description.</p>
+        </div>
       )}
     </div>
   );
