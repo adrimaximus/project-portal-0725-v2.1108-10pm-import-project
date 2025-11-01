@@ -1,9 +1,9 @@
-import { Attachment } from "@/types";
+import { ChatMessageAttachment } from "@/types";
 import { File, Download } from "lucide-react";
 import { Button } from "./ui/button";
 
 interface MessageAttachmentProps {
-  attachment: Attachment;
+  attachment: ChatMessageAttachment;
 }
 
 const MessageAttachment = ({ attachment }: MessageAttachmentProps) => {

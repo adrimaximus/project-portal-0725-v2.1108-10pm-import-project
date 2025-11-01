@@ -1,5 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
-import { Conversation, Message, Attachment, Reaction, Collaborator } from '@/types/index';
+import { Conversation, Message, Attachment, Reaction, Collaborator, ChatMessageAttachment } from '@/types/index';
 import { getInitials, getAvatarUrl } from '@/lib/utils';
 
 const mapConversationData = (c: any): Omit<Conversation, 'messages'> => ({
@@ -62,7 +62,7 @@ export const fetchMessages = async (conversationId: string): Promise<Message[]> 
   });
 };
 
-export const sendMessage = async ({ messageId, conversationId, senderId, text, attachment, replyToMessageId }: { messageId: string, conversationId: string, senderId: string, text: string, attachment: Attachment | null, replyToMessageId?: string | null }) => {
+export const sendMessage = async ({ messageId, conversationId, senderId, text, attachment, replyToMessageId }: { messageId: string, conversationId: string, senderId: string, text: string, attachment: ChatMessageAttachment | null, replyToMessageId?: string | null }) => {
   const { data, error } = await supabase
     .from('messages')
     .insert({

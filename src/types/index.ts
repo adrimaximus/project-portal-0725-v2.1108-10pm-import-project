@@ -306,12 +306,18 @@ export type ConversationMessage = {
   content: string;
 };
 
+export type ChatMessageAttachment = {
+  name: string;
+  url: string;
+  type: string;
+};
+
 export type Message = {
   id: string;
   text: string;
   timestamp: string;
   sender: User;
-  attachment?: Attachment;
+  attachment?: ChatMessageAttachment;
   reply_to_message_id?: string | null;
   repliedMessage?: {
     content: string;
