@@ -213,7 +213,10 @@ export type User = {
   theme?: string;
 };
 
-export type Collaborator = User;
+export type Collaborator = User & {
+  isIdle?: boolean;
+  last_active_at?: string;
+};
 export type AssignedUser = User & { role: string };
 
 export type Reaction = {
