@@ -290,7 +290,7 @@ export interface Person {
   notes: string | null;
   created_at: string;
   updated_at: string;
-  projects: { id: string; name: string; slug: string }[];
+  projects: { id: string; name: string; slug: string; status: string; }[];
   tags: Tag[];
   avatar_url: string | null;
   user_id: string | null;
