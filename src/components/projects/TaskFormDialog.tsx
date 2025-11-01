@@ -15,7 +15,7 @@ import { CalendarIcon, Loader2 } from 'lucide-react';
 import { cn, getTaskStatusStyles, getPriorityStyles } from '@/lib/utils';
 import { format } from 'date-fns';
 import { useProjects } from '@/hooks/useProjects';
-import { Task, TaskStatus, TASK_PRIORITY_OPTIONS, TASK_STATUS_OPTIONS, Tag, User as Profile, Project, TaskAttachment, UpsertTaskPayload } from '@/types';
+import { Task, TaskStatus, TASK_PRIORITY_OPTIONS, TASK_STATUS_OPTIONS, Tag, User as Profile, Project, TaskAttachment, UpsertTaskPayload, TaskPriority } from '@/types';
 import { useTags } from '@/hooks/useTags';
 import { TagsMultiselect } from '@/components/ui/TagsMultiselect';
 import { supabase } from '@/integrations/supabase/client';
@@ -44,8 +44,8 @@ const taskFormSchema = z.object({
   project_id: z.string().optional().nullable(),
   description: z.string().optional().nullable(),
   due_date: z.date().optional().nullable(),
-  priority: z.string().optional().nullable(),
-  status: z.string().optional(),
+  priority: z.enum(TASK_PRIORITY_OPTIONS.map(o => o.value) as [TaskPriority, ...TaskPriority[]]).optional().nullable(),
+  status: z.enum(TASK_STATUS_OPTIONS.map(o => o.value) as [TaskStatus, ...TaskStatus[]]).optional(),
   assignee_ids: z.array(z.string()).optional(),
   tag_ids: z.array(z.string()).optional(),
 });
