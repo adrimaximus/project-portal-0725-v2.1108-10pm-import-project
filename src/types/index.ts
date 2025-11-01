@@ -7,6 +7,35 @@ export const PAYMENT_STATUS_OPTIONS: { label: string; value: PaymentStatus }[] =
   { label: "Cancelled", value: "Cancelled" },
 ];
 
+export type ProjectStatus = 
+  | "Requested"
+  | "On Hold"
+  | "Reschedule"
+  | "In Progress"
+  | "Billing Process"
+  | "Completed"
+  | "Cancelled"
+  | "Bid Lost"
+  | "Archived"
+  | "On Track"
+  | "Planning"
+  | "Pending";
+
+export const PROJECT_STATUS_OPTIONS: { label: string; value: ProjectStatus }[] = [
+  { label: "Requested", value: "Requested" },
+  { label: "On Hold", value: "On Hold" },
+  { label: "Reschedule", value: "Reschedule" },
+  { label: "In Progress", value: "In Progress" },
+  { label: "Billing Process", value: "Billing Process" },
+  { label: "Completed", value: "Completed" },
+  { label: "Cancelled", value: "Cancelled" },
+  { label: "Bid Lost", value: "Bid Lost" },
+  { label: "Archived", value: "Archived" },
+  { label: "On Track", value: "On Track" },
+  { label: "Planning", value: "Planning" },
+  { label: "Pending", value: "Pending" },
+];
+
 export type Invoice = {
   id: string;
   project_id: string;

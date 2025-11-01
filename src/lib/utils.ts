@@ -28,6 +28,12 @@ export const getProjectStatusStyles = (status: ProjectStatus) => {
       return { tw: 'bg-gray-100 text-gray-800', hex: '#6b7280' };
     case 'Archived':
       return { tw: 'bg-gray-100 text-gray-800', hex: '#6b7280' };
+    case 'On Track':
+      return { tw: 'bg-cyan-100 text-cyan-800', hex: '#06b6d4' };
+    case 'Planning':
+      return { tw: 'bg-indigo-100 text-indigo-800', hex: '#6366f1' };
+    case 'Pending':
+      return { tw: 'bg-orange-100 text-orange-800', hex: '#f97316' };
     default:
       return { tw: 'bg-gray-100 text-gray-800', hex: '#6b7280' };
   }
