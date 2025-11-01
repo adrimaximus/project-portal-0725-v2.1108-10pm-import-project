@@ -64,6 +64,16 @@ export const TASK_PRIORITY_OPTIONS: { value: TaskPriority; label: string }[] = [
     { value: 'Low', label: 'Low' },
 ];
 
+export type InvoiceAttachment = {
+  id: string;
+  file_name: string;
+  file_url: string;
+  storage_path: string;
+  file_type: string | null;
+  file_size: number | null;
+  created_at: string;
+};
+
 export type Invoice = {
   id: string;
   projectId: string;
@@ -85,7 +95,7 @@ export type Invoice = {
   clientCompanyName: string | null;
   projectOwner: Owner | null;
   assignedMembers: Member[];
-  invoiceAttachments: Attachment[];
+  invoiceAttachments: InvoiceAttachment[];
   payment_terms: any[];
 };
 
@@ -103,16 +113,6 @@ export type Owner = {
   name: string;
   avatar_url: string;
   initials: string;
-};
-
-export type Attachment = {
-  id: string;
-  file_name: string;
-  file_url: string;
-  storage_path: string;
-  file_type: string | null;
-  file_size: number | null;
-  created_at: string;
 };
 
 export const CONTACT_PROPERTY_TYPES = [

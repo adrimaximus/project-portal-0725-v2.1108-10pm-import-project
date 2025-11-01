@@ -1,6 +1,6 @@
-import { supabase } from '@/integrations/supabase/client';
-import { Conversation, Message, Attachment, Reaction, Collaborator, ChatMessageAttachment } from '@/types/index';
+import { Conversation, Message, Reaction, Collaborator, ChatMessageAttachment } from '@/types/index';
 import { getInitials, getAvatarUrl } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
 
 const mapConversationData = (c: any): Omit<Conversation, 'messages'> => ({
   id: c.conversation_id,
