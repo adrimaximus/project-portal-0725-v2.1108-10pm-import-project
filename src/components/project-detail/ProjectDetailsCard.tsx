@@ -311,7 +311,7 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange, onStatusChange,
                             value={option.value}
                             disabled={option.value === 'Completed' && hasOpenTasks}
                           >
-                            <StatusBadge status={option.label} />
+                            <StatusBadge status={option.value} />
                           </SelectItem>
                         ))}
                       </SelectContent>
