@@ -1,15 +1,15 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { MoreVertical, Edit, Download, ArrowUp, ArrowDown, Paperclip } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { cn, getPaymentStatusStyles } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { Invoice } from "@/types";
+import { Invoice, PaymentStatus } from "@/types";
 import { useMemo } from "react";
+import PaymentStatusBadge from "./PaymentStatusBadge";
 
 interface BillingTableProps {
   invoices: Invoice[];
@@ -17,6 +17,7 @@ interface BillingTableProps {
   sortColumn: keyof Invoice;
   sortDirection: 'asc' | 'desc';
   handleSort: (column: keyof Invoice) => void;
+  onStatusChange: (invoiceId: string, newStatus: PaymentStatus) => void;
 }
 
 const getInitials = (name?: string | null) => {
@@ -28,7 +29,7 @@ const getInitials = (name?: string | null) => {
   return names[0]?.charAt(0).toUpperCase() || '';
 };
 
-const BillingTable = ({ invoices, onEdit, sortColumn, sortDirection, handleSort }: BillingTableProps) => {
+const BillingTable = ({ invoices, onEdit, sortColumn, sortDirection, handleSort, onStatusChange }: BillingTableProps) => {
   const renderSortIcon = (column: keyof Invoice) => {
     if (sortColumn !== column) return null;
     return sortDirection === 'asc' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />;
@@ -186,9 +187,10 @@ const BillingTable = ({ invoices, onEdit, sortColumn, sortDirection, handleSort 
                 </div>
               </TableCell>
               <TableCell>
-                <Badge variant="outline" className={cn("border-transparent", getPaymentStatusStyles(invoice.status).tw)}>
-                  {invoice.status}
-                </Badge>
+                <PaymentStatusBadge 
+                  status={invoice.status} 
+                  onStatusChange={(newStatus) => onStatusChange(invoice.id, newStatus)} 
+                />
               </TableCell>
               <TableCell>{invoice.poNumber || 'N/A'}</TableCell>
               <TableCell>{'Rp ' + invoice.amount.toLocaleString('id-ID')}</TableCell>
