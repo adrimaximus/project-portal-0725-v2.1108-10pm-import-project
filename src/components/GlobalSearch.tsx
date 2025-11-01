@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Project, User, ConversationMessage } from "@/types";
 import {
@@ -9,10 +9,9 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-  CommandSeparator,
 } from "@/components/ui/command";
 import { Button } from "@/components/ui/button";
-import { FileText, User as UserIcon, Trophy, Sparkles, Search as SearchIcon, CreditCard, Loader2, ListChecks } from "lucide-react";
+import { FileText, User as UserIcon, Trophy, Sparkles, Search as SearchIcon, CreditCard, Loader2, ListChecks, Link as LinkIcon } from "lucide-react";
 import debounce from 'lodash.debounce';
 import { analyzeProjects } from "@/lib/openai";
 import ReactMarkdown from "react-markdown";
@@ -40,6 +39,7 @@ export function GlobalSearch() {
   const [conversation, setConversation] = useState<ConversationMessage[]>([]);
   const [isAiLoading, setIsAiLoading] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
   const scrollRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
 
@@ -134,8 +134,13 @@ export function GlobalSearch() {
     setResults({ projects: [], users: [], goals: [], bills: [], tasks: [] });
     setLoading(false);
   
+    const pageContext = {
+      pathname: location.pathname,
+      search: location.search,
+    };
+
     try {
-      const result = await analyzeProjects(message, oldConversation);
+      const result = await analyzeProjects(message, oldConversation, pageContext);
       
       const successKeywords = ['done!', 'updated', 'created', 'changed', 'i\'ve made'];
       if (successKeywords.some(keyword => result.toLowerCase().includes(keyword))) {
@@ -181,9 +186,15 @@ export function GlobalSearch() {
           value={query}
           onValueChange={setQuery}
         />
+        {conversation.length === 0 && (
+          <div className="text-xs text-muted-foreground px-3 py-1.5 border-b flex items-center gap-2 truncate">
+            <LinkIcon className="h-3 w-3 flex-shrink-0" />
+            <span className="truncate">Context: {location.pathname}</span>
+          </div>
+        )}
         <div ref={scrollRef} className="max-h-[400px] overflow-y-auto">
           {conversation.length > 0 && (
-            <div className="p-4 space-y-4 border-t">
+            <div className="p-4 space-y-4">
               {conversation.map((msg, index) => (
                 <div key={index} className={`flex items-start gap-3 ${msg.sender === 'user' ? 'justify-end' : ''}`}>
                   {msg.sender === 'ai' && (

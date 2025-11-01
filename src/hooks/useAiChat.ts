@@ -190,7 +190,7 @@ export const useAiChat = (currentUser: User | null) => {
         console.error("Failed to save user message:", dbError);
       }
 
-      const result = await analyzeProjects(text, undefined, attachmentUrl, attachmentType);
+      const result = await analyzeProjects(text, undefined, undefined, attachmentUrl, attachmentType);
       
       const aiMessage: Message = {
         id: uuidv4(),
