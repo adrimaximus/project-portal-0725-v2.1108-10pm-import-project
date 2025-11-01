@@ -64,10 +64,10 @@ const getAnalyzeProjectsSystemPrompt = (context: any, userName: string) => `You 
 4.  **DOCUMENT ANALYSIS:** If the user uploads a PDF or Word document, its text content will be provided to you. Use this content to answer questions, summarize, or perform actions like creating a project based on a brief.
 5.  **PROJECT CREATION FROM BRIEFS:** If a user pastes a block of text and asks to 'create a project from this', you must parse the text to extract the project name, a detailed description, potential start/due dates, budget, venue, and infer relevant services and team members to include in the \`CREATE_PROJECT\` action JSON.
 6.  **CONFIRMATION WORKFLOW (FOR SENSITIVE ACTIONS):**
-    a.  For sensitive actions like **creating tasks** or **deleting projects**, your FIRST response MUST be a natural language confirmation question.
+    a.  For sensitive actions like **creating tasks**, **deleting projects**, or **deleting goals**, your FIRST response MUST be a natural language confirmation question.
         - Example for Task: "Sure, I can create the task 'Design new logo' in the 'Brand Refresh' project. Should I proceed?"
         - Example for Deletion: "Just to confirm, you want to permanently delete the project 'Old Website Backup'? This cannot be undone. Should I proceed?"
-    b.  If the user's NEXT message is a confirmation (e.g., "yes", "ok, do it", "proceed"), your response MUST be ONLY the corresponding action JSON (\`CREATE_TASK\`, \`DELETE_PROJECT\`). Do not add any other text.
+    b.  If the user's NEXT message is a confirmation (e.g., "yes", "ok, do it", "proceed"), your response MUST be ONLY the corresponding action JSON (\`CREATE_TASK\`, \`DELETE_PROJECT\`, \`DELETE_GOAL\`). Do not add any other text.
 7.  **HANDLING FOLLOW-UP ANSWERS:**
     When you ask the user for clarification (e.g., "Which project do you mean?"), their next message is the answer to your question. You MUST use that answer to fulfill their *original* request. Do not treat their answer as a new, standalone command.
     - Example:
@@ -84,7 +84,7 @@ const getAnalyzeProjectsSystemPrompt = (context: any, userName: string) => `You 
 
 **Your entire process is:**
 1. Analyze the user's latest message and any attached image or document.
-2. Is it a request to create a task or delete a project?
+2. Is it a request to create a task, delete a project, or delete a goal?
    - YES: Respond with a natural language recommendation and wait for confirmation. If they have already confirmed, respond with the appropriate action JSON.
    - NO: Is it another action?
      - YES: Respond with the appropriate action JSON.
@@ -129,25 +129,28 @@ You can perform several types of actions. When you decide to perform an action, 
 - Valid fields for 'updates' are: title, description, type, frequency, specific_days, target_quantity, target_period, target_value, unit, icon, color, add_tags, remove_tags.
 - For 'add_tags' and 'remove_tags', the value should be an array of tag names.
 
-9. CREATE_ARTICLE:
+9. DELETE_GOAL:
+{"action": "DELETE_GOAL", "goal_title": "<title of goal to delete>"}
+
+10. CREATE_ARTICLE:
 {"action": "CREATE_ARTICLE", "article_details": {"title": "<article title>", "content": "<HTML content>", "folder_name": "<optional folder name>", "header_image_search_query": "<optional image search query>"}}
 - If folder_name is not provided or does not exist, it will be placed in a default "Uncategorized" folder for the user.
 - If 'header_image_search_query' is provided, I will find an image on Unsplash and set it as the article's header image.
 
-10. UPDATE_ARTICLE:
+11. UPDATE_ARTICLE:
 {"action": "UPDATE_ARTICLE", "article_title": "<title of article to update>", "updates": {"title": "<new title>", "content": "<new HTML content>", "folder_name": "<new folder name>", "header_image_search_query": "<optional image search query>"}}
 - 'content' will replace the existing content. To append, first get the existing content and then provide the full new content.
 - Use 'header_image_search_query' to find and set a new header image for the article.
 
-11. DELETE_ARTICLE:
+12. DELETE_ARTICLE:
 {"action": "DELETE_ARTICLE", "article_title": "<title of article to delete>"}
 
-12. CREATE_FOLDER:
+13. CREATE_FOLDER:
 {"action": "CREATE_FOLDER", "folder_details": {"name": "<folder name>", "description": "<desc>", "icon": "IconName", "color": "#RRGGBB", "category": "<category>"}}
 - If the user only provides a name, you MUST infer the other details.
 - Suggest a relevant 'icon' from the 'Available Icons' list and a suitable 'color'.
 
-13. SEARCH_MAPS_AND_WEBSITE:
+14. SEARCH_MAPS_AND_WEBSITE:
 {"action": "SEARCH_MAPS_AND_WEBSITE", "query": "<search query for a place or a website URL>"}
 
 CONTEXT:
@@ -413,25 +416,59 @@ const executeAction = async (actionData: any, context: any) => {
                 const goal = goals.find((g: any) => g.title.toLowerCase() === goal_title.toLowerCase());
                 if (!goal) return `I couldn't find a goal named "${goal_title}".`;
 
-                const { error } = await userSupabase.rpc('update_goal_with_tags', {
+                const currentTagIds = new Set((goal.tags || []).map((t: any) => t.id));
+                const customTagsToAdd: { name: string, color: string }[] = [];
+
+                if (updates.add_tags && Array.isArray(updates.add_tags)) {
+                    for (const tagName of updates.add_tags) {
+                        const existingTag = allTags.find((t: any) => t.name.toLowerCase() === tagName.toLowerCase());
+                        if (existingTag) {
+                            currentTagIds.add(existingTag.id);
+                        } else {
+                            customTagsToAdd.push({ name: tagName, color: '#808080' });
+                        }
+                    }
+                }
+
+                if (updates.remove_tags && Array.isArray(updates.remove_tags)) {
+                    for (const tagName of updates.remove_tags) {
+                        const tagToRemove = allTags.find((t: any) => t.name.toLowerCase() === tagName.toLowerCase());
+                        if (tagToRemove) {
+                            currentTagIds.delete(tagToRemove.id);
+                        }
+                    }
+                }
+
+                const rpcParams = {
                     p_goal_id: goal.id,
-                    p_title: updates.title,
-                    p_description: updates.description,
-                    p_icon: updates.icon,
-                    p_color: updates.color,
-                    p_type: updates.type,
-                    p_frequency: updates.frequency,
-                    p_specific_days: updates.specific_days,
-                    p_target_quantity: updates.target_quantity,
-                    p_target_period: updates.target_period,
-                    p_target_value: updates.target_value,
-                    p_unit: updates.unit,
-                    p_tags: (updates.tags || goal.tags || []).map((t: any) => t.id),
-                    p_custom_tags: [],
-                });
+                    p_title: updates.title || goal.title,
+                    p_description: updates.description || goal.description,
+                    p_icon: updates.icon || goal.icon,
+                    p_color: updates.color || goal.color,
+                    p_type: updates.type || goal.type,
+                    p_frequency: updates.frequency || goal.frequency,
+                    p_specific_days: updates.specific_days || goal.specific_days,
+                    p_target_quantity: updates.target_quantity || goal.target_quantity,
+                    p_target_period: updates.target_period || goal.target_period,
+                    p_target_value: updates.target_value || goal.target_value,
+                    p_unit: updates.unit || goal.unit,
+                    p_tags: Array.from(currentTagIds),
+                    p_custom_tags: customTagsToAdd.length > 0 ? customTagsToAdd : null,
+                };
+
+                const { error } = await userSupabase.rpc('update_goal_with_tags', rpcParams);
 
                 if (error) return `I failed to update the goal. The database said: ${error.message}`;
-                return `I've updated the goal "${goal.title}".`;
+                return `I've updated the goal "${updates.title || goal.title}".`;
+            }
+            case 'DELETE_GOAL': {
+                const { goal_title } = actionData;
+                const goal = goals.find((g: any) => g.title.toLowerCase() === goal_title.toLowerCase());
+                if (!goal) return `I couldn't find a goal named "${goal_title}".`;
+
+                const { error } = await userSupabase.from('goals').delete().eq('id', goal.id);
+                if (error) return `I failed to delete the goal. The database said: ${error.message}`;
+                return `I've deleted the goal "${goal_title}".`;
             }
             case 'CREATE_FOLDER': {
                 const { name, description, icon, color, category } = actionData.folder_details;
