@@ -1002,66 +1002,6 @@ async function suggestIcon(payload: any, context: any) {
   return { result: result?.trim() };
 }
 
-async function generateInsight(payload: any, context: any) {
-  const { openai, anthropic } = context;
-  const { goal, context: progressContext } = payload;
-  if (!goal || !progressContext) {
-    throw new Error("Goal and context are required for generating insights.");
-  }
-
-  const owner = goal.collaborators.find((c: any) => c.id === goal.user_id);
-  const otherCollaborators = goal.collaborators.filter((c: any) => c.id !== goal.user_id);
-
-  const modifiedGoal = {
-    ...goal,
-    owner: owner,
-    collaborators: otherCollaborators,
-  };
-  delete modifiedGoal.user_id;
-
-  const systemPrompt = `Anda adalah seorang pelatih AI yang suportif dan berwawasan luas. Tujuan Anda adalah memberikan saran yang memotivasi dan dapat ditindaklanjuti kepada pengguna berdasarkan kemajuan mereka. Analisis detail tujuan berikut: judul, deskripsi, tipe, tag, pemilik (owner), kolaborator lain (collaborators), dan kemajuan terbaru. Berdasarkan analisis holistik ini, berikan wawasan singkat yang bermanfaat dalam format markdown.
-
-- Pertahankan nada yang positif dan memotivasi.
-- Sapa pengguna secara langsung. Jika ada pemilik (owner), sapa mereka sebagai pemilik tujuan.
-- Jika ada kolaborator lain, Anda bisa menyebutkan mereka dalam konteks kolaborasi.
-- Jika kemajuan baik, berikan pujian dan sarankan cara untuk mempertahankan momentum.
-- Jika kemajuan tertinggal, berikan semangat, bukan kritik. Sarankan langkah-langkah kecil yang dapat dikelola untuk kembali ke jalur yang benar.
-- Jaga agar respons tetap ringkas (2-4 kalimat).
-- Jangan mengulangi data kembali kepada pengguna; interpretasikan data tersebut.
-- PENTING: Selalu berikan respons dalam Bahasa Indonesia.`;
-
-  const userPrompt = `Berikut adalah tujuan saya dan kemajuan terbaru saya. Tolong berikan saya beberapa saran pembinaan.
-Tujuan: ${JSON.stringify(modifiedGoal, null, 2)}
-Konteks Kemajuan: ${JSON.stringify(progressContext, null, 2)}`;
-
-  let result;
-  if (anthropic) {
-    const response = await anthropic.messages.create({
-      model: "claude-3-haiku-20240307",
-      messages: [{ role: "user", content: userPrompt }],
-      system: systemPrompt,
-      temperature: 0.7,
-      max_tokens: 200,
-    });
-    result = response.content[0].text;
-  } else if (openai) {
-    const response = await openai.chat.completions.create({
-      model: "gpt-4-turbo",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt }
-      ],
-      temperature: 0.7,
-      max_tokens: 200,
-    });
-    result = response.choices[0].message.content;
-  } else {
-    throw new Error("No AI provider configured.");
-  }
-
-  return { result };
-}
-
 async function aiSelectCalendarEvents(payload: any, context: any) {
   const { openai, anthropic } = context;
   const { events, existingProjects } = payload;
@@ -1143,7 +1083,6 @@ const featureMap: { [key: string]: (payload: any, context: any) => Promise<any> 
   'improve-article-content': articleWriter,
   'summarize-article-content': articleWriter,
   'suggest-icon': suggestIcon,
-  'generate-insight': generateInsight,
   'ai-select-calendar-events': aiSelectCalendarEvents,
   'generate-icon': generateIcon,
 };
