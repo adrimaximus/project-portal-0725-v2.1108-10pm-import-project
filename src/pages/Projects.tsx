@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { getDashboardProjects, createProject, updateProjectDetails, deleteProject } from '@/api/projects';
 import { getProjectTasks, upsertTask, deleteTask, toggleTaskCompletion } from '@/api/tasks';
 import { getPeople } from '@/api/people';
-import { Project, Task as ProjectTask, Person, UpsertTaskPayload, TaskStatus } from '@/types';
+import { Project, Task as ProjectTask, Person, UpsertTaskPayload, TaskStatus, ProjectStatus } from '@/types';
 import { toast } from 'sonner';
 
 import ProjectsToolbar from '@/components/projects/ProjectsToolbar';
@@ -19,6 +19,7 @@ import { useTasks } from '@/hooks/useTasks';
 import { useProjects } from '@/hooks/useProjects';
 import { useCreateProject } from '@/hooks/useCreateProject';
 import { useTaskMutations } from '@/hooks/useTaskMutations';
+import { useProjectMutations } from '@/hooks/useProjectMutations';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import PortalLayout from '@/components/PortalLayout';
 import { getErrorMessage, formatInJakarta } from '@/lib/utils';
@@ -46,7 +47,7 @@ const ProjectsPage = () => {
 
   const onHighlightComplete = useCallback(() => {
     if (taskIdFromParams) {
-      navigate('/projects?view=tasks', { replace: true });
+      navigate(`/projects?view=tasks`, { replace: true });
     } else {
       const newSearchParams = new URLSearchParams(searchParams);
       newSearchParams.delete('highlight');
@@ -79,7 +80,7 @@ const ProjectsPage = () => {
     sortConfig: projectSortConfig, requestSort: requestProjectSort, sortedProjects
   } = useProjectFilters(projectsData, advancedFilters);
 
-  const [taskSortConfig, setTaskSortConfig] = useState<{ key: keyof ProjectTask | string; direction: 'asc' | 'desc' }>({ key: 'updated_at', direction: 'desc' });
+  const [taskSortConfig, setTaskSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'updated_at', direction: 'desc' });
 
   const requestTaskSort = useCallback((key: string) => {
     setTaskSortConfig(prevConfig => {
@@ -161,6 +162,7 @@ const ProjectsPage = () => {
   }, [isTaskView, refetchTasks, refetchProjects]);
 
   const { upsertTask, isUpserting, deleteTask, toggleTaskCompletion, isToggling } = useTaskMutations(refetch);
+  const { updateProjectStatus } = useProjectMutations();
 
   const allTasks = useMemo(() => {
     if (isTaskView) {
@@ -323,6 +325,19 @@ const ProjectsPage = () => {
     });
   };
 
+  const handleStatusChange = (projectId: string, newStatus: ProjectStatus) => {
+    const project = projectsData.find(p => p.id === projectId);
+    if (!project) return;
+
+    const hasOpenTasks = project.tasks?.some(task => !task.completed) ?? false;
+
+    if (newStatus === 'Completed' && hasOpenTasks) {
+        toast.error("Cannot mark project as 'Completed' while there are still open tasks.");
+        return;
+    }
+    updateProjectStatus.mutate({ projectId, status: newStatus });
+  };
+
   const tasksQueryKey = ['tasks', { 
     projectIds: undefined, 
     hideCompleted: hideCompletedTasks, 
@@ -402,6 +417,7 @@ const ProjectsPage = () => {
               tasksQueryKey={tasksQueryKey}
               highlightedTaskId={highlightedTaskId}
               onHighlightComplete={onHighlightComplete}
+              onStatusChange={handleStatusChange}
             />
           </div>
         </div>
