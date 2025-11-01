@@ -8,13 +8,15 @@ export async function analyzeProjects(
   attachmentUrl?: string | null,
   attachmentType?: string | null,
 ): Promise<string> {
-  const { data, error } = await supabase.functions.invoke('analyze-projects', {
+  const { data, error } = await supabase.functions.invoke('ai-handler', {
     body: { 
-      message, 
-      conversationHistory,
-      pageContext,
-      attachmentUrl,
-      attachmentType,
+      feature: 'analyze-projects',
+      payload: {
+        request: message,
+        pageContext,
+        attachmentUrl,
+        attachmentType,
+      }
     },
   });
 
@@ -26,7 +28,7 @@ export async function analyzeProjects(
     throw new Error(data.error);
   }
 
-  return data.reply || "I'm sorry, I couldn't process that request.";
+  return data.result || "I'm sorry, I couldn't process that request.";
 }
 
 export async function generateAiInsight(

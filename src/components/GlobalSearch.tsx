@@ -57,6 +57,29 @@ export function GlobalSearch() {
     setLoading(false);
   };
 
+  const fetchHistory = async () => {
+    const { data, error } = await supabase
+      .from('ai_chat_history')
+      .select('sender, content')
+      .order('created_at', { ascending: true })
+      .limit(50);
+    
+    if (error) {
+      console.error("Error fetching chat history:", error);
+      toast.error("Could not load chat history.");
+    } else {
+      setConversation(data as ConversationMessage[]);
+    }
+  };
+
+  useEffect(() => {
+    if (open) {
+      fetchHistory();
+    } else {
+      resetSearch();
+    }
+  }, [open]);
+
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
       if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
@@ -126,7 +149,6 @@ export function GlobalSearch() {
   const handleSendMessage = async (message: string) => {
     if (!message.trim()) return;
   
-    const oldConversation = [...conversation];
     const newConversationForUi: ConversationMessage[] = [...conversation, { sender: 'user', content: message }];
     setConversation(newConversationForUi);
     setQuery("");
@@ -134,6 +156,24 @@ export function GlobalSearch() {
     setResults({ projects: [], users: [], goals: [], bills: [], tasks: [] });
     setLoading(false);
   
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      setConversation(prev => [...prev, { sender: 'ai', content: `Sorry, I can't save your message because you're not logged in.` }]);
+      setIsAiLoading(false);
+      return;
+    }
+
+    const { error: insertError } = await supabase
+      .from('ai_chat_history')
+      .insert({ user_id: user.id, sender: 'user', content: message });
+
+    if (insertError) {
+      console.error("Failed to save user message:", insertError);
+      setConversation(prev => [...prev, { sender: 'ai', content: `Sorry, I couldn't save your message to the history.` }]);
+      setIsAiLoading(false);
+      return;
+    }
+
     const mainContentElement = document.querySelector('main');
     const pageContent = mainContentElement ? mainContentElement.innerText : document.body.innerText;
 
@@ -144,7 +184,7 @@ export function GlobalSearch() {
     };
 
     try {
-      const result = await analyzeProjects(message, oldConversation, pageContext);
+      const result = await analyzeProjects(message, [], pageContext);
       
       const successKeywords = ['done!', 'updated', 'created', 'changed', 'i\'ve made'];
       if (successKeywords.some(keyword => result.toLowerCase().includes(keyword))) {
@@ -184,7 +224,7 @@ export function GlobalSearch() {
           <span className="text-xs">⌘</span>K
         </kbd>
       </Button>
-      <CommandDialog open={open} onOpenChange={(isOpen) => { setOpen(isOpen); if (!isOpen) resetSearch(); }}>
+      <CommandDialog open={open} onOpenChange={setOpen}>
         <CommandInput 
           placeholder="Search or ask AI..." 
           value={query}
