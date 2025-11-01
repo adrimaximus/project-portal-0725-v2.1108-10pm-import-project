@@ -84,6 +84,19 @@ export const PROJECT_STATUS_OPTIONS: { value: ProjectStatus; label: string }[] =
   { value: 'Bid Lost', label: 'Bid Lost' },
 ];
 
+export type PaymentStatus = 'Paid' | 'Overdue' | 'Due' | 'Unpaid' | 'Pending' | 'In Process' | 'Proposed' | 'Cancelled' | 'Bid Lost';
+
+export const PAYMENT_STATUS_OPTIONS: { value: PaymentStatus; label: string }[] = [
+    { value: 'Paid', label: 'Paid' },
+    { value: 'Overdue', label: 'Overdue' },
+    { value: 'Due', label: 'Due' },
+    { value: 'Unpaid', label: 'Unpaid' },
+    { value: 'Pending', label: 'Pending' },
+    { value: 'In Process', label: 'In Process' },
+    { value: 'Proposed', label: 'Proposed' },
+    { value: 'Cancelled', label: 'Cancelled' },
+];
+
 export interface UpsertTaskPayload {
   id?: string;
   project_id: string;
