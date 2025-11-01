@@ -47,7 +47,7 @@ const ProjectsPage = () => {
 
   const onHighlightComplete = useCallback(() => {
     if (taskIdFromParams) {
-      navigate('/projects?view=tasks', { replace: true });
+      navigate(`/projects?view=tasks`, { replace: true });
     } else {
       const newSearchParams = new URLSearchParams(searchParams);
       newSearchParams.delete('highlight');
@@ -80,7 +80,7 @@ const ProjectsPage = () => {
     sortConfig: projectSortConfig, requestSort: requestProjectSort, sortedProjects
   } = useProjectFilters(projectsData, advancedFilters);
 
-  const [taskSortConfig, setTaskSortConfig] = useState<{ key: keyof ProjectTask | string; direction: 'asc' | 'desc' }>({ key: 'updated_at', direction: 'desc' });
+  const [taskSortConfig, setTaskSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'updated_at', direction: 'desc' });
 
   const requestTaskSort = useCallback((key: string) => {
     setTaskSortConfig(prevConfig => {
