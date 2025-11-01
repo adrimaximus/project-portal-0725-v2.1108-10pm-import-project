@@ -1,5 +1,5 @@
 import React from 'react';
-import { Project, Task as ProjectTask, TaskStatus } from '@/types';
+import { Project, Task as ProjectTask, TaskStatus, ProjectStatus } from '@/types';
 import TableView from './TableView';
 import ListView from './ListView';
 import KanbanView from './KanbanView';
@@ -30,16 +30,17 @@ interface ProjectViewContainerProps {
   tasksQueryKey: any[];
   highlightedTaskId: string | null;
   onHighlightComplete: () => void;
+  onStatusChange: (projectId: string, newStatus: ProjectStatus) => void;
 }
 
 const ProjectViewContainer = ({
   view, projects, tasks, isLoading, isTasksLoading, onDeleteProject, sortConfig, requestSort, rowRefs,
   kanbanGroupBy, onEditTask, onDeleteTask, onToggleTaskCompletion, onTaskStatusChange, isToggling,
-  taskSortConfig, requestTaskSort, refetch, tasksQueryKey, highlightedTaskId, onHighlightComplete
+  taskSortConfig, requestTaskSort, refetch, tasksQueryKey, highlightedTaskId, onHighlightComplete, onStatusChange
 }: ProjectViewContainerProps) => {
   switch (view) {
     case 'table':
-      return <TableView projects={projects} isLoading={isLoading} onDeleteProject={onDeleteProject} sortConfig={sortConfig} requestSort={requestSort} rowRefs={rowRefs} />;
+      return <TableView projects={projects} isLoading={isLoading} onDeleteProject={onDeleteProject} sortConfig={sortConfig} requestSort={requestSort} rowRefs={rowRefs} onStatusChange={onStatusChange} />;
     case 'list':
       return <ListView projects={projects} onDeleteProject={onDeleteProject} />;
     case 'kanban':

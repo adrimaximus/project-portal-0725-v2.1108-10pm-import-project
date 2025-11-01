@@ -8,7 +8,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
-import { Project } from "@/types";
+import { Project, ProjectStatus } from '@/types';
 import { Link } from "react-router-dom";
 import { MoreHorizontal, Trash2 } from "lucide-react";
 import { Button } from "../ui/button";
@@ -37,6 +37,7 @@ interface TableViewProps {
   sortConfig: { key: keyof Project | null; direction: 'ascending' | 'descending' };
   requestSort: (key: keyof Project) => void;
   rowRefs: React.MutableRefObject<Map<string, HTMLTableRowElement>>;
+  onStatusChange: (projectId: string, newStatus: ProjectStatus) => void;
 }
 
 const formatProjectDateRange = (startDateStr: string | null | undefined, dueDateStr: string | null | undefined): string => {
@@ -117,11 +118,13 @@ interface ProjectRowProps {
   project: Project;
   onDeleteProject: (projectId: string) => void;
   rowRefs: React.MutableRefObject<Map<string, HTMLTableRowElement>>;
+  onStatusChange: (projectId: string, newStatus: ProjectStatus) => void;
 }
 
-const ProjectRow = ({ project, onDeleteProject, rowRefs }: ProjectRowProps) => {
+const ProjectRow = ({ project, onDeleteProject, rowRefs, onStatusChange }: ProjectRowProps) => {
   const paymentBadgeColor = getPaymentStatusStyles(project.payment_status).tw;
   const { name: venueName, full: fullVenue } = formatVenue(project.venue);
+  const hasOpenTasks = useMemo(() => project.tasks?.some(task => !task.completed) ?? false, [project.tasks]);
 
   const displayVenueName = venueName.length > 20 ? venueName.substring(0, 20) + '....' : venueName;
 
@@ -139,7 +142,7 @@ const ProjectRow = ({ project, onDeleteProject, rowRefs }: ProjectRowProps) => {
         <div className="text-sm text-muted-foreground">{project.category}</div>
       </TableCell>
       <TableCell>
-        <StatusBadge status={project.status} />
+        <StatusBadge status={project.status} onStatusChange={(newStatus) => onStatusChange(project.id, newStatus)} hasOpenTasks={hasOpenTasks} />
       </TableCell>
       <TableCell>
         <Badge variant="outline" className={cn("border-transparent font-normal", paymentBadgeColor)}>
@@ -189,7 +192,7 @@ const ProjectRow = ({ project, onDeleteProject, rowRefs }: ProjectRowProps) => {
   );
 };
 
-const TableView = ({ projects, isLoading, onDeleteProject, sortConfig, requestSort, rowRefs }: TableViewProps) => {
+const TableView = ({ projects, isLoading, onDeleteProject, sortConfig, requestSort, rowRefs, onStatusChange }: TableViewProps) => {
   const [visibleUpcomingCount, setVisibleUpcomingCount] = useState(10);
   const [visiblePastCount, setVisiblePastCount] = useState(15);
 
@@ -310,7 +313,7 @@ const TableView = ({ projects, isLoading, onDeleteProject, sortConfig, requestSo
                       </TableCell>
                     </TableRow>
                   )}
-                  <ProjectRow project={project} onDeleteProject={onDeleteProject} rowRefs={rowRefs} />
+                  <ProjectRow project={project} onDeleteProject={onDeleteProject} rowRefs={rowRefs} onStatusChange={onStatusChange} />
                 </React.Fragment>
               );
             })}
@@ -356,7 +359,7 @@ const TableView = ({ projects, isLoading, onDeleteProject, sortConfig, requestSo
                       </TableCell>
                     </TableRow>
                   )}
-                  <ProjectRow project={project} onDeleteProject={onDeleteProject} rowRefs={rowRefs} />
+                  <ProjectRow project={project} onDeleteProject={onDeleteProject} rowRefs={rowRefs} onStatusChange={onStatusChange} />
                 </React.Fragment>
               );
             })}
