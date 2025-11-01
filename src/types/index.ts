@@ -32,11 +32,11 @@ export const PAYMENT_STATUS_OPTIONS: { value: PaymentStatus; label: string }[] =
   { value: 'Proposed', label: 'Proposed' },
   { value: 'Quo Approved', label: 'Quo Approved' },
   { value: 'Inv Approved', label: 'Inv Approved' },
-  { value: 'In Process', label: 'In Process' },
   { value: 'Pending', label: 'Pending' },
-  { value: 'Overdue', label: 'Overdue' },
+  { value: 'In Process', label: 'In Process' },
   { value: 'Partially Paid', label: 'Partially Paid' },
   { value: 'Paid', label: 'Paid' },
+  { value: 'Overdue', label: 'Overdue' },
   { value: 'Cancelled', label: 'Cancelled' },
 ];
 
