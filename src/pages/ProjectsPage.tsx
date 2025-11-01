@@ -161,7 +161,8 @@ const ProjectsPage = () => {
     }
   }, [isTaskView, refetchTasks, refetchProjects]);
 
-  const { upsertTask, isUpserting, deleteTask, toggleTaskCompletion, isToggling, updateProjectStatus } = useTaskMutations(refetch);
+  const { upsertTask, isUpserting, deleteTask, toggleTaskCompletion, isToggling } = useTaskMutations(refetch);
+  const { updateProjectStatus } = useProjectMutations();
 
   const allTasks = useMemo(() => {
     if (isTaskView) {

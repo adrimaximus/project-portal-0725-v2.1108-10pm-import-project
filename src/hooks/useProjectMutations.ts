@@ -7,13 +7,15 @@ import { getErrorMessage } from '@/lib/utils';
 import { v4 as uuidv4 } from 'uuid';
 import { useAuth } from '@/contexts/AuthContext';
 
-export const useProjectMutations = (slug: string) => {
+export const useProjectMutations = (slug?: string) => {
     const queryClient = useQueryClient();
     const navigate = useNavigate();
     const { user } = useAuth();
 
     const invalidateProjectQueries = () => {
-        queryClient.invalidateQueries({ queryKey: ['project', slug] });
+        if (slug) {
+            queryClient.invalidateQueries({ queryKey: ['project', slug] });
+        }
         queryClient.invalidateQueries({ queryKey: ['projects'] });
     };
 
@@ -87,7 +89,7 @@ export const useProjectMutations = (slug: string) => {
             return data;
         },
         onSuccess: (data: any) => {
-            if (slug !== data.slug) {
+            if (slug && slug !== data.slug) {
                 toast.success("Project updated successfully! Redirecting...");
                 navigate(`/projects/${data.slug}`, { replace: true });
             } else {
