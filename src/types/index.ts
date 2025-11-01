@@ -214,6 +214,7 @@ export type User = {
 };
 
 export type Collaborator = User;
+export type AssignedUser = User & { role: string };
 
 export type Reaction = {
   id: string;

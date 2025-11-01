@@ -1,123 +1,86 @@
-import { Project, Reaction } from "@/types";
-import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Button } from "@/components/ui/button";
-import { SmilePlus } from "lucide-react";
-import EmojiPicker, { EmojiStyle } from "emoji-picker-react";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
-import { toast } from "sonner";
+"use client";
 
-interface ProjectReactionsProps {
-  project: Project;
-  onReactionsChange: (reactions: Reaction[]) => void;
+import { useState } from "react";
+import { Star } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import StarRatingDisplay from "./StarRatingDisplay";
+
+interface ProjectRatingProps {
+  submittedRating?: number;
+  submittedComment?: string;
+  onSubmit: (rating: number, comment: string) => void;
 }
 
-const ProjectReactions = ({ project, onReactionsChange }: ProjectReactionsProps) => {
-  const { user } = useAuth();
-  const commonEmojis = ['👍', '❤️', '😂', '🎉', '🙏', '😢'];
+const ProjectRating = ({ submittedRating, submittedComment, onSubmit }: ProjectRatingProps) => {
+  const [rating, setRating] = useState(0);
+  const [hoverRating, setHoverRating] = useState(0);
+  const [comment, setComment] = useState("");
 
-  const handleEmojiSelect = async (emoji: string) => {
-    if (!user) return;
-
-    const currentReactions = project.reactions || [];
-    let newReactions: Reaction[];
-    const existingReactionIndex = currentReactions.findIndex(r => r.user_id === user.id);
-
-    if (existingReactionIndex > -1) {
-      if (currentReactions[existingReactionIndex].emoji === emoji) {
-        newReactions = currentReactions.filter(r => r.user_id !== user.id);
-      } else {
-        newReactions = currentReactions.map(r => 
-          r.user_id === user.id ? { ...r, emoji } : r
-        );
-      }
-    } else {
-      newReactions = [
-        ...currentReactions,
-        {
-          id: `temp-${Date.now()}`,
-          emoji,
-          user_id: user.id,
-          user_name: `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email || 'You',
-        }
-      ];
-    }
-    
-    onReactionsChange(newReactions);
-
-    const { error } = await supabase.rpc('toggle_project_reaction', {
-      p_project_id: project.id,
-      p_emoji: emoji,
-    });
-
-    if (error) {
-      console.error("Error toggling project reaction:", error);
-      toast.error("Failed to save reaction.");
-      onReactionsChange(currentReactions);
-    }
+  const handleSubmit = () => {
+    onSubmit(rating, comment);
   };
 
-  const groupedReactions = (project.reactions || []).reduce((acc, reaction) => {
-    if (!acc[reaction.emoji]) {
-      acc[reaction.emoji] = { users: [], userIds: [] };
-    }
-    acc[reaction.emoji].users.push(reaction.user_name);
-    acc[reaction.emoji].userIds.push(reaction.user_id);
-    return acc;
-  }, {} as Record<string, { users: string[]; userIds: string[] }>);
+  // Display view: if a rating has been submitted
+  if (submittedRating) {
+    return (
+      <div className="space-y-3">
+        <div className="space-y-1.5">
+          <Label>Rating</Label>
+          <StarRatingDisplay rating={submittedRating} />
+        </div>
+        {submittedComment && (
+          <div className="space-y-1.5">
+            <Label>Comment</Label>
+            <p className="text-sm text-muted-foreground bg-gray-50 dark:bg-gray-900/50 p-3 rounded-md whitespace-pre-wrap border">
+              {submittedComment}
+            </p>
+          </div>
+        )}
+      </div>
+    );
+  }
 
-  const stopPropagation = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-  };
-
+  // Form view: if no rating has been submitted yet
   return (
-    <div className="flex items-center gap-2 flex-wrap">
-      {Object.entries(groupedReactions).map(([emoji, { users, userIds }]) => {
-        const userHasReacted = user ? userIds.includes(user.id) : false;
-        return (
-          <TooltipProvider key={emoji} delayDuration={100}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Badge
-                  variant={userHasReacted ? "default" : "outline"}
-                  className={cn(
-                    "cursor-pointer text-xs px-1.5 py-0.5",
-                    userHasReacted && "bg-muted text-foreground"
-                  )}
-                  onClick={() => handleEmojiSelect(emoji)}
-                >
-                  {emoji} {users.length}
-                </Badge>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{users.join(', ')}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        );
-      })}
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full">
-            <SmilePlus className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent onClick={stopPropagation} className="p-0 w-auto border-0">
-          <EmojiPicker
-            onEmojiClick={(emojiObject) => handleEmojiSelect(emojiObject.emoji)}
-            emojiStyle={EmojiStyle.NATIVE}
-            previewConfig={{ showPreview: false }}
-            width={350}
-            height={400}
-          />
-        </PopoverContent>
-      </Popover>
+    <div className="space-y-3 rounded-lg border bg-card text-card-foreground p-4 shadow-sm">
+        <h4 className="font-semibold">Project Review</h4>
+        <div className="space-y-1.5">
+            <Label>Rating</Label>
+            <div className="flex items-center gap-1">
+                {[1, 2, 3, 4, 5].map((star) => (
+                <Star
+                    key={star}
+                    className={cn(
+                    "h-6 w-6 cursor-pointer transition-colors",
+                    (hoverRating || rating) >= star
+                        ? "text-yellow-400 fill-yellow-400"
+                        : "text-gray-300 hover:text-yellow-300"
+                    )}
+                    onClick={() => setRating(star)}
+                    onMouseEnter={() => setHoverRating(star)}
+                    onMouseLeave={() => setHoverRating(0)}
+                />
+                ))}
+            </div>
+        </div>
+        <div className="space-y-1.5">
+            <Label htmlFor="comment">Comment</Label>
+            <Textarea
+                id="comment"
+                placeholder="Tell us about your experience with this project..."
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                className="min-h-[80px]"
+            />
+        </div>
+        <Button onClick={handleSubmit} disabled={rating === 0 || !comment.trim()} size="sm">
+            Submit Review
+        </Button>
     </div>
   );
 };
 
-export default ProjectReactions;
+export default ProjectRating;

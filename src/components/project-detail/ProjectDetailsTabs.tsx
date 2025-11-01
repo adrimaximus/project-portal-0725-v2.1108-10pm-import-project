@@ -29,8 +29,10 @@ const ProjectDetailsTabs = ({ project, isEditing }: ProjectDetailsTabsProps) => 
         <ProjectBrief
           files={project.briefFiles || []}
           isEditing={isEditing}
-          onFilesAdd={handleFilesAdd}
+          onFilesChange={handleFilesAdd}
           onFileDelete={handleFileDelete}
+          onSetIsEditing={() => {}}
+          isUploading={false}
         />
       </TabsContent>
       <TabsContent value="comments">

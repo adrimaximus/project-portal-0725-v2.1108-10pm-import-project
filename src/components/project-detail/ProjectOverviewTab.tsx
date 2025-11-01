@@ -17,6 +17,8 @@ interface ProjectOverviewTabProps {
   onServicesChange: (services: string[]) => void;
   onTagsChange: (tags: Tag[]) => void;
   onReactionsChange: (reactions: Reaction[]) => void;
+  onSetIsEditing: (isEditing: boolean) => void;
+  isUploading: boolean;
 }
 
 const ProjectOverviewTab = ({ 
@@ -26,7 +28,9 @@ const ProjectOverviewTab = ({
   onFilesAdd, 
   onFileDelete,
   onTagsChange,
-  onReactionsChange
+  onReactionsChange,
+  onSetIsEditing,
+  isUploading,
 }: ProjectOverviewTabProps) => {
   const [isGenerating, setIsGenerating] = useState(false);
 
@@ -72,6 +76,7 @@ const ProjectOverviewTab = ({
             description={project.description}
             isEditing={isEditing}
             onDescriptionChange={onDescriptionChange}
+            onSetIsEditing={onSetIsEditing}
             aiOptions={{
               onGenerate: handleGenerateBrief,
               isGenerating: isGenerating,
@@ -94,8 +99,10 @@ const ProjectOverviewTab = ({
             <ProjectBrief
               files={project.briefFiles || []}
               isEditing={isEditing}
-              onFilesAdd={onFilesAdd}
+              onFilesChange={onFilesAdd}
               onFileDelete={onFileDelete}
+              onSetIsEditing={onSetIsEditing}
+              isUploading={isUploading}
             />
           </div>
         </CardContent>
