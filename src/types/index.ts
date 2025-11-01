@@ -108,3 +108,84 @@ export type Attachment = {
   file_size: number | null;
   created_at: string;
 };
+
+export const CONTACT_PROPERTY_TYPES = [
+  'text', 'textarea', 'number', 'date', 'email', 'phone', 'url', 'image', 'multi-image', 'select', 'multi-select', 'checkbox'
+] as const;
+
+export type ContactProperty = {
+  id: string;
+  name: string;
+  label: string;
+  type: (typeof CONTACT_PROPERTY_TYPES)[number];
+  options?: string[] | null;
+  is_default?: boolean;
+};
+
+export const COMPANY_PROPERTY_TYPES = [
+  'text', 'textarea', 'number', 'date', 'email', 'phone', 'url', 'image', 'select'
+] as const;
+
+export type CompanyProperty = {
+  id: string;
+  name: string;
+  label: string;
+  type: (typeof COMPANY_PROPERTY_TYPES)[number];
+  options?: string[] | null;
+  is_default?: boolean;
+};
+
+export type Company = {
+  id: string;
+  name: string;
+  legal_name?: string | null;
+  address?: string | null;
+  billing_address?: string | null;
+  logo_url?: string | null;
+  created_at?: string;
+  updated_at?: string;
+  user_id?: string | null;
+  custom_properties?: Record<string, any> | null;
+};
+
+export type Person = {
+  id: string;
+  full_name: string;
+  contact?: {
+    emails?: string[];
+    phones?: string[];
+  } | null;
+  company?: string | null;
+  job_title?: string | null;
+  department?: string | null;
+  social_media?: {
+    linkedin?: string;
+    twitter?: string;
+    instagram?: string;
+  } | null;
+  birthday?: string | null;
+  notes?: string | null;
+  created_at: string;
+  updated_at: string;
+  projects?: { id: string; name: string; slug: string }[] | null;
+  tags?: Tag[] | null;
+  avatar_url?: string | null;
+  user_id?: string | null;
+  address?: any;
+  email?: string | null;
+  phone?: string | null;
+  company_id?: string | null;
+  slug?: string;
+  kanban_order?: number;
+  custom_properties?: Record<string, any> | null;
+};
+
+export type Tag = {
+  id: string;
+  name: string;
+  color: string;
+  user_id?: string | null;
+  isNew?: boolean;
+  type?: string;
+  lead_time?: number | null;
+};
