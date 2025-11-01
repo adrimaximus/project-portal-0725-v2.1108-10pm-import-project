@@ -38,7 +38,7 @@ export const getPaymentStatusStyles = (status: PaymentStatus) => {
     case 'Partially Paid':
       return { tw: 'bg-yellow-100 text-yellow-800', hex: '#f59e0b' };
     case 'Pending':
-      return { tw: 'bg-blue-100 text-blue-800', hex: '#3b82f6' };
+      return { tw: 'bg-yellow-100 text-yellow-800', hex: '#f59e0b' };
     case 'In Process':
       return { tw: 'bg-purple-100 text-purple-800', hex: '#8b5cf6' };
     case 'Requested':
@@ -50,7 +50,7 @@ export const getPaymentStatusStyles = (status: PaymentStatus) => {
     case 'Inv Approved':
       return { tw: 'bg-emerald-100 text-emerald-800', hex: '#10b981' };
     case 'Cancelled':
-      return { tw: 'bg-gray-100 text-gray-800', hex: '#6b7280' };
+      return { tw: 'bg-red-100 text-red-800', hex: '#ef4444' };
     case 'Bid Lost':
       return { tw: 'bg-gray-100 text-gray-800', hex: '#6b7280' };
     default:

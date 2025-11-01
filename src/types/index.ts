@@ -37,6 +37,7 @@ export const PAYMENT_STATUS_OPTIONS: { value: PaymentStatus; label: string }[] =
   { value: 'Overdue', label: 'Overdue' },
   { value: 'Partially Paid', label: 'Partially Paid' },
   { value: 'Paid', label: 'Paid' },
+  { value: 'Cancelled', label: 'Cancelled' },
 ];
 
 export type TaskStatus = 'To do' | 'In Progress' | 'Done' | 'Blocked';
