@@ -702,6 +702,8 @@ async function analyzeProjects(payload: any, context: any) {
       const transcription = await openai.audio.transcriptions.create({
         file: audioResponse,
         model: "whisper-1",
+        language: "id",
+        prompt: "Ini adalah transkripsi untuk asisten manajemen proyek. Kata-kata umum termasuk proyek, tugas, tujuan, anggaran, klien, dan tenggat waktu.",
       });
       
       request = transcription.text;

@@ -209,7 +209,7 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                               {message.text && (
                                 <div className={cn(
                                   "text-sm whitespace-pre-wrap break-words prose prose-sm max-w-none [&_p]:my-0",
-                                  isCurrentUser ? "prose-invert" : "dark:prose-invert"
+                                  isCurrentUser ? "prose-invert prose-a:text-primary-foreground" : "dark:prose-invert"
                                 )}>
                                   <ReactMarkdown
                                     components={{
