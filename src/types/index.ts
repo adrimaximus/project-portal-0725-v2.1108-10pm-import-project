@@ -453,3 +453,40 @@ export interface Service {
 
 // Theme
 export type Theme = "light" | "dark" | "system" | "claude" | "claude-light" | "nature" | "nature-light" | "corporate" | "corporate-light" | "ahensi" | "ahensi-light" | "brand-activator" | "brand-activator-light";
+
+// Knowledge Base
+export type FolderAccessLevel = 'private' | 'public_view' | 'public_edit';
+
+export interface KbFolder {
+  id: string;
+  user_id: string;
+  name: string;
+  description: string | null;
+  created_at: string;
+  updated_at: string;
+  slug: string;
+  icon: string | null;
+  color: string | null;
+  category: string | null;
+  access_level: FolderAccessLevel;
+  last_modified_by: string | null;
+}
+
+export interface KbArticle {
+  id: string;
+  folder_id: string;
+  user_id: string;
+  title: string;
+  content: { html: string } | string | null;
+  slug: string;
+  created_at: string;
+  updated_at: string;
+  header_image_url: string | null;
+  kb_folders: {
+    name: string;
+    slug: string;
+  };
+  tags: Tag[];
+  creator: User;
+  kb_article_reactions: Reaction[];
+}
