@@ -37,7 +37,7 @@ export interface AssignedUser extends User {
   role: 'owner' | 'admin' | 'member' | 'editor';
 }
 export type Owner = User;
-export type Member = User & { role: string };
+export type Member = User & { role: 'owner' | 'admin' | 'member' | 'editor' };
 
 // Tags
 export interface Tag {
