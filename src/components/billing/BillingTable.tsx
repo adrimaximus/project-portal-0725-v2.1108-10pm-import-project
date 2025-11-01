@@ -189,7 +189,7 @@ const BillingTable = ({ invoices, onEdit, sortColumn, sortDirection, handleSort,
               <TableCell>
                 <PaymentStatusBadge 
                   status={invoice.status} 
-                  onStatusChange={(newStatus) => onStatusChange(invoice.id, newStatus)} 
+                  onStatusChange={(newStatus) => onStatusChange(invoice.rawProjectId, newStatus)} 
                 />
               </TableCell>
               <TableCell>{invoice.poNumber || 'N/A'}</TableCell>

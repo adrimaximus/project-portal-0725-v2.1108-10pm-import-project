@@ -17,6 +17,9 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 const Billing = () => {
   const { data: projects = [], isLoading } = useProjects();
@@ -27,6 +30,43 @@ const Billing = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [viewMode, setViewMode] = useState<'table' | 'kanban'>('table');
+  const queryClient = useQueryClient();
+
+  const updatePaymentStatusMutation = useMutation({
+    mutationFn: async ({ projectId, newStatus }: { projectId: string, newStatus: PaymentStatus }) => {
+        const { error } = await supabase
+            .from('projects')
+            .update({ payment_status: newStatus })
+            .eq('id', projectId);
+        if (error) throw error;
+    },
+    onMutate: async ({ projectId, newStatus }) => {
+        await queryClient.cancelQueries({ queryKey: ['projects'] });
+        const previousProjects = queryClient.getQueryData<Project[]>(['projects']);
+        
+        queryClient.setQueryData<Project[]>(['projects'], (old) =>
+            old?.map(p => p.id === projectId ? { ...p, payment_status: newStatus } : p)
+        );
+
+        return { previousProjects };
+    },
+    onError: (err: any, variables, context) => {
+        if (context?.previousProjects) {
+            queryClient.setQueryData(['projects'], context.previousProjects);
+        }
+        toast.error("Failed to update payment status.", { description: err.message });
+    },
+    onSuccess: () => {
+      toast.success("Payment status updated.");
+    },
+    onSettled: () => {
+        queryClient.invalidateQueries({ queryKey: ['projects'] });
+    },
+  });
+
+  const handleStatusChange = (projectId: string, newStatus: PaymentStatus) => {
+      updatePaymentStatusMutation.mutate({ projectId, newStatus });
+  };
   
   const invoices: Invoice[] = useMemo(() => projects
     .map(project => {
@@ -191,6 +231,7 @@ const Billing = () => {
                 sortColumn={sortColumn}
                 sortDirection={sortDirection}
                 handleSort={handleSort}
+                onStatusChange={handleStatusChange}
               />
             ) : (
               <BillingKanbanView invoices={activeInvoices} onEditInvoice={handleEdit} />
@@ -213,6 +254,7 @@ const Billing = () => {
                       sortColumn={sortColumn}
                       sortDirection={sortDirection}
                       handleSort={handleSort}
+                      onStatusChange={handleStatusChange}
                     />
                   ) : (
                     <BillingKanbanView invoices={archivedInvoices} onEditInvoice={handleEdit} />
