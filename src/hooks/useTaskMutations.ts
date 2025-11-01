@@ -275,5 +275,19 @@ export const useTaskMutations = (refetch?: () => void) => {
     }
   });
 
-  return { upsertTask, isUpserting, deleteTask, toggleTaskCompletion, isToggling, updateTaskStatusAndOrder, toggleTaskReaction, sendReminder, isSendingReminder };
+  const { mutate: updateProjectStatus } = useMutation({
+    mutationFn: async ({ projectId, status }: { projectId: string, status: string }) => {
+      const { error } = await supabase.from('projects').update({ status }).eq('id', projectId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Project status updated');
+      invalidateQueries();
+    },
+    onError: (error: any) => {
+      toast.error('Failed to update project status', { description: error.message });
+    }
+  });
+
+  return { upsertTask, isUpserting, deleteTask, toggleTaskCompletion, isToggling, updateTaskStatusAndOrder, toggleTaskReaction, sendReminder, isSendingReminder, updateProjectStatus };
 };

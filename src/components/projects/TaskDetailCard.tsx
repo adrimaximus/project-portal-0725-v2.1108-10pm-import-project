@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Task, TaskAttachment, Reaction, User } from '@/types';
+import { Task, TaskAttachment, Reaction, User, ProjectStatus } from '@/types';
 import { DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -17,6 +17,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import TaskDiscussion from './TaskDiscussion';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
+import StatusBadge from '../StatusBadge';
 
 interface TaskDetailCardProps {
   task: Task;
@@ -80,7 +81,7 @@ const getDueDateClassName = (dueDateStr: string | null, completed: boolean): str
 
 const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, onDelete }) => {
   const queryClient = useQueryClient();
-  const { toggleTaskReaction, sendReminder, isSendingReminder } = useTaskMutations();
+  const { toggleTaskReaction, sendReminder, isSendingReminder, updateProjectStatus } = useTaskMutations();
 
   const allAttachments = useMemo(() => {
     if (!task) return [];
@@ -107,6 +108,10 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
 
   const handleSendReminder = () => {
     sendReminder(task.id);
+  };
+
+  const handleProjectStatusChange = (newStatus: ProjectStatus) => {
+    updateProjectStatus({ projectId: task.project_id, status: newStatus });
   };
 
   const statusStyle = getTaskStatusStyles(task.status);
@@ -202,13 +207,19 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
               ) : <span className="text-muted-foreground">No due date</span>}
             </div>
             <div className="flex items-center gap-2">
-              <h4 className="font-semibold">Status</h4>
+              <h4 className="font-semibold">Task Status</h4>
               <Badge className={cn(statusStyle.tw, 'border-transparent text-xs')}>{task.status}</Badge>
             </div>
             <div className="flex items-center gap-2">
               <h4 className="font-semibold">Priority</h4>
               <Badge className={cn(priorityStyle.tw, 'text-xs')}>{task.priority || 'Low'}</Badge>
             </div>
+            {task.project_status && (
+              <div className="flex items-center gap-2">
+                <h4 className="font-semibold">Project Status</h4>
+                <StatusBadge status={task.project_status} onStatusChange={handleProjectStatusChange} />
+              </div>
+            )}
           </div>
 
           {task.tags && task.tags.length > 0 && (
