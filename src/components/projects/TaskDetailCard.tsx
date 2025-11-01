@@ -13,6 +13,7 @@ import remarkGfm from 'remark-gfm';
 import TaskAttachmentList from './TaskAttachmentList';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 import { useTaskMutations } from '@/hooks/useTaskMutations';
+import { useProjectMutations } from '@/hooks/useProjectMutations';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import TaskDiscussion from './TaskDiscussion';
@@ -81,7 +82,8 @@ const getDueDateClassName = (dueDateStr: string | null, completed: boolean): str
 
 const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, onDelete }) => {
   const queryClient = useQueryClient();
-  const { toggleTaskReaction, sendReminder, isSendingReminder, updateProjectStatus } = useTaskMutations();
+  const { toggleTaskReaction, sendReminder, isSendingReminder } = useTaskMutations();
+  const { updateProjectStatus } = useProjectMutations(task.project_slug);
 
   const allAttachments = useMemo(() => {
     if (!task) return [];
@@ -111,7 +113,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
   };
 
   const handleProjectStatusChange = (newStatus: ProjectStatus) => {
-    updateProjectStatus({ projectId: task.project_id, status: newStatus });
+    updateProjectStatus.mutate({ projectId: task.project_id, status: newStatus });
   };
 
   const statusStyle = getTaskStatusStyles(task.status);
