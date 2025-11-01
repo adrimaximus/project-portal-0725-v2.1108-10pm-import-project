@@ -161,38 +161,6 @@ CONTEXT:
 - Available Folders: ${JSON.stringify(context.summarizedFolders, null, 2)}
 `;
 
-const articleWriterFeaturePrompts = {
-  'generate-article-from-title': {
-    system: `You are an expert writer. Write a comprehensive article in HTML format based on the following title. The article should be well-structured with headings (h2, h3), paragraphs (p), and lists (ul, li) where appropriate. Respond ONLY with the HTML content.`,
-    user: (payload: any) => `Title: "${payload.title}"`,
-    max_tokens: 2048,
-  },
-  'expand-article-text': {
-    system: `You are an expert writer. Your task is to expand upon a selected piece of text within a larger article. Develop the idea further, add more detail, and ensure it flows naturally with the rest of the content. Respond ONLY with the new, expanded HTML content that should replace the original selected text. Do not repeat the original text unless it's naturally part of the expansion.`,
-    user: (payload: any) => `Article Title: "${payload.title}"\n\nFull Article Content (for context):\n${payload.fullContent}\n\nExpand this selected text:\n"${payload.selectedText}"`,
-    max_tokens: 1024,
-  },
-  'improve-article-content': {
-    system: `You are an expert editor. Improve the following article content for clarity, grammar, and engagement. Maintain the original meaning and tone. Respond ONLY with the improved HTML content, preserving the original HTML structure as much as possible. Do not add any explanatory text before or after the HTML.`,
-    user: (payload: any) => `Improve this content:\n\n${payload.content}`,
-    max_tokens: 2048,
-  },
-  'summarize-article-content': {
-    system: `You are an expert editor. Your task is to summarize the provided text.
-- If you are given only 'content', summarize that content.
-- If you are given 'content' (a selection), 'fullArticleContent', and 'articleTitle', summarize the 'content' selection *within the context* of the full article. The summary should fit seamlessly back into the article.
-- The summary should be concise, capture the main points, and be presented in well-structured HTML format (paragraphs, lists).
-- Respond ONLY with the summarized HTML content.`,
-    user: (payload: any) => {
-      if (payload.fullArticleContent && payload.articleTitle) {
-        return `Article Title: "${payload.articleTitle}"\n\nFull Article Content (for context):\n${payload.fullContent}\n\nSummarize this selected text:\n"${payload.content}"`;
-      }
-      return `Summarize this content:\n\n${payload.content}`;
-    },
-    max_tokens: 1024,
-  }
-};
-
 // From _shared/context.ts
 const buildContext = async (supabaseClient: any, user: any) => {
   console.log("[DIAGNOSTIC] buildContext: Starting context build.");
@@ -340,6 +308,84 @@ const executeAction = async (actionData: any, context: any) => {
                 if (error) return `I failed to update the project. The database said: ${error.message}`;
                 return `I've updated the project "${project.name}".`;
             }
+            case 'DELETE_PROJECT': {
+                const { project_name } = actionData;
+                if (!project_name) return "I need a project name to delete it.";
+
+                const project = projects.find((p: any) => p.name.toLowerCase() === project_name.toLowerCase());
+                if (!project) return `I couldn't find a project named "${project_name}".`;
+
+                const { error } = await userSupabase.from('projects').delete().eq('id', project.id);
+                if (error) return `I failed to delete the project. The database said: ${error.message}`;
+
+                return `Done! I've deleted the project "${project_name}".`;
+            }
+            case 'CREATE_TASK': {
+                const { project_name, task_title, assignees } = actionData;
+                if (!project_name || !task_title) {
+                    return "I need both a project name and a task title to create a task.";
+                }
+
+                const project = projects.find((p: any) => p.name.toLowerCase() === project_name.toLowerCase());
+                if (!project) {
+                    return `I couldn't find a project named "${project_name}".`;
+                }
+
+                let assigneeIds: string[] = [];
+                if (assignees && assignees.length > 0) {
+                    assigneeIds = users
+                        .filter((u: any) => assignees.some((name: string) => 
+                            `${u.first_name || ''} ${u.last_name || ''}`.trim().toLowerCase() === name.toLowerCase() || 
+                            u.email.toLowerCase() === name.toLowerCase()
+                        ))
+                        .map((u: any) => u.id);
+                }
+
+                const { data: newTask, error } = await userSupabase.rpc('create_task_with_assignees', {
+                    p_project_id: project.id,
+                    p_title: task_title,
+                    p_assignee_ids: assigneeIds.length > 0 ? assigneeIds : null,
+                });
+
+                if (error) {
+                    return `I failed to create the task. The database said: ${error.message}`;
+                }
+
+                return `Done! I've created the task "${task_title}" in the "${project_name}" project.`;
+            }
+            case 'ASSIGN_TASK':
+            case 'UNASSIGN_TASK': {
+                const { project_name, task_title, assignees } = actionData;
+                if (!project_name || !task_title || !assignees || assignees.length === 0) {
+                    return "I need a project name, a task title, and at least one assignee.";
+                }
+
+                const project = projects.find((p: any) => p.name.toLowerCase() === project_name.toLowerCase());
+                if (!project) return `I couldn't find a project named "${project_name}".`;
+
+                const task = project.tasks.find((t: any) => t.title.toLowerCase() === task_title.toLowerCase());
+                if (!task) return `I couldn't find a task named "${task_title}" in that project.`;
+
+                const assigneeIds = users
+                    .filter((u: any) => assignees.some((name: string) => 
+                        `${u.first_name || ''} ${u.last_name || ''}`.trim().toLowerCase() === name.toLowerCase() || 
+                        u.email.toLowerCase() === name.toLowerCase()
+                    ))
+                    .map((u: any) => u.id);
+                
+                if (assigneeIds.length === 0) return `I couldn't find the users you mentioned.`;
+
+                if (actionData.action === 'ASSIGN_TASK') {
+                    const assignments = assigneeIds.map((userId: string) => ({ task_id: task.id, user_id: userId }));
+                    const { error } = await userSupabase.from('task_assignees').insert(assignments).select();
+                    if (error) return `I failed to assign the task. The database said: ${error.message}`;
+                    return `OK, I've assigned ${assignees.join(', ')} to the task "${task_title}".`;
+                } else { // UNASSIGN_TASK
+                    const { error } = await userSupabase.from('task_assignees').delete().eq('task_id', task.id).in('user_id', assigneeIds);
+                    if (error) return `I failed to unassign from the task. The database said: ${error.message}`;
+                    return `OK, I've unassigned ${assignees.join(', ')} from the task "${task_title}".`;
+                }
+            }
             case 'CREATE_GOAL': {
                 const { goal_details } = actionData;
                 const { data: newGoal, error } = await userSupabase.rpc('create_goal_and_link_tags', {
@@ -410,8 +456,8 @@ const executeAction = async (actionData: any, context: any) => {
                 }
 
                 if (!folder_id) {
-                    const { data: defaultFolderId, error: folderError } = await userSupabase.rpc('create_default_kb_folder');
-                    if (folderError || !defaultFolderId) return `I couldn't find or create a default folder for the article: ${folderError?.message}`;
+                    const { data: defaultFolderId, error: rpcError } = await userSupabase.rpc('create_default_kb_folder');
+                    if (rpcError || !defaultFolderId) return `I couldn't find or create a default folder for the article: ${rpcError?.message}`;
                     folder_id = defaultFolderId;
                 }
 
