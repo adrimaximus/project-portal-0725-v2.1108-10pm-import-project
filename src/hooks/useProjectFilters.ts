@@ -42,21 +42,31 @@ export const useProjectFilters = (projects: Project[], advancedFilters: Advanced
 
   const sortedProjects = useMemo(() => {
     let sortableItems = [...filteredProjects];
+    const tieBreaker = (a: Project, b: Project) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+
     if (sortConfig.key !== null) {
       sortableItems.sort((a, b) => {
         const aValue = a[sortConfig.key!];
         const bValue = b[sortConfig.key!];
 
-        if (aValue === null || aValue === undefined) return 1;
-        if (bValue === null || bValue === undefined) return -1;
+        if (aValue == null && bValue != null) return 1;
+        if (aValue != null && bValue == null) return -1;
+        if (aValue == null && bValue == null) return tieBreaker(a, b);
 
-        if (String(aValue).toLowerCase() < String(bValue).toLowerCase()) {
-          return sortConfig.direction === 'ascending' ? -1 : 1;
+        let compareResult = 0;
+        if (typeof aValue === 'number' && typeof bValue === 'number') {
+          compareResult = aValue - bValue;
+        } else if (aValue instanceof Date && bValue instanceof Date) {
+          compareResult = aValue.getTime() - bValue.getTime();
+        } else {
+          compareResult = String(aValue).localeCompare(String(bValue));
         }
-        if (String(aValue).toLowerCase() > String(bValue).toLowerCase()) {
-          return sortConfig.direction === 'ascending' ? 1 : -1;
+
+        if (compareResult !== 0) {
+          return sortConfig.direction === 'ascending' ? compareResult : -compareResult;
         }
-        return 0;
+
+        return tieBreaker(a, b);
       });
     } else {
       // Default sorting logic
@@ -67,11 +77,17 @@ export const useProjectFilters = (projects: Project[], advancedFilters: Advanced
 
       const upcomingProjects = projectsWithDates
         .filter(p => !isBefore(new Date(p.start_date!), today))
-        .sort((a, b) => new Date(a.start_date!).getTime() - new Date(b.start_date!).getTime());
+        .sort((a, b) => {
+          const dateCompare = new Date(a.start_date!).getTime() - new Date(b.start_date!).getTime();
+          return dateCompare !== 0 ? dateCompare : tieBreaker(a, b);
+        });
 
       const pastProjects = projectsWithDates
         .filter(p => isBefore(new Date(p.start_date!), today))
-        .sort((a, b) => new Date(b.start_date!).getTime() - new Date(a.start_date!).getTime());
+        .sort((a, b) => {
+          const dateCompare = new Date(b.start_date!).getTime() - new Date(a.start_date!).getTime();
+          return dateCompare !== 0 ? dateCompare : tieBreaker(a, b);
+        });
 
       sortableItems = [...upcomingProjects, ...pastProjects, ...projectsWithoutDates];
     }
