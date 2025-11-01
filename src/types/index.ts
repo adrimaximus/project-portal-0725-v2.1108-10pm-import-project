@@ -216,6 +216,7 @@ export interface Project {
   briefFiles: ProjectFile[];
   activities: Activity[];
   tags: Tag[];
+  services: string[];
   client_name: string | null;
   client_avatar_url: string | null;
   client_company_logo_url: string | null;
