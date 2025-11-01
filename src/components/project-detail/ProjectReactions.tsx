@@ -1,5 +1,5 @@
 import { Project, Reaction } from "@/types";
-import { useSession } from "@/hooks/useSession";
+import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
@@ -16,7 +16,7 @@ interface ProjectReactionsProps {
 }
 
 const ProjectReactions = ({ project, onReactionsChange }: ProjectReactionsProps) => {
-  const { user } = useSession();
+  const { user } = useAuth();
   const commonEmojis = ['👍', '❤️', '😂', '🎉', '🙏', '😢'];
 
   const handleEmojiSelect = async (emoji: string) => {
@@ -41,7 +41,7 @@ const ProjectReactions = ({ project, onReactionsChange }: ProjectReactionsProps)
           id: `temp-${Date.now()}`,
           emoji,
           user_id: user.id,
-          user_name: `${user.user_metadata.first_name || ''} ${user.user_metadata.last_name || ''}`.trim() || user.email || 'You',
+          user_name: `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email || 'You',
         }
       ];
     }
