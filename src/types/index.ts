@@ -2,16 +2,18 @@ import { Database } from './supabase';
 
 export type Project = Database['public']['Functions']['get_dashboard_projects']['Returns'][0];
 
-export type ProjectStatus = "On Track" | "At Risk" | "Off Track" | "On Hold" | "Completed" | "Cancelled" | "Bid Lost";
+export type ProjectStatus = "Requested" | "On Hold" | "Reschedule" | "In Progress" | "Billing Process" | "Completed" | "Cancelled" | "Bid Lost" | "Archived";
 
 export const PROJECT_STATUS_OPTIONS: { value: ProjectStatus; label: string }[] = [
-    { value: 'On Track', label: 'On Track' },
-    { value: 'At Risk', label: 'At Risk' },
-    { value: 'Off Track', label: 'Off Track' },
+    { value: 'Requested', label: 'Requested' },
     { value: 'On Hold', label: 'On Hold' },
+    { value: 'Reschedule', label: 'Reschedule' },
+    { value: 'In Progress', label: 'In Progress' },
+    { value: 'Billing Process', label: 'Billing Process' },
     { value: 'Completed', label: 'Completed' },
     { value: 'Cancelled', label: 'Cancelled' },
     { value: 'Bid Lost', label: 'Bid Lost' },
+    { value: 'Archived', label: 'Archived' },
 ];
 
 export type PaymentStatus =

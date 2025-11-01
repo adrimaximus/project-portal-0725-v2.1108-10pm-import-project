@@ -10,20 +10,24 @@ export function cn(...inputs: ClassValue[]) {
 
 export const getProjectStatusStyles = (status: ProjectStatus) => {
   switch (status) {
-    case 'On Track':
-      return { tw: 'bg-green-100 text-green-800', hex: '#22c55e' };
-    case 'At Risk':
-      return { tw: 'bg-yellow-100 text-yellow-800', hex: '#f59e0b' };
-    case 'Off Track':
-      return { tw: 'bg-red-100 text-red-800', hex: '#ef4444' };
-    case 'On Hold':
-      return { tw: 'bg-gray-100 text-gray-800', hex: '#6b7280' };
-    case 'Completed':
+    case 'Requested':
       return { tw: 'bg-blue-100 text-blue-800', hex: '#3b82f6' };
+    case 'On Hold':
+      return { tw: 'bg-yellow-100 text-yellow-800', hex: '#f59e0b' };
+    case 'Reschedule':
+      return { tw: 'bg-yellow-100 text-yellow-800', hex: '#f59e0b' };
+    case 'In Progress':
+      return { tw: 'bg-blue-100 text-blue-800', hex: '#3b82f6' };
+    case 'Billing Process':
+      return { tw: 'bg-blue-100 text-blue-800', hex: '#3b82f6' };
+    case 'Completed':
+      return { tw: 'bg-green-100 text-green-800', hex: '#22c55e' };
     case 'Cancelled':
-      return { tw: 'bg-gray-100 text-gray-800 line-through', hex: '#6b7280' };
+      return { tw: 'bg-red-100 text-red-800', hex: '#ef4444' };
     case 'Bid Lost':
-        return { tw: 'bg-gray-100 text-gray-800 line-through', hex: '#6b7280' };
+      return { tw: 'bg-gray-100 text-gray-800', hex: '#6b7280' };
+    case 'Archived':
+      return { tw: 'bg-gray-100 text-gray-800', hex: '#6b7280' };
     default:
       return { tw: 'bg-gray-100 text-gray-800', hex: '#6b7280' };
   }
