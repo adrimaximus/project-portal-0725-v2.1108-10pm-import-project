@@ -171,7 +171,7 @@ export type Person = {
   notes?: string | null;
   created_at: string;
   updated_at: string;
-  projects?: { id: string; name: string; slug: string; status: string; }[] | null;
+  projects?: { id: string; name: string; slug: string; status: ProjectStatus; }[] | null;
   tags?: Tag[] | null;
   avatar_url?: string | null;
   user_id?: string | null;
@@ -249,7 +249,7 @@ export type Task = {
   project_id: string;
   project_name: string;
   project_slug: string;
-  project_status: string;
+  project_status: ProjectStatus;
   assignedTo: User[];
   created_by: User;
   created_at: string;
@@ -466,7 +466,8 @@ export type Activity = {
 };
 
 type BaseProject = Database['public']['Functions']['get_dashboard_projects']['Returns'][0];
-export type Project = Omit<BaseProject, 'activities' | 'assignedTo' | 'tasks' | 'comments' | 'briefFiles' | 'tags' | 'reactions' | 'services'> & {
+export type Project = Omit<BaseProject, 'status' | 'activities' | 'assignedTo' | 'tasks' | 'comments' | 'briefFiles' | 'tags' | 'reactions' | 'services'> & {
+  status: ProjectStatus;
   activities: Activity[];
   assignedTo: AssignedUser[];
   tasks: Task[];
