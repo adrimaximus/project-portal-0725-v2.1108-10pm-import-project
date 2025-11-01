@@ -13,6 +13,8 @@ export function getProjectStatusStyles(status: string) {
       return { hex: "#22c55e", tw: "bg-green-100 text-green-800 border-green-200" };
     case "In Progress":
       return { hex: "#3b82f6", tw: "bg-blue-100 text-blue-800 border-blue-200" };
+    case "Billing Process":
+      return { hex: "#8b5cf6", tw: "bg-violet-100 text-violet-800 border-violet-200" };
     case "On Hold":
       return { hex: "#f97316", tw: "bg-orange-100 text-orange-800 border-orange-200" };
     case "Reschedule":
