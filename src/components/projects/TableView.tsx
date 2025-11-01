@@ -128,6 +128,17 @@ const ProjectRow = ({ project, onDeleteProject, rowRefs, onStatusChange }: Proje
 
   const displayVenueName = venueName.length > 20 ? venueName.substring(0, 20) + '....' : venueName;
 
+  let displayStatus: ProjectStatus = project.status as ProjectStatus;
+  if (!displayStatus) {
+    const now = new Date();
+    const dueDate = project.due_date ? new Date(project.due_date) : null;
+    if (dueDate && isBefore(dueDate, now)) {
+      displayStatus = "Billing Process";
+    } else {
+      displayStatus = "In Progress";
+    }
+  }
+
   return (
     <TableRow 
       ref={el => {
@@ -135,14 +146,14 @@ const ProjectRow = ({ project, onDeleteProject, rowRefs, onStatusChange }: Proje
         else rowRefs.current.delete(project.id);
       }}
     >
-      <TableCell style={{ borderLeft: `4px solid ${getProjectStatusStyles(project.status).hex}` }}>
+      <TableCell style={{ borderLeft: `4px solid ${getProjectStatusStyles(displayStatus).hex}` }}>
         <Link to={`/projects/${project.slug}`} className="font-medium text-primary hover:underline">
           {project.name}
         </Link>
         <div className="text-sm text-muted-foreground">{project.category}</div>
       </TableCell>
       <TableCell>
-        <StatusBadge status={project.status} onStatusChange={(newStatus) => onStatusChange(project.id, newStatus)} hasOpenTasks={hasOpenTasks} />
+        <StatusBadge status={displayStatus} onStatusChange={(newStatus) => onStatusChange(project.id, newStatus)} hasOpenTasks={hasOpenTasks} />
       </TableCell>
       <TableCell>
         <Badge variant="outline" className={cn("border-transparent font-normal", paymentBadgeColor)}>
