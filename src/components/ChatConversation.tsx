@@ -208,9 +208,8 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                             <div className="min-w-0 flex-grow">
                               {message.text && (
                                 <div className={cn(
-                                  "text-sm whitespace-pre-wrap break-words prose prose-sm dark:prose-invert max-w-none",
-                                  isCurrentUser ? "prose-p:text-primary-foreground" : "",
-                                  "[&_p]:my-0"
+                                  "text-sm whitespace-pre-wrap break-words prose prose-sm max-w-none [&_p]:my-0",
+                                  isCurrentUser ? "prose-invert" : "dark:prose-invert"
                                 )}>
                                   <ReactMarkdown
                                     components={{
