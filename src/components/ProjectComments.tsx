@@ -15,7 +15,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Textarea } from "@/components/ui/textarea";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 import CommentAttachmentItem from './CommentAttachmentItem';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import CommentReactionPicker from './CommentReactionPicker';
@@ -270,8 +270,8 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
                                 <DialogTitle>Attachments ({attachments.length})</DialogTitle>
                               </DialogHeader>
                               <div className="space-y-2 max-h-96 overflow-y-auto pr-2">
-                                {attachments.map((file, index) => (
-                                  <CommentAttachmentItem key={file.url || file.file_url || index} file={file} />
+                                {attachments.map((file: any, index: number) => (
+                                  <CommentAttachmentItem key={file.id || index} file={file} />
                                 ))}
                               </div>
                             </DialogContent>

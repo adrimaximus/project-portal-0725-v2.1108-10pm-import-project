@@ -21,6 +21,8 @@ interface ProjectMainContentProps {
   onToggleCommentReaction: (commentId: string, emoji: string) => void;
   highlightedTaskId: string | null;
   onTaskHighlightComplete: () => void;
+  onSetIsEditing: (isEditing: boolean) => void;
+  isUploading: boolean;
 }
 
 const ProjectMainContent = ({ 
@@ -36,6 +38,8 @@ const ProjectMainContent = ({
   onToggleCommentReaction,
   highlightedTaskId,
   onTaskHighlightComplete,
+  onSetIsEditing,
+  isUploading,
 }: ProjectMainContentProps) => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState(defaultTab);
@@ -118,6 +122,8 @@ const ProjectMainContent = ({
             onServicesChange={(services) => onFieldChange('services', services)}
             onTagsChange={(tags) => onFieldChange('tags', tags)}
             onReactionsChange={(reactions) => onFieldChange('reactions', reactions)}
+            onSetIsEditing={onSetIsEditing}
+            isUploading={isUploading}
           />
         </TabsContent>
         <TabsContent value="tasks" className="mt-4">

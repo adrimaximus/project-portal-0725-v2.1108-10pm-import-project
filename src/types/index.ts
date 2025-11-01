@@ -426,3 +426,24 @@ export type Service = {
   icon_color: string;
   is_featured: boolean;
 };
+
+export type ProjectFile = {
+  id: string;
+  name: string;
+  url: string;
+  storage_path: string;
+  size: number;
+  type: string;
+};
+
+export type Comment = {
+  id: string;
+  created_at: string;
+  text: string;
+  isTicket: boolean;
+  attachment_url: string | null;
+  attachment_name: string | null;
+  attachments_jsonb: ProjectFile[] | null;
+  author: User;
+  reactions?: Reaction[];
+};
