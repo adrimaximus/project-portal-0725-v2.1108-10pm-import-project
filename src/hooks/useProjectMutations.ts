@@ -443,7 +443,7 @@ export const useProjectMutations = (slug?: string) => {
                 if (taskError) {
                     toast.warning("Comment updated, but failed to create the associated task.");
                 }
-
+    
                 if (newTask && mentionedUserIds.length > 0) {
                     const projectMemberIds = project.assignedTo.map(m => m.id);
                     const newMemberIds = mentionedUserIds.filter(id => !projectMemberIds.includes(id));
@@ -560,6 +560,23 @@ export const useProjectMutations = (slug?: string) => {
         },
     });
 
+    const toggleProjectReaction = useMutation({
+        mutationFn: async ({ projectId, emoji }: { projectId: string, emoji: string }) => {
+            if (!user) throw new Error("User not authenticated");
+            const { error } = await supabase.rpc('toggle_project_reaction', {
+                p_project_id: projectId,
+                p_emoji: emoji,
+            });
+            if (error) throw error;
+        },
+        onSuccess: () => {
+            invalidateProjectQueries();
+        },
+        onError: (err: any) => {
+            toast.error("Failed to update reaction.", { description: getErrorMessage(err) });
+        },
+    });
+
     return {
         updateProject,
         addFiles,
@@ -574,5 +591,6 @@ export const useProjectMutations = (slug?: string) => {
         deleteProject,
         toggleCommentReaction,
         updateProjectStatus,
+        toggleProjectReaction,
     };
 };

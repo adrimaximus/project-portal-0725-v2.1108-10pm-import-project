@@ -1,86 +1,70 @@
-"use client";
+import { Reaction, Project } from '@/types';
+import { useAuth } from '@/contexts/AuthContext';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { cn } from '@/lib/utils';
+import EmojiReactionPicker from '../EmojiReactionPicker';
+import { useProjectMutations } from '@/hooks/useProjectMutations';
 
-import { useState } from "react";
-import { Star } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import StarRatingDisplay from "./StarRatingDisplay";
-
-interface ProjectRatingProps {
-  submittedRating?: number;
-  submittedComment?: string;
-  onSubmit: (rating: number, comment: string) => void;
+interface ProjectReactionsProps {
+  project: Project;
+  onReactionsChange: (reactions: Reaction[]) => void;
 }
 
-const ProjectRating = ({ submittedRating, submittedComment, onSubmit }: ProjectRatingProps) => {
-  const [rating, setRating] = useState(0);
-  const [hoverRating, setHoverRating] = useState(0);
-  const [comment, setComment] = useState("");
+const ProjectReactions = ({ project }: ProjectReactionsProps) => {
+  const { user: currentUser } = useAuth();
+  const { toggleProjectReaction } = useProjectMutations(project.slug);
 
-  const handleSubmit = () => {
-    onSubmit(rating, comment);
+  const handleToggleReaction = (emoji: string) => {
+    if (toggleProjectReaction) {
+      toggleProjectReaction.mutate({ projectId: project.id, emoji });
+    }
   };
 
-  // Display view: if a rating has been submitted
-  if (submittedRating) {
-    return (
-      <div className="space-y-3">
-        <div className="space-y-1.5">
-          <Label>Rating</Label>
-          <StarRatingDisplay rating={submittedRating} />
-        </div>
-        {submittedComment && (
-          <div className="space-y-1.5">
-            <Label>Comment</Label>
-            <p className="text-sm text-muted-foreground bg-gray-50 dark:bg-gray-900/50 p-3 rounded-md whitespace-pre-wrap border">
-              {submittedComment}
-            </p>
-          </div>
-        )}
-      </div>
-    );
-  }
+  const reactions = project.reactions || [];
 
-  // Form view: if no rating has been submitted yet
+  const groupedReactions = reactions.reduce((acc, reaction) => {
+    if (!acc[reaction.emoji]) {
+      acc[reaction.emoji] = [];
+    }
+    acc[reaction.emoji].push(reaction);
+    return acc;
+  }, {} as Record<string, Reaction[]>);
+
   return (
-    <div className="space-y-3 rounded-lg border bg-card text-card-foreground p-4 shadow-sm">
-        <h4 className="font-semibold">Project Review</h4>
-        <div className="space-y-1.5">
-            <Label>Rating</Label>
-            <div className="flex items-center gap-1">
-                {[1, 2, 3, 4, 5].map((star) => (
-                <Star
-                    key={star}
-                    className={cn(
-                    "h-6 w-6 cursor-pointer transition-colors",
-                    (hoverRating || rating) >= star
-                        ? "text-yellow-400 fill-yellow-400"
-                        : "text-gray-300 hover:text-yellow-300"
-                    )}
-                    onClick={() => setRating(star)}
-                    onMouseEnter={() => setHoverRating(star)}
-                    onMouseLeave={() => setHoverRating(0)}
-                />
-                ))}
-            </div>
-        </div>
-        <div className="space-y-1.5">
-            <Label htmlFor="comment">Comment</Label>
-            <Textarea
-                id="comment"
-                placeholder="Tell us about your experience with this project..."
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-                className="min-h-[80px]"
-            />
-        </div>
-        <Button onClick={handleSubmit} disabled={rating === 0 || !comment.trim()} size="sm">
-            Submit Review
-        </Button>
+    <div className="flex flex-wrap items-center gap-1">
+      {Object.entries(groupedReactions).map(([emoji, reactionList]) => {
+        const userHasReacted = reactionList.some(r => r.user_id === currentUser?.id);
+        const userNames = reactionList.map(r => r.user_id === currentUser?.id ? 'You' : r.user_name).join(', ');
+
+        return (
+          <TooltipProvider key={emoji} delayDuration={100}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleToggleReaction(emoji); }}
+                  className={cn(
+                    "px-1.5 py-0.5 rounded-full text-xs flex items-center gap-1 transition-colors border",
+                    userHasReacted
+                      ? "bg-primary/20 border-primary/50"
+                      : "bg-muted hover:bg-muted/80"
+                  )}
+                >
+                  <span>{emoji}</span>
+                  <span className="font-medium text-xs">{reactionList.length}</span>
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{userNames}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        );
+      })}
+      <div onClick={(e) => e.stopPropagation()}>
+        <EmojiReactionPicker onSelect={handleToggleReaction} />
+      </div>
     </div>
   );
 };
 
-export default ProjectRating;
+export default ProjectReactions;
