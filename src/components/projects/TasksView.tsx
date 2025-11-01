@@ -20,10 +20,11 @@ import TaskDetailCard from './TaskDetailCard';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import EmojiPicker, { EmojiStyle } from "emoji-picker-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useSession } from "@/hooks/useSession";
+import { useAuth } from "@/contexts/AuthContext";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { User as AuthUser } from '@supabase/supabase-js';
 
 interface TasksViewProps {
   tasks: ProjectTask[];
@@ -74,7 +75,7 @@ const aggregateAttachments = (task: ProjectTask): TaskAttachment[] => {
 
 const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTaskCompletion, onStatusChange, isToggling, sortConfig, requestSort, rowRefs, highlightedTaskId, onHighlightComplete }: TasksViewProps) => {
   const [selectedTask, setSelectedTask] = useState<ProjectTask | null>(null);
-  const { user } = useSession();
+  const { user } = useAuth();
   const [tasks, setTasks] = useState<ProjectTask[]>(tasksProp);
   const queryClient = useQueryClient();
   const commonEmojis = ['👍', '❤️', '😂', '🎉', '🙏', '😢'];
@@ -233,7 +234,7 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
               id: `temp-${Date.now()}`,
               emoji,
               user_id: user.id,
-              user_name: `${user.user_metadata.first_name || ''} ${user.user_metadata.last_name || ''}`.trim() || user.email || 'You',
+              user_name: `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email || 'You',
             });
           }
           return { ...task, reactions: newReactions };
@@ -307,7 +308,7 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
   };
 
   let lastMonthYear: string | null = null;
-  const isDateSorted = sortConfig.key === 'due_date';
+  const isDateSorted = sortConfig.key === null || sortConfig.key === 'due_date';
 
   return (
     <div className="w-full overflow-x-auto">
@@ -570,7 +571,7 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
                             isOverdue(task.due_date) && !task.completed && "ring-2 ring-destructive rounded-md px-1"
                           )}>
                             <SelectValue>
-                              <Badge variant="outline" className={cn(statusStyle.tw, 'border-transparent')}>
+                              <Badge variant="outline" className={cn(getTaskStatusStyles(task.status).tw, 'border-transparent font-normal')}>
                                 {task.status}
                               </Badge>
                             </SelectValue>
