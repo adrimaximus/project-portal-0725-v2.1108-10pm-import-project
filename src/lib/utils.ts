@@ -1,7 +1,7 @@
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
 import { ProjectStatus, PaymentStatus } from "@/types";
-import { format as formatFns, utcToZonedTime } from 'date-fns-tz';
+import { format as formatFns, toZonedTime } from 'date-fns-tz';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -60,6 +60,6 @@ export const getPaymentStatusStyles = (status: PaymentStatus) => {
 export const formatInJakarta = (date: Date | string, formatString: string) => {
   const timeZone = 'Asia/Jakarta';
   const dateObj = typeof date === 'string' ? new Date(date) : date;
-  const zonedDate = utcToZonedTime(dateObj, timeZone);
+  const zonedDate = toZonedTime(dateObj, timeZone);
   return formatFns(zonedDate, formatString, { timeZone });
 };
