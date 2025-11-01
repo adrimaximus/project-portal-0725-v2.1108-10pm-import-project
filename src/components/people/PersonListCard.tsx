@@ -20,6 +20,7 @@ interface PersonListCardProps {
 const PersonListCard: React.FC<PersonListCardProps> = ({ person, onEdit, onDelete, onViewProfile }) => {
   const emailToDisplay = person.contact?.emails?.[0] || person.email;
   const phoneToDisplay = (person.contact as any)?.phones?.[0] || person.phone;
+  const displayAddress = (typeof person.address === 'object' && person.address?.formatted_address) || (typeof person.address === 'string' && person.address) || null;
 
   const handleCopyEmail = (e: React.MouseEvent, email: string) => {
     e.stopPropagation();
@@ -61,10 +62,10 @@ const PersonListCard: React.FC<PersonListCardProps> = ({ person, onEdit, onDelet
             <span>{person.job_title}{person.job_title && person.company ? ' at ' : ''}{person.company}</span>
           </div>
         )}
-        {person.address?.formatted_address && (
+        {displayAddress && (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <MapPin className="h-4 w-4 flex-shrink-0" />
-            <span className="truncate">{person.address.formatted_address}</span>
+            <span className="truncate">{displayAddress}</span>
           </div>
         )}
         <div className="flex items-center gap-4 pt-2 border-t">

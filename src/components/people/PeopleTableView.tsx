@@ -138,7 +138,7 @@ const PeopleTableView: React.FC<PeopleTableViewProps> = ({ people, isLoading, on
                       </p>
                     </TableCell>
                     <TableCell className="hidden lg:table-cell max-w-[200px] truncate text-sm text-muted-foreground cursor-pointer" onClick={() => onViewProfile(person)}>
-                      {person.address?.formatted_address || '-'}
+                      {(typeof person.address === 'object' && person.address?.formatted_address) || (typeof person.address === 'string' && person.address) || '-'}
                     </TableCell>
                     <TableCell className="hidden md:table-cell cursor-pointer" onClick={() => onViewProfile(person)}>
                       <div className="flex items-center gap-3">
