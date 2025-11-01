@@ -39,6 +39,25 @@ export const PAYMENT_STATUS_OPTIONS: { value: PaymentStatus; label: string }[] =
   { value: 'Paid', label: 'Paid' },
 ];
 
+export type TaskStatus = 'To do' | 'In Progress' | 'Done' | 'Blocked';
+
+export const TASK_STATUS_OPTIONS: { value: TaskStatus; label: string }[] = [
+    { value: 'To do', label: 'To do' },
+    { value: 'In Progress', label: 'In Progress' },
+    { value: 'Done', label: 'Done' },
+    { value: 'Blocked', label: 'Blocked' },
+];
+
+export type TaskPriority = 'Urgent' | 'High' | 'Medium' | 'Normal' | 'Low';
+
+export const TASK_PRIORITY_OPTIONS: { value: TaskPriority; label: string }[] = [
+    { value: 'Urgent', label: 'Urgent' },
+    { value: 'High', label: 'High' },
+    { value: 'Medium', label: 'Medium' },
+    { value: 'Normal', label: 'Normal' },
+    { value: 'Low', label: 'Low' },
+];
+
 export type Invoice = {
   id: string;
   projectId: string;
