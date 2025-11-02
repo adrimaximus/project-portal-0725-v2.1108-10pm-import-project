@@ -176,7 +176,7 @@ const PeoplePage = () => {
                 </Button>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="icon">
+                    <Button>
                       <Settings className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
