@@ -8,7 +8,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import CompanyFormDialog from './CompanyFormDialog';
-import { Company, CompanyProperty } from '@/types';
+import { Company, CustomProperty } from '@/types';
 import { useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 import { Input } from '@/components/ui/input';
@@ -31,10 +31,10 @@ const CompaniesView = () => {
         }
     });
 
-    const { data: properties = [], isLoading: isLoadingProperties } = useQuery<CompanyProperty[]>({
-        queryKey: ['company_properties'],
+    const { data: properties = [], isLoading: isLoadingProperties } = useQuery<CustomProperty[]>({
+        queryKey: ['custom_properties', 'company'],
         queryFn: async () => {
-            const { data, error } = await supabase.from('company_properties').select('*').order('label');
+            const { data, error } = await supabase.from('custom_properties').select('*').eq('category', 'company').order('label');
             if (error) throw error;
             return data;
         },

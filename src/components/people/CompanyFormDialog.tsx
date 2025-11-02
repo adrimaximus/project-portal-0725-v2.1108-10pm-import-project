@@ -9,11 +9,12 @@ import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
-import { Company, CompanyProperty } from '@/types';
+import { Company, CustomProperty } from '@/types';
 import { ScrollArea } from '../ui/scroll-area';
 import { Loader2, Building } from "lucide-react";
 import ImageUploader from '../ui/ImageUploader';
 import AddressAutocompleteInput from '../AddressAutocompleteInput';
+import CustomPropertyInput from '../settings/CustomPropertyInput';
 
 interface CompanyFormDialogProps {
     open: boolean;
@@ -35,10 +36,10 @@ const CompanyFormDialog: React.FC<CompanyFormDialogProps> = ({ open, onOpenChang
     const queryClient = useQueryClient();
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const { data: properties = [], isLoading: isLoadingProperties } = useQuery<CompanyProperty[]>({
-        queryKey: ['company_properties'],
+    const { data: properties = [], isLoading: isLoadingProperties } = useQuery<CustomProperty[]>({
+        queryKey: ['custom_properties', 'company'],
         queryFn: async () => {
-            const { data, error } = await supabase.from('company_properties').select('*').order('label');
+            const { data, error } = await supabase.from('custom_properties').select('*').eq('category', 'company').order('label');
             if (error) throw error;
             return data;
         },
@@ -96,7 +97,7 @@ const CompanyFormDialog: React.FC<CompanyFormDialogProps> = ({ open, onOpenChang
         setIsSubmitting(false);
     };
 
-    const renderCustomField = (prop: CompanyProperty) => {
+    const renderCustomField = (prop: CustomProperty) => {
         return (
             <FormField
                 key={prop.id}
@@ -104,14 +105,12 @@ const CompanyFormDialog: React.FC<CompanyFormDialogProps> = ({ open, onOpenChang
                 name={`custom_properties.${prop.name}`}
                 render={({ field }) => (
                     <FormItem>
-                        <FormLabel>{prop.label}</FormLabel>
-                        <FormControl>
-                            <Input 
-                                type={prop.type === 'number' ? 'number' : prop.type === 'date' ? 'date' : 'text'}
-                                {...field}
-                                value={field.value ?? ''}
-                            />
-                        </FormControl>
+                        <CustomPropertyInput 
+                            property={prop} 
+                            control={form.control} 
+                            name={`custom_properties.${prop.name}`} 
+                            bucket="company-logos"
+                        />
                         <FormMessage />
                     </FormItem>
                 )}
