@@ -203,13 +203,13 @@ const TagsSettingsPage = () => {
   };
 
   const SortableHeader = ({ column, label, onSort, sortConfig }: { column: any, label: string, onSort: (col: any) => void, sortConfig: { column: any, direction: SortDirection } }) => (
-    <TableHead>
-      <Button variant="ghost" onClick={() => onSort(column)} className="px-2">
+    <TableHead onClick={() => onSort(column)} className="cursor-pointer p-2">
+      <div className="flex items-center">
         {label}
         {sortConfig.column === column && (
-          sortConfig.direction === 'asc' ? <ArrowUp className="ml-2 h-4 w-4 inline" /> : <ArrowDown className="ml-2 h-4 w-4 inline" />
+          sortConfig.direction === 'asc' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />
         )}
-      </Button>
+      </div>
     </TableHead>
   );
 
