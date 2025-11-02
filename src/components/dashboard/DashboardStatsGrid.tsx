@@ -9,6 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { PROJECT_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAnimatedCounter } from '@/hooks/useAnimatedCounter';
+import { Lock } from 'lucide-react';
 
 interface DashboardStatsGridProps {
   projects: Project[];
@@ -16,7 +17,7 @@ interface DashboardStatsGridProps {
 
 type UserStatData = User & { projectCount: number; totalValue: number };
 
-const UserStat = ({ user, metric, metricType }: { user: UserStatData | null, metric: number, metricType: 'quantity' | 'value' }) => {
+const UserStat = ({ user, metric, metricType, canViewValue }: { user: UserStatData | null, metric: number, metricType: 'quantity' | 'value', canViewValue: boolean }) => {
   const animatedMetric = useAnimatedCounter(metric, 750);
 
   if (!user || metric === 0) {
@@ -27,6 +28,21 @@ const UserStat = ({ user, metric, metricType }: { user: UserStatData | null, met
       </div>
     );
   }
+
+  const renderMetric = () => {
+    if (metricType === 'value' && !canViewValue) {
+      return (
+        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+          <Lock className="h-3 w-3" />
+          <span>Restricted</span>
+        </div>
+      );
+    }
+    return metricType === 'quantity'
+      ? `${new Intl.NumberFormat('id-ID').format(animatedMetric)} project${animatedMetric === 1 ? '' : 's'}`
+      : `Rp\u00A0${new Intl.NumberFormat('id-ID').format(animatedMetric)}`;
+  };
+
   return (
     <div className="flex items-center gap-2 sm:gap-4 pt-2">
       <Avatar className="h-8 w-8 sm:h-10 sm:w-10">
@@ -36,9 +52,7 @@ const UserStat = ({ user, metric, metricType }: { user: UserStatData | null, met
       <div>
         <div className="text-base sm:text-lg font-bold leading-tight">{user.name}</div>
         <p className="text-xs text-muted-foreground">
-          {metricType === 'quantity'
-            ? `${new Intl.NumberFormat('id-ID').format(animatedMetric)} project${animatedMetric === 1 ? '' : 's'}`
-            : `Rp\u00A0${new Intl.NumberFormat('id-ID').format(animatedMetric)}`}
+          {renderMetric()}
         </p>
       </div>
     </div>
@@ -166,13 +180,12 @@ const DashboardStatsGrid = ({ projects }: DashboardStatsGridProps) => {
           value={stats.totalProjects}
           icon={<Briefcase className="h-4 w-4 text-muted-foreground" />}
         />
-        {canViewValue && (
-          <StatCard
-            title="Total Project Value"
-            value={`Rp\u00A0${new Intl.NumberFormat('id-ID').format(stats.totalValue)}`}
-            icon={<DollarSign className="h-4 w-4 text-muted-foreground" />}
-          />
-        )}
+        <StatCard
+          title="Total Project Value"
+          value={`Rp\u00A0${new Intl.NumberFormat('id-ID').format(stats.totalValue)}`}
+          icon={<DollarSign className="h-4 w-4 text-muted-foreground" />}
+          permission="projects:view_value"
+        />
         <StatCard
           title="Project Status"
           icon={<ListChecks className="h-4 w-4 text-muted-foreground" />}
@@ -187,7 +200,7 @@ const DashboardStatsGrid = ({ projects }: DashboardStatsGridProps) => {
                   <div key={option.value} className="flex justify-between">
                     <span>{option.label}</span>
                     <span className="font-semibold">
-                      {viewMode === 'quantity' ? count : `Rp\u00A0${new Intl.NumberFormat('id-ID').format(value)}`}
+                      {viewMode === 'quantity' ? count : (canViewValue ? `Rp\u00A0${new Intl.NumberFormat('id-ID').format(value)}` : '***')}
                     </span>
                   </div>
                 );
@@ -209,7 +222,7 @@ const DashboardStatsGrid = ({ projects }: DashboardStatsGridProps) => {
                   <div key={option.value} className="flex justify-between">
                     <span>{option.label}</span>
                     <span className="font-semibold">
-                      {viewMode === 'quantity' ? count : `Rp\u00A0${new Intl.NumberFormat('id-ID').format(value)}`}
+                      {viewMode === 'quantity' ? count : (canViewValue ? `Rp\u00A0${new Intl.NumberFormat('id-ID').format(value)}` : '***')}
                     </span>
                   </div>
                 );
@@ -225,6 +238,7 @@ const DashboardStatsGrid = ({ projects }: DashboardStatsGridProps) => {
               user={topOwner}
               metric={viewMode === 'quantity' ? topOwner?.projectCount ?? 0 : topOwner?.totalValue ?? 0}
               metricType={viewMode}
+              canViewValue={canViewValue}
             />
           }
         />
@@ -237,6 +251,7 @@ const DashboardStatsGrid = ({ projects }: DashboardStatsGridProps) => {
                 user={topCollaborator}
                 metric={topCollaborator?.projectCount ?? 0}
                 metricType={'quantity'}
+                canViewValue={canViewValue}
               />
             }
           />
@@ -249,6 +264,7 @@ const DashboardStatsGrid = ({ projects }: DashboardStatsGridProps) => {
               user={topPendingOwner}
               metric={viewMode === 'quantity' ? topPendingOwner?.projectCount ?? 0 : topPendingOwner?.totalValue ?? 0}
               metricType={viewMode}
+              canViewValue={canViewValue}
             />
           }
         />

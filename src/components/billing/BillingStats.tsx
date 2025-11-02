@@ -1,6 +1,6 @@
 import { Invoice } from '@/types';
 import StatCard from '@/components/dashboard/StatCard';
-import { DollarSign, Clock, AlertTriangle, Users } from "lucide-react";
+import { DollarSign, Clock, AlertTriangle, Users, Lock } from "lucide-react";
 import { format } from 'date-fns';
 import { useMemo, useState } from 'react';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
@@ -8,13 +8,17 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { getAvatarUrl, generatePastelColor } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { User } from '@/types';
+import { useAuth } from '@/contexts/AuthContext';
+import { useAnimatedCounter } from '@/hooks/useAnimatedCounter';
 
 type UserStatData = User & {
   projectCount: number;
   totalValue: number;
 };
 
-const UserStat = ({ user, metric, metricType }: { user: UserStatData | null, metric: number, metricType: 'count' | 'value' }) => {
+const UserStat = ({ user, metric, metricType, canViewValue }: { user: UserStatData | null, metric: number, metricType: 'count' | 'value', canViewValue: boolean }) => {
+  const animatedMetric = useAnimatedCounter(metric, 750);
+
   if (!user || metric === 0) {
     return (
       <div className="pt-2">
@@ -23,6 +27,21 @@ const UserStat = ({ user, metric, metricType }: { user: UserStatData | null, met
       </div>
     );
   }
+
+  const renderMetric = () => {
+    if (metricType === 'value' && !canViewValue) {
+      return (
+        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+          <Lock className="h-3 w-3" />
+          <span>Restricted</span>
+        </div>
+      );
+    }
+    return metricType === 'count'
+      ? `${new Intl.NumberFormat('id-ID').format(animatedMetric)} project${animatedMetric === 1 ? '' : 's'}`
+      : `Rp\u00A0${new Intl.NumberFormat('id-ID').format(animatedMetric)}`;
+  };
+
   return (
     <div className="flex items-center gap-2 pt-2">
       <Avatar className="h-6 w-6">
@@ -32,9 +51,7 @@ const UserStat = ({ user, metric, metricType }: { user: UserStatData | null, met
       <div>
         <div className="text-sm font-bold leading-tight">{user.name}</div>
         <p className="text-xs text-muted-foreground">
-          {metricType === 'count'
-            ? `${metric} project${metric === 1 ? '' : 's'}`
-            : `Rp\u00A0${new Intl.NumberFormat('id-ID').format(metric)}`}
+          {renderMetric()}
         </p>
       </div>
     </div>
@@ -43,6 +60,8 @@ const UserStat = ({ user, metric, metricType }: { user: UserStatData | null, met
 
 const BillingStats = ({ invoices }: { invoices: Invoice[] }) => {
   const [adminView, setAdminView] = useState<'count' | 'value'>('count');
+  const { hasPermission } = useAuth();
+  const canViewValue = hasPermission('projects:view_value');
 
   const stats = useMemo(() => {
     const outstandingBalance = invoices
@@ -86,6 +105,7 @@ const BillingStats = ({ invoices }: { invoices: Invoice[] }) => {
         value={`Rp ${stats.outstandingBalance.toLocaleString('id-ID')}`}
         icon={<DollarSign className="h-4 w-4 text-muted-foreground" />}
         description="Total amount due"
+        permission="projects:view_value"
       />
       <StatCard
         title="Next Payment Due"
@@ -105,16 +125,18 @@ const BillingStats = ({ invoices }: { invoices: Invoice[] }) => {
           <Users className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <ToggleGroup
-            type="single"
-            value={adminView}
-            onValueChange={(value) => { if (value) setAdminView(value as 'count' | 'value') }}
-            className="mb-2 justify-end"
-            size="sm"
-          >
-            <ToggleGroupItem value="count" aria-label="Show by project count">Qty</ToggleGroupItem>
-            <ToggleGroupItem value="value" aria-label="Show by total value">Value</ToggleGroupItem>
-          </ToggleGroup>
+          {canViewValue && (
+            <ToggleGroup
+              type="single"
+              value={adminView}
+              onValueChange={(value) => { if (value) setAdminView(value as 'count' | 'value') }}
+              className="mb-2 justify-end"
+              size="sm"
+            >
+              <ToggleGroupItem value="count" aria-label="Show by project count">Qty</ToggleGroupItem>
+              <ToggleGroupItem value="value" aria-label="Show by total value">Value</ToggleGroupItem>
+            </ToggleGroup>
+          )}
           <div className="space-y-3 max-h-24 overflow-y-auto pr-2">
             {sortedAdmins.length > 0 ? sortedAdmins.map(adminData => (
               <UserStat
@@ -122,6 +144,7 @@ const BillingStats = ({ invoices }: { invoices: Invoice[] }) => {
                 user={adminData}
                 metric={adminView === 'count' ? adminData.projectCount : adminData.totalValue}
                 metricType={adminView}
+                canViewValue={canViewValue}
               />
             )) : (
               <p className="text-sm text-muted-foreground text-center pt-4">No project admins found.</p>
