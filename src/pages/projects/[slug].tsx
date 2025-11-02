@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -36,6 +36,7 @@ const ProjectDetailPage = () => {
 
   const [isEditing, setIsEditing] = useState(false);
   const [editedProject, setEditedProject] = useState<Project | null>(null);
+  const [hasChanges, setHasChanges] = useState(false);
   const [isTaskFormOpen, setIsTaskFormOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
@@ -66,13 +67,6 @@ const ProjectDetailPage = () => {
     isUpserting: isSavingTask 
   } = useTaskMutations(() => queryClient.invalidateQueries({ queryKey: ['project', slug] }));
 
-  const hasChanges = useMemo(() => {
-    if (!isEditing || !project || !editedProject) {
-      return false;
-    }
-    return JSON.stringify(project) !== JSON.stringify(editedProject);
-  }, [isEditing, project, editedProject]);
-
   useEffect(() => {
     if (project) {
       const channel = supabase
@@ -94,12 +88,14 @@ const ProjectDetailPage = () => {
     if (project) {
       setEditedProject(JSON.parse(JSON.stringify(project))); // Deep copy
       setIsEditing(true);
+      setHasChanges(false);
     }
   };
 
   const handleCancelChanges = () => {
     setIsEditing(false);
     setEditedProject(null);
+    setHasChanges(false);
   };
 
   const handleSaveChanges = useCallback(() => {
@@ -107,6 +103,7 @@ const ProjectDetailPage = () => {
       updateProject.mutate(editedProject, {
         onSuccess: () => {
           setIsEditing(false);
+          setHasChanges(false);
           toast.success("Project saved successfully!");
         },
       });
@@ -132,6 +129,7 @@ const ProjectDetailPage = () => {
   const handleFieldChange = (field: keyof Project, value: any) => {
     if (editedProject) {
       setEditedProject(prev => prev ? { ...prev, [field]: value } : null);
+      setHasChanges(true);
     }
   };
 
