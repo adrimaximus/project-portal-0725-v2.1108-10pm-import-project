@@ -83,10 +83,7 @@ const getDueDateClassName = (dueDateStr: string | null, completed: boolean): str
 
 const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, onDelete }) => {
   const queryClient = useQueryClient();
-  const { toggleTaskReaction, sendReminder, isSendingReminder } = useTaskMutations(() => {
-    queryClient.invalidateQueries({ queryKey: ['tasks'] });
-    queryClient.invalidateQueries({ queryKey: ['project'] });
-  });
+  const { toggleTaskReaction, sendReminder, isSendingReminder } = useTaskMutations();
   const { updateProjectStatus } = useProjectMutations(task.project_slug);
   const scrollRef = useDragScrollY<HTMLDivElement>();
 
@@ -109,7 +106,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
   const handleCopyLink = () => {
     const url = `${window.location.origin}/tasks/${task.id}`;
     navigator.clipboard.writeText(`${task.project_name} | ${task.title}\n${url}`);
-    toast.success("Link copied!");
+    toast.success('Link copied!');
   };
 
   const handleSendReminder = () => sendReminder(task.id);
