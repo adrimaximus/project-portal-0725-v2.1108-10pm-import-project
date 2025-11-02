@@ -177,3 +177,30 @@ export interface Tag {
   isNew?: boolean;
   user_id?: string;
 }
+
+export const CUSTOM_PROPERTY_TYPES = [
+  'text',
+  'textarea',
+  'number',
+  'date',
+  'email',
+  'phone',
+  'url',
+  'image',
+  'multi-image',
+  'select',
+  'multi-select',
+  'checkbox',
+] as const;
+
+export type CustomPropertyType = (typeof CUSTOM_PROPERTY_TYPES)[number];
+
+export interface CustomProperty {
+  id: string;
+  name: string;
+  label: string;
+  type: CustomPropertyType;
+  options?: string[] | null;
+  category: 'contact' | 'company' | 'tag';
+  is_default: boolean;
+}
