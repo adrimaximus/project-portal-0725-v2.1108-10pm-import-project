@@ -56,7 +56,8 @@ const TICKET_TAG_NAME = 'Ticket';
 
 const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task, project }: TaskFormDialogProps) => {
   const isMobile = useIsMobile();
-  const { data: projects = [], isLoading: isLoadingProjects } = useProjects({ excludeOtherPersonal: true });
+  const { data: projectsData, isLoading: isLoadingProjects } = useProjects({ excludeOtherPersonal: true });
+  const projects = useMemo(() => projectsData?.pages.flatMap(page => page.projects) ?? [], [projectsData]);
   const { data: allTags = [], refetch: refetchTags } = useTags();
   const { data: allProfiles = [], isLoading: isLoadingProfiles } = useProfiles();
   const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
