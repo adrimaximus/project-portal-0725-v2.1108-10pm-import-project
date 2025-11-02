@@ -107,7 +107,7 @@ const ProjectsPage = () => {
   const requestTaskSort = useCallback((key: string) => {
     setTaskSortConfig(prevConfig => {
       let direction: 'asc' | 'desc' = 'asc';
-      if (prevConfig.key === key && prevConfig.direction === 'asc') {
+      if (prevConfig.key === key && prevConfig.direction === 'ascending') {
         direction = 'desc';
       }
       return { key, direction };

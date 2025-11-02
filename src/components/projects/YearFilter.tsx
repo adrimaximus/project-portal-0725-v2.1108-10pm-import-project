@@ -17,10 +17,16 @@ const YearFilter = ({ availableYears, selectedYear, onYearChange }: YearFilterPr
     { label: 'Archive (Older)', value: '0' },
   ];
 
+  const handleValueChange = (value: string) => {
+    if (typeof onYearChange === 'function') {
+      onYearChange(Number(value));
+    }
+  };
+
   return (
     <Select
       value={selectedYear === null ? String(currentYear) : String(selectedYear)}
-      onValueChange={(value) => onYearChange(Number(value))}
+      onValueChange={handleValueChange}
     >
       <SelectTrigger className="w-[180px]">
         <SelectValue placeholder="Filter by year..." />
