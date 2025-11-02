@@ -8,6 +8,7 @@ import { generatePastelColor, getAvatarUrl } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { PROJECT_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useAnimatedCounter } from '@/hooks/useAnimatedCounter';
 
 interface DashboardStatsGridProps {
   projects: Project[];
@@ -16,6 +17,8 @@ interface DashboardStatsGridProps {
 type UserStatData = User & { projectCount: number; totalValue: number };
 
 const UserStat = ({ user, metric, metricType }: { user: UserStatData | null, metric: number, metricType: 'quantity' | 'value' }) => {
+  const animatedMetric = useAnimatedCounter(metric, 750);
+
   if (!user || metric === 0) {
     return (
       <div className="pt-2">
@@ -34,8 +37,8 @@ const UserStat = ({ user, metric, metricType }: { user: UserStatData | null, met
         <div className="text-base sm:text-lg font-bold leading-tight">{user.name}</div>
         <p className="text-xs text-muted-foreground">
           {metricType === 'quantity'
-            ? `${metric} project${metric === 1 ? '' : 's'}`
-            : `Rp\u00A0${new Intl.NumberFormat('id-ID').format(metric)}`}
+            ? `${new Intl.NumberFormat('id-ID').format(animatedMetric)} project${animatedMetric === 1 ? '' : 's'}`
+            : `Rp\u00A0${new Intl.NumberFormat('id-ID').format(animatedMetric)}`}
         </p>
       </div>
     </div>
