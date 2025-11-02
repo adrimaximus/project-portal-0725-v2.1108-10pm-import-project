@@ -27,6 +27,7 @@ interface ProjectHeaderProps {
   onFieldChange: (field: keyof Project, value: any) => void;
   onStatusChange?: (newStatus: ProjectStatus) => void;
   hasOpenTasks: boolean;
+  hasChanges: boolean;
 }
 
 const ProjectHeader = ({
@@ -42,6 +43,7 @@ const ProjectHeader = ({
   onFieldChange,
   onStatusChange,
   hasOpenTasks,
+  hasChanges,
 }: ProjectHeaderProps) => {
   const navigate = useNavigate();
 
@@ -80,7 +82,7 @@ const ProjectHeader = ({
           <div className="lg:col-span-1 flex justify-start lg:justify-end items-center gap-2">
             {isEditing ? (
               <div className="flex gap-2">
-                <Button onClick={onSaveChanges} disabled={isSaving}>
+                <Button onClick={onSaveChanges} disabled={isSaving || !hasChanges}>
                   {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Save Changes
                 </Button>

@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -66,6 +66,13 @@ const ProjectDetailPage = () => {
     isUpserting: isSavingTask 
   } = useTaskMutations(() => queryClient.invalidateQueries({ queryKey: ['project', slug] }));
 
+  const hasChanges = useMemo(() => {
+    if (!isEditing || !project || !editedProject) {
+      return false;
+    }
+    return JSON.stringify(project) !== JSON.stringify(editedProject);
+  }, [isEditing, project, editedProject]);
+
   useEffect(() => {
     if (project) {
       const channel = supabase
@@ -95,13 +102,32 @@ const ProjectDetailPage = () => {
     setEditedProject(null);
   };
 
-  const handleSaveChanges = () => {
-    if (editedProject) {
+  const handleSaveChanges = useCallback(() => {
+    if (editedProject && hasChanges) {
       updateProject.mutate(editedProject, {
-        onSuccess: () => setIsEditing(false),
+        onSuccess: () => {
+          setIsEditing(false);
+          toast.success("Project saved successfully!");
+        },
       });
     }
-  };
+  }, [editedProject, hasChanges, updateProject]);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key === 's') {
+        if (isEditing && hasChanges) {
+          event.preventDefault();
+          handleSaveChanges();
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isEditing, hasChanges, handleSaveChanges]);
 
   const handleFieldChange = (field: keyof Project, value: any) => {
     if (editedProject) {
@@ -154,6 +180,7 @@ const ProjectDetailPage = () => {
             onFieldChange={handleFieldChange}
             onStatusChange={(newStatus) => updateProjectStatus.mutate({ projectId: project.id, status: newStatus })}
             hasOpenTasks={hasOpenTasks}
+            hasChanges={hasChanges}
           />
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
             <div className="lg:col-span-2 space-y-6">
