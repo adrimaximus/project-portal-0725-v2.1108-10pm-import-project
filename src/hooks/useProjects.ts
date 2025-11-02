@@ -1,24 +1,36 @@
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { useInfiniteQuery } from '@tanstack/react-query';
+import { getDashboardProjects } from '@/api/projects';
+import { useEffect } from 'react';
 
-export function useProjects() {
-  const fetchProjects = async () => {
-    // Using the get_dashboard_projects function which is optimized for dashboard views
-    const { data, error } = await supabase
-      .rpc('get_dashboard_projects', {
-        p_limit: 100,
-        p_offset: 0,
-      });
+const PAGE_SIZE = 50; // Increase page size for faster full load
 
-    if (error) {
-      console.error('Error fetching projects:', error);
-      throw new Error(error.message);
-    }
-    return data || [];
-  };
-
-  return useQuery({
-    queryKey: ['projects'],
-    queryFn: fetchProjects,
+const fetchProjects = async ({ pageParam = 0, searchTerm, excludeOtherPersonal, year }: { pageParam: number, searchTerm: string, excludeOtherPersonal: boolean, year: number | null }) => {
+  const projects = await getDashboardProjects({
+    limit: PAGE_SIZE,
+    offset: pageParam * PAGE_SIZE,
+    searchTerm,
+    excludeOtherPersonal,
+    year,
   });
-}
+  return {
+    projects,
+    nextPage: projects.length === PAGE_SIZE ? pageParam + 1 : null,
+  };
+};
+
+export const useProjects = ({ searchTerm, fetchAll = false, excludeOtherPersonal = false, year }: { searchTerm?: string, fetchAll?: boolean, excludeOtherPersonal?: boolean, year?: number | null } = {}) => {
+  const query = useInfiniteQuery({
+    queryKey: ['projects', { searchTerm, excludeOtherPersonal, year }],
+    queryFn: ({ pageParam }) => fetchProjects({ pageParam: pageParam as number, searchTerm: searchTerm || "", excludeOtherPersonal, year: year === undefined ? null : year }),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage) => lastPage.nextPage,
+  });
+
+  useEffect(() => {
+    if (fetchAll && query.hasNextPage && !query.isFetchingNextPage) {
+      query.fetchNextPage();
+    }
+  }, [fetchAll, query.hasNextPage, query.isFetchingNextPage, query.fetchNextPage]);
+
+  return query;
+};
