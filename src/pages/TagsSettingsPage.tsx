@@ -19,7 +19,7 @@ import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import RenameGroupDialog from '@/components/settings/RenameGroupDialog';
 
-type SortableTagColumns = 'name' | 'type' | 'color' | 'lead_time';
+type SortableTagColumns = 'name' | 'type' | 'color';
 type SortableGroupColumns = 'name' | 'count';
 type SortDirection = 'asc' | 'desc';
 
@@ -105,8 +105,8 @@ const TagsSettingsPage = () => {
         return nameMatch || groupMatch;
       })
       .sort((a, b) => {
-        const aVal = a[tagSort.column] || (tagSort.column === 'type' ? 'general' : (tagSort.column === 'lead_time' ? 0 : ''));
-        const bVal = b[tagSort.column] || (tagSort.column === 'type' ? 'general' : (tagSort.column === 'lead_time' ? 0 : ''));
+        const aVal = a[tagSort.column] || (tagSort.column === 'type' ? 'general' : '');
+        const bVal = b[tagSort.column] || (tagSort.column === 'type' ? 'general' : '');
         if (aVal < bVal) return tagSort.direction === 'asc' ? -1 : 1;
         if (aVal > bVal) return tagSort.direction === 'asc' ? 1 : -1;
         return 0;
@@ -213,27 +213,6 @@ const TagsSettingsPage = () => {
     </TableHead>
   );
 
-  const formatLeadTime = (hours: number | null | undefined): string => {
-    if (hours === null || typeof hours === 'undefined' || hours < 0) {
-      return '-';
-    }
-    if (hours === 0) {
-      return '0h';
-    }
-    const days = Math.floor(hours / 24);
-    const remainingHours = hours % 24;
-    
-    let result = '';
-    if (days > 0) {
-      result += `${days}d`;
-    }
-    if (remainingHours > 0) {
-      result += `${result ? ' ' : ''}${remainingHours}h`;
-    }
-    
-    return result;
-  };
-
   const renderTagsTable = (tagsToRender: Tag[], isEditable: boolean) => (
     <Table>
       <TableHeader>
@@ -241,7 +220,6 @@ const TagsSettingsPage = () => {
           <SortableHeader column="name" label="Name" onSort={handleTagSort} sortConfig={tagSort} />
           <SortableHeader column="type" label="Group" onSort={handleTagSort} sortConfig={tagSort} />
           <SortableHeader column="color" label="Color" onSort={handleTagSort} sortConfig={tagSort} />
-          <SortableHeader column="lead_time" label="Lead Time (hours)" onSort={handleTagSort} sortConfig={tagSort} />
           {properties.map(prop => (
             <TableHead key={prop.id}>{prop.label}</TableHead>
           ))}
@@ -250,9 +228,9 @@ const TagsSettingsPage = () => {
       </TableHeader>
       <TableBody>
         {isLoading ? (
-          <TableRow><TableCell colSpan={5 + properties.length} className="text-center">Loading tags...</TableCell></TableRow>
+          <TableRow><TableCell colSpan={4 + properties.length} className="text-center">Loading tags...</TableCell></TableRow>
         ) : tagsToRender.length === 0 ? (
-          <TableRow><TableCell colSpan={5 + properties.length} className="text-center h-24">
+          <TableRow><TableCell colSpan={4 + properties.length} className="text-center h-24">
             {searchQuery ? `No tags found for "${searchQuery}"` : `No tags in this category.`}
           </TableCell></TableRow>
         ) : tagsToRender.map(tag => (
@@ -265,7 +243,6 @@ const TagsSettingsPage = () => {
                 <span className="font-mono text-sm hidden sm:inline">{tag.color}</span>
               </div>
             </TableCell>
-            <TableCell className="text-center">{formatLeadTime(tag.lead_time)}</TableCell>
             {properties.map(prop => (
               <TableCell key={prop.id}>
                 {tag.custom_properties?.[prop.name] ? String(tag.custom_properties[prop.name]) : '-'}
