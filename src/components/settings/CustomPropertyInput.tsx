@@ -1,5 +1,5 @@
 import { Control, useController } from 'react-hook-form';
-import { ContactProperty } from '@/types';
+import { CustomProperty } from '@/types';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -9,7 +9,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { MultiSelect } from '@/components/ui/multi-select';
 
 interface CustomPropertyInputProps {
-  property: ContactProperty;
+  property: CustomProperty;
   control: Control<any>;
   name: string;
   bucket?: string; // Added bucket prop for image upload
