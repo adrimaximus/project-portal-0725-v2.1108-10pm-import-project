@@ -34,8 +34,7 @@ const PropertyFormDialog = ({ open, onOpenChange, onSave, property, isSaving, pr
 
   const form = useForm<PropertyFormValues>({
     resolver: zodResolver(propertySchema.superRefine((data, ctx) => {
-      const machineName = data.label.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
-      if (properties.some(p => p.name === machineName && p.id !== property?.id)) {
+      if (properties.some(p => p.name === data.name && p.id !== property?.id)) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           message: 'A property with this name already exists. Please use a different label.',
@@ -64,11 +63,9 @@ const PropertyFormDialog = ({ open, onOpenChange, onSave, property, isSaving, pr
   }, [property, open, form]);
 
   useEffect(() => {
-    if (!property) { // Only auto-generate name for new properties
-      const newName = labelValue?.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '') || '';
-      setValue('name', newName, { shouldValidate: true });
-    }
-  }, [labelValue, setValue, property]);
+    const newName = labelValue?.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '') || '';
+    setValue('name', newName, { shouldValidate: true });
+  }, [labelValue, setValue]);
 
   const onSubmit = (data: PropertyFormValues) => {
     onSave(data);
