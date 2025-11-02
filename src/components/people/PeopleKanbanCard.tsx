@@ -60,8 +60,11 @@ const PeopleKanbanCard = ({ person, dragHappened, onEdit, onDelete }: { person: 
           .ilike('name', `%${companyName}%`)
           .limit(1)
           .maybeSingle();
-        if (!error && data) {
-          companyData = data;
+        
+        if (error) {
+            console.warn(`Could not fetch company by name for person ${person.id}:`, error.message);
+        } else if (data) {
+            companyData = data;
         }
       }
       return companyData;
