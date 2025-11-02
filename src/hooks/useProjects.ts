@@ -15,7 +15,7 @@ const fetchProjects = async ({ pageParam = 0, searchTerm }: { pageParam: number,
   };
 };
 
-export const useProjects = ({ searchTerm }: { searchTerm: string }) => {
+export const useProjects = ({ searchTerm }: { searchTerm: string } = { searchTerm: "" }) => {
   return useInfiniteQuery({
     queryKey: ['projects', { searchTerm }],
     queryFn: ({ pageParam }) => fetchProjects({ pageParam, searchTerm }),

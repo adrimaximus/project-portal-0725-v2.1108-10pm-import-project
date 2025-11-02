@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { DateRangePicker } from "@/components/DateRangePicker";
 import { DateRange } from "react-day-picker";
 import PortalLayout from "@/components/PortalLayout";
@@ -16,7 +16,8 @@ const Index = () => {
     from: new Date(new Date().getFullYear(), 0, 1),
     to: new Date(new Date().getFullYear(), 11, 31),
   });
-  const { data: projects = [], isLoading } = useProjects();
+  const { data, isLoading } = useProjects({ searchTerm: "" });
+  const projects = useMemo(() => data?.pages.flatMap(page => page.projects) ?? [], [data]);
   const { user } = useAuth();
 
   const filteredProjects = projects.filter(project => {
