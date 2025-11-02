@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { DateRangePicker } from "@/components/DateRangePicker";
 import { DateRange } from "react-day-picker";
 import PortalLayout from "@/components/PortalLayout";
@@ -16,7 +16,14 @@ const Index = () => {
     from: new Date(new Date().getFullYear(), 0, 1),
     to: new Date(new Date().getFullYear(), 11, 31),
   });
-  const { data, isLoading } = useProjects({ searchTerm: "" });
+  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useProjects({ searchTerm: "" });
+  
+  useEffect(() => {
+    if (hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [hasNextPage, isFetchingNextPage, data, fetchNextPage]);
+
   const projects = useMemo(() => data?.pages.flatMap(page => page.projects) ?? [], [data]);
   const { user } = useAuth();
 
@@ -35,7 +42,9 @@ const Index = () => {
     return true;
   });
 
-  if (isLoading) {
+  const isStillLoading = isLoading || (hasNextPage && isFetchingNextPage);
+
+  if (isStillLoading && projects.length === 0) {
     return (
       <PortalLayout>
         <div className="space-y-8">
