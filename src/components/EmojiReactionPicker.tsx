@@ -15,54 +15,56 @@ const quickReactions = ['👍', '❤️', '😂', '🎉', '🙏', '😢'];
 const EmojiReactionPicker = ({ onSelect }: EmojiReactionPickerProps) => {
   const { theme } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
+  const [showFullPicker, setShowFullPicker] = useState(false);
 
-  const handleQuickSelect = (emoji: string) => {
-    onSelect(emoji);
-    setIsOpen(false);
+  const handleOpenChange = (open: boolean) => {
+    setIsOpen(open);
+    if (!open) {
+      // Reset to quick reactions view when closing
+      setShowFullPicker(false);
+    }
   };
 
-  const handlePickerSelect = (emoji: any) => {
-    onSelect(emoji.native);
+  const handleSelect = (emoji: string) => {
+    onSelect(emoji);
     setIsOpen(false);
+    setShowFullPicker(false);
   };
 
   return (
-    <Popover open={isOpen} onOpenChange={setIsOpen}>
+    <Popover open={isOpen} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
         <Button variant="ghost" size="icon" className="h-7 w-7">
           <SmilePlus className="h-4 w-4" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0 border-none" side="top" align="center">
-        <div className="flex items-center gap-1 bg-background border rounded-full p-1 shadow-lg">
-          {quickReactions.map(emoji => (
-            <button
-              key={emoji}
-              onClick={() => handleQuickSelect(emoji)}
-              className="text-xl p-1 rounded-full hover:bg-muted transition-colors"
-            >
-              {emoji}
-            </button>
-          ))}
-          <Popover>
-            <PopoverTrigger asChild>
-              <button className="p-1 rounded-full hover:bg-muted transition-colors">
-                <SmilePlus className="h-5 w-5 text-muted-foreground" />
+        {showFullPicker ? (
+          <Picker 
+            data={data} 
+            onEmojiSelect={(emoji: any) => handleSelect(emoji.native)}
+            theme={theme === 'dark' ? 'dark' : 'light'}
+            previewPosition="none"
+          />
+        ) : (
+          <div className="flex items-center gap-1 bg-background border rounded-full p-1 shadow-lg">
+            {quickReactions.map(emoji => (
+              <button
+                key={emoji}
+                onClick={() => handleSelect(emoji)}
+                className="text-xl p-1 rounded-full hover:bg-muted transition-colors"
+              >
+                {emoji}
               </button>
-            </PopoverTrigger>
-            <PopoverContent 
-              className="w-auto p-0 border-none mb-2" 
-              onPointerDown={(e) => e.stopPropagation()}
+            ))}
+            <button 
+              onClick={() => setShowFullPicker(true)}
+              className="p-1 rounded-full hover:bg-muted transition-colors"
             >
-              <Picker 
-                data={data} 
-                onEmojiSelect={handlePickerSelect}
-                theme={theme === 'dark' ? 'dark' : 'light'}
-                previewPosition="none"
-              />
-            </PopoverContent>
-          </Popover>
-        </div>
+              <SmilePlus className="h-5 w-5 text-muted-foreground" />
+            </button>
+          </div>
+        )}
       </PopoverContent>
     </Popover>
   );
