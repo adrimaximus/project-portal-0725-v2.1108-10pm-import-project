@@ -1,9 +1,9 @@
 import React, { useMemo, useRef, useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors, DragOverlay, DragStartEvent, MouseSensor, TouchSensor, DragOverEvent } from '@dnd-kit/core';
-import { Person, Tag, User } from '@/types';
+import { Person, Tag, User, Company } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { useQueryClient, useMutation } from '@tanstack/react-query';
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import PeopleKanbanColumn from './PeopleKanbanColumn';
 import PeopleKanbanCard from './PeopleKanbanCard';
 import KanbanColumnEditor from './KanbanColumnEditor';
@@ -16,13 +16,14 @@ type PeopleKanbanViewProps = {
   tags: Tag[];
   onEditPerson: (person: Person) => void;
   onDeletePerson: (person: Person) => void;
+  kanbanGroupBy: 'tags' | 'company';
 };
 
 type KanbanViewHandle = {
   openSettings: () => void;
 };
 
-const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ people, tags, onEditPerson, onDeletePerson }, ref) => {
+const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ people, tags, onEditPerson, onDeletePerson, kanbanGroupBy }, ref) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const sensors = useSensors(
@@ -51,20 +52,62 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
 
   const uncategorizedTag: Tag = { id: 'uncategorized', name: 'Uncategorized', color: '#9ca3af' };
 
+  const { data: allCompanies = [] } = useQuery<Company[]>({
+    queryKey: ['allCompaniesForKanban'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('companies').select('id, name');
+      if (error) throw error;
+      return data;
+    },
+    enabled: kanbanGroupBy === 'company',
+  });
+
+  const columns = useMemo(() => {
+    if (kanbanGroupBy === 'company') {
+      const companyMap = new Map<string, { id: string, name: string, color: string }>();
+      people.forEach(p => {
+        if (p.company) {
+          if (!companyMap.has(p.company)) {
+            const companyRecord = allCompanies.find(c => c.name === p.company);
+            companyMap.set(p.company, {
+              id: companyRecord?.id || p.company, // Fallback to name if no ID
+              name: p.company,
+              color: '#6b7280'
+            });
+          }
+        }
+      });
+      const companyColumns = Array.from(companyMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+      return [uncategorizedTag, ...companyColumns];
+    }
+    // Default to tags
+    const tagMap = new Map([...tags, uncategorizedTag].map(t => [t.id, t]));
+    return columnOrder
+      .filter(id => visibleColumnIds.includes(id))
+      .map(id => tagMap.get(id))
+      .filter(Boolean) as (Tag | { id: string, name: string, color: string })[];
+  }, [kanbanGroupBy, people, tags, columnOrder, visibleColumnIds, uncategorizedTag, allCompanies]);
+
   useEffect(() => {
     if (!activePerson) {
       const groups: Record<string, Person[]> = {};
-      const allCols = [uncategorizedTag, ...tags];
-      allCols.forEach(col => {
+      columns.forEach(col => {
         groups[col.id] = [];
       });
       people.forEach(person => {
-        const tagId = person.tags?.[0]?.id;
-        const isTagColumnVisible = tagId && visibleColumnIds.includes(tagId);
-        const columnId = tagId && isTagColumnVisible && Object.prototype.hasOwnProperty.call(groups, tagId) 
-          ? tagId 
-          : 'uncategorized';
-        
+        let columnId = 'uncategorized';
+        if (kanbanGroupBy === 'tags') {
+          const tagId = person.tags?.[0]?.id;
+          if (tagId && visibleColumnIds.includes(tagId) && Object.prototype.hasOwnProperty.call(groups, tagId)) {
+            columnId = tagId;
+          }
+        } else { // kanbanGroupBy === 'company'
+          const companyName = person.company;
+          const companyColumn = columns.find(c => c.name === companyName);
+          if (companyColumn) {
+            columnId = companyColumn.id;
+          }
+        }
         if (groups[columnId]) {
           groups[columnId].push(person);
         }
@@ -74,7 +117,7 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
       }
       setPersonGroups(groups);
     }
-  }, [people, tags, visibleColumnIds, activePerson]);
+  }, [people, tags, visibleColumnIds, activePerson, kanbanGroupBy, columns]);
 
   useImperativeHandle(ref, () => ({
     openSettings: () => setIsSettingsOpen(true),
@@ -146,14 +189,6 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
     setCollapseOverrides(newOverrides);
     updateKanbanSettings({ collapseOverrides: newOverrides });
   };
-
-  const columns = useMemo(() => {
-    const tagMap = new Map([...tags, uncategorizedTag].map(t => [t.id, t]));
-    return columnOrder
-      .filter(id => visibleColumnIds.includes(id))
-      .map(id => tagMap.get(id))
-      .filter(Boolean) as Tag[];
-  }, [tags, columnOrder, visibleColumnIds, uncategorizedTag]);
 
   const handleDragStart = (event: DragStartEvent) => {
     dragHappened.current = true;
@@ -227,6 +262,9 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
       destContainerId,
       sourceColumnIds,
       destColumnIds,
+      groupBy: kanbanGroupBy,
+      allCompanies,
+      columns,
     });
   };
 
@@ -235,17 +273,19 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd} onDragCancel={() => setActivePerson(null)}>
       <div className="flex flex-row items-start gap-4 overflow-x-auto pb-4 h-full">
-        <div className={`transition-all duration-300 ease-in-out flex-shrink-0 ${isSettingsOpen ? 'w-64' : 'w-0'} overflow-hidden`}>
-          <div className="w-64 h-full bg-muted/50 rounded-lg border">
-            <KanbanColumnEditor
-              allTags={allTagsForEditor}
-              columnOrder={columnOrder}
-              visibleColumnIds={visibleColumnIds}
-              onSettingsChange={handleSettingsChange}
-              onClose={() => setIsSettingsOpen(false)}
-            />
+        {kanbanGroupBy === 'tags' && (
+          <div className={`transition-all duration-300 ease-in-out flex-shrink-0 ${isSettingsOpen ? 'w-64' : 'w-0'} overflow-hidden`}>
+            <div className="w-64 h-full bg-muted/50 rounded-lg border">
+              <KanbanColumnEditor
+                allTags={allTagsForEditor}
+                columnOrder={columnOrder}
+                visibleColumnIds={visibleColumnIds}
+                onSettingsChange={handleSettingsChange}
+                onClose={() => setIsSettingsOpen(false)}
+              />
+            </div>
           </div>
-        </div>
+        )}
 
         {columns.map(tag => {
           const peopleInColumn = personGroups[tag.id] || [];

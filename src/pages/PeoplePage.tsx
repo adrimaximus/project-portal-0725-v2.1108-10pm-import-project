@@ -22,6 +22,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import PeopleTableView from "@/components/people/PeopleTableView";
 import { usePeopleData } from "@/hooks/usePeopleData";
 import { Person } from "@/types";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 type KanbanViewHandle = {
   openSettings: () => void;
@@ -38,6 +39,7 @@ const PeoplePage = () => {
   const activeTab = searchParams.get('tab') || 'people';
   const viewModeFromUrl = searchParams.get('view') as 'table' | 'kanban' | 'grid';
   const [viewMode, setViewMode] = useState<'table' | 'kanban' | 'grid'>(viewModeFromUrl || 'grid');
+  const [kanbanGroupBy, setKanbanGroupBy] = useState<'tags' | 'company'>('tags');
 
   const [isFindingDuplicates, setIsFindingDuplicates] = useState(false);
   const [duplicateData, setDuplicateData] = useState<{ summary: string; pairs: DuplicatePair[] } | null>(null);
@@ -180,6 +182,17 @@ const PeoplePage = () => {
                     <Tooltip><TooltipTrigger asChild><ToggleGroupItem value="kanban" aria-label="Kanban view"><Kanban className="h-4 w-4" /></ToggleGroupItem></TooltipTrigger><TooltipContent><p>Kanban View</p></TooltipContent></Tooltip>
                   </TooltipProvider>
                 </ToggleGroup>
+                {viewMode === 'kanban' && (
+                  <Select value={kanbanGroupBy} onValueChange={(value) => setKanbanGroupBy(value as 'tags' | 'company')}>
+                    <SelectTrigger className="w-[130px] h-9">
+                      <SelectValue placeholder="Group by..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="tags">Tags</SelectItem>
+                      <SelectItem value="company">Company</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
             </div>
             <div className="flex-grow min-h-0">
@@ -194,7 +207,14 @@ const PeoplePage = () => {
                   requestSort={requestSort}
                 />
               ) : viewMode === 'kanban' ? (
-                <PeopleKanbanView ref={kanbanViewRef} people={filteredPeople} tags={tags} onEditPerson={handleEdit} onDeletePerson={setPersonToDelete} />
+                <PeopleKanbanView 
+                  ref={kanbanViewRef} 
+                  people={filteredPeople} 
+                  tags={tags} 
+                  onEditPerson={handleEdit} 
+                  onDeletePerson={setPersonToDelete} 
+                  kanbanGroupBy={kanbanGroupBy}
+                />
               ) : (
                 <div className="overflow-y-auto h-full">
                   <PeopleGridView people={filteredPeople} onEditPerson={handleEdit} onDeletePerson={setPersonToDelete} onViewProfile={handleViewProfile} />
