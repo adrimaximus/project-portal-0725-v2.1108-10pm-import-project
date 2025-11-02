@@ -3,7 +3,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 interface YearFilterProps {
   availableYears: number[];
   selectedYear: number | null;
-  onYearChange: (year: number | null) => void;
+  onYearChange?: (year: number | null) => void;
 }
 
 const YearFilter = ({ availableYears = [], selectedYear, onYearChange }: YearFilterProps) => {
@@ -20,7 +20,11 @@ const YearFilter = ({ availableYears = [], selectedYear, onYearChange }: YearFil
   return (
     <Select
       value={selectedYear === null ? String(currentYear) : String(selectedYear)}
-      onValueChange={(value) => onYearChange(Number(value))}
+      onValueChange={(value) => {
+        if (onYearChange) {
+          onYearChange(Number(value));
+        }
+      }}
     >
       <SelectTrigger className="w-[180px]">
         <SelectValue placeholder="Filter by year..." />

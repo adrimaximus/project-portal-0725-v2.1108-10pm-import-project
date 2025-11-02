@@ -33,7 +33,7 @@ type ProjectsToolbarProps = {
   allPeople: Person[];
   availableYears: number[];
   selectedYear: number | null;
-  onYearChange: (year: number | null) => void;
+  onYearChange?: (year: number | null) => void;
 };
 
 const ProjectsToolbar = ({
