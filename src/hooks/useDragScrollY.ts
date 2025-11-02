@@ -8,10 +8,10 @@ export const useDragScrollY = <T extends HTMLElement>() => {
 
   const handleMouseDown = useCallback((e: MouseEvent) => {
     if (!ref.current) return;
-    if ((e.target as HTMLElement).closest('button, a, input, textarea, [role="button"], [role="link"]')) return;
+    if ((e.target as HTMLElement).closest('button, a, input, textarea, [role="button"], [role="link"], .emoji-mart')) return;
     isDown.current = true;
     ref.current.classList.add('cursor-grabbing');
-    startY.current = e.pageY - ref.current.offsetTop;
+    startY.current = e.pageY;
     scrollTop.current = ref.current.scrollTop;
   }, []);
 
@@ -32,23 +32,23 @@ export const useDragScrollY = <T extends HTMLElement>() => {
   const handleMouseMove = useCallback((e: MouseEvent) => {
     if (!isDown.current || !ref.current) return;
     e.preventDefault();
-    const y = e.pageY - ref.current.offsetTop;
-    const walk = (y - startY.current) * 1.2;
+    const y = e.pageY;
+    const walk = y - startY.current;
     ref.current.scrollTop = scrollTop.current - walk;
   }, []);
 
   const handleTouchStart = useCallback((e: TouchEvent) => {
     if (!ref.current) return;
-    if ((e.target as HTMLElement).closest('button, a, input, textarea, [role="button"], [role="link"]')) return;
+    if ((e.target as HTMLElement).closest('button, a, input, textarea, [role="button"], [role="link"], .emoji-mart')) return;
     isDown.current = true;
-    startY.current = e.touches[0].pageY - ref.current.offsetTop;
+    startY.current = e.touches[0].pageY;
     scrollTop.current = ref.current.scrollTop;
   }, []);
 
   const handleTouchMove = useCallback((e: TouchEvent) => {
     if (!isDown.current || !ref.current) return;
-    const y = e.touches[0].pageY - ref.current.offsetTop;
-    const walk = (y - startY.current) * 1.2;
+    const y = e.touches[0].pageY;
+    const walk = y - startY.current;
     ref.current.scrollTop = scrollTop.current - walk;
   }, []);
 
