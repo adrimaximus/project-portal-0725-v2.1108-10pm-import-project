@@ -27,7 +27,6 @@ const tagSchema = z.object({
   name: z.string().min(1, "Tag name is required."),
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Must be a valid hex color."),
   type: z.string().optional(),
-  lead_time: z.coerce.number().int().optional().nullable(),
   custom_properties: z.record(z.any()).optional(),
 });
 
@@ -52,9 +51,9 @@ const TagFormDialog = ({ open, onOpenChange, onSave, tag, isSaving, groups }: Ta
   useEffect(() => {
     if (open) {
       if (tag) {
-        form.reset({ name: tag.name, color: tag.color, type: tag.type || 'general', lead_time: tag.lead_time, custom_properties: tag.custom_properties || {} });
+        form.reset({ name: tag.name, color: tag.color, type: tag.type || 'general', custom_properties: tag.custom_properties || {} });
       } else {
-        form.reset({ name: '', color: '#6b7280', type: 'general', lead_time: null, custom_properties: {} });
+        form.reset({ name: '', color: '#6b7280', type: 'general', custom_properties: {} });
       }
     }
   }, [tag, open, form]);
@@ -97,25 +96,6 @@ const TagFormDialog = ({ open, onOpenChange, onSave, tag, isSaving, groups }: Ta
                 <FormMessage />
               </FormItem>
             )} />
-            <FormField
-              control={form.control}
-              name="lead_time"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Lead Time (hours)</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      placeholder="e.g., 36"
-                      {...field}
-                      value={field.value ?? ''}
-                      onChange={event => field.onChange(event.target.value === '' ? null : +event.target.value)}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
             {isLoadingProperties ? (
               <div className="flex justify-center"><Loader2 className="h-5 w-5 animate-spin" /></div>
             ) : properties.length > 0 && (
