@@ -117,7 +117,7 @@ export const CUSTOM_PROPERTY_TYPES = [
   'text', 'textarea', 'number', 'date', 'email', 'phone', 'url', 'image', 'multi-image', 'select', 'multi-select', 'checkbox'
 ] as const;
 
-export type CustomPropertyCategory = 'contact' | 'company';
+export type CustomPropertyCategory = 'contact' | 'company' | 'tag';
 
 export type CustomProperty = {
   id: string;
@@ -182,6 +182,7 @@ export type Tag = {
   isNew?: boolean;
   type?: string;
   lead_time?: number | null;
+  custom_properties?: Record<string, any> | null;
 };
 
 export type User = {

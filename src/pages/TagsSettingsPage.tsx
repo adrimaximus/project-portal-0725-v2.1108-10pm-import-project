@@ -9,7 +9,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Tag } from '@/types';
+import { Badge } from '@/components/ui/badge';
+import { Tag, CustomProperty } from '@/types';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useAuth } from '@/contexts/AuthContext';
@@ -49,6 +50,15 @@ const TagsSettingsPage = () => {
       return data as Tag[];
     },
     enabled: !!user,
+  });
+
+  const { data: properties = [] } = useQuery<CustomProperty[]>({
+    queryKey: ['custom_properties', 'tag'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('custom_properties').select('*').eq('category', 'tag');
+      if (error) throw error;
+      return data;
+    },
   });
 
   const { personalTags, globalTags } = useMemo(() => {
@@ -232,14 +242,17 @@ const TagsSettingsPage = () => {
           <SortableHeader column="type" label="Group" onSort={handleTagSort} sortConfig={tagSort} />
           <SortableHeader column="color" label="Color" onSort={handleTagSort} sortConfig={tagSort} />
           <SortableHeader column="lead_time" label="Lead Time (hours)" onSort={handleTagSort} sortConfig={tagSort} />
+          {properties.map(prop => (
+            <TableHead key={prop.id}>{prop.label}</TableHead>
+          ))}
           <TableHead className="text-right">Actions</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {isLoading ? (
-          <TableRow><TableCell colSpan={5} className="text-center">Loading tags...</TableCell></TableRow>
+          <TableRow><TableCell colSpan={5 + properties.length} className="text-center">Loading tags...</TableCell></TableRow>
         ) : tagsToRender.length === 0 ? (
-          <TableRow><TableCell colSpan={5} className="text-center h-24">
+          <TableRow><TableCell colSpan={5 + properties.length} className="text-center h-24">
             {searchQuery ? `No tags found for "${searchQuery}"` : `No tags in this category.`}
           </TableCell></TableRow>
         ) : tagsToRender.map(tag => (
@@ -253,6 +266,11 @@ const TagsSettingsPage = () => {
               </div>
             </TableCell>
             <TableCell className="text-center">{formatLeadTime(tag.lead_time)}</TableCell>
+            {properties.map(prop => (
+              <TableCell key={prop.id}>
+                {tag.custom_properties?.[prop.name] ? String(tag.custom_properties[prop.name]) : '-'}
+              </TableCell>
+            ))}
             <TableCell className="text-right">
               {isEditable && (
                 <DropdownMenu>
@@ -305,7 +323,7 @@ const TagsSettingsPage = () => {
                     <CardDescription>These tags are available for you to use across the application.</CardDescription>
                   </div>
                   <div className="relative w-full md:max-w-xs">
-                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Search className="absolute left-2.5 top-3 h-4 w-4 text-muted-foreground" />
                     <Input
                       placeholder="Search by name or group..."
                       value={searchQuery}

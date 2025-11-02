@@ -7,9 +7,12 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Loader2 } from 'lucide-react';
-import { Tag } from '@/types';
+import { Tag, CustomProperty } from '@/types';
 import ColorPicker from '../goals/ColorPicker';
 import { GroupSelect } from './GroupSelect';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import CustomPropertyInput from './CustomPropertyInput';
 
 interface TagFormDialogProps {
   open: boolean;
@@ -25,12 +28,22 @@ const tagSchema = z.object({
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Must be a valid hex color."),
   type: z.string().optional(),
   lead_time: z.coerce.number().int().optional().nullable(),
+  custom_properties: z.record(z.any()).optional(),
 });
 
 type TagFormValues = z.infer<typeof tagSchema>;
 
 const TagFormDialog = ({ open, onOpenChange, onSave, tag, isSaving, groups }: TagFormDialogProps) => {
   const isEditMode = !!tag;
+
+  const { data: properties = [], isLoading: isLoadingProperties } = useQuery<CustomProperty[]>({
+    queryKey: ['custom_properties', 'tag'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('custom_properties').select('*').eq('category', 'tag');
+      if (error) throw error;
+      return data;
+    },
+  });
 
   const form = useForm<TagFormValues>({
     resolver: zodResolver(tagSchema),
@@ -39,9 +52,9 @@ const TagFormDialog = ({ open, onOpenChange, onSave, tag, isSaving, groups }: Ta
   useEffect(() => {
     if (open) {
       if (tag) {
-        form.reset({ name: tag.name, color: tag.color, type: tag.type || 'general', lead_time: tag.lead_time });
+        form.reset({ name: tag.name, color: tag.color, type: tag.type || 'general', lead_time: tag.lead_time, custom_properties: tag.custom_properties || {} });
       } else {
-        form.reset({ name: '', color: '#6b7280', type: 'general', lead_time: null });
+        form.reset({ name: '', color: '#6b7280', type: 'general', lead_time: null, custom_properties: {} });
       }
     }
   }, [tag, open, form]);
@@ -103,6 +116,30 @@ const TagFormDialog = ({ open, onOpenChange, onSave, tag, isSaving, groups }: Ta
                 </FormItem>
               )}
             />
+            {isLoadingProperties ? (
+              <div className="flex justify-center"><Loader2 className="h-5 w-5 animate-spin" /></div>
+            ) : properties.length > 0 && (
+              <div className="space-y-4 border-t pt-4">
+                {properties.map(prop => (
+                  <FormField
+                    key={prop.id}
+                    control={form.control}
+                    name={`custom_properties.${prop.name}`}
+                    render={({ field }) => (
+                      <FormItem>
+                        <CustomPropertyInput
+                          property={prop}
+                          control={form.control}
+                          name={`custom_properties.${prop.name}`}
+                          bucket="tag-assets"
+                        />
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                ))}
+              </div>
+            )}
             <DialogFooter className="pt-4">
               <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={isSaving}>Cancel</Button>
               <Button type="submit" disabled={isSaving}>
