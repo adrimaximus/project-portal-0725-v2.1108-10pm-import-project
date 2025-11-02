@@ -75,7 +75,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
 
   if (!task) {
     return (
-      <DialogContent className="w-[90vw] max-w-[650px] grid place-items-center max-h-[85vh] p-0 rounded-lg overflow-hidden">
+      <DialogContent className="w-[90vw] max-w-[650px] grid place-items-center max-h-[85vh] p-0 rounded-lg overflow-hidden bg-background">
         <div className="p-8">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
@@ -104,8 +104,8 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
   const handleSendReminder = () => sendReminder(task.id);
 
   return (
-    <DialogContent className="w-[90vw] max-w-[650px] grid grid-rows-[auto_1fr] max-h-[85vh] p-0 rounded-lg overflow-hidden">
-      <DialogHeader className="p-3 sm:p-4 border-b-[3px] border-primary bg-background z-10">
+    <DialogContent className="w-[90vw] max-w-[650px] flex flex-col max-h-[85vh] p-0 rounded-lg overflow-hidden">
+      <DialogHeader className="p-3 sm:p-4 border-b-[3px] border-primary bg-background z-10 flex-shrink-0">
         <div className="flex justify-between items-start gap-2 sm:gap-4">
           <div className="flex-1 min-w-0">
             <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
@@ -161,7 +161,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
 
       <div
         ref={scrollRef}
-        className="relative h-full overflow-y-auto p-4 space-y-4 cursor-grab active:cursor-grabbing select-none"
+        className="relative flex-grow overflow-y-auto p-4 space-y-4 cursor-grab active:cursor-grabbing select-none"
       >
         {task.description && (
           <div className="border-b pb-4">
