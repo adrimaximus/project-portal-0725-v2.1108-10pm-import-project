@@ -1,6 +1,4 @@
 import { useState, useMemo, useEffect } from "react";
-import { DateRangePicker } from "@/components/DateRangePicker";
-import { DateRange } from "react-day-picker";
 import PortalLayout from "@/components/PortalLayout";
 import DashboardStatsGrid from "@/components/dashboard/DashboardStatsGrid";
 import CollaboratorsList from "@/components/dashboard/CollaboratorsList";
@@ -10,31 +8,26 @@ import { Skeleton } from "@/components/ui/skeleton";
 import MonthlyProgressChart from "@/components/dashboard/MonthlyProgressChart";
 import UnsplashImage from "@/components/dashboard/UnsplashImage";
 import MyTasksWidget from "@/components/dashboard/MyTasksWidget";
+import YearFilter from "@/components/projects/YearFilter";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 const Index = () => {
-  const [date, setDate] = useState<DateRange | undefined>({
-    from: new Date(new Date().getFullYear(), 0, 1),
-    to: new Date(new Date().getFullYear(), 11, 31),
+  const [selectedYear, setSelectedYear] = useState<number | null>(new Date().getFullYear());
+  const { data: availableYearsData = [] } = useQuery<any[]>({
+    queryKey: ['projectYears'],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('get_project_years');
+      if (error) throw error;
+      return data;
+    }
   });
-  const { data, isLoading, hasNextPage, isFetchingNextPage } = useProjects({ fetchAll: true });
+  const availableYears = availableYearsData.map(y => y.year);
+
+  const { data, isLoading, hasNextPage, isFetchingNextPage } = useProjects({ fetchAll: true, year: selectedYear });
   
   const projects = useMemo(() => data?.pages.flatMap(page => page.projects) ?? [], [data]);
   const { user } = useAuth();
-
-  const filteredProjects = projects.filter(project => {
-    if (date?.from && project.start_date) {
-        const projectStart = new Date(project.start_date);
-        const pickerFrom = date.from;
-        const pickerTo = date.to || date.from;
-
-        if (project.due_date) {
-            const projectEnd = new Date(project.due_date);
-            return projectStart <= pickerTo && projectEnd >= pickerFrom;
-        }
-        return projectStart >= pickerFrom && projectStart <= pickerTo;
-    }
-    return true;
-  });
 
   const isStillLoading = isLoading || (hasNextPage && isFetchingNextPage);
 
@@ -77,15 +70,19 @@ const Index = () => {
                 <div className="flex items-center gap-4">
                     <h2 className="text-2xl font-bold">Insights</h2>
                 </div>
-                <DateRangePicker date={date} onDateChange={setDate} />
+                <YearFilter 
+                  availableYears={availableYears}
+                  selectedYear={selectedYear}
+                  onYearChange={setSelectedYear}
+                />
             </div>
             <div className="grid gap-6 md:grid-cols-2">
-              <MonthlyProgressChart projects={filteredProjects} />
+              <MonthlyProgressChart projects={projects} />
               <UnsplashImage />
             </div>
-            <DashboardStatsGrid projects={filteredProjects} />
+            <DashboardStatsGrid projects={projects} />
             <MyTasksWidget />
-            <CollaboratorsList projects={filteredProjects} />
+            <CollaboratorsList projects={projects} />
         </div>
       </div>
     </PortalLayout>
