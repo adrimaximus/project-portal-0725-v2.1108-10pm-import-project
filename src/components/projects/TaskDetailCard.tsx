@@ -1,19 +1,14 @@
 import React, { useMemo } from 'react';
 import { Task, TaskAttachment, ProjectStatus } from '@/types';
 import { DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '../ui/button';
 import { Link } from 'react-router-dom';
 import { format, isAfter, subHours } from 'date-fns';
 import {
-  generatePastelColor,
+  cn,
   getPriorityStyles,
   getTaskStatusStyles,
   isOverdue,
-  cn,
-  getAvatarUrl,
-  getInitials,
   formatTaskText,
 } from '@/lib/utils';
 import {
@@ -39,7 +34,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { useDragScrollY } from '@/hooks/useDragScrollY';
 
 interface TaskDetailCardProps {
@@ -49,7 +43,6 @@ interface TaskDetailCardProps {
   onDelete: (taskId: string) => void;
 }
 
-// 🔧 Helper function untuk kumpulkan semua attachments
 const aggregateAttachments = (task: Task): TaskAttachment[] => {
   let attachments: TaskAttachment[] = [...(task.attachments || [])];
   if (task.ticket_attachments?.length) {
@@ -118,15 +111,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
 
   const handleSendReminder = () => sendReminder(task.id);
 
-  const statusStyle = getTaskStatusStyles(task.status);
-  const priorityStyle = getPriorityStyles(task.priority);
-  const wasReminderSentRecently =
-    task.last_reminder_sent_at &&
-    isAfter(new Date(task.last_reminder_sent_at), subHours(new Date(), 25));
-
-  // ---------------------------
-  // 🧩 RETURN UI
-  // ---------------------------
+  // ✅ Final layout
   return (
     <DialogContent className="w-[90vw] max-w-[650px] grid grid-rows-[auto_1fr] max-h-[85vh] p-0 rounded-lg overflow-hidden">
       {/* HEADER */}
@@ -141,83 +126,4 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
               <span
                 className={cn(
                   'min-w-0 break-words',
-                  task.completed && 'line-through text-muted-foreground'
-                )}
-              >
-                <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ p: 'span' }}>
-                  {formatTaskText(task.title)}
-                </ReactMarkdown>
-              </span>
-            </DialogTitle>
-            <p className="text-xs text-muted-foreground mt-1">
-              Created on {format(new Date(task.created_at), 'MMM d, yyyy')}
-            </p>
-          </div>
-
-          {/* Menu */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onSelect={() => { onEdit(task); onClose(); }}>
-                <Edit className="mr-2 h-4 w-4" /> Edit
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={handleCopyLink}>
-                <LinkIcon className="mr-2 h-4 w-4" /> Copy Link
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onSelect={handleSendReminder}
-                disabled={!isOverdue(task.due_date) || task.completed || isSendingReminder}
-              >
-                <BellRing className="mr-2 h-4 w-4" /> Send Reminder
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onSelect={() => { onDelete(task.id); onClose(); }}
-                className="text-destructive"
-              >
-                <Trash2 className="mr-2 h-4 w-4" /> Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </DialogHeader>
-
-      {/* BODY — draggable scroll anywhere */}
-      <ScrollArea className="relative h-full">
-        <div
-          ref={scrollRef}
-          className="ScrollAreaViewport h-full w-full overflow-y-auto p-4 space-y-4 cursor-grab active:cursor-grabbing select-none"
-        >
-          {task.description && (
-            <div className="border-b pb-4">
-              <h4 className="font-semibold mb-2 text-sm">Description</h4>
-              <div className="prose prose-sm dark:prose-invert max-w-none text-muted-foreground break-all">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                  {formatTaskText(task.description)}
-                </ReactMarkdown>
-              </div>
-            </div>
-          )}
-
-          {allAttachments.length > 0 && (
-            <div className="border-t pt-4">
-              <h4 className="font-semibold mb-2 flex items-center gap-2 text-sm">
-                <Paperclip className="h-4 w-4" /> Attachments
-              </h4>
-              <TaskAttachmentList attachments={allAttachments} />
-            </div>
-          )}
-
-          <div className="border-t pt-4">
-            <TaskDiscussion task={task} onToggleReaction={handleToggleReaction} />
-          </div>
-        </div>
-      </ScrollArea>
-    </DialogContent>
-  );
-};
-
-export default TaskDetailCard;
+                  task.completed && 'line-through te
