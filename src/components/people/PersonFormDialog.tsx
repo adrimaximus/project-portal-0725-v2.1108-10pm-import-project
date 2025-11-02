@@ -21,7 +21,6 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import AvatarUpload from './AvatarUpload';
 import CustomPropertyInput from '../settings/CustomPropertyInput';
 
-// Minimal profile type definition to avoid touching global types.ts
 interface Profile {
   id: string;
   first_name: string | null;
@@ -42,13 +41,16 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
   const queryClient = useQueryClient();
   const { user: currentUser } = useAuth();
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
-  
-  const isLinkedUser = !!person?.user_id; // DEFINISI isLinkedUser
+
+  const isLinkedUser = !!person?.user_id;
 
   const { data: properties = [], isLoading: isLoadingProperties } = useQuery<CustomProperty[]>({
     queryKey: ['custom_properties', 'contact'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('custom_properties').select('*').eq('category', 'contact');
+      const { data, error } = await supabase
+        .from('custom_properties')
+        .select('*')
+        .eq('category', 'contact');
       if (error) throw error;
       return data;
     },
@@ -68,11 +70,10 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
       'notes',
       'phone',
       'phone_number',
-      'website'
+      'website',
     ];
-    return properties.filter(prop => 
-      !prop.is_default && 
-      !redundantFieldNames.includes(prop.name.toLowerCase())
+    return properties.filter(
+      (prop) => !prop.is_default && !redundantFieldNames.includes(prop.name.toLowerCase())
     );
   }, [properties]);
 
@@ -108,6 +109,7 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
       custom_properties: {},
     },
   });
+
   const { control, handleSubmit, reset, setValue, watch } = form;
   const watchedFirstName = watch('first_name');
   const watchedLastName = watch('last_name');
@@ -115,66 +117,67 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
 
   useEffect(() => {
     if (open) {
-      if (person) { // Edit mode
+      if (person) {
         const { custom_properties, full_name, ...personData } = person;
         const nameParts = full_name ? full_name.split(' ') : [''];
         const firstName = nameParts[0] || '';
         const lastName = nameParts.slice(1).join(' ') || '';
-        reset({ 
-          ...personData, 
-          first_name: firstName, 
-          last_name: lastName, 
-          custom_properties: custom_properties || {}, 
+        reset({
+          ...personData,
+          first_name: firstName,
+          last_name: lastName,
+          custom_properties: custom_properties || {},
           company_id: person.company_id,
-          birthday: person.birthday ? new Date(person.birthday).toISOString().split('T')[0] : '',
+          birthday: person.birthday
+            ? new Date(person.birthday).toISOString().split('T')[0]
+            : '',
         });
-      } else { // Create mode
-        reset({ 
-          first_name: '', 
-          last_name: '', 
-          email: '', 
-          phone: '', 
-          company_id: null, 
-          job_title: '', 
-          department: '', 
-          avatar_url: '', 
-          birthday: '', 
-          notes: '', 
+      } else {
+        reset({
+          first_name: '',
+          last_name: '',
+          email: '',
+          phone: '',
+          company_id: null,
+          job_title: '',
+          department: '',
+          avatar_url: '',
+          birthday: '',
+          notes: '',
           custom_properties: {
-            website: 'https://'
-          } 
+            website: 'https://',
+          },
         });
       }
     } else {
-      // Reset when dialog closes
       setSelectedProfile(null);
     }
   }, [person, open, reset]);
 
   useEffect(() => {
-    if (selectedProfile && !person) { // Only pre-fill in create mode
-        setValue('first_name', selectedProfile.first_name || '', { shouldValidate: true });
-        setValue('last_name', selectedProfile.last_name || '', { shouldValidate: true });
-        setValue('email', selectedProfile.email || '', { shouldValidate: true });
-        setValue('phone', selectedProfile.phone || '', { shouldValidate: true });
+    if (selectedProfile && !person) {
+      setValue('first_name', selectedProfile.first_name || '', { shouldValidate: true });
+      setValue('last_name', selectedProfile.last_name || '', { shouldValidate: true });
+      setValue('email', selectedProfile.email || '', { shouldValidate: true });
+      setValue('phone', selectedProfile.phone || '', { shouldValidate: true });
     }
   }, [selectedProfile, person, setValue]);
 
   const mutation = useMutation<Person, Error, PropertyFormValues>({
     mutationFn: async (values: PropertyFormValues): Promise<Person> => {
-      if (selectedProfile && !person) { // Creating a new person from a profile
+      if (selectedProfile && !person) {
         const { data: existingPerson, error: fetchError } = await supabase
-            .from('people')
-            .select('id')
-            .eq('user_id', selectedProfile.id)
-            .single();
+          .from('people')
+          .select('id')
+          .eq('user_id', selectedProfile.id)
+          .single();
 
-        if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116 is "No rows found"
-            throw fetchError;
+        if (fetchError && fetchError.code !== 'PGRST116') {
+          throw fetchError;
         }
 
         if (existingPerson) {
-            throw new Error('A person record for this user already exists.');
+          throw new Error('A person record for this user already exists.');
         }
       }
 
@@ -185,7 +188,7 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
       if (!full_name && values.email) {
         full_name = values.email.split('@')[0];
       }
-      
+
       const contactJson = {
         emails: values.email ? [values.email] : [],
         phones: values.phone ? [values.phone] : [],
@@ -202,8 +205,8 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
         p_social_media: person?.social_media || {},
         p_birthday: values.birthday || null,
         p_notes: values.notes || null,
-        p_project_ids: person?.projects?.map(p => p.id) || [],
-        p_existing_tag_ids: person?.tags?.map(t => t.id) || [],
+        p_project_ids: person?.projects?.map((p) => p.id) || [],
+        p_existing_tag_ids: person?.tags?.map((t) => t.id) || [],
         p_custom_tags: [],
         p_avatar_url: values.avatar_url || (selectedProfile ? selectedProfile.avatar_url : null),
         p_address: person?.address || null,
@@ -220,12 +223,12 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
 
       if (selectedProfile && !person) {
         const { error: updateError } = await supabase
-            .from('people')
-            .update({ user_id: selectedProfile.id })
-            .eq('id', resultData.id);
-        
+          .from('people')
+          .update({ user_id: selectedProfile.id })
+          .eq('id', resultData.id);
+
         if (updateError) {
-            throw updateError;
+          throw updateError;
         }
         resultData.user_id = selectedProfile.id;
       }
@@ -235,9 +238,7 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
     onSuccess: (data) => {
       toast.success(`Person ${person ? 'updated' : 'created'} successfully.`);
       queryClient.invalidateQueries({ queryKey: ['people'] });
-      if (onSuccess) {
-        onSuccess(data);
-      }
+      onSuccess?.(data);
       onOpenChange(false);
     },
     onError: (error: any) => {
@@ -251,13 +252,15 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg flex flex-col max-h-[80vh] p-0">
+      <DialogContent className="sm:max-w-lg grid grid-rows-[auto_1fr_auto] max-h-[80vh] p-0">
+        {/* HEADER */}
         <DialogHeader className="p-4 border-b">
           <DialogTitle>{person ? 'Edit Person' : 'Add New Person'}</DialogTitle>
           <DialogDescription>Fill in the details for the person.</DialogDescription>
         </DialogHeader>
-        
-        <ScrollArea className="flex-grow min-h-0">
+
+        {/* SCROLL AREA */}
+        <ScrollArea className="h-full">
           <div className="p-4">
             <Form {...form}>
               <form id="person-form" onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -270,6 +273,8 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
                     </p>
                   </div>
                 )}
+
+                {/* FORM FIELDS */}
                 <FormField
                   control={control}
                   name="avatar_url"
@@ -289,6 +294,8 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
                     </FormItem>
                   )}
                 />
+
+                {/* Basic info */}
                 <FormField control={control} name="first_name" render={({ field }) => (
                   <FormItem>
                     <FormLabel>First Name</FormLabel>
@@ -320,12 +327,7 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
                 <FormField control={control} name="company_id" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Company</FormLabel>
-                    <FormControl>
-                      <CompanySelector
-                        value={field.value}
-                        onChange={field.onChange}
-                      />
-                    </FormControl>
+                    <FormControl><CompanySelector value={field.value} onChange={field.onChange} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
@@ -357,24 +359,25 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
                     <FormMessage />
                   </FormItem>
                 )} />
-                
+
+                {/* Custom properties */}
                 {isLoadingProperties ? (
                   <div className="flex justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div>
                 ) : filteredProperties.length > 0 && (
                   <div className="space-y-4 border-t pt-4 mt-4">
                     <h3 className="text-lg font-medium">Custom Properties</h3>
-                    {filteredProperties.map(prop => (
+                    {filteredProperties.map((prop) => (
                       <Controller
                         key={prop.id}
                         control={control}
                         name={`custom_properties.${prop.name}`}
                         render={({ field }) => (
                           <FormItem>
-                            <CustomPropertyInput 
-                              property={prop} 
-                              control={control} 
-                              name={`custom_properties.${prop.name}`} 
-                              bucket="people" // Use the correct bucket for people images
+                            <CustomPropertyInput
+                              property={prop}
+                              control={control}
+                              name={`custom_properties.${prop.name}`}
+                              bucket="people"
                             />
                             <FormMessage />
                           </FormItem>
@@ -388,6 +391,7 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
           </div>
         </ScrollArea>
 
+        {/* FOOTER */}
         <DialogFooter className="p-4 border-t">
           <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button type="submit" form="person-form" disabled={mutation.isPending}>
