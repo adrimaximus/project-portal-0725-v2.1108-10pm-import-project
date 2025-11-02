@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { Person } from '@/types';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -35,7 +35,7 @@ const PersonListCard: React.FC<PersonListCardProps> = ({ person, onEdit, onDelet
       <CardHeader className="flex flex-row items-start justify-between p-4">
         <div className="flex items-center gap-3">
           <Avatar className="h-10 w-10">
-            <AvatarImage src={getAvatarUrl(person.avatar_url, person.id)} />
+            <AvatarImage src={getAvatarUrl(person.avatar_url, person.id)} loading="lazy" />
             <AvatarFallback style={generatePastelColor(person.id)}>
               <UserIcon className="h-5 w-5 text-white" />
             </AvatarFallback>
@@ -109,4 +109,4 @@ const PersonListCard: React.FC<PersonListCardProps> = ({ person, onEdit, onDelet
   );
 };
 
-export default PersonListCard;
+export default memo(PersonListCard);

@@ -1,15 +1,27 @@
 import { useState, useMemo, useCallback } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Person, Tag } from '@/types';
 
-const fetchPeople = async (): Promise<Person[]> => {
-  const { data, error } = await supabase.rpc('get_people_with_details');
+const PAGE_SIZE = 30;
+
+const fetchPeople = async ({ pageParam = 0 }): Promise<{ people: Person[], nextPage: number | null }> => {
+  const { data, error } = await supabase.rpc('get_people_with_details', {
+    p_limit: PAGE_SIZE,
+    p_offset: pageParam * PAGE_SIZE,
+  });
+
   if (error) throw error;
-  return (data as Person[]).map(person => ({
+
+  const people = (data as Person[]).map(person => ({
     ...person,
     tags: person.tags ? [...person.tags].sort((a, b) => a.name.localeCompare(b.name)) : [],
   }));
+
+  return {
+    people,
+    nextPage: data.length === PAGE_SIZE ? pageParam + 1 : null,
+  };
 };
 
 const fetchTags = async (): Promise<Tag[]> => {
@@ -22,9 +34,18 @@ export const usePeopleData = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [sortConfig, setSortConfig] = useState<{ key: keyof Person | null; direction: 'ascending' | 'descending' }>({ key: 'updated_at', direction: 'descending' });
 
-  const { data: people = [], isLoading: isLoadingPeople } = useQuery({
+  const { 
+    data, 
+    error, 
+    fetchNextPage, 
+    hasNextPage, 
+    isFetchingNextPage, 
+    isLoading: isLoadingPeople 
+  } = useInfiniteQuery({
     queryKey: ['people', 'with-slug'],
     queryFn: fetchPeople,
+    initialPageParam: 0,
+    getNextPageParam: (lastPage) => lastPage.nextPage,
   });
 
   const { data: tags = [], isLoading: isLoadingTags } = useQuery({
@@ -32,12 +53,16 @@ export const usePeopleData = () => {
     queryFn: fetchTags,
   });
 
+  const people = useMemo(() => data ? data.pages.flatMap(page => page.people) : [], [data]);
+
   const requestSort = useCallback((key: keyof Person) => {
-    let direction: 'ascending' | 'descending' = 'ascending';
-    if (sortConfig.key === key && sortConfig.direction === 'ascending') {
-      direction = 'descending';
-    }
-    setSortConfig({ key, direction });
+    setSortConfig(prevConfig => {
+      let direction: 'ascending' | 'descending' = 'ascending';
+      if (prevConfig.key === key && prevConfig.direction === 'ascending') {
+        direction = 'descending';
+      }
+      return { key, direction };
+    });
   }, [sortConfig]);
 
   const sortedPeople = useMemo(() => {
@@ -79,5 +104,9 @@ export const usePeopleData = () => {
     sortConfig,
     requestSort,
     filteredPeople,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    error,
   };
 };

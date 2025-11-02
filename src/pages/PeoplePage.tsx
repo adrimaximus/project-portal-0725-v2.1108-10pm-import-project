@@ -55,6 +55,9 @@ const PeoplePage = () => {
     sortConfig,
     requestSort,
     filteredPeople,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
   } = usePeopleData();
 
   useEffect(() => {
@@ -221,6 +224,14 @@ const PeoplePage = () => {
                 </div>
               )}
             </div>
+            {hasNextPage && (
+              <div className="flex justify-center py-4">
+                <Button onClick={() => fetchNextPage()} disabled={isFetchingNextPage}>
+                  {isFetchingNextPage ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  Load More
+                </Button>
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="companies" className="flex-grow flex flex-col mt-0">

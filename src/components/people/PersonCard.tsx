@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, memo } from 'react';
 import { Person as BasePerson } from '@/types';
 import { Card } from '@/components/ui/card';
 import { User as UserIcon, Instagram, Briefcase, Mail } from 'lucide-react';
@@ -8,7 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useQuery } from '@tanstack/react-query';
 
-type Person = BasePerson & { company_id?: string | null };
+type Person = BasePerson & { company_id?: string | null; company_logo_url?: string | null };
 
 interface PersonCardProps {
   person: Person;
@@ -31,72 +31,6 @@ const formatPhoneNumberForWhatsApp = (phone: string | undefined) => {
 const PersonCard = ({ person, onViewProfile }: PersonCardProps) => {
   const [imageError, setImageError] = useState(false);
 
-  const { data: companyProperties = [] } = useQuery({
-    queryKey: ['custom_properties', 'company'],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('custom_properties').select('*').eq('category', 'company');
-      if (error) throw error;
-      return data;
-    },
-    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
-  });
-
-  const { data: company } = useQuery({
-    queryKey: ['company_details_for_person_card', person.id],
-    queryFn: async () => {
-      const companyId = person.company_id;
-      const companyNameFromField = person.company?.trim();
-      const companyNameFromJob = person.job_title?.includes(' at ') ? person.job_title.split(' at ')[1].trim() : null;
-      const companyToSearch = companyNameFromField || companyNameFromJob;
-
-      if (!companyId && !companyToSearch) {
-        return null;
-      }
-
-      let companyData: { logo_url: string | null; address: string | null; custom_properties: any } | null = null;
-
-      if (companyId) {
-        const { data, error } = await supabase
-          .from('companies')
-          .select('logo_url, address, custom_properties')
-          .eq('id', companyId)
-          .single();
-        if (!error && data) {
-          companyData = data;
-        }
-      }
-
-      if (!companyData && companyToSearch) {
-        const { data, error } = await supabase
-          .from('companies')
-          .select('logo_url, address, custom_properties')
-          .ilike('name', `%${companyToSearch}%`)
-          .limit(1)
-          .maybeSingle();
-        
-        if (error) {
-            console.warn(`Could not fetch company by name for person ${person.id}:`, error.message);
-        } else if (data) {
-            companyData = data;
-        }
-      }
-      return companyData;
-    },
-    enabled: !!person,
-  });
-
-  const companyLogoUrl = useMemo(() => {
-    if (!company) return null;
-    const logoProperty = companyProperties.find(p => p.label === 'Logo Image');
-    if (logoProperty && company.custom_properties) {
-        const customLogo = company.custom_properties[logoProperty.name];
-        if (customLogo) return customLogo;
-    }
-    return company.logo_url;
-  }, [company, companyProperties]);
-
-  const companyAddress = company?.address;
-
   useEffect(() => {
     setImageError(false);
   }, [person.avatar_url]);
@@ -113,8 +47,8 @@ const PersonCard = ({ person, onViewProfile }: PersonCardProps) => {
     }
   };
 
-  const googleMapsUrl = companyAddress 
-    ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(companyAddress)}`
+  const googleMapsUrl = person.address 
+    ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(person.address)}`
     : '#';
 
   const emailToDisplay = person.contact?.emails?.[0] || person.email;
@@ -133,6 +67,7 @@ const PersonCard = ({ person, onViewProfile }: PersonCardProps) => {
               alt={person.full_name}
               onError={handleImageError}
               className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+              loading="lazy"
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center" style={generatePastelColor(person.id)}>
@@ -140,31 +75,15 @@ const PersonCard = ({ person, onViewProfile }: PersonCardProps) => {
             </div>
           )}
         </div>
-        {companyLogoUrl && (
-          companyAddress ? (
-            <a
-              href={googleMapsUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
-              className="absolute -bottom-6 left-4 bg-background p-0.5 rounded-lg shadow-md flex items-center justify-center"
-              title={`Get directions to ${person.company}`}
-            >
-              <img
-                src={companyLogoUrl}
-                alt={`${person.company} logo`}
-                className="h-10 w-10 object-contain rounded-md"
-              />
-            </a>
-          ) : (
-            <div className="absolute -bottom-6 left-4 bg-background p-0.5 rounded-lg shadow-md flex items-center justify-center">
-              <img
-                src={companyLogoUrl}
-                alt={`${person.company} logo`}
-                className="h-10 w-10 object-contain rounded-md"
-              />
-            </div>
-          )
+        {person.company_logo_url && (
+          <div className="absolute -bottom-6 left-4 bg-background p-0.5 rounded-lg shadow-md flex items-center justify-center">
+            <img
+              src={person.company_logo_url}
+              alt={`${person.company} logo`}
+              className="h-10 w-10 object-contain rounded-md"
+              loading="lazy"
+            />
+          </div>
         )}
       </div>
       <div className="p-3 border-t bg-background flex-grow flex flex-col rounded-b-2xl">
@@ -192,7 +111,7 @@ const PersonCard = ({ person, onViewProfile }: PersonCardProps) => {
           </div>
         </div>
         
-        <div className={`min-w-0 ${companyLogoUrl ? 'pt-2' : ''}`}>
+        <div className={`min-w-0 ${person.company_logo_url ? 'pt-2' : ''}`}>
           <h3 className="font-bold text-sm truncate">{person.full_name}</h3>
         </div>
         
@@ -212,4 +131,4 @@ const PersonCard = ({ person, onViewProfile }: PersonCardProps) => {
   );
 };
 
-export default PersonCard;
+export default memo(PersonCard);

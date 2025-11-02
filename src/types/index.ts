@@ -172,6 +172,7 @@ export type Person = {
   slug?: string;
   kanban_order?: number;
   custom_properties?: Record<string, any> | null;
+  company_logo_url?: string | null;
 };
 
 export type Tag = {
