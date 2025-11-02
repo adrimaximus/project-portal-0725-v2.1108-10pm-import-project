@@ -128,41 +128,39 @@ const ProjectDetailPage = () => {
 
   return (
     <>
-      <div className="container mx-auto p-4 grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>{project.name}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">{project.description}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle>Tasks</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ProjectTasks
-                tasks={project.tasks || []}
-                projectId={project.id}
-                onAddTask={handleCreateTask}
-                onEditTask={handleEditTask}
-                onDeleteTask={handleDeleteTask}
-                onToggleTaskCompletion={handleToggleTaskCompletion}
-              />
-            </CardContent>
-          </Card>
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">{project.name}</h1>
+          {project.description && <p className="text-muted-foreground mt-2">{project.description}</p>}
         </div>
-        <div className="lg:col-span-1">
-          <Card>
-            <CardHeader>
-              <CardTitle>Activity</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ProjectActivityFeed activities={project.activities || []} />
-            </CardContent>
-          </Card>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>Tasks</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ProjectTasks
+                  tasks={project.tasks || []}
+                  projectId={project.id}
+                  onAddTask={handleCreateTask}
+                  onEditTask={handleEditTask}
+                  onDeleteTask={handleDeleteTask}
+                  onToggleTaskCompletion={handleToggleTaskCompletion}
+                />
+              </CardContent>
+            </Card>
+          </div>
+          <div className="lg:col-span-1">
+            <Card>
+              <CardHeader>
+                <CardTitle>Activity</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ProjectActivityFeed activities={project.activities || []} />
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
       <TaskFormDialog
