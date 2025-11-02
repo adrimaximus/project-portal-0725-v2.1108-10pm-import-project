@@ -9,6 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import MonthlyProgressChart from "@/components/dashboard/MonthlyProgressChart";
 import UnsplashImage from "@/components/dashboard/UnsplashImage";
+import MyTasksWidget from "@/components/dashboard/MyTasksWidget";
 
 const Index = () => {
   const [date, setDate] = useState<DateRange | undefined>({
@@ -79,6 +80,7 @@ const Index = () => {
               <UnsplashImage />
             </div>
             <DashboardStatsGrid projects={filteredProjects} />
+            <MyTasksWidget />
             <CollaboratorsList projects={filteredProjects} />
         </div>
       </div>
