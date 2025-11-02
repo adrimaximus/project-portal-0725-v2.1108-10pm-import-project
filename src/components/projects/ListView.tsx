@@ -9,7 +9,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Clock, Trash2, MapPin, CheckCircle } from 'lucide-react';
+import { MoreHorizontal, Clock, Trash2, MapPin, CheckCircle, XCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { getProjectStatusStyles, cn, formatInJakarta, generatePastelColor, getAvatarUrl } from '@/lib/utils';
 import { format, isSameDay, subDays, isBefore, startOfToday } from 'date-fns';
@@ -97,6 +97,7 @@ const DayEntry = ({ dateStr, projectsOnDay, showMonthHeader, onDeleteProject, na
                   <div className="flex-1 min-w-0">
                     <p className="font-medium truncate flex items-center gap-2" title={project.name}>
                       {project.status === 'Completed' && <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />}
+                      {(project.status === 'Cancelled' || project.status === 'Bid Lost') && <XCircle className="h-4 w-4 text-red-600 flex-shrink-0" />}
                       {project.name}
                     </p>
                     {project.venue && (
