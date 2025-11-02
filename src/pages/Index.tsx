@@ -20,14 +20,8 @@ const Index = () => {
     <div className="flex-1 space-y-6 p-4 pt-6 md:p-8">
       <WelcomeHeader />
       <DashboardStatsGrid projects={projects} />
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          <RecentProjectsWidget projects={projects} />
-        </div>
-        <div className="lg:col-span-1">
-          <MyTasksWidget />
-        </div>
-      </div>
+      <MyTasksWidget />
+      <RecentProjectsWidget projects={projects} />
     </div>
   );
 };
