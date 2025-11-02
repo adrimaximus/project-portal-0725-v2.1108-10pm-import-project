@@ -11,7 +11,7 @@ const YearFilter = ({ availableYears, selectedYear, onYearChange }: YearFilterPr
 
   const options = [
     { label: 'Current & Upcoming', value: String(currentYear) },
-    ...availableYears
+    ...(availableYears || [])
       .filter(year => year < currentYear)
       .map(year => ({ label: String(year), value: String(year) })),
     { label: 'Archive (Older)', value: '0' },

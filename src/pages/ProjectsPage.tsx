@@ -84,12 +84,9 @@ const ProjectsPage = () => {
   const { data: availableYears = [] } = useQuery<number[]>({
     queryKey: ['projectYears'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('projects')
-        .select('start_date');
+      const { data, error } = await supabase.rpc('get_project_years');
       if (error) throw error;
-      const years = new Set(data.map(p => p.start_date ? new Date(p.start_date).getFullYear() : null).filter(Boolean) as number[]);
-      return Array.from(years).sort((a, b) => b - a);
+      return data.map((row: { year: number }) => row.year);
     }
   });
 
