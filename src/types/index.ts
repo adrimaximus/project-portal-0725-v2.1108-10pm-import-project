@@ -1,268 +1,150 @@
-import { Database } from './supabase';
+import { LucideIcon } from "lucide-react";
 
-export type ProjectStatus = "Requested" | "On Hold" | "Reschedule" | "In Progress" | "Billing Process" | "Completed" | "Cancelled" | "Bid Lost" | "Archived";
+export interface NavItem {
+  title: string;
+  href?: string;
+  disabled?: boolean;
+  external?: boolean;
+  icon?: LucideIcon;
+  label?: string;
+}
 
-export const PROJECT_STATUS_OPTIONS: { value: ProjectStatus; label: string }[] = [
-    { value: 'Requested', label: 'Requested' },
-    { value: 'On Hold', label: 'On Hold' },
-    { value: 'Reschedule', label: 'Reschedule' },
-    { value: 'In Progress', label: 'In Progress' },
-    { value: 'Billing Process', label: 'Billing Process' },
-    { value: 'Completed', label: 'Completed' },
-    { value: 'Cancelled', label: 'Cancelled' },
-    { value: 'Bid Lost', label: 'Bid Lost' },
-    { value: 'Archived', label: 'Archived' },
-];
+export interface NavItemWithChildren extends NavItem {
+  items?: NavItemWithChildren[];
+}
 
-export type PaymentStatus =
-  | 'Requested'
-  | 'Proposed'
-  | 'Quo Approved'
-  | 'Inv Approved'
-  | 'In Process'
-  | 'Pending'
-  | 'Overdue'
-  | 'Partially Paid'
-  | 'Paid'
-  | 'Cancelled'
-  | 'Bid Lost'
-  | 'Unpaid';
+export const PROJECT_STATUS_OPTIONS = [
+  { value: 'On Track', label: 'On Track', color: 'bg-green-500' },
+  { value: 'At Risk', label: 'At Risk', color: 'bg-yellow-500' },
+  { value: 'Off Track', label: 'Off Track', color: 'bg-red-500' },
+  { value: 'Pending', label: 'Pending', color: 'bg-gray-500' },
+  { value: 'Completed', label: 'Completed', color: 'bg-blue-500' },
+  { value: 'Cancelled', label: 'Cancelled', color: 'bg-zinc-500' },
+  { value: 'Bid Lost', label: 'Bid Lost', color: 'bg-orange-500' },
+] as const;
 
-export const PAYMENT_STATUS_OPTIONS: { value: PaymentStatus; label: string }[] = [
-  { value: 'Requested', label: 'Requested' },
-  { value: 'Proposed', label: 'Proposed' },
-  { value: 'Quo Approved', label: 'Quo Approved' },
-  { value: 'Inv Approved', label: 'Inv Approved' },
-  { value: 'Pending', label: 'Pending' },
-  { value: 'In Process', label: 'In Process' },
-  { value: 'Partially Paid', label: 'Partially Paid' },
-  { value: 'Paid', label: 'Paid' },
-  { value: 'Overdue', label: 'Overdue' },
-  { value: 'Unpaid', label: 'Unpaid' },
-  { value: 'Cancelled', label: 'Cancelled' },
-  { value: 'Bid Lost', label: 'Bid Lost' },
-];
+export const PAYMENT_STATUS_OPTIONS = [
+    { value: 'Paid', label: 'Paid' },
+    { value: 'Unpaid', label: 'Unpaid' },
+    { value: 'Pending', label: 'Pending' },
+    { value: 'Overdue', label: 'Overdue' },
+    { value: 'In Process', label: 'In Process' },
+    { value: 'Proposed', label: 'Proposed' },
+] as const;
 
-export type TaskStatus = 'To do' | 'In Progress' | 'Done' | 'Blocked';
+export type ProjectStatus = typeof PROJECT_STATUS_OPTIONS[number]['value'];
+export type PaymentStatus = typeof PAYMENT_STATUS_OPTIONS[number]['value'];
 
-export const TASK_STATUS_OPTIONS: { value: TaskStatus; label: string }[] = [
-    { value: 'To do', label: 'To do' },
-    { value: 'In Progress', label: 'In Progress' },
-    { value: 'Done', label: 'Done' },
-    { value: 'Blocked', label: 'Blocked' },
-];
-
-export type TaskPriority = 'Urgent' | 'High' | 'Medium' | 'Normal' | 'Low';
-
+export type TaskPriority = 'Low' | 'Normal' | 'High' | 'Urgent';
 export const TASK_PRIORITY_OPTIONS: { value: TaskPriority; label: string }[] = [
-    { value: 'Urgent', label: 'Urgent' },
-    { value: 'High', label: 'High' },
-    { value: 'Medium', label: 'Medium' },
-    { value: 'Normal', label: 'Normal' },
-    { value: 'Low', label: 'Low' },
+  { value: 'Low', label: 'Low' },
+  { value: 'Normal', label: 'Normal' },
+  { value: 'High', label: 'High' },
+  { value: 'Urgent', label: 'Urgent' },
 ];
 
-export type InvoiceAttachment = {
-  id: string;
-  file_name: string;
-  file_url: string;
-  storage_path: string;
-  file_type: string | null;
-  file_size: number | null;
-  created_at: string;
-};
+export type TaskStatus = 'To do' | 'In progress' | 'Done' | 'Backlog';
+export const TASK_STATUS_OPTIONS: { value: TaskStatus; label: string }[] = [
+  { value: 'To do', label: 'To do' },
+  { value: 'In progress', label: 'In progress' },
+  { value: 'Done', label: 'Done' },
+  { value: 'Backlog', label: 'Backlog' },
+];
 
-export type Invoice = {
-  id: string;
-  projectId: string;
-  rawProjectId: string;
-  projectName: string;
-  amount: number;
-  dueDate: Date;
-  status: PaymentStatus;
-  projectStartDate: Date | null;
-  projectEndDate: Date | null;
-  poNumber: string | null;
-  paidDate: Date | null;
-  emailSendingDate: Date | null;
-  hardcopySendingDate: Date | null;
-  channel: string | null;
-  clientName: string | null;
-  clientAvatarUrl: string | null;
-  clientLogo: string | null;
-  clientCompanyName: string | null;
-  projectOwner: Owner | null;
-  assignedMembers: Member[];
-  invoiceAttachments: InvoiceAttachment[];
-  payment_terms: any[];
-};
-
-export type Member = {
+export interface User {
   id: string;
   name: string;
   email: string;
   avatar_url: string;
   initials: string;
-  role: string;
-};
+  role?: string;
+}
 
-export type Owner = {
-  id: string;
-  name: string;
-  avatar_url: string;
-  initials: string;
-};
-
-export const CUSTOM_PROPERTY_TYPES = [
-  'text', 'textarea', 'number', 'date', 'email', 'phone', 'url', 'image', 'multi-image', 'select', 'multi-select', 'checkbox'
-] as const;
-
-export type CustomPropertyCategory = 'contact' | 'company' | 'tag';
-
-export type CustomProperty = {
-  id: string;
-  name: string;
-  label: string;
-  type: (typeof CUSTOM_PROPERTY_TYPES)[number];
-  options?: string[] | null;
-  is_default?: boolean;
-  category: CustomPropertyCategory;
-};
-
-export type Company = {
-  id: string;
-  name: string;
-  legal_name?: string | null;
-  address?: string | null;
-  billing_address?: string | null;
-  logo_url?: string | null;
-  created_at?: string;
-  updated_at?: string;
-  user_id?: string | null;
-  custom_properties?: Record<string, any> | null;
-};
-
-export type Person = {
+export interface Person {
   id: string;
   full_name: string;
-  contact?: {
-    emails?: string[];
-    phones?: string[];
-  } | null;
-  company?: string | null;
-  job_title?: string | null;
-  department?: string | null;
-  social_media?: {
-    linkedin?: string;
-    twitter?: string;
-    instagram?: string;
-  } | null;
-  birthday?: string | null;
-  notes?: string | null;
-  created_at: string;
-  updated_at: string;
-  projects?: { id: string; name: string; slug: string; status: ProjectStatus; }[] | null;
-  tags?: Tag[] | null;
-  avatar_url?: string | null;
-  user_id?: string | null;
-  address?: any;
-  email?: string | null;
-  phone?: string | null;
-  company_id?: string | null;
-  slug?: string;
-  kanban_order?: number;
-  custom_properties?: Record<string, any> | null;
-  company_logo_url?: string | null;
-};
+  email?: string;
+  phone?: string;
+  company?: string;
+  job_title?: string;
+  notes?: string;
+  avatar_url?: string;
+  projects?: { id: string; name: string; slug: string }[];
+  tags?: Tag[];
+  user_id?: string;
+  company_id?: string;
+  slug: string;
+}
 
-export type Tag = {
+export interface Company {
   id: string;
   name: string;
-  color: string;
-  user_id?: string | null;
-  isNew?: boolean;
-  type?: string;
-  lead_time?: number | null;
-  custom_properties?: Record<string, any> | null;
-};
+  legal_name?: string;
+  address?: string;
+  billing_address?: string;
+  logo_url?: string;
+  custom_properties?: Record<string, any>;
+}
 
-export type User = {
+export interface Project {
   id: string;
+  slug: string;
   name: string;
-  first_name?: string | null;
-  last_name?: string | null;
-  email?: string | null;
-  avatar_url?: string | null;
-  initials: string;
-  role?: string;
-  status?: string;
-  updated_at?: string;
-  phone?: string | null;
-  permissions?: string[];
-  people_kanban_settings?: any;
-  theme?: string;
-};
+  category: string;
+  description: string;
+  status: ProjectStatus;
+  progress: number;
+  budget: number;
+  start_date: string;
+  due_date: string;
+  payment_status: PaymentStatus;
+  payment_due_date: string;
+  created_by: User;
+  assignedTo: User[];
+  tasks: Task[];
+  comments: Comment[];
+  services: string[];
+  briefFiles: any[];
+  activities: any[];
+  tags: Tag[];
+  people?: Person[];
+  person_ids?: string[];
+  client_company_id?: string;
+  public: boolean;
+  venue?: string;
+  personal_for_user_id?: string;
+}
 
-export type Collaborator = User & {
-  isIdle?: boolean;
-  last_active_at?: string;
-};
-export type AssignedUser = User & { role: string };
-
-export type Reaction = {
+export interface Task {
   id: string;
-  emoji: string;
-  user_id: string;
-  user_name: string;
-  profiles?: {
-    id: string;
-    first_name: string | null;
-    last_name: string | null;
-  }
-};
+  title: string;
+  completed: boolean;
+  originTicketId?: string;
+  assignedTo: User[];
+  project_id: string;
+  project_slug: string;
+  project_name: string;
+  due_date: string | null;
+  priority: TaskPriority;
+  status: TaskStatus;
+  description?: string;
+  tags: Tag[];
+  created_by: User;
+  attachments?: TaskAttachment[];
+  ticket_attachments?: TaskAttachment[];
+}
 
-export type TaskAttachment = {
+export interface TaskAttachment {
   id: string;
   file_name: string;
   file_url: string;
-  file_type: string | null;
-  file_size: number | null;
+  file_type: string;
+  file_size: number;
   storage_path: string;
   created_at: string;
-};
+}
 
-export type Task = {
-  id: string;
-  title: string;
-  description: string | null;
-  completed: boolean;
-  due_date: string | null;
-  priority: TaskPriority | null;
-  project_id: string;
-  project_name: string;
-  project_slug: string;
-  project_status: ProjectStatus;
-  assignedTo: User[];
-  created_by: User;
-  created_at: string;
-  updated_at: string;
-  status: TaskStatus;
-  tags: Tag[];
-  originTicketId?: string | null;
-  origin_ticket_id?: string | null;
-  attachment_url?: string | null;
-  attachment_name?: string | null;
-  attachments: TaskAttachment[];
-  ticket_attachments?: TaskAttachment[];
-  project_venue: string | null;
-  project_owner: User | null;
-  project_client: string | null;
-  reactions: Reaction[];
-  kanban_order: number | null;
-  last_reminder_sent_at?: string | null;
-};
-
-export type UpsertTaskPayload = {
+export interface UpsertTaskPayload {
   id?: string;
   project_id: string;
   title: string;
@@ -270,202 +152,28 @@ export type UpsertTaskPayload = {
   due_date?: string | null;
   priority?: TaskPriority | null;
   status?: TaskStatus;
-  completed?: boolean;
+  completed: boolean;
   assignee_ids?: string[];
   tag_ids?: string[];
   new_files?: File[];
   deleted_files?: string[];
-};
+}
 
-export type Theme = "light" | "dark" | "system" | "claude" | "claude-light" | "nature" | "nature-light" | "corporate" | "corporate-light" | "ahensi" | "ahensi-light" | "brand-activator" | "brand-activator-light";
-
-export type AppNotification = {
-  id: string;
-  type: string;
-  title: string;
-  description: string;
-  timestamp: string;
-  read: boolean;
-  link?: string;
-  actor: {
-    id: string;
-    name: string;
-    avatar_url: string;
-  };
-};
-
-export type ConversationMessage = {
-  sender: 'user' | 'ai';
-  content: string;
-};
-
-export type ChatMessageAttachment = {
-  name: string;
-  url: string;
-  type: string;
-};
-
-export type Message = {
+export interface Comment {
   id: string;
   text: string;
-  timestamp: string;
-  sender: User;
-  attachment?: ChatMessageAttachment;
-  reply_to_message_id?: string | null;
-  repliedMessage?: {
-    content: string;
-    senderName: string;
-    isDeleted: boolean;
-  } | null;
-  reactions?: Reaction[];
-  is_deleted?: boolean;
-  is_forwarded?: boolean;
-};
-
-export type Conversation = {
-  id: string;
-  userName: string;
-  userAvatar: string;
-  lastMessage: string;
-  lastMessageTimestamp: string;
-  unreadCount: number;
-  isGroup: boolean;
-  members: Collaborator[];
-  messages: Message[];
-  created_by: string;
-};
-
-export type KbFolder = {
-  id: string;
-  name: string;
-  description: string | null;
-  slug: string;
-  icon: string | null;
-  color: string | null;
-  category: string | null;
-  access_level: FolderAccessLevel;
-  updated_at: string;
-};
-
-export type FolderAccessLevel = 'private' | 'public_view' | 'public_edit';
-
-export type KbArticle = {
-  id: string;
-  title: string;
-  slug: string;
-  content: any;
-  folder_id: string;
-  updated_at: string;
-  header_image_url: string | null;
-  kb_folders: {
-    name: string;
-    slug: string;
-  };
-  tags: Tag[];
-  kb_article_reactions: ArticleReaction[];
-  creator: {
-    id: string;
-    name: string;
-    avatar_url: string;
-    initials: string;
-  };
-};
-
-export type ArticleReaction = {
-  id: string;
-  emoji: string;
-  user_id: string;
-  profiles: {
-    id: string;
-    first_name: string | null;
-    last_name: string | null;
-  };
-};
-
-export type GoalType = 'frequency' | 'quantity' | 'value';
-export type GoalPeriod = 'Weekly' | 'Monthly';
-
-export type Goal = {
-  id: string;
-  user_id: string;
-  title: string;
-  description: string | null;
-  icon: string;
-  icon_url: string | null;
-  color: string;
-  type: GoalType;
-  target_quantity: number | null;
-  target_value: number | null;
-  frequency: 'Daily' | 'Weekly' | null;
-  target_period: GoalPeriod | null;
-  unit: string | null;
-  specific_days: string[] | null;
   created_at: string;
-  updated_at: string;
-  slug: string;
-  tags: Tag[];
-  collaborators: Collaborator[];
-  completions: GoalCompletion[];
-  reactions: Reaction[];
-};
-
-export type GoalCompletion = {
-  id: string;
-  date: string;
-  value: number;
-  notes: string | null;
-  userId: string;
-};
-
-export type Service = {
-  id: string;
-  title: string;
-  description: string;
-  icon: string;
-  icon_color: string;
-  is_featured: boolean;
-};
-
-export type ProjectFile = {
-  id: string;
-  name: string;
-  url: string;
-  storage_path: string;
-  size: number;
-  type: string;
-};
-
-export type Comment = {
-  id: string;
-  created_at: string;
-  text: string;
   isTicket: boolean;
-  attachment_url: string | null;
-  attachment_name: string | null;
-  attachments_jsonb: ProjectFile[] | null;
   author: User;
-  reactions?: Reaction[];
-};
+  attachment_url?: string;
+  attachment_name?: string;
+  attachments_jsonb?: TaskAttachment[];
+}
 
-export type Activity = {
+export interface Tag {
   id: string;
-  type: string;
-  details: {
-    description: string;
-  };
-  timestamp: string;
-  user: User;
-};
-
-type BaseProject = Database['public']['Functions']['get_dashboard_projects']['Returns'][0];
-export type Project = Omit<BaseProject, 'status' | 'activities' | 'assignedTo' | 'tasks' | 'comments' | 'briefFiles' | 'tags' | 'reactions' | 'services'> & {
-  status: ProjectStatus;
-  activities: Activity[];
-  assignedTo: AssignedUser[];
-  tasks: Task[];
-  comments: Comment[];
-  briefFiles: ProjectFile[];
-  tags: Tag[];
-  reactions: Reaction[];
-  services: string[];
-};
+  name: string;
+  color: string;
+  isNew?: boolean;
+  user_id?: string;
+}
