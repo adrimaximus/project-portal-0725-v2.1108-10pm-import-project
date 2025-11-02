@@ -65,16 +65,16 @@ const ProjectHeader = ({
         Back to Projects
       </Button>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-8 items-center">
-        <div className="lg:col-span-2 flex items-center gap-3">
-          <div className="w-1 h-8" style={{ backgroundColor: statusStyles.hex }} />
+        <div className="lg:col-span-2 flex items-center gap-3 min-w-0">
+          <div className="w-1 h-8 flex-shrink-0" style={{ backgroundColor: statusStyles.hex }} />
           {isEditing ? (
             <Input
               value={project.name || ''}
               onChange={(e) => onFieldChange('name', e.target.value)}
-              className="text-3xl font-bold tracking-tight h-auto p-0 border-0 shadow-none focus-visible:ring-0"
+              className="text-3xl font-bold tracking-tight h-auto p-0 border-0 shadow-none focus-visible:ring-0 w-full"
             />
           ) : (
-            <h1 className="text-3xl font-bold tracking-tight">{project.name}</h1>
+            <h1 className="text-3xl font-bold tracking-tight truncate">{project.name}</h1>
           )}
           {project.status && <StatusBadge status={project.status} onStatusChange={onStatusChange} hasOpenTasks={hasOpenTasks} />}
         </div>
