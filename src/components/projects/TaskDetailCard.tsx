@@ -46,7 +46,7 @@ import {
 } from '../ui/dropdown-menu';
 import StatusBadge from '../StatusBadge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useDragScroll } from '@/hooks/useDragScroll';
+import { useDragScrollY } from '@/hooks/useDragScrollY';
 
 interface TaskDetailCardProps {
   task: Task;
@@ -55,6 +55,7 @@ interface TaskDetailCardProps {
   onDelete: (taskId: string) => void;
 }
 
+// Helper: kumpulkan semua attachments
 const aggregateAttachments = (task: Task): TaskAttachment[] => {
   let attachments: TaskAttachment[] = [...(task.attachments || [])];
 
@@ -100,12 +101,9 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
   const queryClient = useQueryClient();
   const { toggleTaskReaction, sendReminder, isSendingReminder } = useTaskMutations();
   const { updateProjectStatus } = useProjectMutations(task.project_slug);
-  const scrollRef = useDragScroll<HTMLDivElement>();
+  const scrollRef = useDragScrollY<HTMLDivElement>();
 
-  const allAttachments = useMemo(() => {
-    if (!task) return [];
-    return aggregateAttachments(task);
-  }, [task]);
+  const allAttachments = useMemo(() => aggregateAttachments(task), [task]);
 
   if (!task) return null;
 
@@ -184,7 +182,10 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
               >
                 <BellRing className="mr-2 h-4 w-4" /> Send Reminder
               </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => { onDelete(task.id); onClose(); }} className="text-destructive">
+              <DropdownMenuItem
+                onSelect={() => { onDelete(task.id); onClose(); }}
+                className="text-destructive"
+              >
                 <Trash2 className="mr-2 h-4 w-4" /> Delete
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -192,9 +193,10 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
         </div>
       </DialogHeader>
 
-      {/* SCROLLABLE BODY WITH DRAG */}
+      {/* SCROLLABLE BODY (drag anywhere) */}
       <ScrollArea className="h-full">
         <div ref={scrollRef} className="p-3 sm:p-4 space-y-3 sm:space-y-4 text-xs sm:text-sm pb-10">
+          {/* DESCRIPTION */}
           {task.description && (
             <div className="border-b pb-3 sm:pb-4">
               <h4 className="font-semibold mb-2 text-xs sm:text-sm">Description</h4>
@@ -206,8 +208,20 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
             </div>
           )}
 
-          {/* Tambahkan konten task detail lainnya di sini */}
-          <TaskDiscussion task={task} onToggleReaction={handleToggleReaction} />
+          {/* ATTACHMENTS */}
+          {allAttachments.length > 0 && (
+            <div className="border-t pt-3 sm:pt-4">
+              <h4 className="font-semibold mb-2 flex items-center gap-2 text-xs sm:text-sm">
+                <Paperclip className="h-3 w-3 sm:h-4 sm:w-4" /> Attachments
+              </h4>
+              <TaskAttachmentList attachments={allAttachments} />
+            </div>
+          )}
+
+          {/* DISCUSSION */}
+          <div className="border-t pt-3 sm:pt-4">
+            <TaskDiscussion task={task} onToggleReaction={handleToggleReaction} />
+          </div>
         </div>
       </ScrollArea>
     </DialogContent>
