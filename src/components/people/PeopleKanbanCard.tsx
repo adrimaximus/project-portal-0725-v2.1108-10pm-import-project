@@ -21,9 +21,9 @@ const PeopleKanbanCard = ({ person, dragHappened, onEdit, onDelete }: { person: 
   const navigate = useNavigate();
 
   const { data: companyProperties = [] } = useQuery({
-    queryKey: ['company_properties'],
+    queryKey: ['custom_properties', 'company'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('company_properties').select('*');
+      const { data, error } = await supabase.from('custom_properties').select('*').eq('category', 'company');
       if (error) throw error;
       return data;
     },

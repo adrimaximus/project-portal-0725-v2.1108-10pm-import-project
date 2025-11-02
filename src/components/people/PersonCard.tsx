@@ -32,9 +32,9 @@ const PersonCard = ({ person, onViewProfile }: PersonCardProps) => {
   const [imageError, setImageError] = useState(false);
 
   const { data: companyProperties = [] } = useQuery({
-    queryKey: ['company_properties'],
+    queryKey: ['custom_properties', 'company'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('company_properties').select('*');
+      const { data, error } = await supabase.from('custom_properties').select('*').eq('category', 'company');
       if (error) throw error;
       return data;
     },
@@ -73,14 +73,16 @@ const PersonCard = ({ person, onViewProfile }: PersonCardProps) => {
           .ilike('name', `%${companyToSearch}%`)
           .limit(1)
           .maybeSingle();
-        if (!error && data) {
-          companyData = data;
+        
+        if (error) {
+            console.warn(`Could not fetch company by name for person ${person.id}:`, error.message);
+        } else if (data) {
+            companyData = data;
         }
       }
       return companyData;
     },
     enabled: !!person,
-    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
   });
 
   const companyLogoUrl = useMemo(() => {
