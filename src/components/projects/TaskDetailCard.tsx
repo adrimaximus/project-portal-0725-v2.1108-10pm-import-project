@@ -1,16 +1,9 @@
 import React, { useMemo } from 'react';
-import { Task, TaskAttachment, ProjectStatus } from '@/types';
+import { Task, TaskAttachment } from '@/types';
 import { DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '../ui/button';
-import { Link } from 'react-router-dom';
-import { format, isAfter, subHours } from 'date-fns';
-import {
-  cn,
-  getPriorityStyles,
-  getTaskStatusStyles,
-  isOverdue,
-  formatTaskText,
-} from '@/lib/utils';
+import { format } from 'date-fns';
+import { cn, isOverdue, formatTaskText } from '@/lib/utils';
 import {
   Edit,
   Trash2,
@@ -19,6 +12,7 @@ import {
   Link as LinkIcon,
   MoreHorizontal,
   BellRing,
+  Loader2,
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -71,25 +65,23 @@ const aggregateAttachments = (task: Task): TaskAttachment[] => {
   return attachments;
 };
 
-const getDueDateClassName = (dueDateStr: string | null, completed: boolean): string => {
-  if (!dueDateStr || completed) return 'text-muted-foreground';
-  const dueDate = new Date(dueDateStr);
-  const diff = (dueDate.getTime() - Date.now()) / 36e5;
-  if (diff < 0) return 'text-red-600 font-bold';
-  if (diff <= 1) return 'text-primary font-bold';
-  if (diff <= 24) return 'text-primary';
-  return 'text-muted-foreground';
-};
-
 const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, onDelete }) => {
   const queryClient = useQueryClient();
   const { toggleTaskReaction, sendReminder, isSendingReminder } = useTaskMutations();
-  const { updateProjectStatus } = useProjectMutations(task.project_slug);
+  const { updateProjectStatus } = useProjectMutations(task?.project_slug);
   const scrollRef = useDragScrollY<HTMLDivElement>();
 
-  const allAttachments = useMemo(() => aggregateAttachments(task), [task]);
+  const allAttachments = useMemo(() => (task ? aggregateAttachments(task) : []), [task]);
 
-  if (!task) return null;
+  if (!task) {
+    return (
+      <DialogContent className="w-[90vw] max-w-[650px] grid place-items-center max-h-[85vh] p-0 rounded-lg overflow-hidden">
+        <div className="p-8">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </DialogContent>
+    );
+  }
 
   const handleToggleReaction = (emoji: string) => {
     toggleTaskReaction(
@@ -111,10 +103,8 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
 
   const handleSendReminder = () => sendReminder(task.id);
 
-  // ✅ Final layout
   return (
     <DialogContent className="w-[90vw] max-w-[650px] grid grid-rows-[auto_1fr] max-h-[85vh] p-0 rounded-lg overflow-hidden">
-      {/* HEADER */}
       <DialogHeader className="p-3 sm:p-4 border-b-[3px] border-primary bg-background z-10">
         <div className="flex justify-between items-start gap-2 sm:gap-4">
           <div className="flex-1 min-w-0">
@@ -169,7 +159,6 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
         </div>
       </DialogHeader>
 
-      {/* BODY — full draggable scroll */}
       <div
         ref={scrollRef}
         className="relative h-full overflow-y-auto p-4 space-y-4 cursor-grab active:cursor-grabbing select-none"
