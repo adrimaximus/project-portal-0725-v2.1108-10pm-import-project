@@ -10,7 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { ContactProperty } from '@/types';
+import { CustomProperty } from '@/types';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import PropertyFormDialog, { PropertyFormValues } from '@/components/settings/PropertyFormDialog';
@@ -18,16 +18,16 @@ import PropertyFormDialog, { PropertyFormValues } from '@/components/settings/Pr
 const ContactPropertiesPage = () => {
   const queryClient = useQueryClient();
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [propertyToEdit, setPropertyToEdit] = useState<ContactProperty | null>(null);
-  const [propertyToDelete, setPropertyToDelete] = useState<ContactProperty | null>(null);
+  const [propertyToEdit, setPropertyToEdit] = useState<CustomProperty | null>(null);
+  const [propertyToDelete, setPropertyToDelete] = useState<CustomProperty | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
   const { data: properties = [], isLoading } = useQuery({
-    queryKey: ['contact_properties'],
+    queryKey: ['custom_properties', 'contact'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('contact_properties').select('*').order('label');
+      const { data, error } = await supabase.from('custom_properties').select('*').eq('category', 'contact').order('label');
       if (error) throw error;
-      return data as ContactProperty[];
+      return data as CustomProperty[];
     }
   });
 
@@ -38,7 +38,7 @@ const ContactPropertiesPage = () => {
     setIsFormOpen(true);
   };
 
-  const handleEdit = (property: ContactProperty) => {
+  const handleEdit = (property: CustomProperty) => {
     setPropertyToEdit(property);
     setIsFormOpen(true);
   };
@@ -46,11 +46,11 @@ const ContactPropertiesPage = () => {
   const handleSave = async (propertyData: PropertyFormValues) => {
     setIsSaving(true);
     const { id, is_default, ...dataToSave } = propertyToEdit || {};
-    const upsertData = { ...dataToSave, ...propertyData, is_default: false };
+    const upsertData = { ...dataToSave, ...propertyData, is_default: false, category: 'contact' };
 
     const promise = propertyToEdit?.id
-      ? supabase.from('contact_properties').update(upsertData).eq('id', propertyToEdit.id)
-      : supabase.from('contact_properties').insert(upsertData);
+      ? supabase.from('custom_properties').update(upsertData).eq('id', propertyToEdit.id)
+      : supabase.from('custom_properties').insert(upsertData);
 
     const { error } = await promise;
     setIsSaving(false);
@@ -59,19 +59,19 @@ const ContactPropertiesPage = () => {
       toast.error(`Failed to save property: ${error.message}`);
     } else {
       toast.success(`Property "${propertyData.label}" saved.`);
-      queryClient.invalidateQueries({ queryKey: ['contact_properties'] });
+      queryClient.invalidateQueries({ queryKey: ['custom_properties', 'contact'] });
       setIsFormOpen(false);
     }
   };
 
   const handleDelete = async () => {
     if (!propertyToDelete) return;
-    const { error } = await supabase.from('contact_properties').delete().eq('id', propertyToDelete.id);
+    const { error } = await supabase.from('custom_properties').delete().eq('id', propertyToDelete.id);
     if (error) {
       toast.error(`Failed to delete property: ${error.message}`);
     } else {
       toast.success(`Property "${propertyToDelete.label}" deleted.`);
-      queryClient.invalidateQueries({ queryKey: ['contact_properties'] });
+      queryClient.invalidateQueries({ queryKey: ['custom_properties', 'contact'] });
     }
     setPropertyToDelete(null);
   };

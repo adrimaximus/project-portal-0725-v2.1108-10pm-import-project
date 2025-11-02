@@ -7,14 +7,14 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { ContactProperty, CONTACT_PROPERTY_TYPES } from '@/types';
+import { CustomProperty, CUSTOM_PROPERTY_TYPES } from '@/types';
 import { Loader2, X } from 'lucide-react';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 
 const propertySchema = z.object({
   label: z.string().min(1, 'Label is required'),
   name: z.string().min(1, 'Name is required').regex(/^[a-z0-9_]+$/, 'Name can only contain lowercase letters, numbers, and underscores.'),
-  type: z.enum(CONTACT_PROPERTY_TYPES),
+  type: z.enum(CUSTOM_PROPERTY_TYPES),
   options: z.array(z.string()).optional(),
 });
 
@@ -24,9 +24,9 @@ interface PropertyFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSave: (data: PropertyFormValues) => void;
-  property: ContactProperty | null;
+  property: CustomProperty | null;
   isSaving: boolean;
-  properties: ContactProperty[];
+  properties: CustomProperty[];
 }
 
 const PropertyFormDialog = ({ open, onOpenChange, onSave, property, isSaving, properties }: PropertyFormDialogProps) => {

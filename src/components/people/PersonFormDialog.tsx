@@ -11,12 +11,13 @@ import { Loader2 } from 'lucide-react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { ContactProperty, Person } from '@/types';
+import { CustomProperty, Person } from '@/types';
 import { getErrorMessage } from '@/lib/utils';
 import UserSelector from './UserSelector';
 import { useAuth } from '@/contexts/AuthContext';
 import CompanySelector from './CompanySelector';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import AvatarUpload from './AvatarUpload';
 import CustomPropertyInput from '../settings/CustomPropertyInput';
 
@@ -44,10 +45,10 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
   
   const isLinkedUser = !!person?.user_id; // DEFINISI isLinkedUser
 
-  const { data: properties = [], isLoading: isLoadingProperties } = useQuery<ContactProperty[]>({
-    queryKey: ['contact_properties'],
+  const { data: properties = [], isLoading: isLoadingProperties } = useQuery<CustomProperty[]>({
+    queryKey: ['custom_properties', 'contact'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('contact_properties').select('*').order('label');
+      const { data, error } = await supabase.from('custom_properties').select('*').eq('category', 'contact');
       if (error) throw error;
       return data;
     },
@@ -140,9 +141,6 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
           birthday: '', 
           notes: '', 
           custom_properties: {
-            // Di sinilah Anda dapat mengatur nilai default untuk properti kustom Anda.
-            // Kuncinya harus cocok dengan 'name' dari properti yang Anda tentukan di pengaturan.
-            // Contoh untuk properti bernama 'website':
             website: 'https://'
           } 
         });
@@ -259,7 +257,7 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
           <DialogDescription>Fill in the details for the person.</DialogDescription>
         </DialogHeader>
         
-        <div className="flex-1 overflow-y-auto">
+        <ScrollArea className="h-full">
           <div className="p-4">
             <Form {...form}>
               <form id="person-form" onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -388,7 +386,7 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
               </form>
             </Form>
           </div>
-        </div>
+        </ScrollArea>
 
         <DialogFooter className="p-4 border-t">
           <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>

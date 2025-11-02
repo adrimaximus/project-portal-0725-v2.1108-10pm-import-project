@@ -1,138 +1,203 @@
-import { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import { supabase } from '@/integrations/supabase/client';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { toast } from 'sonner';
+import { Company, CustomProperty } from '@/types';
+import { ScrollArea } from '../ui/scroll-area';
 import { Loader2, Building } from "lucide-react";
-import { Company } from '@/types';
+import ImageUploader from '../ui/ImageUploader';
 import AddressAutocompleteInput from '../AddressAutocompleteInput';
-import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
-import { Label } from '../ui/label';
+import CustomPropertyInput from '../settings/CustomPropertyInput';
 
 interface CompanyFormDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onSave: (data: CompanyFormValues, file: File | null) => void;
-  company: Company | null;
-  isSaving: boolean;
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    company: Company | null;
 }
 
-const companySchema = z.object({
-  name: z.string().min(1, "Company name is required"),
-  legal_name: z.string().optional(),
-  address: z.string().optional(),
-  billing_address: z.string().optional(),
-  term_of_payment_days: z.coerce.number().int().min(0).optional(),
+const formSchema = z.object({
+    name: z.string().min(1, "Company name is required"),
+    legal_name: z.string().optional().nullable(),
+    address: z.string().optional().nullable(),
+    logo_url: z.string().url().optional().nullable().or(z.literal('')),
+    custom_properties: z.record(z.any()).optional()
 });
 
-export type CompanyFormValues = z.infer<typeof companySchema>;
+type CompanyFormData = z.infer<typeof formSchema>;
 
-const CompanyFormDialog = ({ open, onOpenChange, onSave, company, isSaving }: CompanyFormDialogProps) => {
-  const [logoFile, setLogoFile] = useState<File | null>(null);
-  const [logoPreview, setLogoPreview] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+const CompanyFormDialog: React.FC<CompanyFormDialogProps> = ({ open, onOpenChange, company }) => {
+    const queryClient = useQueryClient();
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const form = useForm<CompanyFormValues>({
-    resolver: zodResolver(companySchema),
-    defaultValues: { name: '', legal_name: '', address: '', billing_address: '', term_of_payment_days: 0 }
-  });
+    const { data: properties = [], isLoading: isLoadingProperties } = useQuery<CustomProperty[]>({
+        queryKey: ['custom_properties', 'company'],
+        queryFn: async () => {
+            const { data, error } = await supabase.from('custom_properties').select('*').eq('category', 'company').order('label');
+            if (error) throw error;
+            return data;
+        },
+    });
 
-  useEffect(() => {
-    if (open) {
-      if (company) {
-        form.reset({
-          name: company.name,
-          legal_name: company.legal_name || '',
-          address: company.address || '',
-          billing_address: company.billing_address || '',
-          term_of_payment_days: (company as any).term_of_payment_days || 0,
-        });
-        setLogoPreview(company.logo_url || null);
-      } else {
-        form.reset({ name: '', legal_name: '', address: '', billing_address: '', term_of_payment_days: 0 });
-        setLogoPreview(null);
-      }
-      setLogoFile(null);
-    }
-  }, [company, open, form]);
+    const form = useForm<CompanyFormData>({
+        resolver: zodResolver(formSchema),
+        defaultValues: {},
+    });
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setLogoFile(file);
-      setLogoPreview(URL.createObjectURL(file));
-    }
-  };
+    useEffect(() => {
+        if (open) {
+            if (company) {
+                form.reset({
+                    name: company.name,
+                    legal_name: company.legal_name,
+                    address: company.address,
+                    logo_url: company.logo_url,
+                    custom_properties: company.custom_properties || {},
+                });
+            } else {
+                form.reset({
+                    name: '',
+                    legal_name: '',
+                    address: '',
+                    logo_url: '',
+                    custom_properties: {},
+                });
+            }
+        }
+    }, [company, open, form]);
 
-  const onSubmit = (values: CompanyFormValues) => {
-    onSave(values, logoFile);
-  };
+    const onSubmit = async (values: CompanyFormData) => {
+        setIsSubmitting(true);
+        
+        const submissionData = {
+            ...values,
+            custom_properties: values.custom_properties || {},
+        };
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>{company ? 'Edit Company' : 'Add New Company'}</DialogTitle>
-          <DialogDescription>Fill in the details for the company profile.</DialogDescription>
-        </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 max-h-[70vh] overflow-y-auto pr-6">
-            <div className="flex items-center gap-4">
-              <Avatar className="h-20 w-20 rounded-md">
-                <AvatarImage src={logoPreview || undefined} className="object-contain" />
-                <AvatarFallback className="rounded-md"><Building className="h-8 w-8 text-muted-foreground" /></AvatarFallback>
-              </Avatar>
-              <div className="space-y-2">
-                <Label>Company Logo</Label>
-                <Input type="file" accept="image/*" onChange={handleFileChange} ref={fileInputRef} className="text-xs" />
-              </div>
-            </div>
-            <FormField control={form.control} name="name" render={({ field }) => (
-              <FormItem><FormLabel>Company Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-            )} />
-            <FormField control={form.control} name="legal_name" render={({ field }) => (
-              <FormItem><FormLabel>Legal Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-            )} />
-            <FormField control={form.control} name="address" render={({ field }) => (
-              <FormItem><FormLabel>Address</FormLabel><FormControl><AddressAutocompleteInput value={field.value || ''} onChange={field.onChange} /></FormControl><FormMessage /></FormItem>
-            )} />
-            <FormField control={form.control} name="billing_address" render={({ field }) => (
-              <FormItem><FormLabel>Billing Address</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
-            )} />
+        let error;
+        if (company) {
+            ({ error } = await supabase.from('companies').update(submissionData).eq('id', company.id));
+        } else {
+            ({ error } = await supabase.from('companies').insert(submissionData));
+        }
+
+        if (error) {
+            toast.error(`Failed to save company: ${error.message}`);
+        } else {
+            toast.success(`Company ${company ? 'updated' : 'created'} successfully.`);
+            queryClient.invalidateQueries({ queryKey: ['companies'] });
+            onOpenChange(false);
+        }
+        setIsSubmitting(false);
+    };
+
+    const renderCustomField = (prop: CustomProperty) => {
+        return (
             <FormField
-              control={form.control}
-              name="term_of_payment_days"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Term of Payment (Days)</FormLabel>
-                  <FormControl>
-                    <Input 
-                      type="number" 
-                      {...field} 
-                      onChange={event => field.onChange(event.target.value === '' ? undefined : +event.target.value)}
-                      placeholder="e.g., 7, 14, 30"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+                key={prop.id}
+                control={form.control}
+                name={`custom_properties.${prop.name}`}
+                render={({ field }) => (
+                    <FormItem>
+                        <CustomPropertyInput 
+                            property={prop} 
+                            control={form.control} 
+                            name={`custom_properties.${prop.name}`} 
+                            bucket="company-logos"
+                        />
+                        <FormMessage />
+                    </FormItem>
+                )}
             />
-            <DialogFooter className="pt-4 sticky bottom-0 bg-background">
-              <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
-              <Button type="submit" disabled={isSaving}>
-                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Save
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
-  );
+        );
+    };
+
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent className="sm:max-w-lg grid grid-rows-[auto_1fr_auto] max-h-[80vh] p-0">
+                <DialogHeader className="p-4 border-b">
+                    <DialogTitle>{company ? 'Edit Company' : 'Add New Company'}</DialogTitle>
+                    <DialogDescription>
+                        {company ? `Updating information for ${company.name}.` : 'Enter the details for the new company.'}
+                    </DialogDescription>
+                </DialogHeader>
+                <ScrollArea className="h-full">
+                    <div className="p-4">
+                        <Form {...form}>
+                            <form id="company-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                                <FormField
+                                    control={form.control}
+                                    name="logo_url"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormControl>
+                                                <ImageUploader
+                                                    value={field.value}
+                                                    onChange={field.onChange}
+                                                    bucket="company-logos"
+                                                    label="Company Logo"
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="name"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Company Name</FormLabel>
+                                            <FormControl><Input placeholder="e.g., Acme Inc." {...field} /></FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="legal_name"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Legal Name</FormLabel>
+                                            <FormControl><Input placeholder="e.g., Acme Corporation" {...field} value={field.value ?? ''} /></FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="address"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Address</FormLabel>
+                                            <FormControl><AddressAutocompleteInput value={field.value || ''} onChange={field.onChange} /></FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                {isLoadingProperties ? (
+                                    <div className="flex justify-center"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+                                ) : properties.map(renderCustomField)}
+                            </form>
+                        </Form>
+                    </div>
+                </ScrollArea>
+                <DialogFooter className="p-4 border-t">
+                    <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+                    <Button type="submit" form="company-form" disabled={isSubmitting}>
+                        {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        {company ? 'Save Changes' : 'Create Company'}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
 };
 
 export default CompanyFormDialog;

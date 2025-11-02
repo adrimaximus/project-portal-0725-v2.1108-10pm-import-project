@@ -7,21 +7,21 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { CompanyProperty, COMPANY_PROPERTY_TYPES } from '@/types';
+import { CustomProperty, CUSTOM_PROPERTY_TYPES } from '@/types';
 import { Loader2, X } from 'lucide-react';
 
 interface CompanyPropertyFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: (property: Omit<CompanyProperty, 'id'> & { name: string }) => void;
-  property?: CompanyProperty | null;
+  onSave: (property: Omit<CustomProperty, 'id' | 'category'> & { name: string }) => void;
+  property?: CustomProperty | null;
   isSaving: boolean;
-  properties: CompanyProperty[];
+  properties: CustomProperty[];
 }
 
-const createPropertySchema = (properties: CompanyProperty[], property: CompanyProperty | null) => z.object({
+const createPropertySchema = (properties: CustomProperty[], property: CustomProperty | null) => z.object({
   label: z.string().min(1, 'Label is required'),
-  type: z.enum(COMPANY_PROPERTY_TYPES),
+  type: z.enum(CUSTOM_PROPERTY_TYPES),
   options: z.array(z.object({ value: z.string() })).optional(),
 }).superRefine((data, ctx) => {
   const machineName = data.label.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');

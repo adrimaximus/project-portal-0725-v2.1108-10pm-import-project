@@ -113,30 +113,20 @@ export type Owner = {
   initials: string;
 };
 
-export const CONTACT_PROPERTY_TYPES = [
+export const CUSTOM_PROPERTY_TYPES = [
   'text', 'textarea', 'number', 'date', 'email', 'phone', 'url', 'image', 'multi-image', 'select', 'multi-select', 'checkbox'
 ] as const;
 
-export type ContactProperty = {
+export type CustomPropertyCategory = 'contact' | 'company';
+
+export type CustomProperty = {
   id: string;
   name: string;
   label: string;
-  type: (typeof CONTACT_PROPERTY_TYPES)[number];
+  type: (typeof CUSTOM_PROPERTY_TYPES)[number];
   options?: string[] | null;
   is_default?: boolean;
-};
-
-export const COMPANY_PROPERTY_TYPES = [
-  'text', 'textarea', 'number', 'date', 'email', 'phone', 'url', 'image', 'select'
-] as const;
-
-export type CompanyProperty = {
-  id: string;
-  name: string;
-  label: string;
-  type: (typeof COMPANY_PROPERTY_TYPES)[number];
-  options?: string[] | null;
-  is_default?: boolean;
+  category: CustomPropertyCategory;
 };
 
 export type Company = {
