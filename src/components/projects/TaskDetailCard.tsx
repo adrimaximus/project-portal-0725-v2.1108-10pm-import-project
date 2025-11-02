@@ -83,7 +83,10 @@ const getDueDateClassName = (dueDateStr: string | null, completed: boolean): str
 
 const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, onDelete }) => {
   const queryClient = useQueryClient();
-  const { toggleTaskReaction, sendReminder, isSendingReminder } = useTaskMutations();
+  const { toggleTaskReaction, sendReminder, isSendingReminder } = useTaskMutations(() => {
+    queryClient.invalidateQueries({ queryKey: ['tasks'] });
+    queryClient.invalidateQueries({ queryKey: ['project'] });
+  });
   const { updateProjectStatus } = useProjectMutations(task.project_slug);
   const scrollRef = useDragScrollY<HTMLDivElement>();
 
@@ -106,7 +109,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
   const handleCopyLink = () => {
     const url = `${window.location.origin}/tasks/${task.id}`;
     navigator.clipboard.writeText(`${task.project_name} | ${task.title}\n${url}`);
-    toast.success('Link copied!');
+    toast.success("Link copied!");
   };
 
   const handleSendReminder = () => sendReminder(task.id);
@@ -126,4 +129,80 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
               <span
                 className={cn(
                   'min-w-0 break-words',
-                  task.completed && 'line-through te
+                  task.completed && 'line-through text-muted-foreground'
+                )}
+              >
+                <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ p: 'span' }}>
+                  {formatTaskText(task.title)}
+                </ReactMarkdown>
+              </span>
+            </DialogTitle>
+            <p className="text-xs text-muted-foreground mt-1">
+              Created on {format(new Date(task.created_at), 'MMM d, yyyy')}
+            </p>
+          </div>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8">
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onSelect={() => { onEdit(task); onClose(); }}>
+                <Edit className="mr-2 h-4 w-4" /> Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={handleCopyLink}>
+                <LinkIcon className="mr-2 h-4 w-4" /> Copy Link
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={handleSendReminder}
+                disabled={!isOverdue(task.due_date) || task.completed || isSendingReminder}
+              >
+                <BellRing className="mr-2 h-4 w-4" /> Send Reminder
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() => { onDelete(task.id); onClose(); }}
+                className="text-destructive"
+              >
+                <Trash2 className="mr-2 h-4 w-4" /> Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </DialogHeader>
+
+      {/* BODY — full draggable scroll */}
+      <div
+        ref={scrollRef}
+        className="relative h-full overflow-y-auto p-4 space-y-4 cursor-grab active:cursor-grabbing select-none"
+      >
+        {task.description && (
+          <div className="border-b pb-4">
+            <h4 className="font-semibold mb-2 text-sm">Description</h4>
+            <div className="prose prose-sm dark:prose-invert max-w-none text-muted-foreground break-all">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {formatTaskText(task.description)}
+              </ReactMarkdown>
+            </div>
+          </div>
+        )}
+
+        {allAttachments.length > 0 && (
+          <div className="border-t pt-4">
+            <h4 className="font-semibold mb-2 flex items-center gap-2 text-sm">
+              <Paperclip className="h-4 w-4" /> Attachments
+            </h4>
+            <TaskAttachmentList attachments={allAttachments} />
+          </div>
+        )}
+
+        <div className="border-t pt-4">
+          <TaskDiscussion task={task} onToggleReaction={handleToggleReaction} />
+        </div>
+      </div>
+    </DialogContent>
+  );
+};
+
+export default TaskDetailCard;
