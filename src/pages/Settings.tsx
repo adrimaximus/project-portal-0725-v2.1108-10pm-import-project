@@ -1,13 +1,39 @@
 import PortalLayout from "@/components/PortalLayout";
-import FeatureCard from "@/components/settings/FeatureCard";
 import IntegrationCard from "@/components/settings/IntegrationCard";
 import NavigationCard from "@/components/settings/NavigationCard";
 import TeamCard from "@/components/settings/TeamCard";
-import StorageCard from "@/components/settings/StorageCard";
+import { useAuth } from "@/contexts/AuthContext";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useNavigate } from "react-router-dom";
+import { ChevronRight } from "lucide-react";
 import { useFeatures } from "@/contexts/FeaturesContext";
+import TagsCard from "@/components/settings/TagsCard";
+import ThemeCard from "@/components/settings/ThemeCard";
+import ServicesCard from "@/components/settings/ServicesCard";
+import NotificationsCard from "@/components/settings/NotificationsCard";
+
+const WorkspaceSettingsCard = () => {
+  const navigate = useNavigate();
+  return (
+    <Card onClick={() => navigate('/settings/workspace')} className="cursor-pointer hover:bg-muted/50 transition-colors h-full">
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <CardTitle className="text-base font-medium">Workspace Settings</CardTitle>
+        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+      </CardHeader>
+      <CardContent>
+        <p className="text-sm text-muted-foreground">
+          Manage global features and settings for the entire workspace.
+        </p>
+      </CardContent>
+    </Card>
+  );
+};
 
 const SettingsPage = () => {
-  const { features } = useFeatures();
+  const { user, hasPermission } = useAuth();
+  const { isFeatureEnabled } = useFeatures();
+  const isMasterAdmin = user?.role === 'master admin';
+  const isAdmin = isMasterAdmin || user?.role === 'admin';
 
   return (
     <PortalLayout>
@@ -19,16 +45,23 @@ const SettingsPage = () => {
           </p>
         </div>
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {features
-            .filter(f => f.id !== 'user-management')
-            .sort((a, b) => a.name.localeCompare(b.name))
-            .map((feature) => (
-              <FeatureCard key={feature.id} feature={feature} />
-            ))}
-          <TeamCard />
-          <IntegrationCard />
+          {/* Available to all members */}
           <NavigationCard />
-          <StorageCard />
+          <TagsCard />
+          <ThemeCard />
+          <NotificationsCard />
+          
+          {/* Conditionally available */}
+          {isFeatureEnabled('integrations') && hasPermission('settings:manage_integrations') && <IntegrationCard />}
+          
+          {/* Role-based */}
+          {isAdmin && (
+            <>
+              <TeamCard />
+              <ServicesCard />
+            </>
+          )}
+          {isMasterAdmin && <WorkspaceSettingsCard />}
         </div>
       </div>
     </PortalLayout>
