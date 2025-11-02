@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { useSearchParams, useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { createProject, updateProjectDetails, deleteProject } from '@/api/projects';
+import { getDashboardProjects, createProject, updateProjectDetails, deleteProject } from '@/api/projects';
 import { getProjectTasks, upsertTask, deleteTask, toggleTaskCompletion } from '@/api/tasks';
 import { getPeople } from '@/api/people';
 import { Project, Task as ProjectTask, Person, UpsertTaskPayload, TaskStatus, ProjectStatus } from '@/types';
@@ -84,9 +84,12 @@ const ProjectsPage = () => {
   const { data: availableYears = [] } = useQuery<number[]>({
     queryKey: ['projectYears'],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_project_years');
+      const { data, error } = await supabase
+        .from('projects')
+        .select('start_date');
       if (error) throw error;
-      return data.map((y: { year: number }) => y.year);
+      const years = new Set(data.map(p => p.start_date ? new Date(p.start_date).getFullYear() : null).filter(Boolean) as number[]);
+      return Array.from(years).sort((a, b) => b - a);
     }
   });
 
