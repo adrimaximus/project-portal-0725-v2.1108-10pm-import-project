@@ -6,7 +6,7 @@ interface YearFilterProps {
   onYearChange: (year: number | null) => void;
 }
 
-const YearFilter = ({ availableYears, selectedYear, onYearChange }: YearFilterProps) => {
+const YearFilter = ({ availableYears = [], selectedYear, onYearChange }: YearFilterProps) => {
   const currentYear = new Date().getFullYear();
 
   const options = [
