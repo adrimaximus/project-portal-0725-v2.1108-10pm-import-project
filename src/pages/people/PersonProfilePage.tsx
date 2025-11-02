@@ -11,7 +11,7 @@ import { ArrowLeft, Briefcase, Cake, Edit, Instagram, Linkedin, Mail, MapPin, Mo
 import { Badge } from '@/components/ui/badge';
 import { formatInJakarta, generatePastelColor, getInitials, getAvatarUrl, formatPhoneNumberForApi } from '@/lib/utils';
 import PeopleFormDialog from '@/components/people/PersonFormDialog';
-import { Person as BasePerson, ContactProperty, User, Collaborator } from '@/types';
+import { Person as BasePerson, CustomProperty, User, Collaborator } from '@/types';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import WhatsappIcon from '@/components/icons/WhatsappIcon';
@@ -63,10 +63,10 @@ const PersonProfilePage = () => {
   const { user: currentUser } = useAuth();
   const queryClient = useQueryClient();
 
-  const { data: customProperties = [], isLoading: isLoadingCustomProperties } = useQuery<ContactProperty[]>({
+  const { data: customProperties = [], isLoading: isLoadingCustomProperties } = useQuery<CustomProperty[]>({
     queryKey: ['contact_properties'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('contact_properties').select('*');
+      const { data, error } = await supabase.from('custom_properties').select('*').eq('category', 'contact');
       if (error) throw error;
       return data;
     }
@@ -184,7 +184,7 @@ const PersonProfilePage = () => {
     }
   };
 
-  const renderCustomPropertyValue = (prop: ContactProperty, value: any) => {
+  const renderCustomPropertyValue = (prop: CustomProperty, value: any) => {
     if (value === null || typeof value === 'undefined' || value === '') {
       return <span className="text-muted-foreground">-</span>;
     }

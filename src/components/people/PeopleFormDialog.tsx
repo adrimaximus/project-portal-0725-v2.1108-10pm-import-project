@@ -11,7 +11,7 @@ import { Loader2 } from 'lucide-react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { ContactProperty, Person } from '@/types';
+import { CustomProperty, Person } from '@/types';
 import { getErrorMessage } from '@/lib/utils';
 import UserSelector from './UserSelector';
 import { useAuth } from '@/contexts/AuthContext';
@@ -45,10 +45,10 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
   
   const isLinkedUser = !!person?.user_id; // DEFINISI isLinkedUser
 
-  const { data: properties = [], isLoading: isLoadingProperties } = useQuery<ContactProperty[]>({
-    queryKey: ['contact_properties'],
+  const { data: properties = [], isLoading: isLoadingProperties } = useQuery<CustomProperty[]>({
+    queryKey: ['custom_properties', 'contact'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('contact_properties').select('*').order('label');
+      const { data, error } = await supabase.from('custom_properties').select('*').eq('category', 'contact');
       if (error) throw error;
       return data;
     },
