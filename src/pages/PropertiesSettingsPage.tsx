@@ -3,6 +3,7 @@ import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbP
 import { Link, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChevronRight, User, Building } from "lucide-react";
+import TagsPropertiesCard from "@/components/settings/TagsPropertiesCard";
 
 const PropertiesSettingsPage = () => {
   const navigate = useNavigate();
@@ -31,7 +32,7 @@ const PropertiesSettingsPage = () => {
           </p>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           <Card onClick={() => navigate('/settings/people-properties')} className="cursor-pointer hover:bg-muted/50 transition-colors">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-base font-medium flex items-center gap-2">
@@ -60,6 +61,7 @@ const PropertiesSettingsPage = () => {
               </p>
             </CardContent>
           </Card>
+          <TagsPropertiesCard />
         </div>
       </div>
     </PortalLayout>
