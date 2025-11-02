@@ -25,6 +25,7 @@ import PortalLayout from '@/components/PortalLayout';
 import { getErrorMessage, formatInJakarta } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
+import YearFilter from '@/components/projects/YearFilter';
 
 type ViewMode = 'table' | 'list' | 'kanban' | 'tasks' | 'tasks-kanban';
 type SortConfig<T> = { key: keyof T | null; direction: 'ascending' | 'descending' };
@@ -46,6 +47,7 @@ const ProjectsPage = () => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   
   const highlightedTaskId = taskIdFromParams || searchParams.get('highlight');
+  const [selectedYear, setSelectedYear] = useState<number | null>(new Date().getFullYear());
 
   const onHighlightComplete = useCallback(() => {
     if (taskIdFromParams) {
@@ -64,7 +66,7 @@ const ProjectsPage = () => {
     hasNextPage, 
     isFetchingNextPage,
     refetch: refetchProjects 
-  } = useProjects({ searchTerm });
+  } = useProjects({ searchTerm, year: selectedYear });
 
   const projectsData = useMemo(() => data?.pages.flatMap(page => page.projects) ?? [], [data]);
   
@@ -77,6 +79,18 @@ const ProjectsPage = () => {
   const { data: peopleData } = useQuery<Person[]>({
     queryKey: ['people'],
     queryFn: getPeople,
+  });
+
+  const { data: availableYears = [] } = useQuery<number[]>({
+    queryKey: ['projectYears'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('projects')
+        .select('start_date');
+      if (error) throw error;
+      const years = new Set(data.map(p => p.start_date ? new Date(p.start_date).getFullYear() : null).filter(Boolean) as number[]);
+      return Array.from(years).sort((a, b) => b - a);
+    }
   });
 
   const allPeople = useMemo(() => {
@@ -402,6 +416,9 @@ const ProjectsPage = () => {
             advancedFilters={advancedFilters}
             onAdvancedFiltersChange={setAdvancedFilters}
             allPeople={allPeople}
+            availableYears={availableYears}
+            selectedYear={selectedYear}
+            onYearChange={setSelectedYear}
           />
         </div>
         <div ref={scrollContainerRef} className="flex-grow min-h-0 overflow-y-auto">

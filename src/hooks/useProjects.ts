@@ -4,12 +4,13 @@ import { useEffect } from 'react';
 
 const PAGE_SIZE = 50; // Increase page size for faster full load
 
-const fetchProjects = async ({ pageParam = 0, searchTerm, excludeOtherPersonal }: { pageParam: number, searchTerm: string, excludeOtherPersonal: boolean }) => {
+const fetchProjects = async ({ pageParam = 0, searchTerm, excludeOtherPersonal, year }: { pageParam: number, searchTerm: string, excludeOtherPersonal: boolean, year: number | null }) => {
   const projects = await getDashboardProjects({
     limit: PAGE_SIZE,
     offset: pageParam * PAGE_SIZE,
     searchTerm,
     excludeOtherPersonal,
+    year,
   });
   return {
     projects,
@@ -17,10 +18,10 @@ const fetchProjects = async ({ pageParam = 0, searchTerm, excludeOtherPersonal }
   };
 };
 
-export const useProjects = ({ searchTerm, fetchAll = false, excludeOtherPersonal = false }: { searchTerm?: string, fetchAll?: boolean, excludeOtherPersonal?: boolean } = {}) => {
+export const useProjects = ({ searchTerm, fetchAll = false, excludeOtherPersonal = false, year }: { searchTerm?: string, fetchAll?: boolean, excludeOtherPersonal?: boolean, year?: number | null } = {}) => {
   const query = useInfiniteQuery({
-    queryKey: ['projects', { searchTerm, excludeOtherPersonal }],
-    queryFn: ({ pageParam }) => fetchProjects({ pageParam: pageParam as number, searchTerm: searchTerm || "", excludeOtherPersonal }),
+    queryKey: ['projects', { searchTerm, excludeOtherPersonal, year }],
+    queryFn: ({ pageParam }) => fetchProjects({ pageParam: pageParam as number, searchTerm: searchTerm || "", excludeOtherPersonal, year: year === undefined ? null : year }),
     initialPageParam: 0,
     getNextPageParam: (lastPage) => lastPage.nextPage,
   });
