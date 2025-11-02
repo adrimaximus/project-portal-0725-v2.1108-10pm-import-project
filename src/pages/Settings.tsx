@@ -11,6 +11,7 @@ import TagsCard from "@/components/settings/TagsCard";
 import ThemeCard from "@/components/settings/ThemeCard";
 import ServicesCard from "@/components/settings/ServicesCard";
 import NotificationsCard from "@/components/settings/NotificationsCard";
+import PropertiesCard from "@/components/settings/PropertiesCard";
 
 const WorkspaceSettingsCard = () => {
   const navigate = useNavigate();
@@ -59,6 +60,7 @@ const SettingsPage = () => {
             <>
               <TeamCard />
               <ServicesCard />
+              <PropertiesCard />
             </>
           )}
           {isMasterAdmin && <WorkspaceSettingsCard />}

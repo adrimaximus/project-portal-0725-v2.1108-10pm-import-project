@@ -35,6 +35,7 @@ import StorageSettingsPage from '@/pages/StorageSettingsPage';
 import WorkspaceSettingsPage from '@/pages/WorkspaceSettingsPage';
 import ContactPropertiesPage from '@/pages/ContactPropertiesPage';
 import CompanyPropertiesPage from '@/pages/CompanyPropertiesPage';
+import PropertiesSettingsPage from '@/pages/PropertiesSettingsPage';
 import NotificationsPage from '@/pages/Notifications';
 import Profile from '@/pages/Profile';
 import SearchPage from '@/pages/SearchPage';
@@ -95,6 +96,7 @@ function App() {
           <Route path="/settings/workspace" element={<WorkspaceSettingsPage />} />
           <Route path="/settings/people-properties" element={<ContactPropertiesPage />} />
           <Route path="/settings/company-properties" element={<CompanyPropertiesPage />} />
+          <Route path="/settings/properties" element={<PropertiesSettingsPage />} />
           <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/search" element={<SearchPage />} />
