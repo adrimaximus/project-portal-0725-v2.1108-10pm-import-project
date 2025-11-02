@@ -31,6 +31,8 @@ const CompanyPropertiesPage = () => {
     }
   });
 
+  const customProperties = properties.filter(prop => !prop.is_default);
+
   const handleAddNew = () => {
     setPropertyToEdit(null);
     setIsFormOpen(true);
@@ -112,9 +114,9 @@ const CompanyPropertiesPage = () => {
               <TableBody>
                 {isLoading ? (
                   <TableRow><TableCell colSpan={3} className="text-center">Loading properties...</TableCell></TableRow>
-                ) : properties.length === 0 ? (
+                ) : customProperties.length === 0 ? (
                   <TableRow><TableCell colSpan={3} className="text-center h-24">No custom properties found.</TableCell></TableRow>
-                ) : properties.map(prop => (
+                ) : customProperties.map(prop => (
                   <TableRow key={prop.id}>
                     <TableCell className="font-medium">{prop.label}</TableCell>
                     <TableCell><Badge variant="outline" className="capitalize">{prop.type}</Badge></TableCell>
