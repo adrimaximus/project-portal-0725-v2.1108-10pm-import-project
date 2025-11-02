@@ -16,14 +16,8 @@ const Index = () => {
     from: new Date(new Date().getFullYear(), 0, 1),
     to: new Date(new Date().getFullYear(), 11, 31),
   });
-  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useProjects({ searchTerm: "" });
+  const { data, isLoading, hasNextPage, isFetchingNextPage } = useProjects({ fetchAll: true });
   
-  useEffect(() => {
-    if (hasNextPage && !isFetchingNextPage) {
-      fetchNextPage();
-    }
-  }, [hasNextPage, isFetchingNextPage, data, fetchNextPage]);
-
   const projects = useMemo(() => data?.pages.flatMap(page => page.projects) ?? [], [data]);
   const { user } = useAuth();
 

@@ -23,6 +23,8 @@ import { useProjectMutations } from '@/hooks/useProjectMutations';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import PortalLayout from '@/components/PortalLayout';
 import { getErrorMessage, formatInJakarta } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Loader2 } from 'lucide-react';
 
 type ViewMode = 'table' | 'list' | 'kanban' | 'tasks' | 'tasks-kanban';
 type SortConfig<T> = { key: keyof T | null; direction: 'ascending' | 'descending' };
@@ -55,7 +57,16 @@ const ProjectsPage = () => {
     }
   }, [searchParams, setSearchParams, taskIdFromParams, navigate]);
 
-  const { data: projectsData = [], isLoading: isLoadingProjects, refetch: refetchProjects } = useProjects({ searchTerm });
+  const { 
+    data, 
+    isLoading: isLoadingProjects, 
+    fetchNextPage, 
+    hasNextPage, 
+    isFetchingNextPage,
+    refetch: refetchProjects 
+  } = useProjects({ searchTerm });
+
+  const projectsData = useMemo(() => data?.pages.flatMap(page => page.projects) ?? [], [data]);
   
   const [advancedFilters, setAdvancedFilters] = useState<AdvancedFiltersState>({
     selectedPeopleIds: [],
@@ -399,7 +410,7 @@ const ProjectsPage = () => {
               view={view}
               projects={sortedProjects}
               tasks={filteredTasks}
-              isLoading={isLoadingProjects}
+              isLoading={isLoadingProjects && !projectsData.length}
               isTasksLoading={isLoadingTasks}
               onDeleteProject={handleDeleteProject}
               sortConfig={projectSortConfig}
@@ -420,6 +431,20 @@ const ProjectsPage = () => {
               onStatusChange={handleStatusChange}
             />
           </div>
+          {hasNextPage && (
+            <div className="flex justify-center py-4">
+              <Button
+                variant="outline"
+                onClick={() => fetchNextPage()}
+                disabled={isFetchingNextPage}
+              >
+                {isFetchingNextPage ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : null}
+                Load More Projects
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     </PortalLayout>

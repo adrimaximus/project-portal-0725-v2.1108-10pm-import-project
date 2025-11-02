@@ -22,7 +22,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 const Billing = () => {
-  const { data: projects = [], isLoading } = useProjects();
+  const { data: projectsData, isLoading } = useProjects({ fetchAll: true });
+  const projects = useMemo(() => projectsData?.pages.flatMap(page => page.projects) ?? [], [projectsData]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [sortColumn, setSortColumn] = useState<keyof Invoice>('dueDate');
