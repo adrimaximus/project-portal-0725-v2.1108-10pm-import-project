@@ -81,7 +81,7 @@ const ContactPropertiesPage = () => {
       <div className="space-y-6">
         <Breadcrumb>
           <BreadcrumbList>
-            <BreadcrumbItem><BreadcrumbLink asChild><Link to="/people">People</Link></BreadcrumbLink></BreadcrumbItem>
+            <BreadcrumbItem><BreadcrumbLink asChild><Link to="/settings/properties">Properties</Link></BreadcrumbLink></BreadcrumbItem>
             <BreadcrumbSeparator />
             <BreadcrumbItem><BreadcrumbPage>Contact Properties</BreadcrumbPage></BreadcrumbItem>
           </BreadcrumbList>
