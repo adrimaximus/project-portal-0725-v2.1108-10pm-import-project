@@ -10,30 +10,13 @@ interface PeopleGridViewProps {
 }
 
 const PeopleGridView = ({ people, onEditPerson, onDeletePerson, onViewProfile }: PeopleGridViewProps) => {
-  const sortedAndGroupedPeople = useMemo(() => {
-    const groupedByCompany = people.reduce((acc, person) => {
-      const companyName = person.company || 'Uncategorized';
-      if (!acc[companyName]) {
-        acc[companyName] = [];
-      }
-      acc[companyName].push(person);
-      return acc;
-    }, {} as Record<string, Person[]>);
-
-    const sortedCompanies = Object.keys(groupedByCompany).sort((a, b) => {
-      if (a === 'Uncategorized') return 1;
-      if (b === 'Uncategorized') return -1;
-      return a.localeCompare(b);
-    });
-
-    return sortedCompanies.flatMap(companyName => 
-      groupedByCompany[companyName].sort((a, b) => a.full_name.localeCompare(b.full_name))
-    );
+  const sortedPeople = useMemo(() => {
+    return [...people].sort((a, b) => a.full_name.localeCompare(b.full_name));
   }, [people]);
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
-      {sortedAndGroupedPeople.map(person => (
+      {sortedPeople.map(person => (
         <PersonCard 
           key={person.id} 
           person={person} 
