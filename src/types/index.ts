@@ -6,6 +6,10 @@ export const PROJECT_STATUS_OPTIONS = [
   { value: 'Completed', label: 'Completed' },
   { value: 'Cancelled', label: 'Cancelled' },
   { value: 'Bid Lost', label: 'Bid Lost' },
+  { value: 'On Hold', label: 'On Hold' },
+  { value: 'Reschedule', label: 'Reschedule' },
+  { value: 'Billing Process', label: 'Billing Process' },
+  { value: 'Archived', label: 'Archived' },
 ] as const;
 
 export const PAYMENT_STATUS_OPTIONS = [
@@ -14,6 +18,13 @@ export const PAYMENT_STATUS_OPTIONS = [
   { value: 'Paid', label: 'Paid' },
   { value: 'Partially Paid', label: 'Partially Paid' },
   { value: 'Overdue', label: 'Overdue' },
+  { value: 'Pending', label: 'Pending' },
+  { value: 'In Process', label: 'In Process' },
+  { value: 'Requested', label: 'Requested' },
+  { value: 'Quo Approved', label: 'Quo Approved' },
+  { value: 'Inv Approved', label: 'Inv Approved' },
+  { value: 'Cancelled', label: 'Cancelled' },
+  { value: 'Bid Lost', label: 'Bid Lost' },
 ] as const;
 
 export const TASK_STATUS_OPTIONS = [
