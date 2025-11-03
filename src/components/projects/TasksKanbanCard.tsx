@@ -44,7 +44,7 @@ const aggregateAttachments = (task: Task): TaskAttachment[] => {
     const existingUrls = new Set(attachments.map((a) => a.file_url));
     if (!existingUrls.has(task.attachment_url)) {
       attachments.push({
-        id: task.originTicketId || `legacy-${task.id}`, // Use origin ticket ID if available
+        id: task.origin_ticket_id || `legacy-${task.id}`, // Use origin ticket ID if available
         file_name: task.attachment_name,
         file_url: task.attachment_url,
         file_type: null,
@@ -191,7 +191,7 @@ const TasksKanbanCard = ({ task, onEdit, onDelete }: TasksKanbanCardProps) => {
                 }
               </div>
               <div className="flex items-center gap-2">
-                {(task.originTicketId || task.tags?.some(t => t.name === 'Ticket')) && (
+                {(task.origin_ticket_id || task.tags?.some(t => t.name === 'Ticket')) && (
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>

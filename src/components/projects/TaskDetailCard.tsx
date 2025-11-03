@@ -38,6 +38,7 @@ import { Badge } from '../ui/badge';
 import TaskDiscussion from './TaskDiscussion';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
+import { toast } from 'sonner';
 
 interface TaskDetailCardProps {
   task: Task;
@@ -61,7 +62,7 @@ const aggregateAttachments = (task: Task): TaskAttachment[] => {
     const existingUrls = new Set(attachments.map((a) => a.file_url));
     if (!existingUrls.has(task.attachment_url)) {
       attachments.push({
-        id: task.originTicketId || `legacy-${task.id}`,
+        id: task.origin_ticket_id || `legacy-${task.id}`,
         file_name: task.attachment_name,
         file_url: task.attachment_url,
         file_type: null,
@@ -124,7 +125,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
           <div className="flex justify-between items-start gap-3">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 text-base sm:text-lg font-semibold leading-none tracking-tight">
-                {task.originTicketId && (
+                {task.origin_ticket_id && (
                   <Ticket className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
                 )}
                 {allAttachments.length > 0 && (

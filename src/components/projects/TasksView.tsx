@@ -59,7 +59,7 @@ const aggregateAttachments = (task: ProjectTask): TaskAttachment[] => {
     const existingUrls = new Set(attachments.map((a) => a.file_url));
     if (!existingUrls.has(task.attachment_url)) {
       attachments.push({
-        id: task.originTicketId || `legacy-${task.id}`, // Use origin ticket ID if available
+        id: task.origin_ticket_id || `legacy-${task.id}`, // Use origin ticket ID if available
         file_name: task.attachment_name,
         file_url: task.attachment_url,
         file_type: null,
@@ -318,7 +318,7 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
 
   return (
     <div className="w-full overflow-x-auto">
-      <Drawer open={!!selectedTaskId} onOpenChange={(isOpen) => { if (!isOpen) setSelectedTaskId(null); }}>
+      <Drawer open={!!selectedTask} onOpenChange={(isOpen) => { if (!isOpen) setSelectedTask(null); }}>
         <Table>
           <TableHeader>
             <TableRow>
@@ -354,7 +354,7 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
                 const allAttachments = aggregateAttachments(task);
                 const hasAssignees = task.assignedTo && task.assignedTo.length > 0;
                 const reactions = task.reactions || [];
-                const hasBottomBar = hasAssignees || reactions.length > 0 || (task.originTicketId || task.tags?.some(t => t.name === 'Ticket')) || allAttachments.length > 0;
+                const hasBottomBar = hasAssignees || reactions.length > 0 || (task.origin_ticket_id || task.tags?.some(t => t.name === 'Ticket')) || allAttachments.length > 0;
                 const wasReminderSentRecently = task.last_reminder_sent_at && isAfter(new Date(task.last_reminder_sent_at), subHours(new Date(), 25));
 
                 const groupedReactions: Record<string, { users: string[]; userIds: string[] }> = reactions.reduce((acc, reaction) => {
@@ -418,7 +418,7 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
                                   </ReactMarkdown>
                                 </div>
                               </div>
-                              {task.originTicketId && task.created_by && (
+                              {task.origin_ticket_id && task.created_by && (
                                 <p className="text-xs text-muted-foreground mt-1">
                                   From: {task.created_by.email}
                                 </p>
@@ -540,7 +540,7 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
                                         </div>
                                       </PopoverContent>
                                     </Popover>
-                                    {(task.originTicketId || task.tags?.some(t => t.name === 'Ticket')) && (
+                                    {(task.origin_ticket_id || task.tags?.some(t => t.name === 'Ticket')) && (
                                       <TooltipProvider>
                                         <Tooltip>
                                           <TooltipTrigger asChild>

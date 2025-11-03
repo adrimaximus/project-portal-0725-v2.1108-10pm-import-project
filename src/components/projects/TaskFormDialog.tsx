@@ -138,7 +138,7 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task, proj
         initialTags = task.tags || [];
 
         // 2. Cek apakah ini tiket yang berasal dari komentar (fallback konsistensi data)
-        if (task.originTicketId) {
+        if (task.origin_ticket_id) {
           const ticketTagInOptions = allTags.find(t => t.name === TICKET_TAG_NAME);
           
           // Jika tag 'Ticket' belum ada di daftar tag tugas, tambahkan
