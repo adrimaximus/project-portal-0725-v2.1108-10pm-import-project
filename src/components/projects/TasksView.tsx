@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Task as ProjectTask, TaskAttachment, User, TaskStatus, TASK_STATUS_OPTIONS } from '@/types';
+import { Task as ProjectTask, TaskAttachment, Reaction, User, TaskStatus, TASK_STATUS_OPTIONS } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -9,7 +9,7 @@ import { generatePastelColor, getPriorityStyles, getTaskStatusStyles, isOverdue,
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "../ui/button";
-import { MoreHorizontal, Edit, Trash2, Ticket, Paperclip, Link as LinkIcon, BellRing } from "lucide-react";
+import { MoreHorizontal, Edit, Trash2, Ticket, Paperclip, SmilePlus, Link as LinkIcon, BellRing, Loader2, Calendar, Briefcase, Users, Flag, CheckCircle } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Checkbox } from "@/components/ui/checkbox";
 import TaskAttachmentList from './TaskAttachmentList';
@@ -17,8 +17,14 @@ import { Drawer, DrawerContent, DrawerTrigger } from "@/components/ui/drawer";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import TaskDetailCard from './TaskDetailCard';
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import EmojiPicker, { EmojiStyle } from "emoji-picker-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { User as AuthUser } from '@supabase/supabase-js';
 
 interface TasksViewProps {
   tasks: ProjectTask[];
@@ -69,7 +75,10 @@ const aggregateAttachments = (task: ProjectTask): TaskAttachment[] => {
 
 const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTaskCompletion, onStatusChange, isToggling, sortConfig, requestSort, rowRefs, highlightedTaskId, onHighlightComplete }: TasksViewProps) => {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const { user } = useAuth();
   const [tasks, setTasks] = useState<ProjectTask[]>(tasksProp);
+  const queryClient = useQueryClient();
+  const commonEmojis = ['👍', '❤️', '😂', '🎉', '🙏', '😢'];
   const initialSortSet = useRef(false);
 
   const selectedTask = useMemo(() => {
@@ -225,6 +234,53 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
     setTasks(tasksToSet);
   }, [tasksProp, sortConfig]);
 
+  const handleEmojiSelect = async (emoji: string, taskId: string) => {
+    if (!user) return;
+
+    const previousTasks = tasks;
+    setTasks(currentTasks =>
+      currentTasks.map(task => {
+        if (task.id === taskId) {
+          const newReactions: Reaction[] = [...(task.reactions || [])];
+          const existingReactionIndex = newReactions.findIndex(r => r.user_id === user.id);
+
+          if (existingReactionIndex > -1) {
+            if (newReactions[existingReactionIndex].emoji === emoji) {
+              newReactions.splice(existingReactionIndex, 1);
+            } else {
+              newReactions[existingReactionIndex] = { ...newReactions[existingReactionIndex], emoji };
+            }
+          } else {
+            newReactions.push({
+              id: `temp-${Date.now()}`,
+              emoji,
+              user_id: user.id,
+              user_name: `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email || 'You',
+            });
+          }
+          return { ...task, reactions: newReactions };
+        }
+        return task;
+      })
+    );
+
+    const { error } = await supabase.rpc('toggle_task_reaction', {
+      p_task_id: taskId,
+      p_emoji: emoji,
+    });
+
+    if (error) {
+      console.error("Error toggling reaction:", error);
+      toast.error("Failed to update reaction.");
+      setTasks(previousTasks); // Rollback on error
+    } else {
+      // Invalidate queries to sync with the database in the background
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['project'] });
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="p-4 md:p-6">
@@ -312,8 +368,18 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
                 const priorityStyle = getPriorityStyles(effectivePriority);
                 const allAttachments = aggregateAttachments(task);
                 const hasAssignees = task.assignedTo && task.assignedTo.length > 0;
-                const hasBottomBar = hasAssignees || (task.origin_ticket_id || task.tags?.some(t => t.name === 'Ticket')) || allAttachments.length > 0;
+                const reactions = task.reactions || [];
+                const hasBottomBar = hasAssignees || reactions.length > 0 || (task.origin_ticket_id || task.tags?.some(t => t.name === 'Ticket')) || allAttachments.length > 0;
                 const wasReminderSentRecently = task.last_reminder_sent_at && isAfter(new Date(task.last_reminder_sent_at), subHours(new Date(), 25));
+
+                const groupedReactions: Record<string, { users: string[]; userIds: string[] }> = reactions.reduce((acc, reaction) => {
+                    if (!acc[reaction.emoji]) {
+                        acc[reaction.emoji] = { users: [], userIds: [] };
+                    }
+                    acc[reaction.emoji].users.push(reaction.user_name);
+                    acc[reaction.emoji].userIds.push(reaction.user_id);
+                    return acc;
+                }, {} as Record<string, { users: string[]; userIds: string[] }>);
 
                 const taskMonthYear = task.due_date ? format(new Date(task.due_date), 'MMMM yyyy') : 'No Due Date';
                 let showMonthSeparator = false;
@@ -412,8 +478,83 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
                                         ))}
                                       </div>
                                     )}
+                                    <div className="flex items-center gap-1 flex-wrap">
+                                      {Object.entries(groupedReactions).map(([emoji, { users, userIds }]) => {
+                                          const userHasReacted = user ? userIds.includes(user.id) : false;
+                                          return (
+                                              <TooltipProvider key={emoji}>
+                                                  <Tooltip>
+                                                      <TooltipTrigger asChild>
+                                                          <button
+                                                              onClick={(e) => {
+                                                                  e.stopPropagation();
+                                                                  handleEmojiSelect(emoji, task.id);
+                                                              }}
+                                                              className={cn(
+                                                                  "px-1.5 py-0.5 rounded-full text-xs flex items-center gap-1 transition-colors border",
+                                                                  userHasReacted
+                                                                  ? "bg-primary/20 border-primary/50"
+                                                                  : "bg-muted hover:bg-muted/80"
+                                                              )}
+                                                          >
+                                                              <span>{emoji}</span>
+                                                              <span className="font-medium text-xs">{users.length}</span>
+                                                          </button>
+                                                      </TooltipTrigger>
+                                                      <TooltipContent>
+                                                          <p>{users.join(', ')}</p>
+                                                      </TooltipContent>
+                                                  </Tooltip>
+                                              </TooltipProvider>
+                                          );
+                                      })}
+                                    </div>
                                   </div>
                                   <div className="flex justify-end gap-1 items-center mr-1">
+                                    <Popover>
+                                      <PopoverTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={e => e.stopPropagation()}>
+                                          <SmilePlus className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                                        </Button>
+                                      </PopoverTrigger>
+                                      <PopoverContent onClick={e => e.stopPropagation()} className="p-1 w-auto rounded-full bg-background border shadow-lg">
+                                        <div className="flex items-center gap-1">
+                                          {commonEmojis.map(emoji => (
+                                            <button
+                                              key={emoji}
+                                              className="hover:bg-muted rounded-full p-1 transition-transform transform hover:scale-125"
+                                              onClick={() => handleEmojiSelect(emoji, task.id)}
+                                            >
+                                              <span className="text-xl">{emoji}</span>
+                                            </button>
+                                          ))}
+                                          <Popover>
+                                            <PopoverTrigger asChild>
+                                              <button className="hover:bg-muted rounded-full p-1.5 transition-transform transform hover:scale-125">
+                                                <SmilePlus className="h-5 w-5 text-muted-foreground" />
+                                              </button>
+                                            </PopoverTrigger>
+                                            <PopoverContent
+                                              onClick={(e) => e.stopPropagation()}
+                                              className="p-0 w-auto border-0"
+                                              side="bottom"
+                                              align="start"
+                                              sideOffset={8}
+                                            >
+                                              <EmojiPicker
+                                                onEmojiClick={(emojiObject) => {
+                                                  handleEmojiSelect(emojiObject.emoji, task.id);
+                                                }}
+                                                emojiStyle={EmojiStyle.NATIVE}
+                                                previewConfig={{ showPreview: false }}
+                                                width={350}
+                                                height={400}
+                                              />
+                                            </PopoverContent>
+                                          </Popover>
+                                        </div>
+                                      </PopoverContent>
+                                    </Popover>
                                     {(task.origin_ticket_id || task.tags?.some(t => t.name === 'Ticket')) && (
                                       <TooltipProvider>
                                         <Tooltip>
