@@ -30,14 +30,18 @@ const MyTasksWidget = () => {
 
   const { upsertTask, isUpserting, deleteTask } = useTaskMutations(refetch);
 
-  const myTasks = useMemo(() => tasks.filter(task => 
+  const allMyTasks = useMemo(() => tasks.filter(task => 
     task.assignedTo?.some(assignee => assignee.id === user?.id)
-  ).slice(0, 5), [tasks, user]);
+  ), [tasks, user]);
+
+  const displayedTasks = useMemo(() => allMyTasks.slice(0, 5), [allMyTasks]);
 
   const overdueCount = useMemo(() => 
-    myTasks.filter(task => task.due_date && isPast(new Date(task.due_date))).length,
-    [myTasks]
+    allMyTasks.filter(task => task.due_date && isPast(new Date(task.due_date))).length,
+    [allMyTasks]
   );
+
+  const upcomingCount = allMyTasks.length;
 
   const handleTaskClick = (task: Task) => {
     setSelectedTask(task);
@@ -83,7 +87,7 @@ const MyTasksWidget = () => {
               <ListChecks className="h-5 w-5" />
               My Tasks
             </CardTitle>
-            {!isLoading && myTasks.length > 0 && <Badge variant="secondary">{myTasks.length} Upcoming</Badge>}
+            {!isLoading && upcomingCount > 0 && <Badge variant="secondary">{upcomingCount} Upcoming</Badge>}
             {!isLoading && overdueCount > 0 && <Badge variant="outline" className="text-destructive">{overdueCount} Overdue</Badge>}
           </div>
           <Button asChild variant="link" className="text-sm -my-2 -mr-4">
@@ -95,7 +99,7 @@ const MyTasksWidget = () => {
             <div className="flex justify-center items-center h-48">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
-          ) : myTasks.length === 0 ? (
+          ) : displayedTasks.length === 0 ? (
             <div className="text-center py-10">
               <div className="mx-auto h-12 w-12 text-green-500 bg-green-100 dark:bg-green-900/50 rounded-full flex items-center justify-center">
                   <CheckCircle2 className="h-6 w-6" />
@@ -105,7 +109,7 @@ const MyTasksWidget = () => {
             </div>
           ) : (
             <div className="divide-y divide-border -mx-6 -mb-6">
-              {myTasks.map(task => (
+              {displayedTasks.map(task => (
                 <button 
                   key={task.id} 
                   className="flex w-full items-center gap-3 px-6 py-2.5 transition-colors hover:bg-muted/50 text-left"
