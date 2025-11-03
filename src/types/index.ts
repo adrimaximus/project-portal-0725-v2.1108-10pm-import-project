@@ -272,6 +272,8 @@ export type Project = {
   reactions: Reaction[];
   invoice_attachments?: InvoiceAttachment[];
   payment_terms?: { amount: number; date: string }[];
+  category?: string | null;
+  origin_event_id?: string | null;
 };
 
 export type UpsertTaskPayload = {

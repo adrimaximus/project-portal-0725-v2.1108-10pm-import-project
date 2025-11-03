@@ -47,6 +47,8 @@ const FolderFormDialog = ({ open, onOpenChange, onSave, folder, isSaving }: Fold
     },
   });
 
+  const watchedColor = form.watch('color');
+
   useEffect(() => {
     if (open && folder) {
       form.reset(folder);
@@ -76,7 +78,7 @@ const FolderFormDialog = ({ open, onOpenChange, onSave, folder, isSaving }: Fold
             <FormField control={form.control} name="icon" render={({ field }) => (
               <FormItem>
                 <FormLabel>Icon</FormLabel>
-                <FormControl><IconPicker value={field.value} onChange={field.onChange} /></FormControl>
+                <FormControl><IconPicker value={field.value} onChange={field.onChange} color={watchedColor} /></FormControl>
                 <FormMessage />
               </FormItem>
             )} />
