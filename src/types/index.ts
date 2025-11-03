@@ -1,206 +1,161 @@
-import { LucideIcon } from "lucide-react";
-
-export interface NavItem {
-  title: string;
-  href?: string;
-  disabled?: boolean;
-  external?: boolean;
-  icon?: LucideIcon;
-  label?: string;
-}
-
-export interface NavItemWithChildren extends NavItem {
-  items?: NavItemWithChildren[];
-}
-
 export const PROJECT_STATUS_OPTIONS = [
-  { value: 'On Track', label: 'On Track', color: 'bg-green-500' },
-  { value: 'At Risk', label: 'At Risk', color: 'bg-yellow-500' },
-  { value: 'Off Track', label: 'Off Track', color: 'bg-red-500' },
-  { value: 'Pending', label: 'Pending', color: 'bg-gray-500' },
-  { value: 'Completed', label: 'Completed', color: 'bg-blue-500' },
-  { value: 'Cancelled', label: 'Cancelled', color: 'bg-zinc-500' },
-  { value: 'Bid Lost', label: 'Bid Lost', color: 'bg-orange-500' },
+  { value: 'Requested', label: 'Requested' },
+  { value: 'On Track', label: 'On Track' },
+  { value: 'In Progress', label: 'In Progress' },
+  { value: 'Pending', label: 'Pending' },
+  { value: 'Completed', label: 'Completed' },
+  { value: 'Cancelled', label: 'Cancelled' },
+  { value: 'Bid Lost', label: 'Bid Lost' },
 ] as const;
 
 export const PAYMENT_STATUS_OPTIONS = [
-    { value: 'Paid', label: 'Paid' },
-    { value: 'Unpaid', label: 'Unpaid' },
-    { value: 'Pending', label: 'Pending' },
-    { value: 'Overdue', label: 'Overdue' },
-    { value: 'In Process', label: 'In Process' },
-    { value: 'Proposed', label: 'Proposed' },
+  { value: 'Proposed', label: 'Proposed' },
+  { value: 'Invoiced', label: 'Invoiced' },
+  { value: 'Paid', label: 'Paid' },
+  { value: 'Partially Paid', label: 'Partially Paid' },
+  { value: 'Overdue', label: 'Overdue' },
+] as const;
+
+export const TASK_STATUS_OPTIONS = [
+  { value: 'To do', label: 'To do' },
+  { value: 'In progress', label: 'In progress' },
+  { value: 'Done', label: 'Done' },
+] as const;
+
+export const TASK_PRIORITY_OPTIONS = [
+  { value: 'Urgent', label: 'Urgent' },
+  { value: 'High', label: 'High' },
+  { value: 'Normal', label: 'Normal' },
+  { value: 'Low', label: 'Low' },
 ] as const;
 
 export type ProjectStatus = typeof PROJECT_STATUS_OPTIONS[number]['value'];
 export type PaymentStatus = typeof PAYMENT_STATUS_OPTIONS[number]['value'];
+export type TaskStatus = typeof TASK_STATUS_OPTIONS[number]['value'];
+export type TaskPriority = typeof TASK_PRIORITY_OPTIONS[number]['value'];
 
-export type TaskPriority = 'Low' | 'Normal' | 'High' | 'Urgent';
-export const TASK_PRIORITY_OPTIONS: { value: TaskPriority; label: string }[] = [
-  { value: 'Low', label: 'Low' },
-  { value: 'Normal', label: 'Normal' },
-  { value: 'High', label: 'High' },
-  { value: 'Urgent', label: 'Urgent' },
-];
-
-export type TaskStatus = 'To do' | 'In progress' | 'Done' | 'Backlog';
-export const TASK_STATUS_OPTIONS: { value: TaskStatus; label: string }[] = [
-  { value: 'To do', label: 'To do' },
-  { value: 'In progress', label: 'In progress' },
-  { value: 'Done', label: 'Done' },
-  { value: 'Backlog', label: 'Backlog' },
-];
-
-export interface User {
+export type User = {
   id: string;
-  name: string;
-  email: string;
-  avatar_url: string;
-  initials: string;
-  role?: string;
-}
+  name?: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
+  email?: string | null;
+  avatar_url?: string | null;
+  role?: string | null;
+};
 
-export interface Person {
+export type Person = {
   id: string;
   full_name: string;
-  email?: string;
-  phone?: string;
-  company?: string;
-  job_title?: string;
-  notes?: string;
-  avatar_url?: string;
-  projects?: { id: string; name: string; slug: string }[];
-  tags?: Tag[];
-  user_id?: string;
-  company_id?: string;
-  slug: string;
-}
+  email?: string | null;
+  phone?: string | null;
+  company?: string | null;
+  company_id?: string | null;
+  job_title?: string | null;
+  avatar_url?: string | null;
+};
 
-export interface Company {
+export type Company = {
   id: string;
   name: string;
-  legal_name?: string;
-  address?: string;
-  billing_address?: string;
-  logo_url?: string;
-  custom_properties?: Record<string, any>;
-}
+  logo_url?: string | null;
+  custom_properties?: Record<string, any> | null;
+};
 
-export interface Project {
+export type Reaction = {
   id: string;
-  slug: string;
-  name: string;
-  category: string;
-  description: string;
-  status: ProjectStatus;
-  progress: number;
-  budget: number;
-  start_date: string;
-  due_date: string;
-  payment_status: PaymentStatus;
-  payment_due_date: string;
-  created_by: User;
-  assignedTo: User[];
-  tasks: Task[];
-  comments: Comment[];
-  services: string[];
-  briefFiles: any[];
-  activities: any[];
-  tags: Tag[];
-  people?: Person[];
-  person_ids?: string[];
-  client_company_id?: string;
-  public: boolean;
-  venue?: string;
-  personal_for_user_id?: string;
-}
+  emoji: string;
+  user_id: string;
+  user_name: string;
+};
 
-export interface Task {
+export type Comment = {
   id: string;
-  title: string;
-  completed: boolean;
-  originTicketId?: string;
-  assignedTo: User[];
+  created_at: string;
+  text: string;
+  is_ticket: boolean;
+  author: User;
+  author_id: string;
   project_id: string;
-  project_slug: string;
-  project_name: string;
-  due_date: string | null;
-  priority: TaskPriority;
-  status: TaskStatus;
-  description?: string;
-  tags: Tag[];
-  created_by: User;
-  attachments?: TaskAttachment[];
-  ticket_attachments?: TaskAttachment[];
-}
+  task_id: string;
+  reactions: Reaction[];
+  attachment_url?: string | null;
+  attachment_name?: string | null;
+  attachments_jsonb?: any[];
+};
 
-export interface TaskAttachment {
+export type TaskAttachment = {
   id: string;
   file_name: string;
   file_url: string;
-  file_type: string;
-  file_size: number;
+  file_type: string | null;
+  file_size: number | null;
   storage_path: string;
   created_at: string;
-}
+};
 
-export interface UpsertTaskPayload {
+export type Tag = {
+  id: string;
+  name: string;
+  color: string;
+  user_id: string;
+};
+
+export type Task = {
+  id: string;
+  title: string;
+  description?: string | null;
+  completed: boolean;
+  due_date?: string | null;
+  priority: TaskPriority;
+  project_id: string;
+  project_name: string;
+  project_slug: string;
+  project_status: string;
+  assignedTo: User[];
+  created_by: User;
+  created_at: string;
+  updated_at: string;
+  status: TaskStatus;
+  tags: Tag[];
+  origin_ticket_id?: string | null;
+  attachment_url?: string | null;
+  attachment_name?: string | null;
+  attachments?: TaskAttachment[];
+  ticket_attachments?: TaskAttachment[];
+  reactions: Reaction[];
+  last_reminder_sent_at?: string | null;
+};
+
+export type Project = {
+  id: string;
+  name: string;
+  description?: string | null;
+  status: ProjectStatus;
+  budget?: number | null;
+  start_date?: string | null;
+  due_date?: string | null;
+  payment_status: PaymentStatus;
+  payment_due_date?: string | null;
+  venue?: string | null;
+  services?: string[];
+  people?: Person[];
+  person_ids?: string[];
+  client_company_id?: string | null;
+  tasks?: Task[];
+};
+
+export type UpsertTaskPayload = {
   id?: string;
   project_id: string;
   title: string;
   description?: string | null;
   due_date?: string | null;
-  priority?: TaskPriority | null;
+  priority?: TaskPriority;
   status?: TaskStatus;
-  completed: boolean;
+  completed?: boolean;
   assignee_ids?: string[];
   tag_ids?: string[];
   new_files?: File[];
   deleted_files?: string[];
-}
-
-export interface Comment {
-  id: string;
-  text: string;
-  created_at: string;
-  isTicket: boolean;
-  author: User;
-  attachment_url?: string;
-  attachment_name?: string;
-  attachments_jsonb?: TaskAttachment[];
-}
-
-export interface Tag {
-  id: string;
-  name: string;
-  color: string;
-  isNew?: boolean;
-  user_id?: string;
-}
-
-export const CUSTOM_PROPERTY_TYPES = [
-  'text',
-  'textarea',
-  'number',
-  'date',
-  'email',
-  'phone',
-  'url',
-  'image',
-  'multi-image',
-  'select',
-  'multi-select',
-  'checkbox',
-] as const;
-
-export type CustomPropertyType = (typeof CUSTOM_PROPERTY_TYPES)[number];
-
-export interface CustomProperty {
-  id: string;
-  name: string;
-  label: string;
-  type: CustomPropertyType;
-  options?: string[] | null;
-  category: 'contact' | 'company' | 'tag';
-  is_default: boolean;
-}
+};
