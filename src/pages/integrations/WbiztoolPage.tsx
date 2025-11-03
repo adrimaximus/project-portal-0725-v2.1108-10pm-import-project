@@ -41,7 +41,7 @@ const WbiztoolPage = () => {
 
   const handleConnect = async () => {
     if (!clientId || !apiKey) {
-      toast.error("Please enter both your Client ID and API Key.");
+      toast.error("Please enter both your API Client ID and API Key.");
       return;
     }
     setIsLoading(true);
@@ -162,15 +162,15 @@ const WbiztoolPage = () => {
         <Card>
           <CardHeader>
             <CardTitle>Connect to WBIZTOOL</CardTitle>
-            <CardDescription>Enter your WBIZTOOL Client ID and API key to activate the integration.</CardDescription>
+            <CardDescription>Enter your WBIZTOOL API Client ID and API key to activate the integration.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-                <Label htmlFor="client-id">Client ID</Label>
+                <Label htmlFor="client-id">API Client ID</Label>
                 <Input 
                   id="client-id" 
                   type="text" 
-                  placeholder={isConnected ? "••••••••••••••••••••••••" : "Enter your Client ID"}
+                  placeholder={isConnected ? "••••••••••••••••••••••••" : "Enter your API Client ID"}
                   value={clientId}
                   onChange={(e) => setClientId(e.target.value)}
                   disabled={isConnected || isLoading}
