@@ -3,7 +3,7 @@ import { useTasks } from '@/hooks/useTasks';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Link } from 'react-router-dom';
-import { ListChecks, Loader2, Clock, CheckCircle2 } from 'lucide-react';
+import { Loader2, Clock, CheckCircle2 } from 'lucide-react';
 import { Task, UpsertTaskPayload } from '@/types';
 import { format, isPast } from 'date-fns';
 import { cn, getInitials, getAvatarUrl, generatePastelColor } from '@/lib/utils';
@@ -99,8 +99,7 @@ const MyTasksWidget = () => {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-4">
           <div className="flex items-center gap-3">
-            <CardTitle className="flex items-center gap-2">
-              <ListChecks className="h-5 w-5" />
+            <CardTitle className="flex items-center">
               My Tasks
             </CardTitle>
             {!isLoading && upcomingCount > 0 && (
