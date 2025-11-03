@@ -29,13 +29,19 @@ export const useProjects = ({ searchTerm, fetchAll = false, excludeOtherPersonal
   const queryKey = ['projects', { searchTerm, excludeOtherPersonal, year }];
   const cacheKey = `projects-cache-${JSON.stringify({ searchTerm, excludeOtherPersonal, year })}`;
 
-  const query = useInfiniteQuery<ProjectsPage, Error, InfiniteData<ProjectsPage>, (string | { searchTerm?: string; excludeOtherPersonal: boolean; year: number | null; })[], number>({
+  const query = useInfiniteQuery<
+    ProjectsPage,
+    Error,
+    InfiniteData<ProjectsPage, number>,
+    (string | { searchTerm?: string; excludeOtherPersonal: boolean; year: number | null; })[],
+    number
+  >({
     queryKey,
     queryFn: ({ pageParam }) => fetchProjects({ pageParam, searchTerm: searchTerm || "", excludeOtherPersonal, year: year === undefined ? null : year }),
     initialPageParam: 0,
     getNextPageParam: (lastPage) => lastPage.nextPage,
     placeholderData: () => {
-      const cachedData = SafeLocalStorage.getItem<InfiniteData<ProjectsPage>>(cacheKey);
+      const cachedData = SafeLocalStorage.getItem<InfiniteData<ProjectsPage, number>>(cacheKey);
       if (cachedData && cachedData.pages && cachedData.pageParams) {
         return cachedData;
       }
