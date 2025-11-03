@@ -94,7 +94,7 @@ const ProjectBrief = ({ files, isEditing, onSetIsEditing, onFilesChange, onFileD
 
   return (
     <div 
-      className="bg-[#f6f7f3] dark:bg-stone-900 p-4 rounded-lg group cursor-pointer transition-colors hover:bg-gray-200 dark:hover:bg-stone-800 min-h-[100px]"
+      className="bg-muted/50 p-4 rounded-lg group cursor-pointer transition-colors hover:bg-muted min-h-[100px]"
       onClick={() => onSetIsEditing(true)}
     >
       <div className="flex items-center gap-2 mb-2">
