@@ -1,10 +1,9 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Task, TaskStatus, Reaction, UpsertTaskPayload, User } from '@/types';
+import { Task, TaskStatus, Reaction, UpsertTaskPayload } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { getErrorMessage } from '@/lib/utils';
-import { v4 as uuidv4 } from 'uuid';
 
 type UpdateTaskOrderPayload = {
   taskId: string;
@@ -169,8 +168,7 @@ export const useTaskMutations = (refetch?: () => void) => {
   const { mutate: toggleTaskReaction } = useMutation<
     Reaction[],
     Error,
-    { taskId: string; emoji: string },
-    { previousDataMap: Map<any[], any> }
+    { taskId: string; emoji: string }
   >({
     mutationFn: async ({ taskId, emoji }) => {
       if (!user) throw new Error("User not authenticated");
@@ -181,111 +179,10 @@ export const useTaskMutations = (refetch?: () => void) => {
       if (error) throw error;
       return data as Reaction[];
     },
-    onMutate: async ({ taskId, emoji }) => {
-      const previousDataMap = new Map();
-      if (!user) return { previousDataMap };
-
-      const optimisticallyUpdateTaskReactions = (data: any) => {
-        if (!data) return data;
-
-        const updateReactions = (task: Task): Task => {
-          if (task.id !== taskId) return task;
-
-          const newReactions: Reaction[] = task.reactions ? [...task.reactions] : [];
-          const existingReactionIndex = newReactions.findIndex(r => r.user_id === user.id);
-
-          if (existingReactionIndex > -1) {
-            const existingReaction = newReactions[existingReactionIndex];
-            if (existingReaction.emoji === emoji) {
-              newReactions.splice(existingReactionIndex, 1);
-            } else {
-              newReactions[existingReactionIndex] = { ...existingReaction, emoji };
-            }
-          } else {
-            newReactions.push({
-              id: `temp-${uuidv4()}`,
-              emoji,
-              user_id: user.id,
-              user_name: user.name || user.email || 'You',
-            });
-          }
-          return { ...task, reactions: newReactions };
-        };
-        
-        if (Array.isArray(data)) { // Handles Task[] and Project[]
-            if (data.length === 0) return data;
-            if ('project_id' in data[0]) return data.map(updateReactions); // Task[]
-            if ('tasks' in data[0]) return data.map(project => ({ // Project[]
-                ...project,
-                tasks: (project.tasks || []).map(updateReactions)
-            }));
-        }
-        if (data && typeof data === 'object' && !Array.isArray(data) && data.tasks) { // Single Project
-            return {
-                ...data,
-                tasks: (data.tasks || []).map(updateReactions),
-            };
-        }
-        return data;
-      };
-
-      const queryCache = queryClient.getQueryCache();
-      const relevantQueryKeys = queryCache.findAll()
-        .map(q => q.queryKey)
-        .filter(key => ['projects', 'project', 'tasks'].includes(key[0] as string));
-
-      for (const queryKey of relevantQueryKeys) {
-        const previousData = queryClient.getQueryData(queryKey);
-        if (previousData) {
-          previousDataMap.set(queryKey, previousData);
-          const updatedData = optimisticallyUpdateTaskReactions(previousData);
-          queryClient.setQueryData(queryKey, updatedData);
-        }
-      }
-
-      return { previousDataMap };
+    onSuccess: () => {
+      invalidateQueries();
     },
-    onSuccess: (newReactions, { taskId }) => {
-      const queryCache = queryClient.getQueryCache();
-      const relevantQueryKeys = queryCache.findAll()
-        .map(q => q.queryKey)
-        .filter(key => ['projects', 'project', 'tasks'].includes(key[0] as string));
-
-      for (const queryKey of relevantQueryKeys) {
-        queryClient.setQueryData(queryKey, (oldData: any) => {
-          if (!oldData) return oldData;
-
-          const updateTaskInPlace = (task: Task) => {
-            if (task.id === taskId) {
-              return { ...task, reactions: newReactions };
-            }
-            return task;
-          };
-
-          if (Array.isArray(oldData)) { // Handles Task[] and Project[]
-            if (oldData.length === 0) return oldData;
-            if ('project_id' in oldData[0]) return oldData.map(updateTaskInPlace); // Task[]
-            if ('tasks' in oldData[0]) return oldData.map(project => ({ // Project[]
-                ...project,
-                tasks: (project.tasks || []).map(updateTaskInPlace)
-            }));
-          }
-          if (oldData && typeof oldData === 'object' && !Array.isArray(oldData) && oldData.tasks) { // Single Project
-              return {
-                  ...oldData,
-                  tasks: (oldData.tasks || []).map(updateTaskInPlace),
-              };
-          }
-          return oldData;
-        });
-      }
-    },
-    onError: (err, variables, context) => {
-      if (context?.previousDataMap) {
-        for (const [queryKey, previousData] of context.previousDataMap.entries()) {
-          queryClient.setQueryData(queryKey, previousData);
-        }
-      }
+    onError: (err) => {
       toast.error("Failed to update reaction.", { description: getErrorMessage(err) });
     },
   });
