@@ -2,7 +2,7 @@ import PortalLayout from "@/components/PortalLayout";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import { Link, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChevronRight, User, Building } from "lucide-react";
+import { ChevronRight, User, Building, Briefcase, CreditCard } from "lucide-react";
 import TagsPropertiesCard from "@/components/settings/TagsPropertiesCard";
 
 const PropertiesSettingsPage = () => {
@@ -58,6 +58,34 @@ const PropertiesSettingsPage = () => {
             <CardContent>
               <p className="text-sm text-muted-foreground">
                 Customize the data fields for your companies.
+              </p>
+            </CardContent>
+          </Card>
+          <Card onClick={() => navigate('/settings/project-statuses')} className="cursor-pointer hover:bg-muted/50 transition-colors">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-base font-medium flex items-center gap-2">
+                <Briefcase className="h-4 w-4" />
+                Project Statuses
+              </CardTitle>
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Manage the different statuses for your projects.
+              </p>
+            </CardContent>
+          </Card>
+          <Card onClick={() => navigate('/settings/payment-statuses')} className="cursor-pointer hover:bg-muted/50 transition-colors">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-base font-medium flex items-center gap-2">
+                <CreditCard className="h-4 w-4" />
+                Payment Statuses
+              </CardTitle>
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Customize the payment statuses for projects.
               </p>
             </CardContent>
           </Card>
