@@ -1,11 +1,17 @@
-import { useInfiniteQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, InfiniteData } from '@tanstack/react-query';
 import { getDashboardProjects } from '@/api/projects';
 import { useEffect } from 'react';
 import SafeLocalStorage from '@/lib/localStorage';
+import { Project } from '@/types';
 
 const PAGE_SIZE = 1000;
 
-const fetchProjects = async ({ pageParam = 0, searchTerm, excludeOtherPersonal, year }: { pageParam: number, searchTerm: string, excludeOtherPersonal: boolean, year: number | null }) => {
+type ProjectsPage = {
+  projects: Project[];
+  nextPage: number | null;
+};
+
+const fetchProjects = async ({ pageParam = 0, searchTerm, excludeOtherPersonal, year }: { pageParam: number, searchTerm: string, excludeOtherPersonal: boolean, year: number | null }): Promise<ProjectsPage> => {
   const projects = await getDashboardProjects({
     limit: PAGE_SIZE,
     offset: pageParam * PAGE_SIZE,
@@ -23,14 +29,14 @@ export const useProjects = ({ searchTerm, fetchAll = false, excludeOtherPersonal
   const queryKey = ['projects', { searchTerm, excludeOtherPersonal, year }];
   const cacheKey = `projects-cache-${JSON.stringify({ searchTerm, excludeOtherPersonal, year })}`;
 
-  const query = useInfiniteQuery({
+  const query = useInfiniteQuery<ProjectsPage, Error, InfiniteData<ProjectsPage>, (string | { searchTerm?: string; excludeOtherPersonal: boolean; year: number | null; })[], number>({
     queryKey,
-    queryFn: ({ pageParam }) => fetchProjects({ pageParam: pageParam as number, searchTerm: searchTerm || "", excludeOtherPersonal, year: year === undefined ? null : year }),
+    queryFn: ({ pageParam }) => fetchProjects({ pageParam, searchTerm: searchTerm || "", excludeOtherPersonal, year: year === undefined ? null : year }),
     initialPageParam: 0,
     getNextPageParam: (lastPage) => lastPage.nextPage,
     placeholderData: () => {
-      const cachedData = SafeLocalStorage.getItem(cacheKey);
-      if (cachedData && (cachedData as any).pages && (cachedData as any).pageParams) {
+      const cachedData = SafeLocalStorage.getItem<InfiniteData<ProjectsPage>>(cacheKey);
+      if (cachedData && cachedData.pages && cachedData.pageParams) {
         return cachedData;
       }
       return undefined;
