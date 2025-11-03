@@ -423,7 +423,7 @@ const ProjectsPage = () => {
               onTaskStatusChange={handleTaskStatusChange}
               isToggling={isToggling}
               taskSortConfig={taskSortConfig}
-              requestSort={requestTaskSort}
+              requestTaskSort={requestTaskSort}
               refetch={refetch}
               tasksQueryKey={tasksQueryKey}
               highlightedTaskId={highlightedTaskId}
