@@ -11,7 +11,7 @@ const corsHeaders = {
 const validateCredentials = async (clientId: string, apiKey: string) => {
   // We'll try to hit the devices endpoint.
   // A successful response (even if empty) means auth is OK. A 401/403 means auth failed.
-  const validationResponse = await fetch('https://app.wbiztool.com/api/v1/devices', {
+  const validationResponse = await fetch('https://wbiztool.com/api/v1/devices', {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
