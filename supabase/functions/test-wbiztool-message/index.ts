@@ -32,45 +32,25 @@ serve(async (req) => {
 
     const clientId = credsData.find(c => c.key === 'WBIZTOOL_CLIENT_ID')?.value;
     const apiKey = credsData.find(c => c.key === 'WBIZTOOL_API_KEY')?.value;
+    const whatsappClientId = Deno.env.get('WBIZTOOL_WHATSAPP_CLIENT_ID');
 
-    if (!clientId || !apiKey) {
+    if (!clientId || !apiKey || !whatsappClientId) {
       throw new Error('WBIZTOOL credentials not fully configured.');
     }
 
-    // 1. Fetch devices
-    const devicesResponse = await fetch('https://wbiztool.com/api/v2/devices', {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-client-id': clientId,
-        'x-api-key': apiKey,
-      },
-    });
-
-    if (!devicesResponse.ok) {
-      const errorData = await devicesResponse.json().catch(() => ({}));
-      throw new Error(`WBIZTOOL API Error (devices): ${errorData.message || 'Invalid credentials'}`);
-    }
-    
-    const devicesData = await devicesResponse.json();
-    const activeDevice = devicesData.data?.find((d: any) => d.status === 'connected');
-
-    if (!activeDevice) {
-      throw new Error('No active WBIZTOOL device found.');
-    }
-
-    // 2. Send message using the device
-    const messageResponse = await fetch('https://wbiztool.com/api/v2/messages', {
+    const messageResponse = await fetch('https://app.wbiztool.com/api/v1/send_msg/', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-client-id': clientId,
-        'x-api-key': apiKey,
+        'X-Client-ID': clientId,
+        'X-Api-Key': apiKey,
       },
       body: JSON.stringify({
+        client_id: clientId,
+        api_key: apiKey,
+        whatsapp_client: whatsappClientId,
         phone,
         message,
-        device_id: activeDevice.id,
       }),
     })
     

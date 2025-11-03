@@ -9,22 +9,25 @@ const corsHeaders = {
 }
 
 const validateCredentials = async (clientId: string, apiKey: string) => {
-  const devicesResponse = await fetch('https://wbiztool.com/api/v2/devices', {
+  // We'll try to hit a non-existent endpoint on the v1 API. 
+  // A 404 means auth is OK. A 401/403 means auth failed.
+  const validationResponse = await fetch('https://app.wbiztool.com/api/v1/validate_credentials_test', {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
-      'x-client-id': clientId,
-      'x-api-key': apiKey,
+      'X-Client-ID': clientId,
+      'X-Api-Key': apiKey,
     },
   });
 
-  if (devicesResponse.status === 401 || devicesResponse.status === 403) {
+  if (validationResponse.status === 401 || validationResponse.status === 403) {
     throw new Error('Invalid WBIZTOOL credentials. Please check Client ID or API Key.');
   }
 
-  if (!devicesResponse.ok) {
-    const errorText = await devicesResponse.text();
-    throw new Error(`WBIZTOOL unexpected error: ${errorText.replace(/<[^>]*>?/gm, '').trim()}`);
+  // If we get a 404, it's good. If we get another server error, it's bad.
+  if (!validationResponse.ok && validationResponse.status !== 404) {
+    const errorText = await validationResponse.text();
+    throw new Error(`WBIZTOOL API unexpected error: ${errorText.replace(/<[^>]*>?/gm, '').trim()}`);
   }
 
   return true;

@@ -60,25 +60,20 @@ const sendWhatsappMessage = async (phone: string, message: string) => {
     return;
   }
 
-  const devicesResponse = await fetch('https://wbiztool.com/api/v2/devices', {
-    method: 'GET',
-    headers: { 'Content-Type': 'application/json', 'x-client-id': config.clientId, 'x-api-key': config.apiKey },
-  });
-
-  if (!devicesResponse.ok) {
-    const errorData = await devicesResponse.json().catch(() => ({}));
-    throw new Error(`WBIZTOOL API Error (devices): ${errorData.message || 'Invalid credentials'}`);
-  }
-  
-  const devicesData = await devicesResponse.json();
-  const activeDevice = devicesData.data?.find((d: any) => d.status === 'connected');
-
-  if (!activeDevice) throw new Error('No active WBIZTOOL device found.');
-
-  const messageResponse = await fetch('https://wbiztool.com/api/v2/messages', {
+  const messageResponse = await fetch('https://app.wbiztool.com/api/v1/send_msg/', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-client-id': config.clientId, 'x-api-key': config.apiKey },
-    body: JSON.stringify({ phone: formattedPhone, message: message, device_id: activeDevice.id }),
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Client-ID': config.clientId,
+      'X-Api-Key': config.apiKey,
+    },
+    body: JSON.stringify({
+      client_id: config.clientId,
+      api_key: config.apiKey,
+      whatsapp_client: config.whatsappClientId,
+      phone: formattedPhone,
+      message: message,
+    }),
   });
 
   if (!messageResponse.ok) {
