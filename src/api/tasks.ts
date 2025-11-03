@@ -3,10 +3,12 @@ import { Task, UpsertTaskPayload } from '@/types';
 
 export const getProjectTasks = async (filters: any): Promise<Task[]> => {
   const { data, error } = await supabase.rpc('get_project_tasks', {
-    p_project_ids: filters.projectIds,
+    p_project_ids: filters.projectIds || null,
     p_completed: filters.completed,
-    p_order_by: filters.orderBy,
-    p_order_direction: filters.orderDirection,
+    p_order_by: filters.orderBy || 'due_date',
+    p_order_direction: filters.orderDirection || 'asc',
+    p_limit: filters.limit || 1000,
+    p_offset: filters.offset || 0,
   });
   if (error) throw error;
   return data as Task[];
