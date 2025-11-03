@@ -86,6 +86,16 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
     return tasks.find(t => t.id === selectedTaskId) || null;
   }, [selectedTaskId, tasks]);
 
+  const handleEditTask = (task: ProjectTask) => {
+    setSelectedTaskId(null);
+    onEdit(task);
+  };
+
+  const handleDeleteTask = (taskId: string) => {
+    setSelectedTaskId(null);
+    onDelete(taskId);
+  };
+
   useEffect(() => {
     if (highlightedTaskId && tasks.length > 0) {
       const element = rowRefs.current.get(highlightedTaskId);
@@ -649,7 +659,7 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
           {selectedTask && (
             <TaskDetailCard
               task={selectedTask}
-              onClose={() => setSelectedTask(null)}
+              onClose={() => setSelectedTaskId(null)}
               onEdit={handleEditTask}
               onDelete={handleDeleteTask}
             />
