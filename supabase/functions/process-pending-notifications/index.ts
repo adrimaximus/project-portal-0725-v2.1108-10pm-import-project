@@ -338,11 +338,14 @@ Buat pesan pengingat yang sopan dan profesional sesuai dengan tingkat urgensi ya
                 break;
               }
               case 'discussion_mention': {
-                const { project_id, mentioner_id } = context;
+                const { project_id, mentioner_id, task_id } = context;
                 const projectData = projectMap.get(project_id);
                 const mentionerData = profileMap.get(mentioner_id);
                 if (!projectData || !mentionerData) throw new Error('Missing context data for discussion_mention');
-                userPrompt = `Buat notifikasi mention. Penerima: ${recipientName}. Yang me-mention: ${getFullName(mentionerData)}. Proyek: "${projectData.name}". URL: ${APP_URL}/projects/${projectData.slug}`;
+                const url = task_id
+                  ? `${APP_URL}/projects/${projectData.slug}?tab=tasks&task=${task_id}`
+                  : `${APP_URL}/projects/${projectData.slug}`;
+                userPrompt = `Buat notifikasi mention. Penerima: ${recipientName}. Yang me-mention: ${getFullName(mentionerData)}. Proyek: "${projectData.name}". URL: ${url}`;
                 break;
               }
               case 'task_completed': {
