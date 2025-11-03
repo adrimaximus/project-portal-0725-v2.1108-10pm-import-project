@@ -6,7 +6,6 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { DateRange } from "react-day-picker";
 import ProjectAdvancedFilters, { AdvancedFiltersState } from './ProjectAdvancedFilters';
-import YearFilter from './YearFilter';
 
 type ViewMode = 'table' | 'list' | 'kanban' | 'tasks' | 'tasks-kanban';
 
@@ -31,9 +30,6 @@ type ProjectsToolbarProps = {
   advancedFilters: AdvancedFiltersState;
   onAdvancedFiltersChange: (filters: AdvancedFiltersState) => void;
   allPeople: Person[];
-  availableYears: number[];
-  selectedYear: number | null;
-  onYearChange: (year: number | null) => void;
 };
 
 const ProjectsToolbar = ({
@@ -52,18 +48,10 @@ const ProjectsToolbar = ({
   advancedFilters,
   onAdvancedFiltersChange,
   allPeople,
-  availableYears,
-  selectedYear,
-  onYearChange,
 }: ProjectsToolbarProps) => {
   return (
     <div className="p-4 border-t flex flex-col sm:flex-row items-center justify-between gap-4">
       <div className="w-full sm:w-auto flex-shrink-0 flex items-center gap-4">
-        <YearFilter
-          availableYears={availableYears}
-          selectedYear={selectedYear}
-          onYearChange={onYearChange}
-        />
         <ToggleGroup type="single" value={view} onValueChange={onViewChange} aria-label="Project view">
           <ToggleGroupItem value="list" aria-label="List view"><List className="h-4 w-4" /></ToggleGroupItem>
           <ToggleGroupItem value="table" aria-label="Table view"><LayoutGrid className="h-4 w-4" /></ToggleGroupItem>

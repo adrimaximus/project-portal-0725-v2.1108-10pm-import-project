@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { useSearchParams, useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { getDashboardProjects, createProject, updateProjectDetails, deleteProject } from '@/api/projects';
+import { createProject, updateProjectDetails, deleteProject } from '@/api/projects';
 import { getProjectTasks, upsertTask, deleteTask, toggleTaskCompletion } from '@/api/tasks';
 import { getPeople } from '@/api/people';
 import { Project, Task as ProjectTask, Person, UpsertTaskPayload, TaskStatus, ProjectStatus } from '@/types';
@@ -25,7 +25,6 @@ import PortalLayout from '@/components/PortalLayout';
 import { getErrorMessage, formatInJakarta } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
-import YearFilter from '@/components/projects/YearFilter';
 
 type ViewMode = 'table' | 'list' | 'kanban' | 'tasks' | 'tasks-kanban';
 type SortConfig<T> = { key: keyof T | null; direction: 'ascending' | 'descending' };
@@ -47,7 +46,6 @@ const ProjectsPage = () => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   
   const highlightedTaskId = taskIdFromParams || searchParams.get('highlight');
-  const [selectedYear, setSelectedYear] = useState<number | null>(new Date().getFullYear());
 
   const onHighlightComplete = useCallback(() => {
     if (taskIdFromParams) {
@@ -66,7 +64,7 @@ const ProjectsPage = () => {
     hasNextPage, 
     isFetchingNextPage,
     refetch: refetchProjects 
-  } = useProjects({ searchTerm, year: selectedYear });
+  } = useProjects({ searchTerm });
 
   const projectsData = useMemo(() => data?.pages.flatMap(page => page.projects) ?? [], [data]);
   
@@ -79,15 +77,6 @@ const ProjectsPage = () => {
   const { data: peopleData } = useQuery<Person[]>({
     queryKey: ['people'],
     queryFn: getPeople,
-  });
-
-  const { data: availableYears = [] } = useQuery<number[]>({
-    queryKey: ['projectYears'],
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_project_years');
-      if (error) throw error;
-      return data.map((row: { year: number }) => row.year);
-    }
   });
 
   const allPeople = useMemo(() => {
@@ -413,9 +402,6 @@ const ProjectsPage = () => {
             advancedFilters={advancedFilters}
             onAdvancedFiltersChange={setAdvancedFilters}
             allPeople={allPeople}
-            availableYears={availableYears}
-            selectedYear={selectedYear}
-            onYearChange={setSelectedYear}
           />
         </div>
         <div ref={scrollContainerRef} className="flex-grow min-h-0 overflow-y-auto">
