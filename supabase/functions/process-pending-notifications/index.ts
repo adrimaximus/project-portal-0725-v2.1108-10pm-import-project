@@ -60,7 +60,7 @@ const sendWhatsappMessage = async (phone: string, message: string) => {
     return;
   }
 
-  const devicesResponse = await fetch('https://wbiztool.com/api/v1/get-devices/', {
+  const devicesResponse = await fetch('https://wbiztool.com/api/v1/get_devices/', {
     method: 'GET',
     headers: { 'Content-Type': 'application/json', 'x-client-id': config.clientId, 'x-api-key': config.apiKey },
   });
