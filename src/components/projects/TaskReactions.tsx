@@ -1,18 +1,58 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Reaction } from '@/types';
 import { Button } from '@/components/ui/button';
 import EmojiReactionPicker from '../EmojiReactionPicker';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 interface TaskReactionsProps {
   reactions: Reaction[];
   onToggleReaction: (emoji: string) => void;
 }
 
-const TaskReactions = ({ reactions, onToggleReaction }: TaskReactionsProps) => {
+const TaskReactions = ({ reactions: initialReactions, onToggleReaction }: TaskReactionsProps) => {
   const { user } = useAuth();
+  const [reactions, setReactions] = useState(initialReactions || []);
+
+  useEffect(() => {
+    setReactions(initialReactions || []);
+  }, [initialReactions]);
+
+  const handleToggle = (emoji: string) => {
+    if (!user) {
+      toast.error("You must be logged in to react.");
+      return;
+    }
+
+    const currentReactions = reactions;
+    let newReactions: Reaction[];
+    const existingReactionIndex = currentReactions.findIndex(r => r.user_id === user.id);
+
+    if (existingReactionIndex > -1) {
+      if (currentReactions[existingReactionIndex].emoji === emoji) {
+        newReactions = currentReactions.filter(r => r.user_id !== user.id);
+      } else {
+        newReactions = currentReactions.map(r => 
+          r.user_id === user.id ? { ...r, emoji } : r
+        );
+      }
+    } else {
+      newReactions = [
+        ...currentReactions,
+        {
+          id: `temp-${Date.now()}`,
+          emoji,
+          user_id: user.id,
+          user_name: user.name || 'You',
+        }
+      ];
+    }
+    
+    setReactions(newReactions); // Optimistic update
+    onToggleReaction(emoji); // Fire and forget mutation
+  };
 
   const reactionsSummary = reactions.reduce((acc, reaction) => {
     if (!acc[reaction.emoji]) {
@@ -43,7 +83,7 @@ const TaskReactions = ({ reactions, onToggleReaction }: TaskReactionsProps) => {
                 variant={userReacted ? 'secondary' : 'ghost'}
                 size="sm"
                 className={cn("h-7 px-2 rounded-full", userReacted && "border border-primary/50")}
-                onClick={() => onToggleReaction(emoji)}
+                onClick={() => handleToggle(emoji)}
               >
                 <span className="text-sm">{emoji}</span>
                 {count > 1 && <span className="text-xs ml-1 text-muted-foreground">{count}</span>}
@@ -60,7 +100,7 @@ const TaskReactions = ({ reactions, onToggleReaction }: TaskReactionsProps) => {
           </Tooltip>
         </TooltipProvider>
       ))}
-      <EmojiReactionPicker onSelect={onToggleReaction} />
+      <EmojiReactionPicker onSelect={handleToggle} />
     </div>
   );
 };

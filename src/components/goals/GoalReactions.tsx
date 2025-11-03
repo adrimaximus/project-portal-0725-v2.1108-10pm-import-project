@@ -9,7 +9,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface GoalReactionsProps {
   goal: Goal;
@@ -18,6 +18,10 @@ interface GoalReactionsProps {
 const GoalReactions = ({ goal }: GoalReactionsProps) => {
   const { user } = useAuth();
   const [reactions, setReactions] = useState(goal.reactions || []);
+
+  useEffect(() => {
+    setReactions(goal.reactions || []);
+  }, [goal.reactions]);
 
   const handleEmojiSelect = async (emoji: string) => {
     if (!user) return;

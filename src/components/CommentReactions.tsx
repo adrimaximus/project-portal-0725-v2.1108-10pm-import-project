@@ -3,19 +3,60 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import CommentReactionPicker from './CommentReactionPicker';
+import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 
 interface CommentReactionsProps {
   reactions: Reaction[];
   onToggleReaction: (emoji: string) => void;
 }
 
-const CommentReactions = ({ reactions, onToggleReaction }: CommentReactionsProps) => {
+const CommentReactions = ({ reactions: initialReactions, onToggleReaction }: CommentReactionsProps) => {
   const { user: currentUser } = useAuth();
+  const [reactions, setReactions] = useState(initialReactions || []);
+
+  useEffect(() => {
+    setReactions(initialReactions || []);
+  }, [initialReactions]);
+
+  const handleToggle = (emoji: string) => {
+    if (!currentUser) {
+      toast.error("You must be logged in to react.");
+      return;
+    }
+
+    const currentReactions = reactions;
+    let newReactions: Reaction[];
+    const existingReactionIndex = currentReactions.findIndex(r => r.user_id === currentUser.id);
+
+    if (existingReactionIndex > -1) {
+      if (currentReactions[existingReactionIndex].emoji === emoji) {
+        newReactions = currentReactions.filter(r => r.user_id !== currentUser.id);
+      } else {
+        newReactions = currentReactions.map(r => 
+          r.user_id === currentUser.id ? { ...r, emoji } : r
+        );
+      }
+    } else {
+      newReactions = [
+        ...currentReactions,
+        {
+          id: `temp-${Date.now()}`,
+          emoji,
+          user_id: currentUser.id,
+          user_name: currentUser.name || 'You',
+        }
+      ];
+    }
+    
+    setReactions(newReactions); // Optimistic update
+    onToggleReaction(emoji); // Fire and forget mutation
+  };
 
   if (!reactions) {
     return (
       <div onClick={(e) => e.stopPropagation()}>
-        <CommentReactionPicker onSelect={onToggleReaction} />
+        <CommentReactionPicker onSelect={handleToggle} />
       </div>
     );
   }
@@ -39,7 +80,7 @@ const CommentReactions = ({ reactions, onToggleReaction }: CommentReactionsProps
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
-                  onClick={(e) => { e.stopPropagation(); onToggleReaction(emoji); }}
+                  onClick={(e) => { e.stopPropagation(); handleToggle(emoji); }}
                   className={cn(
                     "px-1.5 py-0.5 rounded-full text-xs flex items-center gap-1 transition-colors border",
                     userHasReacted
@@ -59,7 +100,7 @@ const CommentReactions = ({ reactions, onToggleReaction }: CommentReactionsProps
         );
       })}
       <div onClick={(e) => e.stopPropagation()}>
-        <CommentReactionPicker onSelect={onToggleReaction} />
+        <CommentReactionPicker onSelect={handleToggle} />
       </div>
     </div>
   );
