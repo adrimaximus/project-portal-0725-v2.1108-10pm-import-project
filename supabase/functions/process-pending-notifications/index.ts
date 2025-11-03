@@ -20,12 +20,24 @@ const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 let wbizConfigCache: { clientId: string; apiKey: string; whatsappClientId: string } | null = null;
 
 const formatPhoneNumberForApi = (phone: string): string | null => {
-  if (!phone) return null;
-  let cleaned = phone.trim().replace(/\D/g, '');
-  if (cleaned.startsWith('0')) return '62' + cleaned.substring(1);
-  if (cleaned.startsWith('62')) return cleaned;
-  if (cleaned.length > 8 && cleaned.startsWith('8')) return '62' + cleaned;
-  return cleaned;
+    if (!phone) return null;
+    // Remove all non-digit characters
+    let cleaned = phone.trim().replace(/\D/g, '');
+    
+    // Handle numbers starting with '0'
+    if (cleaned.startsWith('0')) {
+      return '62' + cleaned.substring(1);
+    }
+    // Handle numbers that are missing the '0' or '62' prefix but are otherwise valid length
+    if (cleaned.length > 8 && cleaned.startsWith('8')) {
+      return '62' + cleaned;
+    }
+    // If it already starts with '62', it's good
+    if (cleaned.startsWith('62')) {
+      return cleaned;
+    }
+    // Return null if it's not a recognizable Indonesian format
+    return null;
 };
 
 const getWbizConfig = async () => {
