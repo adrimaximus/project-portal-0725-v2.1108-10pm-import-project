@@ -6,7 +6,7 @@ import { Link } from 'react-router-dom';
 import { ListChecks, Loader2, Clock, CheckCircle2 } from 'lucide-react';
 import { Task, UpsertTaskPayload } from '@/types';
 import { format, isPast } from 'date-fns';
-import { cn } from '@/lib/utils';
+import { cn, getInitials, getAvatarUrl, generatePastelColor } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog } from '@/components/ui/dialog';
@@ -140,49 +140,54 @@ const MyTasksWidget = () => {
             </div>
           ) : (
             <div className="divide-y divide-border -mx-6 -mb-6">
-              {displayedTasks.map(task => (
-                <button 
-                  key={task.id} 
-                  className="flex w-full items-center gap-3 px-6 py-2.5 transition-colors hover:bg-muted/50 text-left"
-                  onClick={() => handleTaskClick(task)}
-                >
-                  <div className="flex-grow">
-                    <p className="font-medium leading-tight text-sm">
-                      {task.title}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-0.5">{task.project_name}</p>
-                  </div>
-                  <div className="flex items-center gap-3 shrink-0 ml-auto">
-                    {task.due_date && (
-                      <div className={cn(
-                        "text-xs font-medium whitespace-nowrap flex items-center gap-1.5",
-                        isPast(new Date(task.due_date)) ? "text-destructive" : "text-muted-foreground"
-                      )}>
-                        <Clock className="h-3 w-3" />
-                        <span>{format(new Date(task.due_date), 'MMM d')}</span>
-                      </div>
-                    )}
-                    {task.reactions && task.reactions.length > 0 && (
-                      <div className="flex items-center gap-0.5 rounded-full bg-muted px-1.5 py-0.5 text-xs">
-                        {task.reactions.slice(0, 2).map((r) => (
-                          <span key={r.id}>{r.emoji}</span>
-                        ))}
-                        {task.reactions.length > 2 && (
-                          <span className="font-medium text-muted-foreground">+{task.reactions.length - 2}</span>
-                        )}
-                      </div>
-                    )}
-                    {task.created_by && (
-                      <Avatar className="h-6 w-6">
-                        <AvatarImage src={task.created_by.avatar_url} alt={task.created_by.first_name || ''} />
-                        <AvatarFallback className="text-xs">
-                          {((task.created_by.first_name?.[0] || '') + (task.created_by.last_name?.[0] || '')).toUpperCase() || '??'}
-                        </AvatarFallback>
-                      </Avatar>
-                    )}
-                  </div>
-                </button>
-              ))}
+              {displayedTasks.map(task => {
+                const otherAssignee = task.assignedTo?.find(a => a.id !== user?.id);
+                const avatarUser = otherAssignee || task.created_by;
+
+                return (
+                  <button 
+                    key={task.id} 
+                    className="flex w-full items-center gap-3 px-6 py-2.5 transition-colors hover:bg-muted/50 text-left"
+                    onClick={() => handleTaskClick(task)}
+                  >
+                    <div className="flex-grow">
+                      <p className="font-medium leading-tight text-sm">
+                        {task.title}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{task.project_name}</p>
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0 ml-auto">
+                      {task.due_date && (
+                        <div className={cn(
+                          "text-xs font-medium whitespace-nowrap flex items-center gap-1.5",
+                          isPast(new Date(task.due_date)) ? "text-destructive" : "text-muted-foreground"
+                        )}>
+                          <Clock className="h-3 w-3" />
+                          <span>{format(new Date(task.due_date), 'MMM d')}</span>
+                        </div>
+                      )}
+                      {task.reactions && task.reactions.length > 0 && (
+                        <div className="flex items-center gap-0.5 rounded-full bg-muted px-1.5 py-0.5 text-xs">
+                          {task.reactions.slice(0, 2).map((r) => (
+                            <span key={r.id}>{r.emoji}</span>
+                          ))}
+                          {task.reactions.length > 2 && (
+                            <span className="font-medium text-muted-foreground">+{task.reactions.length - 2}</span>
+                          )}
+                        </div>
+                      )}
+                      {avatarUser && (
+                        <Avatar className="h-6 w-6">
+                          <AvatarImage src={getAvatarUrl(avatarUser.avatar_url, avatarUser.id)} alt={avatarUser.name || ''} />
+                          <AvatarFallback style={generatePastelColor(avatarUser.id)} className="text-xs">
+                            {getInitials(avatarUser.name, avatarUser.email)}
+                          </AvatarFallback>
+                        </Avatar>
+                      )}
+                    </div>
+                  </button>
+                )
+              })}
             </div>
           )}
         </CardContent>
