@@ -116,7 +116,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
 
   return (
     <DialogContent
-      className="w-[90vw] max-w-[650px] max-h-[85vh] 
+      className="w-[90vw] max-w-[650px] max-h-[80vh] sm:max-h-[85vh] 
                  p-0 rounded-lg bg-background 
                  overflow-y-auto scrollbar-thin 
                  scrollbar-thumb-zinc-700 hover:scrollbar-thumb-zinc-500 
