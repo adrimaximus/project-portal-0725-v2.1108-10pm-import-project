@@ -146,8 +146,7 @@ const MyTasksWidget = () => {
           ) : (
             <div className="divide-y divide-border -mx-6 -mb-6">
               {displayedTasks.map(task => {
-                const otherAssignee = task.assignedTo?.find(a => a.id !== user?.id);
-                const avatarUser = otherAssignee || task.created_by;
+                const avatarUser = task.created_by;
 
                 return (
                   <div 
