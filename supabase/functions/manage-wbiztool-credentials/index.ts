@@ -9,8 +9,6 @@ const corsHeaders = {
 }
 
 const validateCredentials = async (clientId: string, apiKey: string) => {
-  // We'll try to hit the devices endpoint.
-  // A successful response (even if empty) means auth is OK. A 401/403 means auth failed.
   const validationResponse = await fetch('https://wbiztool.com/api/v1/devices', {
     method: 'GET',
     headers: {
@@ -24,7 +22,6 @@ const validateCredentials = async (clientId: string, apiKey: string) => {
     throw new Error('Invalid WBIZTOOL credentials. Please check Client ID or API Key.');
   }
 
-  // If we get any other error, it's a problem.
   if (!validationResponse.ok) {
     const errorText = await validationResponse.text();
     throw new Error(`WBIZTOOL API unexpected error: ${errorText.replace(/<[^>]*>?/gm, '').trim()}`);
