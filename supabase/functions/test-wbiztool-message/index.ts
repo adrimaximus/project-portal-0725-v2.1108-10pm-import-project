@@ -16,26 +16,13 @@ serve(async (req) => {
     const { phone, message } = await req.json()
     if (!phone || !message) throw new Error('Phone number and message are required.')
 
-    const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
-
-    const { data: credsData, error: credsError } = await supabaseAdmin
-      .from('app_config')
-      .select('key, value')
-      .in('key', ['WBIZTOOL_CLIENT_ID', 'WBIZTOOL_API_KEY']);
-
-    if (credsError || !credsData || credsData.length < 2) {
-      throw new Error('WBIZTOOL credentials not found in app configuration.');
-    }
-
-    const clientId = credsData.find(c => c.key === 'WBIZTOOL_CLIENT_ID')?.value;
-    const apiKey = credsData.find(c => c.key === 'WBIZTOOL_API_KEY')?.value;
-    const whatsappClientId = Deno.env.get('WBIZTOOL_WHATSAPP_CLIENT_ID');
+    // NOTE: Hardcoded credentials as per user instruction for a 100% fix.
+    const clientId = "10561";
+    const apiKey = "8fb9780fcaa16a35c968b6cac39d648146340b14";
+    const whatsappClientId = "4189";
 
     if (!clientId || !apiKey || !whatsappClientId) {
-      throw new Error("WBIZTOOL credentials missing or invalid. Please check app_config table.");
+      throw new Error("WBIZTOOL credentials missing or invalid.");
     }
 
     const messageResponse = await fetch('https://wbiztool.com/api/v1/send_msg/', {
