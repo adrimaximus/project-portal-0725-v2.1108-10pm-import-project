@@ -1,6 +1,6 @@
 import { Task, User, TaskAttachment, Reaction } from "@/types";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ListChecks, Plus, MoreHorizontal, Edit, Trash2, Ticket, Paperclip, Eye, Download, File as FileIconLucide, ChevronDown } from "lucide-react";
+import { ListChecks, Plus, MoreHorizontal, Edit, Trash2, Ticket, Paperclip, Eye, Download, File as FileIconLucide, ChevronDown, Loader2 } from "lucide-react";
 import { Button } from "../ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -10,34 +10,28 @@ import { useMemo, useRef, useEffect, useState } from "react";
 import FileIcon from "../FileIcon";
 import TaskReactions from '../projects/TaskReactions';
 import { useTaskMutations } from '@/hooks/useTaskMutations';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import TaskAttachmentList from '../projects/TaskAttachmentList';
-import { cn } from "@/lib/utils";
+import { cn, getErrorMessage, formatBytes } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { Separator } from "@/components/ui/separator";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { supabase } from "@/integrations/supabase/client";
 import { User as AuthUser } from '@supabase/supabase-js';
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
+import { Textarea } from "../ui/textarea";
 
 interface ProjectTasksProps {
   tasks: Task[];
   projectId: string;
-  onAddTask: () => void;
+  projectSlug: string;
   onEditTask: (task: Task) => void;
   onDeleteTask: (task: Task) => void;
   onToggleTaskCompletion: (task: Task, completed: boolean) => void;
   highlightedTaskId?: string | null;
   onHighlightComplete?: () => void;
-}
-
-const formatBytes = (bytes?: number, decimals = 2) => {
-  if (!bytes || bytes === 0) return '';
-  const k = 1024;
-  const dm = decimals < 0 ? 0 : decimals;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
 }
 
 const TaskRow = ({ task, onToggleTaskCompletion, onEditTask, onDeleteTask, handleToggleReaction, setRef, onTitleClick, currentUserId }: {
@@ -114,7 +108,7 @@ const TaskRow = ({ task, onToggleTaskCompletion, onEditTask, onDeleteTask, handl
               <div className="space-y-2">
                 <h4 className="font-medium leading-none">Attachments ({attachmentCount})</h4>
                 <div className="space-y-2 pt-2">
-                  {allAttachments.map((att) => (
+                  {allAttachments.map(att => (
                     <div key={att.id} className="flex items-center justify-between p-2 rounded-md border bg-card">
                       <div className="flex items-center gap-3 min-w-0">
                         <FileIcon fileType={att.file_type || ''} className="h-5 w-5 text-muted-foreground flex-shrink-0" />
@@ -190,13 +184,44 @@ const TaskRow = ({ task, onToggleTaskCompletion, onEditTask, onDeleteTask, handl
   );
 };
 
-const ProjectTasks = ({ tasks, projectId, onAddTask, onEditTask, onDeleteTask, onToggleTaskCompletion, highlightedTaskId, onHighlightComplete }: ProjectTasksProps) => {
+const ProjectTasks = ({ tasks, projectId, projectSlug, onEditTask, onDeleteTask, onToggleTaskCompletion, highlightedTaskId, onHighlightComplete }: ProjectTasksProps) => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { toggleTaskReaction } = useTaskMutations();
   const taskRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const [isCompletedOpen, setIsCompletedOpen] = useState(true);
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [showNewTaskForm, setShowNewTaskForm] = useState(false);
+  const [newTaskTitle, setNewTaskTitle] = useState("");
+  const { user: authUser } = useAuth();
+
+  const { mutate: addTask, isPending: isAddingTask } = useMutation({
+    mutationFn: async ({ title }: { title: string }) => {
+        if (!authUser) throw new Error("User not authenticated");
+        const { error } = await supabase.from('tasks').insert({
+            project_id: projectId,
+            title,
+            created_by: authUser.id,
+            status: 'To do',
+        });
+        if (error) throw error;
+    },
+    onSuccess: () => {
+        toast.success("Task added successfully.");
+        queryClient.invalidateQueries({ queryKey: ['project', projectSlug] });
+        setShowNewTaskForm(false);
+        setNewTaskTitle("");
+    },
+    onError: (err: any) => {
+        toast.error("Failed to add task", { description: getErrorMessage(err) });
+    }
+  });
+
+  const handleAddNewTask = () => {
+    if (newTaskTitle.trim()) {
+        addTask({ title: newTaskTitle.trim() });
+    }
+  };
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -255,7 +280,7 @@ const ProjectTasks = ({ tasks, projectId, onAddTask, onEditTask, onDeleteTask, o
       <div className="text-center text-muted-foreground py-4">
         <ListChecks className="mx-auto h-8 w-8" />
         <p className="mt-2 text-sm">No tasks for this project yet.</p>
-        <Button onClick={onAddTask} className="mt-3 text-sm h-8 px-3">
+        <Button onClick={() => setShowNewTaskForm(true)} className="mt-3 text-sm h-8 px-3">
           <Plus className="mr-1 h-4 w-4" />
           Add First Task
         </Button>
@@ -265,12 +290,6 @@ const ProjectTasks = ({ tasks, projectId, onAddTask, onEditTask, onDeleteTask, o
 
   return (
     <div className="space-y-1">
-      <div className="flex justify-end mb-4">
-        <Button onClick={onAddTask}>
-          <Plus className="mr-2 h-4 w-4" />
-          New Task
-        </Button>
-      </div>
       <TooltipProvider>
         {undoneTasks.map((task) => (
           <TaskRow
@@ -289,6 +308,41 @@ const ProjectTasks = ({ tasks, projectId, onAddTask, onEditTask, onDeleteTask, o
           />
         ))}
       </TooltipProvider>
+
+      {showNewTaskForm ? (
+        <div className="p-2">
+          <Textarea
+            placeholder="What needs to be done?"
+            value={newTaskTitle}
+            onChange={(e) => setNewTaskTitle(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleAddNewTask();
+              }
+              if (e.key === 'Escape') {
+                e.preventDefault();
+                setShowNewTaskForm(false);
+                setNewTaskTitle("");
+              }
+            }}
+            autoFocus
+            className="mb-2"
+          />
+          <div className="flex items-center gap-2">
+            <Button onClick={handleAddNewTask} disabled={isAddingTask}>
+              {isAddingTask ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Add Task
+            </Button>
+            <Button variant="ghost" onClick={() => { setShowNewTaskForm(false); setNewTaskTitle(""); }}>Cancel</Button>
+          </div>
+        </div>
+      ) : (
+        <Button variant="ghost" onClick={() => setShowNewTaskForm(true)} className="w-full justify-start mt-2 text-muted-foreground hover:text-foreground">
+          <Plus className="mr-2 h-4 w-4" />
+          Add task
+        </Button>
+      )}
 
       {doneTasks.length > 0 && (
         <>

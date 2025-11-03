@@ -14,7 +14,6 @@ interface ProjectMainContentProps {
   onFieldChange: (field: keyof Project, value: any) => void;
   mutations: any; // Simplified for brevity, contains all mutation functions
   defaultTab: string;
-  onAddTask: () => void;
   onEditTask: (task: Task) => void;
   onDeleteTask: (task: Task) => void;
   onToggleTaskCompletion: (task: Task, completed: boolean) => void;
@@ -31,7 +30,6 @@ const ProjectMainContent = ({
   onFieldChange, 
   mutations, 
   defaultTab,
-  onAddTask,
   onEditTask,
   onDeleteTask,
   onToggleTaskCompletion,
@@ -130,7 +128,7 @@ const ProjectMainContent = ({
           <ProjectTasks
             tasks={project.tasks || []}
             projectId={project.id}
-            onAddTask={onAddTask}
+            projectSlug={project.slug}
             onEditTask={onEditTask}
             onDeleteTask={onDeleteTask}
             onToggleTaskCompletion={onToggleTaskCompletion}

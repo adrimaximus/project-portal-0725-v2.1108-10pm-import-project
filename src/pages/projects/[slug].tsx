@@ -140,7 +140,6 @@ const ProjectDetailPage = () => {
     }
   };
 
-  const handleCreateTask = () => { setEditingTask(null); setIsTaskFormOpen(true); };
   const handleEditTask = (task: Task) => { setEditingTask(task); setIsTaskFormOpen(true); };
   const handleDeleteTask = (task: Task) => setTaskToDelete(task);
   const confirmDeleteTask = () => { if (taskToDelete) { deleteTask(taskToDelete.id); setTaskToDelete(null); } };
@@ -195,7 +194,6 @@ const ProjectDetailPage = () => {
                 onFieldChange={handleFieldChange}
                 mutations={{ addComment, updateComment, deleteComment, addFiles, deleteFile }}
                 defaultTab={searchParams.get('tab') || 'overview'}
-                onAddTask={handleCreateTask}
                 onEditTask={handleEditTask}
                 onDeleteTask={handleDeleteTask}
                 onToggleTaskCompletion={handleToggleTaskCompletion}

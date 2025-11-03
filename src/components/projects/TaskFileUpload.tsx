@@ -4,6 +4,7 @@ import { X, UploadCloud, Download, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { TaskAttachment } from '@/types';
 import FileIcon from '../FileIcon';
+import { formatBytes } from '@/lib/utils';
 
 interface TaskFileUploadProps {
   existingFiles: TaskAttachment[];
@@ -24,15 +25,6 @@ const TaskFileUpload = ({ existingFiles, newFiles, onNewFilesChange, onExistingF
   const removeNewFile = (fileToRemove: File) => {
     onNewFilesChange(newFiles.filter(file => file !== fileToRemove));
   };
-
-  const formatBytes = (bytes: number | null | undefined, decimals = 2): string => {
-    if (bytes === 0 || bytes == null) return '0 Bytes';
-    const k = 1024;
-    const dm = decimals < 0 ? 0 : decimals;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
-  }
 
   const totalAttachments = existingFiles.length + newFiles.length;
 

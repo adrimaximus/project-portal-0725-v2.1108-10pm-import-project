@@ -203,3 +203,12 @@ export const getColorForTag = (tagName: string): string => {
   const h = hash % 360;
   return `hsl(${h}, 50%, 70%)`;
 };
+
+export const formatBytes = (bytes: number | null | undefined, decimals = 2): string => {
+  if (bytes === 0 || bytes == null) return '0 Bytes';
+  const k = 1024;
+  const dm = decimals < 0 ? 0 : decimals;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+};
