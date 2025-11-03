@@ -60,8 +60,8 @@ const sendWhatsappMessage = async (phone: string, message: string) => {
     return;
   }
 
-  const devicesResponse = await fetch('https://wbiztool.com/api/v1/get-devices/', {
-    method: 'POST',
+  const devicesResponse = await fetch('https://wbiztool.com/api/v2/devices', {
+    method: 'GET',
     headers: { 'Content-Type': 'application/json', 'x-client-id': config.clientId, 'x-api-key': config.apiKey },
   });
 
@@ -75,7 +75,7 @@ const sendWhatsappMessage = async (phone: string, message: string) => {
 
   if (!activeDevice) throw new Error('No active WBIZTOOL device found.');
 
-  const messageResponse = await fetch('https://wbiztool.com/api/v1/send_msg/', {
+  const messageResponse = await fetch('https://wbiztool.com/api/v2/messages', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-client-id': config.clientId, 'x-api-key': config.apiKey },
     body: JSON.stringify({ phone: formattedPhone, message: message, device_id: activeDevice.id }),

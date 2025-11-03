@@ -9,35 +9,21 @@ const corsHeaders = {
 }
 
 const validateCredentials = async (clientId: string, apiKey: string) => {
-  const wbizResponse = await fetch('https://wbiztool.com/api/v1/send_msg/', {
-    method: 'POST',
+  const devicesResponse = await fetch('https://wbiztool.com/api/v2/devices', {
+    method: 'GET',
     headers: {
       'Content-Type': 'application/json',
       'x-client-id': clientId,
       'x-api-key': apiKey,
     },
-    body: JSON.stringify({
-      phone: '000000000000',
-      message: 'connection test',
-      device_id: 'test_device',
-    }),
   });
 
-  if (wbizResponse.status === 401 || wbizResponse.status === 403) {
+  if (devicesResponse.status === 401 || devicesResponse.status === 403) {
     throw new Error('Invalid WBIZTOOL credentials. Please check Client ID or API Key.');
   }
 
-  // treat 400 as valid (means API key accepted, payload just invalid)
-  if (wbizResponse.status === 400) {
-    return true;
-  }
-
-  if (wbizResponse.status === 404) {
-    throw new Error('WBIZTOOL endpoint not found. Please verify the API URL.');
-  }
-
-  if (!wbizResponse.ok) {
-    const errorText = await wbizResponse.text();
+  if (!devicesResponse.ok) {
+    const errorText = await devicesResponse.text();
     throw new Error(`WBIZTOOL unexpected error: ${errorText.replace(/<[^>]*>?/gm, '').trim()}`);
   }
 
