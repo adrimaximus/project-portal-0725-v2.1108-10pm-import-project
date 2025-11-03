@@ -27,8 +27,16 @@ const validateCredentials = async (clientId: string, apiKey: string) => {
   }
 
   if (!wbizResponse.ok) {
+    const status = wbizResponse.status;
     const errorText = await wbizResponse.text();
-    throw new Error(`WBIZTOOL API Error: ${errorText.replace(/<[^>]*>?/gm, '').trim()}`);
+    let errorMessage = `An unknown error occurred (Status: ${status}).`;
+    try {
+      const errorJson = JSON.parse(errorText);
+      errorMessage = errorJson.message || JSON.stringify(errorJson);
+    } catch (e) {
+      errorMessage = errorText.replace(/<[^>]*>?/gm, '').trim() || `Received an empty error response (Status: ${status}).`;
+    }
+    throw new Error(`WBIZTOOL API Error: ${errorMessage}`);
   }
 
   return true;
