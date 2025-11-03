@@ -167,24 +167,21 @@ export const useTaskMutations = (refetch?: () => void) => {
   });
 
   const { mutate: toggleTaskReaction } = useMutation<
-    void,
+    Reaction[],
     Error,
     { taskId: string; emoji: string },
     { previousDataMap: Map<any[], any> }
   >({
     mutationFn: async ({ taskId, emoji }) => {
       if (!user) throw new Error("User not authenticated");
-      const { error } = await supabase.rpc('toggle_task_reaction', {
+      const { data, error } = await supabase.rpc('toggle_task_reaction', {
         p_task_id: taskId,
         p_emoji: emoji,
       });
       if (error) throw error;
+      return data as Reaction[];
     },
     onMutate: async ({ taskId, emoji }) => {
-      await queryClient.cancelQueries({ queryKey: ['projects'] });
-      await queryClient.cancelQueries({ queryKey: ['project'] });
-      await queryClient.cancelQueries({ queryKey: ['tasks'] });
-
       const previousDataMap = new Map();
       if (!user) return { previousDataMap };
 
@@ -206,7 +203,7 @@ export const useTaskMutations = (refetch?: () => void) => {
             }
           } else {
             newReactions.push({
-              id: `temp-${Date.now()}`,
+              id: `temp-${uuidv4()}`,
               emoji,
               user_id: user.id,
               user_name: user.name || user.email || 'You',
@@ -214,21 +211,20 @@ export const useTaskMutations = (refetch?: () => void) => {
           }
           return { ...task, reactions: newReactions };
         };
-
-        if (Array.isArray(data) && data.length > 0 && 'project_id' in data[0]) { // Task[]
-          return data.map(updateReactions);
+        
+        if (Array.isArray(data)) { // Handles Task[] and Project[]
+            if (data.length === 0) return data;
+            if ('project_id' in data[0]) return data.map(updateReactions); // Task[]
+            if ('tasks' in data[0]) return data.map(project => ({ // Project[]
+                ...project,
+                tasks: (project.tasks || []).map(updateReactions)
+            }));
         }
-        if (Array.isArray(data) && data.length > 0 && 'tasks' in data[0]) { // Project[]
-          return data.map(project => ({
-            ...project,
-            tasks: (project.tasks || []).map(updateReactions)
-          }));
-        }
-        if (data.tasks && Array.isArray(data.tasks)) { // Single Project
-          return {
-            ...data,
-            tasks: data.tasks.map(updateReactions),
-          };
+        if (data && typeof data === 'object' && !Array.isArray(data) && data.tasks) { // Single Project
+            return {
+                ...data,
+                tasks: (data.tasks || []).map(updateReactions),
+            };
         }
         return data;
       };
@@ -249,6 +245,41 @@ export const useTaskMutations = (refetch?: () => void) => {
 
       return { previousDataMap };
     },
+    onSuccess: (newReactions, { taskId }) => {
+      const queryCache = queryClient.getQueryCache();
+      const relevantQueryKeys = queryCache.findAll()
+        .map(q => q.queryKey)
+        .filter(key => ['projects', 'project', 'tasks'].includes(key[0] as string));
+
+      for (const queryKey of relevantQueryKeys) {
+        queryClient.setQueryData(queryKey, (oldData: any) => {
+          if (!oldData) return oldData;
+
+          const updateTaskInPlace = (task: Task) => {
+            if (task.id === taskId) {
+              return { ...task, reactions: newReactions };
+            }
+            return task;
+          };
+
+          if (Array.isArray(oldData)) { // Handles Task[] and Project[]
+            if (oldData.length === 0) return oldData;
+            if ('project_id' in oldData[0]) return oldData.map(updateTaskInPlace); // Task[]
+            if ('tasks' in oldData[0]) return oldData.map(project => ({ // Project[]
+                ...project,
+                tasks: (project.tasks || []).map(updateTaskInPlace)
+            }));
+          }
+          if (oldData && typeof oldData === 'object' && !Array.isArray(oldData) && oldData.tasks) { // Single Project
+              return {
+                  ...oldData,
+                  tasks: (oldData.tasks || []).map(updateTaskInPlace),
+              };
+          }
+          return oldData;
+        });
+      }
+    },
     onError: (err, variables, context) => {
       if (context?.previousDataMap) {
         for (const [queryKey, previousData] of context.previousDataMap.entries()) {
@@ -256,9 +287,6 @@ export const useTaskMutations = (refetch?: () => void) => {
         }
       }
       toast.error("Failed to update reaction.", { description: getErrorMessage(err) });
-    },
-    onSuccess: () => {
-      invalidateQueries();
     },
   });
 
