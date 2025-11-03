@@ -147,7 +147,6 @@ const ProjectDetailPage = () => {
               <ProjectTasks
                 tasks={project.tasks || []}
                 projectId={project.id}
-                onAddTask={handleCreateTask}
                 onEditTask={handleEditTask}
                 onDeleteTask={handleDeleteTask}
                 onToggleTaskCompletion={handleToggleTaskCompletion}

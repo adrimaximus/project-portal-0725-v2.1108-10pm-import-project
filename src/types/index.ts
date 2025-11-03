@@ -160,7 +160,7 @@ export type Comment = {
   author_id: string;
   project_id: string;
   task_id: string;
-  reactions: Reaction[];
+  reactions?: Reaction[];
   attachment_url?: string | null;
   attachment_name?: string | null;
   attachments_jsonb?: any[];
@@ -249,6 +249,7 @@ export type Project = {
   person_ids?: string[];
   client_company_id?: string | null;
   tasks?: Task[];
+  comments?: Comment[];
   slug: string;
   created_at: string;
   updated_at: string;

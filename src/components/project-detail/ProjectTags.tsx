@@ -33,7 +33,7 @@ const ProjectTags = ({ project, isEditing, onTagsChange, onReactionsChange }: Pr
 
   const handleTagCreate = (tagName: string): Tag => {
     const randomColor = colors[Math.floor(Math.random() * colors.length)];
-    const newTag: Tag = { id: uuidv4(), name: tagName, color: randomColor, isNew: true };
+    const newTag: Tag = { id: uuidv4(), name: tagName, color: randomColor, isNew: true, user_id: user!.id };
     setAllTags(prev => [...prev, newTag]);
     return newTag;
   };

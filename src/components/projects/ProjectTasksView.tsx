@@ -59,7 +59,7 @@ const TaskListItem = ({ task, onClick }: { task: Task; onClick: (task: Task) => 
 
 
 const ProjectTasksView = () => {
-  const { data: tasks = [], isLoading, refetch } = useTasks({});
+  const { data: tasks = [], isLoading, refetch } = useTasks({ sortConfig: { key: 'created_at', direction: 'desc' } });
 
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [isTaskFormOpen, setIsTaskFormOpen] = useState(false);
