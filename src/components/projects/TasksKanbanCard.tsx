@@ -41,7 +41,7 @@ const aggregateAttachments = (task: Task): TaskAttachment[] => {
 
   // 2. Add attachment from legacy fields if it exists and is not already included
   if (task.attachment_url && task.attachment_name) {
-    const existingUrls = new Set(attachments.map(a => a.file_url));
+    const existingUrls = new Set(attachments.map((a) => a.file_url));
     if (!existingUrls.has(task.attachment_url)) {
       attachments.push({
         id: task.originTicketId || `legacy-${task.id}`, // Use origin ticket ID if available
@@ -63,7 +63,6 @@ const TasksKanbanCard = ({ task, onEdit, onDelete }: TasksKanbanCardProps) => {
   const queryClient = useQueryClient();
   const { toggleTaskReaction } = useTaskMutations(() => {
     queryClient.invalidateQueries({ queryKey: ['tasks'] });
-    queryClient.invalidateQueries({ queryKey: ['project'] });
   });
 
   const priorityStyle = getPriorityStyles(task.priority);

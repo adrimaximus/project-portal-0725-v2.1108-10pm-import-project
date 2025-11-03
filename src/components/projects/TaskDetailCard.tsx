@@ -26,7 +26,6 @@ import remarkGfm from 'remark-gfm';
 import TaskAttachmentList from './TaskAttachmentList';
 import { useTaskMutations } from '@/hooks/useTaskMutations';
 import { useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
 import {
   DropdownMenu,
   DropdownMenuContent,

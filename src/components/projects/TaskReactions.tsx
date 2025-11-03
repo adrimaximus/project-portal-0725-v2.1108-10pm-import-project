@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Reaction } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -12,49 +12,18 @@ interface TaskReactionsProps {
   onToggleReaction: (emoji: string) => void;
 }
 
-const TaskReactions = ({ reactions: initialReactions, onToggleReaction }: TaskReactionsProps) => {
+const TaskReactions = ({ reactions, onToggleReaction }: TaskReactionsProps) => {
   const { user } = useAuth();
-  const [reactions, setReactions] = useState(initialReactions || []);
-
-  useEffect(() => {
-    setReactions(initialReactions || []);
-  }, [initialReactions]);
 
   const handleToggle = (emoji: string) => {
     if (!user) {
       toast.error("You must be logged in to react.");
       return;
     }
-
-    const currentReactions = reactions;
-    let newReactions: Reaction[];
-    const existingReactionIndex = currentReactions.findIndex(r => r.user_id === user.id);
-
-    if (existingReactionIndex > -1) {
-      if (currentReactions[existingReactionIndex].emoji === emoji) {
-        newReactions = currentReactions.filter(r => r.user_id !== user.id);
-      } else {
-        newReactions = currentReactions.map(r => 
-          r.user_id === user.id ? { ...r, emoji } : r
-        );
-      }
-    } else {
-      newReactions = [
-        ...currentReactions,
-        {
-          id: `temp-${Date.now()}`,
-          emoji,
-          user_id: user.id,
-          user_name: user.name || 'You',
-        }
-      ];
-    }
-    
-    setReactions(newReactions); // Optimistic update
-    onToggleReaction(emoji); // Fire and forget mutation
+    onToggleReaction(emoji);
   };
 
-  const reactionsSummary = reactions.reduce((acc, reaction) => {
+  const reactionsSummary = (reactions || []).reduce((acc, reaction) => {
     if (!acc[reaction.emoji]) {
       acc[reaction.emoji] = {
         count: 0,
