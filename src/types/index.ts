@@ -14,6 +14,7 @@ export const PROJECT_STATUS_OPTIONS = [
 
 export const PAYMENT_STATUS_OPTIONS = [
   { value: 'Proposed', label: 'Proposed' },
+  { value: 'Unpaid', label: 'Unpaid' },
   { value: 'Invoiced', label: 'Invoiced' },
   { value: 'Paid', label: 'Paid' },
   { value: 'Partially Paid', label: 'Partially Paid' },
