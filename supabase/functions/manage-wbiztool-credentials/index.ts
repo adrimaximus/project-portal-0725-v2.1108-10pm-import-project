@@ -9,28 +9,35 @@ const corsHeaders = {
 }
 
 const validateCredentials = async (clientId: string, apiKey: string) => {
-    const wbizResponse = await fetch('https://wbiztool.com/api/v1/get-devices/', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'x-client-id': clientId,
-            'x-api-key': apiKey,
-        },
-    });
+  const wbizResponse = await fetch('https://wbiztool.com/api/v1/send_msg/', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-client-id': clientId,
+      'x-api-key': apiKey,
+    },
+    // kirim dummy payload untuk test validasi
+    body: JSON.stringify({
+      phone: '0000',
+      message: 'test connection',
+      device_id: '0000'
+    }),
+  });
 
-    if (!wbizResponse.ok) {
-        const status = wbizResponse.status;
-        const errorText = await wbizResponse.text();
-        let errorMessage = `An unknown error occurred (Status: ${status}).`;
-        try {
-            const errorJson = JSON.parse(errorText);
-            errorMessage = errorJson.message || JSON.stringify(errorJson);
-        } catch (e) {
-            errorMessage = errorText.replace(/<[^>]*>?/gm, '').trim() || `Received an empty error response (Status: ${status}).`;
-        }
-        throw new Error(`WBIZTOOL API Error: ${errorMessage}`);
-    }
-    return true;
+  if (wbizResponse.status === 401 || wbizResponse.status === 403) {
+    throw new Error('Invalid WBIZTOOL credentials. Please check Client ID or API Key.');
+  }
+
+  if (wbizResponse.status === 404) {
+    throw new Error('WBIZTOOL endpoint not found. Please verify the API URL.');
+  }
+
+  if (!wbizResponse.ok) {
+    const errorText = await wbizResponse.text();
+    throw new Error(`WBIZTOOL API Error: ${errorText.replace(/<[^>]*>?/gm, '').trim()}`);
+  }
+
+  return true;
 };
 
 serve(async (req) => {
