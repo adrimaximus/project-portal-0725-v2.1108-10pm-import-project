@@ -48,14 +48,14 @@ const MyTasksWidget = () => {
             <p className="mt-1 text-sm text-muted-foreground">You have no upcoming tasks.</p>
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="divide-y divide-border -mx-6 -mb-6">
             {myTasks.map(task => (
-              <div key={task.id} className="flex items-center gap-4 p-2 -mx-2 rounded-lg transition-colors hover:bg-muted/50">
+              <div key={task.id} className="flex items-center gap-3 px-6 py-2.5 transition-colors hover:bg-muted/50">
                 <div className="flex-grow">
-                  <Link to={`/projects/${task.project_slug}?task=${task.id}`} className="font-medium leading-snug hover:underline">
+                  <Link to={`/projects/${task.project_slug}?task=${task.id}`} className="font-medium leading-tight hover:underline text-sm">
                     {task.title}
                   </Link>
-                  <p className="text-xs text-muted-foreground">{task.project_name}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{task.project_name}</p>
                 </div>
                 {task.due_date && (
                   <div className={cn(
