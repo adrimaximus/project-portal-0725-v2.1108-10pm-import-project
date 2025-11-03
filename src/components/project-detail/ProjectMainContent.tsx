@@ -7,6 +7,8 @@ import ProjectOverviewTab from './ProjectOverviewTab';
 import ProjectTasks from './ProjectTasks';
 import ProjectActivityFeed from './ProjectActivityFeed';
 import { LayoutGrid, ListChecks, MessageSquare, Activity } from 'lucide-react';
+import { useProfiles } from '@/hooks/useProfiles';
+import { toast } from 'sonner';
 
 interface ProjectMainContentProps {
   project: Project;
@@ -40,6 +42,7 @@ const ProjectMainContent = ({
   isUploading,
 }: ProjectMainContentProps) => {
   const { user } = useAuth();
+  const { data: allUsers = [] } = useProfiles();
   const [activeTab, setActiveTab] = useState(defaultTab);
   const [lastViewedDiscussion, setLastViewedDiscussion] = useState(() => new Date());
 
@@ -62,7 +65,26 @@ const ProjectMainContent = ({
 
   const handleAddCommentOrTicket = async (text: string, isTicket: boolean, attachments: File[] | null, mentionedUserIds: string[]) => {
     if (!project || !user) return;
-    mutations.addComment.mutate({ project, user, text, isTicket, attachments, mentionedUserIds });
+    mutations.addComment.mutate({ project, user, text, isTicket, attachments, mentionedUserIds }, {
+      onSuccess: () => {
+        if (mentionedUserIds.length > 0) {
+          const mentionedUsers = allUsers.filter(u => mentionedUserIds.includes(u.id));
+          const names = mentionedUsers.map(u => u.name);
+          let notificationMessage = '';
+          if (names.length === 1) {
+            notificationMessage = `${names[0]} will be notified.`;
+          } else if (names.length === 2) {
+            notificationMessage = `${names[0]} and ${names[1]} will be notified.`;
+          } else if (names.length > 2) {
+            const otherCount = names.length - 1;
+            notificationMessage = `${names[0]} and ${otherCount} others will be notified.`;
+          }
+          if (notificationMessage) {
+            toast.info(notificationMessage);
+          }
+        }
+      }
+    });
   };
 
   const handleUpdateComment = (project: Project, commentId: string, text: string, attachments: File[] | null, isConvertingToTicket: boolean, mentionedUserIds: string[]) => {
