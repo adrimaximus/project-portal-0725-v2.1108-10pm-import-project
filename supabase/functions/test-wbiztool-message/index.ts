@@ -35,10 +35,10 @@ serve(async (req) => {
     const whatsappClientId = Deno.env.get('WBIZTOOL_WHATSAPP_CLIENT_ID');
 
     if (!clientId || !apiKey || !whatsappClientId) {
-      throw new Error('WBIZTOOL credentials not fully configured.');
+      throw new Error("WBIZTOOL credentials missing or invalid. Please check app_config table.");
     }
 
-    const messageResponse = await fetch('https://app.wbiztool.com/api/v1/send_msg/', {
+    const messageResponse = await fetch('https://wbiztool.com/api/v1/send_msg/', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -46,9 +46,9 @@ serve(async (req) => {
         'X-Api-Key': apiKey,
       },
       body: JSON.stringify({
-        client_id: clientId,
+        client_id: parseInt(clientId, 10),
         api_key: apiKey,
-        whatsapp_client: whatsappClientId,
+        whatsapp_client: parseInt(whatsappClientId, 10),
         phone,
         message,
       }),

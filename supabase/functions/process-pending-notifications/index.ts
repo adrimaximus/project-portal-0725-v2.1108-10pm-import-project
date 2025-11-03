@@ -47,7 +47,9 @@ const getWbizConfig = async () => {
   const clientId = data?.find(c => c.key === 'WBIZTOOL_CLIENT_ID')?.value;
   const apiKey = data?.find(c => c.key === 'WBIZTOOL_API_KEY')?.value;
   const whatsappClientId = Deno.env.get('WBIZTOOL_WHATSAPP_CLIENT_ID');
-  if (!clientId || !apiKey || !whatsappClientId) throw new Error("WBIZTOOL credentials not fully configured.");
+  if (!clientId || !apiKey || !whatsappClientId) {
+    throw new Error("WBIZTOOL credentials missing or invalid. Please check app_config table.");
+  }
   wbizConfigCache = { clientId, apiKey, whatsappClientId };
   return wbizConfigCache;
 };
@@ -60,7 +62,7 @@ const sendWhatsappMessage = async (phone: string, message: string) => {
     return;
   }
 
-  const messageResponse = await fetch('https://app.wbiztool.com/api/v1/send_msg/', {
+  const messageResponse = await fetch('https://wbiztool.com/api/v1/send_msg/', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -68,17 +70,25 @@ const sendWhatsappMessage = async (phone: string, message: string) => {
       'X-Api-Key': config.apiKey,
     },
     body: JSON.stringify({
-      client_id: config.clientId,
+      client_id: parseInt(config.clientId, 10),
       api_key: config.apiKey,
-      whatsapp_client: config.whatsappClientId,
+      whatsapp_client: parseInt(config.whatsappClientId, 10),
       phone: formattedPhone,
       message: message,
     }),
   });
 
   if (!messageResponse.ok) {
-    const errorData = await messageResponse.json().catch(() => ({}));
-    throw new Error(`WBIZTOOL API Error (messages): ${errorData.message || 'Failed to send message'}`);
+    const status = messageResponse.status;
+    const errorText = await messageResponse.text();
+    let errorMessage = `Failed to send message (Status: ${status}).`;
+    try {
+      const errorJson = JSON.parse(errorText);
+      errorMessage = errorJson.message || JSON.stringify(errorJson);
+    } catch (e) {
+      errorMessage = errorText.replace(/<[^>]*>?/gm, '').trim() || `Received an empty error response (Status: ${status}).`;
+    }
+    throw new Error(`WBIZTOOL API Error: ${errorMessage}`);
   }
 
   return messageResponse.json();
