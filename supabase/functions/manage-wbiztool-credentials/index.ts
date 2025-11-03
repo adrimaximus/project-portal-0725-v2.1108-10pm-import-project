@@ -9,20 +9,14 @@ const corsHeaders = {
 }
 
 const validateCredentials = async (clientId: string, apiKey: string) => {
-  const wbizResponse = await fetch('https://wbiztool.com/api/v1/send_msg/', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-client-id': clientId,
-      'x-api-key': apiKey,
-    },
-    // kirim dummy payload untuk test validasi
-    body: JSON.stringify({
-      phone: '0000',
-      message: 'test connection',
-      device_id: '0000'
-    }),
-  });
+    const wbizResponse = await fetch('https://wbiztool.com/api/v1/get-devices/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'x-client-id': clientId,
+            'x-api-key': apiKey,
+        },
+    });
 
   if (wbizResponse.status === 401 || wbizResponse.status === 403) {
     throw new Error('Invalid WBIZTOOL credentials. Please check Client ID or API Key.');
