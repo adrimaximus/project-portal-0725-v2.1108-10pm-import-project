@@ -9,7 +9,7 @@ const corsHeaders = {
 }
 
 const validateCredentials = async (clientId: string, apiKey: string) => {
-    const wbizResponse = await fetch('https://wbiztool.com/api/devices/', {
+    const wbizResponse = await fetch('https://wbiztool.com/api/v1/devices/', {
         method: 'GET',
         headers: {
             'Content-Type': 'application/json',
