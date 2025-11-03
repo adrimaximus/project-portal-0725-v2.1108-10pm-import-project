@@ -21,6 +21,7 @@ import remarkGfm from 'remark-gfm';
 import { Link } from 'react-router-dom';
 import CommentReactions from '../CommentReactions';
 import { useProfiles } from '@/hooks/useProfiles';
+import { useCommentMutations } from '@/hooks/useCommentMutations';
 
 interface TaskDiscussionProps {
   task: Task;
@@ -37,6 +38,7 @@ const TaskDiscussion = ({ task, onToggleReaction }: TaskDiscussionProps) => {
   const [isConvertingToTicket, setIsConvertingToTicket] = useState(false);
   const editFileInputRef = useRef<HTMLInputElement>(null);
   const { data: allUsers = [] } = useProfiles();
+  const { toggleCommentReaction } = useCommentMutations(task.id);
 
   const { data: comments = [], isLoading: isLoadingComments } = useQuery({
     queryKey: ['task-comments', task.id],
@@ -126,17 +128,6 @@ const TaskDiscussion = ({ task, onToggleReaction }: TaskDiscussionProps) => {
     onError: (error: any) => toast.error("Failed to delete comment.", { description: error.message }),
   });
 
-  const toggleCommentReactionMutation = useMutation({
-    mutationFn: async ({ commentId, emoji }: { commentId: string, emoji: string }) => {
-      const { error } = await supabase.rpc('toggle_comment_reaction', { p_comment_id: commentId, p_emoji: emoji });
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['task-comments', task.id] });
-    },
-    onError: (error: any) => toast.error("Failed to update reaction.", { description: error.message }),
-  });
-
   const handleAddComment = (text: string, isTicket: boolean, attachments: File[] | null, mentionedUserIds: string[]) => {
     addCommentMutation.mutate({ text, attachments, mentionedUserIds });
   };
@@ -166,7 +157,7 @@ const TaskDiscussion = ({ task, onToggleReaction }: TaskDiscussionProps) => {
   };
 
   const handleToggleCommentReaction = (commentId: string, emoji: string) => {
-    toggleCommentReactionMutation.mutate({ commentId, emoji });
+    toggleCommentReaction({ commentId, emoji });
   };
 
   return (

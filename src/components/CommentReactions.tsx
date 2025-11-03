@@ -3,7 +3,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import CommentReactionPicker from './CommentReactionPicker';
-import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 
 interface CommentReactionsProps {
@@ -11,57 +10,18 @@ interface CommentReactionsProps {
   onToggleReaction: (emoji: string) => void;
 }
 
-const CommentReactions = ({ reactions: initialReactions, onToggleReaction }: CommentReactionsProps) => {
+const CommentReactions = ({ reactions, onToggleReaction }: CommentReactionsProps) => {
   const { user: currentUser } = useAuth();
-  const [reactions, setReactions] = useState(initialReactions || []);
-
-  useEffect(() => {
-    setReactions(initialReactions || []);
-  }, [initialReactions]);
 
   const handleToggle = (emoji: string) => {
     if (!currentUser) {
       toast.error("You must be logged in to react.");
       return;
     }
-
-    const currentReactions = reactions;
-    let newReactions: Reaction[];
-    const existingReactionIndex = currentReactions.findIndex(r => r.user_id === currentUser.id);
-
-    if (existingReactionIndex > -1) {
-      if (currentReactions[existingReactionIndex].emoji === emoji) {
-        newReactions = currentReactions.filter(r => r.user_id !== currentUser.id);
-      } else {
-        newReactions = currentReactions.map(r => 
-          r.user_id === currentUser.id ? { ...r, emoji } : r
-        );
-      }
-    } else {
-      newReactions = [
-        ...currentReactions,
-        {
-          id: `temp-${Date.now()}`,
-          emoji,
-          user_id: currentUser.id,
-          user_name: currentUser.name || 'You',
-        }
-      ];
-    }
-    
-    setReactions(newReactions); // Optimistic update
-    onToggleReaction(emoji); // Fire and forget mutation
+    onToggleReaction(emoji);
   };
 
-  if (!reactions) {
-    return (
-      <div onClick={(e) => e.stopPropagation()}>
-        <CommentReactionPicker onSelect={handleToggle} />
-      </div>
-    );
-  }
-
-  const groupedReactions = reactions.reduce((acc, reaction) => {
+  const groupedReactions = (reactions || []).reduce((acc, reaction) => {
     if (!acc[reaction.emoji]) {
       acc[reaction.emoji] = [];
     }

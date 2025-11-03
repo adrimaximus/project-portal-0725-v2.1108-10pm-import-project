@@ -182,19 +182,21 @@ export const useTaskMutations = (refetch?: () => void) => {
       return data as Reaction[];
     },
     onMutate: async ({ taskId, emoji }) => {
+      if (!user) return { previousDataMap: new Map() };
+
       await queryClient.cancelQueries();
 
       const queryCache = queryClient.getQueryCache();
       const relevantQueryKeys = queryCache.findAll()
         .map(q => q.queryKey)
-        .filter(key => ['tasks', 'project', 'projects'].includes(key[0] as string));
+        .filter(key => ['tasks', 'project'].includes(key[0] as string));
       
       const previousDataMap = new Map();
 
       const optimisticUpdateTask = (task: Task) => {
         if (task.id === taskId) {
           const newReactions: Reaction[] = [...(task.reactions || [])];
-          const existingReactionIndex = newReactions.findIndex(r => r.user_id === user!.id);
+          const existingReactionIndex = newReactions.findIndex(r => r.user_id === user.id);
 
           if (existingReactionIndex > -1) {
             if (newReactions[existingReactionIndex].emoji === emoji) {
@@ -206,8 +208,8 @@ export const useTaskMutations = (refetch?: () => void) => {
             newReactions.push({
               id: `temp-${Date.now()}`,
               emoji,
-              user_id: user!.id,
-              user_name: user!.name || 'You',
+              user_id: user.id,
+              user_name: user.name || 'You',
             });
           }
           return { ...task, reactions: newReactions };
@@ -227,20 +229,6 @@ export const useTaskMutations = (refetch?: () => void) => {
               ...oldData,
               tasks: (oldData.tasks || []).map(optimisticUpdateTask),
             }));
-          } else if (queryKey[0] === 'projects') {
-            queryClient.setQueryData(queryKey, (oldData: any) => {
-              if (!oldData?.pages) return oldData;
-              return {
-                ...oldData,
-                pages: oldData.pages.map((page: any) => ({
-                  ...page,
-                  projects: page.projects.map((p: Project) => ({
-                    ...p,
-                    tasks: (p.tasks || []).map(optimisticUpdateTask),
-                  })),
-                })),
-              };
-            });
           }
         }
       }
