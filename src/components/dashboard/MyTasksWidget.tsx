@@ -27,6 +27,7 @@ const MyTasksWidget = () => {
   const [isTaskFormOpen, setIsTaskFormOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
+  const [filter, setFilter] = useState<'upcoming' | 'overdue'>('upcoming');
 
   const { upsertTask, isUpserting, deleteTask } = useTaskMutations(refetch);
 
@@ -34,14 +35,23 @@ const MyTasksWidget = () => {
     task.assignedTo?.some(assignee => assignee.id === user?.id)
   ), [tasks, user]);
 
-  const displayedTasks = useMemo(() => allMyTasks.slice(0, 5), [allMyTasks]);
-
-  const overdueCount = useMemo(() => 
-    allMyTasks.filter(task => task.due_date && isPast(new Date(task.due_date))).length,
+  const overdueTasks = useMemo(() => 
+    allMyTasks.filter(task => task.due_date && isPast(new Date(task.due_date))),
     [allMyTasks]
   );
 
-  const upcomingCount = allMyTasks.length;
+  const upcomingTasks = useMemo(() => 
+    allMyTasks.filter(task => !task.due_date || !isPast(new Date(task.due_date))),
+    [allMyTasks]
+  );
+
+  const overdueCount = overdueTasks.length;
+  const upcomingCount = upcomingTasks.length;
+
+  const displayedTasks = useMemo(() => {
+    const tasksToDisplay = filter === 'overdue' ? overdueTasks : upcomingTasks;
+    return tasksToDisplay.slice(0, 5);
+  }, [upcomingTasks, overdueTasks, filter]);
 
   const handleTaskClick = (task: Task) => {
     setSelectedTask(task);
@@ -87,8 +97,24 @@ const MyTasksWidget = () => {
               <ListChecks className="h-5 w-5" />
               My Tasks
             </CardTitle>
-            {!isLoading && upcomingCount > 0 && <Badge variant="secondary">{upcomingCount} Upcoming</Badge>}
-            {!isLoading && overdueCount > 0 && <Badge variant="outline" className="text-destructive">{overdueCount} Overdue</Badge>}
+            {!isLoading && upcomingCount > 0 && (
+              <Badge 
+                variant={filter === 'upcoming' ? 'secondary' : 'outline'}
+                className="cursor-pointer"
+                onClick={() => setFilter('upcoming')}
+              >
+                {upcomingCount} Upcoming
+              </Badge>
+            )}
+            {!isLoading && overdueCount > 0 && (
+              <Badge 
+                variant={filter === 'overdue' ? 'destructive' : 'outline'}
+                className={cn("cursor-pointer", filter !== 'overdue' && "text-destructive")}
+                onClick={() => setFilter('overdue')}
+              >
+                {overdueCount} Overdue
+              </Badge>
+            )}
           </div>
           <Button asChild variant="link" className="text-sm -my-2 -mr-4">
             <Link to="/projects?view=tasks">View all</Link>
@@ -104,8 +130,12 @@ const MyTasksWidget = () => {
               <div className="mx-auto h-12 w-12 text-green-500 bg-green-100 dark:bg-green-900/50 rounded-full flex items-center justify-center">
                   <CheckCircle2 className="h-6 w-6" />
               </div>
-              <h3 className="mt-4 text-sm font-semibold text-foreground">All caught up!</h3>
-              <p className="mt-1 text-sm text-muted-foreground">You have no upcoming tasks.</p>
+              <h3 className="mt-4 text-sm font-semibold text-foreground">
+                {filter === 'overdue' ? 'No overdue tasks!' : 'All caught up!'}
+              </h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {filter === 'overdue' ? 'You have no overdue tasks. Keep it up!' : 'You have no upcoming tasks.'}
+              </p>
             </div>
           ) : (
             <div className="divide-y divide-border -mx-6 -mb-6">
