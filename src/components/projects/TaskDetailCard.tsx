@@ -35,6 +35,7 @@ import {
 import { Link } from 'react-router-dom';
 import TaskFooter from './TaskFooter';
 import { Badge } from '../ui/badge';
+import TaskDiscussion from './TaskDiscussion';
 
 interface TaskDetailCardProps {
   task: Task;
@@ -253,8 +254,8 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
           </div>
         )}
 
-        {/* Footer Reactions */}
-        <TaskFooter task={task} onToggleReaction={handleToggleReaction} />
+        {/* Footer Reactions and Discussion */}
+        <TaskDiscussion task={task} onToggleReaction={handleToggleReaction} />
       </div>
     </DialogContent>
   );
