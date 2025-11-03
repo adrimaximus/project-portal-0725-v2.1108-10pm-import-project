@@ -11,7 +11,7 @@ import { format, isAfter, subHours } from 'date-fns';
 import { Button } from '../ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
 import TaskAttachmentList from './TaskAttachmentList';
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import { Drawer, DrawerContent, DrawerTrigger } from "@/components/ui/drawer";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import TaskDetailCard from './TaskDetailCard';
@@ -89,30 +89,30 @@ const TasksKanbanCard = ({ task, onEdit, onDelete }: TasksKanbanCardProps) => {
     if (allAttachments.length === 0) return null;
 
     return (
-      <Dialog>
+      <Drawer>
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-              <DialogTrigger asChild onClick={(e) => e.stopPropagation()}>
+              <DrawerTrigger asChild onClick={(e) => e.stopPropagation()}>
                 <div className="flex items-center gap-1 text-muted-foreground cursor-pointer hover:text-primary">
                   <Paperclip className="h-3 w-3" />
                   <span className="text-xs">{allAttachments.length}</span>
                 </div>
-              </DialogTrigger>
+              </DrawerTrigger>
             </TooltipTrigger>
             <TooltipContent><p>{allAttachments.length} attachment(s)</p></TooltipContent>
           </Tooltip>
         </TooltipProvider>
-        <DialogContent>
+        <DrawerContent>
           <TaskAttachmentList attachments={allAttachments} />
-        </DialogContent>
-      </Dialog>
+        </DrawerContent>
+      </Drawer>
     );
   };
 
   return (
-    <Dialog>
-      <DialogTrigger asChild>
+    <Drawer>
+      <DrawerTrigger asChild>
         <Card 
           ref={setNodeRef} 
           style={style} 
@@ -211,7 +211,7 @@ const TasksKanbanCard = ({ task, onEdit, onDelete }: TasksKanbanCardProps) => {
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger>
-                            <BellRing className="h-3 w-3 text-blue-500" />
+                            <BellRing className="h-3.5 w-3.5 text-blue-500" />
                           </TooltipTrigger>
                           <TooltipContent>
                             <p>A reminder was sent recently.</p>
@@ -229,9 +229,9 @@ const TasksKanbanCard = ({ task, onEdit, onDelete }: TasksKanbanCardProps) => {
             </div>
           </CardContent>
         </Card>
-      </DialogTrigger>
+      </DrawerTrigger>
       <TaskDetailCard task={task} onClose={() => {}} onEdit={onEdit} onDelete={onDelete} />
-    </Dialog>
+    </Drawer>
   );
 };
 

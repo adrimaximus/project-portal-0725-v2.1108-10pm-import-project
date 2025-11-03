@@ -13,7 +13,7 @@ import { MoreHorizontal, Edit, Trash2, Ticket, Paperclip, SmilePlus, Link as Lin
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Checkbox } from "@/components/ui/checkbox";
 import TaskAttachmentList from './TaskAttachmentList';
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import { Drawer, DrawerContent, DrawerTrigger } from "@/components/ui/drawer";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import TaskDetailCard from './TaskDetailCard';
@@ -56,7 +56,7 @@ const aggregateAttachments = (task: ProjectTask): TaskAttachment[] => {
 
   // 2. Add attachment from legacy fields if it exists and is not already included
   if (task.attachment_url && task.attachment_name) {
-    const existingUrls = new Set(attachments.map(a => a.file_url));
+    const existingUrls = new Set(attachments.map((a) => a.file_url));
     if (!existingUrls.has(task.attachment_url)) {
       attachments.push({
         id: task.originTicketId || `legacy-${task.id}`, // Use origin ticket ID if available
@@ -292,24 +292,24 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
     if (allAttachments.length === 0) return null;
 
     return (
-      <Dialog>
+      <Drawer>
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-              <DialogTrigger asChild onClick={(e) => e.stopPropagation()}>
+              <DrawerTrigger asChild onClick={(e) => e.stopPropagation()}>
                 <div className="flex items-center gap-1 text-muted-foreground cursor-pointer hover:text-primary">
                   <Paperclip className="h-4 w-4" />
                   <span className="text-xs">{allAttachments.length}</span>
                 </div>
-              </DialogTrigger>
+              </DrawerTrigger>
             </TooltipTrigger>
             <TooltipContent><p>{allAttachments.length} attachment(s)</p></TooltipContent>
           </Tooltip>
         </TooltipProvider>
-        <DialogContent>
+        <DrawerContent>
           <TaskAttachmentList attachments={allAttachments} />
-        </DialogContent>
-      </Dialog>
+        </DrawerContent>
+      </Drawer>
     );
   };
 
@@ -318,7 +318,7 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
 
   return (
     <div className="w-full overflow-x-auto">
-      <Dialog open={!!selectedTaskId} onOpenChange={(isOpen) => { if (!isOpen) setSelectedTaskId(null); }}>
+      <Drawer open={!!selectedTaskId} onOpenChange={(isOpen) => { if (!isOpen) setSelectedTaskId(null); }}>
         <Table>
           <TableHeader>
             <TableRow>
@@ -409,7 +409,7 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
                               disabled={isToggling}
                             />
                           </div>
-                          <DialogTrigger asChild>
+                          <DrawerTrigger asChild>
                             <div className="flex flex-col cursor-pointer text-sm md:text-base w-full" onClick={() => setSelectedTaskId(task.id)}>
                               <div className="flex items-center gap-2">
                                 <div className={`${task.completed ? 'line-through text-muted-foreground' : ''}`}>
@@ -557,7 +557,7 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
                                 </div>
                               )}
                             </div>
-                          </DialogTrigger>
+                          </DrawerTrigger>
                         </div>
                       </TableCell>
                       <TableCell className="w-[20%]">
@@ -655,17 +655,15 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
             )}
           </TableBody>
         </Table>
-        <DialogContent>
-          {selectedTask && (
-            <TaskDetailCard
-              task={selectedTask}
-              onClose={() => setSelectedTaskId(null)}
-              onEdit={handleEditTask}
-              onDelete={handleDeleteTask}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
+        {selectedTask && (
+          <TaskDetailCard
+            task={selectedTask}
+            onClose={() => setSelectedTaskId(null)}
+            onEdit={handleEditTask}
+            onDelete={handleDeleteTask}
+          />
+        )}
+      </Drawer>
     </div>
   );
 };

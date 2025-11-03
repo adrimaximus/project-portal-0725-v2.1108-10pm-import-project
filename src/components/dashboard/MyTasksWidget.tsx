@@ -9,7 +9,7 @@ import { format, isPast } from 'date-fns';
 import { cn, getInitials, getAvatarUrl, generatePastelColor } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Dialog } from '@/components/ui/dialog';
+import { Drawer } from '@/components/ui/drawer';
 import TaskDetailCard from '@/components/projects/TaskDetailCard';
 import TaskFormDialog from '@/components/projects/TaskFormDialog';
 import { useTaskMutations } from '@/hooks/useTaskMutations';
@@ -194,7 +194,7 @@ const MyTasksWidget = () => {
         </CardContent>
       </Card>
 
-      <Dialog open={!!selectedTask} onOpenChange={(isOpen) => !isOpen && setSelectedTask(null)}>
+      <Drawer open={!!selectedTask} onOpenChange={(isOpen) => !isOpen && setSelectedTask(null)}>
         {selectedTask && (
           <TaskDetailCard
             task={selectedTask}
@@ -203,7 +203,7 @@ const MyTasksWidget = () => {
             onDelete={() => handleDeleteTask(selectedTask)}
           />
         )}
-      </Dialog>
+      </Drawer>
 
       <TaskFormDialog
         open={isTaskFormOpen}
