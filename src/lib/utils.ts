@@ -1,7 +1,7 @@
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
 import { ProjectStatus, PaymentStatus } from "@/types";
-import { format as formatFns, toZonedTime } from 'date-fns-tz';
+import { format as formatFns, toZonedTime, isPast as isPastFns } from 'date-fns-tz';
 import React from "react";
 
 export function cn(...inputs: ClassValue[]) {
@@ -181,6 +181,17 @@ export const isOverdue = (dueDateStr: string | null | undefined): boolean => {
   const dueDate = new Date(dueDateStr);
   const now = new Date();
   return now > dueDate;
+};
+
+export const getDueDateClassName = (dueDateStr: string | null | undefined, completed: boolean): string => {
+  if (!dueDateStr || completed) {
+    return "text-muted-foreground";
+  }
+  const dueDate = new Date(dueDateStr);
+  if (isPastFns(dueDate)) {
+    return "text-destructive font-semibold";
+  }
+  return "text-muted-foreground";
 };
 
 export const getColorForTag = (tagName: string): string => {
