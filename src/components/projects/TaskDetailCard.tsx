@@ -113,7 +113,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
   const priorityStyle = getPriorityStyles(task.priority);
 
   return (
-    <DialogContent className="w-[90vw] max-w-[650px] flex flex-col max-h-[85vh] p-0 rounded-lg overflow-hidden">
+    <DialogContent className="w-[90vw] max-w-[650px] flex flex-col max-h-[85vh] p-0 rounded-lg overflow-hidden bg-background">
       <DialogHeader className="p-3 sm:p-4 border-b bg-background z-10 flex-shrink-0">
         <div className="flex justify-between items-start gap-2 sm:gap-4">
           <div className="flex-1 min-w-0">

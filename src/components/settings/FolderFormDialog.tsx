@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -7,8 +7,9 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Loader2 } from 'lucide-react';
-import IconPicker from '../IconPicker';
+import IconPicker from '../goals/IconPicker';
 import ColorPicker from '../goals/ColorPicker';
+import { useDragScrollY } from '@/hooks/useDragScrollY';
 
 export interface FolderData {
   id?: string;
@@ -35,6 +36,7 @@ type FolderFormValues = z.infer<typeof folderSchema>;
 
 const FolderFormDialog = ({ open, onOpenChange, onSave, folder, isSaving }: FolderFormDialogProps) => {
   const isEditMode = !!folder;
+  const scrollRef = useDragScrollY<HTMLFormElement>();
 
   const form = useForm<FolderFormValues>({
     resolver: zodResolver(folderSchema),
@@ -63,7 +65,7 @@ const FolderFormDialog = ({ open, onOpenChange, onSave, folder, isSaving }: Fold
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSave)} className="space-y-4 py-4">
+          <form ref={scrollRef} onSubmit={form.handleSubmit(onSave)} className="space-y-4 py-4 max-h-[70vh] overflow-y-auto cursor-grab active:cursor-grabbing select-none">
             <FormField control={form.control} name="name" render={({ field }) => (
               <FormItem>
                 <FormLabel>Folder Name</FormLabel>
