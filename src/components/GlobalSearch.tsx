@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback, useRef } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Project, User, ConversationMessage } from "@/types";
+import { Project, User } from "@/types";
 import {
   CommandDialog,
   CommandEmpty,
@@ -11,13 +11,8 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { Button } from "@/components/ui/button";
-import { FileText, User as UserIcon, Trophy, Sparkles, Search as SearchIcon, CreditCard, Loader2, ListChecks, Link as LinkIcon } from "lucide-react";
+import { FileText, User as UserIcon, Trophy, Search as SearchIcon, CreditCard, ListChecks } from "lucide-react";
 import debounce from 'lodash.debounce';
-import { analyzeProjects } from "@/lib/openai";
-import ReactMarkdown from "react-markdown";
-import { Avatar, AvatarFallback } from "./ui/avatar";
-import { useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
 
 type Goal = { id: string; title: string; slug: string; };
 type Bill = { id: string; name: string; slug: string; payment_status: string };
@@ -36,46 +31,16 @@ export function GlobalSearch() {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResults>({ projects: [], users: [], goals: [], bills: [], tasks: [] });
   const [loading, setLoading] = useState(false);
-  const [conversation, setConversation] = useState<ConversationMessage[]>([]);
-  const [isAiLoading, setIsAiLoading] = useState(false);
   const navigate = useNavigate();
-  const location = useLocation();
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const queryClient = useQueryClient();
-
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [conversation, isAiLoading]);
 
   const resetSearch = () => {
     setQuery("");
     setResults({ projects: [], users: [], goals: [], bills: [], tasks: [] });
-    setConversation([]);
-    setIsAiLoading(false);
     setLoading(false);
   };
 
-  const fetchHistory = async () => {
-    const { data, error } = await supabase
-      .from('ai_chat_history')
-      .select('sender, content')
-      .order('created_at', { ascending: true })
-      .limit(50);
-    
-    if (error) {
-      console.error("Error fetching chat history:", error);
-      toast.error("Could not load chat history.");
-    } else {
-      setConversation(data as ConversationMessage[]);
-    }
-  };
-
   useEffect(() => {
-    if (open) {
-      fetchHistory();
-    } else {
+    if (!open) {
       resetSearch();
     }
   }, [open]);
@@ -129,7 +94,6 @@ export function GlobalSearch() {
   const debouncedSearch = useCallback(debounce(performSearch, 300), []);
 
   useEffect(() => {
-    if (conversation.length > 0) return;
     if (query) {
       setLoading(true);
       debouncedSearch(query);
@@ -138,74 +102,12 @@ export function GlobalSearch() {
       setLoading(false);
       debouncedSearch.cancel();
     }
-  }, [query, debouncedSearch, conversation]);
+  }, [query, debouncedSearch]);
 
   const handleSelect = (callback: () => void) => {
     setOpen(false);
     resetSearch();
     callback();
-  };
-
-  const handleSendMessage = async (message: string) => {
-    if (!message.trim()) return;
-  
-    const newConversationForUi: ConversationMessage[] = [...conversation, { sender: 'user', content: message }];
-    setConversation(newConversationForUi);
-    setQuery("");
-    setIsAiLoading(true);
-    setResults({ projects: [], users: [], goals: [], bills: [], tasks: [] });
-    setLoading(false);
-  
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      setConversation(prev => [...prev, { sender: 'ai', content: `Sorry, I can't save your message because you're not logged in.` }]);
-      setIsAiLoading(false);
-      return;
-    }
-
-    const { error: insertError } = await supabase
-      .from('ai_chat_history')
-      .insert({ user_id: user.id, sender: 'user', content: message });
-
-    if (insertError) {
-      console.error("Failed to save user message:", insertError);
-      setConversation(prev => [...prev, { sender: 'ai', content: `Sorry, I couldn't save your message to the history.` }]);
-      setIsAiLoading(false);
-      return;
-    }
-
-    const mainContentElement = document.querySelector('main');
-    const pageContent = mainContentElement ? mainContentElement.innerText : document.body.innerText;
-
-    const pageContext = {
-      pathname: location.pathname,
-      search: location.search,
-      pageContent: pageContent.substring(0, 4000) // Limit to avoid huge payloads
-    };
-
-    try {
-      const result = await analyzeProjects(message, [], pageContext);
-      
-      const successKeywords = ['done!', 'updated', 'created', 'changed', 'i\'ve made'];
-      if (successKeywords.some(keyword => result.toLowerCase().includes(keyword))) {
-        toast.info("Action successful. Refreshing data...");
-        await Promise.all([
-            queryClient.invalidateQueries({ queryKey: ['projects'] }),
-            queryClient.invalidateQueries({ queryKey: ['project'] }),
-            queryClient.invalidateQueries({ queryKey: ['kb_articles'] }),
-            queryClient.invalidateQueries({ queryKey: ['kb_article'] }),
-            queryClient.invalidateQueries({ queryKey: ['kb_folders'] }),
-            queryClient.invalidateQueries({ queryKey: ['goals'] }),
-            queryClient.invalidateQueries({ queryKey: ['goal'] }),
-        ]);
-      }
-  
-      setConversation(prev => [...prev, { sender: 'ai', content: result }]);
-    } catch (error: any) {
-      setConversation(prev => [...prev, { sender: 'ai', content: `Sorry, I encountered an error: ${error.message}` }]);
-    } finally {
-      setIsAiLoading(false);
-    }
   };
 
   const hasResults = results.projects.length > 0 || results.users.length > 0 || results.goals.length > 0 || results.bills.length > 0 || results.tasks.length > 0;
@@ -218,7 +120,7 @@ export function GlobalSearch() {
         onClick={() => setOpen(true)}
       >
         <SearchIcon className="h-4 w-4 mr-2" />
-        <span className="hidden lg:inline-flex">Search or ask AI...</span>
+        <span className="hidden lg:inline-flex">Search...</span>
         <span className="inline-flex lg:hidden">Search...</span>
         <kbd className="pointer-events-none absolute right-[0.3rem] top-[0.3rem] hidden h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100 sm:flex">
           <span className="text-xs">⌘</span>K
@@ -226,146 +128,93 @@ export function GlobalSearch() {
       </Button>
       <CommandDialog open={open} onOpenChange={setOpen}>
         <CommandInput 
-          placeholder="Search or ask AI..." 
+          placeholder="Search for projects, users, goals..." 
           value={query}
           onValueChange={setQuery}
         />
-        {conversation.length === 0 && (
-          <div className="text-xs text-muted-foreground px-3 py-1.5 border-b flex items-center gap-2 truncate">
-            <LinkIcon className="h-3 w-3 flex-shrink-0" />
-            <span className="truncate">Context: {location.pathname}</span>
-          </div>
-        )}
-        <div ref={scrollRef} className="max-h-[400px] overflow-y-auto">
-          {conversation.length > 0 && (
-            <div className="p-4 space-y-4">
-              {conversation.map((msg, index) => (
-                <div key={index} className={`flex items-start gap-3 ${msg.sender === 'user' ? 'justify-end' : ''}`}>
-                  {msg.sender === 'ai' && (
-                    <Avatar className="h-8 w-8">
-                      <AvatarFallback className="bg-primary text-primary-foreground"><Sparkles className="h-4 w-4" /></AvatarFallback>
-                    </Avatar>
-                  )}
-                  <div className={`max-w-sm rounded-lg px-3 py-2 ${msg.sender === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'} prose prose-sm dark:prose-invert max-w-none`}>
-                    <ReactMarkdown>
-                      {msg.content}
-                    </ReactMarkdown>
-                  </div>
-                </div>
-              ))}
-              {isAiLoading && (
-                <div className="flex items-start gap-3">
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback className="bg-primary text-primary-foreground"><Sparkles className="h-4 w-4" /></AvatarFallback>
-                  </Avatar>
-                  <div className="max-w-sm rounded-lg px-3 py-2 bg-muted flex items-center">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
         <CommandList>
           {loading && <CommandEmpty>Searching...</CommandEmpty>}
-          {!loading && !hasResults && query.length > 1 && conversation.length === 0 && <CommandEmpty>No results found.</CommandEmpty>}
+          {!loading && !hasResults && query.length > 1 && <CommandEmpty>No results found.</CommandEmpty>}
           
-          {query.length > 1 && (
-            <CommandGroup heading={conversation.length > 0 ? "Send message" : "AI Assistant"}>
-              <CommandItem
-                onSelect={() => handleSendMessage(query)}
-                value={`ai-${query}`}
-                className="cursor-pointer"
-              >
-                <Sparkles className="mr-2 h-4 w-4" />
-                <span>{conversation.length > 0 ? `Send: "${query}"` : `Ask AI: "${query}"`}</span>
-              </CommandItem>
+          {results.tasks.length > 0 && (
+            <CommandGroup heading="Tasks">
+              {results.tasks.map(task => (
+                <CommandItem
+                  key={task.id}
+                  onSelect={() => handleSelect(() => navigate(`/tasks/${task.id}`))}
+                  value={`task-${task.id}-${task.title}`}
+                  className="cursor-pointer"
+                >
+                  <ListChecks className="mr-2 h-4 w-4" />
+                  <span>{task.title}</span>
+                  <span className="text-xs text-muted-foreground ml-auto">{task.project_name}</span>
+                </CommandItem>
+              ))}
             </CommandGroup>
           )}
 
-          {conversation.length === 0 && (
-            <>
-              {results.tasks.length > 0 && (
-                <CommandGroup heading="Tasks">
-                  {results.tasks.map(task => (
-                    <CommandItem
-                      key={task.id}
-                      onSelect={() => handleSelect(() => navigate(`/tasks/${task.id}`))}
-                      value={`task-${task.id}-${task.title}`}
-                      className="cursor-pointer"
-                    >
-                      <ListChecks className="mr-2 h-4 w-4" />
-                      <span>{task.title}</span>
-                      <span className="text-xs text-muted-foreground ml-auto">{task.project_name}</span>
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              )}
+          {results.projects.length > 0 && (
+            <CommandGroup heading="Projects">
+              {results.projects.map(project => (
+                <CommandItem
+                  key={project.id}
+                  onSelect={() => handleSelect(() => navigate(`/projects/${project.slug}`))}
+                  value={`project-${project.name}`}
+                  className="cursor-pointer"
+                >
+                  <FileText className="mr-2 h-4 w-4" />
+                  <span>{project.name}</span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          )}
 
-              {results.projects.length > 0 && (
-                <CommandGroup heading="Projects">
-                  {results.projects.map(project => (
-                    <CommandItem
-                      key={project.id}
-                      onSelect={() => handleSelect(() => navigate(`/projects/${project.slug}`))}
-                      value={`project-${project.name}`}
-                      className="cursor-pointer"
-                    >
-                      <FileText className="mr-2 h-4 w-4" />
-                      <span>{project.name}</span>
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              )}
+          {results.users.length > 0 && (
+            <CommandGroup heading="Users">
+              {results.users.map(user => (
+                <CommandItem
+                  key={user.id}
+                  onSelect={() => handleSelect(() => navigate(`/users/${user.id}`))}
+                  value={`user-${user.name}`}
+                  className="cursor-pointer"
+                >
+                  <UserIcon className="mr-2 h-4 w-4" />
+                  <span>{user.name}</span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          )}
 
-              {results.users.length > 0 && (
-                <CommandGroup heading="Users">
-                  {results.users.map(user => (
-                    <CommandItem
-                      key={user.id}
-                      onSelect={() => handleSelect(() => navigate(`/users/${user.id}`))}
-                      value={`user-${user.name}`}
-                      className="cursor-pointer"
-                    >
-                      <UserIcon className="mr-2 h-4 w-4" />
-                      <span>{user.name}</span>
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              )}
+          {results.goals.length > 0 && (
+            <CommandGroup heading="Goals">
+              {results.goals.map(goal => (
+                <CommandItem
+                  key={goal.id}
+                  onSelect={() => handleSelect(() => navigate(`/goals/${goal.slug}`))}
+                  value={`goal-${goal.title}`}
+                  className="cursor-pointer"
+                >
+                  <Trophy className="mr-2 h-4 w-4" />
+                  <span>{goal.title}</span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          )}
 
-              {results.goals.length > 0 && (
-                <CommandGroup heading="Goals">
-                  {results.goals.map(goal => (
-                    <CommandItem
-                      key={goal.id}
-                      onSelect={() => handleSelect(() => navigate(`/goals/${goal.slug}`))}
-                      value={`goal-${goal.title}`}
-                      className="cursor-pointer"
-                    >
-                      <Trophy className="mr-2 h-4 w-4" />
-                      <span>{goal.title}</span>
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              )}
-
-              {results.bills.length > 0 && (
-                <CommandGroup heading="Bills">
-                  {results.bills.map(bill => (
-                    <CommandItem
-                      key={bill.id}
-                      onSelect={() => handleSelect(() => navigate(`/projects/${bill.slug}?tab=billing`))}
-                      value={`bill-${bill.name}`}
-                      className="cursor-pointer"
-                    >
-                      <CreditCard className="mr-2 h-4 w-4" />
-                      <span>{bill.name} ({bill.payment_status})</span>
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              )}
-            </>
+          {results.bills.length > 0 && (
+            <CommandGroup heading="Bills">
+              {results.bills.map(bill => (
+                <CommandItem
+                  key={bill.id}
+                  onSelect={() => handleSelect(() => navigate(`/projects/${bill.slug}?tab=billing`))}
+                  value={`bill-${bill.name}`}
+                  className="cursor-pointer"
+                >
+                  <CreditCard className="mr-2 h-4 w-4" />
+                  <span>{bill.name} ({bill.payment_status})</span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
           )}
         </CommandList>
       </CommandDialog>
