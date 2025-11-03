@@ -8,28 +8,6 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS, DELETE',
 }
 
-const validateCredentials = async (clientId: string, apiKey: string) => {
-  const validationResponse = await fetch('https://wbiztool.com/api/v1/devices', {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Client-ID': clientId,
-      'X-Api-Key': apiKey,
-    },
-  });
-
-  if (validationResponse.status === 401 || validationResponse.status === 403) {
-    throw new Error('Invalid WBIZTOOL credentials. Please check Client ID or API Key.');
-  }
-
-  if (!validationResponse.ok) {
-    const errorText = await validationResponse.text();
-    throw new Error(`WBIZTOOL API unexpected error: ${errorText.replace(/<[^>]*>?/gm, '').trim()}`);
-  }
-
-  return true;
-};
-
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -53,8 +31,6 @@ serve(async (req) => {
     if (req.method === 'POST') {
       const { clientId, apiKey } = await req.json()
       if (!clientId || !apiKey) throw new Error('Client ID and API Key are required.')
-
-      await validateCredentials(clientId, apiKey);
 
       const { error: upsertError } = await supabaseAdmin
         .from('app_config')
@@ -88,39 +64,18 @@ serve(async (req) => {
     if (req.method === 'GET') {
       const { data: creds, error } = await supabaseAdmin
         .from('app_config')
-        .select('key, value')
+        .select('key')
         .in('key', ['WBIZTOOL_CLIENT_ID', 'WBIZTOOL_API_KEY']);
 
-      if (error || !creds || creds.length < 2) {
-        return new Response(JSON.stringify({ connected: false }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 200,
-        });
-      }
+      if (error) throw error;
 
-      const clientId = creds.find(c => c.key === 'WBIZTOOL_CLIENT_ID')?.value;
-      const apiKey = creds.find(c => c.key === 'WBIZTOOL_API_KEY')?.value;
+      const hasClientId = creds?.some(c => c.key === 'WBIZTOOL_CLIENT_ID');
+      const hasApiKey = creds?.some(c => c.key === 'WBIZTOOL_API_KEY');
 
-      if (!clientId || !apiKey) {
-        return new Response(JSON.stringify({ connected: false }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 200,
-        });
-      }
-
-      try {
-        await validateCredentials(clientId, apiKey);
-        return new Response(JSON.stringify({ connected: true }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 200,
-        });
-      } catch (validationError) {
-        console.warn("Stored WBIZTOOL credentials are no longer valid:", validationError.message);
-        return new Response(JSON.stringify({ connected: false }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 200,
-        });
-      }
+      return new Response(JSON.stringify({ connected: hasClientId && hasApiKey }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200,
+      });
     }
 
     return new Response(JSON.stringify({ error: 'Method not allowed' }), {
