@@ -52,7 +52,7 @@ const MyTasksWidget = () => {
             {myTasks.map(task => (
               <div key={task.id} className="flex items-center gap-3 px-6 py-2.5 transition-colors hover:bg-muted/50">
                 <div className="flex-grow">
-                  <Link to={`/projects?view=tasks&taskId=${task.id}`} className="font-medium leading-tight hover:underline text-sm">
+                  <Link to={`/projects/${task.project_slug}?task=${task.id}`} className="font-medium leading-tight hover:underline text-sm">
                     {task.title}
                   </Link>
                   <p className="text-xs text-muted-foreground mt-0.5">{task.project_name}</p>
