@@ -4,7 +4,7 @@ import { Task, UpsertTaskPayload } from '@/types';
 export const getProjectTasks = async (filters: any): Promise<Task[]> => {
   const { data, error } = await supabase.rpc('get_project_tasks', {
     p_project_ids: filters.projectIds || null,
-    p_completed: filters.completed,
+    p_completed: filters.completed === undefined ? null : filters.completed,
     p_order_by: filters.orderBy || 'due_date',
     p_order_direction: filters.orderDirection || 'asc',
     p_limit: filters.limit || 1000,
