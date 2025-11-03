@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
-import PrivateRoute from './components/PrivateRoute';
+import ProtectedRoute from './components/ProtectedRoute';
 import Index from './pages/Index';
 import ProjectsPage from './pages/ProjectsPage';
 import SettingsPage from './pages/SettingsPage';
@@ -14,12 +14,12 @@ function App() {
     <Router>
       <AuthProvider>
         <Routes>
-          <Route path="/" element={<PrivateRoute><Index /></PrivateRoute>} />
-          <Route path="/projects" element={<PrivateRoute><ProjectsPage /></PrivateRoute>} />
-          <Route path="/projects/:slug" element={<PrivateRoute><ProjectDetailPage /></PrivateRoute>} />
-          <Route path="/projects/tasks/:taskId" element={<PrivateRoute><ProjectsPage /></PrivateRoute>} />
-          <Route path="/settings" element={<PrivateRoute><SettingsPage /></PrivateRoute>} />
-          <Route path="/settings/notifications" element={<PrivateRoute><NotificationSettingsPage /></PrivateRoute>} />
+          <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+          <Route path="/projects" element={<ProtectedRoute><ProjectsPage /></ProtectedRoute>} />
+          <Route path="/projects/:slug" element={<ProtectedRoute><ProjectDetailPage /></ProtectedRoute>} />
+          <Route path="/projects/tasks/:taskId" element={<ProtectedRoute><ProjectsPage /></ProtectedRoute>} />
+          <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+          <Route path="/settings/notifications" element={<ProtectedRoute><NotificationSettingsPage /></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
         <Toaster />
