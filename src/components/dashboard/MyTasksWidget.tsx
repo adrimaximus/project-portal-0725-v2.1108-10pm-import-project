@@ -174,12 +174,10 @@ const MyTasksWidget = () => {
                           <span>{format(new Date(task.due_date), 'MMM d')}</span>
                         </div>
                       )}
-                      <div onClick={(e) => e.stopPropagation()}>
-                        <TaskReactions
-                          reactions={task.reactions || []}
-                          onToggleReaction={(emoji) => handleToggleReaction(task.id, emoji)}
-                        />
-                      </div>
+                      <TaskReactions
+                        reactions={task.reactions || []}
+                        onToggleReaction={(emoji) => handleToggleReaction(task.id, emoji)}
+                      />
                       {avatarUser && (
                         <Avatar className="h-6 w-6">
                           <AvatarImage src={getAvatarUrl(avatarUser.avatar_url, avatarUser.id)} alt={avatarUser.name || ''} />

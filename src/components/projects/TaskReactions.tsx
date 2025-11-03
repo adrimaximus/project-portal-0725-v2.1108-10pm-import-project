@@ -34,7 +34,7 @@ const TaskReactions = ({ reactions, onToggleReaction }: TaskReactionsProps) => {
   }, {} as Record<string, { count: number; users: string[]; userReacted: boolean }>);
 
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
       {Object.entries(reactionsSummary).map(([emoji, { count, users, userReacted }]) => (
         <TooltipProvider key={emoji} delayDuration={100}>
           <Tooltip>
