@@ -9,7 +9,7 @@ import { generatePastelColor, getPriorityStyles, getTaskStatusStyles, isOverdue,
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "../ui/button";
-import { MoreHorizontal, Edit, Trash2, Ticket, Paperclip, SmilePlus, Link as LinkIcon, BellRing } from "lucide-react";
+import { MoreHorizontal, Edit, Trash2, Ticket, Paperclip, SmilePlus, Link as LinkIcon, BellRing, Loader2, Calendar, Briefcase, Users, Flag, CheckCircle } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Checkbox } from "@/components/ui/checkbox";
 import TaskAttachmentList from './TaskAttachmentList';
@@ -74,12 +74,17 @@ const aggregateAttachments = (task: ProjectTask): TaskAttachment[] => {
 };
 
 const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTaskCompletion, onStatusChange, isToggling, sortConfig, requestSort, rowRefs, highlightedTaskId, onHighlightComplete }: TasksViewProps) => {
-  const [selectedTask, setSelectedTask] = useState<ProjectTask | null>(null);
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const { user } = useAuth();
   const [tasks, setTasks] = useState<ProjectTask[]>(tasksProp);
   const queryClient = useQueryClient();
   const commonEmojis = ['👍', '❤️', '😂', '🎉', '🙏', '😢'];
   const initialSortSet = useRef(false);
+
+  const selectedTask = useMemo(() => {
+    if (!selectedTaskId) return null;
+    return tasks.find(t => t.id === selectedTaskId) || null;
+  }, [selectedTaskId, tasks]);
 
   useEffect(() => {
     if (highlightedTaskId && tasks.length > 0) {
@@ -204,15 +209,6 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
     setTasks(tasksToSet);
   }, [tasksProp, sortConfig]);
 
-  useEffect(() => {
-    if (selectedTask) {
-      const updatedTask = tasks.find(t => t.id === selectedTask.id);
-      if (updatedTask) {
-        setSelectedTask(updatedTask);
-      }
-    }
-  }, [tasks, selectedTask?.id]);
-
   const handleEmojiSelect = async (emoji: string, taskId: string) => {
     if (!user) return;
 
@@ -312,7 +308,7 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
 
   return (
     <div className="w-full overflow-x-auto">
-      <Dialog open={!!selectedTask} onOpenChange={(isOpen) => { if (!isOpen) setSelectedTask(null); }}>
+      <Dialog open={!!selectedTaskId} onOpenChange={(isOpen) => { if (!isOpen) setSelectedTaskId(null); }}>
         <Table>
           <TableHeader>
             <TableRow>
@@ -404,7 +400,7 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
                             />
                           </div>
                           <DialogTrigger asChild>
-                            <div className="flex flex-col cursor-pointer text-sm md:text-base w-full" onClick={() => setSelectedTask(task)}>
+                            <div className="flex flex-col cursor-pointer text-sm md:text-base w-full" onClick={() => setSelectedTaskId(task.id)}>
                               <div className="flex items-center gap-2">
                                 <div className={`${task.completed ? 'line-through text-muted-foreground' : ''}`}>
                                   <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ p: 'span' }}>
@@ -654,8 +650,8 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
             <TaskDetailCard
               task={selectedTask}
               onClose={() => setSelectedTask(null)}
-              onEdit={onEdit}
-              onDelete={onDelete}
+              onEdit={handleEditTask}
+              onDelete={handleDeleteTask}
             />
           )}
         </DialogContent>
