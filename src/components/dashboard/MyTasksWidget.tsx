@@ -15,6 +15,7 @@ import TaskFormDialog from '@/components/projects/TaskFormDialog';
 import { useTaskMutations } from '@/hooks/useTaskMutations';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 const MyTasksWidget = () => {
   const { user } = useAuth();
@@ -151,15 +152,35 @@ const MyTasksWidget = () => {
                     </p>
                     <p className="text-xs text-muted-foreground mt-0.5">{task.project_name}</p>
                   </div>
-                  {task.due_date && (
-                    <div className={cn(
-                      "text-xs font-medium whitespace-nowrap flex items-center gap-1.5",
-                      isPast(new Date(task.due_date)) ? "text-destructive" : "text-muted-foreground"
-                    )}>
-                      <Clock className="h-3 w-3" />
-                      <span>{format(new Date(task.due_date), 'MMM d, p')}</span>
-                    </div>
-                  )}
+                  <div className="flex items-center gap-3 shrink-0 ml-auto">
+                    {task.due_date && (
+                      <div className={cn(
+                        "text-xs font-medium whitespace-nowrap flex items-center gap-1.5",
+                        isPast(new Date(task.due_date)) ? "text-destructive" : "text-muted-foreground"
+                      )}>
+                        <Clock className="h-3 w-3" />
+                        <span>{format(new Date(task.due_date), 'MMM d')}</span>
+                      </div>
+                    )}
+                    {task.reactions && task.reactions.length > 0 && (
+                      <div className="flex items-center gap-0.5 rounded-full bg-muted px-1.5 py-0.5 text-xs">
+                        {task.reactions.slice(0, 2).map((r) => (
+                          <span key={r.id}>{r.emoji}</span>
+                        ))}
+                        {task.reactions.length > 2 && (
+                          <span className="font-medium text-muted-foreground">+{task.reactions.length - 2}</span>
+                        )}
+                      </div>
+                    )}
+                    {task.created_by && (
+                      <Avatar className="h-6 w-6">
+                        <AvatarImage src={task.created_by.avatar_url} alt={task.created_by.first_name || ''} />
+                        <AvatarFallback className="text-xs">
+                          {((task.created_by.first_name?.[0] || '') + (task.created_by.last_name?.[0] || '')).toUpperCase() || '??'}
+                        </AvatarFallback>
+                      </Avatar>
+                    )}
+                  </div>
                 </button>
               ))}
             </div>
