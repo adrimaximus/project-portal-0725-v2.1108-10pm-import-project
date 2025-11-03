@@ -20,6 +20,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/
 import { useTags } from '@/hooks/useTags';
 import { TagsMultiselect } from '@/components/ui/TagsMultiselect';
 import { v4 as uuidv4 } from 'uuid';
+import { useDragScrollY } from '@/hooks/useDragScrollY';
 
 interface ArticleValues {
   id?: string;
@@ -61,6 +62,7 @@ const PageEditorDialog = ({ open, onOpenChange, folders = [], folder, article, o
   const [debouncedTitle, setDebouncedTitle] = useState('');
   const { data: allTags = [] } = useTags();
   const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
+  const scrollRef = useDragScrollY<HTMLFormElement>();
 
   const form = useForm<ArticleFormValues>({
     resolver: zodResolver(articleSchema),
@@ -333,13 +335,14 @@ const PageEditorDialog = ({ open, onOpenChange, folders = [], folder, article, o
         </DialogHeader>
         <Form {...form}>
           <form 
+            ref={scrollRef}
             onSubmit={form.handleSubmit(onSubmit)} 
             onKeyDown={(e) => {
               if (e.key === 'Enter' && (e.target as HTMLElement).nodeName !== 'TEXTAREA' && (e.target as HTMLElement).getAttribute('role') !== 'textbox') {
                 e.preventDefault();
               }
             }}
-            className="space-y-4 p-4 max-h-[70vh] overflow-y-auto"
+            className="space-y-4 p-4 max-h-[70vh] overflow-y-auto cursor-grab active:cursor-grabbing select-none"
           >
             <FormField control={form.control} name="title" render={({ field }) => (
               <FormItem><FormLabel>Title</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>

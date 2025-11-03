@@ -15,6 +15,7 @@ import { Loader2, Building } from "lucide-react";
 import ImageUploader from '../ui/ImageUploader';
 import AddressAutocompleteInput from '../AddressAutocompleteInput';
 import CustomPropertyInput from '../settings/CustomPropertyInput';
+import { useDragScrollY } from '@/hooks/useDragScrollY';
 
 interface CompanyFormDialogProps {
     open: boolean;
@@ -35,6 +36,7 @@ type CompanyFormData = z.infer<typeof formSchema>;
 const CompanyFormDialog: React.FC<CompanyFormDialogProps> = ({ open, onOpenChange, company }) => {
     const queryClient = useQueryClient();
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const scrollRef = useDragScrollY<HTMLDivElement>();
 
     const { data: properties = [], isLoading: isLoadingProperties } = useQuery<CustomProperty[]>({
         queryKey: ['custom_properties', 'company'],
@@ -127,8 +129,7 @@ const CompanyFormDialog: React.FC<CompanyFormDialogProps> = ({ open, onOpenChang
                         {company ? `Updating information for ${company.name}.` : 'Enter the details for the new company.'}
                     </DialogDescription>
                 </DialogHeader>
-                <ScrollArea className="h-full">
-                    <div className="p-4">
+                <div ref={scrollRef} className="h-full overflow-y-auto p-4 cursor-grab active:cursor-grabbing select-none">
                         <Form {...form}>
                             <form id="company-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                                 <FormField
@@ -186,8 +187,7 @@ const CompanyFormDialog: React.FC<CompanyFormDialogProps> = ({ open, onOpenChang
                                 ) : properties.map(renderCustomField)}
                             </form>
                         </Form>
-                    </div>
-                </ScrollArea>
+                </div>
                 <DialogFooter className="p-4 border-t">
                     <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
                     <Button type="submit" form="company-form" disabled={isSubmitting}>

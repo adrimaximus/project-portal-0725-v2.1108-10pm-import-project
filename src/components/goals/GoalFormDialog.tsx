@@ -19,6 +19,7 @@ import IconPicker from './IconPicker';
 import { colors } from '@/data/colors';
 import { allIcons } from '@/data/icons';
 import { useQueryClient } from '@tanstack/react-query';
+import { useDragScrollY } from '@/hooks/useDragScrollY';
 
 interface GoalFormDialogProps {
   open: boolean;
@@ -37,6 +38,7 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, goal }: GoalFormDialogP
   const isEditMode = !!goal;
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const scrollRef = useDragScrollY<HTMLDivElement>();
 
   const [formData, setFormData] = useState({
     title: '', description: '', type: 'frequency' as GoalType,
@@ -185,7 +187,7 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, goal }: GoalFormDialogP
         <DialogHeader className="flex-shrink-0">
           <DialogTitle>{isEditMode ? 'Edit Goal' : 'Create a New Goal'}</DialogTitle>
         </DialogHeader>
-        <div className="flex-1 grid gap-4 py-4 overflow-y-auto pr-4">
+        <div ref={scrollRef} className="flex-1 grid gap-4 py-4 overflow-y-auto pr-4 cursor-grab active:cursor-grabbing select-none">
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="title" className="text-right">Title</Label>
             <Input id="title" value={formData.title} onChange={(e) => handleChange('title', e.target.value)} className="col-span-3" placeholder="e.g., Drink more water" />

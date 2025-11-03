@@ -20,6 +20,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { ScrollArea } from '@/components/ui/scroll-area';
 import AvatarUpload from './AvatarUpload';
 import CustomPropertyInput from '../settings/CustomPropertyInput';
+import { useDragScrollY } from '@/hooks/useDragScrollY';
 
 interface Profile {
   id: string;
@@ -41,16 +42,14 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
   const queryClient = useQueryClient();
   const { user: currentUser } = useAuth();
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
-
+  const scrollRef = useDragScrollY<HTMLDivElement>();
+  
   const isLinkedUser = !!person?.user_id;
 
   const { data: properties = [], isLoading: isLoadingProperties } = useQuery<CustomProperty[]>({
     queryKey: ['custom_properties', 'contact'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('custom_properties')
-        .select('*')
-        .eq('category', 'contact');
+      const { data, error } = await supabase.from('custom_properties').select('*').eq('category', 'contact');
       if (error) throw error;
       return data;
     },
@@ -70,7 +69,7 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
       'notes',
       'phone',
       'phone_number',
-      'website',
+      'website'
     ];
     return properties.filter(
       (prop) => !prop.is_default && !redundantFieldNames.includes(prop.name.toLowerCase())
@@ -260,8 +259,7 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
         </DialogHeader>
 
         {/* SCROLL AREA */}
-        <ScrollArea className="h-full">
-          <div className="p-4">
+        <div ref={scrollRef} className="h-full overflow-y-auto p-4 cursor-grab active:cursor-grabbing select-none">
             <Form {...form}>
               <form id="person-form" onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                 {!person && (
@@ -388,8 +386,7 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
                 )}
               </form>
             </Form>
-          </div>
-        </ScrollArea>
+        </div>
 
         {/* FOOTER */}
         <DialogFooter className="p-4 border-t">
