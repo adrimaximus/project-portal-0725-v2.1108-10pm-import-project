@@ -1,9 +1,9 @@
 import React, { useMemo } from 'react';
-import { Task, TaskAttachment, Reaction } from '@/types';
+import { Task, TaskAttachment, Reaction, User } from '@/types';
 import { DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '../ui/button';
 import { format } from 'date-fns';
-import { cn, isOverdue, formatTaskText, getPriorityStyles, getTaskStatusStyles, getDueDateClassName } from '@/lib/utils';
+import { cn, isOverdue, formatTaskText, getPriorityStyles, getTaskStatusStyles, getDueDateClassName, getAvatarUrl, generatePastelColor, getInitials } from '@/lib/utils';
 import {
   Edit,
   Trash2,
@@ -18,7 +18,8 @@ import {
   Users,
   Flag,
   CheckCircle,
-  Tag
+  Tag,
+  User as UserIcon,
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -36,6 +37,8 @@ import { Link } from 'react-router-dom';
 import TaskFooter from './TaskFooter';
 import { Badge } from '../ui/badge';
 import TaskDiscussion from './TaskDiscussion';
+import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 
 interface TaskDetailCardProps {
   task: Task;
@@ -46,15 +49,15 @@ interface TaskDetailCardProps {
 
 const aggregateAttachments = (task: Task): TaskAttachment[] => {
   let attachments: TaskAttachment[] = [...(task.attachments || [])];
-  if (task.ticket_attachments?.length) {
-    const existingUrls = new Set(attachments.map((a) => a.file_url));
-    attachments = [
-      ...attachments,
-      ...task.ticket_attachments.filter(
-        (att) => att.file_url && !existingUrls.has(att.file_url)
-      ),
-    ];
+  
+  if (task.ticket_attachments && task.ticket_attachments.length > 0) {
+    const existingUrls = new Set(attachments.map(a => a.file_url));
+    const uniqueTicketAttachments = task.ticket_attachments.filter(
+      (ticketAtt) => ticketAtt.file_url && !existingUrls.has(ticketAtt.file_url)
+    );
+    attachments = [...attachments, ...uniqueTicketAttachments];
   }
+
   if (task.attachment_url && task.attachment_name) {
     const existingUrls = new Set(attachments.map((a) => a.file_url));
     if (!existingUrls.has(task.attachment_url)) {
@@ -69,6 +72,7 @@ const aggregateAttachments = (task: Task): TaskAttachment[] => {
       });
     }
   }
+
   return attachments;
 };
 
@@ -183,51 +187,107 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
         )}
 
         {/* Project, due date, status, priority */}
-        <div className="grid grid-cols-2 gap-3 sm:gap-4">
-          <div className="flex items-center gap-2">
-            <Briefcase className="h-4 w-4 text-muted-foreground" />
-            {task.project_name ? (
-              <Link
-                to={`/projects/${task.project_slug}`}
-                className="hover:underline text-primary break-words"
-                onClick={onClose}
-              >
-                {task.project_name}
-              </Link>
-            ) : (
-              <span className="text-muted-foreground">General Tasks</span>
-            )}
+        <div className="grid grid-cols-2 gap-4 sm:gap-6">
+          <div className="flex items-start gap-3">
+            <Briefcase className="h-4 w-4 mt-1 flex-shrink-0 text-muted-foreground" />
+            <div>
+              <p className="font-semibold">Project</p>
+              {task.project_name ? (
+                <Link
+                  to={`/projects/${task.project_slug}`}
+                  className="hover:underline text-primary break-words"
+                  onClick={onClose}
+                >
+                  {task.project_name}
+                </Link>
+              ) : (
+                <span className="text-muted-foreground">General Tasks</span>
+              )}
+            </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-            {task.due_date ? (
-              <span className={cn(getDueDateClassName(task.due_date, task.completed))}>
-                {format(new Date(task.due_date), "MMM d, yyyy, p")}
-              </span>
-            ) : (
-              <span className="text-muted-foreground">No due date</span>
-            )}
+          <div className="flex items-start gap-3">
+            <Calendar className="h-4 w-4 mt-1 flex-shrink-0 text-muted-foreground" />
+            <div>
+              <p className="font-semibold">Due Date</p>
+              {task.due_date ? (
+                <span className={cn(getDueDateClassName(task.due_date, task.completed))}>
+                  {format(new Date(task.due_date), "MMM d, yyyy, p")}
+                </span>
+              ) : (
+                <span className="text-muted-foreground">No due date</span>
+              )}
+            </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <h4 className="font-semibold">Status</h4>
-            <Badge className={cn(getTaskStatusStyles(task.status).tw, "border-transparent text-xs")}>
-              {task.status}
-            </Badge>
+          <div className="flex items-start gap-3">
+            <CheckCircle className="h-4 w-4 mt-1 flex-shrink-0 text-muted-foreground" />
+            <div>
+              <p className="font-semibold">Status</p>
+              <Badge className={cn(getTaskStatusStyles(task.status).tw, "border-transparent text-xs")}>
+                {task.status}
+              </Badge>
+            </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <h4 className="font-semibold">Priority</h4>
-            <Badge className={cn(getPriorityStyles(task.priority).tw, "text-xs")}>
-              {task.priority || "Low"}
-            </Badge>
+          <div className="flex items-start gap-3">
+            <Flag className="h-4 w-4 mt-1 flex-shrink-0 text-muted-foreground" />
+            <div>
+              <p className="font-semibold">Priority</p>
+              <Badge className={cn(getPriorityStyles(task.priority).tw, "text-xs")}>
+                {task.priority || "Low"}
+              </Badge>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-3">
+            <UserIcon className="h-4 w-4 mt-1 flex-shrink-0 text-muted-foreground" />
+            <div>
+              <p className="font-semibold">Created by</p>
+              <div className="flex items-center gap-2 mt-1">
+                <Avatar className="h-6 w-6">
+                  <AvatarImage src={getAvatarUrl(task.created_by.avatar_url, task.created_by.id)} />
+                  <AvatarFallback style={generatePastelColor(task.created_by.id)}>
+                    {getInitials(task.created_by.name, task.created_by.email)}
+                  </AvatarFallback>
+                </Avatar>
+                <span className="text-sm text-muted-foreground">{task.created_by.name}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-3">
+            <Users className="h-4 w-4 mt-1 flex-shrink-0 text-muted-foreground" />
+            <div>
+              <p className="font-semibold">Assignees</p>
+              {task.assignedTo && task.assignedTo.length > 0 ? (
+                <div className="flex items-center -space-x-2 mt-1">
+                  <TooltipProvider>
+                    {task.assignedTo.map(user => (
+                      <Tooltip key={user.id}>
+                        <TooltipTrigger asChild>
+                          <Avatar className="h-6 w-6 border-2 border-background">
+                            <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
+                            <AvatarFallback style={generatePastelColor(user.id)}>
+                              {getInitials(user.name, user.email)}
+                            </AvatarFallback>
+                          </Avatar>
+                        </TooltipTrigger>
+                        <TooltipContent><p>{user.name}</p></TooltipContent>
+                      </Tooltip>
+                    ))}
+                  </TooltipProvider>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground mt-1">Not assigned</p>
+              )}
+            </div>
           </div>
         </div>
 
         {/* Tags */}
         {task.tags?.length > 0 && (
-          <div className="flex items-start gap-2">
+          <div className="flex items-start gap-2 border-t pt-4">
             <Tag className="h-4 w-4 mt-1 text-muted-foreground" />
             <div className="flex gap-1 flex-wrap">
               {task.tags.map((tag) => (
