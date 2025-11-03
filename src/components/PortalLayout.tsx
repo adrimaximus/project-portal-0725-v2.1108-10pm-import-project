@@ -1,10 +1,10 @@
 import { useState, ReactNode } from "react";
-import PortalSidebar from "../PortalSidebar";
+import PortalSidebar from "./PortalSidebar";
 import { cn } from "@/lib/utils";
-import PortalHeader from "../PortalHeader";
-import StorageWarning from "../StorageWarning";
+import PortalHeader from "./PortalHeader";
+import StorageWarning from "./StorageWarning";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
-import PullToRefreshIndicator from "../PullToRefreshIndicator";
+import PullToRefreshIndicator from "./PullToRefreshIndicator";
 import { toast } from "sonner";
 
 type PortalLayoutProps = {
