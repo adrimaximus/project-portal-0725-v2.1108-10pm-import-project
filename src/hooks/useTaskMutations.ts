@@ -1,9 +1,10 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Task, TaskStatus, Reaction, UpsertTaskPayload } from '@/types';
+import { Task, TaskStatus, Reaction, UpsertTaskPayload, User } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { getErrorMessage } from '@/lib/utils';
+import { v4 as uuidv4 } from 'uuid';
 
 type UpdateTaskOrderPayload = {
   taskId: string;
@@ -256,7 +257,7 @@ export const useTaskMutations = (refetch?: () => void) => {
       }
       toast.error("Failed to update reaction.", { description: getErrorMessage(err) });
     },
-    onSettled: () => {
+    onSuccess: () => {
       invalidateQueries();
     },
   });
