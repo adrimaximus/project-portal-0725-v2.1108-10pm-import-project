@@ -2,7 +2,7 @@ import { Project } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 
 const ProjectStats = ({ project }: { project: Project }) => {
-  const ticketCount = project.comments?.filter(c => c.isTicket).length || 0;
+  const ticketCount = project.comments?.filter(c => c.is_ticket).length || 0;
   return (
     <Card>
       <CardHeader><CardTitle>Stats</CardTitle></CardHeader>

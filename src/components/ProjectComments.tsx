@@ -57,7 +57,7 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
     setEditingCommentId(comment.id);
     setEditedText(textWithoutAttachments);
     setNewAttachments([]);
-    setIsConvertingToTicket(comment.isTicket);
+    setIsConvertingToTicket(comment.is_ticket);
   };
 
   const handleCancelEdit = () => {
@@ -103,8 +103,8 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
           {comments.map((comment) => {
             const author = comment.author;
             const fullName = `${author.first_name || ''} ${author.last_name || ''}`.trim() || author.email;
-            const isTicket = comment.isTicket;
-            const ticketTask = isTicket ? tasks.find((t) => t.originTicketId === comment.id) : null;
+            const isTicket = comment.is_ticket;
+            const ticketTask = isTicket ? tasks.find((t) => t.origin_ticket_id === comment.id) : null;
             const canManageComment = user && (comment.author.id === user.id || user.role === 'admin' || user.role === 'master admin');
             
             const textWithoutAttachments = comment.text?.replace(/\n\n\*\*Attachments:\*\*[\s\S]*$/, '').trim() || '';

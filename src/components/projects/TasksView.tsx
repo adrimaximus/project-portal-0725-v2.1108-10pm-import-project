@@ -318,7 +318,7 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
 
   return (
     <div className="w-full overflow-x-auto">
-      <Drawer open={!!selectedTask} onOpenChange={(isOpen) => { if (!isOpen) setSelectedTask(null); }}>
+      <Drawer open={!!selectedTask} onOpenChange={(isOpen) => { if (!isOpen) setSelectedTaskId(null); }}>
         <Table>
           <TableHeader>
             <TableRow>
