@@ -16,6 +16,7 @@ import { useTaskMutations } from '@/hooks/useTaskMutations';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import TaskReactions from '@/components/projects/TaskReactions';
 
 const MyTasksWidget = () => {
   const { user } = useAuth();
@@ -30,7 +31,7 @@ const MyTasksWidget = () => {
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
   const [filter, setFilter] = useState<'upcoming' | 'overdue'>('upcoming');
 
-  const { upsertTask, isUpserting, deleteTask } = useTaskMutations(refetch);
+  const { upsertTask, isUpserting, deleteTask, toggleTaskReaction } = useTaskMutations(refetch);
 
   const allMyTasks = useMemo(() => tasks.filter(task => 
     task.assignedTo?.some(assignee => assignee.id === user?.id)
@@ -87,6 +88,10 @@ const MyTasksWidget = () => {
         setEditingTask(null);
       },
     });
+  };
+
+  const handleToggleReaction = (taskId: string, emoji: string) => {
+    toggleTaskReaction({ taskId, emoji });
   };
 
   return (
@@ -166,16 +171,12 @@ const MyTasksWidget = () => {
                           <span>{format(new Date(task.due_date), 'MMM d')}</span>
                         </div>
                       )}
-                      {task.reactions && task.reactions.length > 0 && (
-                        <div className="flex items-center gap-0.5 rounded-full bg-muted px-1.5 py-0.5 text-xs">
-                          {task.reactions.slice(0, 2).map((r) => (
-                            <span key={r.id}>{r.emoji}</span>
-                          ))}
-                          {task.reactions.length > 2 && (
-                            <span className="font-medium text-muted-foreground">+{task.reactions.length - 2}</span>
-                          )}
-                        </div>
-                      )}
+                      <div onClick={(e) => e.stopPropagation()}>
+                        <TaskReactions
+                          reactions={task.reactions || []}
+                          onToggleReaction={(emoji) => handleToggleReaction(task.id, emoji)}
+                        />
+                      </div>
                       {avatarUser && (
                         <Avatar className="h-6 w-6">
                           <AvatarImage src={getAvatarUrl(avatarUser.avatar_url, avatarUser.id)} alt={avatarUser.name || ''} />
