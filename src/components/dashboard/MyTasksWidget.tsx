@@ -34,6 +34,11 @@ const MyTasksWidget = () => {
     task.assignedTo?.some(assignee => assignee.id === user?.id)
   ).slice(0, 5), [tasks, user]);
 
+  const overdueCount = useMemo(() => 
+    myTasks.filter(task => task.due_date && isPast(new Date(task.due_date))).length,
+    [myTasks]
+  );
+
   const handleTaskClick = (task: Task) => {
     setSelectedTask(task);
   };
@@ -79,6 +84,7 @@ const MyTasksWidget = () => {
               My Tasks
             </CardTitle>
             {!isLoading && myTasks.length > 0 && <Badge variant="secondary">{myTasks.length} Upcoming</Badge>}
+            {!isLoading && overdueCount > 0 && <Badge variant="destructive">{overdueCount} Overdue</Badge>}
           </div>
           <Button asChild variant="link" className="text-sm -my-2 -mr-4">
             <Link to="/projects?view=tasks">View all</Link>
