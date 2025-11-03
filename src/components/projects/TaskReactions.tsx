@@ -1,8 +1,10 @@
-import { Reaction } from '@/types';
+import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { Reaction } from '@/types';
+import { Button } from '@/components/ui/button';
+import EmojiReactionPicker from '../EmojiReactionPicker';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import EmojiReactionPicker from '../EmojiReactionPicker';
 
 interface TaskReactionsProps {
   reactions: Reaction[];
@@ -10,53 +12,55 @@ interface TaskReactionsProps {
 }
 
 const TaskReactions = ({ reactions, onToggleReaction }: TaskReactionsProps) => {
-  const { user: currentUser } = useAuth();
+  const { user } = useAuth();
 
-  if (!reactions) {
-    return null;
-  }
-
-  const groupedReactions = reactions.reduce((acc, reaction) => {
+  const reactionsSummary = reactions.reduce((acc, reaction) => {
     if (!acc[reaction.emoji]) {
-      acc[reaction.emoji] = [];
+      acc[reaction.emoji] = {
+        count: 0,
+        users: [],
+        userReacted: false,
+      };
     }
-    acc[reaction.emoji].push(reaction);
+    acc[reaction.emoji].count++;
+    const userName = reaction.user_name || 'A user';
+    if (reaction.user_id === user?.id) {
+      acc[reaction.emoji].users.unshift('You');
+      acc[reaction.emoji].userReacted = true;
+    } else {
+      acc[reaction.emoji].users.push(userName);
+    }
     return acc;
-  }, {} as Record<string, Reaction[]>);
+  }, {} as Record<string, { count: number; users: string[]; userReacted: boolean }>);
 
   return (
-    <div className="flex flex-wrap items-center gap-1">
-      {Object.entries(groupedReactions).map(([emoji, reactionList]) => {
-        const userHasReacted = reactionList.some(r => r.user_id === currentUser?.id);
-        const userNames = reactionList.map(r => r.user_id === currentUser?.id ? 'You' : r.user_name).join(', ');
-
-        return (
-          <TooltipProvider key={emoji} delayDuration={100}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={(e) => { e.stopPropagation(); onToggleReaction(emoji); }}
-                  className={cn(
-                    "px-1.5 py-0.5 rounded-full text-xs flex items-center gap-1 transition-colors border",
-                    userHasReacted
-                      ? "bg-primary/20 border-primary/50"
-                      : "bg-muted hover:bg-muted/80"
-                  )}
-                >
-                  <span>{emoji}</span>
-                  <span className="font-medium text-xs">{reactionList.length}</span>
-                </button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{userNames}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        );
-      })}
-      <div onClick={(e) => e.stopPropagation()}>
-        <EmojiReactionPicker onSelect={onToggleReaction} />
-      </div>
+    <div className="flex items-center gap-1">
+      {Object.entries(reactionsSummary).map(([emoji, { count, users, userReacted }]) => (
+        <TooltipProvider key={emoji} delayDuration={100}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant={userReacted ? 'secondary' : 'ghost'}
+                size="sm"
+                className={cn("h-7 px-2 rounded-full", userReacted && "border border-primary/50")}
+                onClick={() => onToggleReaction(emoji)}
+              >
+                <span className="text-sm">{emoji}</span>
+                {count > 1 && <span className="text-xs ml-1 text-muted-foreground">{count}</span>}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <div className="text-xs max-w-xs">
+                {users.slice(0, 5).join(', ')}
+                {users.length > 5 && `, and ${users.length - 5} more`}
+                <br />
+                reacted with {emoji}
+              </div>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      ))}
+      <EmojiReactionPicker onSelect={onToggleReaction} />
     </div>
   );
 };

@@ -150,10 +150,13 @@ const MyTasksWidget = () => {
                 const avatarUser = otherAssignee || task.created_by;
 
                 return (
-                  <button 
+                  <div 
                     key={task.id} 
-                    className="flex w-full items-center gap-3 px-6 py-2.5 transition-colors hover:bg-muted/50 text-left"
+                    role="button"
+                    tabIndex={0}
+                    className="flex w-full items-center gap-3 px-6 py-2.5 transition-colors hover:bg-muted/50 text-left cursor-pointer"
                     onClick={() => handleTaskClick(task)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleTaskClick(task) }}
                   >
                     <div className="flex-grow">
                       <p className="font-medium leading-tight text-sm">
@@ -186,7 +189,7 @@ const MyTasksWidget = () => {
                         </Avatar>
                       )}
                     </div>
-                  </button>
+                  </div>
                 )
               })}
             </div>
