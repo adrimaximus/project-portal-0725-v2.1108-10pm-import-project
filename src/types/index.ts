@@ -128,11 +128,12 @@ export type Person = {
   notes?: string | null;
   created_at: string;
   updated_at: string;
-  projects?: { id: string, name: string, slug: string, status: string }[];
+  projects?: { id: string, name: string, slug: string, status: ProjectStatus }[];
   tags?: Tag[];
   user_id?: string | null;
   custom_properties?: Record<string, any> | null;
   social_media?: { [key: string]: string };
+  kanban_order?: number;
 };
 
 export type Company = {
@@ -142,6 +143,7 @@ export type Company = {
   address?: string | null;
   logo_url?: string | null;
   custom_properties?: Record<string, any> | null;
+  updated_at?: string;
 };
 
 export type Reaction = {

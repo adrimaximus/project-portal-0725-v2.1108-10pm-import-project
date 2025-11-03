@@ -50,7 +50,7 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
   const { updatePeopleOrder } = usePeopleKanbanMutations();
   const [personGroups, setPersonGroups] = useState<Record<string, Person[]>>({});
 
-  const uncategorizedTag: Tag = { id: 'uncategorized', name: 'Uncategorized', color: '#9ca3af' };
+  const uncategorizedTag: Tag = { id: 'uncategorized', name: 'Uncategorized', color: '#9ca3af', user_id: '' };
 
   const { data: allCompanies = [] } = useQuery<Company[]>({
     queryKey: ['allCompaniesForKanban'],
