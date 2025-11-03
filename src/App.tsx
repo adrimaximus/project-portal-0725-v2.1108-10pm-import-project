@@ -6,7 +6,7 @@ import ProjectsPage from './pages/ProjectsPage';
 import SettingsPage from './pages/SettingsPage';
 import NotificationSettingsPage from './pages/NotificationSettingsPage';
 import NotFound from './pages/NotFound';
-import ProjectDetailPage from './pages/ProjectDetailPage';
+import ProjectDetailPage from './pages/projects/[slug]';
 import { Toaster } from "@/components/ui/sonner"
 
 function App() {
