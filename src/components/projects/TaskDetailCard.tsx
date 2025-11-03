@@ -164,7 +164,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
 
       <div
         ref={scrollRef}
-        className="relative flex-grow overflow-y-auto p-4 space-y-4 cursor-grab active:cursor-grabbing select-none"
+        className="relative flex-grow overflow-y-auto p-4 space-y-4 select-none"
       >
         {/* Metadata Section */}
         <div className="grid grid-cols-2 gap-4 text-sm">
