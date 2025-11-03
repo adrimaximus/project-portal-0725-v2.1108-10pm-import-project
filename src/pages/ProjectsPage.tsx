@@ -1,468 +1,175 @@
-import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
-import { useSearchParams, useNavigate, useParams } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { getDashboardProjects, createProject, updateProjectDetails, deleteProject } from '@/api/projects';
-import { getProjectTasks, upsertTask, deleteTask, toggleTaskCompletion } from '@/api/tasks';
-import { getPeople } from '@/api/people';
-import { Project, Task as ProjectTask, Person, UpsertTaskPayload, TaskStatus, ProjectStatus } from '@/types';
-import { toast } from 'sonner';
-
-import ProjectsToolbar from '@/components/projects/ProjectsToolbar';
-import ProjectViewContainer from '@/components/projects/ProjectViewContainer';
-import TaskFormDialog from '@/components/projects/TaskFormDialog';
-import { GoogleCalendarImportDialog } from '@/components/projects/GoogleCalendarImportDialog';
-import { AdvancedFiltersState } from '@/components/projects/ProjectAdvancedFilters';
-import { useProjectFilters } from '@/hooks/useProjectFilters';
-import { useAuth } from '@/contexts/AuthContext';
-import { useTasks } from '@/hooks/useTasks';
-import { useProjects } from '@/hooks/useProjects';
-import { useCreateProject } from '@/hooks/useCreateProject';
-import { useTaskMutations } from '@/hooks/useTaskMutations';
-import { useProjectMutations } from '@/hooks/useProjectMutations';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { useState, useEffect, useRef } from 'react';
+import { useSearchParams, Link } from 'react-router-dom';
 import PortalLayout from '@/components/PortalLayout';
-import { getErrorMessage, formatInJakarta } from '@/lib/utils';
+import { useTasks } from '@/hooks/useTasks';
+import { Task } from '@/types';
+import { format, isPast } from 'date-fns';
+import { cn } from '@/lib/utils';
+import { Clock, Loader2, CheckCircle2 } from 'lucide-react';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Loader2 } from 'lucide-react';
-import YearFilter from '@/components/projects/YearFilter';
-
-type ViewMode = 'table' | 'list' | 'kanban' | 'tasks' | 'tasks-kanban';
-type SortConfig<T> = { key: keyof T | null; direction: 'ascending' | 'descending' };
 
 const ProjectsPage = () => {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  const rowRefs = useRef(new Map<string, HTMLTableRowElement>());
-  const { user } = useAuth();
-  const { taskId: taskIdFromParams } = useParams<{ taskId: string }>();
+    const [searchParams, setSearchParams] = useSearchParams();
+    const view = searchParams.get('view');
+    const taskIdFromUrl = searchParams.get('taskId');
 
-  const viewFromUrl = searchParams.get('view') as ViewMode;
-  const view = taskIdFromParams ? 'tasks' : viewFromUrl || 'list';
+    const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+    const taskRefs = useRef<Map<string, HTMLDivElement | null>>(new Map());
 
-  const [kanbanGroupBy, setKanbanGroupBy] = useState<'status' | 'payment_status'>('status');
-  const [hideCompletedTasks, setHideCompletedTasks] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  
-  const highlightedTaskId = taskIdFromParams || searchParams.get('highlight');
-  const [selectedYear, setSelectedYear] = useState<number | null>(new Date().getFullYear());
-
-  const onHighlightComplete = useCallback(() => {
-    if (taskIdFromParams) {
-      navigate(`/projects?view=tasks`, { replace: true });
-    } else {
-      const newSearchParams = new URLSearchParams(searchParams);
-      newSearchParams.delete('highlight');
-      setSearchParams(newSearchParams, { replace: true });
-    }
-  }, [searchParams, setSearchParams, taskIdFromParams, navigate]);
-
-  const { 
-    data, 
-    isLoading: isLoadingProjects, 
-    fetchNextPage, 
-    hasNextPage, 
-    isFetchingNextPage,
-    refetch: refetchProjects 
-  } = useProjects({ searchTerm, year: selectedYear });
-
-  const projectsData = useMemo(() => data?.pages.flatMap(page => page.projects) ?? [], [data]);
-  
-  const [advancedFilters, setAdvancedFilters] = useState<AdvancedFiltersState>({
-    selectedPeopleIds: [],
-    status: [],
-    dueDate: null,
-  });
-
-  const { data: peopleData } = useQuery<Person[]>({
-    queryKey: ['people'],
-    queryFn: getPeople,
-  });
-
-  const { data: availableYears = [] } = useQuery<number[]>({
-    queryKey: ['projectYears'],
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_project_years');
-      if (error) throw error;
-      return data.map((row: { year: number }) => row.year);
-    }
-  });
-
-  const allPeople = useMemo(() => {
-    if (!peopleData) return [];
-    return peopleData
-      .filter(p => p.user_id)
-      .map(p => ({ id: p.user_id!, name: p.full_name }));
-  }, [peopleData]);
-
-  const {
-    dateRange, setDateRange,
-    sortConfig: projectSortConfig, requestSort: requestProjectSort, sortedProjects
-  } = useProjectFilters(projectsData, advancedFilters);
-
-  const [taskSortConfig, setTaskSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'updated_at', direction: 'desc' });
-
-  const requestTaskSort = useCallback((key: string) => {
-    setTaskSortConfig(prevConfig => {
-      let direction: 'asc' | 'desc' = 'asc';
-      if (prevConfig.key === key && prevConfig.direction === 'ascending') {
-        direction = 'desc';
-      }
-      return { key, direction };
+    const { data: tasks = [], isLoading } = useTasks({
+        hideCompleted: false,
+        sortConfig: { key: 'due_date', direction: 'asc' },
     });
-  }, []);
 
-  const finalTaskSortConfig = view === 'tasks-kanban' ? { key: 'kanban_order', direction: 'asc' as const } : taskSortConfig;
+    useEffect(() => {
+        if (taskIdFromUrl && tasks.length > 0) {
+            const taskToSelect = tasks.find(t => t.id === taskIdFromUrl);
+            if (taskToSelect) {
+                setSelectedTask(taskToSelect);
+                const taskElement = taskRefs.current.get(taskIdFromUrl);
+                setTimeout(() => {
+                    taskElement?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    taskElement?.classList.add('bg-yellow-100', 'dark:bg-yellow-900/30', 'transition-all', 'duration-300');
+                    setTimeout(() => {
+                        taskElement?.classList.remove('bg-yellow-100', 'dark:bg-yellow-900/30');
+                    }, 2000);
+                }, 100);
+            }
+        }
+    }, [taskIdFromUrl, tasks]);
 
-  const { data: tasksData = [], isLoading: isLoadingTasks, refetch: refetchTasks } = useTasks({
-    hideCompleted: hideCompletedTasks,
-    sortConfig: finalTaskSortConfig,
-  });
+    const handleTaskClick = (task: Task) => {
+        setSelectedTask(task);
+        setSearchParams({ view: 'tasks', taskId: task.id });
+    };
 
-  useEffect(() => {
-    if (highlightedTaskId && tasksData.length > 0) {
-      const task = tasksData.find(t => t.id === highlightedTaskId);
-      if (task) {
-        const originalTitle = document.title;
-        document.title = `Task: ${task.title} | ${task.project_name || 'Project'}`;
-        
-        return () => {
-          document.title = originalTitle;
-        };
-      }
-    }
-  }, [highlightedTaskId, tasksData]);
+    const handleSheetClose = () => {
+        setSelectedTask(null);
+        const newParams = new URLSearchParams(searchParams);
+        newParams.delete('taskId');
+        setSearchParams(newParams);
+    };
 
-  const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
-  const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
-  const createProjectMutation = useCreateProject();
-  const [scrollToProjectId, setScrollToProjectId] = useState<string | null>(null);
-  const initialTableScrollDone = useRef(false);
-
-  const [isTaskFormOpen, setIsTaskFormOpen] = useState(false);
-  const [editingTask, setEditingTask] = useState<ProjectTask | null>(null);
-  
-  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
-
-  const { data: isGCalConnected } = useQuery({
-    queryKey: ['googleCalendarConnection', user?.id],
-    queryFn: async () => {
-        if (!user) return false;
-        const { data } = await supabase.from('google_calendar_tokens').select('user_id').eq('user_id', user.id).maybeSingle();
-        return !!data;
-    },
-    enabled: !!user,
-  });
-
-  const importEventsMutation = useMutation({
-    mutationFn: async (events: any[]) => {
-        const { error } = await supabase.functions.invoke('import-google-calendar-events', {
-            body: { eventsToImport: events },
-        });
-        if (error) throw error;
-    },
-    onSuccess: () => {
-        toast.success("Events imported successfully as projects!");
-        setIsImportDialogOpen(false);
-        refetchProjects();
-    },
-    onError: (error) => {
-        toast.error("Failed to import events.", { description: error.message });
-    }
-  });
-
-  const isTaskView = view === 'tasks' || view === 'tasks-kanban';
-
-  const refetch = useCallback(() => {
-    if (isTaskView) {
-      refetchTasks();
-    } else {
-      refetchProjects();
-    }
-  }, [isTaskView, refetchTasks, refetchProjects]);
-
-  const { upsertTask, isUpserting, deleteTask, toggleTaskCompletion, isToggling } = useTaskMutations(refetch);
-  const { updateProjectStatus } = useProjectMutations();
-
-  const allTasks = useMemo(() => {
-    if (isTaskView) {
-      return tasksData || [];
-    }
-    if (!projectsData) return [];
-    return projectsData.flatMap(p => p.tasks || []);
-  }, [projectsData, tasksData, isTaskView]);
-
-  const filteredTasks = useMemo(() => {
-    let tasksToFilter = allTasks;
-    if (advancedFilters.selectedPeopleIds.length > 0) {
-        tasksToFilter = tasksToFilter.filter(task => 
-            task.assignedTo?.some(assignee => advancedFilters.selectedPeopleIds.includes(assignee.id))
+    if (view !== 'tasks') {
+        return (
+            <PortalLayout>
+                <div className="text-center py-20">
+                    <h1 className="text-2xl font-bold">Projects</h1>
+                    <p className="text-muted-foreground">Select a view to get started.</p>
+                    <Button asChild className="mt-4">
+                        <Link to="/projects?view=tasks">View Tasks</Link>
+                    </Button>
+                </div>
+            </PortalLayout>
         );
     }
-    if (!searchTerm) return tasksToFilter;
-    const lowercasedFilter = searchTerm.toLowerCase();
-    return tasksToFilter.filter(task => 
-      task.title.toLowerCase().includes(lowercasedFilter) ||
-      (task.description && task.description.toLowerCase().includes(lowercasedFilter)) ||
-      (task.project_name && task.project_name.toLowerCase().includes(lowercasedFilter))
-    );
-  }, [allTasks, searchTerm, advancedFilters.selectedPeopleIds]);
 
-  useEffect(() => {
-    if (view === 'table' && !initialTableScrollDone.current && sortedProjects.length > 0) {
-      const todayStr = formatInJakarta(new Date(), 'yyyy-MM-dd');
-      let targetProject = sortedProjects.find(p => p.start_date && formatInJakarta(p.start_date, 'yyyy-MM-dd') >= todayStr);
-      if (!targetProject && sortedProjects.length > 0) {
-        targetProject = sortedProjects[sortedProjects.length - 1];
-      }
-      if (targetProject) {
-        setScrollToProjectId(targetProject.id);
-        initialTableScrollDone.current = true;
-      }
-    }
-  }, [sortedProjects, view]);
-
-  useEffect(() => {
-    if (scrollToProjectId) {
-      const targetElement = rowRefs.current.get(scrollToProjectId);
-      if (targetElement) {
-        setTimeout(() => {
-          targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          targetElement.classList.add('bg-muted', 'transition-colors', 'duration-1000');
-          setTimeout(() => {
-            targetElement.classList.remove('bg-muted');
-          }, 2000);
-          setScrollToProjectId(null);
-        }, 100);
-      }
-    }
-  }, [scrollToProjectId]);
-
-  const handleViewChange = (newView: ViewMode | null) => {
-    if (newView) {
-      if (taskIdFromParams) {
-        navigate(`/projects?view=${newView}`);
-      } else {
-        setSearchParams({ view: newView }, { replace: true });
-      }
-      if (scrollContainerRef.current) {
-        scrollContainerRef.current.scrollTop = 0;
-        scrollContainerRef.current.scrollLeft = 0;
-      }
-    }
-  };
-
-  const deleteProjectMutation = useMutation({
-    mutationFn: async (projectId: string) => {
-      const { error } = await supabase.from('projects').delete().eq('id', projectId);
-      if (error) throw error;
-      return projectId;
-    },
-    onSuccess: (deletedProjectId) => {
-      const deletedProject = projectsData.find(p => p.id === deletedProjectId);
-      toast.success(`Project "${deletedProject?.name || 'Project'}" has been deleted.`);
-      queryClient.invalidateQueries({ queryKey: ['projects'] });
-    },
-    onError: (error: any, deletedProjectId) => {
-      const deletedProject = projectsData.find(p => p.id === deletedProjectId);
-      toast.error(`Failed to delete project "${deletedProject?.name || 'Project'}".`, { description: getErrorMessage(error) });
-    }
-  });
-
-  const handleDeleteProject = (projectId: string) => {
-    const project = projectsData.find(p => p.id === projectId);
-    if (project) setProjectToDelete(project);
-  };
-
-  const confirmDeleteProject = () => {
-    if (projectToDelete) {
-      deleteProjectMutation.mutate(projectToDelete.id);
-      setProjectToDelete(null);
-    }
-  };
-
-  const handleRefresh = () => {
-    toast.info("Refreshing data...");
-    refetch();
-  };
-
-  const handleCreateTask = () => {
-    setEditingTask(null);
-    setIsTaskFormOpen(true);
-  };
-
-  const handleEditTask = (task: ProjectTask) => {
-    setEditingTask(task);
-    setIsTaskFormOpen(true);
-  };
-
-  const handleDeleteTask = (taskId: string) => {
-    setTaskToDelete(taskId);
-  };
-
-  const confirmDeleteTask = () => {
-    if (taskToDelete) {
-      deleteTask(taskToDelete, {
-        onSuccess: () => {
-          setTaskToDelete(null);
-        }
-      });
-    }
-  };
-
-  const handleTaskFormSubmit = (data: UpsertTaskPayload) => {
-    upsertTask(data, {
-      onSuccess: () => {
-        setIsTaskFormOpen(false);
-        setEditingTask(null);
-      },
-    });
-  };
-
-  const handleToggleTaskCompletion = (task: ProjectTask, completed: boolean) => {
-    toggleTaskCompletion({ task, completed });
-  };
-
-  const handleTaskStatusChange = (task: ProjectTask, newStatus: TaskStatus) => {
-    upsertTask({
-        id: task.id,
-        project_id: task.project_id,
-        title: task.title,
-        status: newStatus,
-        completed: newStatus === 'Done',
-    }, {
-        onSuccess: () => {
-            toast.success(`Task "${task.title}" status updated to "${newStatus}"`);
-        }
-    });
-  };
-
-  const toggleHideCompleted = () => {
-    setHideCompletedTasks(prev => {
-      const newState = !prev;
-      localStorage.setItem('hideCompletedTasks', String(newState));
-      return newState;
-    });
-  };
-
-  const handleStatusChange = (projectId: string, newStatus: ProjectStatus) => {
-    const project = projectsData.find(p => p.id === projectId);
-    if (!project) return;
-
-    const hasOpenTasks = project.tasks?.some(task => !task.completed) ?? false;
-
-    if (newStatus === 'Completed' && hasOpenTasks) {
-        toast.error("Cannot mark project as 'Completed' while there are still open tasks.");
-        return;
-    }
-    updateProjectStatus.mutate({ projectId, status: newStatus });
-  };
-
-  const tasksQueryKey = ['tasks', { 
-    projectIds: undefined, 
-    hideCompleted: hideCompletedTasks, 
-    sortConfig: finalTaskSortConfig 
-  }];
-
-  return (
-    <PortalLayout disableMainScroll noPadding>
-      <AlertDialog open={!!projectToDelete} onOpenChange={(open) => !open && setProjectToDelete(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader><AlertDialogTitle>Are you sure?</AlertDialogTitle><AlertDialogDescription>This action cannot be undone. This will permanently delete the project "{projectToDelete?.name}".</AlertDialogDescription></AlertDialogHeader>
-          <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={confirmDeleteProject}>Delete</AlertDialogAction></AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog open={!!taskToDelete} onOpenChange={(open) => !open && setTaskToDelete(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader><AlertDialogTitle>Delete Task?</AlertDialogTitle><AlertDialogDescription>This action cannot be undone. Are you sure you want to delete this task?</AlertDialogDescription></AlertDialogHeader>
-          <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={confirmDeleteTask}>Delete</AlertDialogAction></AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <TaskFormDialog
-        open={isTaskFormOpen}
-        onOpenChange={setIsTaskFormOpen}
-        onSubmit={handleTaskFormSubmit}
-        isSubmitting={isUpserting}
-        task={editingTask}
-      />
-
-      <GoogleCalendarImportDialog
-        open={isImportDialogOpen}
-        onOpenChange={setIsImportDialogOpen}
-        onImport={(events) => importEventsMutation.mutate(events)}
-        isImporting={importEventsMutation.isPending}
-      />
-
-      <div className="flex-1 flex flex-col min-h-0 rounded-none border-0 sm:border sm:rounded-lg">
-        <div className="flex-shrink-0 bg-background z-10 border-b">
-          <ProjectsToolbar
-            view={view} onViewChange={handleViewChange}
-            kanbanGroupBy={kanbanGroupBy} onKanbanGroupByChange={setKanbanGroupBy}
-            hideCompletedTasks={hideCompletedTasks}
-            onToggleHideCompleted={toggleHideCompleted}
-            onNewProjectClick={() => navigate('/request')}
-            onNewTaskClick={handleCreateTask}
-            isTaskView={isTaskView}
-            isGCalConnected={isGCalConnected}
-            onImportClick={() => setIsImportDialogOpen(true)}
-            onRefreshClick={handleRefresh}
-            advancedFilters={advancedFilters}
-            onAdvancedFiltersChange={setAdvancedFilters}
-            allPeople={allPeople}
-            availableYears={availableYears}
-            selectedYear={selectedYear}
-            onYearChange={setSelectedYear}
-          />
-        </div>
-        <div ref={scrollContainerRef} className="flex-grow min-h-0 overflow-y-auto">
-          <div className="p-0 data-[view=kanban]:px-4 data-[view=kanban]:pb-4 data-[view=kanban]:md:px-6 data-[view=kanban]:md:pb-6 data-[view=tasks-kanban]:p-0" data-view={view}>
-            <ProjectViewContainer
-              view={view}
-              projects={sortedProjects}
-              tasks={filteredTasks}
-              isLoading={isLoadingProjects && !projectsData.length}
-              isTasksLoading={isLoadingTasks}
-              onDeleteProject={handleDeleteProject}
-              sortConfig={projectSortConfig}
-              requestSort={(key) => requestProjectSort(key as keyof Project)}
-              rowRefs={rowRefs}
-              kanbanGroupBy={kanbanGroupBy}
-              onEditTask={handleEditTask}
-              onDeleteTask={handleDeleteTask}
-              onToggleTaskCompletion={handleToggleTaskCompletion}
-              onTaskStatusChange={handleTaskStatusChange}
-              isToggling={isToggling}
-              taskSortConfig={taskSortConfig}
-              requestTaskSort={requestTaskSort}
-              refetch={refetch}
-              tasksQueryKey={tasksQueryKey}
-              highlightedTaskId={highlightedTaskId}
-              onHighlightComplete={onHighlightComplete}
-              onStatusChange={handleStatusChange}
-            />
-          </div>
-          {hasNextPage && (
-            <div className="flex justify-center py-4">
-              <Button
-                variant="outline"
-                onClick={() => fetchNextPage()}
-                disabled={isFetchingNextPage}
-              >
-                {isFetchingNextPage ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : null}
-                Load More Projects
-              </Button>
+    return (
+        <PortalLayout>
+            <div className="space-y-6">
+                <h1 className="text-3xl font-bold">All Tasks</h1>
+                {isLoading ? (
+                    <div className="flex justify-center items-center h-64">
+                        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                    </div>
+                ) : tasks.length === 0 ? (
+                    <div className="text-center py-20">
+                        <CheckCircle2 className="mx-auto h-12 w-12 text-muted-foreground" />
+                        <h3 className="mt-4 text-lg font-semibold">No tasks found</h3>
+                        <p className="mt-1 text-sm text-muted-foreground">Looks like there are no tasks to display.</p>
+                    </div>
+                ) : (
+                    <div className="border rounded-lg">
+                        <div className="divide-y divide-border">
+                            {tasks.map(task => (
+                                <div
+                                    key={task.id}
+                                    ref={el => taskRefs.current.set(task.id, el)}
+                                    onClick={() => handleTaskClick(task)}
+                                    className="flex items-center gap-4 px-4 py-3 transition-colors cursor-pointer hover:bg-muted/50"
+                                >
+                                    <div className="flex-grow">
+                                        <p className="font-medium">{task.title}</p>
+                                        <p className="text-sm text-muted-foreground">{task.project_name}</p>
+                                    </div>
+                                    <div className="flex items-center gap-4">
+                                        {task.assignedTo && task.assignedTo.length > 0 && (
+                                            <div className="flex -space-x-2">
+                                                {task.assignedTo.slice(0, 3).map(assignee => (
+                                                    <Avatar key={assignee.id} className="h-6 w-6 border-2 border-background">
+                                                        <AvatarImage src={assignee.avatar_url} />
+                                                        <AvatarFallback>{assignee.name?.charAt(0)}</AvatarFallback>
+                                                    </Avatar>
+                                                ))}
+                                            </div>
+                                        )}
+                                        {task.due_date && (
+                                            <div className={cn("text-sm font-medium whitespace-nowrap flex items-center gap-1.5", isPast(new Date(task.due_date)) ? "text-destructive" : "text-muted-foreground")}>
+                                                <Clock className="h-4 w-4" />
+                                                <span>{format(new Date(task.due_date), 'MMM d')}</span>
+                                            </div>
+                                        )}
+                                        <Badge variant={task.completed ? 'default' : 'outline'}>
+                                            {task.completed ? 'Done' : 'To Do'}
+                                        </Badge>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
             </div>
-          )}
-        </div>
-      </div>
-    </PortalLayout>
-  );
+
+            <Sheet open={!!selectedTask} onOpenChange={(open) => !open && handleSheetClose()}>
+                <SheetContent className="sm:max-w-lg">
+                    {selectedTask && (
+                        <>
+                            <SheetHeader>
+                                <SheetTitle>{selectedTask.title}</SheetTitle>
+                                <SheetDescription>
+                                    In project <Link to={`/projects/${selectedTask.project_slug}`} className="underline">{selectedTask.project_name}</Link>
+                                </SheetDescription>
+                            </SheetHeader>
+                            <div className="py-6 space-y-4">
+                                <p>{selectedTask.description || 'No description provided.'}</p>
+                                <div className="flex justify-between items-center">
+                                    <span className="text-sm font-medium">Status</span>
+                                    <Badge variant={selectedTask.completed ? 'default' : 'outline'}>
+                                        {selectedTask.completed ? 'Completed' : 'In Progress'}
+                                    </Badge>
+                                </div>
+                                {selectedTask.due_date && (
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-sm font-medium">Due Date</span>
+                                        <span className={cn("text-sm", isPast(new Date(selectedTask.due_date)) ? "text-destructive" : "")}>
+                                            {format(new Date(selectedTask.due_date), 'PPP p')}
+                                        </span>
+                                    </div>
+                                )}
+                                <div className="space-y-2">
+                                    <span className="text-sm font-medium">Assignees</span>
+                                    <div className="flex flex-wrap gap-2">
+                                        {selectedTask.assignedTo?.map(assignee => (
+                                            <div key={assignee.id} className="flex items-center gap-2 bg-muted p-1 rounded-md">
+                                                <Avatar className="h-6 w-6">
+                                                    <AvatarImage src={assignee.avatar_url} />
+                                                    <AvatarFallback>{assignee.name?.charAt(0)}</AvatarFallback>
+                                                </Avatar>
+                                                <span className="text-sm">{assignee.name}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        </>
+                    )}
+                </SheetContent>
+            </Sheet>
+        </PortalLayout>
+    );
 };
 
 export default ProjectsPage;
