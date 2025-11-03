@@ -185,35 +185,50 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
       return task.status;
     };
 
-    if (sortConfig.key === 'priority') {
-      const priorityOrder: { [key: string]: number } = { 'Urgent': 4, 'High': 3, 'Medium': 2, 'Normal': 2, 'Low': 1 };
+    if (sortConfig.key) {
       tasksToSet.sort((a, b) => {
-        const priorityA = getEffectivePriority(a);
-        const priorityB = getEffectivePriority(b);
-        const valueA = priorityOrder[priorityA] || 0;
-        const valueB = priorityOrder[priorityB] || 0;
+        let valA: any;
+        let valB: any;
 
-        if (valueA < valueB) {
-          return sortConfig.direction === 'asc' ? -1 : 1;
+        switch (sortConfig.key) {
+          case 'priority':
+            const priorityOrder: { [key: string]: number } = { 'Urgent': 4, 'High': 3, 'Medium': 2, 'Normal': 2, 'Low': 1 };
+            valA = priorityOrder[getEffectivePriority(a)] || 0;
+            valB = priorityOrder[getEffectivePriority(b)] || 0;
+            break;
+          case 'status':
+            valA = getEffectiveStatus(a);
+            valB = getEffectiveStatus(b);
+            break;
+          case 'due_date':
+          case 'updated_at':
+            valA = a[sortConfig.key] ? new Date(a[sortConfig.key] as string).getTime() : null;
+            valB = b[sortConfig.key] ? new Date(b[sortConfig.key] as string).getTime() : null;
+            break;
+          case 'title':
+            valA = a.title;
+            valB = b.title;
+            break;
+          default:
+            valA = a[sortConfig.key as keyof ProjectTask];
+            valB = b[sortConfig.key as keyof ProjectTask];
         }
-        if (valueA > valueB) {
-          return sortConfig.direction === 'asc' ? 1 : -1;
+
+        if (valA === null || valA === undefined) return 1;
+        if (valB === null || valB === undefined) return -1;
+
+        if (typeof valA === 'string' && typeof valB === 'string') {
+          return valA.localeCompare(valB);
         }
+
+        if (valA < valB) return -1;
+        if (valA > valB) return 1;
         return 0;
       });
-    } else if (sortConfig.key === 'status') {
-      tasksToSet.sort((a, b) => {
-        const statusA = getEffectiveStatus(a);
-        const statusB = getEffectiveStatus(b);
 
-        if (statusA < statusB) {
-          return sortConfig.direction === 'asc' ? -1 : 1;
-        }
-        if (statusA > statusB) {
-          return sortConfig.direction === 'asc' ? 1 : -1;
-        }
-        return 0;
-      });
+      if (sortConfig.direction === 'desc') {
+        tasksToSet.reverse();
+      }
     }
     
     setTasks(tasksToSet);
