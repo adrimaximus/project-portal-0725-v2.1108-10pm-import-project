@@ -1,7 +1,7 @@
 import PortalLayout from "@/components/PortalLayout";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import { Link } from "react-router-dom";
-import NotificationPreferencesCard from "@/components/settings/NotificationPreferencesCard";
+import NotificationSettingsForm from "@/components/settings/NotificationSettingsForm";
 
 const NotificationSettingsPage = () => {
   return (
@@ -21,7 +21,7 @@ const NotificationSettingsPage = () => {
           </BreadcrumbList>
         </Breadcrumb>
         
-        <NotificationPreferencesCard />
+        <NotificationSettingsForm />
       </div>
     </PortalLayout>
   );

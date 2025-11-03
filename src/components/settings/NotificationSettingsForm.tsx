@@ -6,23 +6,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, BellRing } from "lucide-react";
+import { Loader2, BellRing, Mail } from "lucide-react";
 import { Button } from "../ui/button";
 import { Checkbox } from "../ui/checkbox";
-import WhatsappIcon from "../icons/WhatsappIcon";
 import { useQuery } from "@tanstack/react-query";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Mail } from "lucide-react";
 import { PAYMENT_STATUS_OPTIONS } from "@/types";
-
-interface NotificationEvent {
-  id: string;
-  label: string;
-  description: string | null;
-  category: string | null;
-  is_enabled_by_default: boolean;
-  default_channels?: ('email' | 'whatsapp')[];
-}
+import { NotificationEvent } from '@/types/notifications';
+import WhatsappIcon from "../icons/WhatsappIcon";
 
 const notificationTones = [
     { name: 'No Tone', value: 'none' },
@@ -40,7 +31,7 @@ const REMINDER_STATUS_OPTIONS = PAYMENT_STATUS_OPTIONS.filter(opt =>
   ['Unpaid', 'Overdue', 'Pending', 'In Process'].includes(opt.value)
 );
 
-const PROJECT_STATUS_OPTIONS = [
+const PROJECT_STATUS_OPTIONS_FILTER = [
   { label: 'On Track', value: 'On Track' },
   { label: 'Completed', value: 'Completed' },
   { label: 'Cancelled', value: 'Cancelled' },
@@ -49,7 +40,7 @@ const PROJECT_STATUS_OPTIONS = [
   { label: 'Pending', value: 'Pending' },
 ];
 
-const NotificationPreferencesCard = () => {
+const NotificationSettingsForm = () => {
   const { user, refreshUser } = useAuth();
   const [preferences, setPreferences] = useState<Record<string, any>>({});
   const [isLoading, setIsLoading] = useState(true);
@@ -419,7 +410,7 @@ const NotificationPreferencesCard = () => {
                                 <div className="p-4 pl-12 bg-muted/50">
                                   <Label className="font-medium text-xs uppercase tracking-wider text-muted-foreground">Notify for statuses</Label>
                                   <div className="flex flex-wrap gap-x-6 gap-y-2 mt-2">
-                                    {PROJECT_STATUS_OPTIONS.map(statusOption => (
+                                    {PROJECT_STATUS_OPTIONS_FILTER.map(statusOption => (
                                       <div key={statusOption.value} className="flex items-center space-x-2">
                                         <Checkbox
                                           id={`project-status-${statusOption.value}`}
@@ -450,4 +441,4 @@ const NotificationPreferencesCard = () => {
   );
 };
 
-export default NotificationPreferencesCard;
+export default NotificationSettingsForm;
