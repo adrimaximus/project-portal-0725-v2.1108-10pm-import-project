@@ -1,7 +1,8 @@
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
 import { ProjectStatus, PaymentStatus } from "@/types";
-import { format as formatFns, toZonedTime, isPast as isPastFns } from 'date-fns-tz';
+import { format as formatFns, toZonedTime } from 'date-fns-tz';
+import { isPast as isPastFns } from 'date-fns';
 import React from "react";
 
 export function cn(...inputs: ClassValue[]) {
@@ -165,7 +166,7 @@ export const getTaskStatusStyles = (status: string | null | undefined) => {
   switch (status) {
     case 'Done':
       return { tw: 'bg-green-100 text-green-800' };
-    case 'In Progress':
+    case 'In progress':
       return { tw: 'bg-blue-100 text-blue-800' };
     case 'To do':
       return { tw: 'bg-gray-100 text-gray-800' };
