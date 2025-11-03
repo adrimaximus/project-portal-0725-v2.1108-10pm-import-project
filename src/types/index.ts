@@ -34,6 +34,33 @@ export type PaymentStatus = typeof PAYMENT_STATUS_OPTIONS[number]['value'];
 export type TaskStatus = typeof TASK_STATUS_OPTIONS[number]['value'];
 export type TaskPriority = typeof TASK_PRIORITY_OPTIONS[number]['value'];
 
+export const CUSTOM_PROPERTY_TYPES = [
+  "text",
+  "textarea",
+  "number",
+  "date",
+  "email",
+  "phone",
+  "url",
+  "image",
+  "multi-image",
+  "select",
+  "multi-select",
+  "checkbox",
+] as const;
+
+export type CustomPropertyType = (typeof CUSTOM_PROPERTY_TYPES)[number];
+
+export type CustomProperty = {
+  id: string;
+  name: string;
+  label: string;
+  type: CustomPropertyType;
+  options?: string[] | null;
+  category: 'company' | 'contact' | 'tag';
+  is_default: boolean;
+};
+
 export type User = {
   id: string;
   name?: string | null;
@@ -53,11 +80,26 @@ export type Person = {
   company_id?: string | null;
   job_title?: string | null;
   avatar_url?: string | null;
+  slug?: string;
+  address?: any;
+  contact?: { emails?: string[], phones?: string[] };
+  department?: string | null;
+  birthday?: string | null;
+  notes?: string | null;
+  created_at: string;
+  updated_at: string;
+  projects?: { id: string, name: string, slug: string, status: string }[];
+  tags?: Tag[];
+  user_id?: string | null;
+  custom_properties?: Record<string, any> | null;
+  social_media?: { [key: string]: string };
 };
 
 export type Company = {
   id: string;
   name: string;
+  legal_name?: string | null;
+  address?: string | null;
   logo_url?: string | null;
   custom_properties?: Record<string, any> | null;
 };
@@ -99,6 +141,9 @@ export type Tag = {
   name: string;
   color: string;
   user_id: string;
+  type?: string;
+  custom_properties?: Record<string, any> | null;
+  isNew?: boolean;
 };
 
 export type Task = {
