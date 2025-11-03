@@ -37,34 +37,13 @@ serve(async (req) => {
       throw new Error('WBIZTOOL credentials not fully configured.');
     }
 
-    // 1. Fetch devices
-    const devicesResponse = await fetch('https://wbiztool.com/api/v1/get-devices/', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-client-id': clientId,
-        'x-api-key': apiKey,
-      },
-    })
-    if (!devicesResponse.ok) {
-        const status = devicesResponse.status;
-        const errorText = await devicesResponse.text();
-        let errorMessage = `An unknown error occurred (Status: ${status}).`;
-        try {
-          const errorJson = JSON.parse(errorText);
-          errorMessage = errorJson.message || JSON.stringify(errorJson);
-        } catch (e) {
-          errorMessage = errorText.replace(/<[^>]*>?/gm, '').trim() || `Received an empty error response (Status: ${status}).`;
-        }
-        throw new Error(`Failed to fetch WBIZTOOL devices: ${errorMessage}`);
+    // 1. (Bypass) Assume device is valid — WBizTool doesn't expose get-devices API
+    //    Use the configured WhatsApp client ID instead.
+    const whatsappClientId = Deno.env.get('WBIZTOOL_WHATSAPP_CLIENT_ID');
+    if (!whatsappClientId) {
+        throw new Error('WBIZTOOL_WHATSAPP_CLIENT_ID is not configured in environment variables.');
     }
-    
-    const devicesData = await devicesResponse.json()
-    const activeDevice = devicesData.data?.find((d: any) => d.status === 'connected')
-
-    if (!activeDevice) {
-        throw new Error('No active WBIZTOOL device found. Please ensure your WhatsApp device is connected in the WBIZTOOL dashboard.');
-    }
+    const activeDevice = { id: whatsappClientId };
 
     // 2. Send message using the device
     const messageResponse = await fetch('https://wbiztool.com/api/v1/send_msg/', {
