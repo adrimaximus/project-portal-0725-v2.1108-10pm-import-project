@@ -2,7 +2,7 @@ import { useInfiniteQuery } from '@tanstack/react-query';
 import { getDashboardProjects } from '@/api/projects';
 import { useEffect } from 'react';
 
-const PAGE_SIZE = 50; // Increase page size for faster full load
+const PAGE_SIZE = 1000; // Increase page size for faster full load
 
 const fetchProjects = async ({ pageParam = 0, searchTerm, excludeOtherPersonal, year }: { pageParam: number, searchTerm: string, excludeOtherPersonal: boolean, year: number | null }) => {
   const projects = await getDashboardProjects({

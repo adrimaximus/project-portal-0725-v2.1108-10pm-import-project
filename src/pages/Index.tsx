@@ -16,7 +16,24 @@ const Index = () => {
     from: new Date(new Date().getFullYear(), 0, 1),
     to: new Date(new Date().getFullYear(), 11, 31),
   });
-  const { data, isLoading, hasNextPage, isFetchingNextPage } = useProjects({ fetchAll: true });
+
+  const yearFilter = useMemo(() => {
+    if (date?.from && date?.to) {
+        if (date.from.getFullYear() === date.to.getFullYear()) {
+            return date.from.getFullYear();
+        }
+    } else if (date?.from) {
+        // If only 'from' is selected, use that year.
+        return date.from.getFullYear();
+    }
+    // If range spans multiple years or is not set, fetch all.
+    return null;
+  }, [date]);
+
+  const { data, isLoading, hasNextPage, isFetchingNextPage } = useProjects({ 
+    fetchAll: true,
+    year: yearFilter,
+  });
   
   const projects = useMemo(() => data?.pages.flatMap(page => page.projects) ?? [], [data]);
   const { user } = useAuth();
@@ -33,6 +50,8 @@ const Index = () => {
         }
         return projectStart >= pickerFrom && projectStart <= pickerTo;
     }
+    // If no date range is selected, we still might have a year filter from the hook
+    // but for client-side filtering, if there's no date range, we show all fetched projects.
     return true;
   });
 
