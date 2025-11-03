@@ -32,7 +32,7 @@ const EmojiReactionPicker = ({ onSelect }: EmojiReactionPickerProps) => {
   };
 
   return (
-    <Popover open={isOpen} onOpenChange={handleOpenChange}>
+    <Popover open={isOpen} onOpenChange={handleOpenChange} modal={false}>
       <PopoverTrigger asChild>
         <Button variant="ghost" size="icon" className="h-7 w-7">
           <SmilePlus className="h-4 w-4" />
