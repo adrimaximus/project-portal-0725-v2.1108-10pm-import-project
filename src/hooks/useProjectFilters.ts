@@ -6,7 +6,7 @@ import { AdvancedFiltersState } from '@/components/projects/ProjectAdvancedFilte
 
 export const useProjectFilters = (projects: Project[], advancedFilters: AdvancedFiltersState) => {
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
-  const [sortConfig, setSortConfig] = useState<{ key: keyof Project | null; direction: 'asc' | 'desc' }>({ key: null, direction: 'asc' });
+  const [sortConfig, setSortConfig] = useState<{ key: keyof Project | null; direction: 'ascending' | 'descending' }>({ key: null, direction: 'ascending' });
 
   const filteredProjects = useMemo(() => {
     return projects.filter(project => {
@@ -63,7 +63,7 @@ export const useProjectFilters = (projects: Project[], advancedFilters: Advanced
         }
 
         if (compareResult !== 0) {
-          return sortConfig.direction === 'asc' ? compareResult : -compareResult;
+          return sortConfig.direction === 'ascending' ? compareResult : -compareResult;
         }
 
         return tieBreaker(a, b);
@@ -96,9 +96,9 @@ export const useProjectFilters = (projects: Project[], advancedFilters: Advanced
 
   const requestSort = useCallback((key: keyof Project) => {
     setSortConfig(prevConfig => {
-      let direction: 'asc' | 'desc' = 'asc';
-      if (prevConfig.key === key && prevConfig.direction === 'asc') {
-        direction = 'desc';
+      let direction: 'ascending' | 'descending' = 'ascending';
+      if (prevConfig.key === key && prevConfig.direction === 'ascending') {
+        direction = 'descending';
       }
       return { key, direction };
     });
