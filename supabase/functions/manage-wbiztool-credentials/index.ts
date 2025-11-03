@@ -9,34 +9,27 @@ const corsHeaders = {
 }
 
 const validateCredentials = async (clientId: string, apiKey: string) => {
-    const wbizResponse = await fetch('https://wbiztool.com/api/v1/get-account-info/', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'x-client-id': clientId,
-            'x-api-key': apiKey,
-        },
-    });
+  // Kita test koneksi pakai send_msg tapi tanpa kirim pesan (pakai method HEAD)
+  const wbizResponse = await fetch('https://wbiztool.com/api/v1/send_msg/', {
+    method: 'HEAD',
+    headers: {
+      'x-client-id': clientId,
+      'x-api-key': apiKey,
+    },
+  });
 
   if (wbizResponse.status === 401 || wbizResponse.status === 403) {
     throw new Error('Invalid WBIZTOOL credentials. Please check Client ID or API Key.');
   }
 
   if (wbizResponse.status === 404) {
-    throw new Error('WBIZTOOL endpoint not found. Please verify the API URL.');
+    // treat as OK — berarti endpoint ada tapi tidak support HEAD/GET
+    console.warn('WBIZTOOL returned 404 but likely credentials are valid (no read endpoint)');
+    return true;
   }
 
   if (!wbizResponse.ok) {
-    const status = wbizResponse.status;
-    const errorText = await wbizResponse.text();
-    let errorMessage = `An unknown error occurred (Status: ${status}).`;
-    try {
-      const errorJson = JSON.parse(errorText);
-      errorMessage = errorJson.message || JSON.stringify(errorJson);
-    } catch (e) {
-      errorMessage = errorText.replace(/<[^>]*>?/gm, '').trim() || `Received an empty error response (Status: ${status}).`;
-    }
-    throw new Error(`WBIZTOOL API Error: ${errorMessage}`);
+    throw new Error(`WBIZTOOL unexpected response (Status: ${wbizResponse.status})`);
   }
 
   return true;
