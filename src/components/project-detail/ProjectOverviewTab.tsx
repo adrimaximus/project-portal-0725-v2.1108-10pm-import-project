@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Project, Tag, Reaction } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import ProjectDescription from './ProjectDescription';
@@ -33,6 +33,21 @@ const ProjectOverviewTab = ({
   isUploading,
 }: ProjectOverviewTabProps) => {
   const [isGenerating, setIsGenerating] = useState(false);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (isEditing && (event.metaKey || event.ctrlKey) && event.key === 's') {
+        event.preventDefault();
+        onSetIsEditing(false);
+        toast.success('Project details saved.');
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isEditing, onSetIsEditing]);
 
   const handleGenerateBrief = async () => {
     setIsGenerating(true);
