@@ -12,6 +12,49 @@ import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 
+const getErrorMessage = async (error: any): Promise<string> => {
+  let description = "An unknown error occurred. Please check the console.";
+
+  if (error.context && typeof error.context.json === 'function') {
+    try {
+      const errorBody = await error.context.json();
+      description = errorBody.error || "The server returned an error without a specific message.";
+    } catch (e) {
+      description = "Failed to parse the error response from the server.";
+    }
+  } else {
+    description = error.message || "The server returned an error.";
+  }
+
+  // Clean up common error patterns from edge functions
+  const prefixes = ['WBIZTOOL unexpected error:', 'WBIZTOOL API Error:', 'WBIZTOOL API Error (devices):', 'WBIZTOOL API Error (messages):'];
+  for (const prefix of prefixes) {
+    if (description.startsWith(prefix)) {
+      description = description.substring(prefix.length).trim();
+    }
+  }
+
+  // Provide user-friendly messages for specific technical errors
+  if (description.includes('404 Page Not Found')) {
+    return "Could not reach the WBIZTOOL API. The service might be down or the API endpoint has changed. Please contact support if the issue persists.";
+  }
+  if (description.toLowerCase().includes('invalid credentials')) {
+    return "Invalid credentials. Please double-check your API Client ID and API Key.";
+  }
+  if (description.includes('No active WBIZTOOL device found')) {
+    return "No active WhatsApp device found in your WBIZTOOL account. Please ensure your device is connected in the WBIZTOOL dashboard.";
+  }
+  if (description.includes('credentials not fully configured')) {
+      return "WBIZTOOL integration is not fully configured on the server. The 'WBIZTOOL_WHATSAPP_CLIENT_ID' might be missing.";
+  }
+
+  // A simple HTML stripper for any leftover tags
+  description = description.replace(/<[^>]*>?/gm, ' ').replace(/\s+/g, ' ').trim();
+
+  return description;
+};
+
+
 const WbiztoolPage = () => {
   const [clientId, setClientId] = useState("");
   const [apiKey, setApiKey] = useState("");
@@ -55,23 +98,7 @@ const WbiztoolPage = () => {
       setClientId("");
       setApiKey("");
     } catch (error: any) {
-      let description = "An unknown error occurred. Please check the console.";
-      
-      if (error.context && typeof error.context.json === 'function') {
-        try {
-          const errorBody = await error.context.json();
-          if (errorBody.error) {
-            description = errorBody.error;
-          } else {
-            description = "The server returned an error without a specific message.";
-          }
-        } catch (e) {
-          description = "Failed to parse the error response from the server.";
-        }
-      } else {
-        description = error.message || "The server returned an error.";
-      }
-      
+      const description = await getErrorMessage(error);
       toast.error("Failed to connect", { description });
     } finally {
       setIsLoading(false);
@@ -88,7 +115,8 @@ const WbiztoolPage = () => {
       toast.info("Disconnected from WBIZTOOL.");
       setIsConnected(false);
     } catch (error: any) {
-      toast.error("Failed to disconnect", { description: error.message });
+      const description = await getErrorMessage(error);
+      toast.error("Failed to disconnect", { description });
     } finally {
       setIsLoading(false);
     }
@@ -110,22 +138,7 @@ const WbiztoolPage = () => {
       setTestPhone("");
       setTestMessage("");
     } catch (error: any) {
-      let description = "An unknown error occurred. Please check the console.";
-      
-      if (error.context && typeof error.context.json === 'function') {
-        try {
-          const errorBody = await error.context.json();
-          if (errorBody.error) {
-            description = errorBody.error;
-          } else {
-            description = "The server returned an error without a specific message.";
-          }
-        } catch (e) {
-          description = "Failed to parse the error response from the server.";
-        }
-      } else {
-        description = error.message || "The server returned an error.";
-      }
+      const description = await getErrorMessage(error);
       toast.error("Failed to send test message", { description });
     } finally {
       setIsSendingTest(false);
