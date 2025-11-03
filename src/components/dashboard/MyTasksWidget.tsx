@@ -84,7 +84,7 @@ const MyTasksWidget = () => {
               My Tasks
             </CardTitle>
             {!isLoading && myTasks.length > 0 && <Badge variant="secondary">{myTasks.length} Upcoming</Badge>}
-            {!isLoading && overdueCount > 0 && <Badge variant="destructive">{overdueCount} Overdue</Badge>}
+            {!isLoading && overdueCount > 0 && <Badge variant="outline" className="text-destructive">{overdueCount} Overdue</Badge>}
           </div>
           <Button asChild variant="link" className="text-sm -my-2 -mr-4">
             <Link to="/projects?view=tasks">View all</Link>
