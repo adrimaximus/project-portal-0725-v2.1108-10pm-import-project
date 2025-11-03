@@ -83,8 +83,8 @@ const Index = () => {
               <MonthlyProgressChart projects={filteredProjects} />
               <UnsplashImage />
             </div>
-            <DashboardStatsGrid projects={filteredProjects} />
             <MyTasksWidget />
+            <DashboardStatsGrid projects={filteredProjects} />
             <CollaboratorsList projects={filteredProjects} />
         </div>
       </div>
