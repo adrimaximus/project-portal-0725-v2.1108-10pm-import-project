@@ -38,7 +38,7 @@ serve(async (req) => {
 
     // 1. Fetch devices
     const devicesResponse = await fetch('https://wbiztool.com/api/v1/get-devices/', {
-      method: 'GET',
+      method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'x-client-id': clientId,
