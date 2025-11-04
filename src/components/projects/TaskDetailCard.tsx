@@ -246,8 +246,8 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
   const handleSendReminder = () => sendReminder(task.id);
 
   return (
-    <DrawerContent>
-      <div className="mx-auto w-full max-w-[650px] flex flex-col max-h-[90vh]">
+    <>
+      <DrawerContent className="mx-auto w-full max-w-[650px] flex flex-col max-h-[90vh]">
         <div className="flex-shrink-0 p-4 pt-3">
           <div className="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-muted" />
         </div>
@@ -321,7 +321,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
             allUsers={allUsers}
           />
         </div>
-      </div>
+      </DrawerContent>
       <AlertDialog open={!!commentToDelete} onOpenChange={() => setCommentToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -336,7 +336,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </DrawerContent>
+    </>
   );
 };
 
