@@ -57,7 +57,19 @@ const TICKET_TAG_NAME = 'Ticket';
 const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task, project }: TaskFormDialogProps) => {
   const isMobile = useIsMobile();
   const { data: projectsData, isLoading: isLoadingProjects } = useProjects({ excludeOtherPersonal: true });
-  const projects = useMemo(() => projectsData?.pages.flatMap(page => page.projects) ?? [], [projectsData]);
+  
+  const projectsForCombobox = useMemo(() => {
+    const hookProjects = projectsData?.pages.flatMap(page => page.projects) ?? [];
+    if (!project) {
+      return hookProjects;
+    }
+    const projectExists = hookProjects.some(p => p.id === project.id);
+    if (projectExists) {
+      return hookProjects;
+    }
+    return [project, ...hookProjects];
+  }, [projectsData, project]);
+
   const { data: allTags = [], refetch: refetchTags } = useTags();
   const { data: allProfiles = [], isLoading: isLoadingProfiles } = useProfiles();
   const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
@@ -84,8 +96,8 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task, proj
   const selectedProjectId = useWatch({ control: form.control, name: 'project_id' });
 
   useEffect(() => {
-    if (selectedProjectId && projects.length > 0 && allProfiles.length > 0) {
-      const selectedProject = projects.find((p: Project) => p.id === selectedProjectId);
+    if (selectedProjectId && projectsForCombobox.length > 0 && allProfiles.length > 0) {
+      const selectedProject = projectsForCombobox.find((p: Project) => p.id === selectedProjectId);
       if (selectedProject) {
         if (selectedProject.slug === 'general-tasks' || selectedProject.personal_for_user_id) {
           setAssignableUsers(allProfiles);
@@ -98,7 +110,7 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task, proj
     } else if (!selectedProjectId) {
         setAssignableUsers([]);
     }
-  }, [selectedProjectId, projects, allProfiles]);
+  }, [selectedProjectId, projectsForCombobox, allProfiles]);
 
   const directTaskAttachments = useMemo(() => {
     return (task?.attachments || []).filter(f => !filesToDelete.includes(f.id));
@@ -176,8 +188,8 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task, proj
           setPreviousStatus('To do');
         }
       } else {
-        const personalProject = projects.find(p => p.personal_for_user_id === currentUser?.id);
-        const generalTasksProject = projects.find(p => p.slug === 'general-tasks');
+        const personalProject = projectsForCombobox.find(p => p.personal_for_user_id === currentUser?.id);
+        const generalTasksProject = projectsForCombobox.find(p => p.slug === 'general-tasks');
         form.reset({
           title: '',
           project_id: project?.id || personalProject?.id || generalTasksProject?.id || '',
@@ -192,7 +204,7 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task, proj
         setPreviousStatus('To do');
       }
     }
-  }, [task, open, form, projects, project, currentUser, allTags]);
+  }, [task, open, form, projectsForCombobox, project, currentUser, allTags]);
 
   const handleTagsChange = (newTags: Tag[]) => {
     setSelectedTags(newTags);
@@ -259,7 +271,7 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task, proj
     let projectId = values.project_id;
 
     if (!projectId || projectId === '') {
-        const personalProject = projects.find(p => p.personal_for_user_id === currentUser?.id);
+        const personalProject = projectsForCombobox.find(p => p.personal_for_user_id === currentUser?.id);
         if (personalProject) {
             projectId = personalProject.id;
         } else {
@@ -295,7 +307,7 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task, proj
           <FormItem className="flex flex-col">
             <FormLabel>Project</FormLabel>
             <ProjectCombobox
-              projects={projects}
+              projects={projectsForCombobox}
               value={field.value || ''}
               onChange={field.onChange}
               isLoading={isLoadingProjects}
