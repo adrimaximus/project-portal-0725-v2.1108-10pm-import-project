@@ -7,6 +7,7 @@ import OpenAI from 'npm:openai@4.29.2';
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -265,7 +266,7 @@ serve(async (req) => {
           const sixMinutesAgo = new Date(Date.now() - 6 * 60 * 1000).toISOString();
           const { data: recentMessages, error: messagesError } = await supabaseAdmin
             .from('messages')
-            .select('content, sender_id, created_at, sender:profiles(first_name, last_name, email)')
+            .select('content, sender_id, created_at, sender:profiles!sender_id(first_name, last_name, email)')
             .eq('conversation_id', notification.conversation_id)
             .gt('created_at', sixMinutesAgo)
             .neq('sender_id', recipient.id)
