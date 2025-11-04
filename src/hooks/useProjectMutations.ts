@@ -36,8 +36,8 @@ export const useProjectMutations = (slug?: string) => {
         }
     });
 
-    const updateProject = useMutation({
-        mutationFn: async (editedProject: Project) => {
+    const updateProject = useMutation<Project, Error, Project>({
+        mutationFn: async (editedProject: Project): Promise<Project> => {
             const { id, person_ids, ...projectDetails } = editedProject as any;
             
             const { data, error } = await supabase
@@ -86,9 +86,9 @@ export const useProjectMutations = (slug?: string) => {
                 }
             }
 
-            return data;
+            return data as Project;
         },
-        onSuccess: (data: any) => {
+        onSuccess: (data: Project) => {
             if (slug && slug !== data.slug) {
                 toast.success("Project updated successfully! Redirecting...");
                 navigate(`/projects/${data.slug}`, { replace: true });
