@@ -67,13 +67,16 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task, proj
       projectsMap.set(project.id, project);
     }
 
-    // Add task's project if editing
+    // Add task's project if editing. This is crucial when the dialog is opened from a page
+    // that isn't a project detail page (like the main /projects?view=tasks page).
     if (task && task.project_id) {
       if (!projectsMap.has(task.project_id)) {
+        // If the task object itself has project name/slug, use it.
+        // Otherwise, fall back to the `project` prop if available (for ProjectDetail page context).
         projectsMap.set(task.project_id, {
           id: task.project_id,
-          name: task.project_name,
-          slug: task.project_slug,
+          name: task.project_name || project?.name || 'Unknown Project',
+          slug: task.project_slug || project?.slug || '',
         } as Project);
       }
     }
