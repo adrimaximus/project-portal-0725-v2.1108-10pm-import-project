@@ -374,7 +374,6 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task, proj
                 placeholder="Add a more detailed description..."
                 className="resize-none"
                 {...field}
-                value={field.value || ''}
               />
             </FormControl>
             <FormMessage />
