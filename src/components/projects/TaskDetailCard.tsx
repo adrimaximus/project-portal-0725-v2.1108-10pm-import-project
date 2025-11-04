@@ -82,6 +82,21 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
 
   const allAttachments = useMemo(() => (task ? aggregateAttachments(task) : []), [task]);
 
+  const allTags = useMemo(() => {
+    const tags = [...(task?.tags || [])];
+    if (task?.origin_ticket_id) {
+      const hasTicketTag = tags.some(tag => tag.name.toLowerCase() === 'ticket');
+      if (!hasTicketTag) {
+        tags.push({
+          id: 'ticket-tag',
+          name: 'Ticket',
+          color: '#8B5CF6', // Default purple color for tickets
+        });
+      }
+    }
+    return tags;
+  }, [task?.tags, task?.origin_ticket_id]);
+
   if (!task) {
     return (
       <DrawerContent>
@@ -289,11 +304,11 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
             </div>
           </div>
 
-          {task.tags?.length > 0 && (
+          {allTags.length > 0 && (
             <div className="flex items-start gap-2 border-t pt-4">
               <Tag className="h-4 w-4 mt-1 text-muted-foreground" />
               <div className="flex gap-1 flex-wrap">
-                {task.tags.map((tag) => (
+                {allTags.map((tag) => (
                   <Badge key={tag.id} variant="outline" style={{ borderColor: tag.color, color: tag.color }} className="text-xs">
                     {tag.name}
                   </Badge>
