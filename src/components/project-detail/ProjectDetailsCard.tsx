@@ -376,7 +376,7 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange, onStatusChange,
                       <SelectTrigger>
                         <SelectValue placeholder="Select a client or company..." />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="max-h-72">
                         {isLoadingPeople || isLoadingCompanies ? (
                           <SelectItem value="loading" disabled>Loading...</SelectItem>
                         ) : (
