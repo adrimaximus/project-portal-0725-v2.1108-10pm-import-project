@@ -176,7 +176,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
           {task.description && (
             <div className="border-b pb-4">
               <h4 className="font-semibold mb-2 text-sm">Description</h4>
-              <div className="prose prose-sm dark:prose-invert max-w-none text-muted-foreground break-all">
+              <div className="prose prose-sm dark:prose-invert max-w-none text-muted-foreground break-words">
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
                   components={{
