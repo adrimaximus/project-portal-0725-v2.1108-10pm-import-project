@@ -11,6 +11,7 @@ import ChangeOwnerDialog from "./ChangeOwnerDialog";
 import { toast } from "sonner";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { getInitials, generatePastelColor, getAvatarUrl } from "@/lib/utils";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface ProjectTeamCardProps {
   project: Project;
@@ -122,19 +123,23 @@ const ProjectTeamCard = ({ project }: ProjectTeamCardProps) => {
   const canChangeOwner = currentUser && (currentUser.id === project.created_by.id || currentUser.role === 'admin' || currentUser.role === 'master admin');
 
   const renderUserList = (users: AssignedUser[]) => (
-    <div className="space-y-3">
-      {users.map(member => (
-        <div key={member.id} className="flex items-center gap-3">
-          <Avatar className="h-9 w-9">
-            <AvatarImage src={getAvatarUrl(member.avatar_url, member.id)} />
-            <AvatarFallback style={generatePastelColor(member.id)}>{member.initials}</AvatarFallback>
-          </Avatar>
-          <div>
-            <p className="text-sm font-medium">{member.name}</p>
-          </div>
-        </div>
-      ))}
-    </div>
+    <TooltipProvider>
+      <div className="flex flex-wrap gap-2">
+        {users.map(member => (
+          <Tooltip key={member.id}>
+            <TooltipTrigger>
+              <Avatar className="h-9 w-9">
+                <AvatarImage src={getAvatarUrl(member.avatar_url, member.id)} />
+                <AvatarFallback style={generatePastelColor(member.id)}>{member.initials}</AvatarFallback>
+              </Avatar>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{member.name}</p>
+            </TooltipContent>
+          </Tooltip>
+        ))}
+      </div>
+    </TooltipProvider>
   );
 
   return (
@@ -158,15 +163,19 @@ const ProjectTeamCard = ({ project }: ProjectTeamCardProps) => {
                 </Button>
               )}
             </div>
-            <div className="flex items-center gap-3">
-              <Avatar className="h-9 w-9">
-                <AvatarImage src={getAvatarUrl(project.created_by.avatar_url, project.created_by.id)} />
-                <AvatarFallback style={generatePastelColor(project.created_by.id)}>{project.created_by.initials}</AvatarFallback>
-              </Avatar>
-              <div>
-                <p className="text-sm font-medium">{project.created_by.name}</p>
-              </div>
-            </div>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger>
+                  <Avatar className="h-9 w-9">
+                    <AvatarImage src={getAvatarUrl(project.created_by.avatar_url, project.created_by.id)} />
+                    <AvatarFallback style={generatePastelColor(project.created_by.id)}>{project.created_by.initials}</AvatarFallback>
+                  </Avatar>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{project.created_by.name}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
 
           {isEditing ? (
