@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Project, Task, Reaction } from "@/types";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import ProjectBrief from "./ProjectBrief";
 import ProjectComments from '@/components/ProjectComments';
 import { useAuth } from '@/contexts/AuthContext';
 import ProjectOverviewTab from './ProjectOverviewTab';

@@ -16,10 +16,9 @@ import { useNavigate } from "react-router-dom";
 
 interface ProjectTeamCardProps {
   project: Project;
-  onMentionUser: (user: User | AssignedUser) => void;
 }
 
-const ProjectTeamCard = ({ project, onMentionUser }: ProjectTeamCardProps) => {
+const ProjectTeamCard = ({ project }: ProjectTeamCardProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedTeam, setEditedTeam] = useState<AssignedUser[]>(project.assignedTo);
   const [allUsers, setAllUsers] = useState<User[]>([]);
