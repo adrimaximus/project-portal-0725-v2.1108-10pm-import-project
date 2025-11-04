@@ -23,7 +23,6 @@ import CommentReactions from './CommentReactions';
 import { useProfiles } from '@/hooks/useProfiles';
 import { useCommentMutations } from '@/hooks/useCommentMutations';
 import { MoreHorizontal, Edit, Trash2 } from 'lucide-react';
-import CommentReactionPicker from './CommentReactionPicker';
 
 interface Reaction {
   id: string;
