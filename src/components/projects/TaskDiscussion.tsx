@@ -35,7 +35,6 @@ const TaskDiscussion = ({ task, onToggleReaction }: TaskDiscussionProps) => {
   const [editedText, setEditedText] = useState('');
   const [commentToDelete, setCommentToDelete] = useState<CommentType | null>(null);
   const [newAttachments, setNewAttachments] = useState<File[]>([]);
-  const [isConvertingToTicket, setIsConvertingToTicket] = useState(false);
   const editFileInputRef = useRef<HTMLInputElement>(null);
   const { data: allUsers = [] } = useProfiles();
   const { toggleCommentReaction } = useCommentMutations(task.id);
@@ -105,8 +104,44 @@ const TaskDiscussion = ({ task, onToggleReaction }: TaskDiscussionProps) => {
   });
 
   const updateCommentMutation = useMutation({
-    mutationFn: async ({ commentId, text }: { commentId: string, text: string }) => {
-      const { error } = await supabase.from('comments').update({ text }).eq('id', commentId);
+    mutationFn: async ({ commentId, text, attachments }: { commentId: string, text: string, attachments: File[] | null }) => {
+      const { data: originalComment, error: fetchError } = await supabase
+        .from('comments')
+        .select('attachments_jsonb, project_id')
+        .eq('id', commentId)
+        .single();
+      if (fetchError) throw fetchError;
+
+      let attachmentsJsonb: any[] = originalComment.attachments_jsonb || [];
+
+      if (attachments && attachments.length > 0) {
+        const uploadPromises = attachments.map(async (file) => {
+          const fileId = uuidv4();
+          const sanitizedFileName = file.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
+          const filePath = `${originalComment.project_id}/comments/${Date.now()}-${sanitizedFileName}`;
+          const { error: uploadError } = await supabase.storage.from('project-files').upload(filePath, file);
+          if (uploadError) throw new Error(`Failed to upload ${file.name}: ${uploadError.message}`);
+          
+          const { data: urlData } = supabase.storage.from('project-files').getPublicUrl(filePath);
+          if (!urlData || !urlData.publicUrl) {
+            throw new Error(`Failed to get public URL for uploaded file ${file.name}.`);
+          }
+          
+          return { 
+            id: fileId,
+            file_name: file.name, 
+            file_url: urlData.publicUrl,
+            file_type: file.type,
+            file_size: file.size,
+            storage_path: filePath,
+            created_at: new Date().toISOString(),
+          };
+        });
+        const newAttachmentsJsonb = await Promise.all(uploadPromises);
+        attachmentsJsonb = [...attachmentsJsonb, ...newAttachmentsJsonb];
+      }
+
+      const { error } = await supabase.from('comments').update({ text, attachments_jsonb: attachmentsJsonb }).eq('id', commentId);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -135,16 +170,18 @@ const TaskDiscussion = ({ task, onToggleReaction }: TaskDiscussionProps) => {
   const handleEditClick = (comment: CommentType) => {
     setEditingCommentId(comment.id);
     setEditedText(comment.text || '');
+    setNewAttachments([]);
   };
 
   const handleCancelEdit = () => {
     setEditingCommentId(null);
     setEditedText('');
+    setNewAttachments([]);
   };
 
   const handleSaveEdit = () => {
     if (editingCommentId) {
-      updateCommentMutation.mutate({ commentId: editingCommentId, text: editedText });
+      updateCommentMutation.mutate({ commentId: editingCommentId, text: editedText, attachments: newAttachments });
     }
     handleCancelEdit();
   };
@@ -158,6 +195,16 @@ const TaskDiscussion = ({ task, onToggleReaction }: TaskDiscussionProps) => {
 
   const handleToggleCommentReaction = (commentId: string, emoji: string) => {
     toggleCommentReaction({ commentId, emoji });
+  };
+
+  const handleEditFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files) {
+      setNewAttachments(prev => [...prev, ...Array.from(event.target.files!)]);
+    }
+  };
+
+  const removeNewAttachment = (index: number) => {
+    setNewAttachments(prev => prev.filter((_, i) => i !== index));
   };
 
   return (
@@ -214,9 +261,36 @@ const TaskDiscussion = ({ task, onToggleReaction }: TaskDiscussionProps) => {
                   {editingCommentId === comment.id ? (
                     <div className="mt-2 space-y-2">
                       <Textarea value={editedText} onChange={(e) => setEditedText(e.target.value)} autoFocus />
-                      <div className="flex justify-end gap-2">
-                        <Button variant="ghost" size="sm" onClick={handleCancelEdit}>Cancel</Button>
-                        <Button size="sm" onClick={handleSaveEdit}>Save</Button>
+                      {(attachments.length > 0 || newAttachments.length > 0) && (
+                        <div className="mt-2">
+                            <h4 className="font-semibold text-xs text-muted-foreground mb-2">Attachments</h4>
+                            <div className="space-y-1">
+                                {attachments.map((file, index) => (
+                                    <div key={file.url || file.file_url || index} className="flex items-center gap-2 text-sm text-muted-foreground">
+                                        <FileText className="h-4 w-4" />
+                                        <span>{file.name || file.file_name}</span>
+                                    </div>
+                                ))}
+                                {newAttachments.map((file, index) => (
+                                  <div key={index} className="flex items-center justify-between text-sm bg-muted p-1 rounded-md">
+                                    <span className="truncate">{file.name}</span>
+                                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeNewAttachment(index)}>
+                                      <X className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                ))}
+                            </div>
+                        </div>
+                      )}
+                      <div className="flex justify-between items-center">
+                        <Button variant="ghost" size="icon" onClick={() => editFileInputRef.current?.click()}>
+                          <Paperclip className="h-4 w-4" />
+                        </Button>
+                        <input type="file" ref={editFileInputRef} multiple onChange={handleEditFileChange} className="hidden" />
+                        <div className="flex justify-end gap-2">
+                          <Button variant="ghost" size="sm" onClick={handleCancelEdit}>Cancel</Button>
+                          <Button size="sm" onClick={handleSaveEdit}>Save</Button>
+                        </div>
                       </div>
                     </div>
                   ) : (
