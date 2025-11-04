@@ -82,7 +82,7 @@ const ProjectHeader = ({
           <div className="flex justify-start lg:justify-end items-center gap-2 flex-shrink-0">
             {isEditing ? (
               <div className="flex gap-2">
-                <Button onClick={onSaveChanges} disabled={isSaving || !hasChanges}>
+                <Button onClick={onSaveChanges} disabled={isSaving}>
                   {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Save Changes
                 </Button>

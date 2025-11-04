@@ -19,6 +19,7 @@ interface ProjectOverviewTabProps {
   onReactionsChange: (reactions: Reaction[]) => void;
   onSetIsEditing: (isEditing: boolean) => void;
   isUploading: boolean;
+  onSaveChanges: () => void;
 }
 
 const ProjectOverviewTab = ({ 
@@ -31,6 +32,7 @@ const ProjectOverviewTab = ({
   onReactionsChange,
   onSetIsEditing,
   isUploading,
+  onSaveChanges,
 }: ProjectOverviewTabProps) => {
   const [isGenerating, setIsGenerating] = useState(false);
 
@@ -38,8 +40,7 @@ const ProjectOverviewTab = ({
     const handleKeyDown = (event: KeyboardEvent) => {
       if (isEditing && (event.metaKey || event.ctrlKey) && event.key === 's') {
         event.preventDefault();
-        onSetIsEditing(false);
-        toast.success('Project details saved.');
+        onSaveChanges();
       }
     };
 
@@ -47,7 +48,7 @@ const ProjectOverviewTab = ({
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isEditing, onSetIsEditing]);
+  }, [isEditing, onSaveChanges]);
 
   const handleGenerateBrief = async () => {
     setIsGenerating(true);

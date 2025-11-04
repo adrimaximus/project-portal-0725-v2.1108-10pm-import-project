@@ -25,6 +25,7 @@ interface ProjectMainContentProps {
   onTaskHighlightComplete: () => void;
   onSetIsEditing: (isEditing: boolean) => void;
   isUploading: boolean;
+  onSaveChanges: () => void;
 }
 
 const ProjectMainContent = ({ 
@@ -41,6 +42,7 @@ const ProjectMainContent = ({
   onTaskHighlightComplete,
   onSetIsEditing,
   isUploading,
+  onSaveChanges,
 }: ProjectMainContentProps) => {
   const { user } = useAuth();
   const { data: allUsers = [] } = useProfiles();
@@ -166,6 +168,7 @@ const ProjectMainContent = ({
             onReactionsChange={(reactions) => onFieldChange('reactions', reactions)}
             onSetIsEditing={onSetIsEditing}
             isUploading={isUploading}
+            onSaveChanges={onSaveChanges}
           />
         </TabsContent>
         <TabsContent value="tasks" className="mt-4">

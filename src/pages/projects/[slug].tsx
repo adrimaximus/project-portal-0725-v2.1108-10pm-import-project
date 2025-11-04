@@ -84,7 +84,7 @@ const ProjectDetailPage = () => {
 
   const canEdit = hasPermission('projects:edit') || hasPermission('projects:edit_all');
 
-  const handleEditToggle = () => {
+  const enterEditMode = () => {
     if (project) {
       setEditedProject(JSON.parse(JSON.stringify(project))); // Deep copy
       setIsEditing(true);
@@ -99,21 +99,29 @@ const ProjectDetailPage = () => {
   };
 
   const handleSaveChanges = useCallback(() => {
-    if (editedProject && hasChanges) {
+    if (editedProject) {
       updateProject.mutate(editedProject, {
-        onSuccess: () => {
+        onSuccess: (data) => {
           setIsEditing(false);
+          setEditedProject(null);
           setHasChanges(false);
-          toast.success("Project saved successfully!");
+          if (slug && slug !== data.slug) {
+            toast.success("Project updated successfully! Redirecting...");
+            navigate(`/projects/${data.slug}`, { replace: true });
+          } else {
+            toast.success("Project saved successfully!");
+          }
         },
       });
+    } else {
+      setIsEditing(false);
     }
-  }, [editedProject, hasChanges, updateProject]);
+  }, [editedProject, updateProject, slug, navigate]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key === 's') {
-        if (isEditing && hasChanges) {
+        if (isEditing) {
           event.preventDefault();
           handleSaveChanges();
         }
@@ -124,7 +132,7 @@ const ProjectDetailPage = () => {
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isEditing, hasChanges, handleSaveChanges]);
+  }, [isEditing, handleSaveChanges]);
 
   const handleFieldChange = (field: keyof Project, value: any) => {
     if (editedProject) {
@@ -169,7 +177,7 @@ const ProjectDetailPage = () => {
             isEditing={isEditing}
             isSaving={updateProject.isPending}
             canEdit={canEdit}
-            onEditToggle={handleEditToggle}
+            onEditToggle={enterEditMode}
             onSaveChanges={handleSaveChanges}
             onCancelChanges={handleCancelChanges}
             onToggleComplete={handleToggleComplete}
@@ -204,8 +212,9 @@ const ProjectDetailPage = () => {
                   newParams.delete('task');
                   setSearchParams(newParams, { replace: true });
                 }}
-                onSetIsEditing={setIsEditing}
+                onSetIsEditing={() => enterEditMode()}
                 isUploading={addFiles.isPending}
+                onSaveChanges={handleSaveChanges}
               />
             </div>
             <div className="lg:col-span-1 space-y-6">
@@ -225,7 +234,7 @@ const ProjectDetailPage = () => {
       />
       <AlertDialog open={!!taskToDelete} onOpenChange={() => setTaskToDelete(null)}>
         <AlertDialogContent>
-          <AlertDialogHeader><AlertDialogTitle>Are you sure?</AlertDialogTitle><AlertDialogDescription>This will permanently delete the task "{taskToDelete?.title}".</AlertDialogDescription></AlertDialogHeader>
+          <AlertDialogHeader><AlertDialogTitle>Are you sure?</AlertDialogTitle><AlertDialogDescription>This will permanently delete the task "{taskToDelete?.title}". This action cannot be undone.</AlertDialogDescription></AlertDialogHeader>
           <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={confirmDeleteTask}>Delete</AlertDialogAction></AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
