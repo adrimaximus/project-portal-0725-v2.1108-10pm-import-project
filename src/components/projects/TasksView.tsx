@@ -337,7 +337,7 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[40%] sm:w-[30%] cursor-pointer hover:bg-muted/50 sticky left-0 bg-card z-10" onClick={() => requestSort('title')}>
+              <TableHead className="w-[40%] sm:w-[30%] cursor-pointer hover:bg-muted/50" onClick={() => requestSort('title')}>
                 Task
               </TableHead>
               <TableHead className="w-[20%]">Project</TableHead>
@@ -353,7 +353,7 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
               <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => requestSort('updated_at')}>
                 Last Updated
               </TableHead>
-              <TableHead className="text-right sticky right-0 bg-card z-10">Actions</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -412,7 +412,7 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
                       }}
                       data-state={task.completed ? "completed" : ""}
                     >
-                      <TableCell className="font-medium sticky left-0 bg-background z-10 w-[40%] sm:w-[30%]">
+                      <TableCell className="font-medium w-[40%] sm:w-[30%]">
                         <div className="flex items-start gap-3">
                           <div onClick={(e) => e.stopPropagation()}>
                             <Checkbox
