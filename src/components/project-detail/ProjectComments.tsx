@@ -36,9 +36,11 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
   const [editedText, setEditedText] = useState('');
   const [commentToDelete, setCommentToDelete] = useState<CommentType | null>(null);
   const commentInputRef = useRef<{ setText: (text: string, append?: boolean) => void, focus: () => void }>(null);
+  const lastProcessedMentionId = useRef<string | null>(null);
 
   useEffect(() => {
-    if (initialMention && commentInputRef.current) {
+    if (initialMention && commentInputRef.current && initialMention.id !== lastProcessedMentionId.current) {
+      lastProcessedMentionId.current = initialMention.id;
       const mentionText = `@[${initialMention.name}](${initialMention.id}) `;
       commentInputRef.current.setText(mentionText, true);
       commentInputRef.current.focus();
