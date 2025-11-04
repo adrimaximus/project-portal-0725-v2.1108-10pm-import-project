@@ -185,7 +185,7 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
   };
 
   return (
-    <Card>
+    <Card className="mb-24">
       <TooltipProvider>
         <Collapsible open={isOpen} onOpenChange={setIsOpen}>
           <CollapsibleTrigger className="w-full p-6">
