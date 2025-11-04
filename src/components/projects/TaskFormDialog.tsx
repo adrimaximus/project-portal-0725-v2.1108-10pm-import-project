@@ -177,12 +177,12 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task, proj
           description: task.description,
           due_date: task.due_date ? new Date(task.due_date) : null,
           priority: task.priority || 'Normal',
-          status: task.status,
+          status: task.status || 'To do',
           assignee_ids: task.assignedTo?.map(a => a.id) || [],
           tag_ids: initialTags.map(t => t.id),
         });
         setSelectedTags(initialTags);
-        if (task.status !== 'Done') {
+        if (task.status && task.status !== 'Done') {
           setPreviousStatus(task.status);
         } else {
           setPreviousStatus('To do');
@@ -431,8 +431,8 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task, proj
         name="assignee_ids"
         render={({ field }) => {
           const selectedUsers = useMemo(() => 
-            assignableUsers.filter(user => (field.value || []).includes(user.id)),
-            [field.value, assignableUsers]
+            allProfiles.filter(user => (field.value || []).includes(user.id)),
+            [field.value, allProfiles]
           );
 
           return (
