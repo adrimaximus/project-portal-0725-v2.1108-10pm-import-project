@@ -299,7 +299,7 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task, proj
               value={field.value || ''}
               onChange={field.onChange}
               isLoading={isLoadingProjects}
-              disabled={!!project}
+              disabled={!!task || !!project}
             />
             <FormMessage />
           </FormItem>
