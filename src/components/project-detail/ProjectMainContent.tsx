@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Project, Task, Reaction, User } from "@/types";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ProjectComments from '@/components/project-detail/ProjectComments';
@@ -63,6 +63,10 @@ const ProjectMainContent = ({
       setSearchParams(newSearchParams, { replace: true });
     }
   }, [searchParams, setSearchParams]);
+
+  const handleMentionConsumed = useCallback(() => {
+    setInitialMention(null);
+  }, []);
 
   if (!user) {
     return null;
@@ -186,6 +190,7 @@ const ProjectMainContent = ({
             isUpdatingComment={isUpdatingComment}
             updatedCommentId={updatedCommentId}
             initialMention={initialMention}
+            onMentionConsumed={handleMentionConsumed}
             allUsers={allUsers}
           />
         </TabsContent>

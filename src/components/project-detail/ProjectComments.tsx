@@ -25,11 +25,12 @@ interface ProjectCommentsProps {
   onToggleCommentReaction: (commentId: string, emoji: string) => void;
   isUpdatingComment?: boolean;
   updatedCommentId?: string;
-  initialMention?: { id: string; name: string };
+  initialMention?: { id: string; name: string } | null;
+  onMentionConsumed: () => void;
   allUsers: User[];
 }
 
-const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDeleteComment, onToggleCommentReaction, isUpdatingComment, updatedCommentId, initialMention, allUsers }: ProjectCommentsProps) => {
+const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDeleteComment, onToggleCommentReaction, isUpdatingComment, updatedCommentId, initialMention, onMentionConsumed, allUsers }: ProjectCommentsProps) => {
   const { user } = useAuth();
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editedText, setEditedText] = useState('');
@@ -41,8 +42,9 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
       const mentionText = `@[${initialMention.name}](${initialMention.id}) `;
       commentInputRef.current.setText(mentionText, true);
       commentInputRef.current.focus();
+      onMentionConsumed();
     }
-  }, [initialMention]);
+  }, [initialMention, onMentionConsumed]);
 
   const handleEditClick = (comment: CommentType) => {
     setEditingCommentId(comment.id);
