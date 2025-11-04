@@ -189,7 +189,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
                     }
                   }}
                 >
-                  {formatTaskText(task.description)}
+                  {task.description}
                 </ReactMarkdown>
               </div>
             </div>
