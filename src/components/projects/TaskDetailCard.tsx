@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useRef } from 'react';
+import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { Task, TaskAttachment, Reaction, User, Comment as CommentType } from '@/types';
 import { DrawerContent } from '@/components/ui/drawer';
 import { Button } from '../ui/button';
@@ -44,6 +44,7 @@ import { v4 as uuidv4 } from 'uuid';
 import CommentInput from '../CommentInput';
 import { useProfiles } from '@/hooks/useProfiles';
 import { useCommentMutations } from '@/hooks/useCommentMutations';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../ui/alert-dialog';
 
 interface TaskDetailCardProps {
   task: Task;
@@ -200,6 +201,10 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
       deleteCommentMutation.mutate(commentToDelete.id);
       setCommentToDelete(null);
     }
+  };
+
+  const handleToggleCommentReaction = (commentId: string, emoji: string) => {
+    toggleCommentReaction({ commentId, emoji });
   };
 
   const handleEditFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
