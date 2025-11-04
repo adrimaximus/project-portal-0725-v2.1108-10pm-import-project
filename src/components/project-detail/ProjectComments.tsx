@@ -17,6 +17,10 @@ import CommentReactions from '../CommentReactions';
 import CommentAttachmentItem from '../CommentAttachmentItem';
 import CommentInput from '../CommentInput';
 
+interface CommentWithReactions extends CommentType {
+  reactions?: any[]; // Use a more specific type if available
+}
+
 interface ProjectCommentsProps {
   project: Project;
   onAddCommentOrTicket: (text: string, isTicket: boolean, attachments: File[] | null, mentionedUserIds: string[]) => void;
@@ -37,6 +41,7 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
   const [commentToDelete, setCommentToDelete] = useState<CommentType | null>(null);
   const commentInputRef = useRef<{ setText: (text: string, append?: boolean) => void, focus: () => void }>(null);
   const lastProcessedMentionId = useRef<string | null>(null);
+  const commentsEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (initialMention && commentInputRef.current && initialMention.id !== lastProcessedMentionId.current) {
@@ -47,6 +52,10 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
       onMentionConsumed();
     }
   }, [initialMention, onMentionConsumed]);
+
+  useEffect(() => {
+    commentsEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [project.comments]);
 
   const handleEditClick = (comment: CommentType) => {
     setEditingCommentId(comment.id);
@@ -72,17 +81,13 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
     }
   };
 
+  const comments = (project.comments || []) as CommentWithReactions[];
+
   return (
-    <div className="space-y-6">
-      <CommentInput
-        ref={commentInputRef}
-        project={project}
-        onAddCommentOrTicket={onAddCommentOrTicket}
-        allUsers={allUsers}
-      />
-      <div className="space-y-4 h-[300px] overflow-y-auto pr-4">
-        {project.comments && project.comments.length > 0 ? (
-          project.comments.map((comment: CommentType) => {
+    <div className="flex flex-col h-full min-h-[400px] sm:min-h-[500px]">
+      <div className="flex-1 overflow-y-auto pr-4 space-y-4 mb-4">
+        {comments.length > 0 ? (
+          comments.map((comment: CommentType) => {
             const author = comment.author;
             const fullName = `${author.first_name || ''} ${author.last_name || ''}`.trim() || author.email;
             const canManageComment = user && (comment.author.id === user.id || user.role === 'admin' || user.role === 'master admin');
@@ -165,8 +170,17 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
             );
           })
         ) : (
-          <p className="text-sm text-muted-foreground text-center">No comments yet. Start the discussion!</p>
+          <p className="text-sm text-muted-foreground text-center pt-10">No comments yet. Start the discussion!</p>
         )}
+        <div ref={commentsEndRef} />
+      </div>
+      <div className="flex-shrink-0 pt-4 border-t">
+        <CommentInput
+          ref={commentInputRef}
+          project={project}
+          onAddCommentOrTicket={onAddCommentOrTicket}
+          allUsers={allUsers}
+        />
       </div>
       <AlertDialog open={!!commentToDelete} onOpenChange={() => setCommentToDelete(null)}>
         <AlertDialogContent>

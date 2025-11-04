@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Task, Comment as CommentType, User, Reaction } from "@/types";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -38,6 +38,7 @@ const TaskDiscussion = ({ task, onToggleReaction }: TaskDiscussionProps) => {
   const editFileInputRef = useRef<HTMLInputElement>(null);
   const { data: allUsers = [] } = useProfiles();
   const { toggleCommentReaction } = useCommentMutations(task.id);
+  const commentsEndRef = useRef<HTMLDivElement>(null);
 
   const { data: comments = [], isLoading: isLoadingComments } = useQuery({
     queryKey: ['task-comments', task.id],
@@ -52,6 +53,10 @@ const TaskDiscussion = ({ task, onToggleReaction }: TaskDiscussionProps) => {
     },
     enabled: !!task.id,
   });
+
+  useEffect(() => {
+    commentsEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [comments]);
 
   const addCommentMutation = useMutation({
     mutationFn: async ({ text, attachments, mentionedUserIds }: { text: string, attachments: File[] | null, mentionedUserIds: string[] }) => {
@@ -210,9 +215,9 @@ const TaskDiscussion = ({ task, onToggleReaction }: TaskDiscussionProps) => {
   return (
     <div className="space-y-4">
       <TaskReactions reactions={task.reactions || []} onToggleReaction={onToggleReaction} />
-      <div className="border-t pt-4">
-        <h4 className="font-semibold mb-4">Discussion</h4>
-        <div className="space-y-4 max-h-64 overflow-y-auto pr-2">
+      <div className="border-t pt-4 flex flex-col h-full">
+        <h4 className="font-semibold mb-4 flex-shrink-0">Discussion</h4>
+        <div className="flex-grow overflow-y-auto pr-2 space-y-4 mb-4">
           {isLoadingComments ? <p>Loading comments...</p> : comments.map(comment => {
             const author = comment.author;
             const fullName = `${author.first_name || ''} ${author.last_name || ''}`.trim() || author.email;
@@ -327,8 +332,11 @@ const TaskDiscussion = ({ task, onToggleReaction }: TaskDiscussionProps) => {
               </div>
             );
           })}
+          <div ref={commentsEndRef} />
         </div>
-        <CommentInput project={task as any} onAddCommentOrTicket={handleAddComment} allUsers={allUsers} />
+        <div className="flex-shrink-0 pt-4 border-t">
+          <CommentInput project={task as any} onAddCommentOrTicket={handleAddComment} allUsers={allUsers} />
+        </div>
       </div>
       <AlertDialog open={!!commentToDelete} onOpenChange={() => setCommentToDelete(null)}>
         <AlertDialogContent>
