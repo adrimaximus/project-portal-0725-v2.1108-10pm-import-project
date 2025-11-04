@@ -33,21 +33,27 @@ const formatPhoneNumberForApi = (phone: string): string | null => {
     return null;
 };
 
-const getWbizConfig = () => {
-  // NOTE: Hardcoded credentials as per user instruction for a 100% fix.
-  const clientId = "10561";
-  const apiKey = "8fb9780fcaa16a35c968b6cac39d648146340b14";
-  const whatsappClientId = "4189";
-  
+const getWbizConfig = async () => {
+  const { data: wbizConfig, error: configError } = await supabaseAdmin
+    .from('app_config')
+    .select('key, value')
+    .in('key', ['WBIZTOOL_CLIENT_ID', 'WBIZTOOL_API_KEY']);
+
+  if (configError) throw new Error(`Failed to get WBIZTOOL config: ${configError.message}`);
+
+  const clientId = wbizConfig?.find(c => c.key === 'WBIZTOOL_CLIENT_ID')?.value;
+  const apiKey = wbizConfig?.find(c => c.key === 'WBIZTOOL_API_KEY')?.value;
+  const whatsappClientId = Deno.env.get('WBIZTOOL_WHATSAPP_CLIENT_ID');
+
   if (!clientId || !apiKey || !whatsappClientId) {
-    throw new Error("WBIZTOOL credentials missing or invalid.");
+    throw new Error("WBIZTOOL credentials not fully configured. Check app_config and environment variables.");
   }
   
   return { clientId, apiKey, whatsappClientId };
 };
 
 const sendWhatsappMessage = async (phone: string, message: string) => {
-  const config = getWbizConfig();
+  const config = await getWbizConfig();
   const formattedPhone = formatPhoneNumberForApi(phone);
   if (!formattedPhone) {
     console.warn(`Invalid phone number format: ${phone}. Skipping.`);
