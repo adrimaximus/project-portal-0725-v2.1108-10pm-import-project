@@ -1,9 +1,9 @@
-import React, { useMemo } from 'react';
-import { Task, TaskAttachment, Reaction, User } from '@/types';
+import React, { useMemo, useState } from 'react';
+import { Task, TaskAttachment } from '@/types';
 import { DrawerContent } from '@/components/ui/drawer';
 import { Button } from '../ui/button';
 import { format } from 'date-fns';
-import { cn, isOverdue, formatTaskText, getPriorityStyles, getTaskStatusStyles, getDueDateClassName, getAvatarUrl, generatePastelColor, getInitials } from '@/lib/utils';
+import { cn, formatTaskText, getPriorityStyles, getTaskStatusStyles, getDueDateClassName, getAvatarUrl, generatePastelColor, getInitials } from '@/lib/utils';
 import {
   Edit,
   Trash2,
@@ -11,7 +11,6 @@ import {
   Paperclip,
   Link as LinkIcon,
   MoreHorizontal,
-  BellRing,
   Loader2,
   Calendar,
   Briefcase,
@@ -33,8 +32,6 @@ import {
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu';
 import { Link } from 'react-router-dom';
-import TaskFooter from './TaskFooter';
-import { Badge } from '../ui/badge';
 import TaskDiscussion from './TaskDiscussion';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
@@ -62,13 +59,13 @@ const aggregateAttachments = (task: Task): TaskAttachment[] => {
     const existingUrls = new Set(attachments.map((a) => a.file_url));
     if (!existingUrls.has(task.attachment_url)) {
       attachments.push({
-        id: task.origin_ticket_id || `legacy-${task.id}`, // Use origin ticket ID if available
+        id: task.origin_ticket_id || `legacy-${task.id}`,
         file_name: task.attachment_name,
         file_url: task.attachment_url,
         file_type: null,
         file_size: null,
-        storage_path: '', // Not available for legacy
-        created_at: task.created_at, // Approximate time
+        storage_path: '',
+        created_at: task.created_at,
       });
     }
   }
@@ -78,7 +75,8 @@ const aggregateAttachments = (task: Task): TaskAttachment[] => {
 
 const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, onDelete }) => {
   const queryClient = useQueryClient();
-  const { toggleTaskReaction, sendReminder, isSendingReminder } = useTaskMutations();
+  const { toggleTaskReaction, sendReminder } = useTaskMutations();
+  const [showFullDescription, setShowFullDescription] = useState(false);
 
   const allAttachments = useMemo(() => (task ? aggregateAttachments(task) : []), [task]);
 
@@ -91,6 +89,12 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
       </DrawerContent>
     );
   }
+
+  const description = task.description || '';
+  const isLongDescription = description.length > 500;
+  const displayedDescription = isLongDescription && !showFullDescription
+    ? `${description.substring(0, 500)}...`
+    : description;
 
   const handleToggleReaction = (emoji: string) => {
     toggleTaskReaction(
@@ -115,28 +119,17 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
   return (
     <DrawerContent>
       <div className="mx-auto w-full max-w-[650px] flex flex-col max-h-[90vh]">
-        {/* Header with drag handle */}
         <div className="flex-shrink-0 p-4 pt-3">
           <div className="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-muted" />
         </div>
 
-        {/* The original header content */}
         <div className="flex-shrink-0 border-b border-border px-4 pb-4">
           <div className="flex justify-between items-start gap-3">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 text-base sm:text-lg font-semibold leading-none tracking-tight">
-                {task.origin_ticket_id && (
-                  <Ticket className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
-                )}
-                {allAttachments.length > 0 && (
-                  <Paperclip className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0 text-muted-foreground" />
-                )}
-                <span
-                  className={cn(
-                    "min-w-0 break-words",
-                    task.completed && "line-through text-muted-foreground"
-                  )}
-                >
+                {task.origin_ticket_id && <Ticket className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />}
+                {allAttachments.length > 0 && <Paperclip className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0 text-muted-foreground" />}
+                <span className={cn("min-w-0 break-words", task.completed && "line-through text-muted-foreground")}>
                   <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ p: "span" }}>
                     {formatTaskText(task.title)}
                   </ReactMarkdown>
@@ -160,10 +153,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
                 <DropdownMenuItem onSelect={handleCopyLink}>
                   <LinkIcon className="mr-2 h-4 w-4" /> Copy Link
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  onSelect={() => { onDelete(task.id); onClose(); }}
-                  className="text-destructive"
-                >
+                <DropdownMenuItem onSelect={() => { onDelete(task.id); onClose(); }} className="text-destructive">
                   <Trash2 className="mr-2 h-4 w-4" /> Delete
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -171,7 +161,6 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
           </div>
         </div>
 
-        {/* Scrollable main content */}
         <div className="flex-grow overflow-y-auto p-4 text-sm space-y-4 scrollbar-thin scrollbar-thumb-zinc-700 hover:scrollbar-thumb-zinc-500 scrollbar-track-transparent">
           {task.description && (
             <div className="border-b pb-4">
@@ -189,24 +178,28 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
                     }
                   }}
                 >
-                  {task.description}
+                  {displayedDescription}
                 </ReactMarkdown>
               </div>
+              {isLongDescription && (
+                <Button
+                  variant="link"
+                  className="p-0 h-auto text-xs mt-2"
+                  onClick={() => setShowFullDescription(!showFullDescription)}
+                >
+                  {showFullDescription ? 'Show less' : 'Show more'}
+                </Button>
+              )}
             </div>
           )}
 
-          {/* Project, due date, status, priority */}
           <div className="grid grid-cols-2 gap-4 sm:gap-6">
             <div className="flex items-start gap-3">
               <Briefcase className="h-4 w-4 mt-1 flex-shrink-0 text-muted-foreground" />
               <div>
                 <p className="font-semibold">Project</p>
                 {task.project_name ? (
-                  <Link
-                    to={`/projects/${task.project_slug}`}
-                    className="hover:underline text-primary break-words"
-                    onClick={onClose}
-                  >
+                  <Link to={`/projects/${task.project_slug}`} className="hover:underline text-primary break-words" onClick={onClose}>
                     {task.project_name}
                   </Link>
                 ) : (
@@ -294,18 +287,12 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
             </div>
           </div>
 
-          {/* Tags */}
           {task.tags?.length > 0 && (
             <div className="flex items-start gap-2 border-t pt-4">
               <Tag className="h-4 w-4 mt-1 text-muted-foreground" />
               <div className="flex gap-1 flex-wrap">
                 {task.tags.map((tag) => (
-                  <Badge
-                    key={tag.id}
-                    variant="outline"
-                    style={{ borderColor: tag.color, color: tag.color }}
-                    className="text-xs"
-                  >
+                  <Badge key={tag.id} variant="outline" style={{ borderColor: tag.color, color: tag.color }} className="text-xs">
                     {tag.name}
                   </Badge>
                 ))}
@@ -313,7 +300,6 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
             </div>
           )}
 
-          {/* Attachments */}
           {allAttachments.length > 0 && (
             <div className="border-t pt-4">
               <h4 className="font-semibold mb-2 flex items-center gap-2 text-sm">
@@ -323,7 +309,6 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
             </div>
           )}
 
-          {/* Footer Reactions and Discussion */}
           <TaskDiscussion task={task} onToggleReaction={handleToggleReaction} />
         </div>
       </div>
