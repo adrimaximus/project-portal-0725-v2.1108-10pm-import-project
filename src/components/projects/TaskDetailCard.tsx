@@ -62,13 +62,13 @@ const aggregateAttachments = (task: Task): TaskAttachment[] => {
     const existingUrls = new Set(attachments.map((a) => a.file_url));
     if (!existingUrls.has(task.attachment_url)) {
       attachments.push({
-        id: task.origin_ticket_id || `legacy-${task.id}`,
+        id: task.origin_ticket_id || `legacy-${task.id}`, // Use origin ticket ID if available
         file_name: task.attachment_name,
         file_url: task.attachment_url,
         file_type: null,
         file_size: null,
-        storage_path: '',
-        created_at: task.created_at,
+        storage_path: '', // Not available for legacy
+        created_at: task.created_at, // Approximate time
       });
     }
   }
@@ -177,7 +177,18 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
             <div className="border-b pb-4">
               <h4 className="font-semibold mb-2 text-sm">Description</h4>
               <div className="prose prose-sm dark:prose-invert max-w-none text-muted-foreground break-all">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
+                  components={{
+                    a: ({ node, ...props }) => {
+                      const href = props.href || '';
+                      if (href.startsWith('/')) {
+                        return <Link to={href} {...props} className="text-primary hover:underline" />;
+                      }
+                      return <a {...props} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline" />;
+                    }
+                  }}
+                >
                   {formatTaskText(task.description)}
                 </ReactMarkdown>
               </div>
