@@ -182,7 +182,12 @@ const TaskDiscussion = ({ task, onToggleReaction }: TaskDiscussionProps) => {
                 </Avatar>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
-                    <p className="font-semibold">{fullName}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-semibold">{fullName}</p>
+                      {comment.isTicket && (
+                        <Ticket className="h-4 w-4 text-muted-foreground" title="Created as ticket" />
+                      )}
+                    </div>
                     <div className="flex items-center gap-1">
                       <span className="text-xs text-muted-foreground">
                         {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
