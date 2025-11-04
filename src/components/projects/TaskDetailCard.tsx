@@ -3,7 +3,7 @@ import { Task, TaskAttachment } from '@/types';
 import { DrawerContent } from '@/components/ui/drawer';
 import { Button } from '../ui/button';
 import { format } from 'date-fns';
-import { cn, formatTaskText, getPriorityStyles, getTaskStatusStyles, getDueDateClassName, getAvatarUrl, generatePastelColor, getInitials } from '@/lib/utils';
+import { cn, isOverdue, formatTaskText, getPriorityStyles, getTaskStatusStyles, getDueDateClassName, getAvatarUrl, generatePastelColor, getInitials } from '@/lib/utils';
 import {
   Edit,
   Trash2,
@@ -11,6 +11,7 @@ import {
   Paperclip,
   Link as LinkIcon,
   MoreHorizontal,
+  BellRing,
   Loader2,
   Calendar,
   Briefcase,
@@ -36,6 +37,7 @@ import TaskDiscussion from './TaskDiscussion';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 import { toast } from 'sonner';
+import { Badge } from '@/components/ui/badge';
 
 interface TaskDetailCardProps {
   task: Task;
@@ -59,13 +61,13 @@ const aggregateAttachments = (task: Task): TaskAttachment[] => {
     const existingUrls = new Set(attachments.map((a) => a.file_url));
     if (!existingUrls.has(task.attachment_url)) {
       attachments.push({
-        id: task.origin_ticket_id || `legacy-${task.id}`,
+        id: task.origin_ticket_id || `legacy-${task.id}`, // Use origin ticket ID if available
         file_name: task.attachment_name,
         file_url: task.attachment_url,
         file_type: null,
         file_size: null,
-        storage_path: '',
-        created_at: task.created_at,
+        storage_path: '', // Not available for legacy
+        created_at: task.created_at, // Approximate time
       });
     }
   }
