@@ -101,7 +101,7 @@ const ProjectDetailPage = () => {
   const handleSaveChanges = useCallback(() => {
     if (editedProject) {
       updateProject.mutate(editedProject, {
-        onSuccess: (data) => {
+        onSuccess: (data: Project) => {
           setIsEditing(false);
           setEditedProject(null);
           setHasChanges(false);

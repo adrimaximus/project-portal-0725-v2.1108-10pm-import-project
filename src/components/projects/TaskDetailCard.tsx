@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from 'react';
-import { Task, TaskAttachment } from '@/types';
+import React, { useMemo } from 'react';
+import { Task, TaskAttachment, Reaction, User } from '@/types';
 import { DrawerContent } from '@/components/ui/drawer';
 import { Button } from '../ui/button';
 import { format } from 'date-fns';
@@ -107,17 +107,18 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
   const allTags = useMemo(() => {
     const tags = [...(task?.tags || [])];
     if (task?.origin_ticket_id) {
-      const hasTicketTag = tags.some(tag => tag.name.toLowerCase() === 'ticket');
+      const hasTicketTag = tags.some(t => t.name.toLowerCase() === 'ticket');
       if (!hasTicketTag) {
         tags.push({
           id: 'ticket-tag',
           name: 'Ticket',
           color: '#8B5CF6', // Default purple color for tickets
+          user_id: task.created_by.id,
         });
       }
     }
     return tags;
-  }, [task?.tags, task?.origin_ticket_id]);
+  }, [task?.tags, task?.origin_ticket_id, task?.created_by.id]);
 
   if (!task) {
     return (
