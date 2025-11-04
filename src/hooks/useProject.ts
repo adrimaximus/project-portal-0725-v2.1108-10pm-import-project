@@ -8,7 +8,9 @@ const fetchProject = async (slug: string): Promise<Project | null> => {
     .single();
 
   if (projectError) {
+    // PGRST116: "Not a single row was found" - This is expected if the slug is wrong or user lacks permission.
     if (projectError.code === 'PGRST116') {
+      console.warn(`Project with slug "${slug}" not found or user lacks permission.`);
       return null;
     }
     console.error("Error fetching project:", projectError);
