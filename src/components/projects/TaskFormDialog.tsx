@@ -60,15 +60,31 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task, proj
   
   const projectsForCombobox = useMemo(() => {
     const hookProjects = projectsData?.pages.flatMap(page => page.projects) ?? [];
-    if (!project) {
-      return hookProjects;
+    
+    // If we are editing a task, its project might not be in the initial fetched list.
+    // Let's ensure it's present for the combobox to display the name.
+    if (task && task.project_id) {
+        const taskProjectExists = hookProjects.some(p => p.id === task.project_id);
+        if (!taskProjectExists) {
+            const taskProject = {
+                id: task.project_id,
+                name: task.project_name,
+                slug: task.project_slug,
+            } as Project;
+            return [taskProject, ...hookProjects];
+        }
     }
-    const projectExists = hookProjects.some(p => p.id === project.id);
-    if (projectExists) {
-      return hookProjects;
+
+    // Original logic for when a full project object is passed as a prop
+    if (project) {
+        const projectExists = hookProjects.some(p => p.id === project.id);
+        if (!projectExists) {
+            return [project, ...hookProjects];
+        }
     }
-    return [project, ...hookProjects];
-  }, [projectsData, project]);
+
+    return hookProjects;
+  }, [projectsData, project, task]);
 
   const { data: allTags = [], refetch: refetchTags } = useTags();
   const { data: allProfiles = [], isLoading: isLoadingProfiles } = useProfiles();
@@ -143,32 +159,25 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task, proj
       setNewFiles([]);
       setFilesToDelete([]);
       
-      let initialTags: Tag[] = [];
-
       if (task) {
-        // 1. Ambil tag yang sudah ada
-        initialTags = task.tags || [];
+        let initialTags = task.tags || [];
+        const isTicketByTag = initialTags.some(t => t.name === TICKET_TAG_NAME);
+        const isTicketByOrigin = !!task.origin_ticket_id;
 
-        // 2. Cek apakah ini tiket yang berasal dari komentar (fallback konsistensi data)
-        if (task.origin_ticket_id) {
-          const ticketTagInOptions = allTags.find(t => t.name === TICKET_TAG_NAME);
-          
-          // Jika tag 'Ticket' belum ada di daftar tag tugas, tambahkan
-          if (!initialTags.some(t => t.name === TICKET_TAG_NAME)) {
+        if ((isTicketByOrigin || isTicketByTag) && !isTicketByTag) {
+            const ticketTagInOptions = allTags.find(t => t.name === TICKET_TAG_NAME);
             if (ticketTagInOptions) {
-              initialTags = [...initialTags, ticketTagInOptions];
+                initialTags = [...initialTags, ticketTagInOptions];
             } else {
-              // Fallback: Buat representasi tag baru (ini akan dibuat saat submit)
-              const syntheticTicketTag: Tag = {
-                id: uuidv4(),
-                name: TICKET_TAG_NAME,
-                color: '#DB2777',
-                isNew: true,
-                user_id: task.created_by.id,
-              };
-              initialTags = [...initialTags, syntheticTicketTag];
+                const syntheticTicketTag: Tag = {
+                    id: uuidv4(),
+                    name: TICKET_TAG_NAME,
+                    color: '#DB2777',
+                    isNew: true,
+                    user_id: task.created_by.id,
+                };
+                initialTags = [...initialTags, syntheticTicketTag];
             }
-          }
         }
 
         form.reset({
