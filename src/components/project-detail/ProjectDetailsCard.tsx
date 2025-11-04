@@ -18,6 +18,7 @@ import { useMemo } from "react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { Avatar, AvatarImage, AvatarFallback } from "../ui/avatar";
 
 // Extend types to include the new optional company_id field for a robust relationship.
 type LocalPerson = Person & { company_id?: string | null };
@@ -39,56 +40,14 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange, onStatusChange,
   const { hasPermission } = useAuth();
   const canViewValue = hasPermission('projects:view_value');
 
-  const client = project.people?.[0];
-
-  const { data: directCompany } = useQuery({
-    queryKey: ['company_details', project.client_company_id],
-    queryFn: async () => {
-      if (!project.client_company_id) return null;
-      const { data, error } = await supabase.from('companies').select('*').eq('id', project.client_company_id).single();
-      if (error) throw error;
-      return data as Company;
-    },
-    enabled: !!project.client_company_id && !client,
-  });
-
-  const { data: companyProperties = [] } = useQuery({
-    queryKey: ['custom_properties', 'company'],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('custom_properties').select('*').eq('category', 'company');
-      if (error) throw error;
-      return data;
-    }
-  });
-
-  const companyIdForLogo = client?.company_id || project.client_company_id;
-
-  const { data: company } = useQuery({
-    queryKey: ['company_logo', companyIdForLogo],
-    queryFn: async () => {
-      if (!companyIdForLogo) return null;
-      const { data, error } = await supabase
-        .from('companies')
-        .select('logo_url, custom_properties')
-        .eq('id', companyIdForLogo)
-        .single();
-      if (error && error.code !== 'PGRST116') {
-        console.warn(`Could not fetch company by ID "${companyIdForLogo}":`, error.message);
-      }
-      return data;
-    },
-    enabled: !!companyIdForLogo,
-  });
-
-  const companyLogoUrl = useMemo(() => {
-    if (!company) return null;
-    const logoProperty = companyProperties.find(p => p.label === 'Logo Image');
-    if (logoProperty && company.custom_properties) {
-        const customLogo = company.custom_properties[logoProperty.name];
-        if (customLogo) return customLogo;
-    }
-    return company.logo_url;
-  }, [company, companyProperties]);
+  const clientInfo = useMemo(() => {
+    return {
+      name: project.client_name,
+      companyName: project.client_company_name,
+      avatarUrl: project.client_avatar_url,
+      logoUrl: project.client_company_logo_url,
+    };
+  }, [project]);
 
   const { data: allPeople, isLoading: isLoadingPeople } = useQuery<LocalPerson[]>({
     queryKey: ['allPeople'],
@@ -172,8 +131,6 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange, onStatusChange,
       return <p className="text-muted-foreground">No venue specified</p>;
     }
 
-    let venueName = '';
-    let venueAddress = '';
     let fullQuery = project.venue;
     let displayVenue = project.venue;
 
@@ -407,32 +364,25 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange, onStatusChange,
                     </Select>
                   ) : (
                     <div className="pt-1">
-                      {client ? (
+                      {clientInfo.name ? (
                         <div className="flex items-center gap-3">
-                          {companyLogoUrl ? (
-                            <img src={companyLogoUrl} alt={client.company || ''} className="h-8 w-8 object-contain rounded-md bg-muted p-1" />
+                          {clientInfo.logoUrl ? (
+                            <img src={clientInfo.logoUrl} alt={clientInfo.companyName || ''} className="h-8 w-8 object-contain rounded-md bg-muted p-1" />
+                          ) : clientInfo.avatarUrl ? (
+                             <Avatar className="h-8 w-8">
+                                <AvatarImage src={clientInfo.avatarUrl} />
+                                <AvatarFallback><User className="h-4 w-4" /></AvatarFallback>
+                             </Avatar>
                           ) : (
                             <div className="h-8 w-8 rounded-md bg-muted flex items-center justify-center">
                               <Building className="h-4 w-4 text-muted-foreground" />
                             </div>
                           )}
                           <div>
-                            <p className="text-foreground font-semibold">{client.full_name}</p>
-                            <p className="text-muted-foreground text-xs">{client.company}</p>
-                          </div>
-                        </div>
-                      ) : directCompany ? (
-                        <div className="flex items-center gap-3">
-                          {companyLogoUrl ? (
-                            <img src={companyLogoUrl} alt={directCompany.name || ''} className="h-8 w-8 object-contain rounded-md bg-muted p-1" />
-                          ) : (
-                            <div className="h-8 w-8 rounded-md bg-muted flex items-center justify-center">
-                              <Building className="h-4 w-4 text-muted-foreground" />
-                            </div>
-                          )}
-                          <div>
-                            <p className="text-foreground font-semibold">{directCompany.name}</p>
-                            <p className="text-muted-foreground text-xs">Company</p>
+                            <p className="text-foreground font-semibold">{clientInfo.name}</p>
+                            {clientInfo.companyName && clientInfo.companyName !== clientInfo.name && (
+                              <p className="text-muted-foreground text-xs">{clientInfo.companyName}</p>
+                            )}
                           </div>
                         </div>
                       ) : (
