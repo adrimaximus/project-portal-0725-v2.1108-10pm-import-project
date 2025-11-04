@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, forwardRef, useImperativeHandle } from 'react';
 import { Project, User } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
@@ -13,14 +13,31 @@ interface CommentInputProps {
   project: Project;
   onAddCommentOrTicket: (text: string, isTicket: boolean, attachments: File[] | null, mentionedUserIds: string[]) => void;
   allUsers: User[];
+  initialValue?: string;
 }
 
-const CommentInput = ({ project, onAddCommentOrTicket, allUsers }: CommentInputProps) => {
+const CommentInput = forwardRef(({ project, onAddCommentOrTicket, allUsers, initialValue }: CommentInputProps, ref) => {
   const { user } = useAuth();
-  const [text, setText] = useState('');
+  const [text, setText] = useState(initialValue || '');
   const [isTicket, setIsTicket] = useState(false);
   const [attachments, setAttachments] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const mentionsInputRef = useRef<any>(null);
+
+  useImperativeHandle(ref, () => ({
+    setText: (newText: string, append: boolean = false) => {
+      setText(prev => append ? `${prev}${newText}` : newText);
+    },
+    focus: () => {
+      mentionsInputRef.current?.inputElement?.focus();
+    }
+  }));
+
+  useEffect(() => {
+    if (initialValue) {
+      setText(initialValue);
+    }
+  }, [initialValue]);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) {
@@ -70,6 +87,7 @@ const CommentInput = ({ project, onAddCommentOrTicket, allUsers }: CommentInputP
             placeholder="Add a comment or create a ticket... Type @ to mention a team member."
             className="mentions-input"
             a11ySuggestionsListLabel={"Suggested mentions"}
+            inputRef={mentionsInputRef}
           >
             <Mention
               trigger="@"
@@ -147,6 +165,6 @@ const CommentInput = ({ project, onAddCommentOrTicket, allUsers }: CommentInputP
       </div>
     </div>
   );
-};
+});
 
 export default CommentInput;

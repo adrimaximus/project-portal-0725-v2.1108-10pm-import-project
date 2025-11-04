@@ -1,8 +1,7 @@
-import { useState } from 'react';
-import { Project, Task, Reaction } from "@/types";
+import { useState, useEffect } from 'react';
+import { Project, Task, Reaction, User } from "@/types";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import ProjectBrief from "./ProjectBrief";
-import ProjectComments from '@/components/ProjectComments';
+import ProjectComments from '@/components/project-detail/ProjectComments';
 import { useAuth } from '@/contexts/AuthContext';
 import ProjectOverviewTab from './ProjectOverviewTab';
 import ProjectTasks from './ProjectTasks';
@@ -10,6 +9,7 @@ import ProjectActivityFeed from './ProjectActivityFeed';
 import { LayoutGrid, ListChecks, MessageSquare, Activity } from 'lucide-react';
 import { useProfiles } from '@/hooks/useProfiles';
 import { toast } from 'sonner';
+import { useSearchParams } from 'react-router-dom';
 
 interface ProjectMainContentProps {
   project: Project;
@@ -46,6 +46,23 @@ const ProjectMainContent = ({
   const { data: allUsers = [] } = useProfiles();
   const [activeTab, setActiveTab] = useState(defaultTab);
   const [lastViewedDiscussion, setLastViewedDiscussion] = useState(() => new Date());
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [initialMention, setInitialMention] = useState<{ id: string; name: string } | null>(null);
+
+  useEffect(() => {
+    const mentionId = searchParams.get('mention');
+    const mentionName = searchParams.get('mentionName');
+
+    if (mentionId && mentionName) {
+      setActiveTab('discussion');
+      setInitialMention({ id: mentionId, name: mentionName });
+      
+      const newSearchParams = new URLSearchParams(searchParams);
+      newSearchParams.delete('mention');
+      newSearchParams.delete('mentionName');
+      setSearchParams(newSearchParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   if (!user) {
     return null;
@@ -168,6 +185,8 @@ const ProjectMainContent = ({
             onToggleCommentReaction={onToggleCommentReaction}
             isUpdatingComment={isUpdatingComment}
             updatedCommentId={updatedCommentId}
+            initialMention={initialMention}
+            allUsers={allUsers}
           />
         </TabsContent>
         <TabsContent value="activity" className="mt-4 h-[350px] overflow-y-auto pr-4">
