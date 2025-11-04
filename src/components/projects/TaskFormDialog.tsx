@@ -159,18 +159,19 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task, proj
       setNewFiles([]);
       setFilesToDelete([]);
       
-      if (task) {
+      if (task) { // EDIT MODE
         let initialTags = task.tags || [];
         const isTicketByTag = initialTags.some(t => t.name === TICKET_TAG_NAME);
         const isTicketByOrigin = !!task.origin_ticket_id;
 
-        if ((isTicketByOrigin || isTicketByTag) && !isTicketByTag) {
+        // If it's a ticket by origin but doesn't have the tag, add it for UI consistency.
+        if (isTicketByOrigin && !isTicketByTag) {
             const ticketTagInOptions = allTags.find(t => t.name === TICKET_TAG_NAME);
             if (ticketTagInOptions) {
                 initialTags = [...initialTags, ticketTagInOptions];
-            } else {
+            } else if (allTags.length > 0) { // Ensure allTags is loaded before creating a synthetic tag
                 const syntheticTicketTag: Tag = {
-                    id: uuidv4(),
+                    id: `new-${TICKET_TAG_NAME}-${Date.now()}`,
                     name: TICKET_TAG_NAME,
                     color: '#DB2777',
                     isNew: true,
@@ -196,12 +197,15 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task, proj
         } else {
           setPreviousStatus('To do');
         }
-      } else {
+      } else { // CREATE MODE
         const personalProject = projectsForCombobox.find(p => p.personal_for_user_id === currentUser?.id);
         const generalTasksProject = projectsForCombobox.find(p => p.slug === 'general-tasks');
+        
+        const initialProjectId = project?.id || personalProject?.id || generalTasksProject?.id || '';
+
         form.reset({
           title: '',
-          project_id: project?.id || personalProject?.id || generalTasksProject?.id || '',
+          project_id: initialProjectId,
           description: '',
           due_date: null,
           priority: 'Normal',
@@ -234,7 +238,7 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task, proj
 
   const isTicketChecked = useMemo(() => 
     selectedTags.some(t => t.name === TICKET_TAG_NAME),
-    [selectedTags, TICKET_TAG_NAME]
+    [selectedTags]
   );
 
   const handleIsTicketChange = (checked: boolean) => {
