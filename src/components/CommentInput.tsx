@@ -1,4 +1,5 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Project, User } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
@@ -21,6 +22,26 @@ const CommentInput = ({ project, onAddCommentOrTicket, allUsers }: CommentInputP
   const [isTicket, setIsTicket] = useState(false);
   const [attachments, setAttachments] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const mentionsInputRef = useRef<{ input: HTMLTextAreaElement } | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  useEffect(() => {
+    const mentionId = searchParams.get('mention');
+    const mentionName = searchParams.get('mentionName');
+
+    if (mentionId && mentionName) {
+      const mentionText = `@[${mentionName}](${mentionId}) `;
+      setText(prev => prev ? `${prev}${mentionText}` : mentionText);
+      
+      setTimeout(() => {
+        mentionsInputRef.current?.input?.focus();
+      }, 100);
+
+      searchParams.delete('mention');
+      searchParams.delete('mentionName');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) {
@@ -70,6 +91,7 @@ const CommentInput = ({ project, onAddCommentOrTicket, allUsers }: CommentInputP
             placeholder="Add a comment or create a ticket... Type @ to mention a team member."
             className="mentions-input"
             a11ySuggestionsListLabel={"Suggested mentions"}
+            inputRef={mentionsInputRef as any}
           >
             <Mention
               trigger="@"
