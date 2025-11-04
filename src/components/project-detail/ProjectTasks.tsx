@@ -275,18 +275,37 @@ const ProjectTasks = ({ tasks, projectId, projectSlug, onEditTask, onDeleteTask,
     return { undoneTasks: undone, doneTasks: done };
   }, [tasks]);
 
-  if (!tasks || tasks.length === 0) {
-    return (
-      <div className="text-center text-muted-foreground py-4">
-        <ListChecks className="mx-auto h-8 w-8" />
-        <p className="mt-2 text-sm">No tasks for this project yet.</p>
-        <Button onClick={() => setShowNewTaskForm(true)} className="mt-3 text-sm h-8 px-3">
-          <Plus className="mr-1 h-4 w-4" />
-          Add First Task
+  const hasNoTasks = !tasks || tasks.length === 0;
+
+  const addTaskForm = (
+    <div className="p-2">
+      <Textarea
+        placeholder="What needs to be done?"
+        value={newTaskTitle}
+        onChange={(e) => setNewTaskTitle(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            handleAddNewTask();
+          }
+          if (e.key === 'Escape') {
+            e.preventDefault();
+            setShowNewTaskForm(false);
+            setNewTaskTitle("");
+          }
+        }}
+        autoFocus
+        className="mb-2"
+      />
+      <div className="flex items-center gap-2">
+        <Button onClick={handleAddNewTask} disabled={isAddingTask}>
+          {isAddingTask ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+          Add Task
         </Button>
+        <Button variant="ghost" onClick={() => { setShowNewTaskForm(false); setNewTaskTitle(""); }}>Cancel</Button>
       </div>
-    );
-  }
+    </div>
+  );
 
   return (
     <div className="space-y-1">
@@ -310,32 +329,15 @@ const ProjectTasks = ({ tasks, projectId, projectSlug, onEditTask, onDeleteTask,
       </TooltipProvider>
 
       {showNewTaskForm ? (
-        <div className="p-2">
-          <Textarea
-            placeholder="What needs to be done?"
-            value={newTaskTitle}
-            onChange={(e) => setNewTaskTitle(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleAddNewTask();
-              }
-              if (e.key === 'Escape') {
-                e.preventDefault();
-                setShowNewTaskForm(false);
-                setNewTaskTitle("");
-              }
-            }}
-            autoFocus
-            className="mb-2"
-          />
-          <div className="flex items-center gap-2">
-            <Button onClick={handleAddNewTask} disabled={isAddingTask}>
-              {isAddingTask ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              Add Task
-            </Button>
-            <Button variant="ghost" onClick={() => { setShowNewTaskForm(false); setNewTaskTitle(""); }}>Cancel</Button>
-          </div>
+        addTaskForm
+      ) : hasNoTasks ? (
+        <div className="text-center text-muted-foreground py-4">
+          <ListChecks className="mx-auto h-8 w-8" />
+          <p className="mt-2 text-sm">No tasks for this project yet.</p>
+          <Button onClick={() => setShowNewTaskForm(true)} className="mt-3 text-sm h-8 px-3">
+            <Plus className="mr-1 h-4 w-4" />
+            Add First Task
+          </Button>
         </div>
       ) : (
         <Button variant="ghost" onClick={() => setShowNewTaskForm(true)} className="w-full justify-start mt-2 text-muted-foreground hover:text-foreground">
