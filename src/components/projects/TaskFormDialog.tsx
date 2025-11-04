@@ -60,30 +60,32 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task, proj
   
   const projectsForCombobox = useMemo(() => {
     const hookProjects = projectsData?.pages.flatMap(page => page.projects) ?? [];
-    
-    // If we are editing a task, its project might not be in the initial fetched list.
-    // Let's ensure it's present for the combobox to display the name.
-    if (task && task.project_id) {
-        const taskProjectExists = hookProjects.some(p => p.id === task.project_id);
-        if (!taskProjectExists) {
-            const taskProject = {
-                id: task.project_id,
-                name: task.project_name,
-                slug: task.project_slug,
-            } as Project;
-            return [taskProject, ...hookProjects];
-        }
-    }
+    const projectsMap = new Map<string, Project>();
 
-    // Original logic for when a full project object is passed as a prop
+    // Add prop project first to give it priority
     if (project) {
-        const projectExists = hookProjects.some(p => p.id === project.id);
-        if (!projectExists) {
-            return [project, ...hookProjects];
-        }
+      projectsMap.set(project.id, project);
     }
 
-    return hookProjects;
+    // Add task's project if editing
+    if (task && task.project_id) {
+      if (!projectsMap.has(task.project_id)) {
+        projectsMap.set(task.project_id, {
+          id: task.project_id,
+          name: task.project_name,
+          slug: task.project_slug,
+        } as Project);
+      }
+    }
+
+    // Add all other projects from the hook
+    hookProjects.forEach(p => {
+      if (!projectsMap.has(p.id)) {
+        projectsMap.set(p.id, p);
+      }
+    });
+
+    return Array.from(projectsMap.values());
   }, [projectsData, project, task]);
 
   const { data: allTags = [], refetch: refetchTags } = useTags();
@@ -160,24 +162,23 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task, proj
       setFilesToDelete([]);
       
       if (task) { // EDIT MODE
-        let initialTags = task.tags || [];
+        let initialTags = [...(task.tags || [])];
         const isTicketByTag = initialTags.some(t => t.name === TICKET_TAG_NAME);
         const isTicketByOrigin = !!task.origin_ticket_id;
 
-        // If it's a ticket by origin but doesn't have the tag, add it for UI consistency.
         if (isTicketByOrigin && !isTicketByTag) {
             const ticketTagInOptions = allTags.find(t => t.name === TICKET_TAG_NAME);
             if (ticketTagInOptions) {
-                initialTags = [...initialTags, ticketTagInOptions];
-            } else if (allTags.length > 0) { // Ensure allTags is loaded before creating a synthetic tag
+                initialTags.push(ticketTagInOptions);
+            } else {
                 const syntheticTicketTag: Tag = {
-                    id: `new-${TICKET_TAG_NAME}-${Date.now()}`,
+                    id: `new-${TICKET_TAG_NAME}-${uuidv4()}`,
                     name: TICKET_TAG_NAME,
                     color: '#DB2777',
                     isNew: true,
                     user_id: task.created_by.id,
                 };
-                initialTags = [...initialTags, syntheticTicketTag];
+                initialTags.push(syntheticTicketTag);
             }
         }
 
