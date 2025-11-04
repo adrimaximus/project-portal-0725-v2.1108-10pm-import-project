@@ -1,3 +1,4 @@
+import React from 'react';
 import { Comment as CommentType, User } from "@/types";
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { formatDistanceToNow } from 'date-fns';
