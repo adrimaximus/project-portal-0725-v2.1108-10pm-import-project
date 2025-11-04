@@ -12,18 +12,21 @@ import { toast } from "sonner";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { getInitials, generatePastelColor, getAvatarUrl } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useNavigate } from "react-router-dom";
 
 interface ProjectTeamCardProps {
   project: Project;
+  onMentionUser: (user: User | AssignedUser) => void;
 }
 
-const ProjectTeamCard = ({ project }: ProjectTeamCardProps) => {
+const ProjectTeamCard = ({ project, onMentionUser }: ProjectTeamCardProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedTeam, setEditedTeam] = useState<AssignedUser[]>(project.assignedTo);
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const { user: currentUser } = useAuth();
   const [isChangeOwnerDialogOpen, setIsChangeOwnerDialogOpen] = useState(false);
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   useEffect(() => {
     setEditedTeam(project.assignedTo);
@@ -53,6 +56,14 @@ const ProjectTeamCard = ({ project }: ProjectTeamCardProps) => {
       fetchUsers();
     }
   }, [isEditing]);
+
+  const handleMention = (user: User | AssignedUser) => {
+    const searchParams = new URLSearchParams(window.location.search);
+    searchParams.set('tab', 'discussion');
+    searchParams.set('mention', user.id);
+    searchParams.set('mentionName', user.name || '');
+    navigate(`?${searchParams.toString()}`, { replace: true });
+  };
 
   const updateTeamMutation = useMutation({
     mutationFn: async (newTeam: AssignedUser[]) => {
@@ -127,11 +138,13 @@ const ProjectTeamCard = ({ project }: ProjectTeamCardProps) => {
       <div className="flex flex-wrap gap-2">
         {users.map(member => (
           <Tooltip key={member.id}>
-            <TooltipTrigger>
-              <Avatar className="h-9 w-9">
-                <AvatarImage src={getAvatarUrl(member.avatar_url, member.id)} />
-                <AvatarFallback style={generatePastelColor(member.id)}>{member.initials}</AvatarFallback>
-              </Avatar>
+            <TooltipTrigger asChild>
+              <button onClick={() => handleMention(member)} className="p-0 m-0 bg-transparent border-none rounded-full cursor-pointer">
+                <Avatar className="h-9 w-9">
+                  <AvatarImage src={getAvatarUrl(member.avatar_url, member.id)} />
+                  <AvatarFallback style={generatePastelColor(member.id)}>{member.initials}</AvatarFallback>
+                </Avatar>
+              </button>
             </TooltipTrigger>
             <TooltipContent>
               <p>{member.name}</p>
@@ -165,11 +178,13 @@ const ProjectTeamCard = ({ project }: ProjectTeamCardProps) => {
             </div>
             <TooltipProvider>
               <Tooltip>
-                <TooltipTrigger>
-                  <Avatar className="h-9 w-9">
-                    <AvatarImage src={getAvatarUrl(project.created_by.avatar_url, project.created_by.id)} />
-                    <AvatarFallback style={generatePastelColor(project.created_by.id)}>{project.created_by.initials}</AvatarFallback>
-                  </Avatar>
+                <TooltipTrigger asChild>
+                  <button onClick={() => handleMention(project.created_by)} className="p-0 m-0 bg-transparent border-none rounded-full cursor-pointer">
+                    <Avatar className="h-9 w-9">
+                      <AvatarImage src={getAvatarUrl(project.created_by.avatar_url, project.created_by.id)} />
+                      <AvatarFallback style={generatePastelColor(project.created_by.id)}>{project.created_by.initials}</AvatarFallback>
+                    </Avatar>
+                  </button>
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>{project.created_by.name}</p>
