@@ -47,32 +47,54 @@ interface TaskDetailCardProps {
 }
 
 const aggregateAttachments = (task: Task): TaskAttachment[] => {
-  let attachments: TaskAttachment[] = [...(task.attachments || [])];
-  
-  if (task.ticket_attachments && task.ticket_attachments.length > 0) {
-    const existingUrls = new Set(attachments.map(a => a.file_url));
-    const uniqueTicketAttachments = task.ticket_attachments.filter(
-      (ticketAtt) => ticketAtt.file_url && !existingUrls.has(ticketAtt.file_url)
-    );
-    attachments = [...attachments, ...uniqueTicketAttachments];
+  const allAttachments: TaskAttachment[] = [];
+  const seenUrls = new Set<string>();
+
+  // 1. Attachments directly on the task
+  if (task.attachments) {
+    for (const att of task.attachments) {
+      if (att.file_url && !seenUrls.has(att.file_url)) {
+        allAttachments.push(att);
+        seenUrls.add(att.file_url);
+      }
+    }
   }
 
+  // 2. Attachments from the original ticket comment (JSONB field)
+  if (task.ticket_attachments) {
+    for (const ticketAtt of task.ticket_attachments) {
+      if (ticketAtt.file_url && !seenUrls.has(ticketAtt.file_url)) {
+        allAttachments.push({
+          id: ticketAtt.id || ticketAtt.file_url,
+          file_name: ticketAtt.file_name,
+          file_url: ticketAtt.file_url,
+          file_type: ticketAtt.file_type || null,
+          file_size: ticketAtt.file_size || null,
+          storage_path: ticketAtt.storage_path || '',
+          created_at: ticketAtt.created_at || task.created_at,
+        });
+        seenUrls.add(ticketAtt.file_url);
+      }
+    }
+  }
+
+  // 3. Legacy single attachment from the original ticket comment
   if (task.attachment_url && task.attachment_name) {
-    const existingUrls = new Set(attachments.map((a) => a.file_url));
-    if (!existingUrls.has(task.attachment_url)) {
-      attachments.push({
-        id: task.origin_ticket_id || `legacy-${task.id}`, // Use origin ticket ID if available
+    if (!seenUrls.has(task.attachment_url)) {
+      allAttachments.push({
+        id: task.origin_ticket_id || `legacy-${task.id}`,
         file_name: task.attachment_name,
         file_url: task.attachment_url,
         file_type: null,
         file_size: null,
-        storage_path: '', // Not available for legacy
-        created_at: task.created_at, // Approximate time
+        storage_path: '',
+        created_at: task.created_at,
       });
+      seenUrls.add(task.attachment_url);
     }
   }
 
-  return attachments;
+  return allAttachments;
 };
 
 const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, onDelete }) => {
