@@ -8,6 +8,7 @@ import { Textarea } from '../ui/textarea';
 import TaskCommentsList from './TaskCommentsList';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCommentMutations } from '@/hooks/useCommentMutations';
 
 interface TaskDetailCardProps {
   task: ProjectTask;
@@ -23,9 +24,10 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editedText, setEditedText] = useState('');
   const commentInputRef = useRef<HTMLTextAreaElement>(null);
+  const { toggleCommentReaction } = useCommentMutations(task.id);
 
   const { data: comments = [], isLoading: isLoadingComments } = useQuery<CommentType[]>({
-    queryKey: ['comments', task.id],
+    queryKey: ['task-comments', task.id],
     queryFn: async () => {
       const { data, error } = await supabase.rpc('get_task_comments', { p_task_id: task.id });
       if (error) throw new Error(error.message);
@@ -48,7 +50,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['comments', task.id] });
+      queryClient.invalidateQueries({ queryKey: ['task-comments', task.id] });
       setNewCommentText('');
     },
     onError: (error) => {
@@ -62,7 +64,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['comments', task.id] });
+      queryClient.invalidateQueries({ queryKey: ['task-comments', task.id] });
       setEditingCommentId(null);
       setEditedText('');
     },
@@ -77,7 +79,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['comments', task.id] });
+      queryClient.invalidateQueries({ queryKey: ['task-comments', task.id] });
     },
     onError: (error) => {
       toast.error(`Failed to delete comment: ${error.message}`);
@@ -119,10 +121,8 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
     commentInputRef.current?.focus();
   };
 
-  // Dummy functions for props that are not implemented yet
   const handleToggleReaction = (commentId: string, emoji: string) => {
-    console.log('Toggling reaction', commentId, emoji);
-    toast.info('Reaction functionality is not fully implemented yet.');
+    toggleCommentReaction({ commentId, emoji });
   };
 
   return (
