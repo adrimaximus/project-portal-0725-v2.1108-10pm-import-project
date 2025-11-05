@@ -11,7 +11,7 @@ import remarkGfm from 'remark-gfm';
 import { useAuth } from '@/contexts/AuthContext';
 import { Textarea } from '../ui/textarea';
 import { Badge } from '../ui/badge';
-import { useTaskModal } from '@/contexts/TaskModalContext';
+import { useTaskModal } from '@/components/TaskModal';
 import { useQueryClient } from '@tanstack/react-query';
 
 interface TaskCommentsListProps {
