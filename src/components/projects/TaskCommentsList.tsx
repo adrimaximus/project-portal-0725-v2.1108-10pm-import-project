@@ -4,7 +4,7 @@ import { format, formatDistanceToNow } from 'date-fns';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { getAvatarUrl, generatePastelColor, getInitials, formatMentionsForDisplay } from '@/lib/utils';
 import { Button } from '../ui/button';
-import { MoreHorizontal, Edit, Trash2, Ticket, CornerUpLeft } from 'lucide-react';
+import { MoreHorizontal, Edit, Trash2, Ticket, Smile, CornerUpLeft } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -14,7 +14,6 @@ import { Textarea } from '../ui/textarea';
 import { Badge } from '../ui/badge';
 import { useTaskModal } from '@/contexts/TaskModalContext';
 import { useQueryClient } from '@tanstack/react-query';
-import CommentReactions from '../CommentReactions';
 
 interface TaskCommentsListProps {
   comments: CommentType[];
@@ -22,7 +21,6 @@ interface TaskCommentsListProps {
   onEdit: (comment: CommentType) => void;
   onDelete: (comment: CommentType) => void;
   onToggleReaction: (commentId: string, emoji: string) => void;
-  onReply: (user: User) => void;
   editingCommentId: string | null;
   editedText: string;
   setEditedText: (text: string) => void;
@@ -39,7 +37,6 @@ const Comment: React.FC<{
   onEdit: (comment: CommentType) => void;
   onDelete: (comment: CommentType) => void;
   onToggleReaction: (commentId: string, emoji: string) => void;
-  onReply: (user: User) => void;
   isEditing: boolean;
   editedText: string;
   setEditedText: (text: string) => void;
@@ -54,7 +51,6 @@ const Comment: React.FC<{
   onEdit,
   onDelete,
   onToggleReaction,
-  onReply,
   isEditing,
   editedText,
   setEditedText,
@@ -141,15 +137,15 @@ const Comment: React.FC<{
               <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{formattedText}</ReactMarkdown>
             </div>
             <div className="mt-1 flex items-center gap-2">
-              <Button variant="ghost" size="xs" className="text-muted-foreground" onClick={() => onReply(author)}>
+              <Button variant="ghost" size="xs" className="text-muted-foreground">
                 <CornerUpLeft className="h-3 w-3 mr-1" /> Reply
+              </Button>
+              <Button variant="ghost" size="xs" className="text-muted-foreground">
+                <Smile className="h-3 w-3 mr-1" /> React
               </Button>
               <Button variant="ghost" size="xs" className="text-muted-foreground" onClick={handleCreateTaskFromComment}>
                 <Ticket className="h-3 w-3 mr-1" /> Create Ticket
               </Button>
-            </div>
-            <div className="mt-2">
-              <CommentReactions reactions={comment.reactions || []} onToggleReaction={(emoji) => onToggleReaction(comment.id, emoji)} />
             </div>
           </>
         )}
