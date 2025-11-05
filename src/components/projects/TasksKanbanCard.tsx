@@ -1,38 +1,50 @@
 import React from 'react';
-import { Draggable } from 'react-beautiful-dnd';
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { Task, User } from '@/types';
-import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
-import { getAvatarUrl, generatePastelColor, getInitials, truncateText } from '@/lib/utils';
+import { Card, CardContent } from '@/components/ui/card';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { getAvatarUrl, generatePastelColor, getInitials, truncateText, cn } from '@/lib/utils';
 import { Badge } from '../ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 import { format } from 'date-fns';
-import { Tag } from 'lucide-react';
+import { MoreHorizontal, Edit, Trash2 } from 'lucide-react';
+import { Button } from '../ui/button';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
 
 interface TasksKanbanCardProps {
   task: Task;
-  index: number;
-  onClick: () => void;
+  onEdit: (task: Task) => void;
+  onDelete: (taskId: string) => void;
 }
 
 const priorityColors: { [key: string]: string } = {
+  'Urgent': 'bg-red-500',
+  'High': 'bg-orange-500',
+  'Normal': 'bg-yellow-500',
   'Low': 'bg-green-500',
-  'Medium': 'bg-yellow-500',
-  'High': 'bg-red-500',
 };
 
-const TasksKanbanCard: React.FC<TasksKanbanCardProps> = ({ task, index, onClick }) => {
-  const assignedTo = task.assigned_to as User[];
+const TasksKanbanCard: React.FC<TasksKanbanCardProps> = ({ task, onEdit, onDelete }) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition: isDragging ? 'none' : undefined,
+  };
+
+  const assignedTo = task.assignedTo || [];
 
   return (
-    <Draggable draggableId={task.id} index={index}>
-      {(provided) => (
-        <div
-          ref={provided.innerRef}
-          {...provided.draggableProps}
-          {...provided.dragHandleProps}
-          className="bg-card p-3 rounded-lg shadow-sm border border-border/50 mb-3 cursor-pointer hover:bg-accent transition-colors"
-          onClick={onClick}
-        >
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className={cn("mb-3 cursor-grab active:cursor-grabbing", isDragging && "opacity-30")}
+    >
+      <Card className="hover:shadow-md transition-shadow">
+        <CardContent className="p-3">
           <div className="flex justify-between items-start">
             <TooltipProvider>
               <Tooltip>
@@ -44,37 +56,27 @@ const TasksKanbanCard: React.FC<TasksKanbanCardProps> = ({ task, index, onClick 
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
-            {task.priority && (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger>
-                    <div className={`w-3 h-3 rounded-full ${priorityColors[task.priority]}`}></div>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>{task.priority} Priority</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            )}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-7 w-7 flex-shrink-0 -mt-1 -mr-1">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onSelect={() => onEdit(task)}>
+                  <Edit className="mr-2 h-4 w-4" /> Edit
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => onDelete(task.id)} className="text-destructive">
+                  <Trash2 className="mr-2 h-4 w-4" /> Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
-
-          {task.description && (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <p className="text-xs text-muted-foreground mb-3">{truncateText(task.description, 100)}</p>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p className="max-w-xs">{task.description}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )}
 
           {task.tags && task.tags.length > 0 && (
             <div className="flex flex-wrap gap-1 mb-3">
-              {task.tags.map((tag, index) => (
-                <Badge key={index} variant="secondary" className="text-xs">{tag}</Badge>
+              {task.tags.slice(0, 3).map((tag, index) => (
+                <Badge key={index} variant="secondary" className="text-xs" style={{ backgroundColor: `${tag.color}20`, borderColor: tag.color, color: tag.color }}>{tag.name}</Badge>
               ))}
             </div>
           )}
@@ -107,15 +109,29 @@ const TasksKanbanCard: React.FC<TasksKanbanCardProps> = ({ task, index, onClick 
                 </div>
               )}
             </div>
-            {task.due_date && (
-              <div className="text-xs text-muted-foreground">
-                {format(new Date(task.due_date), 'MMM d')}
-              </div>
-            )}
+            <div className="flex items-center gap-2">
+              {task.due_date && (
+                <div className="text-xs text-muted-foreground">
+                  {format(new Date(task.due_date), 'MMM d')}
+                </div>
+              )}
+              {task.priority && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <div className={`w-3 h-3 rounded-full ${priorityColors[task.priority] || 'bg-gray-400'}`}></div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{task.priority} Priority</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+            </div>
           </div>
-        </div>
-      )}
-    </Draggable>
+        </CardContent>
+      </Card>
+    </div>
   );
 };
 
