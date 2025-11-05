@@ -1,16 +1,10 @@
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
-import { customAlphabet } from 'nanoid';
 import { User } from "@/types";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
-
-export const nanoid = customAlphabet(
-  '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz',
-  7
-);
 
 export function getAvatarUrl(avatarUrl: string | null | undefined, userId: string): string {
   if (avatarUrl) {
