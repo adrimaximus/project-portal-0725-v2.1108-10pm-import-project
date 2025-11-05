@@ -230,7 +230,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
     const fullCommentText = comment.text || '';
     const taskTitle = fullCommentText.length > 80 ? `${fullCommentText.substring(0, 80)}...` : fullCommentText;
     
-    onOpen(undefined, {
+    onOpenTaskModal(undefined, {
       title: taskTitle,
       description: fullCommentText,
       project_id: comment.project_id,
@@ -269,6 +269,10 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
 
   const handleToggleReaction = (emoji: string) => {
     toggleTaskReaction({ taskId: task.id, emoji });
+  };
+
+  const handleToggleCommentReaction = (commentId: string, emoji: string) => {
+    toggleCommentReaction({ commentId, emoji });
   };
 
   const handleCopyLink = () => {
