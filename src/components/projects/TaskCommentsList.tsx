@@ -8,6 +8,7 @@ import { MoreHorizontal, Edit, Trash2, Ticket, Smile, CornerUpLeft } from 'lucid
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import rehypeRaw from 'rehype-raw';
 import { useAuth } from '@/contexts/AuthContext';
 import { Textarea } from '../ui/textarea';
 import { Badge } from '../ui/badge';
@@ -133,7 +134,7 @@ const Comment: React.FC<{
         ) : (
           <>
             <div className="prose prose-sm dark:prose-invert max-w-none break-words">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>{formattedText}</ReactMarkdown>
+              <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{formattedText}</ReactMarkdown>
             </div>
             <div className="mt-1 flex items-center gap-2">
               <Button variant="ghost" size="xs" className="text-muted-foreground">
