@@ -49,6 +49,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Textarea } from '../ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../ui/collapsible';
+import { useTaskModal } from '@/contexts/TaskModalContext';
 
 interface TaskDetailCardProps {
   task: Task;
@@ -72,13 +73,13 @@ const aggregateAttachments = (task: Task): TaskAttachment[] => {
     const existingUrls = new Set(attachments.map((a) => a.file_url));
     if (!existingUrls.has(task.attachment_url)) {
       attachments.push({
-        id: task.origin_ticket_id || `legacy-${task.id}`,
+        id: task.origin_ticket_id || `legacy-${task.id}`, // Use origin ticket ID if available
         file_name: task.attachment_name,
         file_url: task.attachment_url,
         file_type: null,
         file_size: null,
-        storage_path: '',
-        created_at: task.created_at,
+        storage_path: '', // Not available for legacy
+        created_at: task.created_at, // Approximate time
       });
     }
   }
@@ -97,7 +98,9 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
   const [commentToDelete, setCommentToDelete] = useState<CommentType | null>(null);
   const [newAttachments, setNewAttachments] = useState<File[]>([]);
   const editFileInputRef = useRef<HTMLInputElement>(null);
+  const commentInputRef = useRef<{ setText: (text: string, append?: boolean) => void, focus: () => void }>(null);
   const { data: allUsers = [] } = useProfiles();
+  const { onOpen: onOpenTaskModal } = useTaskModal();
 
   const { data: comments = [], isLoading: isLoadingComments } = useQuery({
     queryKey: ['task-comments', task.id],
@@ -207,8 +210,35 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
     }
   };
 
-  const handleToggleCommentReaction = (commentId: string, emoji: string) => {
-    toggleCommentReaction({ commentId, emoji });
+  const handleReply = (author: User) => {
+    if (commentInputRef.current) {
+      const mentionText = `@[${author.name}](${author.id}) `;
+      commentInputRef.current.setText(mentionText, true);
+      commentInputRef.current.focus();
+    }
+  };
+
+  const handleCreateTicketFromComment = async (comment: CommentType) => {
+    const { error } = await supabase.from('comments').update({ is_ticket: true }).eq('id', comment.id);
+    if (error) {
+      toast.error("Failed to mark comment as ticket.", { description: error.message });
+      return;
+    }
+    
+    queryClient.invalidateQueries({ queryKey: ['task-comments', task.id] });
+    
+    const fullCommentText = comment.text || '';
+    const taskTitle = fullCommentText.length > 80 ? `${fullCommentText.substring(0, 80)}...` : fullCommentText;
+    
+    onOpen(undefined, {
+      title: taskTitle,
+      description: fullCommentText,
+      project_id: comment.project_id,
+      status: 'To do',
+      priority: 'Normal',
+      due_date: null,
+      origin_ticket_id: comment.id,
+    });
   };
 
   const handleEditFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -434,12 +464,15 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
               removeNewAttachment={removeNewAttachment}
               handleEditFileChange={handleEditFileChange}
               editFileInputRef={editFileInputRef}
+              onReply={handleReply}
+              onCreateTicketFromComment={handleCreateTicketFromComment}
             />
           </div>
         </div>
 
         <div className="flex-shrink-0 p-4 border-t">
           <CommentInput
+            ref={commentInputRef}
             project={task as any}
             onAddCommentOrTicket={handleAddComment}
             allUsers={allUsers}

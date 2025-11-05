@@ -4,7 +4,7 @@ import { format, formatDistanceToNow } from 'date-fns';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { getAvatarUrl, generatePastelColor, getInitials, formatMentionsForDisplay } from '@/lib/utils';
 import { Button } from '../ui/button';
-import { MoreHorizontal, Edit, Trash2, Ticket, Smile, CornerUpLeft } from 'lucide-react';
+import { MoreHorizontal, Edit, Trash2, Ticket, CornerUpLeft } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -12,8 +12,7 @@ import rehypeRaw from 'rehype-raw';
 import { useAuth } from '@/contexts/AuthContext';
 import { Textarea } from '../ui/textarea';
 import { Badge } from '../ui/badge';
-import { useTaskModal } from '@/contexts/TaskModalContext';
-import { useQueryClient } from '@tanstack/react-query';
+import CommentReactions from '../CommentReactions';
 
 interface TaskCommentsListProps {
   comments: CommentType[];
@@ -30,6 +29,8 @@ interface TaskCommentsListProps {
   removeNewAttachment: (index: number) => void;
   handleEditFileChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
   editFileInputRef: React.RefObject<HTMLInputElement>;
+  onReply: (author: User) => void;
+  onCreateTicketFromComment: (comment: CommentType) => void;
 }
 
 const Comment: React.FC<{
@@ -46,6 +47,8 @@ const Comment: React.FC<{
   removeNewAttachment: (index: number) => void;
   handleEditFileChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
   editFileInputRef: React.RefObject<HTMLInputElement>;
+  onReply: (author: User) => void;
+  onCreateTicketFromComment: (comment: CommentType) => void;
 }> = ({
   comment,
   onEdit,
@@ -56,33 +59,11 @@ const Comment: React.FC<{
   setEditedText,
   handleSaveEdit,
   handleCancelEdit,
-  newAttachments,
-  removeNewAttachment,
-  handleEditFileChange,
-  editFileInputRef,
+  onReply,
+  onCreateTicketFromComment,
 }) => {
   const { user } = useAuth();
-  const { onOpen } = useTaskModal();
-  const queryClient = useQueryClient();
-  const projectData: any = queryClient.getQueryData(['project', comment.project_id]);
-
-  const handleCreateTaskFromComment = () => {
-    const fullCommentText = comment.text || '';
-    const taskTitle = fullCommentText.length > 80 ? `${fullCommentText.substring(0, 80)}...` : fullCommentText;
-    
-    onOpen(undefined, {
-      title: taskTitle,
-      description: fullCommentText, // Use the full, untruncated comment text for the description
-      project_id: comment.project_id,
-      status: 'To Do',
-      priority: 'Medium',
-      due_date: null,
-      tags: projectData?.tags || [],
-      assigned_to: [],
-      origin_comment_id: comment.id,
-    });
-  };
-
+  
   const author = comment.author as User;
   const authorName = [author.first_name, author.last_name].filter(Boolean).join(' ') || author.email;
   const formattedText = formatMentionsForDisplay(comment.text || '');
@@ -125,7 +106,6 @@ const Comment: React.FC<{
         {isEditing ? (
           <div className="mt-1 space-y-2">
             <Textarea value={editedText} onChange={(e) => setEditedText(e.target.value)} className="text-sm" />
-            {/* Attachment handling for editing can be added here */}
             <div className="flex justify-end gap-2">
               <Button variant="ghost" size="sm" onClick={handleCancelEdit}>Cancel</Button>
               <Button size="sm" onClick={handleSaveEdit}>Save</Button>
@@ -137,13 +117,11 @@ const Comment: React.FC<{
               <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{formattedText}</ReactMarkdown>
             </div>
             <div className="mt-1 flex items-center gap-2">
-              <Button variant="ghost" size="xs" className="text-muted-foreground">
+              <Button variant="ghost" size="xs" className="text-muted-foreground" onClick={() => onReply(author)}>
                 <CornerUpLeft className="h-3 w-3 mr-1" /> Reply
               </Button>
-              <Button variant="ghost" size="xs" className="text-muted-foreground">
-                <Smile className="h-3 w-3 mr-1" /> React
-              </Button>
-              <Button variant="ghost" size="xs" className="text-muted-foreground" onClick={handleCreateTaskFromComment}>
+              <CommentReactions reactions={comment.reactions || []} onToggleReaction={(emoji) => onToggleReaction(comment.id, emoji)} />
+              <Button variant="ghost" size="xs" className="text-muted-foreground" onClick={() => onCreateTicketFromComment(comment)}>
                 <Ticket className="h-3 w-3 mr-1" /> Create Ticket
               </Button>
             </div>

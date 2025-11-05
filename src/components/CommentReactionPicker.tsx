@@ -20,7 +20,6 @@ const CommentReactionPicker = ({ onSelect }: CommentReactionPickerProps) => {
   const handleOpenChange = (open: boolean) => {
     setIsOpen(open);
     if (!open) {
-      // Reset to quick reactions view when closing
       setShowFullPicker(false);
     }
   };
@@ -57,24 +56,12 @@ const CommentReactionPicker = ({ onSelect }: CommentReactionPickerProps) => {
                 {emoji}
               </button>
             ))}
-            <Popover modal={false}>
-              <PopoverTrigger asChild>
-                <button className="p-1 rounded-full hover:bg-muted transition-colors">
-                  <MoreHorizontal className="h-5 w-5 text-muted-foreground" />
-                </button>
-              </PopoverTrigger>
-              <PopoverContent 
-                className="w-auto p-0 border-none mb-2" 
-                onPointerDown={(e) => e.stopPropagation()}
-              >
-                <Picker 
-                  data={data} 
-                  onEmojiSelect={(emoji: any) => handleSelect(emoji.native)}
-                  theme={theme === 'dark' ? 'dark' : 'light'}
-                  previewPosition="none"
-                />
-              </PopoverContent>
-            </Popover>
+            <button 
+              onClick={() => setShowFullPicker(true)}
+              className="p-1 rounded-full hover:bg-muted transition-colors"
+            >
+              <MoreHorizontal className="h-5 w-5 text-muted-foreground" />
+            </button>
           </div>
         )}
       </PopoverContent>
