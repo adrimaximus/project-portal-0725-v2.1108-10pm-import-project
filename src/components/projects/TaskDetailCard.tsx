@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useRef, useEffect } from 'react';
-import { Task, TaskAttachment, Reaction, User, Comment as CommentType } from '@/types';
+import { Task, TaskAttachment, Reaction, User, Comment as CommentType, TaskStatus, TASK_STATUS_OPTIONS } from '@/types';
 import { DrawerContent } from '@/components/ui/drawer';
 import { Button } from '../ui/button';
 import { format, isPast } from 'date-fns';
@@ -20,6 +20,7 @@ import {
   CheckCircle,
   Tag,
   User as UserIcon,
+  ChevronDown,
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -37,7 +38,7 @@ import TaskCommentsList from './TaskCommentsList';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 import { toast } from 'sonner';
-import { Badge } from '@/components/ui/badge';
+import { Badge } from '../ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { v4 as uuidv4 } from 'uuid';
@@ -45,6 +46,9 @@ import CommentInput from '../CommentInput';
 import { useProfiles } from '@/hooks/useProfiles';
 import { useCommentMutations } from '@/hooks/useCommentMutations';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../ui/alert-dialog';
+import { Textarea } from '../ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../ui/collapsible';
 
 interface TaskDetailCardProps {
   task: Task;
@@ -85,7 +89,7 @@ const aggregateAttachments = (task: Task): TaskAttachment[] => {
 const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, onDelete }) => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  const { toggleTaskReaction, sendReminder } = useTaskMutations();
+  const { toggleTaskReaction, sendReminder, isSendingReminder, updateTaskStatusAndOrder } = useTaskMutations();
   const { toggleCommentReaction } = useCommentMutations(task.id);
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
@@ -257,7 +261,6 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 text-base sm:text-lg font-semibold leading-none tracking-tight">
                 {task.origin_ticket_id && <Ticket className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />}
-                {allAttachments.length > 0 && <Paperclip className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0 text-muted-foreground" />}
                 <span className={cn("min-w-0 break-words", task.completed && "line-through text-muted-foreground")}>
                   <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ p: "span" }}>
                     {formatTaskText(task.title)}
@@ -293,25 +296,148 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
         <div className="flex-1 overflow-y-auto p-4 text-sm space-y-4 scrollbar-thin scrollbar-thumb-zinc-700 hover:scrollbar-thumb-zinc-500 scrollbar-track-transparent">
           {/* Task Details */}
           <div className="grid grid-cols-2 gap-4 sm:gap-6">
-            {/* ... other details ... */}
+            <div className="flex items-start gap-3">
+              <Briefcase className="h-4 w-4 mt-1 flex-shrink-0 text-muted-foreground" />
+              <div>
+                <p className="font-medium">Project</p>
+                <Link to={`/projects/${task.project_slug}`} className="text-primary hover:underline">{task.project_name}</Link>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <CheckCircle className="h-4 w-4 mt-1 flex-shrink-0 text-muted-foreground" />
+              <div>
+                <p className="font-medium">Status</p>
+                <Select
+                  value={task.status}
+                  onValueChange={(newStatus: TaskStatus) => {
+                    updateTaskStatusAndOrder({
+                      taskId: task.id,
+                      newStatus,
+                      orderedTaskIds: [],
+                      newTasks: [],
+                      queryKey: ['tasks'],
+                    });
+                  }}
+                >
+                  <SelectTrigger className="h-auto p-0 border-0 focus:ring-0 focus:ring-offset-0 w-auto bg-transparent shadow-none">
+                    <SelectValue>
+                      <Badge variant="outline" className={cn(getTaskStatusStyles(task.status).tw, 'border-transparent font-normal')}>
+                        {task.status}
+                      </Badge>
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TASK_STATUS_OPTIONS.map(option => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <Flag className="h-4 w-4 mt-1 flex-shrink-0 text-muted-foreground" />
+              <div>
+                <p className="font-medium">Priority</p>
+                <Badge className={getPriorityStyles(task.priority).tw}>{task.priority}</Badge>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <Users className="h-4 w-4 mt-1 flex-shrink-0 text-muted-foreground" />
+              <div>
+                <p className="font-medium">Assignees</p>
+                <div className="flex items-center -space-x-2 mt-1">
+                  {task.assignedTo?.map((assignee: User) => (
+                    <TooltipProvider key={assignee.id}>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Avatar className="h-6 w-6 border-2 border-background">
+                            <AvatarImage src={getAvatarUrl(assignee.avatar_url, assignee.id)} />
+                            <AvatarFallback style={generatePastelColor(assignee.id)}>
+                              {getInitials([assignee.first_name, assignee.last_name].filter(Boolean).join(' '), assignee.email || undefined)}
+                            </AvatarFallback>
+                          </Avatar>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{[assignee.first_name, assignee.last_name].filter(Boolean).join(' ')}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <Calendar className="h-4 w-4 mt-1 flex-shrink-0 text-muted-foreground" />
+              <div>
+                <p className="font-medium">Due Date</p>
+                <div className={cn("flex items-center gap-1.5", getDueDateClassName(task.due_date, task.completed))}>
+                  <span>{task.due_date ? format(new Date(task.due_date), "MMM d, yyyy, p") : 'No due date'}</span>
+                  {isOverdue(task.due_date) && !task.completed && (
+                    <Button variant="ghost" size="icon" className="h-6 w-6 text-blue-500" onClick={handleSendReminder} disabled={isSendingReminder}>
+                      {isSendingReminder ? <Loader2 className="h-3 w-3 animate-spin" /> : <BellRing className="h-3 w-3" />}
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
+            {allTags.length > 0 && (
+              <div className="flex items-start gap-3">
+                <Tag className="h-4 w-4 mt-1 flex-shrink-0 text-muted-foreground" />
+                <div>
+                  <p className="font-medium">Tags</p>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {allTags.map(tag => (
+                      <Badge key={tag.id} variant="outline" style={{ backgroundColor: `${tag.color}20`, borderColor: tag.color, color: tag.color }}>
+                        {tag.name}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
-          {/* ... other sections ... */}
-          <TaskCommentsList
-            comments={comments}
-            isLoading={isLoadingComments}
-            onEdit={handleEditClick}
-            onDelete={setCommentToDelete}
-            onToggleReaction={handleToggleCommentReaction}
-            editingCommentId={editingCommentId}
-            editedText={editedText}
-            setEditedText={setEditedText}
-            handleSaveEdit={handleSaveEdit}
-            handleCancelEdit={handleCancelEdit}
-            newAttachments={newAttachments}
-            removeNewAttachment={removeNewAttachment}
-            handleEditFileChange={handleEditFileChange}
-            editFileInputRef={editFileInputRef}
-          />
+
+          {description && (
+            <div className="pt-4 border-t">
+              <h4 className="font-semibold mb-2">Description</h4>
+              <div className="prose prose-sm dark:prose-invert max-w-none break-words">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{displayedDescription}</ReactMarkdown>
+              </div>
+              {isLongDescription && (
+                <Button variant="link" size="sm" onClick={() => setShowFullDescription(!showFullDescription)} className="px-0 h-auto">
+                  {showFullDescription ? 'Show less' : 'Show more'}
+                </Button>
+              )}
+            </div>
+          )}
+
+          {allAttachments.length > 0 && (
+            <div className="pt-4 border-t">
+              <h4 className="font-semibold mb-2">Attachments ({allAttachments.length})</h4>
+              <TaskAttachmentList attachments={allAttachments} />
+            </div>
+          )}
+
+          <div className="pt-4 border-t">
+            <TaskCommentsList
+              comments={comments}
+              isLoading={isLoadingComments}
+              onEdit={handleEditClick}
+              onDelete={setCommentToDelete}
+              onToggleReaction={handleToggleCommentReaction}
+              editingCommentId={editingCommentId}
+              editedText={editedText}
+              setEditedText={setEditedText}
+              handleSaveEdit={handleSaveEdit}
+              handleCancelEdit={handleCancelEdit}
+              newAttachments={newAttachments}
+              removeNewAttachment={removeNewAttachment}
+              handleEditFileChange={handleEditFileChange}
+              editFileInputRef={editFileInputRef}
+            />
+          </div>
         </div>
 
         <div className="flex-shrink-0 p-4 border-t">
