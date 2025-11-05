@@ -351,7 +351,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
                   {task.assignedTo?.map((assignee: User) => (
                     <TooltipProvider key={assignee.id}>
                       <Tooltip>
-                        <TooltipTrigger>
+                        <TooltipTrigger asChild>
                           <Avatar className="h-6 w-6 border-2 border-background">
                             <AvatarImage src={getAvatarUrl(assignee.avatar_url, assignee.id)} />
                             <AvatarFallback style={generatePastelColor(assignee.id)}>
@@ -395,8 +395,8 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
                     ))}
                   </div>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
 
           {description && (
