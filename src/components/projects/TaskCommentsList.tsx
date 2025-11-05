@@ -4,14 +4,14 @@ import { format, formatDistanceToNow } from 'date-fns';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { getAvatarUrl, generatePastelColor, getInitials, formatMentionsForDisplay } from '@/lib/utils';
 import { Button } from '../ui/button';
-import { MoreHorizontal, Paperclip, Trash2, Edit, Ticket, Smile, CornerUpLeft } from 'lucide-react';
+import { MoreHorizontal, Edit, Trash2, Ticket, Smile, CornerUpLeft } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useAuth } from '@/contexts/AuthContext';
 import { Textarea } from '../ui/textarea';
 import { Badge } from '../ui/badge';
-import { useTaskModal } from '@/components/TaskModal';
+import { useTaskModal } from '@/contexts/TaskModalContext';
 import { useQueryClient } from '@tanstack/react-query';
 
 interface TaskCommentsListProps {

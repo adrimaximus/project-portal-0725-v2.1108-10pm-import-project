@@ -52,68 +52,73 @@ import NotFound from "./pages/NotFound";
 import AuthHandler from "./components/AuthHandler";
 import ProjectStatusesPage from "./pages/settings/ProjectStatusesPage";
 import PaymentStatusesPage from "./pages/settings/PaymentStatusesPage";
+import { TaskModalProvider } from "./contexts/TaskModalContext";
+import GlobalTaskModal from "./components/GlobalTaskModal";
 
 function App() {
   return (
     <>
       <AuthHandler />
-      <Routes>
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-        <Route path="/reset-password" element={<ResetPasswordPage />} />
-        <Route path="/auth/callback" element={<AuthCallbackPage />} />
-        <Route path="/terms-of-service" element={<TermsOfServicePage />} />
-        <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+      <TaskModalProvider>
+        <Routes>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
+          <Route path="/auth/callback" element={<AuthCallbackPage />} />
+          <Route path="/terms-of-service" element={<TermsOfServicePage />} />
+          <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
 
-        <Route element={<ProtectedRouteLayout />}>
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/projects" element={<Projects />} />
-          <Route path="/projects/:slug" element={<ProjectDetail />} />
-          <Route path="/tasks/:taskId" element={<Projects />} />
-          <Route path="/request" element={<Request />} />
-          <Route path="/chat" element={<Chat />} />
-          <Route path="/mood-tracker" element={<MoodTracker />} />
-          <Route path="/goals" element={<Goals />} />
-          <Route path="/goals/:slug" element={<GoalDetail />} />
-          <Route path="/billing" element={<Billing />} />
-          <Route path="/people" element={<People />} />
-          <Route path="/people/:slug" element={<PersonProfile />} />
-          <Route path="/users/:id" element={<UserProfilePage />} />
-          <Route path="/knowledge-base" element={<KnowledgeBase />} />
-          <Route path="/knowledge-base/folders/:slug" element={<FolderDetail />} />
-          <Route path="/knowledge-base/pages/:slug" element={<ArticleDetail />} />
-          <Route path="/notifications" element={<Notifications />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/search" element={<Search />} />
-          <Route path="/users" element={<UserManagement />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="/settings/team" element={<TeamSettings />} />
-          <Route path="/settings/navigation" element={<NavigationSettings />} />
-          <Route path="/settings/tags" element={<TagsSettings />} />
-          <Route path="/settings/theme" element={<ThemeSettings />} />
-          <Route path="/settings/services" element={<ServicesSettings />} />
-          <Route path="/settings/integrations" element={<IntegrationsPage />} />
-          <Route path="/settings/integrations/google-drive" element={<GoogleDrivePage />} />
-          <Route path="/settings/integrations/google-calendar" element={<GoogleCalendarIntegrationPage />} />
-          <Route path="/settings/integrations/wbiztool" element={<WbiztoolPage />} />
-          <Route path="/settings/integrations/openai" element={<OpenAiIntegrationPage />} />
-          <Route path="/settings/integrations/emailit" element={<EmailitPage />} />
-          <Route path="/settings/workspace" element={<WorkspaceSettingsPage />} />
-          <Route path="/settings/storage" element={<StorageSettingsPage />} />
-          <Route path="/settings/properties" element={<PropertiesSettingsPage />} />
-          <Route path="/settings/company-properties" element={<CompanyPropertiesPage />} />
-          <Route path="/settings/people-properties" element={<ContactPropertiesPage />} />
-          <Route path="/settings/tags-properties" element={<TagsPropertiesPage />} />
-          <Route path="/settings/project-statuses" element={<ProjectStatusesPage />} />
-          <Route path="/settings/payment-statuses" element={<PaymentStatusesPage />} />
-          <Route path="/custom/:slug" element={<CustomPage />} />
-          <Route path="/multipage/:slug" element={<MultiEmbedPage />} />
-          <Route path="/multipage/:slug/:itemSlug" element={<MultiEmbedItemPage />} />
-          <Route path="/embed" element={<EmbedPage />} />
-        </Route>
-        <Route path="*" element={<NotFound />} />
-      </Routes>
+          <Route element={<ProtectedRouteLayout />}>
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/projects" element={<Projects />} />
+            <Route path="/projects/:slug" element={<ProjectDetail />} />
+            <Route path="/tasks/:taskId" element={<Projects />} />
+            <Route path="/request" element={<Request />} />
+            <Route path="/chat" element={<Chat />} />
+            <Route path="/mood-tracker" element={<MoodTracker />} />
+            <Route path="/goals" element={<Goals />} />
+            <Route path="/goals/:slug" element={<GoalDetail />} />
+            <Route path="/billing" element={<Billing />} />
+            <Route path="/people" element={<People />} />
+            <Route path="/people/:slug" element={<PersonProfile />} />
+            <Route path="/users/:id" element={<UserProfilePage />} />
+            <Route path="/knowledge-base" element={<KnowledgeBase />} />
+            <Route path="/knowledge-base/folders/:slug" element={<FolderDetail />} />
+            <Route path="/knowledge-base/pages/:slug" element={<ArticleDetail />} />
+            <Route path="/notifications" element={<Notifications />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/search" element={<Search />} />
+            <Route path="/users" element={<UserManagement />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/settings/team" element={<TeamSettings />} />
+            <Route path="/settings/navigation" element={<NavigationSettings />} />
+            <Route path="/settings/tags" element={<TagsSettings />} />
+            <Route path="/settings/theme" element={<ThemeSettings />} />
+            <Route path="/settings/services" element={<ServicesSettings />} />
+            <Route path="/settings/integrations" element={<IntegrationsPage />} />
+            <Route path="/settings/integrations/google-drive" element={<GoogleDrivePage />} />
+            <Route path="/settings/integrations/google-calendar" element={<GoogleCalendarIntegrationPage />} />
+            <Route path="/settings/integrations/wbiztool" element={<WbiztoolPage />} />
+            <Route path="/settings/integrations/openai" element={<OpenAiIntegrationPage />} />
+            <Route path="/settings/integrations/emailit" element={<EmailitPage />} />
+            <Route path="/settings/workspace" element={<WorkspaceSettingsPage />} />
+            <Route path="/settings/storage" element={<StorageSettingsPage />} />
+            <Route path="/settings/properties" element={<PropertiesSettingsPage />} />
+            <Route path="/settings/company-properties" element={<CompanyPropertiesPage />} />
+            <Route path="/settings/people-properties" element={<ContactPropertiesPage />} />
+            <Route path="/settings/tags-properties" element={<TagsPropertiesPage />} />
+            <Route path="/settings/project-statuses" element={<ProjectStatusesPage />} />
+            <Route path="/settings/payment-statuses" element={<PaymentStatusesPage />} />
+            <Route path="/custom/:slug" element={<CustomPage />} />
+            <Route path="/multipage/:slug" element={<MultiEmbedPage />} />
+            <Route path="/multipage/:slug/:itemSlug" element={<MultiEmbedItemPage />} />
+            <Route path="/embed" element={<EmbedPage />} />
+          </Route>
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+        <GlobalTaskModal />
+      </TaskModalProvider>
     </>
   );
 }

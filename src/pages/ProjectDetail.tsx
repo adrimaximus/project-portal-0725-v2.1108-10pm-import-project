@@ -1,16 +1,13 @@
-import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useEffect, useState, useCallback } from 'react';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { getProjectBySlug } from '@/lib/projectsApi';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import ProjectActivityFeed from '@/components/project-detail/ProjectActivityFeed';
-import ProjectTasks from '@/components/project-detail/ProjectTasks';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { Task, UpsertTaskPayload, Project } from '@/types';
+import { Task, UpsertTaskPayload, Project, ProjectStatus, Reaction } from '@/types';
 import { useTaskMutations } from '@/hooks/useTaskMutations';
-import TaskFormDialog from '@/components/projects/TaskFormDialog';
+import { useProjectMutations } from '@/hooks/useProjectMutations';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,15 +18,28 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import PortalLayout from '@/components/PortalLayout';
+import ProjectHeader from '@/components/project-detail/ProjectHeader';
+import ProjectDetailsCard from '@/components/project-detail/ProjectDetailsCard';
+import ProjectProgressCard from '@/components/project-detail/ProjectProgressCard';
+import ProjectTeamCard from '@/components/project-detail/ProjectTeamCard';
+import ProjectMainContent from '@/components/project-detail/ProjectMainContent';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTaskModal } from '@/contexts/TaskModalContext';
 
 const ProjectDetailPage = () => {
   const { slug } = useParams<{ slug: string }>();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [isTaskFormOpen, setIsTaskFormOpen] = useState(false);
-  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const { user, hasPermission } = useAuth();
+  const { onOpen: onOpenTaskModal } = useTaskModal();
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedProject, setEditedProject] = useState<Project | null>(null);
+  const [hasChanges, setHasChanges] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
-  const { upsertTask, deleteTask, toggleTaskCompletion, isUpserting } = useTaskMutations();
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const { data: project, isLoading, error } = useQuery<Project | null>({
     queryKey: ['project', slug],
@@ -37,155 +47,187 @@ const ProjectDetailPage = () => {
     enabled: !!slug,
   });
 
+  const { 
+    updateProject, 
+    addFiles, 
+    deleteFile, 
+    addComment, 
+    updateComment, 
+    deleteComment, 
+    deleteProject, 
+    toggleCommentReaction,
+    updateProjectStatus,
+  } = useProjectMutations(slug);
+  
+  const { 
+    deleteTask, 
+    toggleTaskCompletion, 
+  } = useTaskMutations(() => queryClient.invalidateQueries({ queryKey: ['project', slug] }));
+
   useEffect(() => {
-    if (!project) return;
-
-    const channel = supabase
-      .channel(`project-updates-${project.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'tasks',
-          filter: `project_id=eq.${project.id}`,
-        },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ['project', slug] });
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'project_activities',
-          filter: `project_id=eq.${project.id}`,
-        },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ['project', slug] });
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    if (project) {
+      const channel = supabase
+        .channel(`project-updates-${project.id}`)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'projects', filter: `id=eq.${project.id}` }, () => queryClient.invalidateQueries({ queryKey: ['project', slug] }))
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks', filter: `project_id=eq.${project.id}` }, () => queryClient.invalidateQueries({ queryKey: ['project', slug] }))
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'comments', filter: `project_id=eq.${project.id}` }, () => queryClient.invalidateQueries({ queryKey: ['project', slug] }))
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'project_activities', filter: `project_id=eq.${project.id}` }, () => queryClient.invalidateQueries({ queryKey: ['project', slug] }))
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'project_files', filter: `project_id=eq.${project.id}` }, () => queryClient.invalidateQueries({ queryKey: ['project', slug] }))
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'project_members', filter: `project_id=eq.${project.id}` }, () => queryClient.invalidateQueries({ queryKey: ['project', slug] }))
+        .subscribe();
+      return () => { supabase.removeChannel(channel); };
+    }
   }, [project, slug, queryClient]);
 
-  const handleCreateTask = () => {
-    setEditingTask(null);
-    setIsTaskFormOpen(true);
-  };
+  const canEdit = hasPermission('projects:edit') || hasPermission('projects:edit_all');
 
-  const handleEditTask = (task: Task) => {
-    setEditingTask(task);
-    setIsTaskFormOpen(true);
-  };
-
-  const handleDeleteTask = (task: Task) => {
-    setTaskToDelete(task);
-  };
-
-  const confirmDeleteTask = () => {
-    if (taskToDelete) {
-      deleteTask(taskToDelete.id, {
-        onSuccess: () => {
-          toast.success(`Task "${taskToDelete.title}" deleted.`);
-        },
-      });
-      setTaskToDelete(null);
+  const enterEditMode = () => {
+    if (project) {
+      setEditedProject(JSON.parse(JSON.stringify(project))); // Deep copy
+      setIsEditing(true);
+      setHasChanges(false);
     }
   };
 
-  const handleTaskFormSubmit = (data: UpsertTaskPayload) => {
-    upsertTask(data, {
-      onSuccess: () => {
-        setIsTaskFormOpen(false);
-        setEditingTask(null);
-      },
-    });
+  const handleCancelChanges = () => {
+    setIsEditing(false);
+    setEditedProject(null);
+    setHasChanges(false);
   };
 
-  const handleToggleTaskCompletion = (task: Task, completed: boolean) => {
-    toggleTaskCompletion({ task, completed });
+  const handleSaveChanges = useCallback(() => {
+    if (editedProject) {
+      updateProject.mutate(editedProject, {
+        onSuccess: (data: Project) => {
+          setIsEditing(false);
+          setEditedProject(null);
+          setHasChanges(false);
+          if (slug && slug !== data.slug) {
+            toast.success("Project updated successfully! Redirecting...");
+            navigate(`/projects/${data.slug}`, { replace: true });
+          } else {
+            toast.success("Project saved successfully!");
+          }
+        },
+      });
+    } else {
+      setIsEditing(false);
+    }
+  }, [editedProject, updateProject, slug, navigate]);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key === 's') {
+        if (isEditing) {
+          event.preventDefault();
+          handleSaveChanges();
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isEditing, handleSaveChanges]);
+
+  const handleFieldChange = (field: keyof Project, value: any) => {
+    if (editedProject) {
+      setEditedProject(prev => prev ? { ...prev, [field]: value } : null);
+      setHasChanges(true);
+    }
   };
+
+  const handleToggleComplete = () => {
+    if (project) {
+      const newStatus = project.status === 'Completed' ? 'In Progress' : 'Completed';
+      updateProjectStatus.mutate({ projectId: project.id, status: newStatus });
+    }
+  };
+
+  const confirmDeleteTask = () => { if (taskToDelete) { deleteTask(taskToDelete.id); setTaskToDelete(null); } };
+  const handleToggleTaskCompletion = (task: Task, completed: boolean) => toggleTaskCompletion({ task, completed });
+  const handleToggleCommentReaction = (commentId: string, emoji: string) => toggleCommentReaction.mutate({ commentId, emoji });
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+    return <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   }
-
   if (error) {
     return <div className="text-destructive p-4">Error loading project: {error.message}</div>;
   }
-
   if (!project) {
     return <div className="p-4">Project not found.</div>;
   }
 
+  const projectToDisplay = isEditing && editedProject ? editedProject : project;
+  const hasOpenTasks = project.tasks?.some(task => !task.completed) ?? false;
+
   return (
     <>
-      <div className="container mx-auto p-4 grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>{project.name}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">{project.description}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle>Tasks</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ProjectTasks
-                tasks={project.tasks || []}
-                projectId={project.id}
-                projectSlug={project.slug}
-                onEditTask={handleEditTask}
-                onDeleteTask={handleDeleteTask}
-                onToggleTaskCompletion={handleToggleTaskCompletion}
+      <PortalLayout>
+        <div className="space-y-6">
+          <ProjectHeader
+            project={projectToDisplay}
+            isEditing={isEditing}
+            isSaving={updateProject.isPending}
+            canEdit={canEdit}
+            onEditToggle={enterEditMode}
+            onSaveChanges={handleSaveChanges}
+            onCancelChanges={handleCancelChanges}
+            onToggleComplete={handleToggleComplete}
+            onDeleteProject={() => setIsDeleteDialogOpen(true)}
+            onFieldChange={handleFieldChange}
+            onStatusChange={(newStatus) => updateProjectStatus.mutate({ projectId: project.id, status: newStatus })}
+            hasOpenTasks={hasOpenTasks}
+            hasChanges={hasChanges}
+          />
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+            <div className="lg:col-span-2 space-y-6">
+              <ProjectDetailsCard
+                project={projectToDisplay}
+                isEditing={isEditing}
+                onFieldChange={handleFieldChange}
+                onStatusChange={(newStatus) => updateProjectStatus.mutate({ projectId: project.id, status: newStatus })}
+                hasOpenTasks={hasOpenTasks}
               />
-            </CardContent>
-          </Card>
+              <ProjectMainContent
+                project={projectToDisplay}
+                isEditing={isEditing}
+                onFieldChange={handleFieldChange}
+                mutations={{ addComment, updateComment, deleteComment, addFiles, deleteFile }}
+                defaultTab={searchParams.get('tab') || 'overview'}
+                onEditTask={(task) => onOpenTaskModal(task)}
+                onDeleteTask={setTaskToDelete}
+                onToggleTaskCompletion={handleToggleTaskCompletion}
+                onToggleCommentReaction={handleToggleCommentReaction}
+                highlightedTaskId={searchParams.get('task')}
+                onTaskHighlightComplete={() => {
+                  const newParams = new URLSearchParams(searchParams);
+                  newParams.delete('task');
+                  setSearchParams(newParams, { replace: true });
+                }}
+                onSetIsEditing={() => enterEditMode()}
+                isUploading={addFiles.isPending}
+                onSaveChanges={handleSaveChanges}
+              />
+            </div>
+            <div className="lg:col-span-1 space-y-6">
+              <ProjectProgressCard project={project} />
+              <ProjectTeamCard project={project} />
+            </div>
+          </div>
         </div>
-        <div className="lg:col-span-1">
-          <Card>
-            <CardHeader>
-              <CardTitle>Activity</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ProjectActivityFeed activities={project.activities || []} />
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-      <TaskFormDialog
-        open={isTaskFormOpen}
-        onOpenChange={setIsTaskFormOpen}
-        onSubmit={handleTaskFormSubmit}
-        isSubmitting={isUpserting}
-        task={editingTask}
-        project={project}
-      />
+      </PortalLayout>
       <AlertDialog open={!!taskToDelete} onOpenChange={() => setTaskToDelete(null)}>
         <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete the task "{taskToDelete?.title}". This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDeleteTask}>Delete</AlertDialogAction>
-          </AlertDialogFooter>
+          <AlertDialogHeader><AlertDialogTitle>Are you sure?</AlertDialogTitle><AlertDialogDescription>This will permanently delete the task "{taskToDelete?.title}". This action cannot be undone.</AlertDialogDescription></AlertDialogHeader>
+          <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={confirmDeleteTask}>Delete</AlertDialogAction></AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader><AlertDialogTitle>Are you sure?</AlertDialogTitle><AlertDialogDescription>This will permanently delete the project "{project.name}".</AlertDialogDescription></AlertDialogHeader>
+          <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={() => deleteProject.mutate(project.id)}>Delete</AlertDialogAction></AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </>

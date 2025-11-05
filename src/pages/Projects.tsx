@@ -10,7 +10,6 @@ import { toast } from 'sonner';
 
 import ProjectsToolbar from '@/components/projects/ProjectsToolbar';
 import ProjectViewContainer from '@/components/projects/ProjectViewContainer';
-import TaskFormDialog from '@/components/projects/TaskFormDialog';
 import { GoogleCalendarImportDialog } from '@/components/projects/GoogleCalendarImportDialog';
 import { AdvancedFiltersState } from '@/components/projects/ProjectAdvancedFilters';
 import { useProjectFilters } from '@/hooks/useProjectFilters';
@@ -25,6 +24,7 @@ import PortalLayout from '@/components/PortalLayout';
 import { getErrorMessage, formatInJakarta } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
+import { useTaskModal } from '@/contexts/TaskModalContext';
 
 type ViewMode = 'table' | 'list' | 'kanban' | 'tasks' | 'tasks-kanban';
 type SortConfig<T> = { key: keyof T | null; direction: 'ascending' | 'descending' };
@@ -36,6 +36,7 @@ const ProjectsPage = () => {
   const rowRefs = useRef(new Map<string, HTMLTableRowElement>());
   const { user } = useAuth();
   const { taskId: taskIdFromParams } = useParams<{ taskId: string }>();
+  const { onOpen: onOpenTaskModal } = useTaskModal();
 
   const viewFromUrl = searchParams.get('view') as ViewMode;
   const view = taskIdFromParams ? 'tasks' : viewFromUrl || 'list';
@@ -126,12 +127,8 @@ const ProjectsPage = () => {
 
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
   const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
-  const createProjectMutation = useCreateProject();
   const [scrollToProjectId, setScrollToProjectId] = useState<string | null>(null);
   const initialTableScrollDone = useRef(false);
-
-  const [isTaskFormOpen, setIsTaskFormOpen] = useState(false);
-  const [editingTask, setEditingTask] = useState<ProjectTask | null>(null);
   
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
 
@@ -172,7 +169,7 @@ const ProjectsPage = () => {
     }
   }, [isTaskView, refetchTasks, refetchProjects]);
 
-  const { upsertTask, isUpserting, deleteTask, toggleTaskCompletion, isToggling } = useTaskMutations(refetch);
+  const { deleteTask, toggleTaskCompletion, isToggling } = useTaskMutations(refetch);
   const { updateProjectStatus } = useProjectMutations();
 
   const allTasks = useMemo(() => {
@@ -277,20 +274,6 @@ const ProjectsPage = () => {
     refetch();
   };
 
-  const handleCreateTask = () => {
-    setEditingTask(null);
-    setIsTaskFormOpen(true);
-  };
-
-  const handleEditTask = (task: ProjectTask) => {
-    setEditingTask(task);
-    setIsTaskFormOpen(true);
-  };
-
-  const handleDeleteTask = (taskId: string) => {
-    setTaskToDelete(taskId);
-  };
-
   const confirmDeleteTask = () => {
     if (taskToDelete) {
       deleteTask(taskToDelete, {
@@ -301,20 +284,12 @@ const ProjectsPage = () => {
     }
   };
 
-  const handleTaskFormSubmit = (data: UpsertTaskPayload) => {
-    upsertTask(data, {
-      onSuccess: () => {
-        setIsTaskFormOpen(false);
-        setEditingTask(null);
-      },
-    });
-  };
-
   const handleToggleTaskCompletion = (task: ProjectTask, completed: boolean) => {
     toggleTaskCompletion({ task, completed });
   };
 
   const handleTaskStatusChange = (task: ProjectTask, newStatus: TaskStatus) => {
+    const { upsertTask } = useTaskMutations();
     upsertTask({
         id: task.id,
         project_id: task.project_id,
@@ -371,14 +346,6 @@ const ProjectsPage = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      <TaskFormDialog
-        open={isTaskFormOpen}
-        onOpenChange={setIsTaskFormOpen}
-        onSubmit={handleTaskFormSubmit}
-        isSubmitting={isUpserting}
-        task={editingTask}
-      />
-
       <GoogleCalendarImportDialog
         open={isImportDialogOpen}
         onOpenChange={setIsImportDialogOpen}
@@ -394,7 +361,7 @@ const ProjectsPage = () => {
             hideCompletedTasks={hideCompletedTasks}
             onToggleHideCompleted={toggleHideCompleted}
             onNewProjectClick={() => navigate('/request')}
-            onNewTaskClick={handleCreateTask}
+            onNewTaskClick={() => onOpenTaskModal()}
             isTaskView={isTaskView}
             isGCalConnected={isGCalConnected}
             onImportClick={() => setIsImportDialogOpen(true)}
@@ -417,8 +384,8 @@ const ProjectsPage = () => {
               requestSort={(key) => requestProjectSort(key as keyof Project)}
               rowRefs={rowRefs}
               kanbanGroupBy={kanbanGroupBy}
-              onEditTask={handleEditTask}
-              onDeleteTask={handleDeleteTask}
+              onEditTask={(task) => onOpenTaskModal(task)}
+              onDeleteTask={setTaskToDelete}
               onToggleTaskCompletion={handleToggleTaskCompletion}
               onTaskStatusChange={handleTaskStatusChange}
               isToggling={isToggling}

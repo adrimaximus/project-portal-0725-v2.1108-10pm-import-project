@@ -37,6 +37,7 @@ interface TaskFormDialogProps {
   isSubmitting: boolean;
   task?: Task | null;
   project?: Project | null;
+  initialData?: Partial<UpsertTaskPayload>;
 }
 
 const taskFormSchema = z.object({
@@ -54,7 +55,7 @@ type TaskFormValues = z.infer<typeof taskFormSchema>;
 
 const TICKET_TAG_NAME = 'Ticket';
 
-const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task, project }: TaskFormDialogProps) => {
+const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task, project, initialData }: TaskFormDialogProps) => {
   const isMobile = useIsMobile();
   const { data: projectsData, isLoading: isLoadingProjects } = useProjects({ excludeOtherPersonal: true });
   
@@ -62,17 +63,12 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task, proj
     const hookProjects = projectsData?.pages.flatMap(page => page.projects) ?? [];
     const projectsMap = new Map<string, Project>();
 
-    // Add prop project first to give it priority
     if (project) {
       projectsMap.set(project.id, project);
     }
 
-    // Add task's project if editing. This is crucial when the dialog is opened from a page
-    // that isn't a project detail page (like the main /projects?view=tasks page).
     if (task && task.project_id) {
       if (!projectsMap.has(task.project_id)) {
-        // If the task object itself has project name/slug, use it.
-        // Otherwise, fall back to the `project` prop if available (for ProjectDetail page context).
         projectsMap.set(task.project_id, {
           id: task.project_id,
           name: task.project_name || project?.name || 'Unknown Project',
@@ -81,7 +77,6 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task, proj
       }
     }
 
-    // Add all other projects from the hook
     hookProjects.forEach(p => {
       if (!projectsMap.has(p.id)) {
         projectsMap.set(p.id, p);
@@ -139,13 +134,10 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task, proj
 
   const ticketAttachments = useMemo(() => {
     if (!task?.ticket_attachments) return [];
-    // We filter out files marked for deletion from the ticket attachments list 
-    // only for display purposes, even though the mutation won't delete them from the comment.
     return task.ticket_attachments.filter(f => !filesToDelete.includes(f.id));
   }, [task, filesToDelete]);
 
   const allExistingAttachments: TaskAttachment[] = useMemo(() => {
-    // Combine direct task attachments and ticket attachments for display
     let combined = [...directTaskAttachments];
     
     if (ticketAttachments.length > 0) {
@@ -205,23 +197,23 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task, proj
         const personalProject = projectsForCombobox.find(p => p.personal_for_user_id === currentUser?.id);
         const generalTasksProject = projectsForCombobox.find(p => p.slug === 'general-tasks');
         
-        const initialProjectId = project?.id || personalProject?.id || generalTasksProject?.id || '';
+        const initialProjectId = project?.id || initialData?.project_id || personalProject?.id || generalTasksProject?.id || '';
 
         form.reset({
-          title: '',
+          title: initialData?.title || '',
           project_id: initialProjectId,
-          description: '',
-          due_date: null,
-          priority: 'Normal',
-          status: 'To do',
-          assignee_ids: [],
+          description: initialData?.description || '',
+          due_date: initialData?.due_date ? new Date(initialData.due_date) : null,
+          priority: initialData?.priority || 'Normal',
+          status: initialData?.status || 'To do',
+          assignee_ids: initialData?.assignee_ids || [],
           tag_ids: [],
         });
         setSelectedTags([]);
         setPreviousStatus('To do');
       }
     }
-  }, [task, open, form, projectsForCombobox, project, currentUser, allTags]);
+  }, [task, open, form, projectsForCombobox, project, currentUser, allTags, initialData]);
 
   const handleTagsChange = (newTags: Tag[]) => {
     setSelectedTags(newTags);
@@ -310,6 +302,7 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task, proj
       tag_ids: finalTagIds,
       new_files: newFiles,
       deleted_files: filesToDelete,
+      origin_ticket_id: task?.origin_ticket_id || initialData?.origin_ticket_id,
     };
 
     onSubmit(payload);
