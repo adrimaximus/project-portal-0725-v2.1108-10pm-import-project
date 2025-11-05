@@ -9,7 +9,7 @@ import { generatePastelColor, getPriorityStyles, getTaskStatusStyles, isOverdue,
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "../ui/button";
-import { MoreHorizontal, Edit, Trash2, Ticket, Paperclip, Eye, Download, File as FileIconLucide, ChevronDown, Loader2 } from "lucide-react";
+import { MoreHorizontal, Edit, Trash2, Ticket, Paperclip, Eye, Download, File as FileIconLucide, ChevronDown, Loader2, SmilePlus } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Checkbox } from "@/components/ui/checkbox";
 import TaskAttachmentList from './TaskAttachmentList';
@@ -367,7 +367,6 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
                 const hasAssignees = task.assignedTo && task.assignedTo.length > 0;
                 const reactions = task.reactions || [];
                 const hasBottomBar = hasAssignees || reactions.length > 0 || (task.origin_ticket_id || task.tags?.some(t => t.name === 'Ticket')) || allAttachments.length > 0;
-                const wasReminderSentRecently = task.last_reminder_sent_at && isAfter(new Date(task.last_reminder_sent_at), subHours(new Date(), 25));
 
                 const groupedReactions: Record<string, { users: string[]; userIds: string[] }> = reactions.reduce((acc, reaction) => {
                     if (!acc[reaction.emoji]) {
@@ -488,46 +487,26 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
                                 <div className="flex justify-end gap-1 items-center mr-1">
                                   <Popover>
                                     <PopoverTrigger asChild>
-                                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={e => e.stopPropagation()}>
-                                        <SmilePlus className="h-4 w-4 text-muted-foreground hover:text-foreground" />
-                                      </Button>
+                                      <button className="hover:bg-muted rounded-full p-1.5 transition-transform transform hover:scale-125">
+                                        <SmilePlus className="h-5 w-5 text-muted-foreground" />
+                                      </button>
                                     </PopoverTrigger>
-                                    <PopoverContent onClick={e => e.stopPropagation()} className="p-1 w-auto rounded-full bg-background border shadow-lg">
-                                      <div className="flex items-center gap-1">
-                                        {commonEmojis.map(emoji => (
-                                          <button
-                                            key={emoji}
-                                            className="hover:bg-muted rounded-full p-1 transition-transform transform hover:scale-125"
-                                            onClick={() => handleEmojiSelect(emoji, task.id)}
-                                          >
-                                            <span className="text-xl">{emoji}</span>
-                                          </button>
-                                        ))}
-                                        <Popover>
-                                          <PopoverTrigger asChild>
-                                            <button className="hover:bg-muted rounded-full p-1.5 transition-transform transform hover:scale-125">
-                                              <SmilePlus className="h-5 w-5 text-muted-foreground" />
-                                            </button>
-                                          </PopoverTrigger>
-                                          <PopoverContent
-                                            onClick={(e) => e.stopPropagation()}
-                                            className="p-0 w-auto border-0"
-                                            side="bottom"
-                                            align="start"
-                                            sideOffset={8}
-                                          >
-                                            <EmojiPicker
-                                              onEmojiClick={(emojiObject) => {
-                                                handleEmojiSelect(emojiObject.emoji, task.id);
-                                              }}
-                                              emojiStyle={EmojiStyle.NATIVE}
-                                              previewConfig={{ showPreview: false }}
-                                              width={350}
-                                              height={400}
-                                            />
-                                          </PopoverContent>
-                                        </Popover>
-                                      </div>
+                                    <PopoverContent
+                                      onClick={(e) => e.stopPropagation()}
+                                      className="p-0 w-auto border-0"
+                                      side="bottom"
+                                      align="start"
+                                      sideOffset={8}
+                                    >
+                                      <EmojiPicker
+                                        onEmojiClick={(emojiObject) => {
+                                          handleEmojiSelect(emojiObject.emoji, task.id);
+                                        }}
+                                        emojiStyle={EmojiStyle.NATIVE}
+                                        previewConfig={{ showPreview: false }}
+                                        width={350}
+                                        height={400}
+                                      />
                                     </PopoverContent>
                                   </Popover>
                                   {(task.origin_ticket_id || task.tags?.some(t => t.name === 'Ticket')) && (
@@ -586,23 +565,9 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
                     </TableCell>
                     <TableCell>
                       {task.due_date ? (
-                        <div className="flex items-center gap-1.5">
-                          <span className={getDueDateClassName(task.due_date, task.completed)}>
-                            {format(new Date(task.due_date), "MMM d, yyyy, p")}
-                          </span>
-                          {wasReminderSentRecently && (
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger>
-                                  <BellRing className="h-3.5 w-3.5 text-blue-500" />
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>A reminder was sent recently.</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          )}
-                        </div>
+                        <span className={getDueDateClassName(task.due_date, task.completed)}>
+                          {format(new Date(task.due_date), "MMM d, yyyy, p")}
+                        </span>
                       ) : <span className="text-muted-foreground text-xs">No due date</span>}
                     </TableCell>
                     <TableCell>
