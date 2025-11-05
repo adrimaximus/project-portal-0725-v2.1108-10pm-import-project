@@ -17,6 +17,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { toast } from 'sonner';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import TaskReactions from '@/components/projects/TaskReactions';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const MyTasksWidget = () => {
   const { user } = useAuth();
@@ -157,9 +158,18 @@ const MyTasksWidget = () => {
                     onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleTaskClick(task) }}
                   >
                     <div className="flex-grow">
-                      <p className="font-medium leading-tight text-sm">
-                        {task.title}
-                      </p>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <p className="font-medium leading-tight text-sm truncate">
+                              {task.title}
+                            </p>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>{task.title}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                       <p className="text-xs text-muted-foreground mt-0.5">{task.project_name}</p>
                     </div>
                     <div className="flex items-center gap-3 shrink-0 ml-auto">
