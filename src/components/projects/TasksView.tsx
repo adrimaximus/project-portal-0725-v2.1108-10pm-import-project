@@ -602,14 +602,16 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
             )}
           </TableBody>
         </Table>
-        {selectedTask && (
-          <TaskDetailCard
-            task={selectedTask}
-            onClose={() => setSelectedTaskId(null)}
-            onEdit={handleEditTask}
-            onDelete={handleDeleteTask}
-          />
-        )}
+        <DrawerContent>
+          {selectedTask && (
+            <TaskDetailCard
+              task={selectedTask}
+              onClose={() => setSelectedTaskId(null)}
+              onEdit={handleEditTask}
+              onDelete={handleDeleteTask}
+            />
+          )}
+        </DrawerContent>
       </Drawer>
     </div>
   );
