@@ -263,7 +263,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
                 {task.origin_ticket_id && <Ticket className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />}
                 <span className={cn("min-w-0 break-words", task.completed && "line-through text-muted-foreground")}>
                   <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ p: "span" }}>
-                    {formatMentionsForDisplay(task.title)}
+                    {task.title}
                   </ReactMarkdown>
                 </span>
               </div>
