@@ -1,19 +1,18 @@
 import React from 'react';
-import { Comment as CommentType, User } from "@/types";
+import { Comment as CommentType, User } from '@/types';
+import { format, formatDistanceToNow } from 'date-fns';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
-import { formatDistanceToNow } from 'date-fns';
-import { getInitials, generatePastelColor, formatMentionsForDisplay, getAvatarUrl } from '@/lib/utils';
+import { getAvatarUrl, generatePastelColor, getInitials, formatMentionsForDisplay } from '@/lib/utils';
+import { Button } from '../ui/button';
+import { MoreHorizontal, Paperclip, Trash2, Edit, Ticket, Smile, CornerUpLeft } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { Link } from 'react-router-dom';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
-import { Button } from '../ui/button';
-import { MoreHorizontal, Edit, Trash2, Ticket, Paperclip, X } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 import { Textarea } from '../ui/textarea';
-import CommentReactions from '../CommentReactions';
-import CommentAttachmentItem from '../CommentAttachmentItem';
-import { useAuth } from "@/contexts/AuthContext";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
+import { Badge } from '../ui/badge';
+import { useTaskModal } from '@/contexts/TaskModalContext';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface TaskCommentsListProps {
   comments: CommentType[];
@@ -32,13 +31,26 @@ interface TaskCommentsListProps {
   editFileInputRef: React.RefObject<HTMLInputElement>;
 }
 
-const TaskCommentsList = ({
-  comments,
-  isLoading,
+const Comment: React.FC<{
+  comment: CommentType;
+  onEdit: (comment: CommentType) => void;
+  onDelete: (comment: CommentType) => void;
+  onToggleReaction: (commentId: string, emoji: string) => void;
+  isEditing: boolean;
+  editedText: string;
+  setEditedText: (text: string) => void;
+  handleSaveEdit: () => void;
+  handleCancelEdit: () => void;
+  newAttachments: File[];
+  removeNewAttachment: (index: number) => void;
+  handleEditFileChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  editFileInputRef: React.RefObject<HTMLInputElement>;
+}> = ({
+  comment,
   onEdit,
   onDelete,
   onToggleReaction,
-  editingCommentId,
+  isEditing,
   editedText,
   setEditedText,
   handleSaveEdit,
@@ -47,138 +59,117 @@ const TaskCommentsList = ({
   removeNewAttachment,
   handleEditFileChange,
   editFileInputRef,
-}: TaskCommentsListProps) => {
+}) => {
   const { user } = useAuth();
-  const commentsEndRef = React.useRef<HTMLDivElement>(null);
+  const { onOpen } = useTaskModal();
+  const queryClient = useQueryClient();
+  const projectData: any = queryClient.getQueryData(['project', comment.project_id]);
 
-  React.useEffect(() => {
-    commentsEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [comments]);
+  const handleCreateTaskFromComment = () => {
+    const fullCommentText = comment.text || '';
+    const taskTitle = fullCommentText.length > 80 ? `${fullCommentText.substring(0, 80)}...` : fullCommentText;
+    
+    onOpen(undefined, {
+      title: taskTitle,
+      description: fullCommentText, // Use the full, untruncated comment text for the description
+      project_id: comment.project_id,
+      status: 'To Do',
+      priority: 'Medium',
+      due_date: null,
+      tags: projectData?.tags || [],
+      assigned_to: [],
+      origin_comment_id: comment.id,
+    });
+  };
+
+  const author = comment.author as User;
+  const authorName = [author.first_name, author.last_name].filter(Boolean).join(' ') || author.email;
+  const formattedText = formatMentionsForDisplay(comment.text || '');
+
+  return (
+    <div className="flex items-start gap-3">
+      <Avatar className="h-8 w-8">
+        <AvatarImage src={getAvatarUrl(author.avatar_url, author.id)} />
+        <AvatarFallback style={generatePastelColor(author.id)}>
+          {getInitials(authorName, author.email)}
+        </AvatarFallback>
+      </Avatar>
+      <div className="flex-1">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-sm">{authorName}</span>
+            <span className="text-xs text-muted-foreground">
+              {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
+            </span>
+            {comment.is_ticket && <Badge variant="outline">from ticket</Badge>}
+          </div>
+          {user && user.id === author.id && !isEditing && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-6 w-6">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onSelect={() => onEdit(comment)}>
+                  <Edit className="mr-2 h-4 w-4" /> Edit
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => onDelete(comment)} className="text-destructive">
+                  <Trash2 className="mr-2 h-4 w-4" /> Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
+        {isEditing ? (
+          <div className="mt-1 space-y-2">
+            <Textarea value={editedText} onChange={(e) => setEditedText(e.target.value)} className="text-sm" />
+            {/* Attachment handling for editing can be added here */}
+            <div className="flex justify-end gap-2">
+              <Button variant="ghost" size="sm" onClick={handleCancelEdit}>Cancel</Button>
+              <Button size="sm" onClick={handleSaveEdit}>Save</Button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="prose prose-sm dark:prose-invert max-w-none break-words">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{formattedText}</ReactMarkdown>
+            </div>
+            <div className="mt-1 flex items-center gap-2">
+              <Button variant="ghost" size="xs" className="text-muted-foreground">
+                <CornerUpLeft className="h-3 w-3 mr-1" /> Reply
+              </Button>
+              <Button variant="ghost" size="xs" className="text-muted-foreground">
+                <Smile className="h-3 w-3 mr-1" /> React
+              </Button>
+              <Button variant="ghost" size="xs" className="text-muted-foreground" onClick={handleCreateTaskFromComment}>
+                <Ticket className="h-3 w-3 mr-1" /> Create Ticket
+              </Button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const TaskCommentsList: React.FC<TaskCommentsListProps> = (props) => {
+  const { comments, isLoading, ...rest } = props;
 
   if (isLoading) {
-    return <p>Loading comments...</p>;
+    return <div>Loading comments...</div>;
   }
 
   return (
-    <div className="space-y-4">
-      <h4 className="font-semibold mb-4">Discussion</h4>
-      <div className="space-y-4">
-        {comments.map(comment => {
-          const author = comment.author;
-          const fullName = `${author.first_name || ''} ${author.last_name || ''}`.trim() || author.email;
-          const canManageComment = user && (comment.author.id === user.id || user.role === 'admin' || user.role === 'master admin');
-          const attachments = comment.attachments_jsonb || [];
-
-          return (
-            <div key={comment.id} className="flex items-start space-x-4">
-              <Avatar>
-                <AvatarImage src={getAvatarUrl(author.avatar_url, author.id)} />
-                <AvatarFallback style={generatePastelColor(author.id)}>
-                  {getInitials(fullName, author.email)}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <p className="font-semibold">{fullName}</p>
-                    {comment.isTicket && (
-                      <Ticket className="h-4 w-4 text-muted-foreground" title="Created as ticket" />
-                    )}
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <span className="text-xs text-muted-foreground">
-                      {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
-                    </span>
-                    {canManageComment && editingCommentId !== comment.id && (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-6 w-6">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onSelect={() => onEdit(comment)}>
-                            <Edit className="mr-2 h-4 w-4" /> Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onSelect={() => onDelete(comment)} className="text-destructive">
-                            <Trash2 className="mr-2 h-4 w-4" /> Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )}
-                  </div>
-                </div>
-                {editingCommentId === comment.id ? (
-                  <div className="mt-2 space-y-2">
-                    <Textarea value={editedText} onChange={(e) => setEditedText(e.target.value)} autoFocus />
-                    {(attachments.length > 0 || newAttachments.length > 0) && (
-                      <div className="mt-2">
-                          <h4 className="font-semibold text-xs text-muted-foreground mb-2">Attachments</h4>
-                          <div className="space-y-1">
-                              {attachments.map((file, index) => (
-                                  <div key={file.url || file.file_url || index} className="flex items-center gap-2 text-sm text-muted-foreground">
-                                      <FileText className="h-4 w-4" />
-                                      <span>{file.name || file.file_name}</span>
-                                  </div>
-                              ))}
-                              {newAttachments.map((file, index) => (
-                                <div key={index} className="flex items-center justify-between text-sm bg-muted p-1 rounded-md">
-                                  <span className="truncate">{file.name}</span>
-                                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeNewAttachment(index)}>
-                                    <X className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                              ))}
-                          </div>
-                      </div>
-                    )}
-                    <div className="flex justify-between items-center">
-                      <Button variant="ghost" size="icon" onClick={() => editFileInputRef.current?.click()}>
-                        <Paperclip className="h-4 w-4" />
-                      </Button>
-                      <input type="file" ref={editFileInputRef} multiple onChange={handleEditFileChange} className="hidden" />
-                      <div className="flex justify-end gap-2">
-                        <Button variant="ghost" size="sm" onClick={handleCancelEdit}>Cancel</Button>
-                        <Button size="sm" onClick={handleSaveEdit}>Save</Button>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    <div className="prose prose-sm dark:prose-invert max-w-none mt-1 break-words">
-                      <ReactMarkdown
-                        remarkPlugins={[remarkGfm]}
-                        components={{
-                          a: ({ node, ...props }) => {
-                            const href = props.href || '';
-                            if (href.startsWith('/')) {
-                              return <Link to={href} {...props} className="text-primary hover:underline" />;
-                            }
-                            return <a {...props} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline" />;
-                          }
-                        }}
-                      >
-                        {formatMentionsForDisplay(comment.text)}
-                      </ReactMarkdown>
-                    </div>
-                    {attachments.length > 0 && (
-                      <div className="mt-2 space-y-2">
-                        {attachments.map((file: any, index: number) => (
-                          <CommentAttachmentItem key={file.id || index} file={file} />
-                        ))}
-                      </div>
-                    )}
-                    <div className="mt-2">
-                      <CommentReactions reactions={comment.reactions || []} onToggleReaction={(emoji) => onToggleReaction(comment.id, emoji)} />
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
-          );
-        })}
-        <div ref={commentsEndRef} />
-      </div>
+    <div className="space-y-6">
+      {comments.map((comment) => (
+        <Comment
+          key={comment.id}
+          comment={comment}
+          isEditing={props.editingCommentId === comment.id}
+          {...rest}
+        />
+      ))}
     </div>
   );
 };
