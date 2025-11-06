@@ -14,30 +14,28 @@ import { Textarea } from "@/components/ui/textarea";
 
 const getErrorMessage = async (error: any): Promise<string> => {
   let description = "An unknown error occurred. Please check the console.";
+  let rawErrorText: string | null = null;
 
-  if (error.context && typeof error.context.json === 'function') {
-    try {
-      const errorBody = await error.context.json();
-      description = errorBody.error || "The server returned an error without a specific message.";
-    } catch (e) {
-      // Failed to parse JSON. Let's check if it's an HTML page.
-      if (error.context && typeof error.context.text === 'function') {
-        try {
-          const errorText = await error.context.text();
-          if (errorText.trim().startsWith('<') || errorText.includes('<html>') || errorText.includes('window.dataLayer')) {
-            return "The server returned an unexpected error. This might be a temporary issue with the service. Please try again later.";
-          }
-          // It's not JSON and not HTML, so it might be a plain text error.
-          description = errorText;
-        } catch (textError) {
-          description = "Failed to parse the error response from the server.";
-        }
-      } else {
-        description = "Failed to parse the error response from the server.";
-      }
+  if (error.context && typeof error.context.text === 'function') {
+    rawErrorText = await error.context.text().catch(() => null);
+  } else if (error.message) {
+    rawErrorText = error.message;
+  }
+
+  if (rawErrorText) {
+    // Check for HTML response first
+    if (rawErrorText.trim().startsWith('<') || rawErrorText.includes('<html>') || rawErrorText.includes('window.dataLayer')) {
+      return "The server returned an unexpected error. This might be a temporary issue with the service. Please try again later.";
     }
-  } else {
-    description = error.message || "The server returned an error.";
+    
+    // Try to parse as JSON
+    try {
+      const errorBody = JSON.parse(rawErrorText);
+      description = errorBody.error || errorBody.message || rawErrorText;
+    } catch (e) {
+      // Not JSON, use the raw text
+      description = rawErrorText;
+    }
   }
 
   // Clean up common error patterns from edge functions
@@ -145,10 +143,20 @@ const WbiztoolPage = () => {
       toast.error("Please enter a phone number and a message.");
       return;
     }
+
+    // Normalize phone number for Indonesian format
+    let normalizedPhone = testPhone.replace(/\D/g, ''); // Remove all non-digit characters
+    if (normalizedPhone.startsWith('0')) {
+      normalizedPhone = '62' + normalizedPhone.substring(1);
+    } else if (normalizedPhone.startsWith('8')) {
+      // Handles cases where user types 812... instead of 0812...
+      normalizedPhone = '62' + normalizedPhone;
+    }
+
     setIsSendingTest(true);
     try {
       const { data, error } = await supabase.functions.invoke('test-wbiztool-message', {
-        body: { phone: testPhone, message: testMessage },
+        body: { phone: normalizedPhone, message: testMessage },
       });
       if (error) throw error;
       if (data.error) throw new Error(data.error);
