@@ -20,6 +20,7 @@ import CommentAttachmentItem from '../CommentAttachmentItem';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import CommentReactionPicker from '../CommentReactionPicker';
 import { useProfiles } from '@/hooks/useProfiles';
+import CommentReactions from '../CommentReactions';
 
 interface Reaction {
   id: string;
@@ -221,6 +222,9 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
                           <CornerUpLeft className="h-3 w-3 mr-1" /> Reply
                         </Button>
                         <CommentReactions reactions={comment.reactions || []} onToggleReaction={(emoji) => onToggleCommentReaction(comment.id, emoji)} />
+                        <Button variant="ghost" size="xs" className="text-muted-foreground" onClick={() => onCreateTicketFromComment(comment)}>
+                          <Ticket className="h-3 w-3 mr-1" /> Create Ticket
+                        </Button>
                       </div>
                     </>
                   )}
