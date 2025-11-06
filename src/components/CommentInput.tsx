@@ -1,5 +1,5 @@
 import { useState, useRef, forwardRef, useImperativeHandle, useEffect } from 'react';
-import { Project, User } from "@/types";
+import { Project, User, Comment as CommentType } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Ticket, Paperclip, X } from "lucide-react";
@@ -11,12 +11,14 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/t
 
 interface CommentInputProps {
   project: Project;
-  onAddCommentOrTicket: (text: string, isTicket: boolean, attachments: File[] | null, mentionedUserIds: string[]) => void;
+  onAddCommentOrTicket: (text: string, isTicket: boolean, attachments: File[] | null, mentionedUserIds: string[], replyToId?: string | null) => void;
   allUsers: User[];
   initialValue?: string;
+  replyTo?: CommentType | null;
+  onCancelReply?: () => void;
 }
 
-const CommentInput = forwardRef(({ project, onAddCommentOrTicket, allUsers, initialValue }: CommentInputProps, ref) => {
+const CommentInput = forwardRef(({ project, onAddCommentOrTicket, allUsers, initialValue, replyTo, onCancelReply }: CommentInputProps, ref) => {
   const { user } = useAuth();
   const [text, setText] = useState(initialValue || '');
   const [isTicket, setIsTicket] = useState(false);
@@ -52,7 +54,7 @@ const CommentInput = forwardRef(({ project, onAddCommentOrTicket, allUsers, init
   const handleSubmit = () => {
     if (!text.trim() && attachments.length === 0) return;
     const mentionedUserIds = parseMentions(text);
-    onAddCommentOrTicket(text, isTicket, attachments, mentionedUserIds);
+    onAddCommentOrTicket(text, isTicket, attachments, mentionedUserIds, replyTo?.id);
     setText('');
     setIsTicket(false);
     setAttachments([]);
@@ -80,6 +82,17 @@ const CommentInput = forwardRef(({ project, onAddCommentOrTicket, allUsers, init
         </AvatarFallback>
       </Avatar>
       <div className="min-w-0 flex-1">
+        {replyTo && (
+          <div className="p-2 mb-2 bg-muted rounded-md flex justify-between items-center text-sm">
+            <div className="border-l-2 border-primary pl-2 overflow-hidden">
+              <p className="font-semibold text-primary">Replying to {replyTo.author.name}</p>
+              <p className="text-xs text-muted-foreground truncate">{replyTo.text}</p>
+            </div>
+            <Button variant="ghost" size="icon" onClick={onCancelReply} className="h-7 w-7">
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
         <div className="border rounded-lg focus-within:ring-1 focus-within:ring-ring">
           <MentionsInput
             value={text}

@@ -205,7 +205,7 @@ export const useProjectMutations = (slug?: string) => {
     });
 
     const addComment = useMutation({
-        mutationFn: async ({ project, user, text, isTicket, attachments, mentionedUserIds }: { project: Project, user: User, text: string, isTicket: boolean, attachments: File[] | null, mentionedUserIds: string[] }) => {
+        mutationFn: async ({ project, user, text, isTicket, attachments, mentionedUserIds, replyToId }: { project: Project, user: User, text: string, isTicket: boolean, attachments: File[] | null, mentionedUserIds: string[], replyToId?: string | null }) => {
             let finalCommentText = text;
             let firstAttachmentUrl: string | null = null;
             let firstAttachmentName: string | null = null;
@@ -254,7 +254,8 @@ export const useProjectMutations = (slug?: string) => {
                 is_ticket: isTicket, 
                 attachment_url: firstAttachmentUrl, 
                 attachment_name: firstAttachmentName,
-                attachments_jsonb: attachmentsJsonb, // <-- Insert full attachment data
+                attachments_jsonb: attachmentsJsonb,
+                reply_to_comment_id: replyToId,
             }).select().single();
             
             if (commentError) throw commentError;

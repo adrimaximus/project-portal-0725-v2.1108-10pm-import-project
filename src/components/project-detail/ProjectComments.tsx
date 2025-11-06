@@ -1,29 +1,40 @@
 import { useState, useEffect, useRef } from 'react';
-import { Project, Comment as CommentType, User } from "@/types";
-import { useAuth } from "@/contexts/AuthContext";
+import { Project, Comment as CommentType, Task, User, ProjectFile } from "@/types";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
+import { Ticket, MoreHorizontal, Edit, Trash2, FileText, Paperclip, X, Loader2, SmilePlus, CornerUpLeft } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { getInitials, generatePastelColor, parseMentions, formatMentionsForDisplay, getAvatarUrl } from "@/lib/utils";
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
-import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
-import { getInitials, generatePastelColor, formatMentionsForDisplay, getAvatarUrl } from '@/lib/utils';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import { Link } from 'react-router-dom';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
-import { Button } from '../ui/button';
-import { MoreHorizontal, Edit, Trash2 } from 'lucide-react';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../ui/alert-dialog';
-import { Textarea } from '../ui/textarea';
-import CommentReactions from '../CommentReactions';
+import CommentInput from "../CommentInput";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import { Link } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Textarea } from "@/components/ui/textarea";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 import CommentAttachmentItem from '../CommentAttachmentItem';
-import CommentInput from '../CommentInput';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import CommentReactionPicker from '../CommentReactionPicker';
+import { useProfiles } from '@/hooks/useProfiles';
+
+interface Reaction {
+  id: string;
+  emoji: string;
+  user_id: string;
+  user_name: string;
+}
 
 interface CommentWithReactions extends CommentType {
-  reactions?: any[]; // Use a more specific type if available
+  reactions?: Reaction[];
 }
 
 interface ProjectCommentsProps {
   project: Project;
-  onAddCommentOrTicket: (text: string, isTicket: boolean, attachments: File[] | null, mentionedUserIds: string[]) => void;
+  onAddCommentOrTicket: (text: string, isTicket: boolean, attachments: File[] | null, mentionedUserIds: string[], replyToId?: string | null) => void;
   onUpdateComment: (project: Project, commentId: string, text: string, attachments: File[] | null, isConvertingToTicket: boolean, mentionedUserIds: string[]) => void;
   onDeleteComment: (commentId: string) => void;
   onToggleCommentReaction: (commentId: string, emoji: string) => void;
@@ -32,13 +43,19 @@ interface ProjectCommentsProps {
   initialMention?: { id: string; name: string } | null;
   onMentionConsumed: () => void;
   allUsers: User[];
+  replyTo: CommentType | null;
+  onReply: (comment: CommentType) => void;
+  onCancelReply: () => void;
 }
 
-const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDeleteComment, onToggleCommentReaction, isUpdatingComment, updatedCommentId, initialMention, onMentionConsumed, allUsers }: ProjectCommentsProps) => {
+const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDeleteComment, onToggleCommentReaction, isUpdatingComment, updatedCommentId, initialMention, onMentionConsumed, allUsers, replyTo, onReply, onCancelReply }: ProjectCommentsProps) => {
   const { user } = useAuth();
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editedText, setEditedText] = useState('');
   const [commentToDelete, setCommentToDelete] = useState<CommentType | null>(null);
+  const [newAttachments, setNewAttachments] = useState<File[]>([]);
+  const [isConvertingToTicket, setIsConvertingToTicket] = useState(false);
+  const editFileInputRef = useRef<HTMLInputElement>(null);
   const commentInputRef = useRef<{ setText: (text: string, append?: boolean) => void, focus: () => void }>(null);
   const lastProcessedMentionId = useRef<string | null>(null);
   const commentsEndRef = useRef<HTMLDivElement>(null);
@@ -58,18 +75,24 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
   }, [project.comments]);
 
   const handleEditClick = (comment: CommentType) => {
+    const textWithoutAttachments = comment.text?.replace(/\n\n\*\*Attachments:\*\*[\s\S]*$/, '').trim() || '';
     setEditingCommentId(comment.id);
-    setEditedText(comment.text || '');
+    setEditedText(textWithoutAttachments);
+    setNewAttachments([]);
+    setIsConvertingToTicket(comment.is_ticket);
   };
 
   const handleCancelEdit = () => {
     setEditingCommentId(null);
     setEditedText('');
+    setNewAttachments([]);
+    setIsConvertingToTicket(false);
   };
 
   const handleSaveEdit = () => {
     if (editingCommentId) {
-      onUpdateComment(project, editingCommentId, editedText, null, false, []); // Simplified for now
+      const mentionedUserIds = parseMentions(editedText);
+      onUpdateComment(project, editingCommentId, editedText, newAttachments, isConvertingToTicket, mentionedUserIds);
     }
     handleCancelEdit();
   };
@@ -81,7 +104,18 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
     }
   };
 
+  const handleEditFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files) {
+      setNewAttachments(prev => [...prev, ...Array.from(event.target.files!)]);
+    }
+  };
+
+  const removeNewAttachment = (index: number) => {
+    setNewAttachments(prev => prev.filter((_, i) => i !== index));
+  };
+
   const comments = (project.comments || []) as CommentWithReactions[];
+  const tasks = project.tasks || [];
 
   return (
     <div className="flex flex-col h-full min-h-[400px] sm:min-h-[500px]">
@@ -91,7 +125,23 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
             const author = comment.author;
             const fullName = `${author.first_name || ''} ${author.last_name || ''}`.trim() || author.email;
             const canManageComment = user && (comment.author.id === user.id || user.role === 'admin' || user.role === 'master admin');
-            const attachments = comment.attachments_jsonb || [];
+            
+            const textWithoutAttachments = comment.text?.replace(/\n\n\*\*Attachments:\*\*[\s\S]*$/, '').trim() || '';
+            const mainText = textWithoutAttachments;
+            
+            const attachmentsData = comment.attachments_jsonb;
+            const attachments: any[] = Array.isArray(attachmentsData) ? attachmentsData : attachmentsData ? [attachmentsData] : [];
+
+            const isThisCommentBeingUpdated = isUpdatingComment && updatedCommentId === comment.id;
+
+            const groupedReactions = (comment.reactions || []).reduce((acc, reaction) => {
+              if (!acc[reaction.emoji]) {
+                acc[reaction.emoji] = { users: [], userIds: [] };
+              }
+              acc[reaction.emoji].users.push(reaction.user_name);
+              acc[reaction.emoji].userIds.push(reaction.user_id);
+              return acc;
+            }, {} as Record<string, { users: string[], userIds: string[] }>);
 
             return (
               <div key={comment.id} className="flex items-start space-x-4">
@@ -137,6 +187,12 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
                     </div>
                   ) : (
                     <>
+                      {comment.repliedMessage && (
+                        <div className="text-xs text-muted-foreground border-l-2 pl-2 mb-1">
+                          <p className="font-semibold">Replying to {comment.repliedMessage.senderName}</p>
+                          <p className="italic line-clamp-1">{comment.repliedMessage.content}</p>
+                        </div>
+                      )}
                       <div className="prose prose-sm dark:prose-invert max-w-none mt-1 break-words">
                         <ReactMarkdown
                           remarkPlugins={[remarkGfm]}
@@ -150,7 +206,7 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
                             }
                           }}
                         >
-                          {formatMentionsForDisplay(comment.text)}
+                          {formatMentionsForDisplay(mainText)}
                         </ReactMarkdown>
                       </div>
                       {attachments.length > 0 && (
@@ -160,7 +216,10 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
                           ))}
                         </div>
                       )}
-                      <div className="mt-2">
+                      <div className="mt-1 flex items-center gap-2">
+                        <Button variant="ghost" size="xs" className="text-muted-foreground" onClick={() => onReply(comment)}>
+                          <CornerUpLeft className="h-3 w-3 mr-1" /> Reply
+                        </Button>
                         <CommentReactions reactions={comment.reactions || []} onToggleReaction={(emoji) => onToggleCommentReaction(comment.id, emoji)} />
                       </div>
                     </>
@@ -180,6 +239,8 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
           project={project}
           onAddCommentOrTicket={onAddCommentOrTicket}
           allUsers={allUsers}
+          replyTo={replyTo}
+          onCancelReply={onCancelReply}
         />
       </div>
       <AlertDialog open={!!commentToDelete} onOpenChange={() => setCommentToDelete(null)}>

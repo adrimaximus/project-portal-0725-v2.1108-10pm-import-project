@@ -167,6 +167,12 @@ export type Comment = {
   attachment_url?: string | null;
   attachment_name?: string | null;
   attachments_jsonb?: any[];
+  reply_to_comment_id?: string | null;
+  repliedMessage?: {
+    content: string;
+    senderName: string;
+    isDeleted: boolean;
+  } | null;
 };
 
 export type TaskAttachment = {
@@ -293,6 +299,7 @@ export type UpsertTaskPayload = {
   tag_ids?: string[];
   new_files?: File[];
   deleted_files?: string[];
+  origin_ticket_id?: string | null;
 };
 
 export type GoalType = 'frequency' | 'quantity' | 'value';

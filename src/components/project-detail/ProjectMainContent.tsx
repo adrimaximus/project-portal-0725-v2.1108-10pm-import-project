@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Project, Task, Reaction, User } from "@/types";
+import { Project, Task, Reaction, User, Comment as CommentType } from "@/types";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ProjectComments from '@/components/project-detail/ProjectComments';
 import { useAuth } from '@/contexts/AuthContext';
@@ -50,6 +50,7 @@ const ProjectMainContent = ({
   const [lastViewedDiscussion, setLastViewedDiscussion] = useState(() => new Date());
   const [searchParams, setSearchParams] = useSearchParams();
   const [initialMention, setInitialMention] = useState<{ id: string; name: string } | null>(null);
+  const [replyTo, setReplyTo] = useState<CommentType | null>(null);
 
   useEffect(() => {
     const mentionId = searchParams.get('mention');
@@ -89,25 +90,26 @@ const ProjectMainContent = ({
 
   const handleAddCommentOrTicket = async (text: string, isTicket: boolean, attachments: File[] | null, mentionedUserIds: string[]) => {
     if (!project || !user) return;
-    mutations.addComment.mutate({ project, user, text, isTicket, attachments, mentionedUserIds }, {
-      onSuccess: () => {
-        if (mentionedUserIds.length > 0) {
-          const mentionedUsers = allUsers.filter(u => mentionedUserIds.includes(u.id));
-          const names = mentionedUsers.map(u => u.name);
-          let notificationMessage = '';
-          if (names.length === 1) {
-            notificationMessage = `${names[0]} will be notified.`;
-          } else if (names.length === 2) {
-            notificationMessage = `${names[0]} and ${names[1]} will be notified.`;
-          } else if (names.length > 2) {
-            const otherCount = names.length - 1;
-            notificationMessage = `${names[0]} and ${otherCount} others will be notified.`;
-          }
-          if (notificationMessage) {
-            toast.info(notificationMessage);
-          }
+    mutations.addComment.mutate({ project, user, text, isTicket, attachments, mentionedUserIds, replyToId: replyTo?.id }, {
+        onSuccess: () => {
+            setReplyTo(null);
+            if (mentionedUserIds.length > 0) {
+              const mentionedUsers = allUsers.filter(u => mentionedUserIds.includes(u.id));
+              const names = mentionedUsers.map(u => u.name);
+              let notificationMessage = '';
+              if (names.length === 1) {
+                notificationMessage = `${names[0]} will be notified.`;
+              } else if (names.length === 2) {
+                notificationMessage = `${names[0]} and ${names[1]} will be notified.`;
+              } else if (names.length > 2) {
+                const otherCount = names.length - 1;
+                notificationMessage = `${names[0]} and ${otherCount} others will be notified.`;
+              }
+              if (notificationMessage) {
+                toast.info(notificationMessage);
+              }
+            }
         }
-      }
     });
   };
 
@@ -195,6 +197,9 @@ const ProjectMainContent = ({
             initialMention={initialMention}
             onMentionConsumed={handleMentionConsumed}
             allUsers={allUsers}
+            onReply={setReplyTo}
+            replyTo={replyTo}
+            onCancelReply={() => setReplyTo(null)}
           />
         </TabsContent>
         <TabsContent value="activity" className="mt-4 h-[350px] overflow-y-auto pr-4">
