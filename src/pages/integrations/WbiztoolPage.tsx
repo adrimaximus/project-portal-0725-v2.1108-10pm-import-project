@@ -20,7 +20,21 @@ const getErrorMessage = async (error: any): Promise<string> => {
       const errorBody = await error.context.json();
       description = errorBody.error || "The server returned an error without a specific message.";
     } catch (e) {
-      description = "Failed to parse the error response from the server.";
+      // Failed to parse JSON. Let's check if it's an HTML page.
+      if (error.context && typeof error.context.text === 'function') {
+        try {
+          const errorText = await error.context.text();
+          if (errorText.trim().startsWith('<') || errorText.includes('<html>') || errorText.includes('window.dataLayer')) {
+            return "The server returned an unexpected error. This might be a temporary issue with the service. Please try again later.";
+          }
+          // It's not JSON and not HTML, so it might be a plain text error.
+          description = errorText;
+        } catch (textError) {
+          description = "Failed to parse the error response from the server.";
+        }
+      } else {
+        description = "Failed to parse the error response from the server.";
+      }
     }
   } else {
     description = error.message || "The server returned an error.";
@@ -50,6 +64,10 @@ const getErrorMessage = async (error: any): Promise<string> => {
 
   // A simple HTML stripper for any leftover tags
   description = description.replace(/<[^>]*>?/gm, ' ').replace(/\s+/g, ' ').trim();
+  
+  if (!description) {
+    return "An unexpected server error occurred.";
+  }
 
   return description;
 };
