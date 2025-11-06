@@ -1,26 +1,21 @@
 import { useState, useEffect, useRef } from 'react';
-import { Project, Comment as CommentType, Task, User, ProjectFile } from "@/types";
+import { Project, Comment as CommentType, User } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
-import { Ticket, MoreHorizontal, Edit, Trash2, FileText, Paperclip, X, Loader2, SmilePlus, CornerUpLeft } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Ticket, MoreHorizontal, Edit, Trash2, CornerUpLeft } from "lucide-react";
 import { getInitials, generatePastelColor, parseMentions, getAvatarUrl } from "@/lib/utils";
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
 import CommentInput from "../CommentInput";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import remarkBreaks from 'remark-breaks';
+import rehypeRaw from 'rehype-raw';
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Textarea } from "@/components/ui/textarea";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 import CommentAttachmentItem from '../CommentAttachmentItem';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import CommentReactionPicker from '../CommentReactionPicker';
-import { useProfiles } from '@/hooks/useProfiles';
 import CommentReactions from '../CommentReactions';
 
 interface Reaction {
@@ -57,7 +52,6 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
   const [commentToDelete, setCommentToDelete] = useState<CommentType | null>(null);
   const [newAttachments, setNewAttachments] = useState<File[]>([]);
   const [isConvertingToTicket, setIsConvertingToTicket] = useState(false);
-  const editFileInputRef = useRef<HTMLInputElement>(null);
   const commentInputRef = useRef<{ setText: (text: string, append?: boolean) => void, focus: () => void }>(null);
   const lastProcessedMentionId = useRef<string | null>(null);
   const commentsEndRef = useRef<HTMLDivElement>(null);
@@ -106,18 +100,7 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
     }
   };
 
-  const handleEditFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files) {
-      setNewAttachments(prev => [...prev, ...Array.from(event.target.files!)]);
-    }
-  };
-
-  const removeNewAttachment = (index: number) => {
-    setNewAttachments(prev => prev.filter((_, i) => i !== index));
-  };
-
   const comments = (project.comments || []) as CommentWithReactions[];
-  const tasks = project.tasks || [];
 
   return (
     <div className="flex flex-col h-full min-h-[400px] sm:min-h-[500px]">
@@ -128,22 +111,10 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
             const fullName = `${author.first_name || ''} ${author.last_name || ''}`.trim() || author.email;
             const canManageComment = user && (comment.author.id === user.id || user.role === 'admin' || user.role === 'master admin');
             
-            const textWithoutAttachments = comment.text?.replace(/\n\n\*\*Attachments:\*\*[\s\S]*$/, '').trim() || '';
-            const mainText = textWithoutAttachments;
+            const mainText = comment.text || '';
             
             const attachmentsData = comment.attachments_jsonb;
             const attachments: any[] = Array.isArray(attachmentsData) ? attachmentsData : attachmentsData ? [attachmentsData] : [];
-
-            const isThisCommentBeingUpdated = isUpdatingComment && updatedCommentId === comment.id;
-
-            const groupedReactions = (comment.reactions || []).reduce((acc, reaction) => {
-              if (!acc[reaction.emoji]) {
-                acc[reaction.emoji] = { users: [], userIds: [] };
-              }
-              acc[reaction.emoji].users.push(reaction.user_name);
-              acc[reaction.emoji].userIds.push(reaction.user_id);
-              return acc;
-            }, {} as Record<string, { users: string[], userIds: string[] }>);
 
             return (
               <div key={comment.id} className="flex items-start space-x-4">
@@ -195,9 +166,10 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
                           <p className="italic line-clamp-1">{comment.repliedMessage.content}</p>
                         </div>
                       )}
-                      <div className="prose prose-sm dark:prose-invert max-w-none mt-1 break-words whitespace-pre-wrap">
+                      <div className="prose prose-sm dark:prose-invert max-w-none mt-1 break-words">
                         <ReactMarkdown
-                          remarkPlugins={[remarkGfm, remarkBreaks]}
+                          remarkPlugins={[remarkGfm]}
+                          rehypePlugins={[rehypeRaw]}
                           components={{
                             a: ({ node, ...props }) => {
                               const href = props.href || '';
@@ -205,10 +177,15 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
                                 return <Link to={href} {...props} className="text-primary hover:underline" />;
                               }
                               return <a {...props} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline" />;
-                            }
+                            },
+                            mention: ({node, ...props}) => (
+                              <span className="bg-primary/10 text-primary rounded px-1 py-0.5 font-medium">
+                                @{props.children}
+                              </span>
+                            )
                           }}
                         >
-                          {mainText.replace(/@\[([^\]]+)\]\(([^)]+)\)/g, (match, name) => `@${name.split(' ')[0].toLowerCase()}`)}
+                          {mainText.replace(/@\[([^\]]+)\]\(([^)]+)\)/g, (match, name, id) => `<mention data-id="${id}">${name}</mention>`)}
                         </ReactMarkdown>
                       </div>
                       {attachments.length > 0 && (
