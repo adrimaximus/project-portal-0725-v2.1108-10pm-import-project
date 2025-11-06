@@ -116,7 +116,11 @@ const Comment: React.FC<{
             {comment.repliedMessage && (
               <div className="text-xs text-muted-foreground border-l-2 pl-2 mb-1">
                 <p className="font-semibold">Replying to {comment.repliedMessage.senderName}</p>
-                <p className="italic line-clamp-1">{formatMentionsForDisplay(comment.repliedMessage.content || '')}</p>
+                <div className="italic line-clamp-1 prose prose-sm dark:prose-invert max-w-none">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
+                    {formatMentionsForDisplay(comment.repliedMessage.content || '')}
+                  </ReactMarkdown>
+                </div>
               </div>
             )}
             <div className="prose prose-sm dark:prose-invert max-w-none break-words">
