@@ -4,12 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Ticket, MoreHorizontal, Edit, Trash2, FileText, Paperclip, X, Loader2, SmilePlus, CornerUpLeft } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { getInitials, generatePastelColor, parseMentions, formatMentionsForDisplay, getAvatarUrl } from "@/lib/utils";
+import { getInitials, generatePastelColor, parseMentions, getAvatarUrl } from "@/lib/utils";
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
 import CommentInput from "../CommentInput";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import remarkBreaks from 'remark-breaks';
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -194,9 +195,9 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
                           <p className="italic line-clamp-1">{comment.repliedMessage.content}</p>
                         </div>
                       )}
-                      <div className="prose prose-sm dark:prose-invert max-w-none mt-1 break-words">
+                      <div className="prose prose-sm dark:prose-invert max-w-none mt-1 break-words whitespace-pre-wrap">
                         <ReactMarkdown
-                          remarkPlugins={[remarkGfm]}
+                          remarkPlugins={[remarkGfm, remarkBreaks]}
                           components={{
                             a: ({ node, ...props }) => {
                               const href = props.href || '';
@@ -207,7 +208,7 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
                             }
                           }}
                         >
-                          {formatMentionsForDisplay(mainText)}
+                          {mainText.replace(/@\[([^\]]+)\]\(([^)]+)\)/g, (match, name) => `@${name.split(' ')[0].toLowerCase()}`)}
                         </ReactMarkdown>
                       </div>
                       {attachments.length > 0 && (
@@ -222,7 +223,10 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
                           <CornerUpLeft className="h-3 w-3 mr-1" /> Reply
                         </Button>
                         <CommentReactions reactions={comment.reactions || []} onToggleReaction={(emoji) => onToggleCommentReaction(comment.id, emoji)} />
-                        <Button variant="ghost" size="xs" className="text-muted-foreground" onClick={() => onCreateTicketFromComment(comment)}>
+                        <Button variant="ghost" size="xs" className="text-muted-foreground" onClick={() => {
+                          const mentionedUserIds = parseMentions(comment.text || '');
+                          onUpdateComment(project, comment.id, comment.text || '', null, true, mentionedUserIds);
+                        }}>
                           <Ticket className="h-3 w-3 mr-1" /> Create Ticket
                         </Button>
                       </div>
