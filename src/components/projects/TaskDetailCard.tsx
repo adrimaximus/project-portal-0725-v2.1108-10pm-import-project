@@ -101,6 +101,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
   const commentInputRef = useRef<{ setText: (text: string, append?: boolean) => void, focus: () => void }>(null);
   const { data: allUsers = [] } = useProfiles();
   const { onOpen: onOpenTaskModal } = useTaskModal();
+  const [replyTo, setReplyTo] = useState<CommentType | null>(null);
 
   const { data: comments = [], isLoading: isLoadingComments } = useQuery({
     queryKey: ['task-comments', task.id],
@@ -113,7 +114,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
   });
 
   const addCommentMutation = useMutation({
-    mutationFn: async ({ text, attachments, mentionedUserIds }: { text: string, attachments: File[] | null, mentionedUserIds: string[] }) => {
+    mutationFn: async ({ text, attachments, mentionedUserIds, replyToId }: { text: string, attachments: File[] | null, mentionedUserIds: string[], replyToId?: string | null }) => {
       if (!user) throw new Error("User not authenticated");
       let attachmentsJsonb: any[] = [];
       if (attachments && attachments.length > 0) {
@@ -129,7 +130,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
         });
         attachmentsJsonb = await Promise.all(uploadPromises);
       }
-      const { error } = await supabase.from('comments').insert({ project_id: task.project_id, task_id: task.id, author_id: user.id, text, is_ticket: false, attachments_jsonb: attachmentsJsonb });
+      const { error } = await supabase.from('comments').insert({ project_id: task.project_id, task_id: task.id, author_id: user.id, text, is_ticket: false, attachments_jsonb: attachmentsJsonb, reply_to_comment_id: replyToId });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -181,7 +182,8 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
   });
 
   const handleAddComment = (text: string, isTicket: boolean, attachments: File[] | null, mentionedUserIds: string[]) => {
-    addCommentMutation.mutate({ text, attachments, mentionedUserIds });
+    addCommentMutation.mutate({ text, attachments, mentionedUserIds, replyToId: replyTo?.id });
+    setReplyTo(null);
   };
 
   const handleEditClick = (comment: CommentType) => {
@@ -210,9 +212,10 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
     }
   };
 
-  const handleReply = (author: User) => {
+  const handleReply = (comment: CommentType) => {
+    setReplyTo(comment);
     if (commentInputRef.current) {
-      const mentionText = `@[${author.name}](${author.id}) `;
+      const mentionText = `@[${comment.author.name}](${comment.author.id}) `;
       commentInputRef.current.setText(mentionText, true);
       commentInputRef.current.focus();
     }
@@ -480,6 +483,8 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
             project={task as any}
             onAddCommentOrTicket={handleAddComment}
             allUsers={allUsers}
+            replyTo={replyTo}
+            onCancelReply={() => setReplyTo(null)}
           />
         </div>
       </DrawerContent>

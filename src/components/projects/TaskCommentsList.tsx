@@ -29,7 +29,7 @@ interface TaskCommentsListProps {
   removeNewAttachment: (index: number) => void;
   handleEditFileChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
   editFileInputRef: React.RefObject<HTMLInputElement>;
-  onReply: (author: User) => void;
+  onReply: (comment: CommentType) => void;
   onCreateTicketFromComment: (comment: CommentType) => void;
 }
 
@@ -47,7 +47,7 @@ const Comment: React.FC<{
   removeNewAttachment: (index: number) => void;
   handleEditFileChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
   editFileInputRef: React.RefObject<HTMLInputElement>;
-  onReply: (author: User) => void;
+  onReply: (comment: CommentType) => void;
   onCreateTicketFromComment: (comment: CommentType) => void;
 }> = ({
   comment,
@@ -113,11 +113,17 @@ const Comment: React.FC<{
           </div>
         ) : (
           <>
+            {comment.repliedMessage && (
+              <div className="text-xs text-muted-foreground border-l-2 pl-2 mb-1">
+                <p className="font-semibold">Replying to {comment.repliedMessage.senderName}</p>
+                <p className="italic line-clamp-1">{comment.repliedMessage.content}</p>
+              </div>
+            )}
             <div className="prose prose-sm dark:prose-invert max-w-none break-words">
               <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{formattedText}</ReactMarkdown>
             </div>
             <div className="mt-1 flex items-center gap-2">
-              <Button variant="ghost" size="xs" className="text-muted-foreground" onClick={() => onReply(author)}>
+              <Button variant="ghost" size="xs" className="text-muted-foreground" onClick={() => onReply(comment)}>
                 <CornerUpLeft className="h-3 w-3 mr-1" /> Reply
               </Button>
               <CommentReactions reactions={comment.reactions || []} onToggleReaction={(emoji) => onToggleReaction(comment.id, emoji)} />
