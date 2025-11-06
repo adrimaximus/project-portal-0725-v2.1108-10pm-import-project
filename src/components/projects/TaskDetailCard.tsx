@@ -215,8 +215,9 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
   const handleReply = (comment: CommentType) => {
     setReplyTo(comment);
     if (commentInputRef.current) {
-      const authorName = [comment.author.first_name, comment.author.last_name].filter(Boolean).join(' ') || comment.author.email;
-      const mentionText = `@[${authorName}](${comment.author.id}) `;
+      const author = comment.author as User;
+      const authorName = [author.first_name, author.last_name].filter(Boolean).join(' ') || author.email;
+      const mentionText = `@[${authorName}](${author.id}) `;
       commentInputRef.current.setText(mentionText, true);
       commentInputRef.current.focus();
     }

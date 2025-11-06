@@ -116,7 +116,7 @@ const Comment: React.FC<{
             {comment.repliedMessage && (
               <div className="text-xs text-muted-foreground border-l-2 pl-2 mb-1">
                 <p className="font-semibold">Replying to {comment.repliedMessage.senderName}</p>
-                <p className="italic line-clamp-1">{comment.repliedMessage.content}</p>
+                <p className="italic line-clamp-1">{formatMentionsForDisplay(comment.repliedMessage.content || '')}</p>
               </div>
             )}
             <div className="prose prose-sm dark:prose-invert max-w-none break-words">
