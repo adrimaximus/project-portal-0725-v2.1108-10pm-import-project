@@ -185,7 +185,7 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task, proj
 
         form.reset({
           title: task.title,
-          project_id: task.project_id,
+          project_id: task.project_id || project?.id,
           description: task.description,
           due_date: task.due_date ? new Date(task.due_date) : null,
           priority: task.priority || 'Normal',
