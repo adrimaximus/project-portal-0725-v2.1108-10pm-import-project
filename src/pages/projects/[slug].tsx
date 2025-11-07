@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { getProjectBySlug } from '@/lib/projectsApi';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { Task, UpsertTaskPayload, Project, ProjectStatus, Reaction } from '@/types';
+import { Task, UpsertTaskPayload, Project, ProjectStatus, Reaction, Comment as CommentType } from '@/types';
 import { useTaskMutations } from '@/hooks/useTaskMutations';
 import { useProjectMutations } from '@/hooks/useProjectMutations';
 import TaskFormDialog from '@/components/projects/TaskFormDialog';
@@ -26,6 +26,7 @@ import ProjectProgressCard from '@/components/project-detail/ProjectProgressCard
 import ProjectTeamCard from '@/components/project-detail/ProjectTeamCard';
 import ProjectMainContent from '@/components/project-detail/ProjectMainContent';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTaskModal } from '@/contexts/TaskModalContext';
 
 const ProjectDetailPage = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -33,12 +34,11 @@ const ProjectDetailPage = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user, hasPermission } = useAuth();
+  const { onOpen: onOpenTaskModal } = useTaskModal();
 
   const [isEditing, setIsEditing] = useState(false);
   const [editedProject, setEditedProject] = useState<Project | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
-  const [isTaskFormOpen, setIsTaskFormOpen] = useState(false);
-  const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
@@ -61,7 +61,6 @@ const ProjectDetailPage = () => {
   } = useProjectMutations(slug);
   
   const { 
-    upsertTask, 
     deleteTask, 
     toggleTaskCompletion, 
     isUpserting: isSavingTask 
@@ -148,12 +147,25 @@ const ProjectDetailPage = () => {
     }
   };
 
-  const handleEditTask = (task: Task) => { setEditingTask(task); setIsTaskFormOpen(true); };
-  const handleDeleteTask = (task: Task) => setTaskToDelete(task);
   const confirmDeleteTask = () => { if (taskToDelete) { deleteTask(taskToDelete.id); setTaskToDelete(null); } };
-  const handleTaskFormSubmit = (data: UpsertTaskPayload) => { upsertTask(data, { onSuccess: () => setIsTaskFormOpen(false) }); };
   const handleToggleTaskCompletion = (task: Task, completed: boolean) => toggleTaskCompletion({ task, completed });
   const handleToggleCommentReaction = (commentId: string, emoji: string) => toggleCommentReaction.mutate({ commentId, emoji });
+
+  const handleCreateTicketFromComment = (comment: CommentType) => {
+    if (!project) return;
+  
+    const cleanText = comment.text?.replace(/@\[[^\]]+\]\(([^)]+)\)/g, '').trim() || 'New Ticket';
+    const taskTitle = `Ticket: ${cleanText.substring(0, 50)}${cleanText.length > 50 ? '...' : ''}`;
+  
+    onOpenTaskModal(null, {
+      project_id: project.id,
+      title: taskTitle,
+      description: cleanText,
+      origin_ticket_id: comment.id,
+      status: 'To do',
+      priority: 'Normal',
+    });
+  };
 
   if (isLoading) {
     return <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
@@ -202,8 +214,8 @@ const ProjectDetailPage = () => {
                 onFieldChange={handleFieldChange}
                 mutations={{ addComment, updateComment, deleteComment, addFiles, deleteFile }}
                 defaultTab={searchParams.get('tab') || 'overview'}
-                onEditTask={handleEditTask}
-                onDeleteTask={handleDeleteTask}
+                onEditTask={(task) => onOpenTaskModal(task)}
+                onDeleteTask={setTaskToDelete}
                 onToggleTaskCompletion={handleToggleTaskCompletion}
                 onToggleCommentReaction={handleToggleCommentReaction}
                 highlightedTaskId={searchParams.get('task')}
@@ -215,6 +227,7 @@ const ProjectDetailPage = () => {
                 onSetIsEditing={() => enterEditMode()}
                 isUploading={addFiles.isPending}
                 onSaveChanges={handleSaveChanges}
+                onCreateTicketFromComment={handleCreateTicketFromComment}
               />
             </div>
             <div className="lg:col-span-1 space-y-6">
@@ -224,14 +237,6 @@ const ProjectDetailPage = () => {
           </div>
         </div>
       </PortalLayout>
-      <TaskFormDialog
-        open={isTaskFormOpen}
-        onOpenChange={setIsTaskFormOpen}
-        onSubmit={handleTaskFormSubmit}
-        isSubmitting={isSavingTask}
-        task={editingTask}
-        project={project}
-      />
       <AlertDialog open={!!taskToDelete} onOpenChange={() => setTaskToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader><AlertDialogTitle>Are you sure?</AlertDialogTitle><AlertDialogDescription>This will permanently delete the task "{taskToDelete?.title}". This action cannot be undone.</AlertDialogDescription></AlertDialogHeader>

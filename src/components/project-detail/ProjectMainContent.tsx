@@ -26,6 +26,7 @@ interface ProjectMainContentProps {
   onSetIsEditing: (isEditing: boolean) => void;
   isUploading: boolean;
   onSaveChanges: () => void;
+  onCreateTicketFromComment: (comment: CommentType) => void;
 }
 
 const ProjectMainContent = ({ 
@@ -43,6 +44,7 @@ const ProjectMainContent = ({
   onSetIsEditing,
   isUploading,
   onSaveChanges,
+  onCreateTicketFromComment,
 }: ProjectMainContentProps) => {
   const { user } = useAuth();
   const { data: allUsers = [] } = useProfiles();
@@ -200,6 +202,7 @@ const ProjectMainContent = ({
             onReply={setReplyTo}
             replyTo={replyTo}
             onCancelReply={() => setReplyTo(null)}
+            onCreateTicketFromComment={onCreateTicketFromComment}
           />
         </TabsContent>
         <TabsContent value="activity" className="mt-4 h-[350px] overflow-y-auto pr-4">

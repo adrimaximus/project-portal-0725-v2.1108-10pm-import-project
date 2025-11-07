@@ -43,9 +43,10 @@ interface ProjectCommentsProps {
   replyTo: CommentType | null;
   onReply: (comment: CommentType) => void;
   onCancelReply: () => void;
+  onCreateTicketFromComment: (comment: CommentType) => void;
 }
 
-const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDeleteComment, onToggleCommentReaction, isUpdatingComment, updatedCommentId, initialMention, onMentionConsumed, allUsers, replyTo, onReply, onCancelReply }: ProjectCommentsProps) => {
+const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDeleteComment, onToggleCommentReaction, isUpdatingComment, updatedCommentId, initialMention, onMentionConsumed, allUsers, replyTo, onReply, onCancelReply, onCreateTicketFromComment }: ProjectCommentsProps) => {
   const { user } = useAuth();
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editedText, setEditedText] = useState('');
@@ -207,10 +208,7 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
                           <CornerUpLeft className="h-3 w-3 mr-1" /> Reply
                         </Button>
                         <CommentReactions reactions={comment.reactions || []} onToggleReaction={(emoji) => onToggleCommentReaction(comment.id, emoji)} />
-                        <Button variant="ghost" size="xs" className="text-muted-foreground" onClick={() => {
-                          const mentionedUserIds = parseMentions(comment.text || '');
-                          onUpdateComment(project, comment.id, comment.text || '', null, true, mentionedUserIds);
-                        }}>
+                        <Button variant="ghost" size="xs" className="text-muted-foreground" onClick={() => onCreateTicketFromComment(comment)}>
                           <Ticket className="h-3 w-3 mr-1" /> Create Ticket
                         </Button>
                       </div>
