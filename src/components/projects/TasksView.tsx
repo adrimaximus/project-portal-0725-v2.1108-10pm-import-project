@@ -487,7 +487,10 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
                                 <div className="flex justify-end gap-1 items-center mr-1">
                                   <Popover>
                                     <PopoverTrigger asChild>
-                                      <button className="hover:bg-muted rounded-full p-1.5 transition-transform transform hover:scale-125">
+                                      <button 
+                                        onClick={(e) => e.stopPropagation()}
+                                        className="hover:bg-muted rounded-full p-1.5 transition-transform transform hover:scale-125"
+                                      >
                                         <SmilePlus className="h-5 w-5 text-muted-foreground" />
                                       </button>
                                     </PopoverTrigger>
