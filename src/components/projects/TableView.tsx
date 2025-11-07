@@ -257,7 +257,7 @@ const TableView = ({ projects, isLoading, onDeleteProject, sortConfig, requestSo
 
   return (
     <Table>
-      <TableHeader>
+      <TableHeader className="sticky top-0 bg-background z-10">
         <TableRow>
           <TableHead className="w-[300px] p-2">
             <Button variant="ghost" onClick={() => requestSort('name')} className="w-full justify-start px-2 group">
