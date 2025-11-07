@@ -405,6 +405,32 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
                 </div>
               </div>
             </div>
+            {task.project_owner && (
+              <div className="flex items-start gap-3">
+                <UserIcon className="h-4 w-4 mt-1 flex-shrink-0 text-muted-foreground" />
+                <div>
+                  <p className="font-medium">Project Creator</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Avatar className="h-6 w-6">
+                            <AvatarImage src={getAvatarUrl(task.project_owner.avatar_url, task.project_owner.id)} />
+                            <AvatarFallback style={generatePastelColor(task.project_owner.id)}>
+                              {getInitials([task.project_owner.first_name, task.project_owner.last_name].filter(Boolean).join(' '), task.project_owner.email || undefined)}
+                            </AvatarFallback>
+                          </Avatar>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{[task.project_owner.first_name, task.project_owner.last_name].filter(Boolean).join(' ')}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    <span className="text-sm text-muted-foreground">{[task.project_owner.first_name, task.project_owner.last_name].filter(Boolean).join(' ')}</span>
+                  </div>
+                </div>
+              </div>
+            )}
             <div className="flex items-start gap-3">
               <Calendar className="h-4 w-4 mt-1 flex-shrink-0 text-muted-foreground" />
               <div>
