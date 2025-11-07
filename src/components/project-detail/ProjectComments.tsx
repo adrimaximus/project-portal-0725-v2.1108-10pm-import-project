@@ -104,7 +104,17 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
 
   return (
     <div className="flex flex-col h-full min-h-[400px] sm:min-h-[500px]">
-      <div className="flex-1 overflow-y-auto pr-4 space-y-4 mb-4">
+      <div className="flex-shrink-0 pb-4 border-b mb-4">
+        <CommentInput
+          ref={commentInputRef}
+          project={project}
+          onAddCommentOrTicket={onAddCommentOrTicket}
+          allUsers={allUsers}
+          replyTo={replyTo}
+          onCancelReply={onCancelReply}
+        />
+      </div>
+      <div className="flex-1 overflow-y-auto pr-4 space-y-4">
         {comments.length > 0 ? (
           comments.map((comment: CommentType) => {
             const author = comment.author;
@@ -217,16 +227,6 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
           <p className="text-sm text-muted-foreground text-center pt-10">No comments yet. Start the discussion!</p>
         )}
         <div ref={commentsEndRef} />
-      </div>
-      <div className="flex-shrink-0 pt-4 border-t">
-        <CommentInput
-          ref={commentInputRef}
-          project={project}
-          onAddCommentOrTicket={onAddCommentOrTicket}
-          allUsers={allUsers}
-          replyTo={replyTo}
-          onCancelReply={onCancelReply}
-        />
       </div>
       <AlertDialog open={!!commentToDelete} onOpenChange={() => setCommentToDelete(null)}>
         <AlertDialogContent>
