@@ -3,7 +3,7 @@ import { Project, User, Comment as CommentType } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Ticket, Paperclip, X } from "lucide-react";
-import { getInitials, generatePastelColor, parseMentions, getAvatarUrl } from "@/lib/utils";
+import { getInitials, generatePastelColor, parseMentions, getAvatarUrl, formatMentionsForDisplay } from "@/lib/utils";
 import { MentionsInput, Mention, SuggestionDataItem } from 'react-mentions';
 import '@/styles/mentions.css';
 import { useAuth } from '@/contexts/AuthContext';
@@ -86,7 +86,7 @@ const CommentInput = forwardRef(({ project, onAddCommentOrTicket, allUsers, init
           <div className="p-2 mb-2 bg-muted rounded-md flex justify-between items-center text-sm">
             <div className="border-l-2 border-primary pl-2 overflow-hidden">
               <p className="font-semibold text-primary">Replying to {replyTo.author.name}</p>
-              <p className="text-xs text-muted-foreground truncate">{replyTo.text}</p>
+              <p className="text-xs text-muted-foreground truncate" dangerouslySetInnerHTML={{ __html: formatMentionsForDisplay(replyTo.text || '') }} />
             </div>
             <Button variant="ghost" size="icon" onClick={onCancelReply} className="h-7 w-7">
               <X className="h-4 w-4" />

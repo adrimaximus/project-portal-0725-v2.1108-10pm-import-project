@@ -1,8 +1,8 @@
-import { useRef, useState, forwardRef, useEffect } from "react";
+import { useRef, useState, forwardRef, useImperativeHandle, useEffect } from "react";
 import { useDropzone } from 'react-dropzone';
 import { Button } from "./ui/button";
 import { Paperclip, Send, X, Loader2, UploadCloud, Smile } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, formatMentionsForDisplay } from "@/lib/utils";
 import { Message } from "@/types";
 import VoiceMessageRecorder from "./VoiceMessageRecorder";
 import MentionInput, { UserSuggestion, ProjectSuggestion } from "./MentionInput";
@@ -155,7 +155,7 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
         <div className="p-2 mb-2 bg-muted rounded-md flex justify-between items-center">
           <div className="text-sm overflow-hidden">
             <p className="font-semibold text-primary">Replying to {replyTo.sender.name}</p>
-            <p className="text-xs text-muted-foreground truncate">{replyTo.text}</p>
+            <p className="text-xs text-muted-foreground truncate" dangerouslySetInnerHTML={{ __html: formatMentionsForDisplay(replyTo.text || '') }} />
           </div>
           <Button variant="ghost" size="icon" onClick={onCancelReply} className="h-7 w-7">
             <X className="h-4 w-4" />
