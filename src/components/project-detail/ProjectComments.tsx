@@ -171,12 +171,10 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
                   ) : (
                     <>
                       {comment.repliedMessage && (
-                        <div className="text-xs text-muted-foreground border-l-2 pl-2 mb-1">
-                          <p className="font-semibold">Replying to {comment.repliedMessage.senderName}</p>
-                          <div className="italic line-clamp-1 prose prose-sm dark:prose-invert max-w-none">
-                            <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
-                              {formatMentionsForDisplay(comment.repliedMessage.content || '')}
-                            </ReactMarkdown>
+                        <div className="p-2 mb-2 bg-muted rounded-md text-sm">
+                          <div className="border-l-2 border-primary pl-2 overflow-hidden">
+                            <p className="font-semibold text-primary">Replying to {comment.repliedMessage.senderName}</p>
+                            <p className="text-xs text-muted-foreground truncate" dangerouslySetInnerHTML={{ __html: formatMentionsForDisplay(comment.repliedMessage.content || '') }} />
                           </div>
                         </div>
                       )}
