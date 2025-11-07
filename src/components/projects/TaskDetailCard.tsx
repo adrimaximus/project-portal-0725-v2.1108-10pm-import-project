@@ -397,7 +397,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
                           </Avatar>
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p>{[assignee.first_name, assignee.last_name].filter(Boolean).join(' ')}</p>
+                          <p>{[assignee.first_name, assignee.last_name].filter(Boolean).join(' ') || assignee.email}</p>
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
