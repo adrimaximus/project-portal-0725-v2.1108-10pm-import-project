@@ -44,7 +44,7 @@ export interface Comment {
   attachments_jsonb?: TaskAttachment[] | null;
   project_id: string;
   task_id: string | null;
-  reply_to_comment_id?: string | null;
+  reply_to_message_id?: string | null;
   repliedMessage?: {
     content: string;
     senderName: string;
@@ -102,7 +102,7 @@ export interface Project {
   budget: number | null;
   start_date: string | null;
   due_date: string | null;
-  payment_status: string;
+  payment_status: PaymentStatus;
   payment_due_date: string | null;
   created_by: User;
   assignedTo: User[];
@@ -122,7 +122,42 @@ export interface Project {
   public: boolean;
 }
 
-export type ProjectStatus = 'On Track' | 'At Risk' | 'Off Track' | 'On Hold' | 'Completed' | 'Archived';
+export type ProjectStatus = 'On Track' | 'At Risk' | 'Off Track' | 'On Hold' | 'Completed' | 'Archived' | 'Cancelled' | 'Bid Lost' | 'Billing Process' | 'In Progress' | 'Pending' | 'Requested' | 'Planning' | 'Reschedule';
+
+export const PROJECT_STATUS_OPTIONS: { value: ProjectStatus, label: string }[] = [
+    { value: 'On Track', label: 'On Track' },
+    { value: 'In Progress', label: 'In Progress' },
+    { value: 'Pending', label: 'Pending' },
+    { value: 'Requested', label: 'Requested' },
+    { value: 'Planning', label: 'Planning' },
+    { value: 'At Risk', label: 'At Risk' },
+    { value: 'Off Track', label: 'Off Track' },
+    { value: 'On Hold', label: 'On Hold' },
+    { value: 'Reschedule', label: 'Reschedule' },
+    { value: 'Completed', label: 'Completed' },
+    { value: 'Billing Process', label: 'Billing Process' },
+    { value: 'Archived', label: 'Archived' },
+    { value: 'Cancelled', label: 'Cancelled' },
+    { value: 'Bid Lost', label: 'Bid Lost' },
+];
+
+export type PaymentStatus = 'Paid' | 'Overdue' | 'Partially Paid' | 'Unpaid' | 'Pending' | 'In Process' | 'Requested' | 'Invoiced' | 'Quo Approved' | 'Inv Approved' | 'Proposed' | 'Cancelled' | 'Bid Lost';
+
+export const PAYMENT_STATUS_OPTIONS: { value: PaymentStatus, label: string }[] = [
+    { value: 'Paid', label: 'Paid' },
+    { value: 'Overdue', label: 'Overdue' },
+    { value: 'Partially Paid', label: 'Partially Paid' },
+    { value: 'Unpaid', label: 'Unpaid' },
+    { value: 'Pending', label: 'Pending' },
+    { value: 'In Process', label: 'In Process' },
+    { value: 'Requested', label: 'Requested' },
+    { value: 'Invoiced', label: 'Invoiced' },
+    { value: 'Quo Approved', label: 'Quotation Approved' },
+    { value: 'Inv Approved', label: 'Invoice Approved' },
+    { value: 'Proposed', label: 'Proposed' },
+    { value: 'Cancelled', label: 'Cancelled' },
+    { value: 'Bid Lost', label: 'Bid Lost' },
+];
 
 export interface TaskAttachment {
   id: string;
