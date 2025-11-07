@@ -14,7 +14,7 @@ import { UpsertTaskPayload } from '@/types';
 import { useTaskMutations } from '@/hooks/useTaskMutations';
 import { addHours } from 'date-fns';
 import { useTags } from '@/hooks/useTags';
-import { getErrorMessage } from '@/lib/utils';
+import { getErrorMessage, parseMentions } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -53,6 +53,7 @@ const ProjectMainContent = ({
   isUploading,
   onSaveChanges,
   onOpenTaskModal,
+  onCreateTicketFromComment,
 }: ProjectMainContentProps) => {
   const { user } = useAuth();
   const { data: allUsers = [] } = useProfiles();
