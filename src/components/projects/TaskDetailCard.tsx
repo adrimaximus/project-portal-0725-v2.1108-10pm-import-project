@@ -426,7 +426,6 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
-                    <span className="text-sm text-muted-foreground">{[task.created_by.first_name, task.created_by.last_name].filter(Boolean).join(' ')}</span>
                   </div>
                 </div>
               </div>
