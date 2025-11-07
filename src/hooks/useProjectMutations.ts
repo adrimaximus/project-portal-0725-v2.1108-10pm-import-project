@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { getErrorMessage } from '@/lib/utils';
 import { v4 as uuidv4 } from 'uuid';
 import { useAuth } from '@/contexts/AuthContext';
+import { addHours } from 'date-fns';
 
 export const useProjectMutations = (slug?: string) => {
     const queryClient = useQueryClient();
@@ -378,44 +379,36 @@ export const useProjectMutations = (slug?: string) => {
             }
 
             if (isConvertingToTicket && !originalComment.is_ticket) {
-                const cleanTextForDescription = text.replace(/@\[[^\]]+\]\([^)]+\)\s*/g, '').trim();
+                const cleanTextForDescription = text.replace(/@\[[^\]]+\]\(([^)]+)\)\s*/g, '').trim();
                 const taskTitle = `Ticket: ${cleanTextForDescription.substring(0, 50)}${cleanTextForDescription.length > 50 ? '...' : ''}`;
+
+                let { data: ticketTag, error: tagError } = await supabase.from('tags').select('id').eq('name', 'Ticket').maybeSingle();
+                if (tagError) console.warn("Error finding Ticket tag:", tagError.message);
+                if (!ticketTag && user) {
+                    const { data: newTag, error: newTagError } = await supabase.from('tags').insert({ name: 'Ticket', color: '#DB2777', user_id: user.id }).select('id').single();
+                    if (newTagError) console.warn("Error creating Ticket tag:", newTagError.message);
+                    else ticketTag = newTag;
+                }
 
                 const { data: newTask, error: taskError } = await supabase.from('tasks').insert({
                     project_id: originalComment.project_id,
                     title: taskTitle, 
                     description: cleanTextForDescription,
                     origin_ticket_id: commentId,
-                }).select().single();
+                    due_date: addHours(new Date(), 24).toISOString(),
+                }).select('id').single();
+                
                 if (taskError) {
                     toast.warning("Comment updated, but failed to create the associated task.");
-                }
-    
-                if (newTask && mentionedUserIds.length > 0) {
-                    const projectMemberIds = project.assignedTo.map(m => m.id);
-                    const newMemberIds = mentionedUserIds.filter(id => !projectMemberIds.includes(id));
-
-                    if (newMemberIds.length > 0) {
-                        const newMembers = newMemberIds.map(userId => ({
-                            project_id: project.id,
-                            user_id: userId,
-                            role: 'member' as const
-                        }));
-                        const { error: memberError } = await supabase.from('project_members').insert(newMembers);
-                        if (memberError) {
-                            console.warn('Failed to add mentioned users to project:', memberError);
-                            toast.warning("Couldn't add some mentioned users to the project team.");
-                        }
+                } else if (newTask) {
+                    if (mentionedUserIds.length > 0) {
+                        const assignments = mentionedUserIds.map(userId => ({ task_id: newTask.id, user_id: userId }));
+                        const { error: assignError } = await supabase.from('task_assignees').insert(assignments);
+                        if (assignError) toast.warning("Ticket created, but couldn't assign mentioned users automatically.");
                     }
-
-                    const assignments = mentionedUserIds.map(userId => ({
-                        task_id: newTask.id,
-                        user_id: userId,
-                    }));
-                    const { error: assignError } = await supabase.from('task_assignees').insert(assignments);
-                    if (assignError) {
-                        console.warn('Failed to assign mentioned users:', assignError);
-                        toast.warning("Ticket created, but couldn't assign mentioned users automatically.");
+                    if (ticketTag) {
+                        const { error: taskTagError } = await supabase.from('task_tags').insert({ task_id: newTask.id, tag_id: ticketTag.id });
+                        if (taskTagError) console.warn("Failed to add Ticket tag to task:", taskTagError.message);
                     }
                 }
             }

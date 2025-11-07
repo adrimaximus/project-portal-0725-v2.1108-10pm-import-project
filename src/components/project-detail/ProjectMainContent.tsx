@@ -11,6 +11,12 @@ import { useProfiles } from '@/hooks/useProfiles';
 import { toast } from 'sonner';
 import { useSearchParams } from 'react-router-dom';
 import { UpsertTaskPayload } from '@/types';
+import { useTaskMutations } from '@/hooks/useTaskMutations';
+import { addHours } from 'date-fns';
+import { useTags } from '@/hooks/useTags';
+import { getErrorMessage } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface ProjectMainContentProps {
   project: Project;
@@ -47,7 +53,6 @@ const ProjectMainContent = ({
   isUploading,
   onSaveChanges,
   onOpenTaskModal,
-  onCreateTicketFromComment,
 }: ProjectMainContentProps) => {
   const { user } = useAuth();
   const { data: allUsers = [] } = useProfiles();
@@ -56,6 +61,11 @@ const ProjectMainContent = ({
   const [searchParams, setSearchParams] = useSearchParams();
   const [initialMention, setInitialMention] = useState<{ id: string; name: string } | null>(null);
   const [replyTo, setReplyTo] = useState<CommentType | null>(null);
+  const queryClient = useQueryClient();
+  const { upsertTask } = useTaskMutations(() => {
+    queryClient.invalidateQueries({ queryKey: ['project', project.slug] });
+  });
+  const { data: allTags = [] } = useTags();
 
   useEffect(() => {
     const mentionId = searchParams.get('mention');
@@ -96,22 +106,44 @@ const ProjectMainContent = ({
   const handleAddCommentOrTicket = async (text: string, isTicket: boolean, attachments: File[] | null, mentionedUserIds: string[]) => {
     if (!project || !user) return;
     mutations.addComment.mutate({ project, user, text, isTicket, attachments, mentionedUserIds, replyToId: replyTo?.id }, {
-        onSuccess: (newComment: CommentType) => {
+        onSuccess: async (newComment: CommentType) => {
             setReplyTo(null);
             if (isTicket && newComment) {
-                const cleanText = newComment.text?.replace(/@\[[^\]]+\]\(([^)]+)\)/g, '').trim() || 'New Ticket';
-                const taskTitle = `Ticket: ${cleanText.substring(0, 50)}${cleanText.length > 50 ? '...' : ''}`;
-                
-                onOpenTaskModal(null, {
-                    project_id: project.id,
-                    title: taskTitle,
-                    description: cleanText,
-                    origin_ticket_id: newComment.id,
-                    status: 'To do',
-                    priority: 'Normal',
-                    assignee_ids: mentionedUserIds,
-                }, project);
-                toast.success("Ticket created. Please review the task details.");
+                try {
+                    const cleanText = newComment.text?.replace(/@\[[^\]]+\]\(([^)]+)\)/g, '').trim() || 'New Ticket';
+                    const taskTitle = `Ticket: ${cleanText.substring(0, 50)}${cleanText.length > 50 ? '...' : ''}`;
+
+                    let ticketTag = allTags.find(t => t.name.toLowerCase() === 'ticket');
+                    if (!ticketTag) {
+                        const { data: newTag, error: tagError } = await supabase.from('tags').insert({ name: 'Ticket', color: '#DB2777', user_id: user.id }).select().single();
+                        if (tagError) throw tagError;
+                        ticketTag = newTag;
+                        queryClient.invalidateQueries({ queryKey: ['tags'] });
+                    }
+
+                    const taskPayload: UpsertTaskPayload = {
+                        project_id: project.id,
+                        title: taskTitle,
+                        description: cleanText,
+                        origin_ticket_id: newComment.id,
+                        status: 'To do',
+                        priority: 'Normal',
+                        assignee_ids: mentionedUserIds,
+                        due_date: addHours(new Date(), 24).toISOString(),
+                        tag_ids: ticketTag ? [ticketTag.id] : [],
+                    };
+
+                    upsertTask(taskPayload, {
+                        onSuccess: () => {
+                            toast.success("Ticket created and task automatically generated.");
+                        },
+                        onError: (error) => {
+                            toast.error("Ticket created, but failed to auto-generate task.", { description: getErrorMessage(error) });
+                        }
+                    });
+                } catch (error) {
+                    toast.error("An error occurred while creating the ticket task.", { description: getErrorMessage(error) });
+                }
             } else {
                 toast.success("Comment posted.");
             }
@@ -142,6 +174,19 @@ const ProjectMainContent = ({
 
   const handleDeleteComment = (commentId: string) => {
     mutations.deleteComment.mutate(commentId);
+  };
+
+  const onCreateTicketFromComment = (comment: CommentType) => {
+    if (!project) return;
+    const mentionedUserIds = parseMentions(comment.text || '');
+    mutations.updateComment.mutate({
+        project,
+        commentId: comment.id,
+        text: comment.text || '',
+        attachments: null,
+        isConvertingToTicket: true,
+        mentionedUserIds,
+    });
   };
 
   const { isPending: isUpdatingComment, variables: updatedCommentVariables } = mutations.updateComment;
