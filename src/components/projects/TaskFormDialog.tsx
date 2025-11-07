@@ -320,7 +320,7 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task, proj
         control={form.control}
         name="project_id"
         render={({ field }) => (
-          <FormItem className="flex flex-col">
+          <FormItem>
             <FormLabel>Project</FormLabel>
             <ProjectCombobox
               projects={projectsForCombobox}
@@ -529,7 +529,7 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task, proj
           const displayHour = hour % 12 === 0 ? 12 : hour % 12;
 
           return (
-            <FormItem className="flex flex-col">
+            <FormItem>
               <FormLabel>Due Date & Time</FormLabel>
               <Popover>
                 <PopoverTrigger asChild>
