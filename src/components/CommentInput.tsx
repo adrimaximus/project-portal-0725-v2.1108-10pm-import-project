@@ -74,7 +74,7 @@ const CommentInput = forwardRef(({ project, onAddCommentOrTicket, allUsers, init
   }));
 
   return (
-    <div className="flex items-start space-x-4">
+    <div className="flex items-start space-x-4 pt-6 mt-6 border-t">
       <Avatar>
         <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
         <AvatarFallback style={generatePastelColor(user.id)}>
