@@ -34,7 +34,6 @@ interface ProjectMainContentProps {
   isUploading: boolean;
   onSaveChanges: () => void;
   onOpenTaskModal: (task?: Task | null, initialData?: Partial<UpsertTaskPayload>, project?: Project | null) => void;
-  onCreateTicketFromComment: (comment: CommentType) => void;
 }
 
 const ProjectMainContent = ({ 
@@ -53,7 +52,6 @@ const ProjectMainContent = ({
   isUploading,
   onSaveChanges,
   onOpenTaskModal,
-  onCreateTicketFromComment,
 }: ProjectMainContentProps) => {
   const { user } = useAuth();
   const { data: allUsers = [] } = useProfiles();

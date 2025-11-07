@@ -149,22 +149,6 @@ const ProjectDetailPage = () => {
   const handleToggleTaskCompletion = (task: Task, completed: boolean) => toggleTaskCompletion({ task, completed });
   const handleToggleCommentReaction = (commentId: string, emoji: string) => toggleCommentReaction.mutate({ commentId, emoji });
 
-  const handleCreateTicketFromComment = (comment: CommentType) => {
-    if (!project) return;
-  
-    const cleanText = comment.text?.replace(/@\[[^\]]+\]\(([^)]+)\)/g, '').trim() || 'New Ticket';
-    const taskTitle = `Ticket: ${cleanText.substring(0, 50)}${cleanText.length > 50 ? '...' : ''}`;
-  
-    onOpenTaskModal(null, {
-      project_id: project.id,
-      title: taskTitle,
-      description: cleanText,
-      origin_ticket_id: comment.id,
-      status: 'To do',
-      priority: 'Normal',
-    }, project);
-  };
-
   if (isLoading) {
     return <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   }
@@ -226,7 +210,6 @@ const ProjectDetailPage = () => {
                 isUploading={addFiles.isPending}
                 onSaveChanges={handleSaveChanges}
                 onOpenTaskModal={onOpenTaskModal}
-                onCreateTicketFromComment={handleCreateTicketFromComment}
               />
             </div>
             <div className="lg:col-span-1 space-y-6">
