@@ -8,7 +8,6 @@ import { toast } from 'sonner';
 import { Task, UpsertTaskPayload, Project, ProjectStatus, Reaction, Comment as CommentType } from '@/types';
 import { useTaskMutations } from '@/hooks/useTaskMutations';
 import { useProjectMutations } from '@/hooks/useProjectMutations';
-import TaskFormDialog from '@/components/projects/TaskFormDialog';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -63,7 +62,6 @@ const ProjectDetailPage = () => {
   const { 
     deleteTask, 
     toggleTaskCompletion, 
-    isUpserting: isSavingTask 
   } = useTaskMutations(() => queryClient.invalidateQueries({ queryKey: ['project', slug] }));
 
   useEffect(() => {
@@ -164,7 +162,7 @@ const ProjectDetailPage = () => {
       origin_ticket_id: comment.id,
       status: 'To do',
       priority: 'Normal',
-    });
+    }, project);
   };
 
   if (isLoading) {
@@ -214,7 +212,7 @@ const ProjectDetailPage = () => {
                 onFieldChange={handleFieldChange}
                 mutations={{ addComment, updateComment, deleteComment, addFiles, deleteFile }}
                 defaultTab={searchParams.get('tab') || 'overview'}
-                onEditTask={(task) => onOpenTaskModal(task)}
+                onEditTask={(task) => onOpenTaskModal(task, undefined, project)}
                 onDeleteTask={setTaskToDelete}
                 onToggleTaskCompletion={handleToggleTaskCompletion}
                 onToggleCommentReaction={handleToggleCommentReaction}

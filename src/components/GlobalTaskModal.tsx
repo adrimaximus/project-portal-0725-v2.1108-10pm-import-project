@@ -4,7 +4,7 @@ import { useTaskMutations } from '@/hooks/useTaskMutations';
 import { UpsertTaskPayload } from '@/types';
 
 const GlobalTaskModal = () => {
-  const { isOpen, onClose, task, initialData } = useTaskModal();
+  const { isOpen, onClose, task, project, initialData } = useTaskModal();
   const { upsertTask, isUpserting } = useTaskMutations();
 
   const handleSave = (data: UpsertTaskPayload) => {
@@ -27,6 +27,7 @@ const GlobalTaskModal = () => {
       onSubmit={handleSave}
       isSubmitting={isUpserting}
       task={task}
+      project={project}
       initialData={initialData}
     />
   );

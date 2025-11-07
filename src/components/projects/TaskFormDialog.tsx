@@ -63,20 +63,23 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task, proj
     const hookProjects = projectsData?.pages.flatMap(page => page.projects) ?? [];
     const projectsMap = new Map<string, Project>();
 
+    // Prioritize the project passed via props, as it's the most immediate context
     if (project) {
       projectsMap.set(project.id, project);
     }
 
+    // Then, if editing a task, ensure its project is included
     if (task && task.project_id) {
       if (!projectsMap.has(task.project_id)) {
         projectsMap.set(task.project_id, {
           id: task.project_id,
-          name: task.project_name || project?.name || 'Unknown Project',
-          slug: task.project_slug || project?.slug || '',
+          name: task.project_name || 'Unknown Project',
+          slug: task.project_slug || '',
         } as Project);
       }
     }
 
+    // Finally, add all other projects from the main list
     hookProjects.forEach(p => {
       if (!projectsMap.has(p.id)) {
         projectsMap.set(p.id, p);
