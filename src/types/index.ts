@@ -61,13 +61,22 @@ export const TASK_STATUS_OPTIONS: { value: TaskStatus, label: string }[] = [
   { value: 'Done', label: 'Done' },
 ];
 
+export type TaskPriority = 'Low' | 'Normal' | 'High' | 'Urgent';
+
+export const TASK_PRIORITY_OPTIONS: { value: TaskPriority, label: string }[] = [
+  { value: 'Low', label: 'Low' },
+  { value: 'Normal', label: 'Normal' },
+  { value: 'High', label: 'High' },
+  { value: 'Urgent', label: 'Urgent' },
+];
+
 export interface Task {
   id: string;
   title: string;
   description: string | null;
   completed: boolean;
   due_date: string | null;
-  priority: 'Low' | 'Normal' | 'High' | 'Urgent';
+  priority: TaskPriority;
   project_id: string;
   project_name: string;
   project_slug: string;
@@ -175,7 +184,7 @@ export interface UpsertTaskPayload {
   title: string;
   description?: string | null;
   due_date?: string | null;
-  priority?: 'Low' | 'Normal' | 'High' | 'Urgent';
+  priority?: TaskPriority;
   status?: TaskStatus;
   completed?: boolean;
   assignee_ids?: string[];
