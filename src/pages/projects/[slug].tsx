@@ -225,6 +225,7 @@ const ProjectDetailPage = () => {
                 onSetIsEditing={() => enterEditMode()}
                 isUploading={addFiles.isPending}
                 onSaveChanges={handleSaveChanges}
+                onOpenTaskModal={onOpenTaskModal}
                 onCreateTicketFromComment={handleCreateTicketFromComment}
               />
             </div>

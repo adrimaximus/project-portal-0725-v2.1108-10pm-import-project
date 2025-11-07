@@ -10,6 +10,7 @@ import { LayoutGrid, ListChecks, MessageSquare, Activity } from 'lucide-react';
 import { useProfiles } from '@/hooks/useProfiles';
 import { toast } from 'sonner';
 import { useSearchParams } from 'react-router-dom';
+import { UpsertTaskPayload } from '@/types';
 
 interface ProjectMainContentProps {
   project: Project;
@@ -26,6 +27,7 @@ interface ProjectMainContentProps {
   onSetIsEditing: (isEditing: boolean) => void;
   isUploading: boolean;
   onSaveChanges: () => void;
+  onOpenTaskModal: (task?: Task | null, initialData?: Partial<UpsertTaskPayload>, project?: Project | null) => void;
   onCreateTicketFromComment: (comment: CommentType) => void;
 }
 
@@ -44,6 +46,7 @@ const ProjectMainContent = ({
   onSetIsEditing,
   isUploading,
   onSaveChanges,
+  onOpenTaskModal,
   onCreateTicketFromComment,
 }: ProjectMainContentProps) => {
   const { user } = useAuth();
@@ -93,8 +96,26 @@ const ProjectMainContent = ({
   const handleAddCommentOrTicket = async (text: string, isTicket: boolean, attachments: File[] | null, mentionedUserIds: string[]) => {
     if (!project || !user) return;
     mutations.addComment.mutate({ project, user, text, isTicket, attachments, mentionedUserIds, replyToId: replyTo?.id }, {
-        onSuccess: () => {
+        onSuccess: (newComment: CommentType) => {
             setReplyTo(null);
+            if (isTicket && newComment) {
+                const cleanText = newComment.text?.replace(/@\[[^\]]+\]\(([^)]+)\)/g, '').trim() || 'New Ticket';
+                const taskTitle = `Ticket: ${cleanText.substring(0, 50)}${cleanText.length > 50 ? '...' : ''}`;
+                
+                onOpenTaskModal(null, {
+                    project_id: project.id,
+                    title: taskTitle,
+                    description: cleanText,
+                    origin_ticket_id: newComment.id,
+                    status: 'To do',
+                    priority: 'Normal',
+                    assignee_ids: mentionedUserIds,
+                }, project);
+                toast.success("Ticket created. Please review the task details.");
+            } else {
+                toast.success("Comment posted.");
+            }
+            
             if (mentionedUserIds.length > 0) {
               const mentionedUsers = allUsers.filter(u => mentionedUserIds.includes(u.id));
               const names = mentionedUsers.map(u => u.name);

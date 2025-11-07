@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Project, User, Reaction } from '@/types';
+import { Project, User, Reaction, Comment as CommentType } from '@/types';
 import { useNavigate } from 'react-router-dom';
 import { getErrorMessage } from '@/lib/utils';
 import { v4 as uuidv4 } from 'uuid';
@@ -204,12 +204,12 @@ export const useProjectMutations = (slug?: string) => {
         onError: (err: any) => toast.error("Failed to delete task", { description: getErrorMessage(err) }),
     });
 
-    const addComment = useMutation({
-        mutationFn: async ({ project, user, text, isTicket, attachments, mentionedUserIds, replyToId }: { project: Project, user: User, text: string, isTicket: boolean, attachments: File[] | null, mentionedUserIds: string[], replyToId?: string | null }) => {
+    const addComment = useMutation<CommentType, Error, { project: Project, user: User, text: string, isTicket: boolean, attachments: File[] | null, mentionedUserIds: string[], replyToId?: string | null }>({
+        mutationFn: async ({ project, user, text, isTicket, attachments, mentionedUserIds, replyToId }) => {
             let finalCommentText = text;
             let firstAttachmentUrl: string | null = null;
             let firstAttachmentName: string | null = null;
-            let attachmentsJsonb: any[] = []; // Array to store attachment metadata
+            let attachmentsJsonb: any[] = [];
 
             if (attachments && attachments.length > 0) {
                 const uploadPromises = attachments.map(async (file) => {
@@ -256,7 +256,7 @@ export const useProjectMutations = (slug?: string) => {
                 attachment_name: firstAttachmentName,
                 attachments_jsonb: attachmentsJsonb,
                 reply_to_comment_id: replyToId,
-            }).select().single();
+            }).select('*, author:profiles(*)').single();
             
             if (commentError) throw commentError;
 
@@ -277,53 +277,9 @@ export const useProjectMutations = (slug?: string) => {
               });
             }
     
-            if (isTicket && commentData) {
-                const cleanTextForDescription = text.replace(/@\[[^\]]+\]\([^)]+\)\s*/g, '').trim();
-                const taskTitle = `Ticket: ${cleanTextForDescription.substring(0, 50)}${cleanTextForDescription.length > 50 ? '...' : ''}`;
-
-                const { data: newTask, error: taskError } = await supabase.from('tasks').insert({
-                    project_id: project.id, 
-                    created_by: user.id, 
-                    title: taskTitle, 
-                    description: cleanTextForDescription, // Comment text as description
-                    origin_ticket_id: commentData.id,
-                }).select().single();
-                
-                if (taskError) throw new Error(`Ticket created, but failed to create task: ${taskError.message}`);
-    
-                if (newTask && mentionedUserIds.length > 0) {
-                    // Add mentioned users to the project if they aren't already members
-                    const projectMemberIds = project.assignedTo.map(m => m.id);
-                    const newMemberIds = mentionedUserIds.filter(id => !projectMemberIds.includes(id));
-
-                    if (newMemberIds.length > 0) {
-                        const newMembers = newMemberIds.map(userId => ({
-                            project_id: project.id,
-                            user_id: userId,
-                            role: 'member' as const
-                        }));
-                        const { error: memberError } = await supabase.from('project_members').insert(newMembers);
-                        if (memberError) {
-                            console.warn('Failed to add mentioned users to project:', memberError);
-                            toast.warning("Couldn't add some mentioned users to the project team.");
-                        }
-                    }
-
-                    // Assign users to the task
-                    const assignments = mentionedUserIds.map(userId => ({
-                        task_id: newTask.id,
-                        user_id: userId,
-                    }));
-                    const { error: assignError } = await supabase.from('task_assignees').insert(assignments);
-                    if (assignError) {
-                        console.warn('Failed to assign mentioned users:', assignError);
-                        toast.warning("Ticket created, but couldn't assign mentioned users automatically.");
-                    }
-                }
-            }
+            return commentData as CommentType;
         },
-        onSuccess: (_, variables) => {
-            toast.success(variables.isTicket ? "Ticket created and added to tasks." : "Comment posted.");
+        onSuccess: () => {
             invalidateProjectQueries();
         },
         onError: (err: any) => toast.error("Failed to add comment/ticket", { description: getErrorMessage(err) }),
@@ -351,21 +307,11 @@ export const useProjectMutations = (slug?: string) => {
                     const filePath = `${originalComment.project_id}/comments/${Date.now()}-${sanitizedFileName}`;
                     const { error: uploadError } = await supabase.storage.from('project-files').upload(filePath, file);
                     if (uploadError) throw new Error(`Failed to upload ${file.name}: ${uploadError.message}`);
-                    
                     const { data: urlData } = supabase.storage.from('project-files').getPublicUrl(filePath);
                     if (!urlData || !urlData.publicUrl) {
                         throw new Error(`Failed to get public URL for uploaded file ${file.name}.`);
                     }
-
-                    return { 
-                        id: fileId,
-                        file_name: file.name, 
-                        file_url: urlData.publicUrl,
-                        file_type: file.type,
-                        file_size: file.size,
-                        storage_path: filePath,
-                        created_at: new Date().toISOString(),
-                    };
+                    return { id: fileId, file_name: file.name, file_url: urlData.publicUrl, file_type: file.type, file_size: file.size, storage_path: filePath, created_at: new Date().toISOString() };
                 });
     
                 newAttachmentsJsonb = await Promise.all(uploadPromises);
