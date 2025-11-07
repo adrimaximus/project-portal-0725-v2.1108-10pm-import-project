@@ -332,25 +332,25 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
     <div className="w-full overflow-x-auto">
       <Drawer open={!!selectedTask} onOpenChange={(isOpen) => { if (!isOpen) setSelectedTaskId(null); }}>
         <Table>
-          <TableHeader>
+          <TableHeader className="sticky top-0 bg-background z-10">
             <TableRow>
-              <TableHead className="sticky top-0 bg-background z-10 w-[40%] sm:w-[30%] cursor-pointer hover:bg-muted/50" onClick={() => requestSort('title')}>
+              <TableHead className="w-[40%] sm:w-[30%] cursor-pointer hover:bg-muted/50" onClick={() => requestSort('title')}>
                 Task
               </TableHead>
-              <TableHead className="sticky top-0 bg-background z-10 w-[20%]">Project</TableHead>
-              <TableHead className="sticky top-0 bg-background z-10 cursor-pointer hover:bg-muted/50" onClick={() => requestSort('status')}>
+              <TableHead className="w-[20%]">Project</TableHead>
+              <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => requestSort('status')}>
                 Status
               </TableHead>
-              <TableHead className="sticky top-0 bg-background z-10 cursor-pointer hover:bg-muted/50" onClick={() => requestSort('priority')}>
+              <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => requestSort('priority')}>
                 Priority
               </TableHead>
-              <TableHead className="sticky top-0 bg-background z-10 cursor-pointer hover:bg-muted/50" onClick={() => requestSort('due_date')}>
+              <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => requestSort('due_date')}>
                 Due Date
               </TableHead>
-              <TableHead className="sticky top-0 bg-background z-10 cursor-pointer hover:bg-muted/50" onClick={() => requestSort('updated_at')}>
+              <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => requestSort('updated_at')}>
                 Last Updated
               </TableHead>
-              <TableHead className="sticky top-0 bg-background z-10 text-right">Actions</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
