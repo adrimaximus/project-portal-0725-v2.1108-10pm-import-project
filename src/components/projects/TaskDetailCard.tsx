@@ -385,23 +385,26 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
               <div>
                 <p className="font-medium">Assignees</p>
                 <div className="flex items-center -space-x-2 mt-1">
-                  {task.assignedTo?.map((assignee: User) => (
-                    <TooltipProvider key={assignee.id}>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Avatar className="h-6 w-6 border-2 border-background">
-                            <AvatarImage src={getAvatarUrl(assignee.avatar_url, assignee.id)} />
-                            <AvatarFallback style={generatePastelColor(assignee.id)}>
-                              {getInitials([assignee.first_name, assignee.last_name].filter(Boolean).join(' '), assignee.email || undefined)}
-                            </AvatarFallback>
-                          </Avatar>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>{[assignee.first_name, assignee.last_name].filter(Boolean).join(' ')}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  ))}
+                  {task.assignedTo?.map((assignee: User) => {
+                    const displayName = [assignee.first_name, assignee.last_name].filter(Boolean).join(' ').trim() || assignee.email?.split('@')[0] || 'Unknown User';
+                    return (
+                      <TooltipProvider key={assignee.id}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Avatar className="h-6 w-6 border-2 border-background">
+                              <AvatarImage src={getAvatarUrl(assignee.avatar_url, assignee.id)} />
+                              <AvatarFallback style={generatePastelColor(assignee.id)}>
+                                {getInitials([assignee.first_name, assignee.last_name].filter(Boolean).join(' '), assignee.email || undefined)}
+                              </AvatarFallback>
+                            </Avatar>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>{displayName}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    );
+                  })}
                 </div>
               </div>
             </div>
