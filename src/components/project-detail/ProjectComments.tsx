@@ -54,7 +54,6 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
   const [isConvertingToTicket, setIsConvertingToTicket] = useState(false);
   const commentInputRef = useRef<{ setText: (text: string, append?: boolean) => void, focus: () => void }>(null);
   const lastProcessedMentionId = useRef<string | null>(null);
-  const commentsEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (initialMention && commentInputRef.current && initialMention.id !== lastProcessedMentionId.current) {
@@ -65,10 +64,6 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
       onMentionConsumed();
     }
   }, [initialMention, onMentionConsumed]);
-
-  useEffect(() => {
-    commentsEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [project.comments]);
 
   const handleEditClick = (comment: CommentType) => {
     const textWithoutAttachments = comment.text?.replace(/\n\n\*\*Attachments:\*\*[\s\S]*$/, '').trim() || '';
@@ -228,7 +223,6 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
         ) : (
           <p className="text-sm text-muted-foreground text-center pt-10">No comments yet. Start the discussion!</p>
         )}
-        <div ref={commentsEndRef} />
       </div>
       <AlertDialog open={!!commentToDelete} onOpenChange={() => setCommentToDelete(null)}>
         <AlertDialogContent>
