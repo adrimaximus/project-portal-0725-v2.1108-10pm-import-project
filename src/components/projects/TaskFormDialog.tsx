@@ -153,6 +153,9 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task, proj
 
   useEffect(() => {
     if (open) {
+      if (isLoadingProjects || isLoadingProfiles) {
+        return;
+      }
       setNewFiles([]);
       setFilesToDelete([]);
       
@@ -213,7 +216,7 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task, proj
         setPreviousStatus('To do');
       }
     }
-  }, [task, open, form, projectsForCombobox, project, currentUser, allTags, initialData]);
+  }, [task, open, form, projectsForCombobox, project, currentUser, allTags, initialData, isLoadingProjects, isLoadingProfiles]);
 
   const handleTagsChange = (newTags: Tag[]) => {
     setSelectedTags(newTags);
