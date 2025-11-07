@@ -256,138 +256,140 @@ const TableView = ({ projects, isLoading, onDeleteProject, sortConfig, requestSo
   const isDateSorted = sortConfig.key === null || sortConfig.key === 'start_date';
 
   return (
-    <Table>
-      <TableHeader className="sticky top-0 bg-background z-10">
-        <TableRow>
-          <TableHead className="w-[300px] p-2">
-            <Button variant="ghost" onClick={() => requestSort('name')} className="w-full justify-start px-2 group">
-              Project
-            </Button>
-          </TableHead>
-          <TableHead className="w-[140px] p-2">
-            <Button variant="ghost" onClick={() => requestSort('status')} className="w-full justify-start px-2 group">
-              Status
-            </Button>
-          </TableHead>
-          <TableHead className="w-[120px] p-2">
-            <Button variant="ghost" onClick={() => requestSort('payment_status')} className="w-full justify-start px-2 group">
-              Payment
-            </Button>
-          </TableHead>
-          <TableHead className="w-[150px] p-2">
-            <Button variant="ghost" onClick={() => requestSort('progress')} className="w-full justify-start px-2 group">
-              Progress
-            </Button>
-          </TableHead>
-          <TableHead className="w-[180px] p-2">
-            <Button variant="ghost" onClick={() => requestSort('start_date')} className="w-full justify-start px-2 group">
-              Date
-            </Button>
-          </TableHead>
-          <TableHead className="w-[200px] p-2">
-            <Button variant="ghost" onClick={() => requestSort('venue')} className="w-full justify-start px-2 group">
-              Lokasi
-            </Button>
-          </TableHead>
-          <TableHead className="w-[50px]"></TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {isLoading ? (
+    <div className="w-full overflow-x-auto">
+      <Table>
+        <TableHeader className="sticky top-0 bg-background z-10">
           <TableRow>
-            <TableCell colSpan={7} className="h-24 text-center">
-              Loading projects...
-            </TableCell>
+            <TableHead className="w-[300px] p-2">
+              <Button variant="ghost" onClick={() => requestSort('name')} className="w-full justify-start px-2 group">
+                Project
+              </Button>
+            </TableHead>
+            <TableHead className="w-[140px] p-2">
+              <Button variant="ghost" onClick={() => requestSort('status')} className="w-full justify-start px-2 group">
+                Status
+              </Button>
+            </TableHead>
+            <TableHead className="w-[120px] p-2">
+              <Button variant="ghost" onClick={() => requestSort('payment_status')} className="w-full justify-start px-2 group">
+                Payment
+              </Button>
+            </TableHead>
+            <TableHead className="w-[150px] p-2">
+              <Button variant="ghost" onClick={() => requestSort('progress')} className="w-full justify-start px-2 group">
+                Progress
+              </Button>
+            </TableHead>
+            <TableHead className="w-[180px] p-2">
+              <Button variant="ghost" onClick={() => requestSort('start_date')} className="w-full justify-start px-2 group">
+                Date
+              </Button>
+            </TableHead>
+            <TableHead className="w-[200px] p-2">
+              <Button variant="ghost" onClick={() => requestSort('venue')} className="w-full justify-start px-2 group">
+                Lokasi
+              </Button>
+            </TableHead>
+            <TableHead className="w-[50px]"></TableHead>
           </TableRow>
-        ) : projects.length === 0 ? (
-          <TableRow>
-            <TableCell colSpan={7} className="h-24 text-center">
-              No projects found.
-            </TableCell>
-          </TableRow>
-        ) : (
-          <>
-            {visibleUpcomingProjects.map(project => {
-              const projectMonthYear = project.start_date ? formatInJakarta(new Date(project.start_date), 'MMMM yyyy') : null;
-              let showMonthSeparator = false;
-              if (isDateSorted && projectMonthYear && projectMonthYear !== lastMonthYear) {
-                showMonthSeparator = true;
-                lastMonthYear = projectMonthYear;
-              }
+        </TableHeader>
+        <TableBody>
+          {isLoading ? (
+            <TableRow>
+              <TableCell colSpan={7} className="h-24 text-center">
+                Loading projects...
+              </TableCell>
+            </TableRow>
+          ) : projects.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={7} className="h-24 text-center">
+                No projects found.
+              </TableCell>
+            </TableRow>
+          ) : (
+            <>
+              {visibleUpcomingProjects.map(project => {
+                const projectMonthYear = project.start_date ? formatInJakarta(new Date(project.start_date), 'MMMM yyyy') : null;
+                let showMonthSeparator = false;
+                if (isDateSorted && projectMonthYear && projectMonthYear !== lastMonthYear) {
+                  showMonthSeparator = true;
+                  lastMonthYear = projectMonthYear;
+                }
 
-              return (
-                <React.Fragment key={project.id}>
-                  {showMonthSeparator && (
-                    <TableRow className="border-none hover:bg-transparent">
-                      <TableCell colSpan={7} className="pt-6 pb-2 px-4 text-sm font-semibold text-foreground">
-                        {projectMonthYear}
-                      </TableCell>
-                    </TableRow>
-                  )}
-                  <ProjectRow project={project} onDeleteProject={onDeleteProject} rowRefs={rowRefs} onStatusChange={onStatusChange} />
-                </React.Fragment>
-              );
-            })}
+                return (
+                  <React.Fragment key={project.id}>
+                    {showMonthSeparator && (
+                      <TableRow className="border-none hover:bg-transparent">
+                        <TableCell colSpan={7} className="pt-6 pb-2 px-4 text-sm font-semibold text-foreground">
+                          {projectMonthYear}
+                        </TableCell>
+                      </TableRow>
+                    )}
+                    <ProjectRow project={project} onDeleteProject={onDeleteProject} rowRefs={rowRefs} onStatusChange={onStatusChange} />
+                  </React.Fragment>
+                );
+              })}
 
-            {hasMoreUpcoming && (
-              <TableRow className="border-none hover:bg-transparent">
-                <TableCell colSpan={7} className="py-2 text-center">
-                  <Button variant="outline" onClick={handleLoadMoreUpcoming}>
-                    Load More Upcoming
-                  </Button>
-                </TableCell>
-              </TableRow>
-            )}
+              {hasMoreUpcoming && (
+                <TableRow className="border-none hover:bg-transparent">
+                  <TableCell colSpan={7} className="py-2 text-center">
+                    <Button variant="outline" onClick={handleLoadMoreUpcoming}>
+                      Load More Upcoming
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              )}
 
-            {pastProjects.length > 0 && (
-              <TableRow className="border-none hover:bg-transparent">
-                <TableCell colSpan={7} className="py-4">
-                  <div className="flex items-center">
-                    <div className="flex-grow border-t"></div>
-                    <span className="flex-shrink mx-4 text-xs text-muted-foreground uppercase tracking-wider font-semibold">
-                      Past Projects
-                    </span>
-                    <div className="flex-grow border-t"></div>
-                  </div>
-                </TableCell>
-              </TableRow>
-            )}
+              {pastProjects.length > 0 && (
+                <TableRow className="border-none hover:bg-transparent">
+                  <TableCell colSpan={7} className="py-4">
+                    <div className="flex items-center">
+                      <div className="flex-grow border-t"></div>
+                      <span className="flex-shrink mx-4 text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+                        Past Projects
+                      </span>
+                      <div className="flex-grow border-t"></div>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              )}
 
-            {visiblePastProjects.map(project => {
-              const projectMonthYear = project.start_date ? formatInJakarta(new Date(project.start_date), 'MMMM yyyy') : null;
-              let showMonthSeparator = false;
-              if (isDateSorted && projectMonthYear && projectMonthYear !== lastMonthYear) {
-                showMonthSeparator = true;
-                lastMonthYear = projectMonthYear;
-              }
+              {visiblePastProjects.map(project => {
+                const projectMonthYear = project.start_date ? formatInJakarta(new Date(project.start_date), 'MMMM yyyy') : null;
+                let showMonthSeparator = false;
+                if (isDateSorted && projectMonthYear && projectMonthYear !== lastMonthYear) {
+                  showMonthSeparator = true;
+                  lastMonthYear = projectMonthYear;
+                }
 
-              return (
-                <React.Fragment key={project.id}>
-                  {showMonthSeparator && (
-                    <TableRow className="border-none hover:bg-transparent">
-                      <TableCell colSpan={7} className="pt-6 pb-2 px-4 text-sm font-semibold text-foreground">
-                        {projectMonthYear}
-                      </TableCell>
-                    </TableRow>
-                  )}
-                  <ProjectRow project={project} onDeleteProject={onDeleteProject} rowRefs={rowRefs} onStatusChange={onStatusChange} />
-                </React.Fragment>
-              );
-            })}
+                return (
+                  <React.Fragment key={project.id}>
+                    {showMonthSeparator && (
+                      <TableRow className="border-none hover:bg-transparent">
+                        <TableCell colSpan={7} className="pt-6 pb-2 px-4 text-sm font-semibold text-foreground">
+                          {projectMonthYear}
+                        </TableCell>
+                      </TableRow>
+                    )}
+                    <ProjectRow project={project} onDeleteProject={onDeleteProject} rowRefs={rowRefs} onStatusChange={onStatusChange} />
+                  </React.Fragment>
+                );
+              })}
 
-            {hasMorePast && (
-              <TableRow className="border-none hover:bg-transparent">
-                <TableCell colSpan={7} className="py-2 text-center">
-                  <Button variant="outline" onClick={handleLoadMorePast}>
-                    Load More Past Project
-                  </Button>
-                </TableCell>
-              </TableRow>
-            )}
-          </>
-        )}
-      </TableBody>
-    </Table>
+              {hasMorePast && (
+                <TableRow className="border-none hover:bg-transparent">
+                  <TableCell colSpan={7} className="py-2 text-center">
+                    <Button variant="outline" onClick={handleLoadMorePast}>
+                      Load More Past Project
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              )}
+            </>
+          )}
+        </TableBody>
+      </Table>
+    </div>
   );
 };
 
