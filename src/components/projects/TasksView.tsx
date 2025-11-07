@@ -333,7 +333,7 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
       <Drawer open={!!selectedTask} onOpenChange={(isOpen) => { if (!isOpen) setSelectedTaskId(null); }}>
         <Table>
           <TableHeader>
-            <TableRow>
+            <TableRow className="sticky top-0 bg-background z-10">
               <TableHead className="w-[40%] sm:w-[30%] cursor-pointer hover:bg-muted/50" onClick={() => requestSort('title')}>
                 Task
               </TableHead>
