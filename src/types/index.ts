@@ -25,6 +25,31 @@ export interface Tag {
   user_id: string | null;
 }
 
+export const CUSTOM_PROPERTY_TYPES = [
+  'text',
+  'textarea',
+  'number',
+  'date',
+  'email',
+  'phone',
+  'url',
+  'image',
+  'multi-image',
+  'select',
+  'multi-select',
+  'checkbox',
+] as const;
+
+export interface CustomProperty {
+  id: string;
+  name: string;
+  label: string;
+  type: (typeof CUSTOM_PROPERTY_TYPES)[number];
+  options?: string[] | null;
+  is_default: boolean;
+  category: 'contact' | 'company' | 'tag';
+}
+
 export interface Reaction {
   id: string;
   emoji: string;
