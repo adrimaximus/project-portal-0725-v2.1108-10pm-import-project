@@ -174,27 +174,30 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
                           </div>
                         </div>
                       )}
-                      <div className="prose prose-sm dark:prose-invert max-w-none mt-1 break-words">
-                        <ReactMarkdown
-                          remarkPlugins={[remarkGfm]}
-                          rehypePlugins={[rehypeRaw]}
-                          components={{
-                            a: ({ node, ...props }) => {
-                              const href = props.href || '';
-                              if (href.startsWith('/')) {
-                                return <Link to={href} {...props} className="text-primary hover:underline" />;
-                              }
-                              return <a {...props} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline" />;
-                            },
-                            mention: ({node, ...props}) => (
-                              <span className="bg-primary/10 text-primary rounded px-1 py-0.5 font-medium">
-                                @{props.children}
-                              </span>
-                            )
-                          }}
-                        >
-                          {mainText.replace(/@\[([^\]]+)\]\(([^)]+)\)/g, (match, name, id) => `<mention data-id="${id}">${name}</mention>`)}
-                        </ReactMarkdown>
+                      <div className="flex items-start gap-2 mt-1">
+                        {comment.is_ticket && <Ticket className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-1" />}
+                        <div className="prose prose-sm dark:prose-invert max-w-none break-words">
+                          <ReactMarkdown
+                            remarkPlugins={[remarkGfm]}
+                            rehypePlugins={[rehypeRaw]}
+                            components={{
+                              a: ({ node, ...props }) => {
+                                const href = props.href || '';
+                                if (href.startsWith('/')) {
+                                  return <Link to={href} {...props} className="text-primary hover:underline" />;
+                                }
+                                return <a {...props} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline" />;
+                              },
+                              mention: ({node, ...props}) => (
+                                <span className="bg-primary/10 text-primary rounded px-1 py-0.5 font-medium">
+                                  @{props.children}
+                                </span>
+                              )
+                            }}
+                          >
+                            {mainText.replace(/@\[([^\]]+)\]\(([^)]+)\)/g, (match, name, id) => `<mention data-id="${id}">${name}</mention>`)}
+                          </ReactMarkdown>
+                        </div>
                       </div>
                       {attachments.length > 0 && (
                         <div className="mt-2 space-y-2">
