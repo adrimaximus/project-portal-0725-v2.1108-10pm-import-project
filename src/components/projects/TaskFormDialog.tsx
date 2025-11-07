@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { CalendarIcon, Loader2 } from 'lucide-react';
 import { cn, getTaskStatusStyles, getPriorityStyles } from '@/lib/utils';
-import { format } from 'date-fns';
+import { format, addHours } from 'date-fns';
 import { useProjects } from '@/hooks/useProjects';
 import { Task, TaskStatus, TASK_PRIORITY_OPTIONS, TASK_STATUS_OPTIONS, Tag, User as Profile, Project, TaskAttachment, UpsertTaskPayload, TaskPriority } from '@/types';
 import { useTags } from '@/hooks/useTags';
@@ -63,12 +63,10 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task, proj
     const hookProjects = projectsData?.pages.flatMap(page => page.projects) ?? [];
     const projectsMap = new Map<string, Project>();
 
-    // Prioritize the project passed via props, as it's the most immediate context
     if (project) {
       projectsMap.set(project.id, project);
     }
 
-    // Then, if editing a task, ensure its project is included
     if (task && task.project_id) {
       if (!projectsMap.has(task.project_id)) {
         projectsMap.set(task.project_id, {
@@ -79,7 +77,6 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task, proj
       }
     }
 
-    // Finally, add all other projects from the main list
     hookProjects.forEach(p => {
       if (!projectsMap.has(p.id)) {
         projectsMap.set(p.id, p);
@@ -205,17 +202,40 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task, proj
         
         const initialProjectId = project?.id || initialData?.project_id || personalProject?.id || generalTasksProject?.id || '';
 
+        let initialDueDate = initialData?.due_date ? new Date(initialData.due_date) : null;
+        let initialTags: Tag[] = [];
+
+        const isFromTicket = !!initialData?.origin_ticket_id;
+
+        if (isFromTicket) {
+          initialDueDate = addHours(new Date(), 24);
+
+          const ticketTagInOptions = allTags.find(t => t.name === TICKET_TAG_NAME);
+          if (ticketTagInOptions) {
+            initialTags.push(ticketTagInOptions);
+          } else {
+            const syntheticTicketTag: Tag = {
+              id: `new-${TICKET_TAG_NAME}-${uuidv4()}`,
+              name: TICKET_TAG_NAME,
+              color: '#DB2777',
+              isNew: true,
+              user_id: currentUser?.id || '',
+            };
+            initialTags.push(syntheticTicketTag);
+          }
+        }
+
         form.reset({
           title: initialData?.title || '',
           project_id: initialProjectId,
           description: initialData?.description || '',
-          due_date: initialData?.due_date ? new Date(initialData.due_date) : null,
+          due_date: initialDueDate,
           priority: initialData?.priority || 'Normal',
           status: initialData?.status || 'To do',
           assignee_ids: initialData?.assignee_ids || [],
-          tag_ids: [],
+          tag_ids: initialTags.map(t => t.id),
         });
-        setSelectedTags([]);
+        setSelectedTags(initialTags);
         setPreviousStatus('To do');
       }
     }
