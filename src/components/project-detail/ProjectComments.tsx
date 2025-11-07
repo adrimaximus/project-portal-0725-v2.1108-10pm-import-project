@@ -3,7 +3,7 @@ import { Project, Comment as CommentType, User } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Ticket, MoreHorizontal, Edit, Trash2, CornerUpLeft } from "lucide-react";
-import { getInitials, generatePastelColor, parseMentions, getAvatarUrl } from "@/lib/utils";
+import { getInitials, generatePastelColor, parseMentions, getAvatarUrl, formatMentionsForDisplay } from "@/lib/utils";
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
 import CommentInput from "../CommentInput";
@@ -173,7 +173,11 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
                       {comment.repliedMessage && (
                         <div className="text-xs text-muted-foreground border-l-2 pl-2 mb-1">
                           <p className="font-semibold">Replying to {comment.repliedMessage.senderName}</p>
-                          <p className="italic line-clamp-1">{comment.repliedMessage.content}</p>
+                          <div className="italic line-clamp-1 prose prose-sm dark:prose-invert max-w-none">
+                            <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
+                              {formatMentionsForDisplay(comment.repliedMessage.content || '')}
+                            </ReactMarkdown>
+                          </div>
                         </div>
                       )}
                       <div className="prose prose-sm dark:prose-invert max-w-none mt-1 break-words">

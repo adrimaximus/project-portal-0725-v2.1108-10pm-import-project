@@ -13,6 +13,8 @@ import VoiceMessagePlayer from "./VoiceMessagePlayer";
 import MessageReactions from "./MessageReactions";
 import { useChatContext } from "@/contexts/ChatContext";
 import { ChatMessageActions } from "./ChatMessageActions";
+import rehypeRaw from 'rehype-raw';
+import remarkGfm from "remark-gfm";
 
 interface ChatConversationProps {
   messages: Message[];
@@ -157,9 +159,11 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                             className="w-full text-left p-2 mb-1 text-sm bg-black/10 dark:bg-white/10 rounded-md border-l-2 border-primary hover:bg-black/20 dark:hover:bg-white/20 transition-colors"
                           >
                             <p className="font-semibold">{message.repliedMessage.senderName}</p>
-                            <p className="text-xs line-clamp-2 opacity-80">
-                              {message.repliedMessage.isDeleted ? "This message was deleted." : formatMentionsForDisplay(message.repliedMessage.content)}
-                            </p>
+                            <div className="text-xs line-clamp-2 opacity-80 prose prose-sm dark:prose-invert max-w-none">
+                              <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
+                                {message.repliedMessage.isDeleted ? "This message was deleted." : formatMentionsForDisplay(message.repliedMessage.content)}
+                              </ReactMarkdown>
+                            </div>
                           </button>
                         )}
 
@@ -212,6 +216,8 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                                   isCurrentUser ? "prose-invert prose-a:text-primary-foreground" : "dark:prose-invert"
                                 )}>
                                   <ReactMarkdown
+                                    remarkPlugins={[remarkGfm]}
+                                    rehypePlugins={[rehypeRaw]}
                                     components={{
                                       a: ({ node, ...props }) => {
                                         const href = props.href || '';
@@ -222,7 +228,7 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                                       }
                                     }}
                                   >
-                                    {message.text}
+                                    {formatMentionsForDisplay(message.text)}
                                   </ReactMarkdown>
                                 </div>
                               )}
