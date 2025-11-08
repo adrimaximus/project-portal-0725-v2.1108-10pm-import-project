@@ -84,7 +84,7 @@ const sendWhatsappMessage = async (phone: string, message: string) => {
       const errorJson = JSON.parse(errorText);
       errorMessage = errorJson.message || JSON.stringify(errorJson);
     } catch (e) {
-      errorMessage = errorText.replace(/<[^>]*>?/gm, '').trim() || `Received an empty error response (Status: ${status}).`;
+      errorMessage = errorText.replace(/<[^>]*>?/gm, ' ').trim() || `Received an empty error response (Status: ${status}).`;
     }
     throw new Error(`WBIZTOOL API Error: ${errorMessage}`);
   }
@@ -142,34 +142,6 @@ const generateAiMessage = async (userPrompt: string): Promise<string> => {
   throw new Error("No AI provider (Anthropic or OpenAI) is configured.");
 };
 
-const generateChatEmailHtml = (recipientName: string, messages: any[], conversationData: any, senderName: string) => {
-    const messageHtml = messages.map(msg => {
-        const sender = getFullName(msg.sender);
-        const time = new Date(msg.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-        return `
-            <div style="margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid #eeeeee;">
-                <p style="margin: 0; font-weight: 600; color: #111827;">${sender} <span style="font-weight: 400; color: #6b7280; font-size: 12px;">${time}</span></p>
-                <p style="margin: 4px 0 0; color: #374151;">${msg.content.replace(/\n/g, '<br>')}</p>
-            </div>
-        `;
-    }).join('');
-
-    const conversationName = conversationData.is_group ? `the group "${conversationData.group_name}"` : `your chat with ${senderName}`;
-
-    return `
-    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #111827;">
-        <h2 style="font-size: 24px; font-weight: 600; color: #111827; margin-bottom: 8px;">New Messages in 7i Portal</h2>
-        <p style="font-size: 16px; color: #374151; margin-top: 0;">Hi ${recipientName},</p>
-        <p style="font-size: 16px; color: #374151;">You have ${messages.length} new message(s) in ${conversationName}.</p>
-        <div style="background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin-top: 24px; margin-bottom: 24px;">
-            ${messageHtml}
-        </div>
-        <a href="${APP_URL}/chat?highlight=${conversationData.id}" style="display: inline-block; padding: 12px 24px; font-size: 16px; color: #ffffff; background-color: #008A9E; text-decoration: none; border-radius: 8px; font-weight: 600;">View Conversation</a>
-        <p style="margin-top: 24px; font-size: 12px; color: #6b7280;">You are receiving this because you have email notifications enabled for new chat messages.</p>
-    </div>
-    `;
-};
-
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -199,10 +171,6 @@ serve(async (req) => {
       return new Response(JSON.stringify({ message: 'No pending notifications.' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    const recipientIds = notifications.map(n => n.recipient_id).filter(Boolean);
-    const { data: peopleData } = await supabaseAdmin.from('people').select('user_id, contact').in('user_id', recipientIds);
-    const peopleContactMap = new Map(peopleData?.map(p => [p.user_id, p.contact]) || []);
-
     let successCount = 0, failureCount = 0, skippedCount = 0;
 
     const userIds = new Set<string>();
@@ -210,7 +178,6 @@ serve(async (req) => {
     const taskIds = new Set<string>();
     const goalIds = new Set<string>();
     const folderIds = new Set<string>();
-    const conversationIds = new Set<string>();
 
     notifications.forEach(n => {
         if (n.context_data) {
@@ -224,16 +191,14 @@ serve(async (req) => {
             if (n.context_data.goal_id) goalIds.add(n.context_data.goal_id);
             if (n.context_data.folder_id) folderIds.add(n.context_data.folder_id);
         }
-        if (n.conversation_id) conversationIds.add(n.conversation_id);
     });
 
-    const [profilesRes, projectsRes, tasksRes, goalsRes, foldersRes, conversationsRes] = await Promise.all([
+    const [profilesRes, projectsRes, tasksRes, goalsRes, foldersRes] = await Promise.all([
         userIds.size > 0 ? supabaseAdmin.from('profiles').select('id, first_name, last_name, email').in('id', Array.from(userIds)) : Promise.resolve({ data: [], error: null }),
         projectIds.size > 0 ? supabaseAdmin.from('projects').select('id, name, slug').in('id', Array.from(projectIds)) : Promise.resolve({ data: [], error: null }),
         taskIds.size > 0 ? supabaseAdmin.from('tasks').select('id, title, project_id').in('id', Array.from(taskIds)) : Promise.resolve({ data: [], error: null }),
         goalIds.size > 0 ? supabaseAdmin.from('goals').select('id, title, slug').in('id', Array.from(goalIds)) : Promise.resolve({ data: [], error: null }),
         folderIds.size > 0 ? supabaseAdmin.from('kb_folders').select('id, name, slug').in('id', Array.from(folderIds)) : Promise.resolve({ data: [], error: null }),
-        conversationIds.size > 0 ? supabaseAdmin.from('conversations').select('id, group_name, is_group').in('id', Array.from(conversationIds)) : Promise.resolve({ data: [], error: null }),
     ]);
 
     const profileMap = new Map(profilesRes.data?.map(p => [p.id, p]));
@@ -241,25 +206,12 @@ serve(async (req) => {
     const taskMap = new Map(tasksRes.data?.map(t => [t.id, t]));
     const goalMap = new Map(goalsRes.data?.map(g => [g.id, g]));
     const folderMap = new Map(foldersRes.data?.map(f => [f.id, f]));
-    const conversationMap = new Map(conversationsRes.data?.map(c => [c.id, c]));
 
     for (const notification of notifications) {
       try {
         const recipient = notification.recipient;
-        if (!recipient) {
-          await supabaseAdmin.from('pending_whatsapp_notifications').update({ status: 'skipped', error_message: 'Recipient profile not found.', processed_at: new Date().toISOString() }).eq('id', notification.id);
-          skippedCount++;
-          continue;
-        }
-
-        const personContact = peopleContactMap.get(recipient.id);
-        const phoneFromPeople = personContact?.phones?.[0];
-        const phoneToSend = phoneFromPeople || recipient.phone;
-        const prefs = recipient.notification_preferences || {};
-        const typePref = prefs[notification.notification_type] || {};
-
-        if (typePref.enabled === false) {
-          await supabaseAdmin.from('pending_whatsapp_notifications').update({ status: 'skipped', error_message: 'User disabled this notification type.', processed_at: new Date().toISOString() }).eq('id', notification.id);
+        if (!recipient || !recipient.phone) {
+          await supabaseAdmin.from('pending_whatsapp_notifications').update({ status: 'skipped', error_message: 'Recipient profile or phone not found.', processed_at: new Date().toISOString() }).eq('id', notification.id);
           skippedCount++;
           continue;
         }
@@ -268,158 +220,25 @@ serve(async (req) => {
         const context = notification.context_data;
         const recipientName = recipient.first_name || recipient.email.split('@')[0];
 
-        if (notification.notification_type === 'new_chat_message') {
-          const sixMinutesAgo = new Date(Date.now() - 6 * 60 * 1000).toISOString();
-          const { data: recentMessages, error: messagesError } = await supabaseAdmin
-            .from('messages')
-            .select('content, sender_id, created_at, sender:profiles!sender_id(first_name, last_name, email)')
-            .eq('conversation_id', notification.conversation_id)
-            .gt('created_at', sixMinutesAgo)
-            .neq('sender_id', recipient.id)
-            .order('created_at', { ascending: true });
-
-          if (messagesError || !recentMessages || recentMessages.length === 0) {
-            await supabaseAdmin.from('pending_whatsapp_notifications').update({ status: 'processed', processed_at: new Date().toISOString() }).eq('id', notification.id);
-            successCount++;
-            continue;
+        switch (notification.notification_type) {
+          case 'discussion_mention': {
+            const { project_id, mentioner_id, task_id } = context;
+            const projectData = projectMap.get(project_id);
+            const mentionerData = profileMap.get(mentioner_id);
+            if (!projectData || !mentionerData) throw new Error('Missing context data for discussion_mention');
+            const url = task_id
+              ? `${APP_URL}/projects/${projectData.slug}?tab=tasks&task=${task_id}`
+              : `${APP_URL}/projects/${projectData.slug}`;
+            userPrompt = `Buat notifikasi mention. Penerima: ${recipientName}. Yang me-mention: ${getFullName(mentionerData)}. Proyek: "${projectData.name}". URL: ${url}`;
+            break;
           }
-
-          const conversationData = conversationMap.get(notification.conversation_id);
-          const senderName = getFullName(recentMessages[0].sender);
-          const subject = recentMessages.length > 1
-            ? `You have new messages in ${conversationData.is_group ? `"${conversationData.group_name}"` : 'your chat'}`
-            : `New message from ${senderName}`;
-
-          if (typePref.email !== false && recipient.email) {
-            const emailHtml = generateChatEmailHtml(recipientName, recentMessages, conversationData, senderName);
-            const { error: emailError } = await supabaseAdmin.functions.invoke('send-email', {
-                body: { to: recipient.email, subject, html: emailHtml }
-            });
-            if (emailError) console.error(`[EMAIL] Failed for notif ${notification.id}:`, emailError.message);
-            else console.log(`[EMAIL] Sent for notif ${notification.id} to ${recipient.email}`);
-          }
-
-          if (typePref.whatsapp !== false && phoneToSend) {
-            const messagesForPrompt = recentMessages.map(m => `${getFullName(m.sender)}: ${m.content}`).join('\n');
-            userPrompt = `Buat notifikasi ringkasan chat. Penerima: ${recipientName}. Pengirim: ${senderName}. Percakapan: "${conversationData.is_group ? conversationData.group_name : senderName}". Ada ${recentMessages.length} pesan baru. Ringkasan pesan: ${messagesForPrompt}. URL: ${APP_URL}/chat?highlight=${notification.conversation_id}`;
-            const aiMessage = await generateAiMessage(userPrompt);
-            await sendWhatsappMessage(phoneToSend, aiMessage);
-          }
-        } else {
-            switch (notification.notification_type) {
-              case 'billing_reminder': {
-                const { project_name, days_overdue } = context;
-                if (!project_name) throw new Error('Missing project_name for billing_reminder');
-                let urgency = 'sedikit mendesak';
-                if (days_overdue > 30) {
-                    urgency = 'sangat mendesak dan perlu segera ditindaklanjuti';
-                } else if (days_overdue > 7) {
-                    urgency = 'cukup mendesak';
-                }
-                userPrompt = `**Konteks:**
-- **Jenis:** Pengingat Invoice Jatuh Tempo
-- **Penerima:** ${recipientName}
-- **Proyek:** ${project_name}
-- **Jumlah Hari Terlambat:** ${days_overdue} hari
-- **Tingkat Urgensi:** ${urgency}
-- **URL:** ${APP_URL}/billing
-
-Buat pesan pengingat yang sopan dan profesional sesuai dengan tingkat urgensi yang diberikan.`;
-                break;
-              }
-              case 'task_assignment': {
-                const taskData = taskMap.get(context.task_id);
-                const projectData = projectMap.get(taskData?.project_id);
-                const assignerData = profileMap.get(context.assigner_id);
-                if (!taskData || !projectData || !assignerData) throw new Error('Missing context data for task_assignment');
-                userPrompt = `Buat notifikasi penugasan tugas. Penerima: ${recipientName}. Pemberi tugas: ${getFullName(assignerData)}. Judul tugas: "${taskData.title}". Proyek: "${projectData.name}". URL: ${APP_URL}/projects/${projectData.slug}?tab=tasks&task=${context.task_id}`;
-                break;
-              }
-              case 'new_task': {
-                const { task_title, creator_id, project_name, project_slug, task_id } = context;
-                const creatorData = profileMap.get(creator_id);
-                if (!task_title || !creatorData || !project_name || !project_slug || !task_id) {
-                    throw new Error('Missing context data for new_task notification');
-                }
-                userPrompt = `Buat notifikasi tugas baru. Penerima: ${recipientName}. Pembuat tugas: ${getFullName(creatorData)}. Judul tugas: "${task_title}". Proyek: "${project_name}". URL: ${APP_URL}/projects/${project_slug}?tab=tasks&task=${task_id}`;
-                break;
-              }
-              case 'discussion_mention': {
-                const { project_id, mentioner_id, task_id } = context;
-                const projectData = projectMap.get(project_id);
-                const mentionerData = profileMap.get(mentioner_id);
-                if (!projectData || !mentionerData) throw new Error('Missing context data for discussion_mention');
-                const url = task_id
-                  ? `${APP_URL}/projects/${projectData.slug}?tab=tasks&task=${task_id}`
-                  : `${APP_URL}/projects/${projectData.slug}`;
-                userPrompt = `Buat notifikasi mention. Penerima: ${recipientName}. Yang me-mention: ${getFullName(mentionerData)}. Proyek: "${projectData.name}". URL: ${url}`;
-                break;
-              }
-              case 'task_completed': {
-                const taskData = taskMap.get(context.task_id);
-                const completerData = profileMap.get(context.completer_id);
-                if (!taskData || !completerData) throw new Error('Missing context data for task_completed');
-                userPrompt = `Buat notifikasi tugas selesai. Penerima: ${recipientName}. Yang menyelesaikan: ${getFullName(completerData)}. Judul tugas: "${taskData.title}". Proyek: "${context.project_name}". URL: ${APP_URL}/projects/${context.project_slug}?tab=tasks&task=${context.task_id}`;
-                break;
-              }
-              case 'project_invite': {
-                const projectData = projectMap.get(context.project_id);
-                const inviterData = profileMap.get(context.inviter_id);
-                if (!projectData || !inviterData) throw new Error('Missing context data for project_invite');
-                userPrompt = `Buat notifikasi undangan proyek. Penerima: ${recipientName}. Pengundang: ${getFullName(inviterData)}. Proyek: "${projectData.name}". URL: ${APP_URL}/projects/${projectData.slug}`;
-                break;
-              }
-              case 'goal_invite': {
-                const goalData = goalMap.get(context.goal_id);
-                const inviterData = profileMap.get(context.inviter_id);
-                if (!goalData || !inviterData) throw new Error('Missing context data for goal_invite');
-                userPrompt = `Buat notifikasi undangan kolaborasi goal. Penerima: ${recipientName}. Pengundang: ${getFullName(inviterData)}. Judul goal: "${goalData.title}". URL: ${APP_URL}/goals/${goalData.slug}`;
-                break;
-              }
-              case 'kb_invite': {
-                const folderData = folderMap.get(context.folder_id);
-                const inviterData = profileMap.get(context.inviter_id);
-                if (!folderData || !inviterData) throw new Error('Missing context data for kb_invite');
-                userPrompt = `Buat notifikasi undangan kolaborasi knowledge base. Penerima: ${recipientName}. Pengundang: ${getFullName(inviterData)}. Nama folder: "${folderData.name}". URL: ${APP_URL}/knowledge-base/folders/${folderData.slug}`;
-                break;
-              }
-              case 'payment_status_updated': {
-                const projectData = projectMap.get(context.project_id);
-                const updaterData = profileMap.get(context.updater_id);
-                if (!projectData || !updaterData) throw new Error('Missing context data for payment_status_updated');
-                userPrompt = `Buat notifikasi pembaruan status pembayaran. Penerima: ${recipientName}. Yang memperbarui: ${getFullName(updaterData)}. Proyek: "${projectData.name}". Status baru: *${context.new_status}*. URL: ${APP_URL}/projects/${projectData.slug}`;
-                break;
-              }
-              case 'project_status_updated': {
-                const projectData = projectMap.get(context.project_id);
-                const updaterData = profileMap.get(context.updater_id);
-                if (!projectData || !updaterData) throw new Error('Missing context data for project_status_updated');
-                userPrompt = `Buat notifikasi pembaruan status proyek. Penerima: ${recipientName}. Yang memperbarui: ${getFullName(updaterData)}. Proyek: "${projectData.name}". Status diubah dari *${context.old_status}* menjadi *${context.new_status}*. URL: ${APP_URL}/projects/${projectData.slug}`;
-                break;
-              }
-              case 'goal_progress_update': {
-                const goalData = goalMap.get(context.goal_id);
-                const updaterData = profileMap.get(context.updater_id);
-                if (!goalData || !updaterData) throw new Error('Missing context data for goal_progress_update');
-                userPrompt = `Buat notifikasi pembaruan progres goal. Penerima: ${recipientName}. Yang memperbarui: ${getFullName(updaterData)}. Goal: "${goalData.title}". Progres baru dicatat. URL: ${APP_URL}/goals/${goalData.slug}`;
-                break;
-              }
-              case 'task_overdue': {
-                const { task_title, project_name, project_slug, task_id, days_overdue } = context;
-                if (!task_title || !project_name || !project_slug || !task_id || days_overdue === undefined) {
-                  throw new Error('Missing context data for task_overdue notification');
-                }
-                userPrompt = `Buat notifikasi tugas yang telah jatuh tempo. Penerima: ${recipientName}. Judul tugas: "${task_title}". Proyek: "${project_name}". Tugas ini telah terlambat *${days_overdue} hari*. URL: ${APP_URL}/projects/${project_slug}?tab=tasks&task=${task_id}`;
-                break;
-              }
-              default:
-                throw new Error(`Unsupported notification type: ${notification.notification_type}`);
-            }
-            if (typePref.whatsapp !== false && phoneToSend) {
-                const aiMessage = await generateAiMessage(userPrompt);
-                await sendWhatsappMessage(phoneToSend, aiMessage);
-            }
+          // Add other cases here as you implement more notification types
+          default:
+            throw new Error(`Unsupported notification type: ${notification.notification_type}`);
         }
+
+        const aiMessage = await generateAiMessage(userPrompt);
+        await sendWhatsappMessage(recipient.phone, aiMessage);
 
         await supabaseAdmin.from('pending_whatsapp_notifications').update({ status: 'processed', processed_at: new Date().toISOString() }).eq('id', notification.id);
         successCount++;
