@@ -140,13 +140,14 @@ export const EditInvoiceDialog = ({ isOpen, onClose, invoice, project }: EditInv
   };
 
   const addSplit = () => {
-    const newSplits = [...splitInvoices, {
+    const newSplit: SplitInvoice = {
       id: `new-${uuidv4()}`,
       client_company_id: null,
       amount: null,
       payment_due_date: undefined,
       payment_status: 'Proposed',
-    }];
+    };
+    const newSplits = [...splitInvoices, newSplit];
     
     if (splitMode === 'term' && project?.budget && project.budget > 0) {
         const newCount = newSplits.length;
