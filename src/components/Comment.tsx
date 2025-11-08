@@ -163,12 +163,12 @@ const Comment: React.FC<CommentProps> = ({
               </div>
             )}
             <div className="mt-1 flex items-center gap-2">
-              <Button variant="ghost" size="xs" className="text-muted-foreground" onClick={() => onReply(comment)}>
+              <Button variant="ghost" size="sm" className="text-muted-foreground h-auto p-1 text-xs" onClick={() => onReply(comment)}>
                 <CornerUpLeft className="h-3 w-3 mr-1" /> Reply
               </Button>
               <CommentReactions reactions={comment.reactions || []} onToggleReaction={(emoji) => onToggleReaction(comment.id, emoji)} />
               {!comment.is_ticket && (
-                <Button variant="ghost" size="xs" className="text-muted-foreground" onClick={() => onCreateTicketFromComment(comment)}>
+                <Button variant="ghost" size="sm" className="text-muted-foreground h-auto p-1 text-xs" onClick={() => onCreateTicketFromComment(comment)}>
                   <Ticket className="h-3 w-3 mr-1" /> Create Ticket
                 </Button>
               )}

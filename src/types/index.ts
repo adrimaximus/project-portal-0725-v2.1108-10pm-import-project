@@ -62,7 +62,7 @@ export interface Comment {
   text: string | null;
   created_at: string;
   author: User;
-  reactions: Reaction[];
+  reactions?: Reaction[];
   is_ticket: boolean;
   attachment_url?: string | null;
   attachment_name?: string | null;
