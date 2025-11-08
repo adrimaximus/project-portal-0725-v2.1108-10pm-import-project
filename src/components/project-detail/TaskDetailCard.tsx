@@ -90,7 +90,7 @@ const aggregateAttachments = (task: Task): TaskAttachment[] => {
 
 const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, onDelete }) => {
   const { user } = useAuth();
-  const { toggleTaskReaction, sendReminder, isSendingReminder, updateTaskStatusAndOrder } = useTaskMutations();
+  const { toggleTaskReaction, sendReminder, isSendingReminder, upsertTask } = useTaskMutations();
   const { 
     comments, 
     isLoadingComments, 
@@ -165,7 +165,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
           project_id: comment.project_id,
           status: 'To do',
           priority: 'Normal',
-          due_date: null,
+          due_date: addHours(new Date(), 24).toISOString(),
           origin_ticket_id: comment.id,
         });
       }
@@ -274,12 +274,12 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
                 <Select
                   value={task.status}
                   onValueChange={(newStatus: TaskStatus) => {
-                    updateTaskStatusAndOrder({
-                      taskId: task.id,
-                      newStatus,
-                      orderedTaskIds: [],
-                      newTasks: [],
-                      queryKey: ['tasks'],
+                    upsertTask({
+                      id: task.id,
+                      project_id: task.project_id,
+                      title: task.title,
+                      status: newStatus,
+                      completed: newStatus === 'Done',
                     });
                   }}
                 >
