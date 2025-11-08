@@ -143,7 +143,7 @@ const Comment: React.FC<CommentProps> = ({
         ) : (
           <>
             {comment.repliedMessage && (
-              <div className="text-xs text-muted-foreground border-l-4 border-blue-500 pl-3 py-2 mb-2 bg-muted rounded-md">
+              <div className="text-xs text-muted-foreground border-l-2 border-border pl-3 py-2 mb-2 bg-muted rounded-md">
                 <p className="font-semibold">Replying to {comment.repliedMessage.senderName}</p>
                 <div className="italic line-clamp-1 prose prose-sm dark:prose-invert max-w-none">
                   <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
