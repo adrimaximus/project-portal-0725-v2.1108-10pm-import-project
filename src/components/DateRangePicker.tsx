@@ -50,7 +50,7 @@ export function DateRangePicker({
                 format(date.from, "LLL dd, y")
               )
             ) : (
-              <span>Filter by project timeline</span>
+              <span>Timeline filter</span>
             )}
           </Button>
         </PopoverTrigger>
