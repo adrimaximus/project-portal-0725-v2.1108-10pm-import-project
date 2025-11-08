@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { DateRange } from "react-day-picker";
 import ProjectAdvancedFilters, { AdvancedFiltersState } from './ProjectAdvancedFilters';
+import { Separator } from "@/components/ui/separator";
 
 type ViewMode = 'table' | 'list' | 'kanban' | 'tasks' | 'tasks-kanban';
 
@@ -52,29 +53,34 @@ const ProjectsToolbar = ({
   return (
     <div className="p-4 border-t flex flex-col sm:flex-row items-center justify-between gap-4">
       <div className="w-full sm:w-auto flex-shrink-0 flex items-center gap-4">
-        <ToggleGroup type="single" value={view} onValueChange={onViewChange} aria-label="Project view">
-          <ToggleGroupItem value="list" aria-label="List view"><List className="h-4 w-4" /></ToggleGroupItem>
-          <ToggleGroupItem value="table" aria-label="Table view"><LayoutGrid className="h-4 w-4" /></ToggleGroupItem>
-          <ToggleGroupItem value="kanban" aria-label="Kanban view"><KanbanSquare className="h-4 w-4" /></ToggleGroupItem>
-          <ToggleGroupItem value="tasks" aria-label="Tasks list view"><ListChecks className="h-4 w-4" /></ToggleGroupItem>
-          <ToggleGroupItem value="tasks-kanban" aria-label="Tasks kanban view"><CheckSquare className="h-4 w-4" /></ToggleGroupItem>
-        </ToggleGroup>
+        <div className="flex items-center gap-4">
+          <ToggleGroup type="single" value={view} onValueChange={onViewChange} aria-label="Project view">
+            <ToggleGroupItem value="list" aria-label="List view"><List className="h-4 w-4" /></ToggleGroupItem>
+            <ToggleGroupItem value="table" aria-label="Table view"><LayoutGrid className="h-4 w-4" /></ToggleGroupItem>
+            <ToggleGroupItem value="kanban" aria-label="Kanban view"><KanbanSquare className="h-4 w-4" /></ToggleGroupItem>
+            <ToggleGroupItem value="tasks" aria-label="Tasks list view"><ListChecks className="h-4 w-4" /></ToggleGroupItem>
+            <ToggleGroupItem value="tasks-kanban" aria-label="Tasks kanban view"><CheckSquare className="h-4 w-4" /></ToggleGroupItem>
+          </ToggleGroup>
 
-        {view === 'kanban' && (
-          <Select value={kanbanGroupBy} onValueChange={onKanbanGroupByChange}>
-            <SelectTrigger className="w-[180px]"><SelectValue placeholder="Group by..." /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="status">Status</SelectItem>
-              <SelectItem value="payment_status">Payment Status</SelectItem>
-            </SelectContent>
-          </Select>
-        )}
-        {isTaskView && (
-          <div className="flex items-center space-x-2">
-            <Switch id="hide-completed" checked={hideCompletedTasks} onCheckedChange={onToggleHideCompleted} />
-            <Label htmlFor="hide-completed" className="text-sm">Hide Done</Label>
-          </div>
-        )}
+          {view === 'kanban' && (
+            <Select value={kanbanGroupBy} onValueChange={onKanbanGroupByChange}>
+              <SelectTrigger className="w-[180px]"><SelectValue placeholder="Group by..." /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="status">Status</SelectItem>
+                <SelectItem value="payment_status">Payment Status</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
+          {isTaskView && (
+            <div className="flex items-center space-x-2">
+              <Switch id="hide-completed" checked={hideCompletedTasks} onCheckedChange={onToggleHideCompleted} />
+              <Label htmlFor="hide-completed" className="text-sm">Hide Done</Label>
+            </div>
+          )}
+        </div>
+        
+        <Separator orientation="vertical" className="h-6" />
+
         <ProjectAdvancedFilters filters={advancedFilters} onFiltersChange={onAdvancedFiltersChange} allPeople={allPeople} />
       </div>
 
