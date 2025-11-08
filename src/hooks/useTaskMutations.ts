@@ -7,7 +7,7 @@ import { getErrorMessage } from '@/lib/utils';
 import { v4 as uuidv4 } from 'uuid';
 import { addHours } from 'date-fns';
 
-type UpdateTaskOrderPayload = {
+export type UpdateTaskOrderPayload = {
   taskId: string;
   newStatus: TaskStatus;
   orderedTaskIds: string[];
@@ -58,7 +58,7 @@ export const useTaskMutations = (refetch?: () => void) => {
         if (fetchFilesError) throw new Error(`Could not fetch files to delete: ${fetchFilesError.message}`);
 
         if (filesToDelete && filesToDelete.length > 0) {
-          const storagePaths = filesToDelete.map(f => f.storage_path);
+          const storagePaths = filesToDelete.map(f => f.storage_path).filter(Boolean);
           if (storagePaths.length > 0) {
             const { error: storageError } = await supabase.storage.from('project-files').remove(storagePaths);
             if (storageError) console.warn("Failed to delete some files from storage:", storageError.message);

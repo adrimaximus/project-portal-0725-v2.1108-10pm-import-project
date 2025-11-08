@@ -280,6 +280,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
                       orderedTaskIds: [],
                       newTasks: [],
                       queryKey: ['tasks'],
+                      movedColumns: false,
                     });
                   }}
                 >

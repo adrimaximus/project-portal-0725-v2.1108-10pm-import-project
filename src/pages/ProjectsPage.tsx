@@ -17,7 +17,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useTasks } from '@/hooks/useTasks';
 import { useProjects } from '@/hooks/useProjects';
 import { useCreateProject } from '@/hooks/useCreateProject';
-import { useTaskMutations } from '@/hooks/useTaskMutations';
+import { useTaskMutations, UpdateTaskOrderPayload } from '@/hooks/useTaskMutations';
 import { useProjectMutations } from '@/hooks/useProjectMutations';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import PortalLayout from '@/components/PortalLayout';
@@ -269,7 +269,7 @@ const ProjectsPage = () => {
     updateProjectStatus.mutate({ projectId, status: newStatus });
   };
 
-  const handleTaskOrderChange = (payload: { taskId: string; newStatus: TaskStatus; orderedTaskIds: string[]; newTasks: ProjectTask[]; queryKey: any[]; movedColumns: boolean }) => {
+  const handleTaskOrderChange = (payload: UpdateTaskOrderPayload) => {
     updateTaskStatusAndOrder(payload);
   };
 
