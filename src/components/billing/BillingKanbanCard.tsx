@@ -16,7 +16,7 @@ interface BillingKanbanCardProps {
 
 const BillingKanbanCard = ({ invoice, onEdit }: BillingKanbanCardProps) => {
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ 
-      id: invoice.rawProjectId,
+      id: invoice.id,
       data: {
         type: 'Invoice',
         invoice,
@@ -34,7 +34,7 @@ const BillingKanbanCard = ({ invoice, onEdit }: BillingKanbanCardProps) => {
                 <CardContent className="p-3">
                     <div className="flex justify-between items-start">
                         <div className="space-y-1">
-                            <p className="text-xs text-muted-foreground">{invoice.id}</p>
+                            <p className="text-xs text-muted-foreground">{invoice.invoice_number || 'N/A'}</p>
                             <h4 className="font-semibold text-sm leading-snug">{invoice.projectName}</h4>
                         </div>
                         <DropdownMenu>
