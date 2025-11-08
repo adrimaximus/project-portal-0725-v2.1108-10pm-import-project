@@ -59,7 +59,7 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const { updatePeopleOrder } = usePeopleKanbanMutations();
   const [personGroups, setPersonGroups] = useState<Record<string, Person[]>>({});
-  const isOptimisticUpdate = useRef(false);
+  const [isDragging, setIsDragging] = useState(false);
 
   const uncategorizedTag: Tag = { id: 'uncategorized', name: 'Uncategorized', color: '#9ca3af', user_id: '' };
 
@@ -100,12 +100,7 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
   }, [kanbanGroupBy, people, tags, columnOrder, visibleColumnIds, uncategorizedTag, allCompanies]);
 
   useEffect(() => {
-    if (isOptimisticUpdate.current) {
-      isOptimisticUpdate.current = false;
-      return;
-    }
-
-    if (!activePerson) {
+    if (!isDragging) {
       const groups: Record<string, Person[]> = {};
       columns.forEach(col => {
         groups[col.id] = [];
@@ -133,7 +128,7 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
       }
       setPersonGroups(groups);
     }
-  }, [people, tags, visibleColumnIds, activePerson, kanbanGroupBy, columns]);
+  }, [people, tags, visibleColumnIds, isDragging, kanbanGroupBy, columns]);
 
   useImperativeHandle(ref, () => ({
     openSettings: () => setIsSettingsOpen(true),
@@ -208,6 +203,7 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
 
   const handleDragStart = (event: DragStartEvent) => {
     dragHappened.current = true;
+    setIsDragging(true);
     const { active } = event;
     setActivePerson(people.find(p => p.id === active.id) || null);
   };
@@ -254,6 +250,7 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
     
     if (!over) {
       setActivePerson(null);
+      setIsDragging(false);
       setTimeout(() => { dragHappened.current = false; }, 0);
       return;
     }
@@ -265,11 +262,11 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
 
     if (!sourceContainerId || !destContainerId) {
       setActivePerson(null);
+      setIsDragging(false);
       setTimeout(() => { dragHappened.current = false; }, 0);
       return;
     }
 
-    isOptimisticUpdate.current = true;
     setPersonGroups(currentGroups => {
       let finalGroups = { ...currentGroups };
       if (sourceContainerId === destContainerId) {
@@ -283,6 +280,7 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
       return finalGroups;
     });
     setActivePerson(null);
+    setIsDragging(false);
     setTimeout(() => { dragHappened.current = false; }, 0);
 
     const newPeopleState = Object.values(personGroups).flat();
@@ -302,10 +300,16 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
     });
   };
 
+  const handleDragCancel = () => {
+    setActivePerson(null);
+    setIsDragging(false);
+    setTimeout(() => { dragHappened.current = false; }, 0);
+  };
+
   const allTagsForEditor = [uncategorizedTag, ...tags];
 
   return (
-    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd} onDragCancel={() => setActivePerson(null)}>
+    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd} onDragCancel={handleDragCancel}>
       <div className="flex flex-row items-start gap-4 overflow-x-auto pb-4">
         {kanbanGroupBy === 'tags' && (
           <div className={`transition-all duration-300 ease-in-out flex-shrink-0 ${isSettingsOpen ? 'w-64' : 'w-0'} overflow-hidden`}>

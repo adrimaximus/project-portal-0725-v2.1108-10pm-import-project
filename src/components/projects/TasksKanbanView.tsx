@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Task, TaskStatus, TASK_STATUS_OPTIONS } from '@/types';
 import TasksKanbanColumn from './TasksKanbanColumn';
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, MouseSensor, TouchSensor, useSensor, useSensors, DragOverEvent, DropAnimation, defaultDropAnimationSideEffects } from '@dnd-kit/core';
@@ -28,7 +28,7 @@ const TasksKanbanView = ({ tasks, onEdit, onDelete, refetch, tasksQueryKey, onTa
   const [collapsedColumns, setCollapsedColumns] = useState<Set<TaskStatus>>(new Set());
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [tasksByStatus, setTasksByStatus] = useState<Record<TaskStatus, Task[]>>({} as Record<TaskStatus, Task[]>);
-  const isOptimisticUpdate = useRef(false);
+  const [isDragging, setIsDragging] = useState(false);
 
   useEffect(() => {
     const savedState = localStorage.getItem('tasksKanbanCollapsedColumns');
@@ -38,12 +38,7 @@ const TasksKanbanView = ({ tasks, onEdit, onDelete, refetch, tasksQueryKey, onTa
   }, []);
 
   useEffect(() => {
-    if (isOptimisticUpdate.current) {
-      isOptimisticUpdate.current = false;
-      return;
-    }
-
-    if (!activeTask) {
+    if (!isDragging) {
       const grouped: { [key in TaskStatus]: Task[] } = TASK_STATUS_OPTIONS.reduce((acc, opt) => {
         acc[opt.value] = [];
         return acc;
@@ -63,7 +58,7 @@ const TasksKanbanView = ({ tasks, onEdit, onDelete, refetch, tasksQueryKey, onTa
       }
       setTasksByStatus(grouped);
     }
-  }, [tasks, activeTask]);
+  }, [tasks, isDragging]);
 
   const toggleColumnCollapse = (status: TaskStatus) => {
     setCollapsedColumns(prev => {
@@ -93,6 +88,7 @@ const TasksKanbanView = ({ tasks, onEdit, onDelete, refetch, tasksQueryKey, onTa
   );
 
   const handleDragStart = (event: DragStartEvent) => {
+    setIsDragging(true);
     const { active } = event;
     const task = tasks.find(t => t.id === active.id);
     if (task) {
@@ -151,6 +147,7 @@ const TasksKanbanView = ({ tasks, onEdit, onDelete, refetch, tasksQueryKey, onTa
     
     if (!over) {
       setActiveTask(null);
+      setIsDragging(false);
       return;
     }
 
@@ -163,6 +160,7 @@ const TasksKanbanView = ({ tasks, onEdit, onDelete, refetch, tasksQueryKey, onTa
     if (!activeContainer || !overContainer) {
         console.error("Could not determine drag and drop containers.");
         setActiveTask(null);
+        setIsDragging(false);
         return;
     }
 
@@ -183,9 +181,9 @@ const TasksKanbanView = ({ tasks, onEdit, onDelete, refetch, tasksQueryKey, onTa
         }
     }
     
-    isOptimisticUpdate.current = true;
     setTasksByStatus(finalTasksByStatusState);
     setActiveTask(null);
+    setIsDragging(false);
 
     const finalOrderedTasks = TASK_STATUS_OPTIONS.flatMap(option => 
       (finalTasksByStatusState[option.value] || []).map((task, index) => ({ ...task, status: option.value, kanban_order: index }))
@@ -201,8 +199,13 @@ const TasksKanbanView = ({ tasks, onEdit, onDelete, refetch, tasksQueryKey, onTa
     });
   };
 
+  const handleDragCancel = () => {
+    setActiveTask(null);
+    setIsDragging(false);
+  };
+
   return (
-    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd} onDragCancel={() => setActiveTask(null)}>
+    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd} onDragCancel={handleDragCancel}>
       <div className="flex gap-4 overflow-x-auto p-2 sm:p-4 h-full">
         {TASK_STATUS_OPTIONS.map(option => (
           <TasksKanbanColumn

@@ -1,6 +1,6 @@
 import { Invoice, PAYMENT_STATUS_OPTIONS, PaymentStatus, Project } from '@/types';
 import BillingKanbanColumn from './BillingKanbanColumn';
-import { useMemo, useState, useRef, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, MouseSensor, TouchSensor, useSensor, useSensors, DragOverEvent, DropAnimation, defaultDropAnimationSideEffects } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
 import { useProjectKanbanMutations } from '@/hooks/useProjectKanbanMutations';
@@ -28,7 +28,7 @@ const BillingKanbanView = ({ invoices, onEditInvoice }: BillingKanbanViewProps) 
     const { updateProjectOrder } = useProjectKanbanMutations();
     const [groupedInvoices, setGroupedInvoices] = useState<Record<string, Invoice[]>>({});
     const [collapsedColumns, setCollapsedColumns] = useState<string[]>([]);
-    const isOptimisticUpdate = useRef(false);
+    const [isDragging, setIsDragging] = useState(false);
 
     useEffect(() => {
         const savedState = localStorage.getItem('billingKanbanCollapsedColumns');
@@ -46,11 +46,7 @@ const BillingKanbanView = ({ invoices, onEditInvoice }: BillingKanbanViewProps) 
     };
 
     useEffect(() => {
-        if (isOptimisticUpdate.current) {
-            isOptimisticUpdate.current = false;
-            return;
-        }
-        if (!activeInvoice) {
+        if (!isDragging) {
             const groups: Record<string, Invoice[]> = {};
             PAYMENT_STATUS_OPTIONS.forEach(opt => {
                 groups[opt.value] = [];
@@ -62,7 +58,7 @@ const BillingKanbanView = ({ invoices, onEditInvoice }: BillingKanbanViewProps) 
             });
             setGroupedInvoices(groups);
         }
-    }, [invoices, activeInvoice]);
+    }, [invoices, isDragging]);
 
     const sensors = useSensors(
         useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
@@ -70,6 +66,7 @@ const BillingKanbanView = ({ invoices, onEditInvoice }: BillingKanbanViewProps) 
     );
 
     const handleDragStart = (event: DragStartEvent) => {
+        setIsDragging(true);
         setActiveInvoice(invoices.find(i => i.rawProjectId === event.active.id) || null);
     };
 
@@ -118,6 +115,7 @@ const BillingKanbanView = ({ invoices, onEditInvoice }: BillingKanbanViewProps) 
         
         if (!over) {
             setActiveInvoice(null);
+            setIsDragging(false);
             return;
         }
 
@@ -129,6 +127,7 @@ const BillingKanbanView = ({ invoices, onEditInvoice }: BillingKanbanViewProps) 
         const activeInvoiceInstance = invoices.find(i => i.rawProjectId === activeId);
         if (!activeInvoiceInstance || !activeContainer || !overContainer) {
             setActiveInvoice(null);
+            setIsDragging(false);
             return;
         }
 
@@ -142,9 +141,9 @@ const BillingKanbanView = ({ invoices, onEditInvoice }: BillingKanbanViewProps) 
             }
         }
         
-        isOptimisticUpdate.current = true;
         setGroupedInvoices(finalGroupedInvoices);
         setActiveInvoice(null);
+        setIsDragging(false);
 
         const newInvoicesState = Object.values(finalGroupedInvoices).flat();
 
@@ -172,8 +171,13 @@ const BillingKanbanView = ({ invoices, onEditInvoice }: BillingKanbanViewProps) 
         }
     };
 
+    const handleDragCancel = () => {
+        setActiveInvoice(null);
+        setIsDragging(false);
+    };
+
     return (
-        <DndContext sensors={sensors} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
+        <DndContext sensors={sensors} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd} onDragCancel={handleDragCancel}>
             <div className="flex gap-4 overflow-x-auto p-4">
                 {PAYMENT_STATUS_OPTIONS.map(statusOption => (
                     <BillingKanbanColumn
