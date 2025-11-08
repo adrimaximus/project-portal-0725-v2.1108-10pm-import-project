@@ -24,7 +24,8 @@ const GlobalActivityFeed = () => {
     if (!text) return "";
     return text
       .replace(/\\"/g, "")
-      .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-card-foreground">$1</strong>');
+      .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-card-foreground">$1</strong>')
+      .replace(/@\[(.*?)\]\(.*?\)/g, '@$1');
   };
 
   return (
