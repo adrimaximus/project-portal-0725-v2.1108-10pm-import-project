@@ -26,22 +26,23 @@ const NavLink = ({ item, isCollapsed }: { item: NavItem, isCollapsed: boolean })
   
   let isActive = false;
   if (itemQuery) {
-      isActive = location.pathname === itemPath && location.search === `?${itemQuery}`;
+    // If the link has a query string, it must match exactly.
+    isActive = location.pathname === itemPath && location.search === `?${itemQuery}`;
   } else {
-      if (location.pathname.startsWith(itemPath) && itemPath !== '/') {
-          const isCompetingQueryLinkActive = location.pathname === itemPath && location.search;
-          if (isCompetingQueryLinkActive) {
-              isActive = false;
-          } else {
-              isActive = true;
-          }
-      } else {
-          isActive = location.pathname === itemPath;
-      }
+    // If the link does NOT have a query string, it can be a prefix match,
+    // but only if the current URL doesn't have a query string that would match another link.
+    // This prevents '/projects' from being active when on '/projects?view=tasks'.
+    isActive = location.pathname.startsWith(itemPath) && !location.search;
   }
 
+  // Special case for the root path matching the dashboard.
   if (item.href === '/dashboard' && location.pathname === '/') {
       isActive = true;
+  }
+
+  // Special case for project detail pages to highlight the main "Projects" link.
+  if (item.href === '/projects?view=list' && location.pathname.startsWith('/projects/')) {
+    isActive = true;
   }
 
   const isChatLink = item.label.toLowerCase() === 'chat';
@@ -211,7 +212,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
             href = '/projects?view=list';
         }
         if (itemNameLower === 'tasks') {
-            href = '/projects?view=tasks-kanban';
+            href = '/projects?view=tasks';
         }
         if (itemNameLower === 'knowledge base' && href !== '/knowledge-base') {
             href = '/knowledge-base';
