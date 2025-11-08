@@ -51,7 +51,8 @@ export const useProjectKanbanMutations = () => {
             }
         },
         onSettled: () => {
-            queryClient.invalidateQueries({ queryKey: ['projects'] });
+            // Do not invalidate the query to prevent flickering.
+            // The optimistic update in onMutate is sufficient.
         },
     });
 

@@ -68,7 +68,8 @@ export const usePeopleKanbanMutations = () => {
             toast.error(`Failed to move person: ${err.message}`);
         },
         onSettled: () => {
-            queryClient.invalidateQueries({ queryKey: ['people', 'with-slug'] });
+            // Do not invalidate the query to prevent flickering.
+            // The optimistic update in onMutate is sufficient.
         },
     });
 

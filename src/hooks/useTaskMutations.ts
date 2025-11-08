@@ -161,7 +161,9 @@ export const useTaskMutations = (refetch?: () => void) => {
       toast.error('Failed to update task position.', { description: err.message });
     },
     onSettled: (data, error, variables) => {
-      queryClient.invalidateQueries({ queryKey: variables.queryKey });
+      // Do not invalidate the tasks query key to prevent flickering.
+      // The optimistic update is sufficient.
+      // We still invalidate projects in case task counts are displayed elsewhere.
       queryClient.invalidateQueries({ queryKey: ['projects'] });
     },
   });
