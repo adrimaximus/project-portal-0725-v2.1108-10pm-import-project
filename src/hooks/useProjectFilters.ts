@@ -14,29 +14,26 @@ export const useProjectFilters = (projects: Project[], advancedFilters: Advanced
       const projectEnd = project.due_date ? new Date(project.due_date) : projectStart;
 
       const matchesDate = (() => {
-        if (!dateRange || !dateRange.from) {
-          return true; // No date filter applied
-        }
-
-        if (!projectStart) {
-          return false; // Project has no start date, cannot match a date filter
-        }
-
+        if (!dateRange || !dateRange.from) return true;
+        if (!projectStart) return false;
         const filterStart = dateRange.from;
-        const filterEnd = dateRange.to || dateRange.from; // Handle single day selection
-
-        // Ensure project end is not before project start
+        const filterEnd = dateRange.to || dateRange.from;
         const effectiveProjectEnd = projectEnd && projectEnd < projectStart ? projectStart : (projectEnd || projectStart);
-
-        // Overlap condition: (StartA <= EndB) and (EndA >= StartB)
         return projectStart <= filterEnd && effectiveProjectEnd >= filterStart;
       })();
 
-      const matchesStatus = advancedFilters.status.length === 0 || advancedFilters.status.includes(project.status);
-      const matchesPerson = advancedFilters.selectedPeopleIds.length === 0 ||
-        (project.assignedTo && project.assignedTo.some(person => advancedFilters.selectedPeopleIds.includes(person.id)));
+      const matchesOwner = advancedFilters.ownerIds.length === 0 ||
+        (project.created_by && advancedFilters.ownerIds.includes(project.created_by.id));
 
-      return matchesDate && matchesStatus && matchesPerson;
+      const matchesMember = advancedFilters.memberIds.length === 0 ||
+        (project.assignedTo && project.assignedTo.some(person => 
+          person.id !== project.created_by?.id && advancedFilters.memberIds.includes(person.id)
+        ));
+
+      const matchesStatus = advancedFilters.excludedStatus.length === 0 ||
+        !advancedFilters.excludedStatus.includes(project.status);
+
+      return matchesDate && matchesOwner && matchesMember && matchesStatus;
     });
   }, [projects, dateRange, advancedFilters]);
 
