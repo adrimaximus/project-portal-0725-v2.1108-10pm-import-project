@@ -9,6 +9,48 @@ export interface User {
   avatar_url?: string | null;
   role?: string;
   initials?: string;
+  permissions?: string[];
+}
+
+export interface Collaborator extends User {
+  isIdle?: boolean;
+  last_active_at?: string;
+}
+
+export interface ChatMessageAttachment {
+  name: string;
+  url: string;
+  type: string;
+}
+
+export interface Message {
+  id: string;
+  text: string | null;
+  timestamp: string;
+  sender: User;
+  attachment?: ChatMessageAttachment;
+  reactions?: Reaction[];
+  reply_to_message_id?: string | null;
+  repliedMessage?: {
+    content: string | null;
+    senderName: string;
+    isDeleted: boolean;
+  } | null;
+  is_deleted?: boolean;
+  is_forwarded?: boolean;
+}
+
+export interface Conversation {
+  id: string;
+  userName: string;
+  userAvatar?: string | null;
+  isGroup: boolean;
+  members: Collaborator[];
+  messages: Message[];
+  lastMessage: string;
+  lastMessageTimestamp: string;
+  unreadCount: number;
+  created_by: string;
 }
 
 export interface Profile extends User {
