@@ -286,6 +286,33 @@ serve(async (req) => {
             userPrompt = `Buat notifikasi perubahan status pembayaran. Penerima: ${recipientName}. Proyek: "${projectData.name}". Status pembayaran sekarang adalah *${new_status}*, diperbarui oleh ${getFullName(updaterData)}. URL: ${url}`;
             break;
           }
+          case 'goal_invite': {
+            const { goal_id, inviter_id } = context;
+            const goalData = goalMap.get(goal_id);
+            const inviterData = profileMap.get(inviter_id);
+            if (!goalData || !inviterData) throw new Error('Missing context data for goal_invite');
+            const url = `${APP_URL}/goals/${goalData.slug}`;
+            userPrompt = `Buat notifikasi undangan kolaborasi goal. Penerima: ${recipientName}. Yang mengundang: ${getFullName(inviterData)}. Goal: "${goalData.title}". URL: ${url}`;
+            break;
+          }
+          case 'goal_progress_update': {
+            const { goal_id, updater_id, value_logged } = context;
+            const goalData = goalMap.get(goal_id);
+            const updaterData = profileMap.get(updater_id);
+            if (!goalData || !updaterData) throw new Error('Missing context data for goal_progress_update');
+            const url = `${APP_URL}/goals/${goalData.slug}`;
+            userPrompt = `Buat notifikasi progres goal. Penerima: ${recipientName}. Yang mengupdate: ${getFullName(updaterData)}. Goal: "${goalData.title}". Progres yang dicatat: ${value_logged}. URL: ${url}`;
+            break;
+          }
+          case 'kb_invite': {
+            const { folder_id, inviter_id } = context;
+            const folderData = folderMap.get(folder_id);
+            const inviterData = profileMap.get(inviter_id);
+            if (!folderData || !inviterData) throw new Error('Missing context data for kb_invite');
+            const url = `${APP_URL}/knowledge-base/folders/${folderData.slug}`;
+            userPrompt = `Buat notifikasi undangan kolaborasi knowledge base. Penerima: ${recipientName}. Yang mengundang: ${getFullName(inviterData)}. Folder: "${folderData.name}". URL: ${url}`;
+            break;
+          }
           default:
             throw new Error(`Unsupported notification type: ${notification.notification_type}`);
         }
