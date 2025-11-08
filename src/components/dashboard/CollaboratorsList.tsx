@@ -21,8 +21,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ChevronsUpDown, Filter, CheckCircle, Clock, AlertTriangle, PlusSquare } from "lucide-react";
-import { generatePastelColor, getAvatarUrl } from '@/lib/utils';
+import { ChevronsUpDown, Filter, CheckCircle, Clock, AlertTriangle, PlusSquare, ArrowUp, ArrowDown } from "lucide-react";
+import { generatePastelColor, getAvatarUrl, cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from "@/components/ui/button";
 import { useMediaQuery } from '@/hooks/use-media-query';
@@ -65,6 +65,9 @@ interface CollaboratorStat extends User {
   completedCreatedTaskCount: number;
   overdueTaskCount: number;
   completedOnTimeCount: number;
+  completionRate: number;
+  onTimeRate: number;
+  createdCompletionRate: number;
 }
 
 const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
@@ -78,6 +81,7 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
   const [taskFilters, setTaskFilters] = useState<string[]>(['active']);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const isDesktop = useMediaQuery("(min-width: 768px)");
+  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'projectCount', direction: 'desc' });
 
   const projectFilterOptions = PROJECT_STATUS_OPTIONS;
 
@@ -101,8 +105,16 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
     fetchTasks();
   }, [projects]);
 
+  const handleSort = (key: string) => {
+    let direction: 'asc' | 'desc' = 'desc';
+    if (sortConfig.key === key && sortConfig.direction === 'desc') {
+      direction = 'asc';
+    }
+    setSortConfig({ key, direction });
+  };
+
   const { collaboratorsByRole, allCollaborators } = useMemo(() => {
-    const stats: Record<string, CollaboratorStat & { countedProjectIds: Set<string>; matchingTaskIds: Set<string>; matchingTasksDetails: Map<string, string> }> = {};
+    const stats: Record<string, Omit<CollaboratorStat, 'completionRate' | 'onTimeRate' | 'createdCompletionRate'> & { countedProjectIds: Set<string>; matchingTaskIds: Set<string>; matchingTasksDetails: Map<string, string> }> = {};
     const roleHierarchy: Record<string, number> = { 'owner': 1, 'admin': 2, 'editor': 3, 'member': 4 };
 
     const ensureUser = (user: Partial<User>) => {
@@ -222,18 +234,38 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
         stat.filteredTaskCount = stat.matchingTaskIds.size;
     });
 
-    const collaborators = Object.values(stats)
-        .map(({ countedProjectIds, matchingTaskIds, matchingTasksDetails, ...rest }) => ({ 
-            ...rest,
-            projectsForTasks: Array.from(matchingTasksDetails.values())
-        }))
-        .sort((a, b) => b.projectCount - a.projectCount);
+    const collaboratorsWithMetrics = Object.values(stats)
+        .map(({ countedProjectIds, matchingTaskIds, matchingTasksDetails, ...rest }) => {
+            const completionRate = rest.assignedTaskCount > 0 ? (rest.completedAssignedTaskCount / rest.assignedTaskCount) * 100 : 0;
+            const onTimeRate = rest.completedAssignedTaskCount > 0 ? (rest.completedOnTimeCount / rest.completedAssignedTaskCount) * 100 : 0;
+            const createdCompletionRate = rest.createdTaskCount > 0 ? (rest.completedCreatedTaskCount / rest.createdTaskCount) * 100 : 0;
+            
+            return { 
+                ...rest,
+                projectsForTasks: Array.from(matchingTasksDetails.values()),
+                completionRate,
+                onTimeRate,
+                createdCompletionRate,
+            };
+        });
+
+    collaboratorsWithMetrics.sort((a, b) => {
+        const key = sortConfig.key as keyof typeof a;
+        const aValue = a[key];
+        const bValue = b[key];
+
+        if (typeof aValue === 'number' && typeof bValue === 'number') {
+            if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+            if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+        }
+        return 0;
+    });
 
     const grouped: Record<string, CollaboratorStat[]> = {};
-    collaborators.forEach(collab => {
+    collaboratorsWithMetrics.forEach(collab => {
         const role = collab.role || 'member';
         if (!grouped[role]) grouped[role] = [];
-        grouped[role].push(collab);
+        grouped[role].push(collab as CollaboratorStat);
     });
 
     const orderedGrouped: Record<string, CollaboratorStat[]> = {};
@@ -244,7 +276,7 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
     const flatList = Object.values(orderedGrouped).flat();
 
     return { collaboratorsByRole: orderedGrouped, allCollaborators: flatList };
-  }, [projects, tasks, projectFilters, taskFilters]);
+  }, [projects, tasks, projectFilters, taskFilters, sortConfig]);
 
   const getFilteredProjects = (collaborator: CollaboratorStat) => {
     if (projectFilters.length === 0) return [];
@@ -328,17 +360,13 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
   };
 
   const renderCompletionRate = (c: CollaboratorStat) => {
-    const completionRate = c.assignedTaskCount > 0 ? (c.completedAssignedTaskCount / c.assignedTaskCount) * 100 : 0;
-    const onTimeRate = c.completedAssignedTaskCount > 0 ? (c.completedOnTimeCount / c.completedAssignedTaskCount) * 100 : 0;
-    const createdCompletionRate = c.createdTaskCount > 0 ? (c.completedCreatedTaskCount / c.createdTaskCount) * 100 : 0;
-
     return (
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
             <div className="flex items-center justify-end gap-2">
-              <span>{completionRate.toFixed(0)}%</span>
-              <Progress value={completionRate} className="w-16 h-1.5" />
+              <span>{c.completionRate.toFixed(0)}%</span>
+              <Progress value={c.completionRate} className="w-16 h-1.5" />
             </div>
           </TooltipTrigger>
           <TooltipContent>
@@ -347,7 +375,7 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
               <div className="flex items-center gap-2">
                 <CheckCircle className="h-4 w-4 text-green-500" />
                 <div>
-                  <p><strong>{onTimeRate.toFixed(0)}%</strong> On-Time Completion</p>
+                  <p><strong>{c.onTimeRate.toFixed(0)}%</strong> On-Time Completion</p>
                   <p className="text-xs text-muted-foreground">{c.completedOnTimeCount} of {c.completedAssignedTaskCount} completed tasks</p>
                 </div>
               </div>
@@ -360,7 +388,7 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
               <div className="flex items-center gap-2">
                 <PlusSquare className="h-4 w-4 text-blue-500" />
                 <div>
-                  <p><strong>{createdCompletionRate.toFixed(0)}%</strong> Created Tasks Completed</p>
+                  <p><strong>{c.createdCompletionRate.toFixed(0)}%</strong> Created Tasks Completed</p>
                   <p className="text-xs text-muted-foreground">{c.completedCreatedTaskCount} of {c.createdTaskCount} created tasks</p>
                 </div>
               </div>
@@ -462,6 +490,20 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
     </div>
   );
 
+  const SortableTableHead = ({ children, columnKey }: { children: React.ReactNode, columnKey: string }) => {
+    const isActive = sortConfig.key === columnKey;
+    const Icon = isActive ? (sortConfig.direction === 'asc' ? ArrowUp : ArrowDown) : ChevronsUpDown;
+    
+    return (
+      <TableHead className="text-right">
+        <Button variant="ghost" onClick={() => handleSort(columnKey)} className="px-2 py-1 h-auto -mx-2">
+          <span className="mr-2">{children}</span>
+          <Icon className={cn("h-4 w-4", !isActive && "text-muted-foreground/50")} />
+        </Button>
+      </TableHead>
+    );
+  };
+
   return (
     <Card className="mb-24">
       <TooltipProvider>
@@ -522,6 +564,8 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
                             <div className="text-right font-medium">{renderFilteredTaskCount(c)}</div>
                             <div className="text-muted-foreground">Completion Rate</div>
                             <div className="text-right font-medium">{renderCompletionRate(c)}</div>
+                            <div className="text-muted-foreground">Overdue Tasks</div>
+                            <div className="text-right font-medium">{c.overdueTaskCount}</div>
                             <div className="text-muted-foreground">Overdue Bill</div>
                             <div className="text-right font-medium">{c.overdueBillCount}</div>
                           </div>
@@ -538,11 +582,12 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
                     <TableHeader>
                         <TableRow>
                             <TableHead>Collaborator</TableHead>
-                            <TableHead className="text-right">Total Projects</TableHead>
+                            <SortableTableHead columnKey="projectCount">Total Projects</SortableTableHead>
                             <TableHead className="text-right">Filtered Projects</TableHead>
                             <TableHead className="text-right">Filtered Tasks</TableHead>
-                            <TableHead className="text-right">Completion Rate</TableHead>
-                            <TableHead className="text-right">Overdue Bill</TableHead>
+                            <SortableTableHead columnKey="completionRate">Completion Rate</SortableTableHead>
+                            <SortableTableHead columnKey="overdueTaskCount">Overdue Tasks</SortableTableHead>
+                            <SortableTableHead columnKey="overdueBillCount">Overdue Bill</SortableTableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -570,6 +615,7 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
                                     <TableCell className="text-right font-medium">{renderFilteredProjectCount(c)}</TableCell>
                                     <TableCell className="text-right font-medium">{renderFilteredTaskCount(c)}</TableCell>
                                     <TableCell className="text-right font-medium">{renderCompletionRate(c)}</TableCell>
+                                    <TableCell className="text-right font-medium">{c.overdueTaskCount}</TableCell>
                                     <TableCell className="text-right font-medium">{c.overdueBillCount}</TableCell>
                                 </TableRow>
                             ))}
