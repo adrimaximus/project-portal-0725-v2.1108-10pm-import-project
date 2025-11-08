@@ -38,6 +38,13 @@ interface CollaboratorsListProps {
   projects: Project[];
 }
 
+const taskFilterOptions = [
+  { value: 'created', label: 'Tasks Created' },
+  { value: 'active', label: 'Active Tasks' },
+  { value: 'overdue', label: 'Overdue Tasks' },
+  { value: 'completed', label: 'Completed Tasks' },
+];
+
 interface CollaboratorStat extends User {
   projectCount: number;
   projects: {
@@ -48,7 +55,7 @@ interface CollaboratorStat extends User {
     isActive: boolean;
     status: string;
   }[];
-  activeTaskCount: number;
+  filteredTaskCount: number;
   activeTicketCount: number;
   overdueBillCount: number;
   role: string;
@@ -57,13 +64,14 @@ interface CollaboratorStat extends User {
 const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [tasks, setTasks] = useState<any[]>([]);
-  const [filters, setFilters] = useState<string[]>(() => {
+  const [projectFilters, setProjectFilters] = useState<string[]>(() => {
     return PROJECT_STATUS_OPTIONS
       .map(opt => opt.value)
       .filter(status => !['Completed', 'Cancelled', 'Bid Lost', 'Archived'].includes(status));
   });
+  const [taskFilters, setTaskFilters] = useState<string[]>(['active']);
 
-  const filterOptions = PROJECT_STATUS_OPTIONS;
+  const projectFilterOptions = PROJECT_STATUS_OPTIONS;
 
   useEffect(() => {
     const fetchTasks = async () => {
@@ -86,20 +94,25 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
   }, [projects]);
 
   const { collaboratorsByRole, allCollaborators } = useMemo(() => {
-    const stats: Record<string, CollaboratorStat & { countedProjectIds: Set<string> }> = {};
+    const stats: Record<string, CollaboratorStat & { countedProjectIds: Set<string>; matchingTaskIds: Set<string> }> = {};
     const roleHierarchy: Record<string, number> = { 'owner': 1, 'admin': 2, 'editor': 3, 'member': 4 };
 
-    const ensureUser = (user: User) => {
+    const ensureUser = (user: Partial<User>) => {
+        if (!user.id) return null;
         if (!stats[user.id]) {
             stats[user.id] = {
-                ...user,
+                id: user.id,
+                name: user.name || 'Unknown User',
+                initials: user.initials || '??',
+                avatar_url: user.avatar_url,
                 projectCount: 0,
                 projects: [],
-                activeTaskCount: 0,
+                filteredTaskCount: 0,
                 activeTicketCount: 0,
                 overdueBillCount: 0,
                 role: user.role || 'member',
                 countedProjectIds: new Set(),
+                matchingTaskIds: new Set(),
             };
         }
         return stats[user.id];
@@ -114,13 +127,13 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
 
         const isUpcoming = startDate ? startDate > today : false;
         const isOnGoing = startDate ? (startDate <= today && (endDate ? endDate >= today : true)) : false;
-        const isActive = !['Completed', 'Cancelled', 'Bid Lost'].includes(p.status);
         
         const paymentDueDate = p.payment_due_date ? new Date(p.payment_due_date) : null;
         const isOverdue = paymentDueDate ? paymentDueDate < today && p.payment_status !== 'Paid' : false;
 
         p.assignedTo.forEach(user => {
             const userStat = ensureUser(user);
+            if (!userStat) return;
             
             const currentRolePriority = roleHierarchy[userStat.role] || 99;
             const newRolePriority = roleHierarchy[user.role || 'member'] || 99;
@@ -130,72 +143,110 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
 
             if (!userStat.countedProjectIds.has(p.id)) {
                 userStat.projectCount++;
-                userStat.projects.push({ id: p.id, name: p.name, isUpcoming, isOnGoing, isActive, status: p.status });
+                userStat.projects.push({ id: p.id, name: p.name, isUpcoming, isOnGoing, isActive: !['Completed', 'Cancelled', 'Bid Lost'].includes(p.status), status: p.status });
                 if (isOverdue) userStat.overdueBillCount++;
                 userStat.countedProjectIds.add(p.id);
             }
         });
     });
 
+    const todayForOverdue = new Date();
+    todayForOverdue.setHours(23, 59, 59, 999);
+
     (tasks || []).forEach(task => {
-        if (!task.completed) {
+        if (!task.completed && task.origin_ticket_id) {
             (task.assignedTo || []).forEach((assignee: User) => {
                 const userStat = ensureUser(assignee);
-                userStat.activeTaskCount++;
-                if (task.origin_ticket_id) {
-                    userStat.activeTicketCount++;
-                }
+                if (userStat) userStat.activeTicketCount++;
             });
         }
+
+        const isOverdue = !task.completed && task.due_date && new Date(task.due_date) < todayForOverdue;
+
+        if (taskFilters.includes('created')) {
+            const creatorStat = ensureUser(task.created_by);
+            if (creatorStat) creatorStat.matchingTaskIds.add(task.id);
+        }
+
+        (task.assignedTo || []).forEach((assignee: User) => {
+            const userStat = ensureUser(assignee);
+            if (!userStat) return;
+
+            if (taskFilters.includes('active') && !task.completed) {
+                userStat.matchingTaskIds.add(task.id);
+            }
+            if (taskFilters.includes('overdue') && isOverdue) {
+                userStat.matchingTaskIds.add(task.id);
+            }
+            if (taskFilters.includes('completed') && task.completed) {
+                userStat.matchingTaskIds.add(task.id);
+            }
+        });
+    });
+
+    Object.values(stats).forEach(stat => {
+        stat.filteredTaskCount = stat.matchingTaskIds.size;
     });
 
     const collaborators = Object.values(stats)
-        .map(({ countedProjectIds, ...rest }) => rest)
+        .map(({ countedProjectIds, matchingTaskIds, ...rest }) => rest)
         .sort((a, b) => b.projectCount - a.projectCount);
 
     const grouped: Record<string, CollaboratorStat[]> = {};
     collaborators.forEach(collab => {
         const role = collab.role || 'member';
-        if (!grouped[role]) {
-            grouped[role] = [];
-        }
+        if (!grouped[role]) grouped[role] = [];
         grouped[role].push(collab);
     });
 
     const orderedGrouped: Record<string, CollaboratorStat[]> = {};
     Object.keys(roleHierarchy).forEach(role => {
-        if (grouped[role]) {
-            orderedGrouped[role] = grouped[role];
-        }
+        if (grouped[role]) orderedGrouped[role] = grouped[role];
     });
     
     const flatList = Object.values(orderedGrouped).flat();
 
     return { collaboratorsByRole: orderedGrouped, allCollaborators: flatList };
-  }, [projects, tasks]);
+  }, [projects, tasks, projectFilters, taskFilters]);
 
   const getFilteredProjects = (collaborator: CollaboratorStat) => {
-    if (filters.length === 0) return [];
-    return collaborator.projects.filter(p => filters.includes(p.status));
+    if (projectFilters.length === 0) return [];
+    return collaborator.projects.filter(p => projectFilters.includes(p.status));
   };
 
-  const handleFilterChange = (filterValue: string) => {
-    setFilters(prev => 
+  const handleProjectFilterChange = (filterValue: string) => {
+    setProjectFilters(prev => 
       prev.includes(filterValue) 
         ? prev.filter(f => f !== filterValue)
         : [...prev, filterValue]
     );
   };
 
-  const filterButtonText = useMemo(() => {
-    if (filters.length === 0) return "No filters selected";
-    if (filters.length === 1) {
-      return filterOptions.find(f => f.value === filters[0])?.label || "Filter";
-    }
-    return `${filters.length} filters selected`;
-  }, [filters, filterOptions]);
+  const handleTaskFilterChange = (filterValue: string) => {
+    setTaskFilters(prev => 
+      prev.includes(filterValue) 
+        ? prev.filter(f => f !== filterValue)
+        : [...prev, filterValue]
+    );
+  };
 
-  const renderFilteredCount = (collaborator: CollaboratorStat) => {
+  const projectFilterButtonText = useMemo(() => {
+    if (projectFilters.length === 0) return "No filters selected";
+    if (projectFilters.length === 1) {
+      return projectFilterOptions.find(f => f.value === projectFilters[0])?.label || "Filter";
+    }
+    return `${projectFilters.length} filters selected`;
+  }, [projectFilters, projectFilterOptions]);
+
+  const taskFilterButtonText = useMemo(() => {
+    if (taskFilters.length === 0) return "No filters selected";
+    if (taskFilters.length === 1) {
+      return taskFilterOptions.find(f => f.value === taskFilters[0])?.label || "Filter";
+    }
+    return `${taskFilters.length} filters selected`;
+  }, [taskFilters]);
+
+  const renderFilteredProjectCount = (collaborator: CollaboratorStat) => {
     const filtered = getFilteredProjects(collaborator);
     return (
       <TooltipProvider>
@@ -255,20 +306,40 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
             <CardContent className="px-6 pb-6 pt-0">
               {/* Mobile View */}
               <div className="md:hidden">
-                <div className="flex justify-end mb-4">
+                <div className="flex justify-end mb-4 gap-2">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="outline" size="sm">
-                        {filterButtonText}
+                        {projectFilterButtonText}
                         <ChevronDown className="ml-2 h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      {filterOptions.map(opt => (
+                      {projectFilterOptions.map(opt => (
                         <DropdownMenuCheckboxItem
                           key={opt.value}
-                          checked={filters.includes(opt.value)}
-                          onCheckedChange={() => handleFilterChange(opt.value)}
+                          checked={projectFilters.includes(opt.value)}
+                          onCheckedChange={() => handleProjectFilterChange(opt.value)}
+                          onSelect={(e) => e.preventDefault()}
+                        >
+                          {opt.label}
+                        </DropdownMenuCheckboxItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm">
+                        {taskFilterButtonText}
+                        <ChevronDown className="ml-2 h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      {taskFilterOptions.map(opt => (
+                        <DropdownMenuCheckboxItem
+                          key={opt.value}
+                          checked={taskFilters.includes(opt.value)}
+                          onCheckedChange={() => handleTaskFilterChange(opt.value)}
                           onSelect={(e) => e.preventDefault()}
                         >
                           {opt.label}
@@ -295,10 +366,10 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
                           <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
                             <div className="text-muted-foreground">Total Projects</div>
                             <div className="text-right font-medium">{c.projectCount}</div>
-                            <div className="text-muted-foreground">{filterButtonText}</div>
-                            <div className="text-right font-medium">{renderFilteredCount(c)}</div>
-                            <div className="text-muted-foreground">Active Tasks</div>
-                            <div className="text-right font-medium">{c.activeTaskCount}</div>
+                            <div className="text-muted-foreground">{projectFilterButtonText}</div>
+                            <div className="text-right font-medium">{renderFilteredProjectCount(c)}</div>
+                            <div className="text-muted-foreground">{taskFilterButtonText}</div>
+                            <div className="text-right font-medium">{c.filteredTaskCount}</div>
                             <div className="text-muted-foreground">Active Tickets</div>
                             <div className="text-right font-medium">{c.activeTicketCount}</div>
                             <div className="text-muted-foreground">Overdue Bill</div>
@@ -322,18 +393,18 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                   <Button variant="ghost" className="px-2 -mr-2 h-8">
-                                    {filterButtonText}
+                                    {projectFilterButtonText}
                                     <ChevronDown className="ml-2 h-4 w-4" />
                                   </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
                                   <DropdownMenuLabel>Filter by Status</DropdownMenuLabel>
                                   <DropdownMenuSeparator />
-                                  {filterOptions.map(opt => (
+                                  {projectFilterOptions.map(opt => (
                                     <DropdownMenuCheckboxItem
                                       key={opt.value}
-                                      checked={filters.includes(opt.value)}
-                                      onCheckedChange={() => handleFilterChange(opt.value)}
+                                      checked={projectFilters.includes(opt.value)}
+                                      onCheckedChange={() => handleProjectFilterChange(opt.value)}
                                       onSelect={(e) => e.preventDefault()}
                                     >
                                       {opt.label}
@@ -342,7 +413,30 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
                                 </DropdownMenuContent>
                               </DropdownMenu>
                             </TableHead>
-                            <TableHead className="text-right">Active Tasks</TableHead>
+                            <TableHead className="text-right">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" className="px-2 -mr-2 h-8">
+                                    {taskFilterButtonText}
+                                    <ChevronDown className="ml-2 h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuLabel>Filter by Task Type</DropdownMenuLabel>
+                                  <DropdownMenuSeparator />
+                                  {taskFilterOptions.map(opt => (
+                                    <DropdownMenuCheckboxItem
+                                      key={opt.value}
+                                      checked={taskFilters.includes(opt.value)}
+                                      onCheckedChange={() => handleTaskFilterChange(opt.value)}
+                                      onSelect={(e) => e.preventDefault()}
+                                    >
+                                      {opt.label}
+                                    </DropdownMenuCheckboxItem>
+                                  ))}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </TableHead>
                             <TableHead className="text-right">Active Tickets</TableHead>
                             <TableHead className="text-right">Overdue Bill</TableHead>
                         </TableRow>
@@ -369,8 +463,8 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
                                         </div>
                                     </TableCell>
                                     <TableCell className="text-right font-medium">{c.projectCount}</TableCell>
-                                    <TableCell className="text-right font-medium">{renderFilteredCount(c)}</TableCell>
-                                    <TableCell className="text-right font-medium">{c.activeTaskCount}</TableCell>
+                                    <TableCell className="text-right font-medium">{renderFilteredProjectCount(c)}</TableCell>
+                                    <TableCell className="text-right font-medium">{c.filteredTaskCount}</TableCell>
                                     <TableCell className="text-right font-medium">{c.activeTicketCount}</TableCell>
                                     <TableCell className="text-right font-medium">{c.overdueBillCount}</TableCell>
                                 </TableRow>
