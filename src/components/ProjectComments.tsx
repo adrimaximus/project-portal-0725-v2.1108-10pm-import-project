@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Project, Comment as CommentType, User } from "@/types";
 import CommentInput from "./CommentInput";
-import Comment from '../Comment';
+import Comment from './Comment';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 interface ProjectCommentsProps {
