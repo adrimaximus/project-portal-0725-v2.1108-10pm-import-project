@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { Task, TaskStatus, TASK_STATUS_OPTIONS } from '@/types';
 import TasksKanbanColumn from './TasksKanbanColumn';
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, MouseSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core';
@@ -18,8 +18,14 @@ const TasksKanbanView = ({ tasks, onEdit, onDelete, refetch, tasksQueryKey, onTa
   const [collapsedColumns, setCollapsedColumns] = useState<Set<TaskStatus>>(new Set());
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [tasksByStatus, setTasksByStatus] = useState<Record<TaskStatus, Task[]>>({} as Record<TaskStatus, Task[]>);
+  const isOptimisticUpdate = useRef(false);
 
   useEffect(() => {
+    if (isOptimisticUpdate.current) {
+      isOptimisticUpdate.current = false;
+      return;
+    }
+
     if (!activeTask) {
       const grouped: { [key in TaskStatus]: Task[] } = TASK_STATUS_OPTIONS.reduce((acc, opt) => {
         acc[opt.value] = [];
@@ -139,6 +145,7 @@ const TasksKanbanView = ({ tasks, onEdit, onDelete, refetch, tasksQueryKey, onTa
         }
     }
 
+    isOptimisticUpdate.current = true;
     setTasksByStatus(finalTasksByStatusState);
 
     const finalOrderedTasks = TASK_STATUS_OPTIONS.flatMap(option => 
