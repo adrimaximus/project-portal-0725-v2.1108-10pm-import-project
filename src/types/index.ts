@@ -42,6 +42,9 @@ export interface User {
   permissions?: string[];
   theme?: Theme;
   people_kanban_settings?: any;
+  phone?: string | null;
+  status?: string;
+  updated_at?: string;
 }
 
 export type AssignedUser = User & { role: string };

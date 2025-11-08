@@ -195,7 +195,7 @@ const ProjectDetailPage = () => {
                 onDeleteTask={setTaskToDelete}
                 onToggleTaskCompletion={handleToggleTaskCompletion}
                 highlightedTaskId={searchParams.get('task')}
-                onTaskHighlightComplete={() => {
+                onHighlightComplete={() => {
                   const newParams = new URLSearchParams(searchParams);
                   newParams.delete('task');
                   setSearchParams(newParams, { replace: true });
