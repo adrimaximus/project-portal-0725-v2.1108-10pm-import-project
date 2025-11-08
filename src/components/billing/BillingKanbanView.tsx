@@ -17,6 +17,22 @@ const BillingKanbanView = ({ invoices, onEditInvoice }: BillingKanbanViewProps) 
     const [activeInvoice, setActiveInvoice] = useState<Invoice | null>(null);
     const { updateProjectOrder } = useProjectKanbanMutations();
     const [groupedInvoices, setGroupedInvoices] = useState<Record<string, Invoice[]>>({});
+    const [collapsedColumns, setCollapsedColumns] = useState<string[]>([]);
+
+    useEffect(() => {
+        const savedState = localStorage.getItem('billingKanbanCollapsedColumns');
+        if (savedState) {
+            setCollapsedColumns(JSON.parse(savedState));
+        }
+    }, []);
+
+    const toggleColumnCollapse = (columnId: string) => {
+        const newCollapsedColumns = collapsedColumns.includes(columnId)
+            ? collapsedColumns.filter(id => id !== columnId)
+            : [...collapsedColumns, columnId];
+        setCollapsedColumns(newCollapsedColumns);
+        localStorage.setItem('billingKanbanCollapsedColumns', JSON.stringify(newCollapsedColumns));
+    };
 
     useEffect(() => {
         if (!activeInvoice) {
@@ -131,6 +147,8 @@ const BillingKanbanView = ({ invoices, onEditInvoice }: BillingKanbanViewProps) 
                         status={statusOption}
                         invoices={groupedInvoices[statusOption.value] || []}
                         onEditInvoice={onEditInvoice}
+                        isCollapsed={collapsedColumns.includes(statusOption.value)}
+                        onToggleCollapse={toggleColumnCollapse}
                     />
                 ))}
             </div>

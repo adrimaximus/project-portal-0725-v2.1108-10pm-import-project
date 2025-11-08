@@ -21,6 +21,13 @@ const TasksKanbanView = ({ tasks, onEdit, onDelete, refetch, tasksQueryKey, onTa
   const isOptimisticUpdate = useRef(false);
 
   useEffect(() => {
+    const savedState = localStorage.getItem('tasksKanbanCollapsedColumns');
+    if (savedState) {
+      setCollapsedColumns(new Set(JSON.parse(savedState)));
+    }
+  }, []);
+
+  useEffect(() => {
     if (isOptimisticUpdate.current) {
       isOptimisticUpdate.current = false;
       return;
@@ -56,6 +63,7 @@ const TasksKanbanView = ({ tasks, onEdit, onDelete, refetch, tasksQueryKey, onTa
       } else {
         newSet.add(status);
       }
+      localStorage.setItem('tasksKanbanCollapsedColumns', JSON.stringify(Array.from(newSet)));
       return newSet;
     });
   };
