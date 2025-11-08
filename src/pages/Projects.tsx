@@ -25,6 +25,7 @@ import { getErrorMessage, formatInJakarta } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 import { useTaskModal } from '@/contexts/TaskModalContext';
+import { DateRange } from 'react-day-picker';
 
 type ViewMode = 'table' | 'list' | 'kanban' | 'tasks' | 'tasks-kanban';
 type SortConfig<T> = { key: keyof T | null; direction: 'ascending' | 'descending' };
@@ -43,16 +44,17 @@ const ProjectsPage = () => {
 
   const [kanbanGroupBy, setKanbanGroupBy] = useState<'status' | 'payment_status'>('status');
   const [hideCompletedTasks, setHideCompletedTasks] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || "");
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   
   const highlightedTaskId = taskIdFromParams || searchParams.get('highlight');
 
   const onHighlightComplete = useCallback(() => {
+    const newSearchParams = new URLSearchParams(searchParams);
     if (taskIdFromParams) {
-      navigate(`/projects?view=tasks`, { replace: true });
+      newSearchParams.delete('taskId'); // Assuming taskId might be a param
+      navigate(`/projects?${newSearchParams.toString()}`, { replace: true });
     } else {
-      const newSearchParams = new URLSearchParams(searchParams);
       newSearchParams.delete('highlight');
       setSearchParams(newSearchParams, { replace: true });
     }
@@ -75,6 +77,17 @@ const ProjectsPage = () => {
     newFilters.memberIds.forEach(id => newSearchParams.append('member', id));
     newFilters.excludedStatus.forEach(status => newSearchParams.append('excludeStatus', status));
     
+    setSearchParams(newSearchParams, { replace: true });
+  };
+
+  const handleSearchChange = (term: string) => {
+    setSearchTerm(term);
+    const newSearchParams = new URLSearchParams(searchParams);
+    if (term) {
+      newSearchParams.set('search', term);
+    } else {
+      newSearchParams.delete('search');
+    }
     setSearchParams(newSearchParams, { replace: true });
   };
 
@@ -259,11 +272,15 @@ const ProjectsPage = () => {
 
   const handleViewChange = (newView: ViewMode | null) => {
     if (newView) {
+      const newSearchParams = new URLSearchParams(searchParams);
+      newSearchParams.set('view', newView);
+      
       if (taskIdFromParams) {
-        navigate(`/projects?view=${newView}`);
+        navigate(`/projects?${newSearchParams.toString()}`, { replace: true });
       } else {
-        setSearchParams({ view: newView }, { replace: true });
+        setSearchParams(newSearchParams, { replace: true });
       }
+
       if (scrollContainerRef.current) {
         scrollContainerRef.current.scrollTop = 0;
         scrollContainerRef.current.scrollLeft = 0;
@@ -401,6 +418,10 @@ const ProjectsPage = () => {
             onAdvancedFiltersChange={handleAdvancedFiltersChange}
             allPeople={allMembers}
             allOwners={allOwners}
+            searchTerm={searchTerm}
+            onSearchChange={handleSearchChange}
+            dateRange={dateRange}
+            onDateRangeChange={setDateRange}
           />
         </div>
         <div ref={scrollContainerRef} className="flex-grow min-h-0 overflow-y-auto">
