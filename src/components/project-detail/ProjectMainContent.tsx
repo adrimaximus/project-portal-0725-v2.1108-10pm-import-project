@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ProjectBrief from './ProjectBrief';
 import { useAuth } from '@/contexts/AuthContext';
 import ProjectOverviewTab from './ProjectOverviewTab';
-import ProjectTasks from './ProjectTasks';
+import ProjectTasks from '../projects/ProjectTasks';
 import ProjectActivityFeed from './ProjectActivityFeed';
 import { LayoutGrid, ListChecks, MessageSquare, Activity } from 'lucide-react';
 import { useProfiles } from '@/hooks/useProfiles';
@@ -31,7 +31,7 @@ interface ProjectMainContentProps {
   };
   defaultTab: string;
   onEditTask: (task: Task) => void;
-  onDeleteTask: (taskId: string) => void;
+  onDeleteTask: (task: Task) => void;
   onToggleTaskCompletion: (task: Task, completed: boolean) => void;
   highlightedTaskId: string | null;
   onHighlightComplete: () => void;
@@ -177,7 +177,7 @@ const ProjectMainContent = ({
             projectId={project.id}
             projectSlug={project.slug}
             onEditTask={onEditTask}
-            onDeleteTask={(task) => onDeleteTask(task.id)}
+            onDeleteTask={onDeleteTask}
             onToggleTaskCompletion={onToggleTaskCompletion}
             highlightedTaskId={highlightedTaskId}
             onHighlightComplete={onHighlightComplete}
@@ -205,7 +205,7 @@ const ProjectMainContent = ({
             task={selectedTaskToView}
             onClose={() => setSelectedTaskToView(null)}
             onEdit={onEditTask}
-            onDelete={onDeleteTask}
+            onDelete={() => onDeleteTask(selectedTaskToView)}
           />
         )}
       </Dialog>

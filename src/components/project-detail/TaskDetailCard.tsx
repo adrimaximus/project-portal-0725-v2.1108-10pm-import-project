@@ -34,7 +34,7 @@ import {
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu';
 import { Link } from 'react-router-dom';
-import TaskCommentsList from '../projects/TaskCommentsList';
+import TaskCommentsList from './TaskCommentsList';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 import { toast } from 'sonner';
@@ -44,7 +44,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { v4 as uuidv4 } from 'uuid';
 import CommentInput from '../CommentInput';
 import { useProfiles } from '@/hooks/useProfiles';
-import { useCommentMutations } from '@/hooks/useCommentMutations';
+import { useCommentMutations } from '@/hooks/useCommentManager';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../ui/alert-dialog';
 import { Textarea } from '../ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
@@ -55,7 +55,7 @@ interface TaskDetailCardProps {
   task: Task;
   onClose: () => void;
   onEdit: (task: Task) => void;
-  onDelete: (taskId: string) => void;
+  onDelete: (task: Task) => void;
 }
 
 const aggregateAttachments = (task: Task): TaskAttachment[] => {
@@ -179,7 +179,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
       toast.success("Comment deleted.");
       queryClient.invalidateQueries({ queryKey: ['task-comments', task.id] });
     },
-    onError: (error: any) => toast.error("Failed to delete comment.", { description: error.message }),
+    onError: (error: any) => toast.error("Failed to delete comment.", { description: getErrorMessage(error) }),
   });
 
   const handleAddComment = (text: string, isTicket: boolean, attachments: File[] | null, mentionedUserIds: string[]) => {
@@ -323,7 +323,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
                 <DropdownMenuItem onSelect={handleCopyLink}>
                   <LinkIcon className="mr-2 h-4 w-4" /> Copy Link
                 </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => { onDelete(task.id); onClose(); }} className="text-destructive">
+                <DropdownMenuItem onSelect={() => { onDelete(task); onClose(); }} className="text-destructive">
                   <Trash2 className="mr-2 h-4 w-4" /> Delete
                 </DropdownMenuItem>
               </DropdownMenuContent>
