@@ -103,11 +103,26 @@ const ProjectsPage = () => {
     }));
   }, []);
 
+  const isTaskView = view === 'tasks' || view === 'tasks-kanban';
+
+  const projectIdsForTaskView = useMemo(() => {
+    if (!isTaskView) return undefined;
+  
+    const visibleProjects = projectsData.filter(project => 
+      !(advancedFilters.excludedStatus || []).includes(project.status)
+    );
+    
+    return visibleProjects.map(project => project.id);
+  
+  }, [isTaskView, projectsData, advancedFilters.excludedStatus]);
+
   const finalTaskSortConfig = view === 'tasks-kanban' ? { key: 'kanban_order', direction: 'asc' as const } : taskSortConfig;
 
   const { data: tasksData = [], isLoading: isLoadingTasks, refetch: refetchTasks } = useTasks({
+    projectIds: projectIdsForTaskView,
     hideCompleted: hideCompletedTasks,
     sortConfig: finalTaskSortConfig,
+    enabled: !isLoadingProjects,
   });
 
   useEffect(() => {
@@ -149,8 +164,6 @@ const ProjectsPage = () => {
         toast.error("Failed to import events.", { description: error.message });
     }
   });
-
-  const isTaskView = view === 'tasks' || view === 'tasks-kanban';
 
   const refetch = useCallback(() => {
     if (isTaskView) refetchTasks();
@@ -244,7 +257,7 @@ const ProjectsPage = () => {
   };
 
   const tasksQueryKey = ['tasks', { 
-    projectIds: undefined, 
+    projectIds: projectIdsForTaskView, 
     hideCompleted: hideCompletedTasks, 
     sortConfig: finalTaskSortConfig 
   }];
