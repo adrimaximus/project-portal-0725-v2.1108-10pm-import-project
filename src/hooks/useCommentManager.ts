@@ -19,28 +19,17 @@ export const useCommentManager = ({ scope }: UseCommentManagerProps) => {
   const { data: comments = [], isLoading: isLoadingComments } = useQuery<CommentType[]>({
     queryKey,
     queryFn: async () => {
-      let query = supabase.from('comments').select('*, author:profiles(*), reactions:comment_reactions(*, user:profiles(id, first_name, last_name, email))');
-      if (scope.projectId) {
-        query = query.eq('project_id', scope.projectId).is('task_id', null);
-      } else if (scope.taskId) {
-        query = query.eq('task_id', scope.taskId);
-      } else {
-        return [];
+      if (scope.taskId) {
+        const { data, error } = await supabase.rpc('get_task_comments', { p_task_id: scope.taskId });
+        if (error) throw error;
+        return (data as any[]).map(c => ({ ...c, isTicket: c.is_ticket })) as CommentType[];
       }
-      
-      const { data, error } = await query.order('created_at', { ascending: true });
-      if (error) throw error;
-      
-      return (data as any[]).map(c => ({
-        ...c,
-        author: c.author || { id: 'unknown', name: 'Unknown User' },
-        reactions: (c.reactions || []).map((r: any) => ({
-          id: r.id,
-          emoji: r.emoji,
-          user_id: r.user_id,
-          user_name: r.user ? `${r.user.first_name || ''} ${r.user.last_name || ''}`.trim() || r.user.email : 'A user',
-        }))
-      })) as CommentType[];
+      if (scope.projectId) {
+        const { data, error } = await supabase.rpc('get_project_comments', { p_project_id: scope.projectId });
+        if (error) throw error;
+        return (data as any[]).map(c => ({ ...c, isTicket: c.is_ticket })) as CommentType[];
+      }
+      return [];
     },
     enabled: !!(scope.projectId || scope.taskId),
   });
