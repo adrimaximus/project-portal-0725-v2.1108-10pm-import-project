@@ -109,6 +109,8 @@ export interface Tag {
   color: string;
   user_id: string | null;
   isNew?: boolean;
+  type?: string | null;
+  custom_properties?: Record<string, any> | null;
 }
 
 export const CUSTOM_PROPERTY_TYPES = [
