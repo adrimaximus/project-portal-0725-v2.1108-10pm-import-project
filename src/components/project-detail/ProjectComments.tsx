@@ -1,33 +1,10 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Project, Comment as CommentType, User } from "@/types";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
-import { Ticket, MoreHorizontal, Edit, Trash2, CornerUpLeft } from "lucide-react";
-import { getInitials, generatePastelColor, parseMentions, getAvatarUrl, formatMentionsForDisplay } from "@/lib/utils";
-import { formatDistanceToNow } from 'date-fns';
-import { id } from 'date-fns/locale';
-import CommentInput from "../CommentInput";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import rehypeRaw from 'rehype-raw';
-import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Textarea } from "@/components/ui/textarea";
+import CommentInput from "../CommentInput";
+import Comment from '../Comment';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import CommentAttachmentItem from '../CommentAttachmentItem';
-import CommentReactions from '../CommentReactions';
-
-interface Reaction {
-  id: string;
-  emoji: string;
-  user_id: string;
-  user_name: string;
-}
-
-interface CommentWithReactions extends CommentType {
-  reactions?: Reaction[];
-}
 
 interface ProjectCommentsProps {
   project: Project;
@@ -46,7 +23,20 @@ interface ProjectCommentsProps {
   onCreateTicketFromComment: (comment: CommentType) => void;
 }
 
-const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDeleteComment, onToggleCommentReaction, isUpdatingComment, updatedCommentId, initialMention, onMentionConsumed, allUsers, replyTo, onReply, onCancelReply, onCreateTicketFromComment }: ProjectCommentsProps) => {
+const ProjectComments = ({ 
+  project, 
+  onAddCommentOrTicket, 
+  onUpdateComment, 
+  onDeleteComment, 
+  onToggleCommentReaction, 
+  initialMention, 
+  onMentionConsumed, 
+  allUsers,
+  replyTo,
+  onReply,
+  onCancelReply,
+  onCreateTicketFromComment,
+}: ProjectCommentsProps) => {
   const { user } = useAuth();
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editedText, setEditedText] = useState('');
@@ -83,7 +73,7 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
 
   const handleSaveEdit = () => {
     if (editingCommentId) {
-      const mentionedUserIds = parseMentions(editedText);
+      const mentionedUserIds: string[] = []; // Placeholder for now
       onUpdateComment(project, editingCommentId, editedText, newAttachments, isConvertingToTicket, mentionedUserIds);
     }
     handleCancelEdit();
@@ -96,7 +86,7 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
     }
   };
 
-  const comments = (project.comments || []) as CommentWithReactions[];
+  const comments = (project.comments || []);
 
   return (
     <div className="flex flex-col h-full min-h-[400px] sm:min-h-[500px]">
@@ -112,115 +102,26 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
       </div>
       <div className="flex-1 overflow-y-auto pr-4 space-y-4">
         {comments.length > 0 ? (
-          comments.map((comment: CommentType) => {
-            const author = comment.author;
-            const fullName = `${author.first_name || ''} ${author.last_name || ''}`.trim() || author.email;
-            const canManageComment = user && (comment.author.id === user.id || user.role === 'admin' || user.role === 'master admin');
-            
-            const mainText = comment.text || '';
-            
-            const attachmentsData = comment.attachments_jsonb;
-            const attachments: any[] = Array.isArray(attachmentsData) ? attachmentsData : attachmentsData ? [attachmentsData] : [];
-
-            return (
-              <div key={comment.id} className="flex items-start space-x-4">
-                <Avatar>
-                  <AvatarImage src={getAvatarUrl(author.avatar_url, author.id)} />
-                  <AvatarFallback style={generatePastelColor(author.id)}>
-                    {getInitials(fullName, author.email)}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <p className="font-semibold">{fullName}</p>
-                    <div className="flex items-center gap-1">
-                      <span className="text-xs text-muted-foreground">
-                        {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true, locale: id })}
-                      </span>
-                      {canManageComment && editingCommentId !== comment.id && (
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-6 w-6">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onSelect={() => handleEditClick(comment)}>
-                              <Edit className="mr-2 h-4 w-4" /> Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onSelect={() => setCommentToDelete(comment)} className="text-destructive">
-                              <Trash2 className="mr-2 h-4 w-4" /> Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      )}
-                    </div>
-                  </div>
-                  {editingCommentId === comment.id ? (
-                    <div className="mt-2 space-y-2">
-                      <Textarea value={editedText} onChange={(e) => setEditedText(e.target.value)} autoFocus />
-                      <div className="flex justify-end gap-2">
-                        <Button variant="ghost" size="sm" onClick={handleCancelEdit}>Cancel</Button>
-                        <Button size="sm" onClick={handleSaveEdit}>Save</Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                      {comment.repliedMessage && (
-                        <div className="p-2 mb-2 bg-muted rounded-md text-sm">
-                          <div className="border-l-2 border-primary pl-2 overflow-hidden">
-                            <p className="font-semibold text-primary">Replying to {comment.repliedMessage.senderName}</p>
-                            <p className="text-xs text-muted-foreground truncate" dangerouslySetInnerHTML={{ __html: formatMentionsForDisplay(comment.repliedMessage.content || '') }} />
-                          </div>
-                        </div>
-                      )}
-                      <div className="flex items-start gap-2 mt-1">
-                        {comment.is_ticket && <Ticket className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-1" />}
-                        <div className="prose prose-sm dark:prose-invert max-w-none break-words">
-                          <ReactMarkdown
-                            remarkPlugins={[remarkGfm]}
-                            rehypePlugins={[rehypeRaw]}
-                            components={{
-                              a: ({ node, ...props }) => {
-                                const href = props.href || '';
-                                if (href.startsWith('/')) {
-                                  return <Link to={href} {...props} className="text-primary hover:underline" />;
-                                }
-                                return <a {...props} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline" />;
-                              },
-                              mention: ({node, ...props}) => (
-                                <span className="bg-primary/10 text-primary rounded px-1 py-0.5 font-medium">
-                                  @{props.children}
-                                </span>
-                              )
-                            }}
-                          >
-                            {mainText.replace(/@\[([^\]]+)\]\(([^)]+)\)/g, (match, name, id) => `<mention data-id="${id}">${name}</mention>`)}
-                          </ReactMarkdown>
-                        </div>
-                      </div>
-                      {attachments.length > 0 && (
-                        <div className="mt-2 space-y-2">
-                          {attachments.map((file: any, index: number) => (
-                            <CommentAttachmentItem key={file.id || index} file={file} />
-                          ))}
-                        </div>
-                      )}
-                      <div className="mt-1 flex items-center gap-2">
-                        <Button variant="ghost" size="xs" className="text-muted-foreground" onClick={() => onReply(comment)}>
-                          <CornerUpLeft className="h-3 w-3 mr-1" /> Reply
-                        </Button>
-                        <CommentReactions reactions={comment.reactions || []} onToggleReaction={(emoji) => onToggleCommentReaction(comment.id, emoji)} />
-                        <Button variant="ghost" size="xs" className="text-muted-foreground" onClick={() => onCreateTicketFromComment(comment)}>
-                          <Ticket className="h-3 w-3 mr-1" /> Create Ticket
-                        </Button>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
-            );
-          })
+          comments.map((comment: CommentType) => (
+            <Comment
+              key={comment.id}
+              comment={comment}
+              isEditing={editingCommentId === comment.id}
+              editedText={editedText}
+              setEditedText={setEditedText}
+              handleSaveEdit={handleSaveEdit}
+              handleCancelEdit={handleCancelEdit}
+              onEdit={handleEditClick}
+              onDelete={setCommentToDelete}
+              onToggleReaction={onToggleCommentReaction}
+              onReply={onReply}
+              onCreateTicketFromComment={onCreateTicketFromComment}
+              newAttachments={newAttachments}
+              removeNewAttachment={() => {}}
+              handleEditFileChange={() => {}}
+              editFileInputRef={useRef(null)}
+            />
+          ))
         ) : (
           <p className="text-sm text-muted-foreground text-center pt-10">No comments yet. Start the discussion!</p>
         )}
@@ -230,7 +131,7 @@ const ProjectComments = ({ project, onAddCommentOrTicket, onUpdateComment, onDel
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete the comment. This action cannot be undone.
+              This will permanently delete the comment. If this is a ticket, the associated task will also be deleted. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
