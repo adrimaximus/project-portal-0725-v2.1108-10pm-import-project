@@ -171,9 +171,54 @@ const ProjectAdvancedFilters = ({ filters, onFiltersChange, allPeople }: Project
     return (
       <TooltipProvider>
         <div className="flex items-center gap-1">
-          <Popover><PopoverTrigger asChild><Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" className={cn(filters.ownerIds?.length > 0 && "text-primary bg-muted")}><UserCog className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent><p>Filter by Project Owner</p></TooltipContent></Tooltip></PopoverTrigger><PopoverContent className="w-80 p-4">{ownerFilterContent}</PopoverContent></Popover>
-          <Popover><PopoverTrigger asChild><Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" className={cn(filters.memberIds?.length > 0 && "text-primary bg-muted")}><Users className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent><p>Filter by Project Member</p></TooltipContent></Tooltip></PopoverTrigger><PopoverContent className="w-80 p-4">{memberFilterContent}</PopoverContent></Popover>
-          <Popover><PopoverTrigger asChild><Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" className={cn(filters.excludedStatus?.length > 0 && "text-primary bg-muted")}><ListX className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent><p>Exclude Project Statuses</p></TooltipContent></Tooltip></PopoverTrigger><PopoverContent className="w-80 p-4">{statusFilterContent}</PopoverContent></Popover>
+          <Popover>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <PopoverTrigger asChild>
+                  <Button variant="ghost" size="icon" className={cn(filters.ownerIds?.length > 0 && "text-primary bg-muted")}>
+                    <UserCog className="h-4 w-4" />
+                  </Button>
+                </PopoverTrigger>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Filter by Project Owner</p>
+              </TooltipContent>
+            </Tooltip>
+            <PopoverContent className="w-80 p-4">{ownerFilterContent}</PopoverContent>
+          </Popover>
+
+          <Popover>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <PopoverTrigger asChild>
+                  <Button variant="ghost" size="icon" className={cn(filters.memberIds?.length > 0 && "text-primary bg-muted")}>
+                    <Users className="h-4 w-4" />
+                  </Button>
+                </PopoverTrigger>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Filter by Project Member</p>
+              </TooltipContent>
+            </Tooltip>
+            <PopoverContent className="w-80 p-4">{memberFilterContent}</PopoverContent>
+          </Popover>
+
+          <Popover>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <PopoverTrigger asChild>
+                  <Button variant="ghost" size="icon" className={cn(filters.excludedStatus?.length > 0 && "text-primary bg-muted")}>
+                    <ListX className="h-4 w-4" />
+                  </Button>
+                </PopoverTrigger>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Exclude Project Statuses</p>
+              </TooltipContent>
+            </Tooltip>
+            <PopoverContent className="w-80 p-4">{statusFilterContent}</PopoverContent>
+          </Popover>
+
           {activeFilterCount > 0 && (
             <>
               <Separator orientation="vertical" className="h-6 mx-1" />
