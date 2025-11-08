@@ -58,6 +58,26 @@ const ProjectsPage = () => {
     }
   }, [searchParams, setSearchParams, taskIdFromParams, navigate]);
 
+  const advancedFilters = useMemo((): AdvancedFiltersState => ({
+    ownerIds: searchParams.getAll('owner'),
+    memberIds: searchParams.getAll('member'),
+    excludedStatus: searchParams.getAll('excludeStatus'),
+  }), [searchParams]);
+
+  const handleAdvancedFiltersChange = (newFilters: AdvancedFiltersState) => {
+    const newSearchParams = new URLSearchParams(searchParams);
+    
+    newSearchParams.delete('owner');
+    newSearchParams.delete('member');
+    newSearchParams.delete('excludeStatus');
+
+    newFilters.ownerIds.forEach(id => newSearchParams.append('owner', id));
+    newFilters.memberIds.forEach(id => newSearchParams.append('member', id));
+    newFilters.excludedStatus.forEach(status => newSearchParams.append('excludeStatus', status));
+    
+    setSearchParams(newSearchParams, { replace: true });
+  };
+
   const { 
     data, 
     isLoading: isLoadingProjects, 
@@ -69,12 +89,6 @@ const ProjectsPage = () => {
 
   const projectsData = useMemo(() => data?.pages.flatMap(page => page.projects) ?? [], [data]);
   
-  const [advancedFilters, setAdvancedFilters] = useState<AdvancedFiltersState>({
-    ownerIds: [],
-    memberIds: [],
-    excludedStatus: [],
-  });
-
   const { data: allMembers = [] } = useQuery({
     queryKey: ['project_members_distinct'],
     queryFn: async () => {
@@ -384,7 +398,7 @@ const ProjectsPage = () => {
             onImportClick={() => setIsImportDialogOpen(true)}
             onRefreshClick={handleRefresh}
             advancedFilters={advancedFilters}
-            onAdvancedFiltersChange={setAdvancedFilters}
+            onAdvancedFiltersChange={handleAdvancedFiltersChange}
             allPeople={allMembers}
             allOwners={allOwners}
           />
