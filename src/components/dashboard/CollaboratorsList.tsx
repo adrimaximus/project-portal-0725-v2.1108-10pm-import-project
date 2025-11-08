@@ -208,7 +208,9 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
               <>
                 <p className="font-bold">Filtered Projects:</p>
                 <ul className="list-disc pl-4 text-left">
-                  {filtered.map(p => <li key={p.id}>{p.name}</li>)}
+                  {filtered
+                    .sort((a, b) => a.name.localeCompare(b.name))
+                    .map(p => <li key={p.id}>{p.name}</li>)}
                 </ul>
               </>
             ) : (
