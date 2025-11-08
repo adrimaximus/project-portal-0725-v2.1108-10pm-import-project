@@ -87,19 +87,18 @@ const ProjectsPage = () => {
       .map(p => ({ id: p.user_id!, name: p.full_name }));
   }, [peopleData]);
 
-  const allOwners = useMemo(() => {
-    if (!projectsData) return [];
-    const ownerMap = new Map<string, { id: string, name: string }>();
-    projectsData.forEach(project => {
-      if (project.created_by && !ownerMap.has(project.created_by.id)) {
-        ownerMap.set(project.created_by.id, {
-          id: project.created_by.id,
-          name: project.created_by.name,
-        });
+  const { data: allOwners = [] } = useQuery({
+    queryKey: ['project_owners'],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('get_project_owners');
+      if (error) {
+        toast.error('Failed to load project owners for filtering.');
+        console.error(error);
+        return [];
       }
-    });
-    return Array.from(ownerMap.values()).sort((a, b) => a.name.localeCompare(b.name));
-  }, [projectsData]);
+      return data as { id: string; name: string }[];
+    }
+  });
 
   const {
     dateRange, setDateRange,
