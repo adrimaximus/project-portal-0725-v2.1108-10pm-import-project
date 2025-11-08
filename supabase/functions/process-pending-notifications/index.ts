@@ -232,7 +232,42 @@ serve(async (req) => {
             userPrompt = `Buat notifikasi mention. Penerima: ${recipientName}. Yang me-mention: ${getFullName(mentionerData)}. Proyek: "${projectData.name}". URL: ${url}`;
             break;
           }
-          // Add other cases here as you implement more notification types
+          case 'task_assignment': {
+            const { task_id, assigner_id } = context;
+            const taskData = taskMap.get(task_id);
+            if (!taskData) throw new Error('Task not found for assignment notification');
+            const projectData = projectMap.get(taskData.project_id);
+            const assignerData = profileMap.get(assigner_id);
+            if (!projectData || !assignerData) throw new Error('Missing context data for task_assignment');
+            const url = `${APP_URL}/projects/${projectData.slug}?tab=tasks&task=${task_id}`;
+            userPrompt = `Buat notifikasi penugasan tugas. Penerima: ${recipientName}. Yang menugaskan: ${getFullName(assignerData)}. Tugas: "${taskData.title}" di proyek "${projectData.name}". URL: ${url}`;
+            break;
+          }
+          case 'task_completed': {
+            const { task_id, completer_id, project_id, project_name } = context;
+            const completerData = profileMap.get(completer_id);
+            const projectData = projectMap.get(project_id);
+            if (!completerData || !projectData) throw new Error('Missing context data for task_completed');
+            const url = `${APP_URL}/projects/${projectData.slug}?tab=tasks&task=${task_id}`;
+            userPrompt = `Buat notifikasi tugas selesai. Penerima: ${recipientName}. Yang menyelesaikan: ${getFullName(completerData)}. Tugas: "${context.task_title}" di proyek "${project_name}". URL: ${url}`;
+            break;
+          }
+          case 'new_task': {
+            const { task_title, creator_id, project_name, project_slug } = context;
+            const creatorData = profileMap.get(creator_id);
+            if (!creatorData) throw new Error('Missing context data for new_task');
+            const url = `${APP_URL}/projects/${project_slug}`;
+            userPrompt = `Buat notifikasi tugas baru. Penerima: ${recipientName}. Yang membuat: ${getFullName(creatorData)}. Tugas: "${task_title}" di proyek "${project_name}". URL: ${url}`;
+            break;
+          }
+          case 'new_ticket': {
+            const { ticket_content, creator_id, project_name, project_slug } = context;
+            const creatorData = profileMap.get(creator_id);
+            if (!creatorData) throw new Error('Missing context data for new_ticket');
+            const url = `${APP_URL}/projects/${project_slug}`;
+            userPrompt = `Buat notifikasi tiket baru. Penerima: ${recipientName}. Yang membuat: ${getFullName(creatorData)}. Konten tiket: "${ticket_content}" di proyek "${project_name}". URL: ${url}`;
+            break;
+          }
           default:
             throw new Error(`Unsupported notification type: ${notification.notification_type}`);
         }
