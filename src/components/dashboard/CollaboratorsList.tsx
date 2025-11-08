@@ -42,6 +42,7 @@ interface CollaboratorStat extends User {
   projectCount: number;
   projects: {
     id: string;
+    name: string;
     isUpcoming: boolean;
     isOnGoing: boolean;
     isActive: boolean;
@@ -129,7 +130,7 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
 
             if (!userStat.countedProjectIds.has(p.id)) {
                 userStat.projectCount++;
-                userStat.projects.push({ id: p.id, isUpcoming, isOnGoing, isActive, status: p.status });
+                userStat.projects.push({ id: p.id, name: p.name, isUpcoming, isOnGoing, isActive, status: p.status });
                 if (isOverdue) userStat.overdueBillCount++;
                 userStat.countedProjectIds.add(p.id);
             }
@@ -173,15 +174,9 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
     return { collaboratorsByRole: orderedGrouped, allCollaborators: flatList };
   }, [projects, tasks]);
 
-  const getFilteredCount = (collaborator: CollaboratorStat) => {
-    if (filters.length === 0) return 0;
-    const matchingProjectIds = new Set<string>();
-    collaborator.projects.forEach(p => {
-        if (filters.includes(p.status)) {
-            matchingProjectIds.add(p.id);
-        }
-    });
-    return matchingProjectIds.size;
+  const getFilteredProjects = (collaborator: CollaboratorStat) => {
+    if (filters.length === 0) return [];
+    return collaborator.projects.filter(p => filters.includes(p.status));
   };
 
   const handleFilterChange = (filterValue: string) => {
@@ -199,6 +194,31 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
     }
     return `${filters.length} filters selected`;
   }, [filters, filterOptions]);
+
+  const renderFilteredCount = (collaborator: CollaboratorStat) => {
+    const filtered = getFilteredProjects(collaborator);
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span>{filtered.length}</span>
+          </TooltipTrigger>
+          <TooltipContent>
+            {filtered.length > 0 ? (
+              <>
+                <p className="font-bold">Filtered Projects:</p>
+                <ul className="list-disc pl-4 text-left">
+                  {filtered.map(p => <li key={p.id}>{p.name}</li>)}
+                </ul>
+              </>
+            ) : (
+              <p>No projects match the current filter.</p>
+            )}
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  };
 
   return (
     <Card className="mb-24">
@@ -274,7 +294,7 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
                             <div className="text-muted-foreground">Total Projects</div>
                             <div className="text-right font-medium">{c.projectCount}</div>
                             <div className="text-muted-foreground">{filterButtonText}</div>
-                            <div className="text-right font-medium">{getFilteredCount(c)}</div>
+                            <div className="text-right font-medium">{renderFilteredCount(c)}</div>
                             <div className="text-muted-foreground">Active Tasks</div>
                             <div className="text-right font-medium">{c.activeTaskCount}</div>
                             <div className="text-muted-foreground">Active Tickets</div>
@@ -347,7 +367,7 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
                                         </div>
                                     </TableCell>
                                     <TableCell className="text-right font-medium">{c.projectCount}</TableCell>
-                                    <TableCell className="text-right font-medium">{getFilteredCount(c)}</TableCell>
+                                    <TableCell className="text-right font-medium">{renderFilteredCount(c)}</TableCell>
                                     <TableCell className="text-right font-medium">{c.activeTaskCount}</TableCell>
                                     <TableCell className="text-right font-medium">{c.activeTicketCount}</TableCell>
                                     <TableCell className="text-right font-medium">{c.overdueBillCount}</TableCell>
