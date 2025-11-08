@@ -21,7 +21,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ChevronsUpDown, ChevronDown } from "lucide-react";
+import { ChevronsUpDown, ChevronDown, Filter, FilterX } from "lucide-react";
 import { generatePastelColor, getAvatarUrl } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -33,6 +33,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import { useMediaQuery } from '@/hooks/use-media-query';
+import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerFooter, DrawerClose, DrawerTrigger } from '../ui/drawer';
+import { Label } from '../ui/label';
+import { Checkbox } from '../ui/checkbox';
+import { Separator } from '../ui/separator';
 
 interface CollaboratorsListProps {
   projects: Project[];
@@ -70,6 +76,8 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
       .filter(status => !['Completed', 'Cancelled', 'Bid Lost', 'Archived'].includes(status));
   });
   const [taskFilters, setTaskFilters] = useState<string[]>(['active']);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const isDesktop = useMediaQuery("(min-width: 768px)");
 
   const projectFilterOptions = PROJECT_STATUS_OPTIONS;
 
@@ -230,21 +238,12 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
     );
   };
 
-  const projectFilterButtonText = useMemo(() => {
-    if (projectFilters.length === 0) return "No filters selected";
-    if (projectFilters.length === 1) {
-      return projectFilterOptions.find(f => f.value === projectFilters[0])?.label || "Filter";
-    }
-    return `${projectFilters.length} filters selected`;
-  }, [projectFilters, projectFilterOptions]);
+  const clearFilters = () => {
+    setProjectFilters([]);
+    setTaskFilters([]);
+  };
 
-  const taskFilterButtonText = useMemo(() => {
-    if (taskFilters.length === 0) return "No filters selected";
-    if (taskFilters.length === 1) {
-      return taskFilterOptions.find(f => f.value === taskFilters[0])?.label || "Filter";
-    }
-    return `${taskFilters.length} filters selected`;
-  }, [taskFilters]);
+  const activeFilterCount = projectFilters.length + taskFilters.length;
 
   const renderFilteredProjectCount = (collaborator: CollaboratorStat) => {
     const filtered = getFilteredProjects(collaborator);
@@ -272,6 +271,95 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
       </TooltipProvider>
     );
   };
+
+  const FilterContent = (
+    <div className="p-4 space-y-4">
+      <div>
+        <h4 className="font-semibold mb-2">Project Status</h4>
+        <div className="space-y-2">
+          {projectFilterOptions.map(opt => (
+            <div key={opt.value} className="flex items-center space-x-2">
+              <Checkbox
+                id={`proj-filter-${opt.value}`}
+                checked={projectFilters.includes(opt.value)}
+                onCheckedChange={() => handleProjectFilterChange(opt.value)}
+              />
+              <Label htmlFor={`proj-filter-${opt.value}`} className="text-sm font-normal">
+                {opt.label}
+              </Label>
+            </div>
+          ))}
+        </div>
+      </div>
+      <Separator />
+      <div>
+        <h4 className="font-semibold mb-2">Task Filters</h4>
+        <div className="space-y-2">
+          {taskFilterOptions.map(opt => (
+            <div key={opt.value} className="flex items-center space-x-2">
+              <Checkbox
+                id={`task-filter-${opt.value}`}
+                checked={taskFilters.includes(opt.value)}
+                onCheckedChange={() => handleTaskFilterChange(opt.value)}
+              />
+              <Label htmlFor={`task-filter-${opt.value}`} className="text-sm font-normal">
+                {opt.label}
+              </Label>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+
+  const FilterComponent = (
+    <div className="flex items-center gap-2">
+      {isDesktop ? (
+        <Popover open={isFilterOpen} onOpenChange={setIsFilterOpen}>
+          <PopoverTrigger asChild>
+            <Button variant="outline" size="sm" className="relative">
+              <Filter className="mr-2 h-4 w-4" />
+              Filters
+              {activeFilterCount > 0 && (
+                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">{activeFilterCount}</span>
+              )}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-64 p-0" align="end">
+            {FilterContent}
+            {activeFilterCount > 0 && (
+              <div className="p-4 border-t">
+                <Button variant="ghost" size="sm" className="w-full" onClick={clearFilters}>Clear Filters</Button>
+              </div>
+            )}
+          </PopoverContent>
+        </Popover>
+      ) : (
+        <Drawer open={isFilterOpen} onOpenChange={setIsFilterOpen}>
+          <DrawerTrigger asChild>
+            <Button variant="outline" size="sm" className="relative">
+              <Filter className="mr-2 h-4 w-4" />
+              Filters
+              {activeFilterCount > 0 && (
+                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">{activeFilterCount}</span>
+              )}
+            </Button>
+          </DrawerTrigger>
+          <DrawerContent>
+            <DrawerHeader>
+              <DrawerTitle>Filters</DrawerTitle>
+              <DrawerDescription>Filter collaborator stats by project and task status.</DrawerDescription>
+            </DrawerHeader>
+            {FilterContent}
+            <DrawerFooter>
+              {activeFilterCount > 0 && <Button variant="outline" onClick={clearFilters}>Clear Filters</Button>}
+              <DrawerClose asChild><Button>Apply</Button></DrawerClose>
+            </DrawerFooter>
+          </DrawerContent>
+        </Drawer>
+      )}
+    </div>
+  );
 
   return (
     <Card className="mb-24">
@@ -306,47 +394,8 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
             <CardContent className="px-6 pb-6 pt-0">
               {/* Mobile View */}
               <div className="md:hidden">
-                <div className="flex justify-end mb-4 gap-2">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="outline" size="sm">
-                        {projectFilterButtonText}
-                        <ChevronDown className="ml-2 h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      {projectFilterOptions.map(opt => (
-                        <DropdownMenuCheckboxItem
-                          key={opt.value}
-                          checked={projectFilters.includes(opt.value)}
-                          onCheckedChange={() => handleProjectFilterChange(opt.value)}
-                          onSelect={(e) => e.preventDefault()}
-                        >
-                          {opt.label}
-                        </DropdownMenuCheckboxItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="outline" size="sm">
-                        {taskFilterButtonText}
-                        <ChevronDown className="ml-2 h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      {taskFilterOptions.map(opt => (
-                        <DropdownMenuCheckboxItem
-                          key={opt.value}
-                          checked={taskFilters.includes(opt.value)}
-                          onCheckedChange={() => handleTaskFilterChange(opt.value)}
-                          onSelect={(e) => e.preventDefault()}
-                        >
-                          {opt.label}
-                        </DropdownMenuCheckboxItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                <div className="flex justify-end mb-4">
+                  {FilterComponent}
                 </div>
                 {Object.entries(collaboratorsByRole).map(([role, collaboratorsInRole]) => (
                   <div key={role}>
@@ -366,9 +415,9 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
                           <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
                             <div className="text-muted-foreground">Total Projects</div>
                             <div className="text-right font-medium">{c.projectCount}</div>
-                            <div className="text-muted-foreground">{projectFilterButtonText}</div>
+                            <div className="text-muted-foreground">Filtered Projects</div>
                             <div className="text-right font-medium">{renderFilteredProjectCount(c)}</div>
-                            <div className="text-muted-foreground">{taskFilterButtonText}</div>
+                            <div className="text-muted-foreground">Filtered Tasks</div>
                             <div className="text-right font-medium">{c.filteredTaskCount}</div>
                             <div className="text-muted-foreground">Active Tickets</div>
                             <div className="text-right font-medium">{c.activeTicketCount}</div>
@@ -389,54 +438,8 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
                         <TableRow>
                             <TableHead>Collaborator</TableHead>
                             <TableHead className="text-right">Total Projects</TableHead>
-                            <TableHead className="text-right">
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" className="px-2 -mr-2 h-8">
-                                    {projectFilterButtonText}
-                                    <ChevronDown className="ml-2 h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuLabel>Filter by Status</DropdownMenuLabel>
-                                  <DropdownMenuSeparator />
-                                  {projectFilterOptions.map(opt => (
-                                    <DropdownMenuCheckboxItem
-                                      key={opt.value}
-                                      checked={projectFilters.includes(opt.value)}
-                                      onCheckedChange={() => handleProjectFilterChange(opt.value)}
-                                      onSelect={(e) => e.preventDefault()}
-                                    >
-                                      {opt.label}
-                                    </DropdownMenuCheckboxItem>
-                                  ))}
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </TableHead>
-                            <TableHead className="text-right">
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" className="px-2 -mr-2 h-8">
-                                    {taskFilterButtonText}
-                                    <ChevronDown className="ml-2 h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuLabel>Filter by Task Type</DropdownMenuLabel>
-                                  <DropdownMenuSeparator />
-                                  {taskFilterOptions.map(opt => (
-                                    <DropdownMenuCheckboxItem
-                                      key={opt.value}
-                                      checked={taskFilters.includes(opt.value)}
-                                      onCheckedChange={() => handleTaskFilterChange(opt.value)}
-                                      onSelect={(e) => e.preventDefault()}
-                                    >
-                                      {opt.label}
-                                    </DropdownMenuCheckboxItem>
-                                  ))}
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </TableHead>
+                            <TableHead className="text-right">Filtered Projects</TableHead>
+                            <TableHead className="text-right">Filtered Tasks</TableHead>
                             <TableHead className="text-right">Active Tickets</TableHead>
                             <TableHead className="text-right">Overdue Bill</TableHead>
                         </TableRow>
@@ -446,9 +449,12 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
                           <React.Fragment key={role}>
                             <TableRow className="border-b-0 hover:bg-transparent">
                               <TableCell colSpan={7} className="pt-6 pb-2">
-                                <h3 className="text-sm font-semibold uppercase text-muted-foreground tracking-wider">
-                                  {role.replace('_', ' ')}
-                                </h3>
+                                <div className="flex justify-between items-center">
+                                  <h3 className="text-sm font-semibold uppercase text-muted-foreground tracking-wider">
+                                    {role.replace('_', ' ')}
+                                  </h3>
+                                  {role === 'owner' && FilterComponent}
+                                </div>
                               </TableCell>
                             </TableRow>
                             {collaboratorsInRole.map(c => (
