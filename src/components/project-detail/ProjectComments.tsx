@@ -37,13 +37,14 @@ const ProjectComments = ({
   const lastProcessedMentionId = useRef<string | null>(null);
 
   const { 
-    comments, 
-    isLoadingComments, 
     addComment, 
     updateComment, 
     deleteComment, 
     toggleReaction 
   } = useCommentManager({ scope: { projectId: project.id } });
+
+  const comments = project.comments || [];
+  const isLoadingComments = false; // Data comes from project prop
 
   useEffect(() => {
     if (initialMention && commentInputRef.current && initialMention.id !== lastProcessedMentionId.current) {
