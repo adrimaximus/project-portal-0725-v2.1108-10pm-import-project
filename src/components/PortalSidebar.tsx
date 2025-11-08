@@ -210,6 +210,9 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
         if (itemNameLower === 'projects') {
             href = '/projects?view=list';
         }
+        if (itemNameLower === 'tasks') {
+            href = '/projects?view=tasks-list';
+        }
         if (itemNameLower === 'knowledge base' && href !== '/knowledge-base') {
             href = '/knowledge-base';
         }
