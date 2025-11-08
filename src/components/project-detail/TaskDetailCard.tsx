@@ -98,7 +98,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
     updateComment, 
     deleteComment, 
     toggleReaction 
-  } = useCommentManager({ scope: { taskId: task.id } });
+  } = useCommentManager({ scope: { taskId: task.id, projectId: task.project_id } });
   
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
@@ -352,7 +352,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
                           </Avatar>
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p>{[task.created_by.first_name, task.created_by.last_name].filter(Boolean).join(' ')}</p>
+                          <p>{[task.created_by.first_name, task.created_by.last_name].filter(Boolean).join(' ').trim() || task.created_by.email?.split('@')[0] || 'Unknown User'}</p>
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
@@ -437,7 +437,6 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
         <div className="flex-shrink-0 p-4 border-t">
           <CommentInput
             ref={commentInputRef}
-            project={task as any}
             onAddCommentOrTicket={handleAddComment}
             allUsers={allUsers}
             replyTo={replyTo}
