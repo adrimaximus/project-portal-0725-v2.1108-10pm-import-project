@@ -5,99 +5,83 @@ import { DateRange } from 'react-day-picker';
 import { isBefore, startOfToday, parseISO } from 'date-fns';
 import SafeLocalStorage from '@/lib/localStorage';
 
-const FILTERS_STORAGE_KEY = 'projectFilters';
-
 type ViewMode = 'table' | 'list' | 'kanban' | 'tasks' | 'tasks-kanban';
 
 export const useProjectFilters = (projects: Project[]) => {
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const getInitialState = () => {
-    const storedFilters = SafeLocalStorage.getItem<any>(FILTERS_STORAGE_KEY, {});
+  // --- State derived from URL ---
+  const view = (searchParams.get('view') as ViewMode) || 'list';
+  const searchTerm = searchParams.get('search') || '';
+  const kanbanGroupBy = (searchParams.get('groupBy') as 'status' | 'payment_status') || 'status';
+  const hideCompletedTasks = searchParams.get('hideCompleted') === 'true';
+  
+  const advancedFilters: AdvancedFiltersState = useMemo(() => ({
+    ownerIds: searchParams.getAll('owner'),
+    memberIds: searchParams.getAll('member'),
+    excludedStatus: searchParams.getAll('excludeStatus'),
+  }), [searchParams]);
+
+  const dateRange = useMemo(() => {
     const fromParam = searchParams.get('from');
     const toParam = searchParams.get('to');
-
-    let dateRange;
     if (fromParam) {
       try {
-        dateRange = { from: parseISO(fromParam), to: toParam ? parseISO(toParam) : undefined };
-      } catch (e) {
-        console.warn("Invalid date in URL, ignoring.", e);
-      }
-    } else if (storedFilters.dateRange?.from) {
-      try {
-        dateRange = { from: new Date(storedFilters.dateRange.from), to: storedFilters.dateRange.to ? new Date(storedFilters.dateRange.to) : undefined };
-      } catch (e) {
-        console.warn("Invalid date in localStorage, ignoring.", e);
-      }
+        return { from: parseISO(fromParam), to: toParam ? parseISO(toParam) : undefined };
+      } catch (e) { console.warn("Invalid date in URL", e); }
     }
+    return undefined;
+  }, [searchParams]);
 
-    return {
-      view: (searchParams.get('view') as ViewMode) || storedFilters.view || 'list',
-      searchTerm: searchParams.get('search') || storedFilters.searchTerm || '',
-      kanbanGroupBy: (searchParams.get('groupBy') as 'status' | 'payment_status') || storedFilters.kanbanGroupBy || 'status',
-      hideCompletedTasks: searchParams.get('hideCompleted') ? searchParams.get('hideCompleted') === 'true' : (storedFilters.hideCompletedTasks ?? true),
-      advancedFilters: {
-        ownerIds: searchParams.getAll('owner').length > 0 ? searchParams.getAll('owner') : (storedFilters.advancedFilters?.ownerIds ?? []),
-        memberIds: searchParams.getAll('member').length > 0 ? searchParams.getAll('member') : (storedFilters.advancedFilters?.memberIds ?? []),
-        excludedStatus: searchParams.getAll('excludeStatus').length > 0 ? searchParams.getAll('excludeStatus') : (storedFilters.advancedFilters?.excludedStatus ?? []),
-      },
-      dateRange,
-      sortConfig: {
-        key: searchParams.get('sortKey') || storedFilters.sortConfig?.key || null,
-        direction: (searchParams.get('sortDir') as 'ascending' | 'descending') || storedFilters.sortConfig?.direction || 'ascending',
-      },
-    };
-  };
+  const sortConfig = useMemo(() => ({
+    key: searchParams.get('sortKey') as keyof Project | null,
+    direction: (searchParams.get('sortDir') as 'ascending' | 'descending') || 'ascending',
+  }), [searchParams]);
 
-  const [view, setView] = useState<ViewMode>(getInitialState().view);
-  const [searchTerm, setSearchTerm] = useState(getInitialState().searchTerm);
-  const [kanbanGroupBy, setKanbanGroupBy] = useState<'status' | 'payment_status'>(getInitialState().kanbanGroupBy);
-  const [hideCompletedTasks, setHideCompletedTasks] = useState(getInitialState().hideCompletedTasks);
-  const [advancedFilters, setAdvancedFilters] = useState<AdvancedFiltersState>(getInitialState().advancedFilters);
-  const [dateRange, setDateRange] = useState<DateRange | undefined>(getInitialState().dateRange);
-  const [sortConfig, setSortConfig] = useState<{ key: keyof Project | null; direction: 'ascending' | 'descending' }>(getInitialState().sortConfig);
-
-  useEffect(() => {
-    const newSearchParams = new URLSearchParams();
-    newSearchParams.set('view', view);
-    if (searchTerm) newSearchParams.set('search', searchTerm);
-    if (view === 'kanban') newSearchParams.set('groupBy', kanbanGroupBy);
-    if (view === 'tasks' || view === 'tasks-kanban') newSearchParams.set('hideCompleted', String(hideCompletedTasks));
-    
-    advancedFilters.ownerIds.forEach(id => newSearchParams.append('owner', id));
-    advancedFilters.memberIds.forEach(id => newSearchParams.append('member', id));
-    advancedFilters.excludedStatus.forEach(status => newSearchParams.append('excludeStatus', status));
-
-    if (dateRange?.from) newSearchParams.set('from', dateRange.from.toISOString().split('T')[0]);
-    if (dateRange?.to) newSearchParams.set('to', dateRange.to.toISOString().split('T')[0]);
-
-    if (sortConfig.key) {
-      newSearchParams.set('sortKey', sortConfig.key);
-      newSearchParams.set('sortDir', sortConfig.direction);
-    }
-
-    setSearchParams(newSearchParams, { replace: true });
-
-    SafeLocalStorage.setItem(FILTERS_STORAGE_KEY, {
-      view, searchTerm, kanbanGroupBy, hideCompletedTasks, advancedFilters, dateRange, sortConfig
+  // --- Setter functions that update the URL ---
+  const updateSearchParams = useCallback((updates: Record<string, string | string[] | null | boolean>) => {
+    const newSearchParams = new URLSearchParams(searchParams);
+    Object.entries(updates).forEach(([key, value]) => {
+      newSearchParams.delete(key);
+      if (value !== null && value !== '' && value !== false) {
+        if (Array.isArray(value)) {
+          value.forEach(v => newSearchParams.append(key, v));
+        } else {
+          newSearchParams.set(key, String(value));
+        }
+      }
     });
-  }, [view, searchTerm, kanbanGroupBy, hideCompletedTasks, advancedFilters, dateRange, sortConfig, setSearchParams]);
+    setSearchParams(newSearchParams, { replace: true });
+  }, [searchParams, setSearchParams]);
 
   const handleViewChange = (newView: ViewMode | null) => {
-    if (newView) setView(newView);
+    if (newView) updateSearchParams({ view: newView });
+  };
+  const handleSearchChange = (term: string) => updateSearchParams({ search: term });
+  const setKanbanGroupBy = (value: 'status' | 'payment_status') => updateSearchParams({ groupBy: value });
+  const toggleHideCompleted = () => updateSearchParams({ hideCompleted: !hideCompletedTasks });
+  const handleAdvancedFiltersChange = (filters: AdvancedFiltersState) => {
+    updateSearchParams({
+      owner: filters.ownerIds,
+      member: filters.memberIds,
+      excludeStatus: filters.excludedStatus,
+    });
+  };
+  const setDateRange = (range: DateRange | undefined) => {
+    updateSearchParams({
+      from: range?.from ? range.from.toISOString().split('T')[0] : null,
+      to: range?.to ? range.to.toISOString().split('T')[0] : null,
+    });
+  };
+  const requestSort = (key: keyof Project) => {
+    const newDirection = sortConfig.key === key && sortConfig.direction === 'ascending' ? 'descending' : 'ascending';
+    updateSearchParams({
+      sortKey: key,
+      sortDir: newDirection,
+    });
   };
 
-  const handleSearchChange = (term: string) => setSearchTerm(term);
-  const toggleHideCompleted = () => setHideCompletedTasks(prev => !prev);
-
-  const requestSort = useCallback((key: keyof Project) => {
-    setSortConfig(prevConfig => ({
-      key,
-      direction: prevConfig.key === key && prevConfig.direction === 'ascending' ? 'descending' : 'ascending',
-    }));
-  }, []);
-
+  // --- Filtering and Sorting Logic ---
   const sortedProjects = useMemo(() => {
     let sortableItems = [...projects].filter(project => {
       const projectStart = project.start_date ? new Date(project.start_date) : null;
@@ -176,7 +160,7 @@ export const useProjectFilters = (projects: Project[]) => {
     kanbanGroupBy, setKanbanGroupBy,
     hideCompletedTasks, toggleHideCompleted,
     searchTerm, handleSearchChange,
-    advancedFilters, handleAdvancedFiltersChange: setAdvancedFilters,
+    advancedFilters, handleAdvancedFiltersChange,
     dateRange, setDateRange,
     sortConfig, requestSort,
     sortedProjects,
