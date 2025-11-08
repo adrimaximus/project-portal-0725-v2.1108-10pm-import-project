@@ -218,6 +218,15 @@ export interface Activity {
   };
 }
 
+export interface ProjectFile {
+  id: string;
+  name: string;
+  url: string;
+  storage_path: string;
+  size: number;
+  type: string;
+}
+
 export interface Project {
   id: string;
   name: string;
@@ -251,6 +260,7 @@ export interface Project {
   origin_event_id?: string | null;
   created_at: string;
   updated_at: string;
+  personal_for_user_id?: string | null;
 }
 
 export type ProjectStatus = 'On Track' | 'At Risk' | 'Off Track' | 'On Hold' | 'Completed' | 'Archived' | 'Cancelled' | 'Bid Lost' | 'Billing Process' | 'In Progress' | 'Pending' | 'Requested' | 'Planning' | 'Reschedule';
@@ -369,4 +379,89 @@ export interface Service {
   icon_color: string;
   is_featured: boolean;
   created_at?: string;
+}
+
+export type GoalType = 'frequency' | 'quantity' | 'value';
+export type GoalPeriod = 'Weekly' | 'Monthly';
+
+export interface GoalCompletion {
+  id: string;
+  date: string;
+  value: number;
+  notes: string | null;
+  userId: string;
+}
+
+export interface Goal {
+  id: string;
+  user_id: string;
+  title: string;
+  description: string | null;
+  icon: string;
+  icon_url: string | null;
+  color: string;
+  type: GoalType;
+  target_quantity: number | null;
+  target_value: number | null;
+  frequency: 'Daily' | 'Weekly' | 'Monthly' | null;
+  target_period: GoalPeriod | null;
+  unit: string | null;
+  specific_days: string[] | null;
+  created_at: string;
+  updated_at: string;
+  slug: string;
+  tags: Tag[];
+  collaborators: User[];
+  completions: GoalCompletion[];
+  reactions: Reaction[];
+}
+
+export type FolderAccessLevel = 'private' | 'public_view' | 'public_edit';
+
+export interface KbFolder {
+  id: string;
+  user_id: string;
+  name: string;
+  description: string | null;
+  created_at: string;
+  updated_at: string;
+  slug: string;
+  icon: string | null;
+  color: string | null;
+  category: string | null;
+  access_level: FolderAccessLevel;
+  last_modified_by: string | null;
+}
+
+export interface ArticleReaction {
+  id: string;
+  emoji: string;
+  user_id: string;
+  profiles: {
+    id: string;
+    first_name: string | null;
+    last_name: string | null;
+  };
+}
+
+export interface KbArticle {
+  id: string;
+  title: string;
+  slug: string;
+  content: any; // JSONB
+  folder_id: string;
+  updated_at: string;
+  header_image_url: string | null;
+  kb_folders: {
+    name: string;
+    slug: string;
+  };
+  tags: Tag[];
+  creator: {
+    id: string;
+    name: string;
+    avatar_url: string | null;
+    initials: string;
+  };
+  kb_article_reactions?: ArticleReaction[];
 }

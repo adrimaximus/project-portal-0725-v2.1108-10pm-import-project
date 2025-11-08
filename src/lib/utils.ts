@@ -29,6 +29,16 @@ export function generatePastelColor(seed: string) {
   return { backgroundColor: `hsl(${h}, 70%, 85%)` };
 }
 
+export const getColorForTag = (tagName: string): string => {
+  let hash = 0;
+  for (let i = 0; i < tagName.length; i++) {
+    hash = tagName.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const h = hash % 360;
+  // Using a more vibrant saturation/lightness for tags
+  return `hsl(${h}, 60%, 70%)`;
+};
+
 export function getInitials(name?: string | null, email?: string | null): string {
   if (name) {
     const nameParts = name.split(' ').filter(Boolean);
