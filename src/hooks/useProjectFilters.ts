@@ -27,7 +27,7 @@ export const useProjectFilters = (projects: Project[], advancedFilters: Advanced
 
       const matchesMember = (advancedFilters.memberIds?.length || 0) === 0 ||
         (project.assignedTo && project.assignedTo.some(person => 
-          person.id !== project.created_by?.id && advancedFilters.memberIds.includes(person.id)
+          advancedFilters.memberIds.includes(person.id)
         ));
 
       const matchesStatus = (advancedFilters.excludedStatus?.length || 0) === 0 ||
