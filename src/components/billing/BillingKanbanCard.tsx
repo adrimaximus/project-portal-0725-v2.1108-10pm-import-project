@@ -15,7 +15,13 @@ interface BillingKanbanCardProps {
 }
 
 const BillingKanbanCard = ({ invoice, onEdit }: BillingKanbanCardProps) => {
-    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: invoice.rawProjectId });
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ 
+      id: invoice.rawProjectId,
+      data: {
+        type: 'Invoice',
+        invoice,
+      }
+    });
 
     const style = {
         transform: CSS.Transform.toString(transform),

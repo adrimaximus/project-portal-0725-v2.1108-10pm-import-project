@@ -26,7 +26,13 @@ const priorityColors: { [key: string]: string } = {
 };
 
 const TasksKanbanCard: React.FC<TasksKanbanCardProps> = ({ task, onEdit, onDelete }) => {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ 
+    id: task.id,
+    data: {
+      type: 'Task',
+      task,
+    }
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -92,7 +98,7 @@ const TasksKanbanCard: React.FC<TasksKanbanCardProps> = ({ task, onEdit, onDelet
                         <Avatar className="h-6 w-6 border-2 border-card">
                           <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
                           <AvatarFallback style={generatePastelColor(user.id)}>
-                            {getInitials(userName, user.email)}
+                            {getInitials(userName, user.email || undefined)}
                           </AvatarFallback>
                         </Avatar>
                       </TooltipTrigger>

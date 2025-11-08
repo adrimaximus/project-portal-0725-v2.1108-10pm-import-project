@@ -14,8 +14,21 @@ import WhatsappIcon from '../icons/WhatsappIcon';
 
 type Person = BasePerson & { company_id?: string | null; company_logo_url?: string | null };
 
-const PeopleKanbanCard = ({ person, dragHappened, onEdit, onDelete }: { person: Person, dragHappened: React.MutableRefObject<boolean>, onEdit: (person: Person) => void, onDelete: (person: Person) => void }) => {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: person.id });
+interface PersonCardProps {
+  person: Person;
+  dragHappened: React.MutableRefObject<boolean>;
+  onEdit: (person: Person) => void;
+  onDelete: (person: Person) => void;
+}
+
+const PeopleKanbanCard = ({ person, dragHappened, onEdit, onDelete }: PersonCardProps) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ 
+    id: person.id,
+    data: {
+      type: 'Person',
+      person,
+    }
+  });
   const navigate = useNavigate();
 
   const style = {

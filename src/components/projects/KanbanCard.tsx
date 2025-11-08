@@ -11,7 +11,13 @@ import { CheckCircle } from 'lucide-react';
 import { isSameDay, subDays } from 'date-fns';
 
 const KanbanCard = ({ project, dragHappened }: { project: Project, dragHappened: React.MutableRefObject<boolean> }) => {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: project.id });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ 
+    id: project.id,
+    data: {
+      type: 'Project',
+      project,
+    }
+  });
   const navigate = useNavigate();
   
   const style = {
