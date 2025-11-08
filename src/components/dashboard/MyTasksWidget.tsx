@@ -18,11 +18,11 @@ import { toast } from 'sonner';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import TaskReactions from '@/components/projects/TaskReactions';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Progress } from '@/components/ui/progress';
 
 const MyTasksWidget = () => {
   const { user } = useAuth();
-  const { data: tasks = [], isLoading, refetch } = useTasks({
-    hideCompleted: true,
+  const { data: allTasks = [], isLoading, refetch } = useTasks({
     sortConfig: { key: 'due_date', direction: 'asc' },
   });
 
@@ -34,18 +34,35 @@ const MyTasksWidget = () => {
 
   const { upsertTask, isUpserting, deleteTask, toggleTaskReaction } = useTaskMutations(refetch);
 
-  const allMyTasks = useMemo(() => tasks.filter(task => 
+  const allMyAssignedTasks = useMemo(() => allTasks.filter(task => 
     task.assignedTo?.some(assignee => assignee.id === user?.id)
-  ), [tasks, user]);
+  ), [allTasks, user]);
+
+  const completedMyTasks = useMemo(() => 
+    allMyAssignedTasks.filter(task => task.completed),
+    [allMyAssignedTasks]
+  );
+
+  const incompleteMyTasks = useMemo(() =>
+    allMyAssignedTasks.filter(task => !task.completed),
+    [allMyAssignedTasks]
+  );
 
   const overdueTasks = useMemo(() => 
-    allMyTasks.filter(task => task.due_date && isPast(new Date(task.due_date))),
-    [allMyTasks]
+    incompleteMyTasks.filter(task => task.due_date && isPast(new Date(task.due_date))),
+    [incompleteMyTasks]
   );
 
   const upcomingTasks = useMemo(() => 
-    allMyTasks.filter(task => !task.due_date || !isPast(new Date(task.due_date))),
-    [allMyTasks]
+    incompleteMyTasks.filter(task => !task.due_date || !isPast(new Date(task.due_date))),
+    [incompleteMyTasks]
+  );
+
+  const completionRate = useMemo(() => 
+    allMyAssignedTasks.length > 0 
+      ? (completedMyTasks.length / allMyAssignedTasks.length) * 100 
+      : 0,
+    [allMyAssignedTasks, completedMyTasks]
   );
 
   const overdueCount = overdueTasks.length;
@@ -103,6 +120,21 @@ const MyTasksWidget = () => {
             <CardTitle className="flex items-center">
               My Tasks
             </CardTitle>
+            {!isLoading && allMyAssignedTasks.length > 0 && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="flex items-center gap-2 cursor-default">
+                      <Progress value={completionRate} className="w-16 h-1.5" />
+                      <span className="text-sm font-medium text-muted-foreground">{completionRate.toFixed(0)}%</span>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{completedMyTasks.length} of {allMyAssignedTasks.length} tasks completed</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
             {!isLoading && upcomingCount > 0 && (
               <Badge 
                 variant={filter === 'upcoming' ? 'secondary' : 'outline'}
