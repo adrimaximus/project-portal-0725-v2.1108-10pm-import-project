@@ -352,7 +352,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
                           </Avatar>
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p>{[task.created_by.first_name, task.created_by.last_name].filter(Boolean).join(' ')}</p>
+                          <p>{[task.created_by.first_name, task.created_by.last_name].filter(Boolean).join(' ').trim() || task.created_by.email?.split('@')[0] || 'Unknown User'}</p>
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
