@@ -502,7 +502,7 @@ export interface Invoice {
   projectId: string;
   projectName: string;
   amount: number;
-  dueDate: Date;
+  dueDate: Date | null;
   status: PaymentStatus;
   rawProjectId: string;
   projectStartDate: Date | null;

@@ -25,7 +25,7 @@ const fetchInvoices = async (): Promise<Invoice[]> => {
   if (error) throw error;
   return data.map((d: any) => ({
     ...d,
-    dueDate: new Date(d.payment_due_date),
+    dueDate: d.payment_due_date ? new Date(d.payment_due_date) : null,
     rawProjectId: d.project_id,
     projectId: d.project_slug,
   })) as Invoice[];

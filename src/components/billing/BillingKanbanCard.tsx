@@ -67,7 +67,7 @@ const BillingKanbanCard = ({ invoice, onEdit }: BillingKanbanCardProps) => {
                         </div>
                         <div className="text-right text-sm">
                             <p className="text-xs text-muted-foreground">Due</p>
-                            <p className="font-semibold">{format(invoice.dueDate, 'MMM dd, yyyy')}</p>
+                            <p className="font-semibold">{invoice.dueDate ? format(invoice.dueDate, 'MMM dd, yyyy') : 'N/A'}</p>
                         </div>
                     </div>
                 </CardContent>

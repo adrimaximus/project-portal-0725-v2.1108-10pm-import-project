@@ -195,7 +195,7 @@ const BillingTable = ({ invoices, onEdit, sortColumn, sortDirection, handleSort,
               <TableCell>{invoice.poNumber || 'N/A'}</TableCell>
               <TableCell>{'Rp ' + invoice.amount.toLocaleString('id-ID')}</TableCell>
               <TableCell className={cn(invoice.status === 'Overdue' && 'text-destructive font-semibold')}>
-                {format(new Date(invoice.dueDate), 'MMM dd, yyyy')}
+                {invoice.dueDate ? format(new Date(invoice.dueDate), 'MMM dd, yyyy') : 'N/A'}
               </TableCell>
               <TableCell>
                 {invoice.invoiceAttachments && invoice.invoiceAttachments.length > 0 ? (
