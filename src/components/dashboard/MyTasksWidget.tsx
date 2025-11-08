@@ -3,7 +3,7 @@ import { useTasks } from '@/hooks/useTasks';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Link } from 'react-router-dom';
-import { Loader2, Clock, CheckCircle2 } from 'lucide-react';
+import { Loader2, Clock, CheckCircle2, CheckCircle, AlertTriangle, PlusSquare } from 'lucide-react';
 import { Task, UpsertTaskPayload } from '@/types';
 import { format, isPast } from 'date-fns';
 import { cn, getInitials, getAvatarUrl, generatePastelColor } from '@/lib/utils';
@@ -64,6 +64,26 @@ const MyTasksWidget = () => {
       : 0,
     [allMyAssignedTasks, completedMyTasks]
   );
+
+  const completedOnTimeCount = useMemo(() => 
+    completedMyTasks.filter(task => 
+      task.due_date && task.updated_at && new Date(task.updated_at) <= new Date(task.due_date)
+    ).length,
+    [completedMyTasks]
+  );
+
+  const myCreatedTasks = useMemo(() => 
+    allTasks.filter(task => task.created_by?.id === user?.id),
+    [allTasks, user]
+  );
+
+  const completedCreatedTasks = useMemo(() =>
+    myCreatedTasks.filter(task => task.completed),
+    [myCreatedTasks]
+  );
+
+  const onTimeRate = completedMyTasks.length > 0 ? (completedOnTimeCount / completedMyTasks.length) * 100 : 0;
+  const createdCompletionRate = myCreatedTasks.length > 0 ? (completedCreatedTasks.length / myCreatedTasks.length) * 100 : 0;
 
   const overdueCount = overdueTasks.length;
   const upcomingCount = upcomingTasks.length;
@@ -130,7 +150,29 @@ const MyTasksWidget = () => {
                     </div>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>{completedMyTasks.length} of {allMyAssignedTasks.length} tasks completed</p>
+                    <div className="space-y-2 text-sm">
+                      <p className="font-bold">Task Productivity</p>
+                      <div className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        <div>
+                          <p><strong>{onTimeRate.toFixed(0)}%</strong> On-Time Completion</p>
+                          <p className="text-xs text-muted-foreground">{completedOnTimeCount} of {completedMyTasks.length} completed tasks</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <AlertTriangle className="h-4 w-4 text-red-500" />
+                        <div>
+                          <p><strong>{overdueCount}</strong> Overdue Task(s)</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <PlusSquare className="h-4 w-4 text-blue-500" />
+                        <div>
+                          <p><strong>{createdCompletionRate.toFixed(0)}%</strong> Created Tasks Completed</p>
+                          <p className="text-xs text-muted-foreground">{completedCreatedTasks.length} of {myCreatedTasks.length} created tasks</p>
+                        </div>
+                      </div>
+                    </div>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
