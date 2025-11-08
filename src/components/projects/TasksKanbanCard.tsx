@@ -36,7 +36,7 @@ const TasksKanbanCard: React.FC<TasksKanbanCardProps> = ({ task, onEdit, onDelet
 
   const style = {
     transform: CSS.Transform.toString(transform),
-    transition: isDragging ? 'none' : undefined,
+    transition,
   };
 
   const assignedTo = task.assignedTo || [];
