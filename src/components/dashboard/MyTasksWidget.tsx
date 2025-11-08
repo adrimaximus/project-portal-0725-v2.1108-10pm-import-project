@@ -4,35 +4,29 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Link } from 'react-router-dom';
 import { Loader2, Clock, CheckCircle2, CheckCircle, AlertTriangle, PlusSquare } from 'lucide-react';
-import { Task, UpsertTaskPayload } from '@/types';
+import { Task, UpsertTaskPayload, Project } from '@/types';
 import { format, isPast } from 'date-fns';
 import { cn, getInitials, getAvatarUrl, generatePastelColor } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Drawer } from '@/components/ui/drawer';
-import TaskDetailCard from '@/components/projects/TaskDetailCard';
-import TaskFormDialog from '@/components/projects/TaskFormDialog';
 import { useTaskMutations } from '@/hooks/useTaskMutations';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import TaskReactions from '@/components/projects/TaskReactions';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Progress } from '@/components/ui/progress';
+import { useTaskModal } from '@/contexts/TaskModalContext';
 
 const MyTasksWidget = () => {
   const { user } = useAuth();
   const { data: allTasks = [], isLoading, refetch } = useTasks({
     sortConfig: { key: 'due_date', direction: 'asc' },
   });
+  const { onOpen: onOpenTaskModal } = useTaskModal();
 
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
-  const [isTaskFormOpen, setIsTaskFormOpen] = useState(false);
-  const [editingTask, setEditingTask] = useState<Task | null>(null);
-  const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
   const [filter, setFilter] = useState<'upcoming' | 'overdue'>('upcoming');
 
-  const { upsertTask, isUpserting, deleteTask, toggleTaskReaction } = useTaskMutations(refetch);
+  const { toggleTaskReaction } = useTaskMutations(refetch);
 
   const allMyAssignedTasks = useMemo(() => allTasks.filter(task => 
     task.assignedTo?.some(assignee => assignee.id === user?.id)
@@ -94,38 +88,12 @@ const MyTasksWidget = () => {
   }, [upcomingTasks, overdueTasks, filter]);
 
   const handleTaskClick = (task: Task) => {
-    setSelectedTask(task);
-  };
-
-  const handleEditTask = (task: Task) => {
-    setSelectedTask(null); // Close the detail view
-    setEditingTask(task);
-    setIsTaskFormOpen(true);
-  };
-
-  const handleDeleteTask = (task: Task) => {
-    setSelectedTask(null); // Close the detail view
-    setTaskToDelete(task);
-  };
-
-  const confirmDeleteTask = () => {
-    if (taskToDelete) {
-      deleteTask(taskToDelete.id, {
-        onSuccess: () => {
-          toast.success(`Task "${taskToDelete.title}" deleted.`);
-          setTaskToDelete(null);
-        },
-      });
-    }
-  };
-
-  const handleTaskFormSubmit = (data: UpsertTaskPayload) => {
-    upsertTask(data, {
-      onSuccess: () => {
-        setIsTaskFormOpen(false);
-        setEditingTask(null);
-      },
-    });
+    const projectForTask = {
+      id: task.project_id,
+      name: task.project_name,
+      slug: task.project_slug,
+    } as Project;
+    onOpenTaskModal(task, undefined, projectForTask);
   };
 
   const handleToggleReaction = (taskId: string, emoji: string) => {
@@ -276,38 +244,6 @@ const MyTasksWidget = () => {
           )}
         </CardContent>
       </Card>
-
-      <Drawer open={!!selectedTask} onOpenChange={(isOpen) => !isOpen && setSelectedTask(null)}>
-        {selectedTask && (
-          <TaskDetailCard
-            task={selectedTask}
-            onClose={() => setSelectedTask(null)}
-            onEdit={handleEditTask}
-            onDelete={() => handleDeleteTask(selectedTask)}
-          />
-        )}
-      </Drawer>
-
-      <TaskFormDialog
-        open={isTaskFormOpen}
-        onOpenChange={setIsTaskFormOpen}
-        onSubmit={handleTaskFormSubmit}
-        isSubmitting={isUpserting}
-        task={editingTask}
-      />
-
-      <AlertDialog open={!!taskToDelete} onOpenChange={() => setTaskToDelete(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Task?</AlertDialogTitle>
-            <AlertDialogDescription>This action cannot be undone. Are you sure you want to delete this task?</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDeleteTask}>Delete</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
   );
 };
