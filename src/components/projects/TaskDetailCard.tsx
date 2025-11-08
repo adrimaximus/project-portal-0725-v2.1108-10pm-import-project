@@ -98,7 +98,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
     updateComment, 
     deleteComment, 
     toggleReaction 
-  } = useCommentManager({ scope: { taskId: task.id } });
+  } = useCommentManager({ scope: { taskId: task.id, projectId: task.project_id } });
   
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
