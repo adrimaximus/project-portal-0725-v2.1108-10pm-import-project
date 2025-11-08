@@ -141,11 +141,8 @@ const ProjectDetailPage = () => {
     }
   };
 
-  const handleDeleteTask = (taskId: string) => {
-    const task = project?.tasks?.find(t => t.id === taskId);
-    if (task) {
-      setTaskToDelete(task);
-    }
+  const handleDeleteTask = (task: Task) => {
+    setTaskToDelete(task);
   };
 
   const confirmDeleteTask = () => { if (taskToDelete) { deleteTask(taskToDelete.id); setTaskToDelete(null); } };
