@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Project, Task, Reaction, User, Comment as CommentType } from "@/types";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import ProjectComments from '@/components/project-detail/ProjectComments';
+import ProjectBrief from './ProjectBrief';
+import RequestComments from "../request/RequestComments";
 import { useAuth } from '@/contexts/AuthContext';
 import ProjectOverviewTab from './ProjectOverviewTab';
 import ProjectTasks from './ProjectTasks';
@@ -17,6 +18,8 @@ import { useTags } from '@/hooks/useTags';
 import { getErrorMessage, parseMentions } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
+import { Dialog } from '@/components/ui/dialog';
+import TaskDetailCard from '@/components/projects/TaskDetailCard';
 
 interface ProjectMainContentProps {
   project: Project;
@@ -65,6 +68,7 @@ const ProjectMainContent = ({
     queryClient.invalidateQueries({ queryKey: ['project', project.slug] });
   });
   const { data: allTags = [] } = useTags();
+  const [selectedTaskToView, setSelectedTaskToView] = useState<Task | null>(null);
 
   useEffect(() => {
     const mentionId = searchParams.get('mention');
@@ -250,6 +254,7 @@ const ProjectMainContent = ({
             onToggleTaskCompletion={onToggleTaskCompletion}
             highlightedTaskId={highlightedTaskId}
             onHighlightComplete={onTaskHighlightComplete}
+            onTaskClick={setSelectedTaskToView}
           />
         </TabsContent>
         <TabsContent value="discussion" className="mt-4">
@@ -274,6 +279,16 @@ const ProjectMainContent = ({
           <ProjectActivityFeed activities={project.activities || []} />
         </TabsContent>
       </Tabs>
+      <Dialog open={!!selectedTaskToView} onOpenChange={(isOpen) => !isOpen && setSelectedTaskToView(null)}>
+        {selectedTaskToView && (
+          <TaskDetailCard
+            task={selectedTaskToView}
+            onClose={() => setSelectedTaskToView(null)}
+            onEdit={onEditTask}
+            onDelete={(task) => onDeleteTask(task)}
+          />
+        )}
+      </Dialog>
     </div>
   );
 };
