@@ -14,6 +14,7 @@ import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import TaskAttachmentList from '../projects/TaskAttachmentList';
 import { cn, getErrorMessage, formatBytes } from "@/lib/utils";
+import { useNavigate } from "react-router-dom";
 import { Separator } from "@/components/ui/separator";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { supabase } from "@/integrations/supabase/client";
@@ -27,7 +28,7 @@ interface ProjectTasksProps {
   projectId: string;
   projectSlug: string;
   onEditTask: (task: Task) => void;
-  onDeleteTask: (task: Task) => void;
+  onDeleteTask: (taskId: string) => void;
   onToggleTaskCompletion: (task: Task, completed: boolean) => void;
   highlightedTaskId?: string | null;
   onHighlightComplete?: () => void;
@@ -38,7 +39,7 @@ const TaskRow = ({ task, onToggleTaskCompletion, onEditTask, onDeleteTask, handl
   task: Task;
   onToggleTaskCompletion: (task: Task, completed: boolean) => void;
   onEditTask: (task: Task) => void;
-  onDeleteTask: (task: Task) => void;
+  onDeleteTask: (taskId: string) => void;
   handleToggleReaction: (taskId: string, emoji: string) => void;
   setRef: (el: HTMLDivElement | null) => void;
   onTaskClick: (task: Task) => void;
@@ -174,7 +175,7 @@ const TaskRow = ({ task, onToggleTaskCompletion, onEditTask, onDeleteTask, handl
             <Edit className="mr-2 h-4 w-4" />
             Edit
           </DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => onDeleteTask(task)} className="text-destructive">
+          <DropdownMenuItem onSelect={() => onDeleteTask(task.id)} className="text-destructive">
             <Trash2 className="mr-2 h-4 w-4" />
             Delete
           </DropdownMenuItem>

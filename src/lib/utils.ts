@@ -141,10 +141,10 @@ export const formatPhoneNumberForApi = (phone: string): string | null => {
     return null;
 };
 
-export const getErrorMessage = (error: any): string => {
+export const getErrorMessage = (error: any, defaultMessage: string = 'An unknown error occurred.'): string => {
   if (typeof error === 'string') return error;
   if (error && typeof error.message === 'string') return error.message;
-  return 'An unknown error occurred.';
+  return defaultMessage;
 };
 
 export const formatBytes = (bytes: number | null | undefined, decimals = 2) => {
@@ -158,7 +158,7 @@ export const formatBytes = (bytes: number | null | undefined, decimals = 2) => {
 
 export const formatTaskText = (text: string, maxLength?: number): string => {
   if (!text) return '';
-  let processedText = text.replace(/@\[([^\]]+)\]\([^)]+\)/g, '@$1');
+  let processedText = text.replace(/@\[([^\]]+)\]\(([^)]+)\)/g, '@$1');
   if (maxLength && processedText.length > maxLength) {
     processedText = `${processedText.substring(0, maxLength)}...`;
   }

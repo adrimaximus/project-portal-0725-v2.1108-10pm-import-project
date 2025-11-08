@@ -177,7 +177,12 @@ const ProjectMainContent = ({
             projectId={project.id}
             projectSlug={project.slug}
             onEditTask={onEditTask}
-            onDeleteTask={onDeleteTask}
+            onDeleteTask={(taskId: string) => {
+              const task = project.tasks?.find(t => t.id === taskId);
+              if (task) {
+                onDeleteTask(task);
+              }
+            }}
             onToggleTaskCompletion={onToggleTaskCompletion}
             highlightedTaskId={highlightedTaskId}
             onHighlightComplete={onHighlightComplete}
