@@ -196,6 +196,8 @@ export interface Project {
   client_company_id: string | null;
   reactions: Reaction[];
   public: boolean;
+  venue?: string | null;
+  origin_event_id?: string | null;
 }
 
 export type ProjectStatus = 'On Track' | 'At Risk' | 'Off Track' | 'On Hold' | 'Completed' | 'Archived' | 'Cancelled' | 'Bid Lost' | 'Billing Process' | 'In Progress' | 'Pending' | 'Requested' | 'Planning' | 'Reschedule';
