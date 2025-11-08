@@ -43,17 +43,6 @@ type SplitInvoice = {
   payment_terms?: any[];
 };
 
-const toRoman = (num: number) => {
-    const roman: { [key: string]: number } = { M: 1000, CM: 900, D: 500, CD: 400, C: 100, XC: 90, L: 50, XL: 40, X: 10, IX: 9, V: 5, IV: 4, I: 1 };
-    let str = '';
-    for (let i of Object.keys(roman)) {
-        let q = Math.floor(num / roman[i]);
-        num -= q * roman[i];
-        str += i.repeat(q);
-    }
-    return str;
-};
-
 export const EditInvoiceDialog = ({ isOpen, onClose, invoice, project }: EditInvoiceDialogProps) => {
   const queryClient = useQueryClient();
   const [isProcessing, setIsProcessing] = useState(false);
@@ -151,17 +140,55 @@ export const EditInvoiceDialog = ({ isOpen, onClose, invoice, project }: EditInv
   };
 
   const addSplit = () => {
-    setSplitInvoices([...splitInvoices, {
+    const newSplits = [...splitInvoices, {
       id: `new-${uuidv4()}`,
       client_company_id: null,
       amount: null,
       payment_due_date: undefined,
       payment_status: 'Proposed',
-    }]);
+    }];
+    
+    if (splitMode === 'term' && project?.budget && project.budget > 0) {
+        const newCount = newSplits.length;
+        const splitAmount = Math.round(project.budget / newCount);
+        newSplits.forEach((split, i) => {
+            split.amount = i === newCount - 1 ? project.budget - (splitAmount * (newCount - 1)) : splitAmount;
+        });
+    }
+
+    setSplitInvoices(newSplits);
   };
 
   const removeSplit = (index: number) => {
-    setSplitInvoices(splitInvoices.filter((_, i) => i !== index));
+    const newSplits = splitInvoices.filter((_, i) => i !== index);
+    
+    if (splitMode === 'term' && project?.budget && project.budget > 0 && newSplits.length > 0) {
+        const newCount = newSplits.length;
+        const splitAmount = Math.round(project.budget / newCount);
+        newSplits.forEach((split, i) => {
+            split.amount = i === newCount - 1 ? project.budget - (splitAmount * (newCount - 1)) : splitAmount;
+        });
+    }
+
+    setSplitInvoices(newSplits);
+  };
+
+  const handleGenerateInvoiceNumber = async (index: number) => {
+    if (!project) return;
+    setIsGenerating(true);
+    try {
+        const { data, error } = await supabase.rpc('generate_invoice_number', {
+            p_project_id: project.id,
+            p_term_index: index,
+        });
+        if (error) throw error;
+        handleSplitInvoiceChange(index, 'invoice_number', data);
+        toast.success("Invoice number generated.");
+    } catch (error: any) {
+        toast.error("Failed to generate invoice number.", { description: error.message });
+    } finally {
+        setIsGenerating(false);
+    }
   };
 
   const totalAmount = useMemo(() => splitInvoices.reduce((sum, si) => sum + (si.amount || 0), 0), [splitInvoices]);
@@ -229,7 +256,24 @@ export const EditInvoiceDialog = ({ isOpen, onClose, invoice, project }: EditInv
                     )}
                   </div>
                   <div className="grid grid-cols-2 gap-2">
-                    <Input placeholder="Invoice #" value={split.invoice_number || ''} onChange={(e) => handleSplitInvoiceChange(index, 'invoice_number', e.target.value)} />
+                    <div className="relative">
+                        <Input 
+                            placeholder="Invoice #" 
+                            value={split.invoice_number || ''} 
+                            onChange={(e) => handleSplitInvoiceChange(index, 'invoice_number', e.target.value)} 
+                        />
+                        <Button 
+                            type="button" 
+                            size="icon" 
+                            variant="ghost" 
+                            className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+                            onClick={() => handleGenerateInvoiceNumber(index)}
+                            disabled={isGenerating}
+                            title="Generate Invoice Number"
+                        >
+                            {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
+                        </Button>
+                    </div>
                     <Input placeholder="PO #" value={split.po_number || ''} onChange={(e) => handleSplitInvoiceChange(index, 'po_number', e.target.value)} />
                   </div>
                 </div>
