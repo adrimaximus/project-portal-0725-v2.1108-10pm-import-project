@@ -49,6 +49,7 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const { updatePeopleOrder } = usePeopleKanbanMutations();
   const [personGroups, setPersonGroups] = useState<Record<string, Person[]>>({});
+  const isOptimisticUpdate = useRef(false);
 
   const uncategorizedTag: Tag = { id: 'uncategorized', name: 'Uncategorized', color: '#9ca3af', user_id: '' };
 
@@ -89,6 +90,11 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
   }, [kanbanGroupBy, people, tags, columnOrder, visibleColumnIds, uncategorizedTag, allCompanies]);
 
   useEffect(() => {
+    if (isOptimisticUpdate.current) {
+      isOptimisticUpdate.current = false;
+      return;
+    }
+
     if (!activePerson) {
       const groups: Record<string, Person[]> = {};
       columns.forEach(col => {
@@ -241,7 +247,6 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
     setActivePerson(null);
     setTimeout(() => { dragHappened.current = false; }, 0);
 
-    const { active, over } = event;
     if (!over) return;
 
     const activeId = String(active.id);
@@ -250,6 +255,8 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
     const destContainerId = overIsItem ? over.data.current?.sortable.containerId as string : String(over.id);
 
     if (!sourceContainerId || !destContainerId) return;
+
+    isOptimisticUpdate.current = true;
 
     const newPeopleState = Object.values(personGroups).flat();
     const sourceColumnIds = (personGroups[sourceContainerId] || []).map(p => p.id);

@@ -17,12 +17,18 @@ const KanbanView = ({ projects, groupBy }: { projects: Project[], groupBy: 'stat
   const dragHappened = useRef(false);
   const { updateProjectOrder } = useProjectKanbanMutations();
   const [projectGroups, setProjectGroups] = useState<Record<string, Project[]>>({});
+  const isOptimisticUpdate = useRef(false);
 
   const columns = useMemo(() => {
     return groupBy === 'status' ? PROJECT_STATUS_OPTIONS : PAYMENT_STATUS_OPTIONS;
   }, [groupBy]);
 
   useEffect(() => {
+    if (isOptimisticUpdate.current) {
+      isOptimisticUpdate.current = false;
+      return;
+    }
+
     if (!activeProject) {
       const groups: Record<string, Project[]> = {};
       columns.forEach(opt => {
@@ -126,7 +132,6 @@ const KanbanView = ({ projects, groupBy }: { projects: Project[], groupBy: 'stat
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
     setActiveProject(null);
     setTimeout(() => { dragHappened.current = false; }, 0);
 
@@ -137,6 +142,8 @@ const KanbanView = ({ projects, groupBy }: { projects: Project[], groupBy: 'stat
     const overIsItem = !!over.data.current?.sortable;
     const overContainer = overIsItem ? over.data.current?.sortable.containerId as string : String(over.id);
     
+    isOptimisticUpdate.current = true;
+
     const activeProjectInstance = projects.find(p => p.id === activeId);
     if (!activeProjectInstance || !activeContainer || !overContainer) return;
 
