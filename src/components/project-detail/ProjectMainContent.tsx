@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { Project, Task, Reaction, User, Comment as CommentType } from "@/types";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ProjectBrief from './ProjectBrief';
-import RequestComments from "../request/RequestComments";
 import { useAuth } from '@/contexts/AuthContext';
 import ProjectOverviewTab from './ProjectOverviewTab';
 import ProjectTasks from './ProjectTasks';
@@ -20,6 +19,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { Dialog } from '@/components/ui/dialog';
 import TaskDetailCard from '@/components/projects/TaskDetailCard';
+import ProjectComments from '@/components/project-detail/ProjectComments';
 
 interface ProjectMainContentProps {
   project: Project;
