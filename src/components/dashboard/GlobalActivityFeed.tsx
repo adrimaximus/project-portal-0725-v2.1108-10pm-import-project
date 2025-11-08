@@ -22,10 +22,33 @@ const GlobalActivityFeed = () => {
 
   const formatDescription = (text: string) => {
     if (!text) return "";
-    return text
+
+    let processedText = text
       .replace(/\\"/g, "")
       .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-card-foreground">$1</strong>')
       .replace(/@\[(.*?)\]\(.*?\)/g, '@$1');
+
+    const attachmentMatch = processedText.match(/(Attachments:.*)/s);
+
+    if (attachmentMatch) {
+      const mainDescription = processedText.substring(0, attachmentMatch.index);
+      const attachmentBlock = attachmentMatch[0];
+      
+      const linkRegex = /\[(.*?)\]\((.*?)\)/g;
+      let linksHtml = '';
+      let match;
+      while ((match = linkRegex.exec(attachmentBlock)) !== null) {
+        const fileName = match[1];
+        const fileUrl = match[2];
+        linksHtml += `<a href="${fileUrl}" class="underline" target="_blank" rel="noopener noreferrer">${fileName}</a><br>`;
+      }
+
+      if (linksHtml) {
+        return `${mainDescription}<br><em class="text-muted-foreground">Attachments:</em><blockquote class="mt-1 border-l-2 pl-4 text-xs">${linksHtml}</blockquote>`;
+      }
+    }
+
+    return processedText;
   };
 
   return (
