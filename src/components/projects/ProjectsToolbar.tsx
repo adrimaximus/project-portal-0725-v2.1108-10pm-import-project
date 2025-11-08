@@ -31,6 +31,7 @@ type ProjectsToolbarProps = {
   advancedFilters: AdvancedFiltersState;
   onAdvancedFiltersChange: (filters: AdvancedFiltersState) => void;
   allPeople: Person[];
+  allOwners: Person[];
 };
 
 const ProjectsToolbar = ({
@@ -49,6 +50,7 @@ const ProjectsToolbar = ({
   advancedFilters,
   onAdvancedFiltersChange,
   allPeople,
+  allOwners,
 }: ProjectsToolbarProps) => {
   return (
     <div className="p-4 border-t flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -108,7 +110,12 @@ const ProjectsToolbar = ({
         
         <Separator orientation="vertical" className="h-6" />
 
-        <ProjectAdvancedFilters filters={advancedFilters} onFiltersChange={onAdvancedFiltersChange} allPeople={allPeople} />
+        <ProjectAdvancedFilters
+          filters={advancedFilters}
+          onFiltersChange={onAdvancedFiltersChange}
+          allPeople={allPeople}
+          allOwners={allOwners}
+        />
       </div>
 
       {/* Desktop Action Buttons */}

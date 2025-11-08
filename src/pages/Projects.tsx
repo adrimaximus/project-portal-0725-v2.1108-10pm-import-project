@@ -70,9 +70,9 @@ const ProjectsPage = () => {
   const projectsData = useMemo(() => data?.pages.flatMap(page => page.projects) ?? [], [data]);
   
   const [advancedFilters, setAdvancedFilters] = useState<AdvancedFiltersState>({
-    selectedPeopleIds: [],
-    status: [],
-    dueDate: null,
+    ownerIds: [],
+    memberIds: [],
+    excludedStatus: [],
   });
 
   const { data: peopleData } = useQuery<Person[]>({
@@ -87,6 +87,20 @@ const ProjectsPage = () => {
       .map(p => ({ id: p.user_id!, name: p.full_name }));
   }, [peopleData]);
 
+  const allOwners = useMemo(() => {
+    if (!projectsData) return [];
+    const ownerMap = new Map<string, { id: string, name: string }>();
+    projectsData.forEach(project => {
+      if (project.created_by && !ownerMap.has(project.created_by.id)) {
+        ownerMap.set(project.created_by.id, {
+          id: project.created_by.id,
+          name: project.created_by.name,
+        });
+      }
+    });
+    return Array.from(ownerMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [projectsData]);
+
   const {
     dateRange, setDateRange,
     sortConfig: projectSortConfig, requestSort: requestProjectSort, sortedProjects
@@ -98,7 +112,7 @@ const ProjectsPage = () => {
     setTaskSortConfig(prevConfig => {
       let direction: 'asc' | 'desc' = 'asc';
       if (prevConfig.key === key && prevConfig.direction === 'asc') {
-        direction = 'desc';
+        direction = 'descending';
       }
       return { key, direction };
     });
@@ -127,6 +141,7 @@ const ProjectsPage = () => {
 
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
   const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
+  const createProjectMutation = useCreateProject();
   const [scrollToProjectId, setScrollToProjectId] = useState<string | null>(null);
   const initialTableScrollDone = useRef(false);
   
@@ -369,6 +384,7 @@ const ProjectsPage = () => {
             advancedFilters={advancedFilters}
             onAdvancedFiltersChange={setAdvancedFilters}
             allPeople={allPeople}
+            allOwners={allOwners}
           />
         </div>
         <div ref={scrollContainerRef} className="flex-grow min-h-0 overflow-y-auto">
@@ -384,7 +400,7 @@ const ProjectsPage = () => {
               requestSort={(key) => requestProjectSort(key as keyof Project)}
               rowRefs={rowRefs}
               kanbanGroupBy={kanbanGroupBy}
-              onEditTask={(task) => onOpenTaskModal(task)}
+              onEditTask={(task) => onOpenTaskModal(task, undefined, project)}
               onDeleteTask={setTaskToDelete}
               onToggleTaskCompletion={handleToggleTaskCompletion}
               onTaskStatusChange={handleTaskStatusChange}

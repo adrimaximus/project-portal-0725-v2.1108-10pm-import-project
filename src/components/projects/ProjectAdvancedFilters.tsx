@@ -36,9 +36,10 @@ interface ProjectAdvancedFiltersProps {
   filters: AdvancedFiltersState;
   onFiltersChange: (filters: AdvancedFiltersState) => void;
   allPeople: Person[];
+  allOwners: Person[];
 }
 
-const ProjectAdvancedFilters = ({ filters, onFiltersChange, allPeople }: ProjectAdvancedFiltersProps) => {
+const ProjectAdvancedFilters = ({ filters, onFiltersChange, allPeople, allOwners }: ProjectAdvancedFiltersProps) => {
   const [open, setOpen] = useState(false);
   const isDesktop = useMediaQuery("(min-width: 768px)");
 
@@ -87,7 +88,7 @@ const ProjectAdvancedFilters = ({ filters, onFiltersChange, allPeople }: Project
             <CommandList>
               <CommandEmpty>No person found.</CommandEmpty>
               <CommandGroup>
-                {allPeople.map((person) => (
+                {allOwners.map((person) => (
                   <CommandItem key={person.id} value={person.name} onSelect={() => handleOwnerToggle(person.id)}>
                     <Check className={cn("mr-2 h-4 w-4", filters.ownerIds?.includes(person.id) ? "opacity-100" : "opacity-0")} />
                     {person.name}
