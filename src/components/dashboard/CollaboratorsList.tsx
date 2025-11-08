@@ -21,7 +21,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ChevronsUpDown, Filter } from "lucide-react";
+import { ChevronsUpDown, Filter, CheckCircle, Clock, AlertTriangle, PlusSquare } from "lucide-react";
 import { generatePastelColor, getAvatarUrl } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from "@/components/ui/button";
@@ -31,6 +31,7 @@ import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, Dr
 import { Label } from '../ui/label';
 import { Checkbox } from '../ui/checkbox';
 import { Separator } from '../ui/separator';
+import { Progress } from '@/components/ui/progress';
 
 interface CollaboratorsListProps {
   projects: Project[];
@@ -58,6 +59,12 @@ interface CollaboratorStat extends User {
   activeTicketCount: number;
   overdueBillCount: number;
   role: string;
+  assignedTaskCount: number;
+  completedAssignedTaskCount: number;
+  createdTaskCount: number;
+  completedCreatedTaskCount: number;
+  overdueTaskCount: number;
+  completedOnTimeCount: number;
 }
 
 const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
@@ -116,6 +123,12 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
                 countedProjectIds: new Set(),
                 matchingTaskIds: new Set(),
                 matchingTasksDetails: new Map(),
+                assignedTaskCount: 0,
+                completedAssignedTaskCount: 0,
+                createdTaskCount: 0,
+                completedCreatedTaskCount: 0,
+                overdueTaskCount: 0,
+                completedOnTimeCount: 0,
             };
         }
         return stats[user.id];
@@ -166,17 +179,29 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
 
         const isOverdue = !task.completed && task.due_date && new Date(task.due_date) < todayForOverdue;
 
-        if (taskFilters.includes('created')) {
+        if (task.created_by) {
             const creatorStat = ensureUser(task.created_by);
             if (creatorStat) {
-                creatorStat.matchingTaskIds.add(task.id);
-                creatorStat.matchingTasksDetails.set(task.project_id, task.project_name);
+                creatorStat.createdTaskCount++;
+                if (task.completed) {
+                    creatorStat.completedCreatedTaskCount++;
+                }
             }
         }
 
         (task.assignedTo || []).forEach((assignee: User) => {
             const userStat = ensureUser(assignee);
             if (!userStat) return;
+
+            userStat.assignedTaskCount++;
+            if (task.completed) {
+                userStat.completedAssignedTaskCount++;
+                if (task.due_date && task.updated_at && new Date(task.updated_at) <= new Date(task.due_date)) {
+                    userStat.completedOnTimeCount++;
+                }
+            } else if (isOverdue) {
+                userStat.overdueTaskCount++;
+            }
 
             if (taskFilters.includes('active') && !task.completed) {
                 userStat.matchingTaskIds.add(task.id);
@@ -296,6 +321,50 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
             ) : (
               <p>No tasks match the current filter.</p>
             )}
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  };
+
+  const renderCompletionRate = (c: CollaboratorStat) => {
+    const completionRate = c.assignedTaskCount > 0 ? (c.completedAssignedTaskCount / c.assignedTaskCount) * 100 : 0;
+    const onTimeRate = c.completedAssignedTaskCount > 0 ? (c.completedOnTimeCount / c.completedAssignedTaskCount) * 100 : 0;
+    const createdCompletionRate = c.createdTaskCount > 0 ? (c.completedCreatedTaskCount / c.createdTaskCount) * 100 : 0;
+
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="flex items-center justify-end gap-2">
+              <span>{completionRate.toFixed(0)}%</span>
+              <Progress value={completionRate} className="w-16 h-1.5" />
+            </div>
+          </TooltipTrigger>
+          <TooltipContent>
+            <div className="space-y-2 text-sm">
+              <p className="font-bold">Task Productivity</p>
+              <div className="flex items-center gap-2">
+                <CheckCircle className="h-4 w-4 text-green-500" />
+                <div>
+                  <p><strong>{onTimeRate.toFixed(0)}%</strong> On-Time Completion</p>
+                  <p className="text-xs text-muted-foreground">{c.completedOnTimeCount} of {c.completedAssignedTaskCount} completed tasks</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-red-500" />
+                <div>
+                  <p><strong>{c.overdueTaskCount}</strong> Overdue Task(s)</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <PlusSquare className="h-4 w-4 text-blue-500" />
+                <div>
+                  <p><strong>{createdCompletionRate.toFixed(0)}%</strong> Created Tasks Completed</p>
+                  <p className="text-xs text-muted-foreground">{c.completedCreatedTaskCount} of {c.createdTaskCount} created tasks</p>
+                </div>
+              </div>
+            </div>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
@@ -451,8 +520,8 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
                             <div className="text-right font-medium">{renderFilteredProjectCount(c)}</div>
                             <div className="text-muted-foreground">Filtered Tasks</div>
                             <div className="text-right font-medium">{renderFilteredTaskCount(c)}</div>
-                            <div className="text-muted-foreground">Active Tickets</div>
-                            <div className="text-right font-medium">{c.activeTicketCount}</div>
+                            <div className="text-muted-foreground">Completion Rate</div>
+                            <div className="text-right font-medium">{renderCompletionRate(c)}</div>
                             <div className="text-muted-foreground">Overdue Bill</div>
                             <div className="text-right font-medium">{c.overdueBillCount}</div>
                           </div>
@@ -472,7 +541,7 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
                             <TableHead className="text-right">Total Projects</TableHead>
                             <TableHead className="text-right">Filtered Projects</TableHead>
                             <TableHead className="text-right">Filtered Tasks</TableHead>
-                            <TableHead className="text-right">Active Tickets</TableHead>
+                            <TableHead className="text-right">Completion Rate</TableHead>
                             <TableHead className="text-right">Overdue Bill</TableHead>
                         </TableRow>
                     </TableHeader>
@@ -500,7 +569,7 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
                                     <TableCell className="text-right font-medium">{c.projectCount}</TableCell>
                                     <TableCell className="text-right font-medium">{renderFilteredProjectCount(c)}</TableCell>
                                     <TableCell className="text-right font-medium">{renderFilteredTaskCount(c)}</TableCell>
-                                    <TableCell className="text-right font-medium">{c.activeTicketCount}</TableCell>
+                                    <TableCell className="text-right font-medium">{renderCompletionRate(c)}</TableCell>
                                     <TableCell className="text-right font-medium">{c.overdueBillCount}</TableCell>
                                 </TableRow>
                             ))}
