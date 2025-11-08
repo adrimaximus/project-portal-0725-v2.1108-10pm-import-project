@@ -1,39 +1,32 @@
-import { useInfiniteQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { Task } from "@/types";
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { Task } from '@/types';
 
-const TASKS_PER_PAGE = 50;
+type UseTasksProps = {
+  projectIds?: string[];
+  hideCompleted?: boolean;
+  sortConfig: { key: string; direction: 'asc' | 'desc' };
+  enabled?: boolean;
+};
 
-export const useTasks = (filters: { 
-  projectIds?: string[] | null; 
-  completed?: boolean; 
-  orderBy?: string; 
-  orderDirection?: 'asc' | 'desc'; 
-}) => {
-  return useInfiniteQuery({
-    queryKey: ['tasks', filters],
-    queryFn: async ({ pageParam = 0 }) => {
+export const useTasks = ({ projectIds, hideCompleted, sortConfig, enabled = true }: UseTasksProps) => {
+  return useQuery<Task[], Error>({
+    queryKey: ['tasks', { projectIds, hideCompleted, sortConfig }],
+    queryFn: async () => {
       const { data, error } = await supabase.rpc('get_project_tasks', {
-        p_project_ids: filters.projectIds,
-        p_completed: filters.completed,
-        p_order_by: filters.orderBy,
-        p_order_direction: filters.orderDirection,
-        p_limit: TASKS_PER_PAGE,
-        p_offset: pageParam * TASKS_PER_PAGE,
+        p_project_ids: projectIds || null,
+        p_completed: hideCompleted ? false : null,
+        p_order_by: sortConfig.key,
+        p_order_direction: sortConfig.direction,
+        p_limit: 1000, // A reasonable limit for tasks display
+        p_offset: 0,
       });
 
       if (error) {
         throw new Error(`Failed to fetch tasks: ${error.message}`);
       }
-      
-      return data as Task[];
+      return data || [];
     },
-    initialPageParam: 0,
-    getNextPageParam: (lastPage, allPages) => {
-      if (!lastPage || lastPage.length < TASKS_PER_PAGE) {
-        return undefined;
-      }
-      return allPages.length;
-    },
+    enabled,
   });
 };

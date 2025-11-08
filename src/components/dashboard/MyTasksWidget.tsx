@@ -19,7 +19,7 @@ import { useTaskModal } from '@/contexts/TaskModalContext';
 
 const MyTasksWidget = () => {
   const { user } = useAuth();
-  const { data: tasksData, isLoading, refetch } = useTasks({
+  const { data: allTasks = [], isLoading, refetch } = useTasks({
     sortConfig: { key: 'due_date', direction: 'asc' },
   });
   const { onOpen: onOpenTaskModal } = useTaskModal();
@@ -27,8 +27,6 @@ const MyTasksWidget = () => {
   const [filter, setFilter] = useState<'upcoming' | 'overdue'>('upcoming');
 
   const { toggleTaskReaction } = useTaskMutations(refetch);
-
-  const allTasks = useMemo(() => tasksData?.pages.flatMap(page => page) ?? [], [tasksData]);
 
   const allMyAssignedTasks = useMemo(() => allTasks.filter(task => 
     task.assignedTo?.some(assignee => assignee.id === user?.id)
