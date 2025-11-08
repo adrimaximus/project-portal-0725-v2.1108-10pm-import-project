@@ -211,7 +211,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
             href = '/projects?view=list';
         }
         if (itemNameLower === 'tasks') {
-            href = '/projects?view=list';
+            href = '/projects?view=tasks-kanban';
         }
         if (itemNameLower === 'knowledge base' && href !== '/knowledge-base') {
             href = '/knowledge-base';
