@@ -218,3 +218,42 @@ export interface UpsertTaskPayload {
   new_files?: File[];
   deleted_files?: string[];
 }
+
+export interface Person {
+  id: string;
+  full_name: string;
+  email?: string | null;
+  phone?: string | null;
+  company?: string | null;
+  company_id?: string | null;
+  job_title?: string | null;
+  department?: string | null;
+  social_media?: { [key: string]: string } | null;
+  birthday?: string | null;
+  notes?: string | null;
+  created_at: string;
+  updated_at: string;
+  projects?: { id: string; name: string; slug: string; status: string; start_date: string }[] | null;
+  tags?: Tag[] | null;
+  avatar_url?: string | null;
+  user_id?: string | null;
+  address?: any | null;
+  contact?: { emails?: string[]; phones?: string[] } | null;
+  slug: string;
+  kanban_order?: number;
+  custom_properties?: Record<string, any> | null;
+  company_logo_url?: string | null;
+}
+
+export interface Company {
+  id: string;
+  name: string;
+  legal_name?: string | null;
+  address?: string | null;
+  billing_address?: string | null;
+  logo_url?: string | null;
+  created_at: string;
+  updated_at: string;
+  user_id?: string | null;
+  custom_properties?: Record<string, any> | null;
+}

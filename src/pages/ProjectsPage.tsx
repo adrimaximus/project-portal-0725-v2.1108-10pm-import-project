@@ -28,7 +28,6 @@ import { useTaskModal } from '@/contexts/TaskModalContext';
 import { getProjectBySlug } from '@/lib/projectsApi';
 
 type ViewMode = 'table' | 'list' | 'kanban' | 'tasks' | 'tasks-kanban';
-type SortConfig<T> = { key: keyof T | null; direction: 'ascending' | 'descending' };
 
 const ProjectsPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -105,7 +104,7 @@ const ProjectsPage = () => {
   const requestTaskSort = useCallback((key: string) => {
     setTaskSortConfig(prevConfig => ({
       key,
-      direction: prevConfig.key === key && prevConfig.direction === 'asc' ? 'descending' : 'ascending',
+      direction: prevConfig.key === key && prevConfig.direction === 'asc' ? 'desc' : 'asc',
     }));
   }, []);
 
@@ -347,7 +346,7 @@ const ProjectsPage = () => {
               isTasksLoading={isLoadingTasks}
               onDeleteProject={handleDeleteProject}
               sortConfig={projectSortConfig}
-              requestSort={(key) => requestSort(key as keyof Project)}
+              requestSort={(key) => requestProjectSort(key as keyof Project)}
               rowRefs={rowRefs}
               kanbanGroupBy={kanbanGroupBy}
               onEditTask={handleEditTask}
