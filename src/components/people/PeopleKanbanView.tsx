@@ -7,7 +7,7 @@ import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import PeopleKanbanColumn from './PeopleKanbanColumn';
 import PeopleKanbanCard from './PeopleKanbanCard';
 import KanbanColumnEditor from './KanbanColumnEditor';
-import { arrayMove, SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { arrayMove, SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePeopleKanbanMutations } from '@/hooks/usePeopleKanbanMutations';
 
@@ -55,7 +55,7 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
   const { data: allCompanies = [] } = useQuery<Company[]>({
     queryKey: ['allCompaniesForKanban'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('companies').select('id, name');
+      const { data, error } = await supabase.from('companies').select('*');
       if (error) throw error;
       return data;
     },
