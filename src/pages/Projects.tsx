@@ -25,6 +25,7 @@ import { getErrorMessage, formatInJakarta } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 import { useTaskModal } from '@/contexts/TaskModalContext';
+import { getProjectBySlug } from '@/lib/projectsApi';
 
 type ViewMode = 'table' | 'list' | 'kanban' | 'tasks' | 'tasks-kanban';
 type SortConfig<T> = { key: keyof T | null; direction: 'ascending' | 'descending' };
@@ -274,6 +275,18 @@ const ProjectsPage = () => {
     updateTaskStatusAndOrder(payload);
   };
 
+  const handleEditTask = async (task: ProjectTask) => {
+    try {
+      const projectForTask = await getProjectBySlug(task.project_slug);
+      if (!projectForTask) {
+        throw new Error("Project for this task could not be found.");
+      }
+      onOpenTaskModal(task, undefined, projectForTask);
+    } catch (error) {
+      toast.error("Could not open task editor.", { description: getErrorMessage(error) });
+    }
+  };
+
   const tasksQueryKey = ['tasks', { 
     projectIds: projectIdsForTaskView, 
     hideCompleted: hideCompletedTasks, 
@@ -339,10 +352,7 @@ const ProjectsPage = () => {
               requestSort={(key) => requestProjectSort(key as keyof Project)}
               rowRefs={rowRefs}
               kanbanGroupBy={kanbanGroupBy}
-              onEditTask={(task) => {
-                const projectForTask = projectsData.find(p => p.id === task.project_id);
-                onOpenTaskModal(task, undefined, projectForTask);
-              }}
+              onEditTask={handleEditTask}
               onDeleteTask={setTaskToDelete}
               onToggleTaskCompletion={handleToggleTaskCompletion}
               onTaskStatusChange={handleTaskStatusChange}
