@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Task, TaskStatus, TASK_STATUS_OPTIONS } from '@/types';
 import TasksKanbanColumn from './TasksKanbanColumn';
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, MouseSensor, TouchSensor, useSensor, useSensors, DragOverEvent, DropAnimation, defaultDropAnimationSideEffects } from '@dnd-kit/core';
@@ -28,7 +28,7 @@ const TasksKanbanView = ({ tasks, onEdit, onDelete, refetch, tasksQueryKey, onTa
   const [collapsedColumns, setCollapsedColumns] = useState<Set<TaskStatus>>(new Set());
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [tasksByStatus, setTasksByStatus] = useState<Record<TaskStatus, Task[]>>({} as Record<TaskStatus, Task[]>);
-  const [isDragging, setIsDragging] = useState(false);
+  const justDropped = useRef(false);
 
   useEffect(() => {
     const savedState = localStorage.getItem('tasksKanbanCollapsedColumns');
@@ -38,27 +38,30 @@ const TasksKanbanView = ({ tasks, onEdit, onDelete, refetch, tasksQueryKey, onTa
   }, []);
 
   useEffect(() => {
-    if (!isDragging) {
-      const grouped: { [key in TaskStatus]: Task[] } = TASK_STATUS_OPTIONS.reduce((acc, opt) => {
-        acc[opt.value] = [];
-        return acc;
-      }, {} as { [key in TaskStatus]: Task[] });
-  
-      tasks.forEach(task => {
-        const status = task.status || 'To do';
-        if (grouped[status]) {
-          grouped[status].push(task);
-        } else {
-          grouped['To do'].push(task);
-        }
-      });
-  
-      for (const status in grouped) {
-        grouped[status as TaskStatus].sort((a, b) => (a.kanban_order || 0) - (b.kanban_order || 0));
-      }
-      setTasksByStatus(grouped);
+    if (justDropped.current) {
+      justDropped.current = false;
+      return;
     }
-  }, [tasks, isDragging]);
+
+    const grouped: { [key in TaskStatus]: Task[] } = TASK_STATUS_OPTIONS.reduce((acc, opt) => {
+      acc[opt.value] = [];
+      return acc;
+    }, {} as { [key in TaskStatus]: Task[] });
+
+    tasks.forEach(task => {
+      const status = task.status || 'To do';
+      if (grouped[status]) {
+        grouped[status].push(task);
+      } else {
+        grouped['To do'].push(task);
+      }
+    });
+
+    for (const status in grouped) {
+      grouped[status as TaskStatus].sort((a, b) => (a.kanban_order || 0) - (b.kanban_order || 0));
+    }
+    setTasksByStatus(grouped);
+  }, [tasks]);
 
   const toggleColumnCollapse = (status: TaskStatus) => {
     setCollapsedColumns(prev => {
@@ -88,7 +91,6 @@ const TasksKanbanView = ({ tasks, onEdit, onDelete, refetch, tasksQueryKey, onTa
   );
 
   const handleDragStart = (event: DragStartEvent) => {
-    setIsDragging(true);
     const { active } = event;
     const task = tasks.find(t => t.id === active.id);
     if (task) {
@@ -147,7 +149,6 @@ const TasksKanbanView = ({ tasks, onEdit, onDelete, refetch, tasksQueryKey, onTa
     
     if (!over) {
       setActiveTask(null);
-      setIsDragging(false);
       return;
     }
 
@@ -160,7 +161,6 @@ const TasksKanbanView = ({ tasks, onEdit, onDelete, refetch, tasksQueryKey, onTa
     if (!activeContainer || !overContainer) {
         console.error("Could not determine drag and drop containers.");
         setActiveTask(null);
-        setIsDragging(false);
         return;
     }
 
@@ -181,9 +181,9 @@ const TasksKanbanView = ({ tasks, onEdit, onDelete, refetch, tasksQueryKey, onTa
         }
     }
     
+    justDropped.current = true;
     setTasksByStatus(finalTasksByStatusState);
     setActiveTask(null);
-    setIsDragging(false);
 
     const finalOrderedTasks = TASK_STATUS_OPTIONS.flatMap(option => 
       (finalTasksByStatusState[option.value] || []).map((task, index) => ({ ...task, status: option.value, kanban_order: index }))
@@ -201,7 +201,25 @@ const TasksKanbanView = ({ tasks, onEdit, onDelete, refetch, tasksQueryKey, onTa
 
   const handleDragCancel = () => {
     setActiveTask(null);
-    setIsDragging(false);
+    // Revert any changes made by onDragOver by re-grouping from the original prop
+    const grouped: { [key in TaskStatus]: Task[] } = TASK_STATUS_OPTIONS.reduce((acc, opt) => {
+        acc[opt.value] = [];
+        return acc;
+      }, {} as { [key in TaskStatus]: Task[] });
+  
+      tasks.forEach(task => {
+        const status = task.status || 'To do';
+        if (grouped[status]) {
+          grouped[status].push(task);
+        } else {
+          grouped['To do'].push(task);
+        }
+      });
+  
+      for (const status in grouped) {
+        grouped[status as TaskStatus].sort((a, b) => (a.kanban_order || 0) - (b.kanban_order || 0));
+      }
+      setTasksByStatus(grouped);
   };
 
   return (
