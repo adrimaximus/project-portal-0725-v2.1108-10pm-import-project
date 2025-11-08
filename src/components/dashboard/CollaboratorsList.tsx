@@ -21,7 +21,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ChevronsUpDown, ChevronDown } from "lucide-react";
+import { ChevronsUpDown, ChevronDown, Check } from "lucide-react";
 import { generatePastelColor, getAvatarUrl } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -29,8 +29,12 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuCheckboxItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import { formatDistanceToNow } from 'date-fns';
 
 interface CollaboratorsListProps {
   projects: Project[];
@@ -38,9 +42,12 @@ interface CollaboratorsListProps {
 
 interface CollaboratorStat extends User {
   projectCount: number;
-  upcomingProjectCount: number;
-  onGoingProjectCount: number;
-  activeProjectCount: number;
+  projects: {
+    id: string;
+    isUpcoming: boolean;
+    isOnGoing: boolean;
+    isActive: boolean;
+  }[];
   activeTaskCount: number;
   activeTicketCount: number;
   overdueBillCount: number;
@@ -50,13 +57,13 @@ interface CollaboratorStat extends User {
 const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [tasks, setTasks] = useState<any[]>([]);
-  const [filter, setFilter] = useState<'activeProject' | 'upcoming' | 'onGoing'>('activeProject');
+  const [filters, setFilters] = useState<string[]>(['activeProject']);
 
-  const filterLabels = {
-    activeProject: 'Active Projects',
-    upcoming: 'Upcoming',
-    onGoing: 'On Going',
-  };
+  const filterOptions = [
+    { value: 'activeProject', label: 'Active Projects' },
+    { value: 'upcoming', label: 'Upcoming' },
+    { value: 'onGoing', label: 'On Going' },
+  ];
 
   useEffect(() => {
     const fetchTasks = async () => {
@@ -87,9 +94,7 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
             stats[user.id] = {
                 ...user,
                 projectCount: 0,
-                upcomingProjectCount: 0,
-                onGoingProjectCount: 0,
-                activeProjectCount: 0,
+                projects: [],
                 activeTaskCount: 0,
                 activeTicketCount: 0,
                 overdueBillCount: 0,
@@ -125,9 +130,7 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
 
             if (!userStat.countedProjectIds.has(p.id)) {
                 userStat.projectCount++;
-                if (isUpcoming) userStat.upcomingProjectCount++;
-                if (isOnGoing) userStat.onGoingProjectCount++;
-                if (isActive) userStat.activeProjectCount++;
+                userStat.projects.push({ id: p.id, isUpcoming, isOnGoing, isActive });
                 if (isOverdue) userStat.overdueBillCount++;
                 userStat.countedProjectIds.add(p.id);
             }
@@ -172,17 +175,35 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
   }, [projects, tasks]);
 
   const getFilteredCount = (collaborator: CollaboratorStat) => {
-    switch (filter) {
-      case 'activeProject':
-        return collaborator.activeProjectCount;
-      case 'upcoming':
-        return collaborator.upcomingProjectCount;
-      case 'onGoing':
-        return collaborator.onGoingProjectCount;
-      default:
-        return 0;
-    }
+    if (filters.length === 0) return 0;
+    const matchingProjectIds = new Set<string>();
+    collaborator.projects.forEach(p => {
+        if (
+            (filters.includes('activeProject') && p.isActive) ||
+            (filters.includes('upcoming') && p.isUpcoming) ||
+            (filters.includes('onGoing') && p.isOnGoing)
+        ) {
+            matchingProjectIds.add(p.id);
+        }
+    });
+    return matchingProjectIds.size;
   };
+
+  const handleFilterChange = (filterValue: string) => {
+    setFilters(prev => 
+      prev.includes(filterValue) 
+        ? prev.filter(f => f !== filterValue)
+        : [...prev, filterValue]
+    );
+  };
+
+  const filterButtonText = useMemo(() => {
+    if (filters.length === 0) return "No filters selected";
+    if (filters.length === 1) {
+      return filterOptions.find(f => f.value === filters[0])?.label || "Filter";
+    }
+    return `${filters.length} filters selected`;
+  }, [filters]);
 
   return (
     <Card className="mb-24">
@@ -221,14 +242,20 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="outline" size="sm">
-                        {filterLabels[filter]}
+                        {filterButtonText}
                         <ChevronDown className="ml-2 h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onSelect={() => setFilter('activeProject')}>Active Projects</DropdownMenuItem>
-                      <DropdownMenuItem onSelect={() => setFilter('upcoming')}>Upcoming</DropdownMenuItem>
-                      <DropdownMenuItem onSelect={() => setFilter('onGoing')}>On Going</DropdownMenuItem>
+                      {filterOptions.map(opt => (
+                        <DropdownMenuCheckboxItem
+                          key={opt.value}
+                          checked={filters.includes(opt.value)}
+                          onCheckedChange={() => handleFilterChange(opt.value)}
+                        >
+                          {opt.label}
+                        </DropdownMenuCheckboxItem>
+                      ))}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
@@ -250,7 +277,7 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
                           <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
                             <div className="text-muted-foreground">Total Projects</div>
                             <div className="text-right font-medium">{c.projectCount}</div>
-                            <div className="text-muted-foreground">{filterLabels[filter]}</div>
+                            <div className="text-muted-foreground">{filterButtonText}</div>
                             <div className="text-right font-medium">{getFilteredCount(c)}</div>
                             <div className="text-muted-foreground">Active Tasks</div>
                             <div className="text-right font-medium">{c.activeTaskCount}</div>
@@ -277,14 +304,22 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                   <Button variant="ghost" className="px-2 -mr-2 h-8">
-                                    {filterLabels[filter]}
+                                    {filterButtonText}
                                     <ChevronDown className="ml-2 h-4 w-4" />
                                   </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
-                                  <DropdownMenuItem onSelect={() => setFilter('activeProject')}>Active Projects</DropdownMenuItem>
-                                  <DropdownMenuItem onSelect={() => setFilter('upcoming')}>Upcoming</DropdownMenuItem>
-                                  <DropdownMenuItem onSelect={() => setFilter('onGoing')}>On Going</DropdownMenuItem>
+                                  <DropdownMenuLabel>Filter by</DropdownMenuLabel>
+                                  <DropdownMenuSeparator />
+                                  {filterOptions.map(opt => (
+                                    <DropdownMenuCheckboxItem
+                                      key={opt.value}
+                                      checked={filters.includes(opt.value)}
+                                      onCheckedChange={() => handleFilterChange(opt.value)}
+                                    >
+                                      {opt.label}
+                                    </DropdownMenuCheckboxItem>
+                                  ))}
                                 </DropdownMenuContent>
                               </DropdownMenu>
                             </TableHead>
