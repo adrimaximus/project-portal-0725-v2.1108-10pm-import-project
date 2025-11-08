@@ -507,6 +507,7 @@ export interface Invoice {
   rawProjectId: string;
   projectStartDate: Date | null;
   projectEndDate: Date | null;
+  invoice_number: string | null;
   poNumber: string | null;
   paidDate: Date | null;
   emailSendingDate: Date | null;
