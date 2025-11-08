@@ -72,8 +72,8 @@ const BillingTable = ({ invoices, onEdit, sortColumn, sortDirection, handleSort,
       <TableHeader>
         <TableRow>
           <TableHead>
-            <Button variant="ghost" onClick={() => handleSort('invoice_number')} className="px-2">
-              Invoice # {renderSortIcon('invoice_number')}
+            <Button variant="ghost" onClick={() => handleSort('id')} className="px-2">
+              Invoice # {renderSortIcon('id')}
             </Button>
           </TableHead>
           <TableHead>
@@ -130,7 +130,7 @@ const BillingTable = ({ invoices, onEdit, sortColumn, sortDirection, handleSort,
         ) : (
           sortedInvoices.map((invoice) => (
             <TableRow key={invoice.id}>
-              <TableCell className={cn("font-medium", invoice.status === 'Overdue' && 'text-destructive font-semibold border-l-4 border-destructive', invoice.status === 'Paid' && 'text-green-600 font-semibold border-l-4 border-green-600')}>{invoice.invoice_number || 'N/A'}</TableCell>
+              <TableCell className={cn("font-medium", invoice.status === 'Overdue' && 'text-destructive font-semibold border-l-4 border-destructive', invoice.status === 'Paid' && 'text-green-600 font-semibold border-l-4 border-green-600')}>{invoice.id}</TableCell>
               <TableCell>
                 <Link to={`/projects/${invoice.projectId}`} className="font-medium text-primary hover:underline">
                   {invoice.projectName}
@@ -195,7 +195,7 @@ const BillingTable = ({ invoices, onEdit, sortColumn, sortDirection, handleSort,
               <TableCell>{invoice.poNumber || 'N/A'}</TableCell>
               <TableCell>{'Rp ' + invoice.amount.toLocaleString('id-ID')}</TableCell>
               <TableCell className={cn(invoice.status === 'Overdue' && 'text-destructive font-semibold')}>
-                {invoice.dueDate ? format(new Date(invoice.dueDate), 'MMM dd, yyyy') : 'N/A'}
+                {format(new Date(invoice.dueDate), 'MMM dd, yyyy')}
               </TableCell>
               <TableCell>
                 {invoice.invoiceAttachments && invoice.invoiceAttachments.length > 0 ? (

@@ -67,7 +67,7 @@ const BillingKanbanView = ({ invoices, onEditInvoice }: BillingKanbanViewProps) 
 
     const handleDragStart = (event: DragStartEvent) => {
         setIsDragging(true);
-        setActiveInvoice(invoices.find(i => i.id === event.active.id) || null);
+        setActiveInvoice(invoices.find(i => i.rawProjectId === event.active.id) || null);
     };
 
     const handleDragOver = (event: DragOverEvent) => {
@@ -93,13 +93,13 @@ const BillingKanbanView = ({ invoices, onEditInvoice }: BillingKanbanViewProps) 
             const destItems = newGroups[overContainer];
             if (!sourceItems || !destItems) return prev;
     
-            const activeIndex = sourceItems.findIndex(p => p.id === activeId);
+            const activeIndex = sourceItems.findIndex(p => p.rawProjectId === activeId);
             if (activeIndex === -1) return prev;
     
             const [movedItem] = sourceItems.splice(activeIndex, 1);
     
             movedItem.status = overContainer as PaymentStatus;
-            const overIndex = overIsItem ? destItems.findIndex(p => p.id === overId) : destItems.length;
+            const overIndex = overIsItem ? destItems.findIndex(p => p.rawProjectId === overId) : destItems.length;
             if (overIndex !== -1) {
                 destItems.splice(overIndex, 0, movedItem);
             } else {
@@ -124,7 +124,7 @@ const BillingKanbanView = ({ invoices, onEditInvoice }: BillingKanbanViewProps) 
         const overIsItem = !!over.data.current?.sortable;
         const overContainer = overIsItem ? over.data.current?.sortable.containerId as string : String(over.id);
         
-        const activeInvoiceInstance = invoices.find(i => i.id === activeId);
+        const activeInvoiceInstance = invoices.find(i => i.rawProjectId === activeId);
         if (!activeInvoiceInstance || !activeContainer || !overContainer) {
             setActiveInvoice(null);
             setIsDragging(false);
@@ -134,8 +134,8 @@ const BillingKanbanView = ({ invoices, onEditInvoice }: BillingKanbanViewProps) 
         let finalGroupedInvoices = { ...groupedInvoices };
         if (activeContainer === overContainer) {
             const items = finalGroupedInvoices[activeContainer];
-            const oldIndex = items.findIndex(i => i.id === activeId);
-            const newIndex = items.findIndex(i => i.id === over.id);
+            const oldIndex = items.findIndex(i => i.rawProjectId === activeId);
+            const newIndex = items.findIndex(i => i.rawProjectId === over.id);
             if (oldIndex !== -1 && newIndex !== -1) {
                 finalGroupedInvoices[activeContainer] = arrayMove(items, oldIndex, newIndex);
             }
@@ -195,7 +195,7 @@ const BillingKanbanView = ({ invoices, onEditInvoice }: BillingKanbanViewProps) 
                     <Card className="shadow-xl w-72">
                         <CardContent className="p-3">
                             <div className="space-y-1">
-                                <p className="text-xs text-muted-foreground">{activeInvoice.invoice_number || 'N/A'}</p>
+                                <p className="text-xs text-muted-foreground">{activeInvoice.id}</p>
                                 <h4 className="font-semibold text-sm leading-snug">{activeInvoice.projectName}</h4>
                             </div>
                             <div className="flex items-center gap-2 mt-2">
@@ -215,7 +215,7 @@ const BillingKanbanView = ({ invoices, onEditInvoice }: BillingKanbanViewProps) 
                                 </div>
                                 <div className="text-right text-sm">
                                     <p className="text-xs text-muted-foreground">Due</p>
-                                    <p className="font-semibold">{activeInvoice.dueDate ? format(activeInvoice.dueDate, 'MMM dd, yyyy') : 'N/A'}</p>
+                                    <p className="font-semibold">{format(activeInvoice.dueDate, 'MMM dd, yyyy')}</p>
                                 </div>
                             </div>
                         </CardContent>

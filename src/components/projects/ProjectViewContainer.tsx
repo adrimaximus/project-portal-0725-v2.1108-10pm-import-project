@@ -29,7 +29,7 @@ interface ProjectViewContainerProps {
   highlightedTaskId: string | null;
   onHighlightComplete: () => void;
   onStatusChange: (projectId: string, newStatus: ProjectStatus) => void;
-  onTaskOrderChange: (payload: { taskId: string; newStatus: TaskStatus; orderedTaskIds: string[]; newTasks: ProjectTask[]; queryKey: any[]; movedColumns: boolean }) => void;
+  onTaskOrderChange: (payload: any) => void;
 }
 
 type ViewMode = 'table' | 'list' | 'kanban' | 'tasks' | 'tasks-kanban';
