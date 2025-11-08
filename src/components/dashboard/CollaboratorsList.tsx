@@ -21,17 +21,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ChevronsUpDown, ChevronDown, Filter, FilterX } from "lucide-react";
+import { ChevronsUpDown, Filter } from "lucide-react";
 import { generatePastelColor, getAvatarUrl } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuCheckboxItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { useMediaQuery } from '@/hooks/use-media-query';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
@@ -273,40 +265,42 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
   };
 
   const FilterContent = (
-    <div className="p-4 space-y-4">
-      <div>
-        <h4 className="font-semibold mb-2">Project Status</h4>
-        <div className="space-y-2">
-          {projectFilterOptions.map(opt => (
-            <div key={opt.value} className="flex items-center space-x-2">
-              <Checkbox
-                id={`proj-filter-${opt.value}`}
-                checked={projectFilters.includes(opt.value)}
-                onCheckedChange={() => handleProjectFilterChange(opt.value)}
-              />
-              <Label htmlFor={`proj-filter-${opt.value}`} className="text-sm font-normal">
-                {opt.label}
-              </Label>
-            </div>
-          ))}
+    <div className="p-1">
+      <div className="max-h-[45vh] overflow-y-auto p-3 space-y-4">
+        <div>
+          <h4 className="font-semibold mb-2">Project Status</h4>
+          <div className="space-y-2">
+            {projectFilterOptions.map(opt => (
+              <div key={opt.value} className="flex items-center space-x-2">
+                <Checkbox
+                  id={`proj-filter-${opt.value}`}
+                  checked={projectFilters.includes(opt.value)}
+                  onCheckedChange={() => handleProjectFilterChange(opt.value)}
+                />
+                <Label htmlFor={`proj-filter-${opt.value}`} className="text-sm font-normal">
+                  {opt.label}
+                </Label>
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
-      <Separator />
-      <div>
-        <h4 className="font-semibold mb-2">Task Filters</h4>
-        <div className="space-y-2">
-          {taskFilterOptions.map(opt => (
-            <div key={opt.value} className="flex items-center space-x-2">
-              <Checkbox
-                id={`task-filter-${opt.value}`}
-                checked={taskFilters.includes(opt.value)}
-                onCheckedChange={() => handleTaskFilterChange(opt.value)}
-              />
-              <Label htmlFor={`task-filter-${opt.value}`} className="text-sm font-normal">
-                {opt.label}
-              </Label>
-            </div>
-          ))}
+        <Separator />
+        <div>
+          <h4 className="font-semibold mb-2">Task Filters</h4>
+          <div className="space-y-2">
+            {taskFilterOptions.map(opt => (
+              <div key={opt.value} className="flex items-center space-x-2">
+                <Checkbox
+                  id={`task-filter-${opt.value}`}
+                  checked={taskFilters.includes(opt.value)}
+                  onCheckedChange={() => handleTaskFilterChange(opt.value)}
+                />
+                <Label htmlFor={`task-filter-${opt.value}`} className="text-sm font-normal">
+                  {opt.label}
+                </Label>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>
@@ -392,11 +386,11 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
           </CollapsibleTrigger>
           <CollapsibleContent>
             <CardContent className="px-6 pb-6 pt-0">
+              <div className="flex justify-end mb-4">
+                {FilterComponent}
+              </div>
               {/* Mobile View */}
               <div className="md:hidden">
-                <div className="flex justify-end mb-4">
-                  {FilterComponent}
-                </div>
                 {Object.entries(collaboratorsByRole).map(([role, collaboratorsInRole]) => (
                   <div key={role}>
                     <h3 className="text-sm font-semibold uppercase text-muted-foreground tracking-wider pt-6 pb-2">
@@ -449,12 +443,9 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
                           <React.Fragment key={role}>
                             <TableRow className="border-b-0 hover:bg-transparent">
                               <TableCell colSpan={7} className="pt-6 pb-2">
-                                <div className="flex justify-between items-center">
-                                  <h3 className="text-sm font-semibold uppercase text-muted-foreground tracking-wider">
-                                    {role.replace('_', ' ')}
-                                  </h3>
-                                  {role === 'owner' && FilterComponent}
-                                </div>
+                                <h3 className="text-sm font-semibold uppercase text-muted-foreground tracking-wider">
+                                  {role.replace('_', ' ')}
+                                </h3>
                               </TableCell>
                             </TableRow>
                             {collaboratorsInRole.map(c => (
