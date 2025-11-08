@@ -24,7 +24,8 @@ import {
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import TaskAttachmentList from './TaskAttachmentList';
+import rehypeRaw from 'rehype-raw';
+import TaskAttachmentList from '../projects/TaskAttachmentList';
 import { useTaskMutations } from '@/hooks/useTaskMutations';
 import { useQueryClient, useMutation, useQuery } from '@tanstack/react-query';
 import {
@@ -44,7 +45,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { v4 as uuidv4 } from 'uuid';
 import CommentInput from '../CommentInput';
 import { useProfiles } from '@/hooks/useProfiles';
-import { useCommentMutations } from '@/hooks/useCommentMutations';
+import { useCommentManager } from '@/hooks/useCommentManager';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../ui/alert-dialog';
 import { Textarea } from '../ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
@@ -55,7 +56,7 @@ interface TaskDetailCardProps {
   task: Task;
   onClose: () => void;
   onEdit: (task: Task) => void;
-  onDelete: (taskId: string) => void;
+  onDelete: (task: Task) => void;
 }
 
 const aggregateAttachments = (task: Task): TaskAttachment[] => {
@@ -88,10 +89,17 @@ const aggregateAttachments = (task: Task): TaskAttachment[] => {
 };
 
 const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, onDelete }) => {
-  const queryClient = useQueryClient();
   const { user } = useAuth();
   const { toggleTaskReaction, sendReminder, isSendingReminder, updateTaskStatusAndOrder } = useTaskMutations();
-  const { toggleCommentReaction } = useCommentMutations(task.id);
+  const { 
+    comments, 
+    isLoadingComments, 
+    addComment, 
+    updateComment, 
+    deleteComment, 
+    toggleReaction 
+  } = useCommentManager({ scope: { taskId: task.id } });
+  
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editedText, setEditedText] = useState('');
@@ -103,86 +111,8 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
   const { onOpen: onOpenTaskModal } = useTaskModal();
   const [replyTo, setReplyTo] = useState<CommentType | null>(null);
 
-  const { data: comments = [], isLoading: isLoadingComments } = useQuery({
-    queryKey: ['task-comments', task.id],
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_task_comments', { p_task_id: task.id });
-      if (error) throw error;
-      return (data as any[]).map(c => ({ ...c, isTicket: c.is_ticket })) as CommentType[];
-    },
-    enabled: !!task.id,
-  });
-
-  const addCommentMutation = useMutation({
-    mutationFn: async ({ text, attachments, mentionedUserIds, replyToId }: { text: string, attachments: File[] | null, mentionedUserIds: string[], replyToId?: string | null }) => {
-      if (!user) throw new Error("User not authenticated");
-      let attachmentsJsonb: any[] = [];
-      if (attachments && attachments.length > 0) {
-        const uploadPromises = attachments.map(async (file) => {
-          const fileId = uuidv4();
-          const sanitizedFileName = file.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
-          const filePath = `${task.project_id}/comments/${Date.now()}-${sanitizedFileName}`;
-          const { error: uploadError } = await supabase.storage.from('project-files').upload(filePath, file);
-          if (uploadError) throw new Error(`Failed to upload ${file.name}: ${uploadError.message}`);
-          const { data: urlData } = supabase.storage.from('project-files').getPublicUrl(filePath);
-          if (!urlData || !urlData.publicUrl) throw new Error(`Failed to get public URL for uploaded file ${file.name}.`);
-          return { id: fileId, file_name: file.name, file_url: urlData.publicUrl, file_type: file.type, file_size: file.size, storage_path: filePath, created_at: new Date().toISOString() };
-        });
-        attachmentsJsonb = await Promise.all(uploadPromises);
-      }
-      const { error } = await supabase.from('comments').insert({ project_id: task.project_id, task_id: task.id, author_id: user.id, text, is_ticket: false, attachments_jsonb: attachmentsJsonb, reply_to_comment_id: replyToId });
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success("Comment added.");
-      queryClient.invalidateQueries({ queryKey: ['task-comments', task.id] });
-    },
-    onError: (error: any) => toast.error("Failed to add comment.", { description: error.message }),
-  });
-
-  const updateCommentMutation = useMutation({
-    mutationFn: async ({ commentId, text, attachments }: { commentId: string, text: string, attachments: File[] | null }) => {
-      const { data: originalComment, error: fetchError } = await supabase.from('comments').select('attachments_jsonb, project_id').eq('id', commentId).single();
-      if (fetchError) throw fetchError;
-      let attachmentsJsonb: any[] = originalComment.attachments_jsonb || [];
-      if (attachments && attachments.length > 0) {
-        const uploadPromises = attachments.map(async (file) => {
-          const fileId = uuidv4();
-          const sanitizedFileName = file.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
-          const filePath = `${originalComment.project_id}/comments/${Date.now()}-${sanitizedFileName}`;
-          const { error: uploadError } = await supabase.storage.from('project-files').upload(filePath, file);
-          if (uploadError) throw new Error(`Failed to upload ${file.name}: ${uploadError.message}`);
-          const { data: urlData } = supabase.storage.from('project-files').getPublicUrl(filePath);
-          if (!urlData || !urlData.publicUrl) throw new Error(`Failed to get public URL for uploaded file ${file.name}.`);
-          return { id: fileId, file_name: file.name, file_url: urlData.publicUrl, file_type: file.type, file_size: file.size, storage_path: filePath, created_at: new Date().toISOString() };
-        });
-        const newAttachmentsJsonb = await Promise.all(uploadPromises);
-        attachmentsJsonb = [...attachmentsJsonb, ...newAttachmentsJsonb];
-      }
-      const { error } = await supabase.from('comments').update({ text, attachments_jsonb: attachmentsJsonb }).eq('id', commentId);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success("Comment updated.");
-      queryClient.invalidateQueries({ queryKey: ['task-comments', task.id] });
-    },
-    onError: (error: any) => toast.error("Failed to update comment.", { description: error.message }),
-  });
-
-  const deleteCommentMutation = useMutation({
-    mutationFn: async (commentId: string) => {
-      const { error } = await supabase.from('comments').delete().eq('id', commentId);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success("Comment deleted.");
-      queryClient.invalidateQueries({ queryKey: ['task-comments', task.id] });
-    },
-    onError: (error: any) => toast.error("Failed to delete comment.", { description: error.message }),
-  });
-
   const handleAddComment = (text: string, isTicket: boolean, attachments: File[] | null, mentionedUserIds: string[]) => {
-    addCommentMutation.mutate({ text, attachments, mentionedUserIds, replyToId: replyTo?.id });
+    addComment.mutate({ text, isTicket, attachments, replyToId: replyTo?.id });
     setReplyTo(null);
   };
 
@@ -200,14 +130,14 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
 
   const handleSaveEdit = () => {
     if (editingCommentId) {
-      updateCommentMutation.mutate({ commentId: editingCommentId, text: editedText, attachments: newAttachments });
+      updateComment.mutate({ commentId: editingCommentId, text: editedText, attachments: newAttachments });
     }
     handleCancelEdit();
   };
 
   const handleDeleteConfirm = () => {
     if (commentToDelete) {
-      deleteCommentMutation.mutate(commentToDelete.id);
+      deleteComment.mutate(commentToDelete.id);
       setCommentToDelete(null);
     }
   };
@@ -224,25 +154,21 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
   };
 
   const handleCreateTicketFromComment = async (comment: CommentType) => {
-    const { error } = await supabase.from('comments').update({ is_ticket: true }).eq('id', comment.id);
-    if (error) {
-      toast.error("Failed to mark comment as ticket.", { description: error.message });
-      return;
-    }
-    
-    queryClient.invalidateQueries({ queryKey: ['task-comments', task.id] });
-    
-    const fullCommentText = comment.text || '';
-    const taskTitle = fullCommentText.length > 80 ? `${fullCommentText.substring(0, 80)}...` : fullCommentText;
-    
-    onOpenTaskModal(undefined, {
-      title: taskTitle,
-      description: fullCommentText,
-      project_id: comment.project_id,
-      status: 'To do',
-      priority: 'Normal',
-      due_date: null,
-      origin_ticket_id: comment.id,
+    updateComment.mutate({ commentId: comment.id, text: comment.text || '', isTicket: true }, {
+      onSuccess: () => {
+        const fullCommentText = comment.text || '';
+        const taskTitle = fullCommentText.length > 80 ? `${fullCommentText.substring(0, 80)}...` : fullCommentText;
+        
+        onOpenTaskModal(undefined, {
+          title: taskTitle,
+          description: fullCommentText,
+          project_id: comment.project_id,
+          status: 'To do',
+          priority: 'Normal',
+          due_date: null,
+          origin_ticket_id: comment.id,
+        });
+      }
     });
   };
 
@@ -260,7 +186,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
   const allTags = useMemo(() => {
     const tags = [...(task?.tags || [])];
     if (task?.origin_ticket_id) {
-      const hasTicketTag = tags.some(t => t.name.toLowerCase() === 'ticket');
+      const hasTicketTag = tags.some(t => t.name === 'Ticket');
       if (!hasTicketTag) {
         tags.push({ id: 'ticket-tag', name: 'Ticket', color: '#8B5CF6', user_id: task.created_by.id });
       }
@@ -271,13 +197,14 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
   const description = task.description || '';
   const isLongDescription = description.length > 500;
   const displayedDescription = isLongDescription && !showFullDescription ? `${description.substring(0, 500)}...` : description;
+  const formattedDescription = formatMentionsForDisplay(displayedDescription);
 
   const handleToggleReaction = (emoji: string) => {
     toggleTaskReaction({ taskId: task.id, emoji });
   };
 
   const handleToggleCommentReaction = (commentId: string, emoji: string) => {
-    toggleCommentReaction({ commentId, emoji });
+    toggleReaction.mutate({ commentId, emoji });
   };
 
   const handleCopyLink = () => {
@@ -322,7 +249,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
                 <DropdownMenuItem onSelect={handleCopyLink}>
                   <LinkIcon className="mr-2 h-4 w-4" /> Copy Link
                 </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => { onDelete(task.id); onClose(); }} className="text-destructive">
+                <DropdownMenuItem onSelect={() => { onDelete(task); onClose(); }} className="text-destructive">
                   <Trash2 className="mr-2 h-4 w-4" /> Delete
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -468,7 +395,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
             <div className="pt-4 border-t">
               <h4 className="font-semibold mb-2">Description</h4>
               <div className="prose prose-sm dark:prose-invert max-w-none break-words">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>{displayedDescription}</ReactMarkdown>
+                <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{formattedDescription}</ReactMarkdown>
               </div>
               {isLongDescription && (
                 <Button variant="link" size="sm" onClick={() => setShowFullDescription(!showFullDescription)} className="px-0 h-auto">

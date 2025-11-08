@@ -1,25 +1,17 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Project, Task, Reaction, User, Comment as CommentType } from "@/types";
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { Project, Task, Reaction, User, Comment as CommentType, UpsertTaskPayload } from "@/types";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import ProjectBrief from './ProjectBrief';
-import { useAuth } from '@/contexts/AuthContext';
 import ProjectOverviewTab from './ProjectOverviewTab';
 import ProjectTasks from '../projects/ProjectTasks';
 import ProjectActivityFeed from './ProjectActivityFeed';
 import { LayoutGrid, ListChecks, MessageSquare, Activity } from 'lucide-react';
-import { useProfiles } from '@/hooks/useProfiles';
-import { toast } from 'sonner';
 import { useSearchParams } from 'react-router-dom';
-import { UpsertTaskPayload } from '@/types';
-import { useTaskMutations } from '@/hooks/useTaskMutations';
 import { addHours } from 'date-fns';
-import { useTags } from '@/hooks/useTags';
-import { getErrorMessage, parseMentions } from '@/lib/utils';
-import { supabase } from '@/integrations/supabase/client';
-import { useQueryClient } from '@tanstack/react-query';
-import { Dialog } from '@/components/ui/dialog';
-import TaskDetailCard from '@/components/projects/TaskDetailCard';
+import { toast } from 'sonner';
+import { useCommentManager } from '@/hooks/useCommentManager';
 import ProjectComments from '@/components/project-detail/ProjectComments';
+import { useProfiles } from '@/hooks/useProfiles';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface ProjectMainContentProps {
   project: Project;
@@ -57,18 +49,85 @@ const ProjectMainContent = ({
   onSaveChanges,
   onOpenTaskModal,
 }: ProjectMainContentProps) => {
-  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState(defaultTab);
   const [lastViewedDiscussion, setLastViewedDiscussion] = useState(() => new Date());
   const [searchParams, setSearchParams] = useSearchParams();
   const [initialMention, setInitialMention] = useState<{ id: string; name: string } | null>(null);
   const [replyTo, setReplyTo] = useState<CommentType | null>(null);
-  const queryClient = useQueryClient();
-  const { upsertTask } = useTaskMutations(() => {
-    queryClient.invalidateQueries({ queryKey: ['project', project.slug] });
-  });
-  const { data: allTags = [] } = useTags();
-  const [selectedTaskToView, setSelectedTaskToView] = useState<Task | null>(null);
+  const { user } = useAuth();
+
+  // Comment Management Logic
+  const { 
+    comments, 
+    isLoadingComments,
+    addComment, 
+    updateComment, 
+    deleteComment, 
+    toggleReaction 
+  } = useCommentManager({ scope: { projectId: project.id } });
+
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editedText, setEditedText] = useState('');
+  const [newAttachments, setNewAttachments] = useState<File[]>([]);
+  const editFileInputRef = useRef<HTMLInputElement>(null);
+  const { data: allUsers = [] } = useProfiles();
+
+  const handleAddCommentOrTicket = (text: string, isTicket: boolean, attachments: File[] | null, mentionedUserIds: string[]) => {
+    addComment.mutate({ text, isTicket, attachments, replyToId: replyTo?.id });
+    setReplyTo(null);
+  };
+
+  const handleEditClick = (comment: CommentType) => {
+    setEditingCommentId(comment.id);
+    setEditedText(comment.text || '');
+    setNewAttachments([]);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingCommentId(null);
+    setEditedText('');
+    setNewAttachments([]);
+  };
+
+  const handleSaveEdit = () => {
+    if (editingCommentId) {
+      updateComment.mutate({ commentId: editingCommentId, text: editedText, attachments: newAttachments });
+    }
+    handleCancelEdit();
+  };
+
+  const handleEditFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files) {
+      setNewAttachments(prev => [...prev, ...Array.from(event.target.files!)]);
+    }
+  };
+
+  const removeNewAttachment = (index: number) => {
+    setNewAttachments(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const onCreateTicketFromComment = (comment: CommentType) => {
+    const cleanText = comment.text?.replace(/@\[[^\]]+\]\(([^)]+)\)/g, '').trim() || 'New Ticket';
+    const taskTitle = `Ticket: ${cleanText.substring(0, 50)}${cleanText.length > 50 ? '...' : ''}`;
+
+    updateComment.mutate({ commentId: comment.id, text: comment.text || '', isTicket: true }, {
+      onSuccess: () => {
+        onOpenTaskModal(undefined, {
+          title: taskTitle,
+          description: cleanText,
+          project_id: comment.project_id,
+          status: 'To do',
+          priority: 'Normal',
+          due_date: addHours(new Date(), 24).toISOString(),
+          origin_ticket_id: comment.id,
+        }, project);
+      }
+    });
+  };
+
+  const handleMentionConsumed = useCallback(() => {
+    setInitialMention(null);
+  }, []);
 
   useEffect(() => {
     const mentionId = searchParams.get('mention');
@@ -85,14 +144,6 @@ const ProjectMainContent = ({
     }
   }, [searchParams, setSearchParams]);
 
-  const handleMentionConsumed = useCallback(() => {
-    setInitialMention(null);
-  }, []);
-
-  if (!user) {
-    return null;
-  }
-
   const handleTabChange = (value: string) => {
     setActiveTab(value);
     if (value === 'discussion') {
@@ -100,27 +151,11 @@ const ProjectMainContent = ({
     }
   };
 
-  const newCommentsCount = project.comments?.filter(
+  const newCommentsCount = comments?.filter(
     comment => user && comment.author.id !== user.id && new Date(comment.created_at) > lastViewedDiscussion
   ).length ?? 0;
 
   const uncompletedTasksCount = project.tasks?.filter(task => !task.completed).length ?? 0;
-
-  const onCreateTicketFromComment = (comment: CommentType) => {
-    if (!project) return;
-    const cleanText = comment.text?.replace(/@\[[^\]]+\]\(([^)]+)\)/g, '').trim() || 'New Ticket';
-    const taskTitle = `Ticket: ${cleanText.substring(0, 50)}${cleanText.length > 50 ? '...' : ''}`;
-
-    onOpenTaskModal(undefined, {
-      title: taskTitle,
-      description: cleanText,
-      project_id: project.id,
-      status: 'To do',
-      priority: 'Normal',
-      due_date: addHours(new Date(), 24).toISOString(),
-      origin_ticket_id: comment.id,
-    }, project);
-  };
 
   return (
     <div className="p-4">
@@ -181,34 +216,40 @@ const ProjectMainContent = ({
             onToggleTaskCompletion={onToggleTaskCompletion}
             highlightedTaskId={highlightedTaskId}
             onHighlightComplete={onHighlightComplete}
-            onTaskClick={setSelectedTaskToView}
+            onTaskClick={onOpenTaskModal}
           />
         </TabsContent>
         <TabsContent value="discussion" className="mt-4">
           <ProjectComments
             project={project}
-            initialMention={initialMention}
-            onMentionConsumed={handleMentionConsumed}
+            comments={comments}
+            isLoadingComments={isLoadingComments}
+            onAddCommentOrTicket={handleAddCommentOrTicket}
+            onDeleteComment={(comment: CommentType) => deleteComment.mutate(comment.id)}
+            onToggleCommentReaction={(commentId: string, emoji: string) => toggleReaction.mutate({ commentId, emoji })}
+            editingCommentId={editingCommentId}
+            editedText={editedText}
+            setEditedText={setEditedText}
+            handleSaveEdit={handleSaveEdit}
+            handleCancelEdit={handleCancelEdit}
+            onEdit={handleEditClick}
             onReply={setReplyTo}
             replyTo={replyTo}
             onCancelReply={() => setReplyTo(null)}
             onCreateTicketFromComment={onCreateTicketFromComment}
+            newAttachments={newAttachments}
+            removeNewAttachment={removeNewAttachment}
+            handleEditFileChange={handleEditFileChange}
+            editFileInputRef={editFileInputRef}
+            initialMention={initialMention}
+            onMentionConsumed={handleMentionConsumed}
+            allUsers={allUsers}
           />
         </TabsContent>
         <TabsContent value="activity" className="mt-4 h-[350px] overflow-y-auto pr-4">
           <ProjectActivityFeed activities={project.activities || []} />
         </TabsContent>
       </Tabs>
-      <Dialog open={!!selectedTaskToView} onOpenChange={(isOpen) => !isOpen && setSelectedTaskToView(null)}>
-        {selectedTaskToView && (
-          <TaskDetailCard
-            task={selectedTaskToView}
-            onClose={() => setSelectedTaskToView(null)}
-            onEdit={onEditTask}
-            onDelete={() => onDeleteTask(selectedTaskToView)}
-          />
-        )}
-      </Dialog>
     </div>
   );
 };

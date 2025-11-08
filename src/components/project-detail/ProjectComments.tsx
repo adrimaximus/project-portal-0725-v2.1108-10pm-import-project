@@ -1,50 +1,63 @@
-import { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Project, Comment as CommentType, User } from "@/types";
-import { useAuth } from "@/contexts/AuthContext";
 import CommentInput from "../CommentInput";
 import Comment from '../Comment';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { useCommentManager } from '@/hooks/useCommentManager';
-import { useProfiles } from '@/hooks/useProfiles';
 
 interface ProjectCommentsProps {
   project: Project;
-  initialMention?: { id: string; name: string } | null;
-  onMentionConsumed: () => void;
-  replyTo: CommentType | null;
+  comments: CommentType[];
+  isLoadingComments: boolean;
+  onAddCommentOrTicket: (text: string, isTicket: boolean, attachments: File[] | null, mentionedUserIds: string[]) => void;
+  onDeleteComment: (comment: CommentType) => void;
+  onToggleCommentReaction: (commentId: string, emoji: string) => void;
+  editingCommentId: string | null;
+  editedText: string;
+  setEditedText: (text: string) => void;
+  handleSaveEdit: () => void;
+  handleCancelEdit: () => void;
+  onEdit: (comment: CommentType) => void;
   onReply: (comment: CommentType) => void;
+  replyTo: CommentType | null;
   onCancelReply: () => void;
   onCreateTicketFromComment: (comment: CommentType) => void;
+  newAttachments: File[];
+  removeNewAttachment: (index: number) => void;
+  handleEditFileChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  editFileInputRef: React.RefObject<HTMLInputElement>;
+  initialMention?: { id: string; name: string } | null;
+  onMentionConsumed: () => void;
+  allUsers: User[];
 }
 
-const ProjectComments = ({ 
-  project, 
-  initialMention, 
-  onMentionConsumed, 
-  replyTo,
+const ProjectComments: React.FC<ProjectCommentsProps> = ({
+  project,
+  comments,
+  isLoadingComments,
+  onAddCommentOrTicket,
+  onDeleteComment,
+  onToggleCommentReaction,
+  editingCommentId,
+  editedText,
+  setEditedText,
+  handleSaveEdit,
+  handleCancelEdit,
+  onEdit,
   onReply,
+  replyTo,
   onCancelReply,
   onCreateTicketFromComment,
-}: ProjectCommentsProps) => {
-  const { user } = useAuth();
-  const { data: allUsers = [] } = useProfiles();
-  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
-  const [editedText, setEditedText] = useState('');
+  newAttachments,
+  removeNewAttachment,
+  handleEditFileChange,
+  editFileInputRef,
+  initialMention,
+  onMentionConsumed,
+  allUsers,
+}) => {
   const [commentToDelete, setCommentToDelete] = useState<CommentType | null>(null);
-  const [newAttachments, setNewAttachments] = useState<File[]>([]);
-  const editFileInputRef = useRef<HTMLInputElement>(null);
   const commentInputRef = useRef<{ setText: (text: string, append?: boolean) => void, focus: () => void }>(null);
   const lastProcessedMentionId = useRef<string | null>(null);
-
-  const { 
-    addComment, 
-    updateComment, 
-    deleteComment, 
-    toggleReaction 
-  } = useCommentManager({ scope: { projectId: project.id } });
-
-  const comments = project.comments || [];
-  const isLoadingComments = false; // Data comes from project prop
 
   useEffect(() => {
     if (initialMention && commentInputRef.current && initialMention.id !== lastProcessedMentionId.current) {
@@ -56,48 +69,11 @@ const ProjectComments = ({
     }
   }, [initialMention, onMentionConsumed]);
 
-  const handleEditClick = (comment: CommentType) => {
-    setEditingCommentId(comment.id);
-    setEditedText(comment.text || '');
-    setNewAttachments([]);
-  };
-
-  const handleCancelEdit = () => {
-    setEditingCommentId(null);
-    setEditedText('');
-    setNewAttachments([]);
-  };
-
-  const handleSaveEdit = () => {
-    if (editingCommentId) {
-      updateComment.mutate({ commentId: editingCommentId, text: editedText, attachments: newAttachments });
-    }
-    handleCancelEdit();
-  };
-
   const handleDeleteConfirm = () => {
     if (commentToDelete) {
-      deleteComment.mutate(commentToDelete.id);
+      onDeleteComment(commentToDelete);
       setCommentToDelete(null);
     }
-  };
-
-  const handleCreateTicket = (comment: CommentType) => {
-    updateComment.mutate({ commentId: comment.id, text: comment.text || '', isTicket: true }, {
-      onSuccess: () => {
-        onCreateTicketFromComment(comment);
-      }
-    });
-  };
-
-  const handleEditFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files) {
-      setNewAttachments(prev => [...prev, ...Array.from(event.target.files!)]);
-    }
-  };
-
-  const removeNewAttachment = (index: number) => {
-    setNewAttachments(prev => prev.filter((_, i) => i !== index));
   };
 
   return (
@@ -106,7 +82,7 @@ const ProjectComments = ({
         <CommentInput
           ref={commentInputRef}
           project={project}
-          onAddCommentOrTicket={(text, isTicket, attachments, mentionedUserIds) => addComment.mutate({ text, isTicket, attachments, replyToId: replyTo?.id })}
+          onAddCommentOrTicket={onAddCommentOrTicket}
           allUsers={allUsers}
           replyTo={replyTo}
           onCancelReply={onCancelReply}
@@ -125,11 +101,11 @@ const ProjectComments = ({
               setEditedText={setEditedText}
               handleSaveEdit={handleSaveEdit}
               handleCancelEdit={handleCancelEdit}
-              onEdit={handleEditClick}
+              onEdit={onEdit}
               onDelete={setCommentToDelete}
-              onToggleReaction={(commentId, emoji) => toggleReaction.mutate({ commentId, emoji })}
+              onToggleReaction={onToggleReaction}
               onReply={onReply}
-              onCreateTicketFromComment={handleCreateTicket}
+              onCreateTicketFromComment={onCreateTicketFromComment}
               newAttachments={newAttachments}
               removeNewAttachment={removeNewAttachment}
               handleEditFileChange={handleEditFileChange}
