@@ -169,7 +169,7 @@ const ProjectAdvancedFilters = ({ filters, onFiltersChange, allPeople, allOwners
   return (
     <>
       {/* Desktop View */}
-      <div className="hidden md:flex items-center gap-1">
+      <div className="hidden sm:flex items-center gap-1">
         <TooltipProvider>
           <Popover>
             <Tooltip>
@@ -236,7 +236,7 @@ const ProjectAdvancedFilters = ({ filters, onFiltersChange, allPeople, allOwners
       </div>
 
       {/* Mobile View */}
-      <div className="md:hidden">
+      <div className="sm:hidden">
         <Drawer open={open} onOpenChange={setOpen}>
           <DrawerTrigger asChild>
             <Button variant="outline" size="icon" className="relative">
