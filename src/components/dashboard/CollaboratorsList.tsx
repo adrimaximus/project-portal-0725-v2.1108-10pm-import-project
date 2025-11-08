@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Project, User } from '@/types';
+import { Project, User, PROJECT_STATUS_OPTIONS } from '@/types';
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import {
   Collapsible,
@@ -21,20 +21,18 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ChevronsUpDown, ChevronDown, Check } from "lucide-react";
+import { ChevronsUpDown, ChevronDown } from "lucide-react";
 import { generatePastelColor, getAvatarUrl } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
   DropdownMenuCheckboxItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { formatDistanceToNow } from 'date-fns';
 
 interface CollaboratorsListProps {
   projects: Project[];
@@ -47,6 +45,7 @@ interface CollaboratorStat extends User {
     isUpcoming: boolean;
     isOnGoing: boolean;
     isActive: boolean;
+    status: string;
   }[];
   activeTaskCount: number;
   activeTicketCount: number;
@@ -57,13 +56,13 @@ interface CollaboratorStat extends User {
 const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [tasks, setTasks] = useState<any[]>([]);
-  const [filters, setFilters] = useState<string[]>(['activeProject']);
+  const [filters, setFilters] = useState<string[]>(() => {
+    return PROJECT_STATUS_OPTIONS
+      .map(opt => opt.value)
+      .filter(status => !['Completed', 'Cancelled', 'Bid Lost', 'Archived'].includes(status));
+  });
 
-  const filterOptions = [
-    { value: 'activeProject', label: 'Active Projects' },
-    { value: 'upcoming', label: 'Upcoming' },
-    { value: 'onGoing', label: 'On Going' },
-  ];
+  const filterOptions = PROJECT_STATUS_OPTIONS;
 
   useEffect(() => {
     const fetchTasks = async () => {
@@ -130,7 +129,7 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
 
             if (!userStat.countedProjectIds.has(p.id)) {
                 userStat.projectCount++;
-                userStat.projects.push({ id: p.id, isUpcoming, isOnGoing, isActive });
+                userStat.projects.push({ id: p.id, isUpcoming, isOnGoing, isActive, status: p.status });
                 if (isOverdue) userStat.overdueBillCount++;
                 userStat.countedProjectIds.add(p.id);
             }
@@ -178,11 +177,7 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
     if (filters.length === 0) return 0;
     const matchingProjectIds = new Set<string>();
     collaborator.projects.forEach(p => {
-        if (
-            (filters.includes('activeProject') && p.isActive) ||
-            (filters.includes('upcoming') && p.isUpcoming) ||
-            (filters.includes('onGoing') && p.isOnGoing)
-        ) {
+        if (filters.includes(p.status)) {
             matchingProjectIds.add(p.id);
         }
     });
@@ -203,7 +198,7 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
       return filterOptions.find(f => f.value === filters[0])?.label || "Filter";
     }
     return `${filters.length} filters selected`;
-  }, [filters]);
+  }, [filters, filterOptions]);
 
   return (
     <Card className="mb-24">
@@ -309,7 +304,7 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
                                   </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
-                                  <DropdownMenuLabel>Filter by</DropdownMenuLabel>
+                                  <DropdownMenuLabel>Filter by Status</DropdownMenuLabel>
                                   <DropdownMenuSeparator />
                                   {filterOptions.map(opt => (
                                     <DropdownMenuCheckboxItem
