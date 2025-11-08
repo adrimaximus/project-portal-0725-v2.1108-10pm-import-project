@@ -1,3 +1,4 @@
+import { useState, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { LayoutGrid, List, Kanban } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -6,7 +7,6 @@ import ProjectsKanbanView from "@/components/projects/ProjectsKanbanView";
 import TasksView from "@/components/projects/TasksView";
 import useLocalStorage from "@/hooks/useLocalStorage";
 import { useTasks } from "@/hooks/useTasks";
-import { useMemo } from "react";
 import { SortingState } from "@tanstack/react-table";
 
 const ProjectsPage = () => {
@@ -57,22 +57,20 @@ const ProjectsPage = () => {
   const allTasks = useMemo(() => tasksData?.pages.flatMap(page => page) ?? [], [tasksData]);
 
   return (
-    <div className="flex flex-col h-full">
+    <Tabs value={view} onValueChange={handleViewChange} className="flex flex-col h-full">
       <header className="flex items-center justify-between p-4 border-b">
         <h1 className="text-2xl font-semibold">Projects</h1>
-        <Tabs value={view} onValueChange={handleViewChange}>
-          <TabsList>
-            <TabsTrigger value="list" className="px-3">
-              <List className="h-4 w-4 mr-2" /> List
-            </TabsTrigger>
-            <TabsTrigger value="kanban" className="px-3">
-              <Kanban className="h-4 w-4 mr-2" /> Board
-            </TabsTrigger>
-            <TabsTrigger value="tasks" className="px-3">
-              <LayoutGrid className="h-4 w-4 mr-2" /> Tasks
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
+        <TabsList>
+          <TabsTrigger value="list" className="px-3">
+            <List className="h-4 w-4 mr-2" /> List
+          </TabsTrigger>
+          <TabsTrigger value="kanban" className="px-3">
+            <Kanban className="h-4 w-4 mr-2" /> Board
+          </TabsTrigger>
+          <TabsTrigger value="tasks" className="px-3">
+            <LayoutGrid className="h-4 w-4 mr-2" /> Tasks
+          </TabsTrigger>
+        </TabsList>
       </header>
       <main className="flex-1 overflow-y-auto">
         <TabsContent value="list" className="m-0">
@@ -98,7 +96,7 @@ const ProjectsPage = () => {
           )}
         </TabsContent>
       </main>
-    </div>
+    </Tabs>
   );
 };
 
