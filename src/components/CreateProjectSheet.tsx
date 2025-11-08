@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, ReactNode } from "react";
 import {
   Sheet,
   SheetContent,
@@ -13,16 +13,18 @@ import { Button } from "./ui/button";
 import { CreateProjectForm } from "./CreateProjectForm";
 import { Plus } from "lucide-react";
 
-export function CreateProjectSheet() {
+export function CreateProjectSheet({ children }: { children?: ReactNode }) {
   const [open, setOpen] = useState(false);
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" />
-          Proyek Baru
-        </Button>
+        {children || (
+          <Button>
+            <Plus className="mr-2 h-4 w-4" />
+            Proyek Baru
+          </Button>
+        )}
       </SheetTrigger>
       <SheetContent className="sm:max-w-lg">
         <SheetHeader>

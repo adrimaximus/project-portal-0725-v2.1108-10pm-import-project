@@ -25,6 +25,7 @@ import { getErrorMessage, formatInJakarta } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 import { useTaskModal } from '@/contexts/TaskModalContext';
+import { getProjectBySlug } from '@/lib/projectsApi';
 
 type ViewMode = 'table' | 'list' | 'kanban' | 'tasks' | 'tasks-kanban';
 type SortConfig<T> = { key: keyof T | null; direction: 'ascending' | 'descending' };
@@ -37,16 +38,9 @@ const ProjectsPage = () => {
   const { user } = useAuth();
   const { taskId: taskIdFromParams } = useParams<{ taskId: string }>();
   const { onOpen: onOpenTaskModal } = useTaskModal();
-
-  const viewFromUrl = searchParams.get('view') as ViewMode;
-  const view = taskIdFromParams ? 'tasks' : viewFromUrl || 'list';
-
-  const [kanbanGroupBy, setKanbanGroupBy] = useState<'status' | 'payment_status'>('status');
-  const [hideCompletedTasks, setHideCompletedTasks] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
   
   const highlightedTaskId = taskIdFromParams || searchParams.get('highlight');
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const onHighlightComplete = useCallback(() => {
     if (taskIdFromParams) {
@@ -65,50 +59,76 @@ const ProjectsPage = () => {
     hasNextPage, 
     isFetchingNextPage,
     refetch: refetchProjects 
-  } = useProjects({ searchTerm });
+  } = useProjects({ fetchAll: true });
 
   const projectsData = useMemo(() => data?.pages.flatMap(page => page.projects) ?? [], [data]);
   
-  const [advancedFilters, setAdvancedFilters] = useState<AdvancedFiltersState>({
-    ownerIds: [],
-    memberIds: [],
-    excludedStatus: [],
-  });
-
-  const { data: peopleData } = useQuery<Person[]>({
-    queryKey: ['people'],
-    queryFn: getPeople,
-  });
-
-  const allPeople = useMemo(() => {
-    if (!peopleData) return [];
-    return peopleData
-      .filter(p => p.user_id)
-      .map(p => ({ id: p.user_id!, name: p.full_name }));
-  }, [peopleData]);
-
   const {
+    view, handleViewChange,
+    kanbanGroupBy, setKanbanGroupBy,
+    hideCompletedTasks, toggleHideCompleted,
+    searchTerm, handleSearchChange,
+    advancedFilters, handleAdvancedFiltersChange,
     dateRange, setDateRange,
-    sortConfig: projectSortConfig, requestSort: requestProjectSort, sortedProjects
-  } = useProjectFilters(projectsData, advancedFilters);
+    sortConfig: projectSortConfig, requestSort: requestProjectSort,
+    sortedProjects
+  } = useProjectFilters(projectsData);
+
+  const { data: allMembers = [] } = useQuery({
+    queryKey: ['project_members_distinct'],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('get_project_members_distinct');
+      if (error) {
+        toast.error('Failed to load project members for filtering.');
+        console.error(error);
+        return [];
+      }
+      return data as { id: string; name: string }[];
+    }
+  });
+
+  const { data: allOwners = [] } = useQuery({
+    queryKey: ['project_owners'],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('get_project_owners');
+      if (error) {
+        toast.error('Failed to load project owners for filtering.');
+        console.error(error);
+        return [];
+      }
+      return data as { id: string; name: string }[];
+    }
+  });
 
   const [taskSortConfig, setTaskSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'updated_at', direction: 'desc' });
 
   const requestTaskSort = useCallback((key: string) => {
-    setTaskSortConfig(prevConfig => {
-      let direction: 'asc' | 'desc' = 'asc';
-      if (prevConfig.key === key && prevConfig.direction === 'asc') {
-        direction = 'descending';
-      }
-      return { key, direction };
-    });
+    setTaskSortConfig(prevConfig => ({
+      key,
+      direction: prevConfig.key === key && prevConfig.direction === 'asc' ? 'descending' : 'ascending',
+    }));
   }, []);
+
+  const isTaskView = view === 'tasks' || view === 'tasks-kanban';
+
+  const projectIdsForTaskView = useMemo(() => {
+    if (!isTaskView) return undefined;
+  
+    const visibleProjects = projectsData.filter(project => 
+      !(advancedFilters.excludedStatus || []).includes(project.status)
+    );
+    
+    return visibleProjects.map(project => project.id);
+  
+  }, [isTaskView, projectsData, advancedFilters.excludedStatus]);
 
   const finalTaskSortConfig = view === 'tasks-kanban' ? { key: 'kanban_order', direction: 'asc' as const } : taskSortConfig;
 
   const { data: tasksData = [], isLoading: isLoadingTasks, refetch: refetchTasks } = useTasks({
+    projectIds: projectIdsForTaskView,
     hideCompleted: hideCompletedTasks,
     sortConfig: finalTaskSortConfig,
+    enabled: !isLoadingProjects,
   });
 
   useEffect(() => {
@@ -117,20 +137,13 @@ const ProjectsPage = () => {
       if (task) {
         const originalTitle = document.title;
         document.title = `Task: ${task.title} | ${task.project_name || 'Project'}`;
-        
-        return () => {
-          document.title = originalTitle;
-        };
+        return () => { document.title = originalTitle; };
       }
     }
   }, [highlightedTaskId, tasksData]);
 
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
   const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
-  const createProjectMutation = useCreateProject();
-  const [scrollToProjectId, setScrollToProjectId] = useState<string | null>(null);
-  const initialTableScrollDone = useRef(false);
-  
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
 
   const { data: isGCalConnected } = useQuery({
@@ -145,9 +158,7 @@ const ProjectsPage = () => {
 
   const importEventsMutation = useMutation({
     mutationFn: async (events: any[]) => {
-        const { error } = await supabase.functions.invoke('import-google-calendar-events', {
-            body: { eventsToImport: events },
-        });
+        const { error } = await supabase.functions.invoke('import-google-calendar-events', { body: { eventsToImport: events } });
         if (error) throw error;
     },
     onSuccess: () => {
@@ -160,32 +171,21 @@ const ProjectsPage = () => {
     }
   });
 
-  const isTaskView = view === 'tasks' || view === 'tasks-kanban';
-
   const refetch = useCallback(() => {
-    if (isTaskView) {
-      refetchTasks();
-    } else {
-      refetchProjects();
-    }
+    if (isTaskView) refetchTasks();
+    else refetchProjects();
   }, [isTaskView, refetchTasks, refetchProjects]);
 
-  const { deleteTask, toggleTaskCompletion, isToggling } = useTaskMutations(refetch);
+  const { deleteTask, toggleTaskCompletion, isToggling, upsertTask, updateTaskStatusAndOrder } = useTaskMutations(refetch);
   const { updateProjectStatus } = useProjectMutations();
 
-  const allTasks = useMemo(() => {
-    if (isTaskView) {
-      return tasksData || [];
-    }
-    if (!projectsData) return [];
-    return projectsData.flatMap(p => p.tasks || []);
-  }, [projectsData, tasksData, isTaskView]);
-
   const filteredTasks = useMemo(() => {
-    let tasksToFilter = allTasks;
-    if (advancedFilters.selectedPeopleIds.length > 0) {
+    let tasksToFilter = tasksData || [];
+    const selectedPeopleIds = [...(advancedFilters.ownerIds || []), ...(advancedFilters.memberIds || [])];
+    if (selectedPeopleIds.length > 0) {
+        const uniqueSelectedPeopleIds = [...new Set(selectedPeopleIds)];
         tasksToFilter = tasksToFilter.filter(task => 
-            task.assignedTo?.some(assignee => advancedFilters.selectedPeopleIds.includes(assignee.id))
+            task.assignedTo?.some(assignee => uniqueSelectedPeopleIds.includes(assignee.id))
         );
     }
     if (!searchTerm) return tasksToFilter;
@@ -195,51 +195,7 @@ const ProjectsPage = () => {
       (task.description && task.description.toLowerCase().includes(lowercasedFilter)) ||
       (task.project_name && task.project_name.toLowerCase().includes(lowercasedFilter))
     );
-  }, [allTasks, searchTerm, advancedFilters.selectedPeopleIds]);
-
-  useEffect(() => {
-    if (view === 'table' && !initialTableScrollDone.current && sortedProjects.length > 0) {
-      const todayStr = formatInJakarta(new Date(), 'yyyy-MM-dd');
-      let targetProject = sortedProjects.find(p => p.start_date && formatInJakarta(p.start_date, 'yyyy-MM-dd') >= todayStr);
-      if (!targetProject && sortedProjects.length > 0) {
-        targetProject = sortedProjects[sortedProjects.length - 1];
-      }
-      if (targetProject) {
-        setScrollToProjectId(targetProject.id);
-        initialTableScrollDone.current = true;
-      }
-    }
-  }, [sortedProjects, view]);
-
-  useEffect(() => {
-    if (scrollToProjectId) {
-      const targetElement = rowRefs.current.get(scrollToProjectId);
-      if (targetElement) {
-        setTimeout(() => {
-          targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          targetElement.classList.add('bg-muted', 'transition-colors', 'duration-1000');
-          setTimeout(() => {
-            targetElement.classList.remove('bg-muted');
-          }, 2000);
-          setScrollToProjectId(null);
-        }, 100);
-      }
-    }
-  }, [scrollToProjectId]);
-
-  const handleViewChange = (newView: ViewMode | null) => {
-    if (newView) {
-      if (taskIdFromParams) {
-        navigate(`/projects?view=${newView}`);
-      } else {
-        setSearchParams({ view: newView }, { replace: true });
-      }
-      if (scrollContainerRef.current) {
-        scrollContainerRef.current.scrollTop = 0;
-        scrollContainerRef.current.scrollLeft = 0;
-      }
-    }
-  };
+  }, [tasksData, searchTerm, advancedFilters.ownerIds, advancedFilters.memberIds]);
 
   const deleteProjectMutation = useMutation({
     mutationFn: async (projectId: string) => {
@@ -290,7 +246,6 @@ const ProjectsPage = () => {
   };
 
   const handleTaskStatusChange = (task: ProjectTask, newStatus: TaskStatus) => {
-    const { upsertTask } = useTaskMutations();
     upsertTask({
         id: task.id,
         project_id: task.project_id,
@@ -304,20 +259,10 @@ const ProjectsPage = () => {
     });
   };
 
-  const toggleHideCompleted = () => {
-    setHideCompletedTasks(prev => {
-      const newState = !prev;
-      localStorage.setItem('hideCompletedTasks', String(newState));
-      return newState;
-    });
-  };
-
   const handleStatusChange = (projectId: string, newStatus: ProjectStatus) => {
     const project = projectsData.find(p => p.id === projectId);
     if (!project) return;
-
     const hasOpenTasks = project.tasks?.some(task => !task.completed) ?? false;
-
     if (newStatus === 'Completed' && hasOpenTasks) {
         toast.error("Cannot mark project as 'Completed' while there are still open tasks.");
         return;
@@ -325,8 +270,24 @@ const ProjectsPage = () => {
     updateProjectStatus.mutate({ projectId, status: newStatus });
   };
 
+  const handleTaskOrderChange = (payload: { taskId: string; newStatus: TaskStatus; orderedTaskIds: string[]; newTasks: ProjectTask[]; queryKey: any[] }) => {
+    updateTaskStatusAndOrder(payload);
+  };
+
+  const handleEditTask = async (task: ProjectTask) => {
+    try {
+      const projectForTask = await getProjectBySlug(task.project_slug);
+      if (!projectForTask) {
+        throw new Error("Project for this task could not be found.");
+      }
+      onOpenTaskModal(task, undefined, projectForTask);
+    } catch (error) {
+      toast.error("Could not open task editor.", { description: getErrorMessage(error) });
+    }
+  };
+
   const tasksQueryKey = ['tasks', { 
-    projectIds: undefined, 
+    projectIds: projectIdsForTaskView, 
     hideCompleted: hideCompletedTasks, 
     sortConfig: finalTaskSortConfig 
   }];
@@ -361,15 +322,19 @@ const ProjectsPage = () => {
             kanbanGroupBy={kanbanGroupBy} onKanbanGroupByChange={setKanbanGroupBy}
             hideCompletedTasks={hideCompletedTasks}
             onToggleHideCompleted={toggleHideCompleted}
-            onNewProjectClick={() => navigate('/request')}
             onNewTaskClick={() => onOpenTaskModal()}
             isTaskView={isTaskView}
             isGCalConnected={isGCalConnected}
             onImportClick={() => setIsImportDialogOpen(true)}
             onRefreshClick={handleRefresh}
             advancedFilters={advancedFilters}
-            onAdvancedFiltersChange={setAdvancedFilters}
-            allPeople={allPeople}
+            onAdvancedFiltersChange={handleAdvancedFiltersChange}
+            allPeople={allMembers}
+            allOwners={allOwners}
+            searchTerm={searchTerm}
+            onSearchChange={handleSearchChange}
+            dateRange={dateRange}
+            onDateRangeChange={setDateRange}
           />
         </div>
         <div ref={scrollContainerRef} className="flex-grow min-h-0 overflow-y-auto">
@@ -382,10 +347,10 @@ const ProjectsPage = () => {
               isTasksLoading={isLoadingTasks}
               onDeleteProject={handleDeleteProject}
               sortConfig={projectSortConfig}
-              requestSort={(key) => requestProjectSort(key as keyof Project)}
+              requestSort={(key) => requestSort(key as keyof Project)}
               rowRefs={rowRefs}
               kanbanGroupBy={kanbanGroupBy}
-              onEditTask={(task) => onOpenTaskModal(task, undefined, project)}
+              onEditTask={handleEditTask}
               onDeleteTask={setTaskToDelete}
               onToggleTaskCompletion={handleToggleTaskCompletion}
               onTaskStatusChange={handleTaskStatusChange}
@@ -397,6 +362,7 @@ const ProjectsPage = () => {
               highlightedTaskId={highlightedTaskId}
               onHighlightComplete={onHighlightComplete}
               onStatusChange={handleStatusChange}
+              onTaskOrderChange={handleTaskOrderChange}
             />
           </div>
           {hasNextPage && (

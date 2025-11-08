@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import { DateRange } from "react-day-picker";
 import { DateRangePicker } from "../DateRangePicker";
+import { CreateProjectSheet } from "@/components/CreateProjectSheet";
 
 type ViewMode = 'table' | 'list' | 'kanban' | 'tasks' | 'tasks-kanban';
 
@@ -26,7 +27,6 @@ type ProjectsToolbarProps = {
   onKanbanGroupByChange: (value: 'status' | 'payment_status') => void;
   hideCompletedTasks: boolean;
   onToggleHideCompleted: () => void;
-  onNewProjectClick: () => void;
   onNewTaskClick: () => void;
   isTaskView: boolean;
   isGCalConnected: boolean | undefined;
@@ -49,7 +49,6 @@ const ProjectsToolbar = ({
   onKanbanGroupByChange,
   hideCompletedTasks,
   onToggleHideCompleted,
-  onNewProjectClick,
   onNewTaskClick,
   isTaskView,
   isGCalConnected,
@@ -151,10 +150,19 @@ const ProjectsToolbar = ({
             <span className="sr-only">New Task</span>
           </Button>
         ) : (
-          <Button size="icon" variant="outline" onClick={onNewProjectClick}>
-            <PlusCircle className="h-4 w-4" />
-            <span className="sr-only">New Project</span>
-          </Button>
+          <CreateProjectSheet>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button size="icon" variant="outline">
+                    <PlusCircle className="h-4 w-4" />
+                    <span className="sr-only">New Project</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent><p>New Project</p></TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </CreateProjectSheet>
         )}
         {isGCalConnected ? (
           <Button variant="outline" size="icon" onClick={onImportClick}>
@@ -177,10 +185,12 @@ const ProjectsToolbar = ({
             <span className="sr-only">New Task</span>
           </Button>
         ) : (
-          <Button size="icon" variant="outline" onClick={onNewProjectClick}>
-            <PlusCircle className="h-4 w-4" />
-            <span className="sr-only">New Project</span>
-          </Button>
+          <CreateProjectSheet>
+            <Button size="icon" variant="outline">
+              <PlusCircle className="h-4 w-4" />
+              <span className="sr-only">New Project</span>
+            </Button>
+          </CreateProjectSheet>
         )}
         {isGCalConnected ? (
           <Button variant="outline" size="icon" onClick={onImportClick}>
