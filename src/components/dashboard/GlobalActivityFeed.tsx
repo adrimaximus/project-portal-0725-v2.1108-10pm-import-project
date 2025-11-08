@@ -59,7 +59,7 @@ const GlobalActivityFeed = () => {
                   </span>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm text-muted-foreground break-words">
                     <span className="font-semibold text-card-foreground">{activity.user_name}</span>
                     {' '}
                     <span dangerouslySetInnerHTML={{ __html: formatDescription(activity.details.description) }} />
