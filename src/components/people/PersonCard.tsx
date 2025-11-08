@@ -1,12 +1,10 @@
-import { useState, useEffect, useMemo, memo } from 'react';
+import React, { memo } from 'react';
 import { Person as BasePerson } from '@/types';
-import { Card } from '@/components/ui/card';
-import { User as UserIcon, Instagram, Briefcase, Mail } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { User as UserIcon, Instagram, Briefcase, Mail, Building } from 'lucide-react';
 import { generatePastelColor, getAvatarUrl } from '@/lib/utils';
 import WhatsappIcon from '../icons/WhatsappIcon';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { useQuery } from '@tanstack/react-query';
 
 type Person = BasePerson & { company_id?: string | null; company_logo_url?: string | null };
 
@@ -29,9 +27,9 @@ const formatPhoneNumberForWhatsApp = (phone: string | undefined) => {
 };
 
 const PersonCard = ({ person, onViewProfile }: PersonCardProps) => {
-  const [imageError, setImageError] = useState(false);
+  const [imageError, setImageError] = React.useState(false);
 
-  useEffect(() => {
+  React.useEffect(() => {
     setImageError(false);
   }, [person.avatar_url]);
 
@@ -47,16 +45,12 @@ const PersonCard = ({ person, onViewProfile }: PersonCardProps) => {
     }
   };
 
-  const googleMapsUrl = person.address 
-    ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(person.address)}`
-    : '#';
-
   const emailToDisplay = person.contact?.emails?.[0] || person.email;
   const phoneToDisplay = (person.contact as any)?.phones?.[0] || person.phone;
 
   return (
     <Card 
-      className="group h-full flex flex-col transition-shadow hover-shadow-lg cursor-pointer rounded-2xl" 
+      className="group h-full flex flex-col transition-shadow hover:shadow-lg cursor-pointer rounded-2xl" 
       onClick={() => onViewProfile(person)}
     >
       <div className="relative">
@@ -75,19 +69,9 @@ const PersonCard = ({ person, onViewProfile }: PersonCardProps) => {
             </div>
           )}
         </div>
-        {person.company_logo_url && (
-          <div className="absolute -bottom-6 left-4 bg-background p-0.5 rounded-lg shadow-md flex items-center justify-center">
-            <img
-              src={person.company_logo_url}
-              alt={`${person.company} logo`}
-              className="h-10 w-10 object-contain rounded-md"
-              loading="lazy"
-            />
-          </div>
-        )}
       </div>
-      <div className="p-3 border-t bg-background flex-grow flex flex-col rounded-b-2xl">
-        <div className="flex justify-end mb-2">
+      <CardContent className="p-3 border-t bg-background flex-grow flex flex-col rounded-b-2xl">
+        <div className="flex justify-end mb-2 h-5">
           <div className="flex items-center gap-3">
             {person.social_media?.instagram && (
               <a href={person.social_media.instagram} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-muted-foreground hover:text-primary transition-colors">
@@ -111,22 +95,32 @@ const PersonCard = ({ person, onViewProfile }: PersonCardProps) => {
           </div>
         </div>
         
-        <div className={`min-w-0 ${person.company_logo_url ? 'pt-2' : ''}`}>
+        <div className="min-w-0">
           <h3 className="font-bold text-sm truncate">{person.full_name}</h3>
         </div>
         
-        {(person.company || person.job_title) && (
+        {person.job_title && (
           <div className="mt-1 flex items-start gap-2 text-xs text-muted-foreground">
             <Briefcase className="h-3 w-3 flex-shrink-0 mt-0.5" />
-            <p>
-              {person.job_title}
-              {person.job_title && person.company && ' at '}
-              {!person.job_title && person.company && 'at '}
-              {person.company}
-            </p>
+            <p>{person.job_title}</p>
           </div>
         )}
-      </div>
+
+        {person.company && (
+          <div className="mt-auto pt-2">
+            <div className="inline-flex items-center gap-2 bg-muted p-1 pr-2 rounded-full">
+              {person.company_logo_url ? (
+                <img src={person.company_logo_url} alt={`${person.company} logo`} className="h-5 w-5 object-contain rounded-full bg-white" loading="lazy" />
+              ) : (
+                <div className="h-5 w-5 rounded-full bg-background flex items-center justify-center">
+                  <Building className="h-3 w-3 text-muted-foreground" />
+                </div>
+              )}
+              <span className="text-xs font-medium text-muted-foreground truncate">{person.company}</span>
+            </div>
+          </div>
+        )}
+      </CardContent>
     </Card>
   );
 };
