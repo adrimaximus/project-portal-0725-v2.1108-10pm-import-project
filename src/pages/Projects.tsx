@@ -28,7 +28,6 @@ import { useTaskModal } from '@/contexts/TaskModalContext';
 import { getProjectBySlug } from '@/lib/projectsApi';
 
 type ViewMode = 'table' | 'list' | 'kanban' | 'tasks' | 'tasks-kanban';
-type SortConfig<T> = { key: keyof T | null; direction: 'ascending' | 'descending' };
 
 const ProjectsPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -43,11 +42,10 @@ const ProjectsPage = () => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const onHighlightComplete = useCallback(() => {
-    const newSearchParams = new URLSearchParams(searchParams);
     if (taskIdFromParams) {
-      newSearchParams.delete('taskId');
-      navigate(`/projects?${newSearchParams.toString()}`, { replace: true });
+      navigate(`/projects?view=tasks`, { replace: true });
     } else {
+      const newSearchParams = new URLSearchParams(searchParams);
       newSearchParams.delete('highlight');
       setSearchParams(newSearchParams, { replace: true });
     }
@@ -106,7 +104,7 @@ const ProjectsPage = () => {
   const requestTaskSort = useCallback((key: string) => {
     setTaskSortConfig(prevConfig => ({
       key,
-      direction: prevConfig.key === key && prevConfig.direction === 'asc' ? 'descending' : 'ascending',
+      direction: prevConfig.key === key && prevConfig.direction === 'asc' ? 'desc' : 'asc',
     }));
   }, []);
 
@@ -323,7 +321,6 @@ const ProjectsPage = () => {
             kanbanGroupBy={kanbanGroupBy} onKanbanGroupByChange={setKanbanGroupBy}
             hideCompletedTasks={hideCompletedTasks}
             onToggleHideCompleted={toggleHideCompleted}
-            onNewProjectClick={() => navigate('/request')}
             onNewTaskClick={() => onOpenTaskModal()}
             isTaskView={isTaskView}
             isGCalConnected={isGCalConnected}
@@ -349,7 +346,7 @@ const ProjectsPage = () => {
               isTasksLoading={isLoadingTasks}
               onDeleteProject={handleDeleteProject}
               sortConfig={projectSortConfig}
-              requestSort={(key) => requestProjectSort(key as keyof Project)}
+              requestSort={(key) => requestSort(key as keyof Project)}
               rowRefs={rowRefs}
               kanbanGroupBy={kanbanGroupBy}
               onEditTask={handleEditTask}

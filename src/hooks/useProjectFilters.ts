@@ -45,7 +45,7 @@ export const useProjectFilters = (projects: Project[]) => {
       dateRange,
       sortConfig: {
         key: searchParams.get('sortKey') || storedFilters.sortConfig?.key || null,
-        direction: (searchParams.get('sortDir') as 'ascending' | 'descending') || storedFilters.sortConfig?.direction || 'ascending',
+        direction: (searchParams.get('sortDir') as 'asc' | 'desc') || storedFilters.sortConfig?.direction || 'asc',
       },
     };
   };
@@ -56,7 +56,7 @@ export const useProjectFilters = (projects: Project[]) => {
   const [hideCompletedTasks, setHideCompletedTasks] = useState(getInitialState().hideCompletedTasks);
   const [advancedFilters, setAdvancedFilters] = useState<AdvancedFiltersState>(getInitialState().advancedFilters);
   const [dateRange, setDateRange] = useState<DateRange | undefined>(getInitialState().dateRange);
-  const [sortConfig, setSortConfig] = useState(getInitialState().sortConfig);
+  const [sortConfig, setSortConfig] = useState<{ key: keyof Project | null; direction: 'asc' | 'desc' }>(getInitialState().sortConfig);
 
   useEffect(() => {
     const newSearchParams = new URLSearchParams();
@@ -94,7 +94,7 @@ export const useProjectFilters = (projects: Project[]) => {
   const requestSort = useCallback((key: keyof Project) => {
     setSortConfig(prevConfig => ({
       key,
-      direction: prevConfig.key === key && prevConfig.direction === 'ascending' ? 'descending' : 'ascending',
+      direction: prevConfig.key === key && prevConfig.direction === 'asc' ? 'desc' : 'asc',
     }));
   }, []);
 
@@ -147,7 +147,7 @@ export const useProjectFilters = (projects: Project[]) => {
         }
 
         if (compareResult !== 0) {
-          return sortConfig.direction === 'ascending' ? compareResult : -compareResult;
+          return sortConfig.direction === 'asc' ? compareResult : -compareResult;
         }
 
         return tieBreaker(a, b);
