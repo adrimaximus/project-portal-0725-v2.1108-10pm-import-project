@@ -75,17 +75,18 @@ const ProjectsPage = () => {
     excludedStatus: [],
   });
 
-  const { data: peopleData } = useQuery<Person[]>({
-    queryKey: ['people'],
-    queryFn: getPeople,
+  const { data: allMembers = [] } = useQuery({
+    queryKey: ['project_members_distinct'],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('get_project_members_distinct');
+      if (error) {
+        toast.error('Failed to load project members for filtering.');
+        console.error(error);
+        return [];
+      }
+      return data as { id: string; name: string }[];
+    }
   });
-
-  const allPeople = useMemo(() => {
-    if (!peopleData) return [];
-    return peopleData
-      .filter(p => p.user_id)
-      .map(p => ({ id: p.user_id!, name: p.full_name }));
-  }, [peopleData]);
 
   const { data: allOwners = [] } = useQuery({
     queryKey: ['project_owners'],
@@ -384,7 +385,7 @@ const ProjectsPage = () => {
             onRefreshClick={handleRefresh}
             advancedFilters={advancedFilters}
             onAdvancedFiltersChange={setAdvancedFilters}
-            allPeople={allPeople}
+            allPeople={allMembers}
             allOwners={allOwners}
           />
         </div>
