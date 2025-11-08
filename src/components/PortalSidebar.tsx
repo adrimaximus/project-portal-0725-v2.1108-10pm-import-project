@@ -22,27 +22,32 @@ const Icons = LucideIcons as unknown as { [key: string]: LucideIcons.LucideIcon 
 
 const NavLink = ({ item, isCollapsed }: { item: NavItem, isCollapsed: boolean }) => {
   const location = useLocation();
-  const [itemPath, itemQuery] = item.href.split('?');
+  const [itemPath, itemQueryString] = item.href.split('?');
   
   let isActive = false;
-  if (itemQuery) {
-    // If the link has a query string, it must match exactly.
-    isActive = location.pathname === itemPath && location.search === `?${itemQuery}`;
-  } else {
-    // If the link does NOT have a query string, it can be a prefix match,
-    // but only if the current URL doesn't have a query string that would match another link.
-    // This prevents '/projects' from being active when on '/projects?view=tasks'.
-    isActive = location.pathname.startsWith(itemPath) && !location.search;
-  }
-
-  // Special case for the root path matching the dashboard.
-  if (item.href === '/dashboard' && location.pathname === '/') {
-      isActive = true;
-  }
 
   // Special case for project detail pages to highlight the main "Projects" link.
   if (item.href === '/projects?view=list' && location.pathname.startsWith('/projects/')) {
     isActive = true;
+  } 
+  // Handle /projects and /projects?view=...
+  else if (location.pathname === '/projects' && itemPath === '/projects') {
+    const locationParams = new URLSearchParams(location.search);
+    const itemParams = new URLSearchParams(itemQueryString);
+    
+    const itemView = itemParams.get('view') || 'list'; // Default view for projects is 'list'
+    const locationView = locationParams.get('view') || 'list';
+
+    isActive = itemView === locationView;
+  }
+  // Handle other exact path matches
+  else if (location.pathname === itemPath) {
+    isActive = location.search === (itemQueryString ? `?${itemQueryString}` : '');
+  }
+
+  // Special case for root path matching dashboard
+  if (item.href === '/dashboard' && location.pathname === '/') {
+      isActive = true;
   }
 
   const isChatLink = item.label.toLowerCase() === 'chat';
