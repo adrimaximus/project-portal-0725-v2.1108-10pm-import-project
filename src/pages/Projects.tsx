@@ -2,16 +2,21 @@ import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { useSearchParams, useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { createProject, updateProjectDetails, deleteProject } from '@/api/projects';
+import { getProjectTasks, upsertTask, deleteTask, toggleTaskCompletion } from '@/api/tasks';
+import { getPeople } from '@/api/people';
 import { Project, Task as ProjectTask, Person, UpsertTaskPayload, TaskStatus, ProjectStatus } from '@/types';
 import { toast } from 'sonner';
 
 import ProjectsToolbar from '@/components/projects/ProjectsToolbar';
 import ProjectViewContainer from '@/components/projects/ProjectViewContainer';
 import { GoogleCalendarImportDialog } from '@/components/projects/GoogleCalendarImportDialog';
+import { AdvancedFiltersState } from '@/components/projects/ProjectAdvancedFilters';
 import { useProjectFilters } from '@/hooks/useProjectFilters';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTasks } from '@/hooks/useTasks';
 import { useProjects } from '@/hooks/useProjects';
+import { useCreateProject } from '@/hooks/useCreateProject';
 import { useTaskMutations } from '@/hooks/useTaskMutations';
 import { useProjectMutations } from '@/hooks/useProjectMutations';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -22,6 +27,7 @@ import { Loader2 } from 'lucide-react';
 import { useTaskModal } from '@/contexts/TaskModalContext';
 
 type ViewMode = 'table' | 'list' | 'kanban' | 'tasks' | 'tasks-kanban';
+type SortConfig<T> = { key: keyof T | null; direction: 'ascending' | 'descending' };
 
 const ProjectsPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -170,7 +176,7 @@ const ProjectsPage = () => {
     else refetchProjects();
   }, [isTaskView, refetchTasks, refetchProjects]);
 
-  const { deleteTask, toggleTaskCompletion, isToggling } = useTaskMutations(refetch);
+  const { deleteTask, toggleTaskCompletion, isToggling, upsertTask } = useTaskMutations(refetch);
   const { updateProjectStatus } = useProjectMutations();
 
   const filteredTasks = useMemo(() => {
@@ -227,7 +233,11 @@ const ProjectsPage = () => {
 
   const confirmDeleteTask = () => {
     if (taskToDelete) {
-      deleteTask(taskToDelete, { onSuccess: () => setTaskToDelete(null) });
+      deleteTask(taskToDelete, {
+        onSuccess: () => {
+          setTaskToDelete(null);
+        }
+      });
     }
   };
 
@@ -236,12 +246,16 @@ const ProjectsPage = () => {
   };
 
   const handleTaskStatusChange = (task: ProjectTask, newStatus: TaskStatus) => {
-    const { upsertTask } = useTaskMutations();
     upsertTask({
-        id: task.id, project_id: task.project_id, title: task.title,
-        status: newStatus, completed: newStatus === 'Done',
+        id: task.id,
+        project_id: task.project_id,
+        title: task.title,
+        status: newStatus,
+        completed: newStatus === 'Done',
     }, {
-        onSuccess: () => toast.success(`Task "${task.title}" status updated to "${newStatus}"`)
+        onSuccess: () => {
+            toast.success(`Task "${task.title}" status updated to "${newStatus}"`);
+        }
     });
   };
 
@@ -321,7 +335,10 @@ const ProjectsPage = () => {
               requestSort={(key) => requestProjectSort(key as keyof Project)}
               rowRefs={rowRefs}
               kanbanGroupBy={kanbanGroupBy}
-              onEditTask={(task) => onOpenTaskModal(task, undefined, project)}
+              onEditTask={(task) => {
+                const projectForTask = projectsData.find(p => p.id === task.project_id);
+                onOpenTaskModal(task, undefined, projectForTask);
+              }}
               onDeleteTask={setTaskToDelete}
               onToggleTaskCompletion={handleToggleTaskCompletion}
               onTaskStatusChange={handleTaskStatusChange}
