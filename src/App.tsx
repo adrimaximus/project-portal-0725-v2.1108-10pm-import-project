@@ -54,6 +54,7 @@ import ProjectStatusesPage from "./pages/settings/ProjectStatusesPage";
 import PaymentStatusesPage from "./pages/settings/PaymentStatusesPage";
 import { TaskModalProvider } from "./contexts/TaskModalContext";
 import GlobalTaskModal from "./components/GlobalTaskModal";
+import NotificationSettingsPage from "./pages/NotificationSettingsPage";
 
 function App() {
   return (
@@ -110,6 +111,7 @@ function App() {
             <Route path="/settings/tags-properties" element={<TagsPropertiesPage />} />
             <Route path="/settings/project-statuses" element={<ProjectStatusesPage />} />
             <Route path="/settings/payment-statuses" element={<PaymentStatusesPage />} />
+            <Route path="/settings/notifications" element={<NotificationSettingsPage />} />
             <Route path="/custom/:slug" element={<CustomPage />} />
             <Route path="/multipage/:slug" element={<MultiEmbedPage />} />
             <Route path="/multipage/:slug/:itemSlug" element={<MultiEmbedItemPage />} />
