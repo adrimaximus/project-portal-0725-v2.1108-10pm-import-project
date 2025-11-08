@@ -165,7 +165,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
           project_id: comment.project_id,
           status: 'To do',
           priority: 'Normal',
-          due_date: null,
+          due_date: addHours(new Date(), 24).toISOString(),
           origin_ticket_id: comment.id,
         });
       }
@@ -280,6 +280,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
                       orderedTaskIds: [],
                       newTasks: [],
                       queryKey: ['tasks'],
+                      movedColumns: false,
                     });
                   }}
                 >

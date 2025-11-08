@@ -269,7 +269,7 @@ const ProjectsPage = () => {
     updateProjectStatus.mutate({ projectId, status: newStatus });
   };
 
-  const handleTaskOrderChange = (payload: { taskId: string; newStatus: TaskStatus; orderedTaskIds: string[]; newTasks: ProjectTask[]; queryKey: any[] }) => {
+  const handleTaskOrderChange = (payload: { taskId: string; newStatus: TaskStatus; orderedTaskIds: string[]; newTasks: ProjectTask[]; queryKey: any[]; movedColumns: boolean }) => {
     updateTaskStatusAndOrder(payload);
   };
 

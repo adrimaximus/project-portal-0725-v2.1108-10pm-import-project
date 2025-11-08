@@ -196,6 +196,7 @@ const TasksKanbanView = ({ tasks, onEdit, onDelete, refetch, tasksQueryKey, onTa
       orderedTaskIds: orderedTaskIds,
       newTasks: finalOrderedTasks,
       queryKey: tasksQueryKey,
+      movedColumns: activeContainer !== overContainer,
     });
   };
 
