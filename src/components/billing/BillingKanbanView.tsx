@@ -28,6 +28,7 @@ const BillingKanbanView = ({ invoices, onEditInvoice }: BillingKanbanViewProps) 
     const { updateProjectOrder } = useProjectKanbanMutations();
     const [groupedInvoices, setGroupedInvoices] = useState<Record<string, Invoice[]>>({});
     const [collapsedColumns, setCollapsedColumns] = useState<string[]>([]);
+    const isOptimisticUpdate = useRef(false);
 
     useEffect(() => {
         const savedState = localStorage.getItem('billingKanbanCollapsedColumns');
@@ -45,6 +46,10 @@ const BillingKanbanView = ({ invoices, onEditInvoice }: BillingKanbanViewProps) 
     };
 
     useEffect(() => {
+        if (isOptimisticUpdate.current) {
+            isOptimisticUpdate.current = false;
+            return;
+        }
         if (!activeInvoice) {
             const groups: Record<string, Invoice[]> = {};
             PAYMENT_STATUS_OPTIONS.forEach(opt => {
@@ -110,9 +115,11 @@ const BillingKanbanView = ({ invoices, onEditInvoice }: BillingKanbanViewProps) 
 
     const handleDragEnd = (event: DragEndEvent) => {
         const { active, over } = event;
-        setActiveInvoice(null);
-
-        if (!over) return;
+        
+        if (!over) {
+            setActiveInvoice(null);
+            return;
+        }
 
         const activeId = String(active.id);
         const activeContainer = active.data.current?.sortable.containerId as string;
@@ -120,13 +127,30 @@ const BillingKanbanView = ({ invoices, onEditInvoice }: BillingKanbanViewProps) 
         const overContainer = overIsItem ? over.data.current?.sortable.containerId as string : String(over.id);
         
         const activeInvoiceInstance = invoices.find(i => i.rawProjectId === activeId);
-        if (!activeInvoiceInstance || !activeContainer || !overContainer) return;
+        if (!activeInvoiceInstance || !activeContainer || !overContainer) {
+            setActiveInvoice(null);
+            return;
+        }
 
-        const newInvoicesState = Object.values(groupedInvoices).flat();
+        let finalGroupedInvoices = { ...groupedInvoices };
+        if (activeContainer === overContainer) {
+            const items = finalGroupedInvoices[activeContainer];
+            const oldIndex = items.findIndex(i => i.rawProjectId === activeId);
+            const newIndex = items.findIndex(i => i.rawProjectId === over.id);
+            if (oldIndex !== -1 && newIndex !== -1) {
+                finalGroupedInvoices[activeContainer] = arrayMove(items, oldIndex, newIndex);
+            }
+        }
+        
+        isOptimisticUpdate.current = true;
+        setGroupedInvoices(finalGroupedInvoices);
+        setActiveInvoice(null);
+
+        const newInvoicesState = Object.values(finalGroupedInvoices).flat();
 
         const finalUpdates: any[] = [];
-        for (const groupKey in groupedInvoices) {
-            groupedInvoices[groupKey].forEach((invoice, index) => {
+        for (const groupKey in finalGroupedInvoices) {
+            finalGroupedInvoices[groupKey].forEach((invoice, index) => {
                 finalUpdates.push({
                     project_id: invoice.rawProjectId,
                     kanban_order: index,

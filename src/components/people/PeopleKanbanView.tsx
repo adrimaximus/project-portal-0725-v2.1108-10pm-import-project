@@ -59,6 +59,7 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const { updatePeopleOrder } = usePeopleKanbanMutations();
   const [personGroups, setPersonGroups] = useState<Record<string, Person[]>>({});
+  const isOptimisticUpdate = useRef(false);
 
   const uncategorizedTag: Tag = { id: 'uncategorized', name: 'Uncategorized', color: '#9ca3af', user_id: '' };
 
@@ -99,6 +100,11 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
   }, [kanbanGroupBy, people, tags, columnOrder, visibleColumnIds, uncategorizedTag, allCompanies]);
 
   useEffect(() => {
+    if (isOptimisticUpdate.current) {
+      isOptimisticUpdate.current = false;
+      return;
+    }
+
     if (!activePerson) {
       const groups: Record<string, Person[]> = {};
       columns.forEach(col => {
@@ -244,18 +250,40 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
-    setActivePerson(null);
-    setTimeout(() => { dragHappened.current = false; }, 0);
-
     const { active, over } = event;
-    if (!over) return;
+    
+    if (!over) {
+      setActivePerson(null);
+      setTimeout(() => { dragHappened.current = false; }, 0);
+      return;
+    }
 
     const activeId = String(active.id);
     const sourceContainerId = active.data.current?.sortable.containerId as string;
     const overIsItem = !!over.data.current?.sortable;
     const destContainerId = overIsItem ? over.data.current?.sortable.containerId as string : String(over.id);
 
-    if (!sourceContainerId || !destContainerId) return;
+    if (!sourceContainerId || !destContainerId) {
+      setActivePerson(null);
+      setTimeout(() => { dragHappened.current = false; }, 0);
+      return;
+    }
+
+    isOptimisticUpdate.current = true;
+    setPersonGroups(currentGroups => {
+      let finalGroups = { ...currentGroups };
+      if (sourceContainerId === destContainerId) {
+        const items = finalGroups[sourceContainerId];
+        const oldIndex = items.findIndex(p => p.id === activeId);
+        const newIndex = items.findIndex(p => p.id === over.id);
+        if (oldIndex !== -1 && newIndex !== -1) {
+          finalGroups[sourceContainerId] = arrayMove(items, oldIndex, newIndex);
+        }
+      }
+      return finalGroups;
+    });
+    setActivePerson(null);
+    setTimeout(() => { dragHappened.current = false; }, 0);
 
     const newPeopleState = Object.values(personGroups).flat();
     const sourceColumnIds = (personGroups[sourceContainerId] || []).map(p => p.id);

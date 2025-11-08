@@ -147,10 +147,12 @@ const TasksKanbanView = ({ tasks, onEdit, onDelete, refetch, tasksQueryKey, onTa
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
-    setActiveTask(null);
     const { active, over } = event;
-
-    if (!over) return;
+    
+    if (!over) {
+      setActiveTask(null);
+      return;
+    }
 
     const activeId = String(active.id);
     const overId = String(over.id);
@@ -160,6 +162,7 @@ const TasksKanbanView = ({ tasks, onEdit, onDelete, refetch, tasksQueryKey, onTa
 
     if (!activeContainer || !overContainer) {
         console.error("Could not determine drag and drop containers.");
+        setActiveTask(null);
         return;
     }
 
@@ -182,6 +185,7 @@ const TasksKanbanView = ({ tasks, onEdit, onDelete, refetch, tasksQueryKey, onTa
     
     isOptimisticUpdate.current = true;
     setTasksByStatus(finalTasksByStatusState);
+    setActiveTask(null);
 
     const finalOrderedTasks = TASK_STATUS_OPTIONS.flatMap(option => 
       (finalTasksByStatusState[option.value] || []).map((task, index) => ({ ...task, status: option.value, kanban_order: index }))
