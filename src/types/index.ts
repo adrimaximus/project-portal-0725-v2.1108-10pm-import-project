@@ -198,6 +198,8 @@ export interface Project {
   public: boolean;
   venue?: string | null;
   origin_event_id?: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export type ProjectStatus = 'On Track' | 'At Risk' | 'Off Track' | 'On Hold' | 'Completed' | 'Archived' | 'Cancelled' | 'Bid Lost' | 'Billing Process' | 'In Progress' | 'Pending' | 'Requested' | 'Planning' | 'Reschedule';
@@ -300,4 +302,10 @@ export interface Company {
   updated_at: string;
   user_id?: string | null;
   custom_properties?: Record<string, any> | null;
+}
+
+export interface AdvancedFiltersState {
+  ownerIds: string[];
+  memberIds: string[];
+  excludedStatus: string[];
 }

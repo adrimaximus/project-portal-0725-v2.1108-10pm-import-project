@@ -11,7 +11,7 @@ import { toast } from 'sonner';
 import ProjectsToolbar from '@/components/projects/ProjectsToolbar';
 import ProjectViewContainer from '@/components/projects/ProjectViewContainer';
 import { GoogleCalendarImportDialog } from '@/components/projects/GoogleCalendarImportDialog';
-import { AdvancedFiltersState } from '@/components/projects/ProjectAdvancedFilters';
+import { AdvancedFiltersState } from '@/types';
 import { useProjectFilters } from '@/hooks/useProjectFilters';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTasks } from '@/hooks/useTasks';
