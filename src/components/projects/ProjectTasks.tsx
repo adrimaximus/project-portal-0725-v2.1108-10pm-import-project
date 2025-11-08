@@ -10,7 +10,7 @@ import { useMemo, useRef, useEffect, useState } from "react";
 import FileIcon from "../FileIcon";
 import TaskReactions from '../projects/TaskReactions';
 import { useTaskMutations } from '@/hooks/useTaskMutations';
-import { useQueryClient, useMutation } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import TaskAttachmentList from './TaskAttachmentList';
 import { cn, getErrorMessage, formatBytes } from "@/lib/utils";
@@ -243,9 +243,12 @@ const ProjectTasks = ({ project, tasks, projectId, projectSlug, onEditTask, onDe
 
   const handleAddNewTask = () => {
     if (newTaskTitle.trim()) {
-        createTasks([{ title: newTaskTitle.trim(), project_id: projectId, created_by: authUser!.id }]);
-        setShowNewTaskForm(false);
-        setNewTaskTitle("");
+        createTasks([{ title: newTaskTitle.trim(), project_id: projectId, created_by: authUser!.id }], {
+          onSuccess: () => {
+            setShowNewTaskForm(false);
+            setNewTaskTitle("");
+          }
+        });
     }
   };
 
@@ -320,8 +323,8 @@ const ProjectTasks = ({ project, tasks, projectId, projectSlug, onEditTask, onDe
         className="mb-2"
       />
       <div className="flex items-center gap-2">
-        <Button onClick={handleAddNewTask} disabled={isAddingTask}>
-          {isAddingTask ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+        <Button onClick={handleAddNewTask} disabled={isCreatingTasks}>
+          {isCreatingTasks ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
           Add Task
         </Button>
         <Button variant="ghost" onClick={() => { setShowNewTaskForm(false); setNewTaskTitle(""); }}>Cancel</Button>
