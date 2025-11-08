@@ -54,7 +54,7 @@ const PeoplePage = () => {
     setSearchTerm,
     sortConfig,
     requestSort,
-    filteredPeople,
+    people,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
@@ -124,9 +124,9 @@ const PeoplePage = () => {
   const handleDelete = async () => {
     if (!personToDelete) return;
 
-    await queryClient.cancelQueries({ queryKey: ['people', 'with-slug'] });
-    const previousPeople = queryClient.getQueryData<Person[]>(['people', 'with-slug']);
-    queryClient.setQueryData<Person[]>(['people', 'with-slug'], (old) =>
+    await queryClient.cancelQueries({ queryKey: ['people'] });
+    const previousPeople = queryClient.getQueryData<Person[]>(['people']);
+    queryClient.setQueryData<Person[]>(['people'], (old) =>
       old ? old.filter((p) => p.id !== personToDelete.id) : []
     );
     setPersonToDelete(null);
@@ -134,11 +134,11 @@ const PeoplePage = () => {
     const { error } = await supabase.from('people').delete().eq('id', personToDelete.id);
 
     if (error) {
-      queryClient.setQueryData(['people', 'with-slug'], previousPeople);
+      queryClient.setQueryData(['people'], previousPeople);
       toast.error(`Failed to delete ${personToDelete.full_name}.`, { description: getErrorMessage(error) });
     } else {
       toast.success(`${personToDelete.full_name} has been deleted.`);
-      queryClient.invalidateQueries({ queryKey: ['people', 'with-slug'] });
+      queryClient.invalidateQueries({ queryKey: ['people'] });
     }
   };
 
@@ -201,7 +201,7 @@ const PeoplePage = () => {
             <div className="flex-grow min-h-0">
               {viewMode === 'table' ? (
                 <PeopleTableView
-                  people={filteredPeople}
+                  people={people}
                   isLoading={isLoading}
                   onEdit={handleEdit}
                   onDelete={setPersonToDelete}
@@ -212,7 +212,7 @@ const PeoplePage = () => {
               ) : viewMode === 'kanban' ? (
                 <PeopleKanbanView 
                   ref={kanbanViewRef} 
-                  people={filteredPeople} 
+                  people={people} 
                   tags={tags} 
                   onEditPerson={handleEdit} 
                   onDeletePerson={setPersonToDelete} 
@@ -220,7 +220,7 @@ const PeoplePage = () => {
                 />
               ) : (
                 <div className="overflow-y-auto h-full">
-                  <PeopleGridView people={filteredPeople} onEditPerson={handleEdit} onDeletePerson={setPersonToDelete} onViewProfile={handleViewProfile} />
+                  <PeopleGridView people={people} onEditPerson={handleEdit} onDeletePerson={setPersonToDelete} onViewProfile={handleViewProfile} />
                 </div>
               )}
             </div>
