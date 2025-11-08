@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useTasks } from '@/hooks/useTasks';
 import { Task, UpsertTaskPayload, User } from '@/types';
 import { Loader2 } from 'lucide-react';
@@ -6,7 +6,7 @@ import { Dialog } from '@/components/ui/dialog';
 import TaskDetailCard from '@/components/projects/TaskDetailCard';
 import TaskFormDialog from '@/components/projects/TaskFormDialog';
 import { useTaskMutations } from '@/hooks/useTaskMutations';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from 'sonner';
 import { format, isPast } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -64,7 +64,7 @@ const ProjectTasksView = () => {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [isTaskFormOpen, setIsTaskFormOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
-  const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
+  const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
 
   const { upsertTask, isUpserting, deleteTask } = useTaskMutations(refetch);
 
@@ -78,14 +78,14 @@ const ProjectTasksView = () => {
     setIsTaskFormOpen(true);
   };
 
-  const handleDeleteTask = (taskId: string) => {
+  const handleDeleteTask = (task: Task) => {
     setSelectedTask(null);
-    setTaskToDelete(taskId);
+    setTaskToDelete(task);
   };
 
   const confirmDeleteTask = () => {
     if (taskToDelete) {
-      deleteTask(taskToDelete, {
+      deleteTask(taskToDelete.id, {
         onSuccess: () => {
           toast.success(`Task deleted.`);
           setTaskToDelete(null);

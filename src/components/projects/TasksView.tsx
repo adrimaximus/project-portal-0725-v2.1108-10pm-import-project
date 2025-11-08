@@ -12,7 +12,7 @@ import { Button } from "../ui/button";
 import { MoreHorizontal, Edit, Trash2, Ticket, Paperclip, Eye, Download, File as FileIconLucide, ChevronDown, Loader2, SmilePlus } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Checkbox } from "@/components/ui/checkbox";
-import TaskAttachmentList from './TaskAttachmentList';
+import TaskAttachmentList from '../projects/TaskAttachmentList';
 import { Drawer, DrawerContent, DrawerTrigger } from "@/components/ui/drawer";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -610,7 +610,7 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
             task={selectedTask}
             onClose={() => setSelectedTaskId(null)}
             onEdit={handleEditTask}
-            onDelete={handleDeleteTask}
+            onDelete={() => handleDeleteTask(selectedTask.id)}
           />
         )}
       </Drawer>
