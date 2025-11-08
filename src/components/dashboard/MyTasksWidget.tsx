@@ -103,8 +103,8 @@ const MyTasksWidget = () => {
   return (
     <>
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between pb-4">
-          <div className="flex items-center gap-3">
+        <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 pb-4">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
             <CardTitle className="flex items-center">
               My Tasks
             </CardTitle>
@@ -164,7 +164,7 @@ const MyTasksWidget = () => {
               </Badge>
             )}
           </div>
-          <Button asChild variant="link" className="text-sm -my-2 -mr-4">
+          <Button asChild variant="link" className="text-sm -my-2 -mr-4 self-end sm:self-auto">
             <Link to="/projects?view=tasks">View all</Link>
           </Button>
         </CardHeader>
@@ -199,7 +199,7 @@ const MyTasksWidget = () => {
                     onClick={() => handleTaskClick(task)}
                     onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleTaskClick(task) }}
                   >
-                    <div className="flex-grow">
+                    <div className="flex-grow min-w-0">
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -212,9 +212,9 @@ const MyTasksWidget = () => {
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
-                      <p className="text-xs text-muted-foreground mt-0.5">{task.project_name}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5 truncate">{task.project_name}</p>
                     </div>
-                    <div className="flex items-center gap-3 shrink-0 ml-auto">
+                    <div className="flex items-center flex-wrap justify-end gap-x-3 gap-y-1 shrink-0 ml-auto">
                       {task.due_date && (
                         <div className={cn(
                           "text-xs font-medium whitespace-nowrap flex items-center gap-1.5",
