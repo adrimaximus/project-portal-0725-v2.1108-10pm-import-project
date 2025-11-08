@@ -1,7 +1,7 @@
 import { useMemo, useState, useEffect } from 'react';
 import { Task, TaskStatus, TASK_STATUS_OPTIONS } from '@/types';
 import TasksKanbanColumn from './TasksKanbanColumn';
-import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, MouseSensor, TouchSensor, useSensor, useSensors, DragOverEvent } from '@dnd-kit/core';
+import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, MouseSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
 import TasksKanbanCard from './TasksKanbanCard';
 
@@ -20,6 +20,7 @@ const TasksKanbanView = ({ tasks, onEdit, onDelete, refetch, tasksQueryKey, onTa
   const [tasksByStatus, setTasksByStatus] = useState<Record<TaskStatus, Task[]>>({} as Record<TaskStatus, Task[]>);
 
   useEffect(() => {
+    // Hanya perbarui dari props jika tidak sedang menyeret
     if (!activeTask) {
       const grouped: { [key in TaskStatus]: Task[] } = TASK_STATUS_OPTIONS.reduce((acc, opt) => {
         acc[opt.value] = [];
@@ -31,10 +32,12 @@ const TasksKanbanView = ({ tasks, onEdit, onDelete, refetch, tasksQueryKey, onTa
         if (grouped[status]) {
           grouped[status].push(task);
         } else {
+          // Fallback untuk tugas dengan status tidak valid
           grouped['To do'].push(task);
         }
       });
   
+      // Urutkan setiap kolom berdasarkan kanban_order
       for (const status in grouped) {
         grouped[status as TaskStatus].sort((a, b) => (a.kanban_order || 0) - (b.kanban_order || 0));
       }
@@ -76,74 +79,67 @@ const TasksKanbanView = ({ tasks, onEdit, onDelete, refetch, tasksQueryKey, onTa
     }
   };
 
-  const handleDragOver = (event: DragOverEvent) => {
+  const handleDragEnd = (event: DragEndEvent) => {
+    setActiveTask(null);
     const { active, over } = event;
+
     if (!over) return;
 
     const activeId = String(active.id);
     const overId = String(over.id);
 
-    if (activeId === overId) return;
-
     const activeContainer = active.data.current?.sortable.containerId as TaskStatus;
-    const overIsItem = !!over.data.current?.sortable;
-    const overContainer = overIsItem ? (over.data.current?.sortable.containerId as TaskStatus) : (over.id as TaskStatus);
+    const overContainer = over.data.current?.sortable?.containerId as TaskStatus || over.id as TaskStatus;
 
     if (!activeContainer || !overContainer) return;
 
-    setTasksByStatus(prev => {
-      const newGroups = { ...prev };
-      const sourceItems = newGroups[activeContainer];
-      const destItems = newGroups[overContainer];
-      if (!sourceItems || !destItems) return prev;
+    let newTasksByStatus = { ...tasksByStatus };
 
+    if (activeContainer === overContainer) {
+      if (activeId === overId) return;
+      const items = newTasksByStatus[activeContainer];
+      const oldIndex = items.findIndex(t => t.id === activeId);
+      const newIndex = items.findIndex(t => t.id === overId);
+      if (oldIndex !== -1 && newIndex !== -1) {
+        newTasksByStatus[activeContainer] = arrayMove(items, oldIndex, newIndex);
+      }
+    } else {
+      const sourceItems = [...newTasksByStatus[activeContainer]];
+      const destItems = [...newTasksByStatus[overContainer]];
+      
       const activeIndex = sourceItems.findIndex(t => t.id === activeId);
-      if (activeIndex === -1) return prev;
+      if (activeIndex === -1) return;
 
       const [movedItem] = sourceItems.splice(activeIndex, 1);
+      const updatedMovedItem = { ...movedItem, status: overContainer };
 
-      if (activeContainer === overContainer) {
-        const overIndex = destItems.findIndex(t => t.id === overId);
-        if (overIndex !== -1) {
-          destItems.splice(overIndex, 0, movedItem);
-        }
-      } else {
-        movedItem.status = overContainer;
-        const overIndex = overIsItem ? destItems.findIndex(t => t.id === overId) : destItems.length;
-        if (overIndex !== -1) {
-          destItems.splice(overIndex, 0, movedItem);
-        } else {
-          destItems.push(movedItem);
-        }
-      }
-      return newGroups;
-    });
-  };
+      const overIndex = over.data.current?.sortable ? destItems.findIndex(t => t.id === overId) : destItems.length;
+      destItems.splice(overIndex, 0, updatedMovedItem);
 
-  const handleDragEnd = (event: DragEndEvent) => {
-    setActiveTask(null);
-    const { active, over } = event;
+      newTasksByStatus[activeContainer] = sourceItems;
+      newTasksByStatus[overContainer] = destItems;
+    }
 
-    if (!over || active.id === over.id) return;
+    // Perbarui UI secara optimis
+    setTasksByStatus(newTasksByStatus);
 
-    const activeId = String(active.id);
-    const overIsItem = !!over.data.current?.sortable;
-    const overContainer = overIsItem ? (over.data.current?.sortable.containerId as TaskStatus) : (over.id as TaskStatus);
+    // Ratakan tugas dalam urutan yang konsisten untuk pembaruan backend
+    const finalOrderedTasks = TASK_STATUS_OPTIONS.flatMap(option => 
+      (newTasksByStatus[option.value] || []).map((task, index) => ({ ...task, kanban_order: index }))
+    );
+    const orderedTaskIds = finalOrderedTasks.map(t => t.id);
 
-    const newTasks = Object.values(tasksByStatus).flat();
-    const orderedTaskIds = newTasks.map(t => t.id);
-
-    onTaskOrderChange({ 
-        taskId: activeId, 
-        newStatus: overContainer, 
-        orderedTaskIds: orderedTaskIds,
-        newTasks: newTasks,
-        queryKey: tasksQueryKey,
+    onTaskOrderChange({
+      taskId: activeId,
+      newStatus: overContainer,
+      orderedTaskIds: orderedTaskIds,
+      newTasks: finalOrderedTasks,
+      queryKey: tasksQueryKey,
     });
   };
 
   return (
-    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd} onDragCancel={() => setActiveTask(null)}>
+    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragCancel={() => setActiveTask(null)}>
       <div className="flex gap-4 overflow-x-auto p-2 sm:p-4 h-full">
         {TASK_STATUS_OPTIONS.map(option => (
           <TasksKanbanColumn
