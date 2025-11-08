@@ -54,6 +54,7 @@ interface CollaboratorStat extends User {
     status: string;
   }[];
   filteredTaskCount: number;
+  projectsForTasks: string[];
   activeTicketCount: number;
   overdueBillCount: number;
   role: string;
@@ -94,7 +95,7 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
   }, [projects]);
 
   const { collaboratorsByRole, allCollaborators } = useMemo(() => {
-    const stats: Record<string, CollaboratorStat & { countedProjectIds: Set<string>; matchingTaskIds: Set<string> }> = {};
+    const stats: Record<string, CollaboratorStat & { countedProjectIds: Set<string>; matchingTaskIds: Set<string>; matchingTasksDetails: Map<string, string> }> = {};
     const roleHierarchy: Record<string, number> = { 'owner': 1, 'admin': 2, 'editor': 3, 'member': 4 };
 
     const ensureUser = (user: Partial<User>) => {
@@ -108,11 +109,13 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
                 projectCount: 0,
                 projects: [],
                 filteredTaskCount: 0,
+                projectsForTasks: [],
                 activeTicketCount: 0,
                 overdueBillCount: 0,
                 role: user.role || 'member',
                 countedProjectIds: new Set(),
                 matchingTaskIds: new Set(),
+                matchingTasksDetails: new Map(),
             };
         }
         return stats[user.id];
@@ -165,7 +168,10 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
 
         if (taskFilters.includes('created')) {
             const creatorStat = ensureUser(task.created_by);
-            if (creatorStat) creatorStat.matchingTaskIds.add(task.id);
+            if (creatorStat) {
+                creatorStat.matchingTaskIds.add(task.id);
+                creatorStat.matchingTasksDetails.set(task.project_id, task.project_name);
+            }
         }
 
         (task.assignedTo || []).forEach((assignee: User) => {
@@ -174,12 +180,15 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
 
             if (taskFilters.includes('active') && !task.completed) {
                 userStat.matchingTaskIds.add(task.id);
+                userStat.matchingTasksDetails.set(task.project_id, task.project_name);
             }
             if (taskFilters.includes('overdue') && isOverdue) {
                 userStat.matchingTaskIds.add(task.id);
+                userStat.matchingTasksDetails.set(task.project_id, task.project_name);
             }
             if (taskFilters.includes('completed') && task.completed) {
                 userStat.matchingTaskIds.add(task.id);
+                userStat.matchingTasksDetails.set(task.project_id, task.project_name);
             }
         });
     });
@@ -189,7 +198,10 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
     });
 
     const collaborators = Object.values(stats)
-        .map(({ countedProjectIds, matchingTaskIds, ...rest }) => rest)
+        .map(({ countedProjectIds, matchingTaskIds, matchingTasksDetails, ...rest }) => ({ 
+            ...rest,
+            projectsForTasks: Array.from(matchingTasksDetails.values())
+        }))
         .sort((a, b) => b.projectCount - a.projectCount);
 
     const grouped: Record<string, CollaboratorStat[]> = {};
@@ -257,6 +269,32 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
               </>
             ) : (
               <p>No projects match the current filter.</p>
+            )}
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  };
+
+  const renderFilteredTaskCount = (collaborator: CollaboratorStat) => {
+    const projectNames = [...collaborator.projectsForTasks].sort((a, b) => a.localeCompare(b));
+
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span>{collaborator.filteredTaskCount}</span>
+          </TooltipTrigger>
+          <TooltipContent>
+            {projectNames.length > 0 ? (
+              <>
+                <p className="font-bold">Projects with Filtered Tasks:</p>
+                <ul className="list-disc pl-4 text-left">
+                  {projectNames.map(name => <li key={name}>{name}</li>)}
+                </ul>
+              </>
+            ) : (
+              <p>No tasks match the current filter.</p>
             )}
           </TooltipContent>
         </Tooltip>
@@ -412,7 +450,7 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
                             <div className="text-muted-foreground">Filtered Projects</div>
                             <div className="text-right font-medium">{renderFilteredProjectCount(c)}</div>
                             <div className="text-muted-foreground">Filtered Tasks</div>
-                            <div className="text-right font-medium">{c.filteredTaskCount}</div>
+                            <div className="text-right font-medium">{renderFilteredTaskCount(c)}</div>
                             <div className="text-muted-foreground">Active Tickets</div>
                             <div className="text-right font-medium">{c.activeTicketCount}</div>
                             <div className="text-muted-foreground">Overdue Bill</div>
@@ -461,7 +499,7 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
                                     </TableCell>
                                     <TableCell className="text-right font-medium">{c.projectCount}</TableCell>
                                     <TableCell className="text-right font-medium">{renderFilteredProjectCount(c)}</TableCell>
-                                    <TableCell className="text-right font-medium">{c.filteredTaskCount}</TableCell>
+                                    <TableCell className="text-right font-medium">{renderFilteredTaskCount(c)}</TableCell>
                                     <TableCell className="text-right font-medium">{c.activeTicketCount}</TableCell>
                                     <TableCell className="text-right font-medium">{c.overdueBillCount}</TableCell>
                                 </TableRow>
