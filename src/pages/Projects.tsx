@@ -197,9 +197,11 @@ const ProjectsPage = () => {
 
   const filteredTasks = useMemo(() => {
     let tasksToFilter = allTasks;
-    if (advancedFilters.selectedPeopleIds.length > 0) {
+    const selectedPeopleIds = [...(advancedFilters.ownerIds || []), ...(advancedFilters.memberIds || [])];
+    if (selectedPeopleIds.length > 0) {
+        const uniqueSelectedPeopleIds = [...new Set(selectedPeopleIds)];
         tasksToFilter = tasksToFilter.filter(task => 
-            task.assignedTo?.some(assignee => advancedFilters.selectedPeopleIds.includes(assignee.id))
+            task.assignedTo?.some(assignee => uniqueSelectedPeopleIds.includes(assignee.id))
         );
     }
     if (!searchTerm) return tasksToFilter;
@@ -209,7 +211,7 @@ const ProjectsPage = () => {
       (task.description && task.description.toLowerCase().includes(lowercasedFilter)) ||
       (task.project_name && task.project_name.toLowerCase().includes(lowercasedFilter))
     );
-  }, [allTasks, searchTerm, advancedFilters.selectedPeopleIds]);
+  }, [allTasks, searchTerm, advancedFilters.ownerIds, advancedFilters.memberIds]);
 
   useEffect(() => {
     if (view === 'table' && !initialTableScrollDone.current && sortedProjects.length > 0) {
