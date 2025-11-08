@@ -104,7 +104,7 @@ const ProjectsToolbar = ({
 
           {view === 'kanban' && (
             <Select value={kanbanGroupBy} onValueChange={onKanbanGroupByChange}>
-              <SelectTrigger className="w-[150px]"><SelectValue placeholder="Group by..." /></SelectTrigger>
+              <SelectTrigger className="w-[80px]"><SelectValue placeholder="Group by..." /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="status">Status</SelectItem>
                 <SelectItem value="payment_status">Payment Status</SelectItem>
