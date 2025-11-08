@@ -5,7 +5,7 @@ import { id } from 'date-fns/locale';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { getAvatarUrl, generatePastelColor, getInitials, formatMentionsForDisplay } from '@/lib/utils';
 import { Button } from './ui/button';
-import { MoreHorizontal, Edit, Trash2, Ticket, CornerUpLeft } from 'lucide-react';
+import { MoreHorizontal, Edit, Trash2, Ticket, CornerUpLeft, Paperclip, X, FileText } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -16,6 +16,7 @@ import { Textarea } from './ui/textarea';
 import { Badge } from './ui/badge';
 import CommentReactions from './CommentReactions';
 import CommentAttachmentItem from './CommentAttachmentItem';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 
 interface CommentProps {
   comment: CommentType;
@@ -29,6 +30,10 @@ interface CommentProps {
   handleCancelEdit: () => void;
   onReply: (comment: CommentType) => void;
   onCreateTicketFromComment: (comment: CommentType) => void;
+  newAttachments?: File[];
+  removeNewAttachment?: (index: number) => void;
+  handleEditFileChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  editFileInputRef?: React.RefObject<HTMLInputElement>;
 }
 
 const Comment: React.FC<CommentProps> = ({
@@ -43,6 +48,10 @@ const Comment: React.FC<CommentProps> = ({
   handleCancelEdit,
   onReply,
   onCreateTicketFromComment,
+  newAttachments,
+  removeNewAttachment,
+  handleEditFileChange,
+  editFileInputRef,
 }) => {
   const { user } = useAuth();
   
@@ -90,9 +99,45 @@ const Comment: React.FC<CommentProps> = ({
         {isEditing ? (
           <div className="mt-1 space-y-2">
             <Textarea value={editedText} onChange={(e) => setEditedText(e.target.value)} className="text-sm" />
-            <div className="flex justify-end gap-2">
-              <Button variant="ghost" size="sm" onClick={handleCancelEdit}>Cancel</Button>
-              <Button size="sm" onClick={handleSaveEdit}>Save</Button>
+            {(attachments.length > 0 || (newAttachments && newAttachments.length > 0)) && (
+              <div className="mt-2">
+                  <h4 className="font-semibold text-xs text-muted-foreground mb-2">Attachments</h4>
+                  <div className="space-y-1">
+                      {attachments.map((file, index) => (
+                          <div key={file.url || file.file_url || index} className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <FileText className="h-4 w-4" />
+                              <span>{file.name || file.file_name}</span>
+                          </div>
+                      ))}
+                      {newAttachments && newAttachments.map((file, index) => (
+                        <div key={index} className="flex items-center justify-between text-sm bg-muted p-1 rounded-md">
+                          <span className="truncate">{file.name}</span>
+                          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeNewAttachment && removeNewAttachment(index)}>
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                  </div>
+              </div>
+            )}
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-1">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="ghost" size="icon" onClick={() => editFileInputRef?.current?.click()}>
+                        <Paperclip className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent><p>Attach files</p></TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                <input type="file" ref={editFileInputRef} multiple onChange={handleEditFileChange} className="hidden" />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="ghost" size="sm" onClick={handleCancelEdit}>Cancel</Button>
+                <Button size="sm" onClick={handleSaveEdit}>Save</Button>
+              </div>
             </div>
           </div>
         ) : (

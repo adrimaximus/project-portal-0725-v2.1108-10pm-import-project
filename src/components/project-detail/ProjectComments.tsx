@@ -31,6 +31,8 @@ const ProjectComments = ({
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editedText, setEditedText] = useState('');
   const [commentToDelete, setCommentToDelete] = useState<CommentType | null>(null);
+  const [newAttachments, setNewAttachments] = useState<File[]>([]);
+  const editFileInputRef = useRef<HTMLInputElement>(null);
   const commentInputRef = useRef<{ setText: (text: string, append?: boolean) => void, focus: () => void }>(null);
   const lastProcessedMentionId = useRef<string | null>(null);
 
@@ -56,16 +58,18 @@ const ProjectComments = ({
   const handleEditClick = (comment: CommentType) => {
     setEditingCommentId(comment.id);
     setEditedText(comment.text || '');
+    setNewAttachments([]);
   };
 
   const handleCancelEdit = () => {
     setEditingCommentId(null);
     setEditedText('');
+    setNewAttachments([]);
   };
 
   const handleSaveEdit = () => {
     if (editingCommentId) {
-      updateComment.mutate({ commentId: editingCommentId, text: editedText });
+      updateComment.mutate({ commentId: editingCommentId, text: editedText, attachments: newAttachments });
     }
     handleCancelEdit();
   };
@@ -83,6 +87,16 @@ const ProjectComments = ({
         onCreateTicketFromComment(comment);
       }
     });
+  };
+
+  const handleEditFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files) {
+      setNewAttachments(prev => [...prev, ...Array.from(event.target.files!)]);
+    }
+  };
+
+  const removeNewAttachment = (index: number) => {
+    setNewAttachments(prev => prev.filter((_, i) => i !== index));
   };
 
   return (
@@ -115,6 +129,10 @@ const ProjectComments = ({
               onToggleReaction={toggleReaction.mutate}
               onReply={onReply}
               onCreateTicketFromComment={handleCreateTicket}
+              newAttachments={newAttachments}
+              removeNewAttachment={removeNewAttachment}
+              handleEditFileChange={handleEditFileChange}
+              editFileInputRef={editFileInputRef}
             />
           ))
         ) : (
@@ -137,3 +155,6 @@ const ProjectComments = ({
       </AlertDialog>
     </div>
   );
+};
+
+export default ProjectComments;

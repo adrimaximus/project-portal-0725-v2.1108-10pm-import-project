@@ -82,8 +82,27 @@ export const useCommentManager = ({ scope }: UseCommentManagerProps) => {
   });
 
   const updateCommentMutation = useMutation({
-    mutationFn: async ({ commentId, text, isTicket }: { commentId: string, text: string, isTicket?: boolean }) => {
-      const updatePayload: { text: string, is_ticket?: boolean } = { text };
+    mutationFn: async ({ commentId, text, isTicket, attachments }: { commentId: string, text: string, isTicket?: boolean, attachments?: File[] | null }) => {
+      const { data: originalComment, error: fetchError } = await supabase.from('comments').select('attachments_jsonb, project_id').eq('id', commentId).single();
+      if (fetchError) throw fetchError;
+
+      let attachmentsJsonb: any[] = originalComment.attachments_jsonb || [];
+      if (attachments && attachments.length > 0) {
+        const uploadPromises = attachments.map(async (file) => {
+          const fileId = uuidv4();
+          const sanitizedFileName = file.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
+          const filePath = `${originalComment.project_id}/comments/${Date.now()}-${sanitizedFileName}`;
+          const { error: uploadError } = await supabase.storage.from('project-files').upload(filePath, file);
+          if (uploadError) throw new Error(`Failed to upload ${file.name}: ${uploadError.message}`);
+          const { data: urlData } = supabase.storage.from('project-files').getPublicUrl(filePath);
+          if (!urlData || !urlData.publicUrl) throw new Error(`Failed to get public URL for uploaded file ${file.name}.`);
+          return { id: fileId, file_name: file.name, file_url: urlData.publicUrl, file_type: file.type, file_size: file.size, storage_path: filePath, created_at: new Date().toISOString() };
+        });
+        const newAttachmentsJsonb = await Promise.all(uploadPromises);
+        attachmentsJsonb = [...attachmentsJsonb, ...newAttachmentsJsonb];
+      }
+
+      const updatePayload: { text: string, is_ticket?: boolean, attachments_jsonb?: any[] } = { text, attachments_jsonb };
       if (isTicket !== undefined) {
         updatePayload.is_ticket = isTicket;
       }
