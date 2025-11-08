@@ -7,6 +7,10 @@ import { Switch } from "@/components/ui/switch";
 import ProjectAdvancedFilters, { AdvancedFiltersState } from './ProjectAdvancedFilters';
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Input } from "@/components/ui/input";
+import { Search } from "lucide-react";
+import { DateRange } from "react-day-picker";
+import { DateRangePicker } from "../DateRangePicker";
 
 type ViewMode = 'table' | 'list' | 'kanban' | 'tasks' | 'tasks-kanban';
 
@@ -32,6 +36,10 @@ type ProjectsToolbarProps = {
   onAdvancedFiltersChange: (filters: AdvancedFiltersState) => void;
   allPeople: Person[];
   allOwners: Person[];
+  searchTerm: string;
+  onSearchChange: (term: string) => void;
+  dateRange: DateRange | undefined;
+  onDateRangeChange: (range: DateRange | undefined) => void;
 };
 
 const ProjectsToolbar = ({
@@ -51,6 +59,10 @@ const ProjectsToolbar = ({
   onAdvancedFiltersChange,
   allPeople,
   allOwners,
+  searchTerm,
+  onSearchChange,
+  dateRange,
+  onDateRangeChange,
 }: ProjectsToolbarProps) => {
   return (
     <div className="p-4 border-t flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -116,6 +128,19 @@ const ProjectsToolbar = ({
           allPeople={allPeople}
           allOwners={allOwners}
         />
+      </div>
+
+      <div className="w-full sm:w-auto flex items-center gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search projects or tasks..."
+            value={searchTerm}
+            onChange={(e) => onSearchChange(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <DateRangePicker date={dateRange} onDateChange={onDateRangeChange} />
       </div>
 
       {/* Desktop Action Buttons */}

@@ -1,15 +1,105 @@
-import { useState, useMemo, useCallback } from 'react';
-import { Project } from '@/types';
+import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { Project, AdvancedFiltersState } from '@/types';
 import { DateRange } from 'react-day-picker';
-import { isBefore, startOfToday } from 'date-fns';
-import { AdvancedFiltersState } from '@/components/projects/ProjectAdvancedFilters';
+import { isBefore, startOfToday, parseISO } from 'date-fns';
+import SafeLocalStorage from '@/lib/localStorage';
 
-export const useProjectFilters = (projects: Project[], advancedFilters: AdvancedFiltersState) => {
-  const [dateRange, setDateRange] = useState<DateRange | undefined>();
-  const [sortConfig, setSortConfig] = useState<{ key: keyof Project | null; direction: 'ascending' | 'descending' }>({ key: null, direction: 'ascending' });
+const FILTERS_STORAGE_KEY = 'projectFilters';
 
-  const filteredProjects = useMemo(() => {
-    return projects.filter(project => {
+type ViewMode = 'table' | 'list' | 'kanban' | 'tasks' | 'tasks-kanban';
+
+export const useProjectFilters = (projects: Project[]) => {
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const getInitialState = () => {
+    const storedFilters = SafeLocalStorage.getItem<any>(FILTERS_STORAGE_KEY, {});
+    const fromParam = searchParams.get('from');
+    const toParam = searchParams.get('to');
+
+    let dateRange;
+    if (fromParam) {
+      try {
+        dateRange = { from: parseISO(fromParam), to: toParam ? parseISO(toParam) : undefined };
+      } catch (e) {
+        console.warn("Invalid date in URL, ignoring.", e);
+      }
+    } else if (storedFilters.dateRange?.from) {
+      try {
+        dateRange = { from: new Date(storedFilters.dateRange.from), to: storedFilters.dateRange.to ? new Date(storedFilters.dateRange.to) : undefined };
+      } catch (e) {
+        console.warn("Invalid date in localStorage, ignoring.", e);
+      }
+    }
+
+    return {
+      view: (searchParams.get('view') as ViewMode) || storedFilters.view || 'list',
+      searchTerm: searchParams.get('search') || storedFilters.searchTerm || '',
+      kanbanGroupBy: (searchParams.get('groupBy') as 'status' | 'payment_status') || storedFilters.kanbanGroupBy || 'status',
+      hideCompletedTasks: searchParams.get('hideCompleted') ? searchParams.get('hideCompleted') === 'true' : (storedFilters.hideCompletedTasks ?? true),
+      advancedFilters: {
+        ownerIds: searchParams.getAll('owner').length > 0 ? searchParams.getAll('owner') : (storedFilters.advancedFilters?.ownerIds ?? []),
+        memberIds: searchParams.getAll('member').length > 0 ? searchParams.getAll('member') : (storedFilters.advancedFilters?.memberIds ?? []),
+        excludedStatus: searchParams.getAll('excludeStatus').length > 0 ? searchParams.getAll('excludeStatus') : (storedFilters.advancedFilters?.excludedStatus ?? []),
+      },
+      dateRange,
+      sortConfig: {
+        key: searchParams.get('sortKey') || storedFilters.sortConfig?.key || null,
+        direction: (searchParams.get('sortDir') as 'ascending' | 'descending') || storedFilters.sortConfig?.direction || 'ascending',
+      },
+    };
+  };
+
+  const [view, setView] = useState<ViewMode>(getInitialState().view);
+  const [searchTerm, setSearchTerm] = useState(getInitialState().searchTerm);
+  const [kanbanGroupBy, setKanbanGroupBy] = useState<'status' | 'payment_status'>(getInitialState().kanbanGroupBy);
+  const [hideCompletedTasks, setHideCompletedTasks] = useState(getInitialState().hideCompletedTasks);
+  const [advancedFilters, setAdvancedFilters] = useState<AdvancedFiltersState>(getInitialState().advancedFilters);
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(getInitialState().dateRange);
+  const [sortConfig, setSortConfig] = useState(getInitialState().sortConfig);
+
+  useEffect(() => {
+    const newSearchParams = new URLSearchParams();
+    newSearchParams.set('view', view);
+    if (searchTerm) newSearchParams.set('search', searchTerm);
+    if (view === 'kanban') newSearchParams.set('groupBy', kanbanGroupBy);
+    if (view === 'tasks' || view === 'tasks-kanban') newSearchParams.set('hideCompleted', String(hideCompletedTasks));
+    
+    advancedFilters.ownerIds.forEach(id => newSearchParams.append('owner', id));
+    advancedFilters.memberIds.forEach(id => newSearchParams.append('member', id));
+    advancedFilters.excludedStatus.forEach(status => newSearchParams.append('excludeStatus', status));
+
+    if (dateRange?.from) newSearchParams.set('from', dateRange.from.toISOString().split('T')[0]);
+    if (dateRange?.to) newSearchParams.set('to', dateRange.to.toISOString().split('T')[0]);
+
+    if (sortConfig.key) {
+      newSearchParams.set('sortKey', sortConfig.key);
+      newSearchParams.set('sortDir', sortConfig.direction);
+    }
+
+    setSearchParams(newSearchParams, { replace: true });
+
+    SafeLocalStorage.setItem(FILTERS_STORAGE_KEY, {
+      view, searchTerm, kanbanGroupBy, hideCompletedTasks, advancedFilters, dateRange, sortConfig
+    });
+  }, [view, searchTerm, kanbanGroupBy, hideCompletedTasks, advancedFilters, dateRange, sortConfig, setSearchParams]);
+
+  const handleViewChange = (newView: ViewMode | null) => {
+    if (newView) setView(newView);
+  };
+
+  const handleSearchChange = (term: string) => setSearchTerm(term);
+  const toggleHideCompleted = () => setHideCompletedTasks(prev => !prev);
+
+  const requestSort = useCallback((key: keyof Project) => {
+    setSortConfig(prevConfig => ({
+      key,
+      direction: prevConfig.key === key && prevConfig.direction === 'ascending' ? 'descending' : 'ascending',
+    }));
+  }, []);
+
+  const sortedProjects = useMemo(() => {
+    let sortableItems = [...projects].filter(project => {
       const projectStart = project.start_date ? new Date(project.start_date) : null;
       const projectEnd = project.due_date ? new Date(project.due_date) : projectStart;
 
@@ -35,10 +125,7 @@ export const useProjectFilters = (projects: Project[], advancedFilters: Advanced
 
       return matchesDate && matchesOwner && matchesMember && matchesStatus;
     });
-  }, [projects, dateRange, advancedFilters]);
 
-  const sortedProjects = useMemo(() => {
-    let sortableItems = [...filteredProjects];
     const tieBreaker = (a: Project, b: Project) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
 
     if (sortConfig.key !== null) {
@@ -66,7 +153,6 @@ export const useProjectFilters = (projects: Project[], advancedFilters: Advanced
         return tieBreaker(a, b);
       });
     } else {
-      // Default sorting logic
       const today = startOfToday();
       
       const projectsWithDates = sortableItems.filter(p => p.start_date);
@@ -74,38 +160,25 @@ export const useProjectFilters = (projects: Project[], advancedFilters: Advanced
 
       const upcomingProjects = projectsWithDates
         .filter(p => !isBefore(new Date(p.start_date!), today))
-        .sort((a, b) => {
-          const dateCompare = new Date(a.start_date!).getTime() - new Date(b.start_date!).getTime();
-          return dateCompare !== 0 ? dateCompare : tieBreaker(a, b);
-        });
+        .sort((a, b) => new Date(a.start_date!).getTime() - new Date(b.start_date!).getTime());
 
       const pastProjects = projectsWithDates
         .filter(p => isBefore(new Date(p.start_date!), today))
-        .sort((a, b) => {
-          const dateCompare = new Date(b.start_date!).getTime() - new Date(a.start_date!).getTime();
-          return dateCompare !== 0 ? dateCompare : tieBreaker(a, b);
-        });
+        .sort((a, b) => new Date(b.start_date!).getTime() - new Date(a.start_date!).getTime());
 
       sortableItems = [...upcomingProjects, ...pastProjects, ...projectsWithoutDates];
     }
     return sortableItems;
-  }, [filteredProjects, sortConfig]);
-
-  const requestSort = useCallback((key: keyof Project) => {
-    setSortConfig(prevConfig => {
-      let direction: 'ascending' | 'descending' = 'ascending';
-      if (prevConfig.key === key && prevConfig.direction === 'ascending') {
-        direction = 'descending';
-      }
-      return { key, direction };
-    });
-  }, []);
+  }, [projects, dateRange, advancedFilters, sortConfig]);
 
   return {
-    dateRange,
-    setDateRange,
-    sortConfig,
-    requestSort,
+    view, handleViewChange,
+    kanbanGroupBy, setKanbanGroupBy,
+    hideCompletedTasks, toggleHideCompleted,
+    searchTerm, handleSearchChange,
+    advancedFilters, handleAdvancedFiltersChange: setAdvancedFilters,
+    dateRange, setDateRange,
+    sortConfig, requestSort,
     sortedProjects,
   };
 };
