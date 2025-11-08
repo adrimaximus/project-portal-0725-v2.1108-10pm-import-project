@@ -50,7 +50,7 @@ export default function PortalLayout({ children, summary, pageHeader, disableMai
             "flex-1 min-h-0 relative overscroll-y-contain",
             !disableMainScroll && "overflow-y-auto",
             disableMainScroll && "flex flex-col",
-            !noPadding && "p-4 md:p-8"
+            !noPadding && "p-4 pb-24 md:p-8"
           )}
         >
           <PullToRefreshIndicator isRefreshing={isRefreshing} pullPosition={pullPosition} />
