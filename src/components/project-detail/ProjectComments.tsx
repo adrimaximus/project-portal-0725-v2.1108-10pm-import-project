@@ -1,22 +1,16 @@
 import { useState, useRef, useEffect } from 'react';
 import { Project, Comment as CommentType, User } from "@/types";
-import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import CommentInput from "../CommentInput";
 import Comment from '../Comment';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { useCommentManager } from '@/hooks/useCommentManager';
+import { useProfiles } from '@/hooks/useProfiles';
 
 interface ProjectCommentsProps {
   project: Project;
-  onAddCommentOrTicket: (text: string, isTicket: boolean, attachments: File[] | null, mentionedUserIds: string[], replyToId?: string | null) => void;
-  onUpdateComment: (project: Project, commentId: string, text: string, attachments: File[] | null, isConvertingToTicket: boolean, mentionedUserIds: string[]) => void;
-  onDeleteComment: (commentId: string) => void;
-  onToggleCommentReaction: (commentId: string, emoji: string) => void;
-  isUpdatingComment?: boolean;
-  updatedCommentId?: string;
   initialMention?: { id: string; name: string } | null;
   onMentionConsumed: () => void;
-  allUsers: User[];
   replyTo: CommentType | null;
   onReply: (comment: CommentType) => void;
   onCancelReply: () => void;
@@ -25,26 +19,29 @@ interface ProjectCommentsProps {
 
 const ProjectComments = ({ 
   project, 
-  onAddCommentOrTicket, 
-  onUpdateComment, 
-  onDeleteComment, 
-  onToggleCommentReaction, 
   initialMention, 
   onMentionConsumed, 
-  allUsers,
   replyTo,
   onReply,
   onCancelReply,
   onCreateTicketFromComment,
 }: ProjectCommentsProps) => {
   const { user } = useAuth();
+  const { data: allUsers = [] } = useProfiles();
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editedText, setEditedText] = useState('');
   const [commentToDelete, setCommentToDelete] = useState<CommentType | null>(null);
-  const [newAttachments, setNewAttachments] = useState<File[]>([]);
-  const [isConvertingToTicket, setIsConvertingToTicket] = useState(false);
   const commentInputRef = useRef<{ setText: (text: string, append?: boolean) => void, focus: () => void }>(null);
   const lastProcessedMentionId = useRef<string | null>(null);
+
+  const { 
+    comments, 
+    isLoadingComments, 
+    addComment, 
+    updateComment, 
+    deleteComment, 
+    toggleReaction 
+  } = useCommentManager({ scope: { projectId: project.id } });
 
   useEffect(() => {
     if (initialMention && commentInputRef.current && initialMention.id !== lastProcessedMentionId.current) {
@@ -57,36 +54,28 @@ const ProjectComments = ({
   }, [initialMention, onMentionConsumed]);
 
   const handleEditClick = (comment: CommentType) => {
-    const textWithoutAttachments = comment.text?.replace(/\n\n\*\*Attachments:\*\*[\s\S]*$/, '').trim() || '';
     setEditingCommentId(comment.id);
-    setEditedText(textWithoutAttachments);
-    setNewAttachments([]);
-    setIsConvertingToTicket(comment.is_ticket);
+    setEditedText(comment.text || '');
   };
 
   const handleCancelEdit = () => {
     setEditingCommentId(null);
     setEditedText('');
-    setNewAttachments([]);
-    setIsConvertingToTicket(false);
   };
 
   const handleSaveEdit = () => {
     if (editingCommentId) {
-      const mentionedUserIds: string[] = []; // Placeholder for now
-      onUpdateComment(project, editingCommentId, editedText, newAttachments, isConvertingToTicket, mentionedUserIds);
+      updateComment({ commentId: editingCommentId, text: editedText });
     }
     handleCancelEdit();
   };
 
   const handleDeleteConfirm = () => {
     if (commentToDelete) {
-      onDeleteComment(commentToDelete.id);
+      deleteComment(commentToDelete.id);
       setCommentToDelete(null);
     }
   };
-
-  const comments = (project.comments || []);
 
   return (
     <div className="flex flex-col h-full min-h-[400px] sm:min-h-[500px]">
@@ -94,14 +83,16 @@ const ProjectComments = ({
         <CommentInput
           ref={commentInputRef}
           project={project}
-          onAddCommentOrTicket={onAddCommentOrTicket}
+          onAddCommentOrTicket={(text, isTicket, attachments, mentionedUserIds) => addComment({ text, isTicket, attachments, replyToId: replyTo?.id })}
           allUsers={allUsers}
           replyTo={replyTo}
           onCancelReply={onCancelReply}
         />
       </div>
       <div className="flex-1 overflow-y-auto pr-4 space-y-4">
-        {comments.length > 0 ? (
+        {isLoadingComments ? (
+          <p>Loading comments...</p>
+        ) : comments.length > 0 ? (
           comments.map((comment: CommentType) => (
             <Comment
               key={comment.id}
@@ -113,13 +104,9 @@ const ProjectComments = ({
               handleCancelEdit={handleCancelEdit}
               onEdit={handleEditClick}
               onDelete={setCommentToDelete}
-              onToggleReaction={onToggleCommentReaction}
+              onToggleReaction={toggleReaction}
               onReply={onReply}
               onCreateTicketFromComment={onCreateTicketFromComment}
-              newAttachments={newAttachments}
-              removeNewAttachment={() => {}}
-              handleEditFileChange={() => {}}
-              editFileInputRef={useRef(null)}
             />
           ))
         ) : (

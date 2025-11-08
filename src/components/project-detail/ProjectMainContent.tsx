@@ -30,7 +30,6 @@ interface ProjectMainContentProps {
   onEditTask: (task: Task) => void;
   onDeleteTask: (task: Task) => void;
   onToggleTaskCompletion: (task: Task, completed: boolean) => void;
-  onToggleCommentReaction: (commentId: string, emoji: string) => void;
   highlightedTaskId: string | null;
   onTaskHighlightComplete: () => void;
   onSetIsEditing: (isEditing: boolean) => void;
@@ -48,7 +47,6 @@ const ProjectMainContent = ({
   onEditTask,
   onDeleteTask,
   onToggleTaskCompletion,
-  onToggleCommentReaction,
   highlightedTaskId,
   onTaskHighlightComplete,
   onSetIsEditing,
@@ -105,79 +103,6 @@ const ProjectMainContent = ({
   ).length ?? 0;
 
   const uncompletedTasksCount = project.tasks?.filter(task => !task.completed).length ?? 0;
-
-  const handleAddCommentOrTicket = async (text: string, isTicket: boolean, attachments: File[] | null, mentionedUserIds: string[]) => {
-    if (!project || !user) return;
-    mutations.addComment.mutate({ project, user, text, isTicket, attachments, mentionedUserIds, replyToId: replyTo?.id }, {
-        onSuccess: async (newComment: CommentType) => {
-            setReplyTo(null);
-            if (isTicket && newComment) {
-                try {
-                    const cleanText = newComment.text?.replace(/@\[[^\]]+\]\(([^)]+)\)/g, '').trim() || 'New Ticket';
-                    const taskTitle = `Ticket: ${cleanText.substring(0, 50)}${cleanText.length > 50 ? '...' : ''}`;
-
-                    let ticketTag = allTags.find(t => t.name.toLowerCase() === 'ticket');
-                    if (!ticketTag) {
-                        const { data: newTag, error: tagError } = await supabase.from('tags').insert({ name: 'Ticket', color: '#DB2777', user_id: user.id }).select().single();
-                        if (tagError) throw tagError;
-                        ticketTag = newTag;
-                        queryClient.invalidateQueries({ queryKey: ['tags'] });
-                    }
-
-                    const taskPayload: UpsertTaskPayload = {
-                        project_id: project.id,
-                        title: taskTitle,
-                        description: cleanText,
-                        origin_ticket_id: newComment.id,
-                        status: 'To do',
-                        priority: 'Normal',
-                        assignee_ids: mentionedUserIds,
-                        due_date: addHours(new Date(), 24).toISOString(),
-                        tag_ids: ticketTag ? [ticketTag.id] : [],
-                    };
-
-                    upsertTask(taskPayload, {
-                        onSuccess: () => {
-                            toast.success("Ticket created and task automatically generated.");
-                        },
-                        onError: (error) => {
-                            toast.error("Ticket created, but failed to auto-generate task.", { description: getErrorMessage(error) });
-                        }
-                    });
-                } catch (error) {
-                    toast.error("An error occurred while creating the ticket task.", { description: getErrorMessage(error) });
-                }
-            } else {
-                toast.success("Comment posted.");
-            }
-            
-            if (mentionedUserIds.length > 0) {
-              const mentionedUsers = allUsers.filter(u => mentionedUserIds.includes(u.id));
-              const names = mentionedUsers.map(u => u.name);
-              let notificationMessage = '';
-              if (names.length === 1) {
-                notificationMessage = `${names[0]} will be notified.`;
-              } else if (names.length === 2) {
-                notificationMessage = `${names[0]} and ${names[1]} will be notified.`;
-              } else if (names.length > 2) {
-                const otherCount = names.length - 1;
-                notificationMessage = `${names[0]} and ${otherCount} others will be notified.`;
-              }
-              if (notificationMessage) {
-                toast.info(notificationMessage);
-              }
-            }
-        }
-    });
-  };
-
-  const handleUpdateComment = (project: Project, commentId: string, text: string, attachments: File[] | null, isConvertingToTicket: boolean, mentionedUserIds: string[]) => {
-    mutations.updateComment.mutate({ project, commentId, text, attachments, isConvertingToTicket, mentionedUserIds });
-  };
-
-  const handleDeleteComment = (commentId: string) => {
-    mutations.deleteComment.mutate(commentId);
-  };
 
   const onCreateTicketFromComment = (comment: CommentType) => {
     if (!project) return;
@@ -253,19 +178,13 @@ const ProjectMainContent = ({
             onDeleteTask={onDeleteTask}
             onToggleTaskCompletion={onToggleTaskCompletion}
             highlightedTaskId={highlightedTaskId}
-            onHighlightComplete={onTaskHighlightComplete}
+            onTaskHighlightComplete={onTaskHighlightComplete}
             onTaskClick={setSelectedTaskToView}
           />
         </TabsContent>
         <TabsContent value="discussion" className="mt-4">
           <ProjectComments
             project={project}
-            onAddCommentOrTicket={handleAddCommentOrTicket}
-            onUpdateComment={handleUpdateComment}
-            onDeleteComment={handleDeleteComment}
-            onToggleCommentReaction={onToggleCommentReaction}
-            isUpdatingComment={isUpdatingComment}
-            updatedCommentId={updatedCommentId}
             initialMention={initialMention}
             onMentionConsumed={handleMentionConsumed}
             allUsers={allUsers}
