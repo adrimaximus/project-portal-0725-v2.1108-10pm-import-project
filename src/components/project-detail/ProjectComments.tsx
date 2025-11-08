@@ -116,7 +116,7 @@ const ProjectComments = ({
         {isLoadingComments ? (
           <p>Loading comments...</p>
         ) : comments.length > 0 ? (
-          comments.map((comment: CommentType) => (
+          [...comments].reverse().map((comment: CommentType) => (
             <Comment
               key={comment.id}
               comment={comment}
