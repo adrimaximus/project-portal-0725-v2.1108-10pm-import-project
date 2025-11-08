@@ -321,7 +321,79 @@ serve(async (req) => {
             await sendWhatsappMessage(recipient.phone, aiMessage);
             break;
           }
-          // ... (other cases remain the same)
+          case 'goal_invite_email': {
+            if (!recipient.email) {
+              await supabaseAdmin.from('pending_whatsapp_notifications').update({ status: 'skipped', error_message: 'Recipient email not found.', processed_at: new Date().toISOString() }).eq('id', notification.id);
+              skippedCount++;
+              continue;
+            }
+            const { goal_id, inviter_id } = context;
+            const goalData = goalMap.get(goal_id);
+            const inviterData = profileMap.get(inviter_id);
+            if (!goalData || !inviterData) throw new Error('Missing context for goal_invite_email');
+            
+            const url = `${APP_URL}/goals/${goalData.slug}`;
+            const subject = `You've been invited to collaborate on a goal: ${goalData.title}`;
+            const html = `
+                <p>Hi ${recipientName},</p>
+                <p><strong>${getFullName(inviterData)}</strong> has invited you to collaborate on the goal "<strong>${goalData.title}</strong>".</p>
+                <p>You can view the goal and start collaborating by clicking the button below:</p>
+                <a href="${url}" style="display: inline-block; padding: 12px 24px; font-size: 16px; color: #ffffff; background-color: #008A9E; text-decoration: none; border-radius: 8px;">View Goal</a>
+            `;
+            const text = `Hi, ${getFullName(inviterData)} invited you to the goal "${goalData.title}". View it here: ${url}`;
+
+            await sendEmail(recipient.email, subject, html, text);
+            break;
+          }
+          case 'kb_invite_email': {
+            if (!recipient.email) {
+              await supabaseAdmin.from('pending_whatsapp_notifications').update({ status: 'skipped', error_message: 'Recipient email not found.', processed_at: new Date().toISOString() }).eq('id', notification.id);
+              skippedCount++;
+              continue;
+            }
+            const { folder_id, inviter_id } = context;
+            const folderData = folderMap.get(folder_id);
+            const inviterData = profileMap.get(inviter_id);
+            if (!folderData || !inviterData) throw new Error('Missing context for kb_invite_email');
+            
+            const url = `${APP_URL}/knowledge-base/folders/${folderData.slug}`;
+            const subject = `You've been invited to the folder: ${folderData.name}`;
+            const html = `
+                <p>Hi ${recipientName},</p>
+                <p><strong>${getFullName(inviterData)}</strong> has invited you to collaborate on the knowledge base folder "<strong>${folderData.name}</strong>".</p>
+                <p>You can view the folder by clicking the button below:</p>
+                <a href="${url}" style="display: inline-block; padding: 12px 24px; font-size: 16px; color: #ffffff; background-color: #008A9E; text-decoration: none; border-radius: 8px;">View Folder</a>
+            `;
+            const text = `Hi, ${getFullName(inviterData)} invited you to the folder "${folderData.name}". View it here: ${url}`;
+
+            await sendEmail(recipient.email, subject, html, text);
+            break;
+          }
+          case 'goal_progress_update_email': {
+            if (!recipient.email) {
+              await supabaseAdmin.from('pending_whatsapp_notifications').update({ status: 'skipped', error_message: 'Recipient email not found.', processed_at: new Date().toISOString() }).eq('id', notification.id);
+              skippedCount++;
+              continue;
+            }
+            const { goal_id, updater_id, value_logged } = context;
+            const goalData = goalMap.get(goal_id);
+            const updaterData = profileMap.get(updater_id);
+            if (!goalData || !updaterData) throw new Error('Missing context for goal_progress_update_email');
+            
+            const url = `${APP_URL}/goals/${goalData.slug}`;
+            const subject = `Progress update on your goal: ${goalData.title}`;
+            const html = `
+                <p>Hi ${recipientName},</p>
+                <p><strong>${getFullName(updaterData)}</strong> just logged progress on your shared goal "<strong>${goalData.title}</strong>".</p>
+                <p><strong>Progress Logged:</strong> ${value_logged}</p>
+                <p>You can view the latest progress by clicking the button below:</p>
+                <a href="${url}" style="display: inline-block; padding: 12px 24px; font-size: 16px; color: #ffffff; background-color: #008A9E; text-decoration: none; border-radius: 8px;">View Goal Progress</a>
+            `;
+            const text = `Hi, ${getFullName(updaterData)} logged progress on "${goalData.title}". View it here: ${url}`;
+
+            await sendEmail(recipient.email, subject, html, text);
+            break;
+          }
           default:
             throw new Error(`Unsupported notification type: ${notification.notification_type}`);
         }
