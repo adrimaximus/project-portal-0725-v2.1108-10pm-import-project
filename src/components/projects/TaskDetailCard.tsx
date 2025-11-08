@@ -2,7 +2,7 @@ import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { Task, TaskAttachment, Reaction, User, Comment as CommentType, TaskStatus, TASK_STATUS_OPTIONS } from '@/types';
 import { DrawerContent } from '@/components/ui/drawer';
 import { Button } from '../ui/button';
-import { format, isPast } from 'date-fns';
+import { format, isPast, addHours } from 'date-fns';
 import { cn, isOverdue, formatTaskText, getPriorityStyles, getTaskStatusStyles, getDueDateClassName, getAvatarUrl, generatePastelColor, getInitials, formatMentionsForDisplay } from '@/lib/utils';
 import {
   Edit,
@@ -90,7 +90,7 @@ const aggregateAttachments = (task: Task): TaskAttachment[] => {
 
 const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, onDelete }) => {
   const { user } = useAuth();
-  const { toggleTaskReaction, sendReminder, isSendingReminder, updateTaskStatusAndOrder } = useTaskMutations();
+  const { toggleTaskReaction, sendReminder, isSendingReminder, upsertTask } = useTaskMutations();
   const { 
     comments, 
     isLoadingComments, 
@@ -274,13 +274,12 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
                 <Select
                   value={task.status}
                   onValueChange={(newStatus: TaskStatus) => {
-                    updateTaskStatusAndOrder({
-                      taskId: task.id,
-                      newStatus,
-                      orderedTaskIds: [],
-                      newTasks: [],
-                      queryKey: ['tasks'],
-                      movedColumns: false,
+                    upsertTask({
+                      id: task.id,
+                      project_id: task.project_id,
+                      title: task.title,
+                      status: newStatus,
+                      completed: newStatus === 'Done',
                     });
                   }}
                 >
