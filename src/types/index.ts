@@ -491,3 +491,31 @@ export interface KbArticle {
   };
   kb_article_reactions?: ArticleReaction[];
 }
+
+export type Owner = User;
+export type Member = AssignedUser;
+
+export interface Invoice {
+  id: string;
+  projectId: string;
+  projectName: string;
+  amount: number;
+  dueDate: Date;
+  status: PaymentStatus;
+  rawProjectId: string;
+  projectStartDate: Date | null;
+  projectEndDate: Date | null;
+  poNumber: string | null;
+  paidDate: Date | null;
+  emailSendingDate: Date | null;
+  hardcopySendingDate: Date | null;
+  channel: string | null;
+  clientName: string | null;
+  clientAvatarUrl: string | null;
+  clientLogo: string | null;
+  clientCompanyName: string | null;
+  projectOwner: Owner | null;
+  assignedMembers: Member[];
+  invoiceAttachments: InvoiceAttachment[];
+  payment_terms: any[];
+}
