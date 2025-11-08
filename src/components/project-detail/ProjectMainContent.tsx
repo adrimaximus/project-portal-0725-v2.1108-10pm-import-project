@@ -177,12 +177,7 @@ const ProjectMainContent = ({
             projectId={project.id}
             projectSlug={project.slug}
             onEditTask={onEditTask}
-            onDeleteTask={(taskId: string) => {
-              const task = project.tasks?.find(t => t.id === taskId);
-              if (task) {
-                onDeleteTask(task);
-              }
-            }}
+            onDeleteTask={onDeleteTask}
             onToggleTaskCompletion={onToggleTaskCompletion}
             highlightedTaskId={highlightedTaskId}
             onHighlightComplete={onHighlightComplete}
@@ -210,7 +205,7 @@ const ProjectMainContent = ({
             task={selectedTaskToView}
             onClose={() => setSelectedTaskToView(null)}
             onEdit={onEditTask}
-            onDelete={() => onDeleteTask(selectedTaskToView)}
+            onDelete={onDeleteTask}
           />
         )}
       </Dialog>
