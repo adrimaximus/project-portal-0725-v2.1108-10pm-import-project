@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useState, useEffect, forwardRef, useImperativeHandle } from 'react';
-import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors, DragOverlay, DragStartEvent, MouseSensor, TouchSensor, DragOverEvent } from '@dnd-kit/core';
+import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors, DragOverlay, DragStartEvent, MouseSensor, TouchSensor, DragOverEvent, DropAnimation, defaultDropAnimationSideEffects } from '@dnd-kit/core';
 import { Person, Tag, User, Company } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -21,6 +21,16 @@ type PeopleKanbanViewProps = {
 
 type KanbanViewHandle = {
   openSettings: () => void;
+};
+
+const dropAnimation: DropAnimation = {
+  sideEffects: defaultDropAnimationSideEffects({
+    styles: {
+      active: {
+        opacity: '0.5',
+      },
+    },
+  }),
 };
 
 const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ people, tags, onEditPerson, onDeletePerson, kanbanGroupBy }, ref) => {
@@ -301,7 +311,7 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
           );
         })}
       </div>
-      <DragOverlay dropAnimation={null}>
+      <DragOverlay dropAnimation={dropAnimation}>
         {activePerson ? (
           <div className="w-72">
             <PeopleKanbanCard person={activePerson} dragHappened={dragHappened} onEdit={() => {}} onDelete={() => {}} />

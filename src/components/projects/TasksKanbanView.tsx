@@ -1,7 +1,7 @@
 import { useMemo, useState, useEffect, useRef } from 'react';
 import { Task, TaskStatus, TASK_STATUS_OPTIONS } from '@/types';
 import TasksKanbanColumn from './TasksKanbanColumn';
-import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, MouseSensor, TouchSensor, useSensor, useSensors, DragOverEvent } from '@dnd-kit/core';
+import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, MouseSensor, TouchSensor, useSensor, useSensors, DragOverEvent, DropAnimation, defaultDropAnimationSideEffects } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
 import TasksKanbanCard from './TasksKanbanCard';
 
@@ -13,6 +13,16 @@ interface TasksKanbanViewProps {
   tasksQueryKey: any[];
   onTaskOrderChange: (payload: any) => void;
 }
+
+const dropAnimation: DropAnimation = {
+  sideEffects: defaultDropAnimationSideEffects({
+    styles: {
+      active: {
+        opacity: '0.5',
+      },
+    },
+  }),
+};
 
 const TasksKanbanView = ({ tasks, onEdit, onDelete, refetch, tasksQueryKey, onTaskOrderChange }: TasksKanbanViewProps) => {
   const [collapsedColumns, setCollapsedColumns] = useState<Set<TaskStatus>>(new Set());
@@ -189,7 +199,7 @@ const TasksKanbanView = ({ tasks, onEdit, onDelete, refetch, tasksQueryKey, onTa
 
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd} onDragCancel={() => setActiveTask(null)}>
-      <div className="flex gap-4 overflow-x-auto p-2 sm:p-4">
+      <div className="flex gap-4 overflow-x-auto p-2 sm:p-4 h-full">
         {TASK_STATUS_OPTIONS.map(option => (
           <TasksKanbanColumn
             key={option.value}
@@ -202,7 +212,7 @@ const TasksKanbanView = ({ tasks, onEdit, onDelete, refetch, tasksQueryKey, onTa
           />
         ))}
       </div>
-      <DragOverlay>
+      <DragOverlay dropAnimation={dropAnimation}>
         {activeTask ? <TasksKanbanCard task={activeTask} onEdit={onEdit} onDelete={onDelete} /> : null}
       </DragOverlay>
     </DndContext>

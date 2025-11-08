@@ -1,7 +1,7 @@
 import { Invoice, PAYMENT_STATUS_OPTIONS, PaymentStatus, Project } from '@/types';
 import BillingKanbanColumn from './BillingKanbanColumn';
 import { useMemo, useState, useRef, useEffect } from 'react';
-import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, MouseSensor, TouchSensor, useSensor, useSensors, DragOverEvent } from '@dnd-kit/core';
+import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, MouseSensor, TouchSensor, useSensor, useSensors, DragOverEvent, DropAnimation, defaultDropAnimationSideEffects } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
 import { useProjectKanbanMutations } from '@/hooks/useProjectKanbanMutations';
 import { Card, CardContent } from '@/components/ui/card';
@@ -12,6 +12,16 @@ interface BillingKanbanViewProps {
     invoices: Invoice[];
     onEditInvoice: (invoice: Invoice) => void;
 }
+
+const dropAnimation: DropAnimation = {
+  sideEffects: defaultDropAnimationSideEffects({
+    styles: {
+      active: {
+        opacity: '0.5',
+      },
+    },
+  }),
+};
 
 const BillingKanbanView = ({ invoices, onEditInvoice }: BillingKanbanViewProps) => {
     const [activeInvoice, setActiveInvoice] = useState<Invoice | null>(null);
@@ -152,7 +162,7 @@ const BillingKanbanView = ({ invoices, onEditInvoice }: BillingKanbanViewProps) 
                     />
                 ))}
             </div>
-            <DragOverlay>
+            <DragOverlay dropAnimation={dropAnimation}>
                 {activeInvoice ? (
                     <Card className="shadow-xl w-72">
                         <CardContent className="p-3">
