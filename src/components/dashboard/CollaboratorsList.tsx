@@ -247,6 +247,7 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
                           key={opt.value}
                           checked={filters.includes(opt.value)}
                           onCheckedChange={() => handleFilterChange(opt.value)}
+                          onSelect={(e) => e.preventDefault()}
                         >
                           {opt.label}
                         </DropdownMenuCheckboxItem>
@@ -311,6 +312,7 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
                                       key={opt.value}
                                       checked={filters.includes(opt.value)}
                                       onCheckedChange={() => handleFilterChange(opt.value)}
+                                      onSelect={(e) => e.preventDefault()}
                                     >
                                       {opt.label}
                                     </DropdownMenuCheckboxItem>
