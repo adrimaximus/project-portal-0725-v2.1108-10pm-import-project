@@ -180,7 +180,7 @@ const ProjectMainContent = ({
             onDeleteTask={onDeleteTask}
             onToggleTaskCompletion={onToggleTaskCompletion}
             highlightedTaskId={highlightedTaskId}
-            onHighlightComplete={onTaskHighlightComplete}
+            onHighlightComplete={onHighlightComplete}
             onTaskClick={setSelectedTaskToView}
           />
         </TabsContent>
@@ -205,7 +205,7 @@ const ProjectMainContent = ({
             task={selectedTaskToView}
             onClose={() => setSelectedTaskToView(null)}
             onEdit={onEditTask}
-            onDelete={onDeleteTask}
+            onDelete={() => onDeleteTask(selectedTaskToView)}
           />
         )}
       </Dialog>

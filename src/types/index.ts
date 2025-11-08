@@ -60,6 +60,11 @@ export interface ChatMessageAttachment {
   type: string;
 }
 
+export interface ConversationMessage {
+  sender: 'ai' | 'user';
+  content: string;
+}
+
 export interface Message {
   id: string;
   text: string | null;
@@ -230,6 +235,16 @@ export interface ProjectFile {
   type: string;
 }
 
+export interface InvoiceAttachment {
+  id: string;
+  file_name: string;
+  file_url: string;
+  file_type: string | null;
+  file_size: number | null;
+  storage_path: string;
+  created_at: string;
+}
+
 export interface Project {
   id: string;
   name: string;
@@ -264,6 +279,14 @@ export interface Project {
   created_at: string;
   updated_at: string;
   personal_for_user_id?: string | null;
+  invoice_number?: string | null;
+  po_number?: string | null;
+  paid_date?: string | null;
+  email_sending_date?: string | null;
+  hardcopy_sending_date?: string | null;
+  channel?: string | null;
+  invoice_attachments?: InvoiceAttachment[];
+  payment_terms?: any[];
 }
 
 export type ProjectStatus = 'On Track' | 'At Risk' | 'Off Track' | 'On Hold' | 'Completed' | 'Archived' | 'Cancelled' | 'Bid Lost' | 'Billing Process' | 'In Progress' | 'Pending' | 'Requested' | 'Planning' | 'Reschedule';
