@@ -268,6 +268,24 @@ serve(async (req) => {
             userPrompt = `Buat notifikasi tiket baru. Penerima: ${recipientName}. Yang membuat: ${getFullName(creatorData)}. Konten tiket: "${ticket_content}" di proyek "${project_name}". URL: ${url}`;
             break;
           }
+          case 'project_status_updated': {
+            const { project_id, updater_id, old_status, new_status, project_slug } = context;
+            const projectData = projectMap.get(project_id);
+            const updaterData = profileMap.get(updater_id);
+            if (!projectData || !updaterData) throw new Error('Missing context data for project_status_updated');
+            const url = `${APP_URL}/projects/${project_slug}`;
+            userPrompt = `Buat notifikasi perubahan status proyek. Penerima: ${recipientName}. Proyek: "${projectData.name}". Status diubah dari *${old_status}* menjadi *${new_status}* oleh ${getFullName(updaterData)}. URL: ${url}`;
+            break;
+          }
+          case 'payment_status_updated': {
+            const { project_id, updater_id, new_status, project_slug } = context;
+            const projectData = projectMap.get(project_id);
+            const updaterData = profileMap.get(updater_id);
+            if (!projectData || !updaterData) throw new Error('Missing context data for payment_status_updated');
+            const url = `${APP_URL}/projects/${project_slug}`;
+            userPrompt = `Buat notifikasi perubahan status pembayaran. Penerima: ${recipientName}. Proyek: "${projectData.name}". Status pembayaran sekarang adalah *${new_status}*, diperbarui oleh ${getFullName(updaterData)}. URL: ${url}`;
+            break;
+          }
           default:
             throw new Error(`Unsupported notification type: ${notification.notification_type}`);
         }
