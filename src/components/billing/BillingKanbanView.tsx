@@ -55,7 +55,9 @@ const BillingKanbanView = ({ invoices, onEditInvoice }: BillingKanbanViewProps) 
         const overIsItem = !!over.data.current?.sortable;
         const overContainer = overIsItem ? over.data.current?.sortable.containerId as string : overId;
     
-        if (!activeContainer || !overContainer) return;
+        if (!activeContainer || !overContainer || activeContainer === overContainer) {
+          return;
+        }
     
         setGroupedInvoices(prev => {
             const newGroups = { ...prev };
@@ -68,20 +70,14 @@ const BillingKanbanView = ({ invoices, onEditInvoice }: BillingKanbanViewProps) 
     
             const [movedItem] = sourceItems.splice(activeIndex, 1);
     
-            if (activeContainer === overContainer) {
-                const overIndex = destItems.findIndex(p => p.rawProjectId === overId);
-                if (overIndex !== -1) {
-                    destItems.splice(overIndex, 0, movedItem);
-                }
+            movedItem.status = overContainer as PaymentStatus;
+            const overIndex = overIsItem ? destItems.findIndex(p => p.rawProjectId === overId) : destItems.length;
+            if (overIndex !== -1) {
+                destItems.splice(overIndex, 0, movedItem);
             } else {
-                movedItem.status = overContainer as PaymentStatus;
-                const overIndex = overIsItem ? destItems.findIndex(p => p.rawProjectId === overId) : destItems.length;
-                if (overIndex !== -1) {
-                    destItems.splice(overIndex, 0, movedItem);
-                } else {
-                    destItems.push(movedItem);
-                }
+                destItems.push(movedItem);
             }
+            
             return newGroups;
         });
     };

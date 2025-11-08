@@ -207,7 +207,9 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
     const overIsItem = !!over.data.current?.sortable;
     const overContainer = overIsItem ? over.data.current?.sortable.containerId as string : overId;
 
-    if (!activeContainer || !overContainer) return;
+    if (!activeContainer || !overContainer || activeContainer === overContainer) {
+      return;
+    }
 
     setPersonGroups(prev => {
       const newGroups = { ...prev };
@@ -220,19 +222,13 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
 
       const [movedItem] = sourceItems.splice(activeIndex, 1);
 
-      if (activeContainer === overContainer) {
-        const overIndex = destItems.findIndex(p => p.id === overId);
-        if (overIndex !== -1) {
-          destItems.splice(overIndex, 0, movedItem);
-        }
+      const overIndex = overIsItem ? destItems.findIndex(p => p.id === overId) : destItems.length;
+      if (overIndex !== -1) {
+        destItems.splice(overIndex, 0, movedItem);
       } else {
-        const overIndex = overIsItem ? destItems.findIndex(p => p.id === overId) : destItems.length;
-        if (overIndex !== -1) {
-          destItems.splice(overIndex, 0, movedItem);
-        } else {
-          destItems.push(movedItem);
-        }
+        destItems.push(movedItem);
       }
+      
       return newGroups;
     });
   };

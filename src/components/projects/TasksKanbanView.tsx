@@ -1,7 +1,7 @@
 import { useMemo, useState, useEffect, useRef } from 'react';
 import { Task, TaskStatus, TASK_STATUS_OPTIONS } from '@/types';
 import TasksKanbanColumn from './TasksKanbanColumn';
-import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, MouseSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, MouseSensor, TouchSensor, useSensor, useSensors, DragOverEvent } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
 import TasksKanbanCard from './TasksKanbanCard';
 
@@ -82,6 +82,52 @@ const TasksKanbanView = ({ tasks, onEdit, onDelete, refetch, tasksQueryKey, onTa
     }
   };
 
+  const handleDragOver = (event: DragOverEvent) => {
+    const { active, over } = event;
+    if (!over) return;
+
+    const activeId = String(active.id);
+    const overId = String(over.id);
+
+    if (activeId === overId) return;
+
+    const activeContainer = active.data.current?.sortable.containerId as TaskStatus;
+    const overIsItem = !!over.data.current?.sortable;
+    const overContainer = (overIsItem ? over.data.current?.sortable.containerId : overId) as TaskStatus;
+
+    if (!activeContainer || !overContainer || activeContainer === overContainer) {
+      return;
+    }
+
+    setTasksByStatus((prev) => {
+      const activeItems = prev[activeContainer];
+      const overItems = prev[overContainer];
+
+      const activeIndex = activeItems.findIndex((t) => t.id === activeId);
+      
+      if (activeIndex === -1) {
+        return prev;
+      }
+
+      const [movedItem] = activeItems.splice(activeIndex, 1);
+      movedItem.status = overContainer;
+
+      const overIndex = overIsItem ? overItems.findIndex((t) => t.id === overId) : overItems.length;
+      
+      if (overIndex !== -1) {
+        overItems.splice(overIndex, 0, movedItem);
+      } else {
+        overItems.push(movedItem);
+      }
+
+      return {
+        ...prev,
+        [activeContainer]: [...activeItems],
+        [overContainer]: [...overItems],
+      };
+    });
+  };
+
   const handleDragEnd = (event: DragEndEvent) => {
     setActiveTask(null);
     const { active, over } = event;
@@ -99,10 +145,10 @@ const TasksKanbanView = ({ tasks, onEdit, onDelete, refetch, tasksQueryKey, onTa
         return;
     }
 
-    let finalTasksByStatusState: Record<TaskStatus, Task[]>;
+    let finalTasksByStatusState = { ...tasksByStatus };
 
     if (activeContainer === overContainer) {
-        const items = tasksByStatus[activeContainer];
+        const items = finalTasksByStatusState[activeContainer];
         if (!Array.isArray(items)) return;
 
         const oldIndex = items.findIndex(t => t.id === activeId);
@@ -110,41 +156,12 @@ const TasksKanbanView = ({ tasks, onEdit, onDelete, refetch, tasksQueryKey, onTa
 
         if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
             finalTasksByStatusState = {
-                ...tasksByStatus,
+                ...finalTasksByStatusState,
                 [activeContainer]: arrayMove(items, oldIndex, newIndex),
             };
-        } else {
-            finalTasksByStatusState = tasksByStatus;
-        }
-    } else {
-        const sourceItems = tasksByStatus[activeContainer];
-        const destItems = tasksByStatus[overContainer];
-        if (!Array.isArray(sourceItems) || !Array.isArray(destItems)) return;
-
-        const activeIndex = sourceItems.findIndex(t => t.id === activeId);
-        if (activeIndex !== -1) {
-            const [movedItem] = sourceItems.slice(activeIndex, activeIndex + 1);
-            const newSourceItems = sourceItems.filter(t => t.id !== activeId);
-            
-            const newDestItems = [...destItems];
-            const overIndex = destItems.findIndex(t => t.id === overId);
-            
-            if (overIndex !== -1) {
-                newDestItems.splice(overIndex, 0, { ...movedItem, status: overContainer });
-            } else {
-                newDestItems.push({ ...movedItem, status: overContainer });
-            }
-
-            finalTasksByStatusState = {
-                ...tasksByStatus,
-                [activeContainer]: newSourceItems,
-                [overContainer]: newDestItems,
-            };
-        } else {
-            finalTasksByStatusState = tasksByStatus;
         }
     }
-
+    
     isOptimisticUpdate.current = true;
     setTasksByStatus(finalTasksByStatusState);
 
@@ -163,7 +180,7 @@ const TasksKanbanView = ({ tasks, onEdit, onDelete, refetch, tasksQueryKey, onTa
   };
 
   return (
-    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragCancel={() => setActiveTask(null)}>
+    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd} onDragCancel={() => setActiveTask(null)}>
       <div className="flex gap-4 overflow-x-auto p-2 sm:p-4 h-full">
         {TASK_STATUS_OPTIONS.map(option => (
           <TasksKanbanColumn
