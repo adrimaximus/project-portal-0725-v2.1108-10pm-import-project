@@ -189,7 +189,7 @@ const TasksKanbanView = ({ tasks, onEdit, onDelete, refetch, tasksQueryKey, onTa
 
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd} onDragCancel={() => setActiveTask(null)}>
-      <div className="flex gap-4 overflow-x-auto p-2 sm:p-4 h-full">
+      <div className="flex gap-4 overflow-x-auto p-2 sm:p-4">
         {TASK_STATUS_OPTIONS.map(option => (
           <TasksKanbanColumn
             key={option.value}

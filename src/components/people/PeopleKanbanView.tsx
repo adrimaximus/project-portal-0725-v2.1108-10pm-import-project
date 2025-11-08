@@ -268,10 +268,10 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
 
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd} onDragCancel={() => setActivePerson(null)}>
-      <div className="flex flex-row items-start gap-4 overflow-x-auto pb-4 h-full">
+      <div className="flex flex-row items-start gap-4 overflow-x-auto pb-4">
         {kanbanGroupBy === 'tags' && (
           <div className={`transition-all duration-300 ease-in-out flex-shrink-0 ${isSettingsOpen ? 'w-64' : 'w-0'} overflow-hidden`}>
-            <div className="w-64 h-full bg-muted/50 rounded-lg border">
+            <div className="w-64 bg-muted/50 rounded-lg border">
               <KanbanColumnEditor
                 allTags={allTagsForEditor}
                 columnOrder={columnOrder}
