@@ -51,11 +51,7 @@ const ProjectDetailPage = () => {
     updateProject, 
     addFiles, 
     deleteFile, 
-    addComment, 
-    updateComment, 
-    deleteComment, 
     deleteProject, 
-    toggleCommentReaction,
     updateProjectStatus,
   } = useProjectMutations(slug);
   
@@ -147,7 +143,6 @@ const ProjectDetailPage = () => {
 
   const confirmDeleteTask = () => { if (taskToDelete) { deleteTask(taskToDelete.id); setTaskToDelete(null); } };
   const handleToggleTaskCompletion = (task: Task, completed: boolean) => toggleTaskCompletion({ task, completed });
-  const handleToggleCommentReaction = (commentId: string, emoji: string) => toggleCommentReaction.mutate({ commentId, emoji });
 
   if (isLoading) {
     return <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
@@ -194,12 +189,11 @@ const ProjectDetailPage = () => {
                 project={projectToDisplay}
                 isEditing={isEditing}
                 onFieldChange={handleFieldChange}
-                mutations={{ addComment, updateComment, deleteComment, addFiles, deleteFile }}
+                mutations={{ addFiles, deleteFile }}
                 defaultTab={searchParams.get('tab') || 'overview'}
                 onEditTask={(task) => onOpenTaskModal(task, undefined, project)}
                 onDeleteTask={setTaskToDelete}
                 onToggleTaskCompletion={handleToggleTaskCompletion}
-                onToggleCommentReaction={handleToggleCommentReaction}
                 highlightedTaskId={searchParams.get('task')}
                 onTaskHighlightComplete={() => {
                   const newParams = new URLSearchParams(searchParams);

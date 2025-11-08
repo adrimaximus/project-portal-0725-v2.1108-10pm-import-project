@@ -25,7 +25,10 @@ interface ProjectMainContentProps {
   project: Project;
   isEditing: boolean;
   onFieldChange: (field: keyof Project, value: any) => void;
-  mutations: any; // Simplified for brevity, contains all mutation functions
+  mutations: {
+    addFiles: any;
+    deleteFile: any;
+  };
   defaultTab: string;
   onEditTask: (task: Task) => void;
   onDeleteTask: (task: Task) => void;
@@ -106,19 +109,19 @@ const ProjectMainContent = ({
 
   const onCreateTicketFromComment = (comment: CommentType) => {
     if (!project) return;
-    const mentionedUserIds = parseMentions(comment.text || '');
-    mutations.updateComment.mutate({
-        project,
-        commentId: comment.id,
-        text: comment.text || '',
-        attachments: null,
-        isConvertingToTicket: true,
-        mentionedUserIds,
-    });
-  };
+    const cleanText = comment.text?.replace(/@\[[^\]]+\]\(([^)]+)\)/g, '').trim() || 'New Ticket';
+    const taskTitle = `Ticket: ${cleanText.substring(0, 50)}${cleanText.length > 50 ? '...' : ''}`;
 
-  const { isPending: isUpdatingComment, variables: updatedCommentVariables } = mutations.updateComment;
-  const updatedCommentId = (updatedCommentVariables as any)?.commentId;
+    onOpenTaskModal(undefined, {
+      title: taskTitle,
+      description: cleanText,
+      project_id: project.id,
+      status: 'To do',
+      priority: 'Normal',
+      due_date: addHours(new Date(), 24).toISOString(),
+      origin_ticket_id: comment.id,
+    }, project);
+  };
 
   return (
     <div className="p-4">

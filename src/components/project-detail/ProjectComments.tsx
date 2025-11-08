@@ -65,16 +65,24 @@ const ProjectComments = ({
 
   const handleSaveEdit = () => {
     if (editingCommentId) {
-      updateComment({ commentId: editingCommentId, text: editedText });
+      updateComment.mutate({ commentId: editingCommentId, text: editedText });
     }
     handleCancelEdit();
   };
 
   const handleDeleteConfirm = () => {
     if (commentToDelete) {
-      deleteComment(commentToDelete.id);
+      deleteComment.mutate(commentToDelete.id);
       setCommentToDelete(null);
     }
+  };
+
+  const handleCreateTicket = (comment: CommentType) => {
+    updateComment.mutate({ commentId: comment.id, text: comment.text || '', isTicket: true }, {
+      onSuccess: () => {
+        onCreateTicketFromComment(comment);
+      }
+    });
   };
 
   return (
@@ -83,7 +91,7 @@ const ProjectComments = ({
         <CommentInput
           ref={commentInputRef}
           project={project}
-          onAddCommentOrTicket={(text, isTicket, attachments, mentionedUserIds) => addComment({ text, isTicket, attachments, replyToId: replyTo?.id })}
+          onAddCommentOrTicket={(text, isTicket, attachments, mentionedUserIds) => addComment.mutate({ text, isTicket, attachments, replyToId: replyTo?.id })}
           allUsers={allUsers}
           replyTo={replyTo}
           onCancelReply={onCancelReply}
@@ -104,9 +112,9 @@ const ProjectComments = ({
               handleCancelEdit={handleCancelEdit}
               onEdit={handleEditClick}
               onDelete={setCommentToDelete}
-              onToggleReaction={toggleReaction}
+              onToggleReaction={toggleReaction.mutate}
               onReply={onReply}
-              onCreateTicketFromComment={onCreateTicketFromComment}
+              onCreateTicketFromComment={handleCreateTicket}
             />
           ))
         ) : (
@@ -129,6 +137,3 @@ const ProjectComments = ({
       </AlertDialog>
     </div>
   );
-};
-
-export default ProjectComments;

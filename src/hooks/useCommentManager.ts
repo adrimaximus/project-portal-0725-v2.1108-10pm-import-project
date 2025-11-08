@@ -62,7 +62,7 @@ export const useCommentManager = ({ scope }: UseCommentManagerProps) => {
         });
         attachmentsJsonb = await Promise.all(uploadPromises);
       }
-      const { error } = await supabase.from('comments').insert({ 
+      const { data, error } = await supabase.from('comments').insert({ 
         project_id: scope.projectId, 
         task_id: scope.taskId, 
         author_id: user.id, 
@@ -70,8 +70,9 @@ export const useCommentManager = ({ scope }: UseCommentManagerProps) => {
         is_ticket: isTicket, 
         attachments_jsonb: attachmentsJsonb,
         reply_to_comment_id: replyToId,
-      });
+      }).select().single();
       if (error) throw error;
+      return data;
     },
     onSuccess: () => {
       toast.success("Comment added.");
@@ -81,8 +82,12 @@ export const useCommentManager = ({ scope }: UseCommentManagerProps) => {
   });
 
   const updateCommentMutation = useMutation({
-    mutationFn: async ({ commentId, text }: { commentId: string, text: string }) => {
-      const { error } = await supabase.from('comments').update({ text }).eq('id', commentId);
+    mutationFn: async ({ commentId, text, isTicket }: { commentId: string, text: string, isTicket?: boolean }) => {
+      const updatePayload: { text: string, is_ticket?: boolean } = { text };
+      if (isTicket !== undefined) {
+        updatePayload.is_ticket = isTicket;
+      }
+      const { error } = await supabase.from('comments').update(updatePayload).eq('id', commentId);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -148,9 +153,9 @@ export const useCommentManager = ({ scope }: UseCommentManagerProps) => {
   return {
     comments,
     isLoadingComments,
-    addComment: addCommentMutation.mutate,
-    updateComment: updateCommentMutation.mutate,
-    deleteComment: deleteCommentMutation.mutate,
-    toggleReaction: toggleReactionMutation.mutate,
+    addComment: addCommentMutation,
+    updateComment: updateCommentMutation,
+    deleteComment: deleteCommentMutation,
+    toggleReaction: toggleReactionMutation,
   };
 };
