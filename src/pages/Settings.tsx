@@ -30,7 +30,7 @@ const WorkspaceSettingsCard = () => {
   );
 };
 
-const SettingsPage = () => {
+const Settings = () => {
   const { user, hasPermission } = useAuth();
   const { isFeatureEnabled } = useFeatures();
   const isMasterAdmin = user?.role === 'master admin';
@@ -70,4 +70,4 @@ const SettingsPage = () => {
   );
 };
 
-export default SettingsPage;
+export default Settings;
