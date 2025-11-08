@@ -5,6 +5,7 @@ import { Task, TaskStatus, Reaction, UpsertTaskPayload, Project } from '@/types'
 import { useAuth } from '@/contexts/AuthContext';
 import { getErrorMessage } from '@/lib/utils';
 import { v4 as uuidv4 } from 'uuid';
+import { addHours } from 'date-fns';
 
 type UpdateTaskOrderPayload = {
   taskId: string;
@@ -12,6 +13,7 @@ type UpdateTaskOrderPayload = {
   orderedTaskIds: string[];
   newTasks: Task[]; // For optimistic update
   queryKey: any[]; // For optimistic update
+  movedColumns: boolean;
 };
 
 export const useTaskMutations = (refetch?: () => void) => {
@@ -160,10 +162,18 @@ export const useTaskMutations = (refetch?: () => void) => {
       }
       toast.error('Failed to update task position.', { description: err.message });
     },
+    onSuccess: (_, variables) => {
+        const { taskId, newStatus, movedColumns, newTasks } = variables;
+        const task = newTasks.find(t => t.id === taskId);
+
+        if (movedColumns) {
+            toast.success(`Task "${task?.title}" moved to ${newStatus}.`);
+        } else {
+            toast.success(`Task order updated in ${newStatus}.`);
+        }
+    },
     onSettled: (data, error, variables) => {
-      // Do not invalidate the tasks query key to prevent flickering.
-      // The optimistic update is sufficient.
-      // We still invalidate projects in case task counts are displayed elsewhere.
+      // Invalidate projects to update task counts, but not tasks to avoid flicker.
       queryClient.invalidateQueries({ queryKey: ['projects'] });
     },
   });
