@@ -4,9 +4,9 @@ import { List, LayoutGrid, KanbanSquare, ListChecks, CheckSquare, PlusCircle, Do
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { DateRange } from "react-day-picker";
 import ProjectAdvancedFilters, { AdvancedFiltersState } from './ProjectAdvancedFilters';
 import { Separator } from "@/components/ui/separator";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 type ViewMode = 'table' | 'list' | 'kanban' | 'tasks' | 'tasks-kanban';
 
@@ -54,13 +54,40 @@ const ProjectsToolbar = ({
     <div className="p-4 border-t flex flex-col sm:flex-row items-center justify-between gap-4">
       <div className="w-full sm:w-auto flex-shrink-0 flex items-center gap-4">
         <div className="flex items-center gap-4">
-          <ToggleGroup type="single" value={view} onValueChange={onViewChange} aria-label="Project view">
-            <ToggleGroupItem value="list" aria-label="List view"><List className="h-4 w-4" /></ToggleGroupItem>
-            <ToggleGroupItem value="table" aria-label="Table view"><LayoutGrid className="h-4 w-4" /></ToggleGroupItem>
-            <ToggleGroupItem value="kanban" aria-label="Kanban view"><KanbanSquare className="h-4 w-4" /></ToggleGroupItem>
-            <ToggleGroupItem value="tasks" aria-label="Tasks list view"><ListChecks className="h-4 w-4" /></ToggleGroupItem>
-            <ToggleGroupItem value="tasks-kanban" aria-label="Tasks kanban view"><CheckSquare className="h-4 w-4" /></ToggleGroupItem>
-          </ToggleGroup>
+          <TooltipProvider>
+            <ToggleGroup type="single" value={view} onValueChange={onViewChange} aria-label="Project view">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <ToggleGroupItem value="list" aria-label="List view"><List className="h-4 w-4" /></ToggleGroupItem>
+                </TooltipTrigger>
+                <TooltipContent><p>List view</p></TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <ToggleGroupItem value="table" aria-label="Grid view"><LayoutGrid className="h-4 w-4" /></ToggleGroupItem>
+                </TooltipTrigger>
+                <TooltipContent><p>Grid view</p></TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <ToggleGroupItem value="kanban" aria-label="Kanban view"><KanbanSquare className="h-4 w-4" /></ToggleGroupItem>
+                </TooltipTrigger>
+                <TooltipContent><p>Kanban view</p></TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <ToggleGroupItem value="tasks" aria-label="Tasks list view"><ListChecks className="h-4 w-4" /></ToggleGroupItem>
+                </TooltipTrigger>
+                <TooltipContent><p>Tasks list view</p></TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <ToggleGroupItem value="tasks-kanban" aria-label="Tasks kanban view"><CheckSquare className="h-4 w-4" /></ToggleGroupItem>
+                </TooltipTrigger>
+                <TooltipContent><p>Tasks kanban view</p></TooltipContent>
+              </Tooltip>
+            </ToggleGroup>
+          </TooltipProvider>
 
           {view === 'kanban' && (
             <Select value={kanbanGroupBy} onValueChange={onKanbanGroupByChange}>
