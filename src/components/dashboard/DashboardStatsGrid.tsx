@@ -1,21 +1,25 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { Project, User } from '@/types';
+import { Project, User, PROJECT_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS } from '@/types';
 import StatCard from '@/components/dashboard/StatCard';
 import { DollarSign, ListChecks, CreditCard, User as UserIcon, Users, Hourglass, Briefcase } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { generatePastelColor, getAvatarUrl } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
-import { PROJECT_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAnimatedCounter } from '@/hooks/useAnimatedCounter';
 import { Lock } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface DashboardStatsGridProps {
   projects: Project[];
 }
 
-type UserStatData = User & { projectCount: number; totalValue: number };
+type UserStatData = User & {
+  projectCount: number;
+  totalValue: number;
+  projects: { id: string; name: string }[];
+};
 
 const UserStat = ({ user, metric, metricType, canViewValue }: { user: UserStatData | null, metric: number, metricType: 'quantity' | 'value', canViewValue: boolean }) => {
   const animatedMetric = useAnimatedCounter(metric, 750);
@@ -44,18 +48,32 @@ const UserStat = ({ user, metric, metricType, canViewValue }: { user: UserStatDa
   };
 
   return (
-    <div className="flex items-center gap-2 sm:gap-4 pt-2">
-      <Avatar className="h-8 w-8 sm:h-10 sm:w-10">
-        <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} alt={user.name} />
-        <AvatarFallback style={generatePastelColor(user.id)}>{user.initials}</AvatarFallback>
-      </Avatar>
-      <div>
-        <div className="text-base sm:text-lg font-bold leading-tight">{user.name}</div>
-        <p className="text-xs text-muted-foreground">
-          {renderMetric()}
-        </p>
-      </div>
-    </div>
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className="flex items-center gap-2 sm:gap-4 pt-2 cursor-pointer">
+            <Avatar className="h-8 w-8 sm:h-10 sm:w-10">
+              <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} alt={user.name} />
+              <AvatarFallback style={generatePastelColor(user.id)}>{user.initials}</AvatarFallback>
+            </Avatar>
+            <div>
+              <div className="text-base sm:text-lg font-bold leading-tight">{user.name}</div>
+              <p className="text-xs text-muted-foreground">
+                {renderMetric()}
+              </p>
+            </div>
+          </div>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p className="font-bold">Projects:</p>
+          <ul className="list-disc pl-4 text-left">
+            {user.projects.map(p => (
+              <li key={p.id}>{p.name}</li>
+            ))}
+          </ul>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 };
 
@@ -104,9 +122,10 @@ const DashboardStatsGrid = ({ projects }: DashboardStatsGridProps) => {
 
     const ownerStats = projects.reduce((acc, p) => {
         if (p.created_by && p.created_by.email !== 'adri@7inked.com') {
-            if (!acc[p.created_by.id]) acc[p.created_by.id] = { ...p.created_by, projectCount: 0, totalValue: 0 };
+            if (!acc[p.created_by.id]) acc[p.created_by.id] = { ...p.created_by, projectCount: 0, totalValue: 0, projects: [] };
             acc[p.created_by.id].projectCount++;
             acc[p.created_by.id].totalValue += p.budget || 0;
+            acc[p.created_by.id].projects.push({ id: p.id, name: p.name });
         }
         return acc;
     }, {} as Record<string, UserStatData>);
@@ -116,9 +135,12 @@ const DashboardStatsGrid = ({ projects }: DashboardStatsGridProps) => {
     const collaboratorStats = projects.reduce((acc, p) => {
         p.assignedTo.forEach(user => {
             if (user.email === 'adri@7inked.com') return;
-            if (!acc[user.id]) acc[user.id] = { ...user, projectCount: 0, totalValue: 0 };
-            acc[user.id].projectCount++;
-            acc[user.id].totalValue += p.budget || 0;
+            if (!acc[user.id]) acc[user.id] = { ...user, projectCount: 0, totalValue: 0, projects: [] };
+            if (!acc[user.id].projects.some(proj => proj.id === p.id)) {
+                acc[user.id].projectCount++;
+                acc[user.id].totalValue += p.budget || 0;
+                acc[user.id].projects.push({ id: p.id, name: p.name });
+            }
         });
         return acc;
     }, {} as Record<string, UserStatData>);
@@ -133,10 +155,11 @@ const DashboardStatsGrid = ({ projects }: DashboardStatsGridProps) => {
     const mostPendingPaymentStats = mostPendingPaymentProjects.reduce((acc, p) => {
         if (p.created_by && p.created_by.email !== 'adri@7inked.com') {
             if (!acc[p.created_by.id]) {
-                acc[p.created_by.id] = { ...p.created_by, projectCount: 0, totalValue: 0 };
+                acc[p.created_by.id] = { ...p.created_by, projectCount: 0, totalValue: 0, projects: [] };
             }
             acc[p.created_by.id].projectCount++;
             acc[p.created_by.id].totalValue += p.budget || 0;
+            acc[p.created_by.id].projects.push({ id: p.id, name: p.name });
         }
         return acc;
     }, {} as Record<string, UserStatData>);

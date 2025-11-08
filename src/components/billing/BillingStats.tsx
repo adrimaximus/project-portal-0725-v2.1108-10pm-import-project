@@ -1,4 +1,4 @@
-import { Invoice } from '@/types';
+import { Invoice, User } from '@/types';
 import StatCard from '@/components/dashboard/StatCard';
 import { DollarSign, Clock, AlertTriangle, Users, Lock } from "lucide-react";
 import { format } from 'date-fns';
@@ -7,13 +7,14 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { getAvatarUrl, generatePastelColor } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { User } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAnimatedCounter } from '@/hooks/useAnimatedCounter';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 type UserStatData = User & {
   projectCount: number;
   totalValue: number;
+  projects: { id: string; name: string; slug: string; rawProjectId: string }[];
 };
 
 const UserStat = ({ user, metric, metricType, canViewValue }: { user: UserStatData | null, metric: number, metricType: 'count' | 'value', canViewValue: boolean }) => {
@@ -43,18 +44,32 @@ const UserStat = ({ user, metric, metricType, canViewValue }: { user: UserStatDa
   };
 
   return (
-    <div className="flex items-center gap-2 pt-2">
-      <Avatar className="h-6 w-6">
-        <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} alt={user.name} />
-        <AvatarFallback style={generatePastelColor(user.id)}>{user.initials}</AvatarFallback>
-      </Avatar>
-      <div>
-        <div className="text-sm font-bold leading-tight">{user.name}</div>
-        <p className="text-xs text-muted-foreground">
-          {renderMetric()}
-        </p>
-      </div>
-    </div>
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className="flex items-center gap-2 pt-2 cursor-pointer">
+            <Avatar className="h-6 w-6">
+              <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} alt={user.name} />
+              <AvatarFallback style={generatePastelColor(user.id)}>{user.initials}</AvatarFallback>
+            </Avatar>
+            <div>
+              <div className="text-sm font-bold leading-tight">{user.name}</div>
+              <p className="text-xs text-muted-foreground">
+                {renderMetric()}
+              </p>
+            </div>
+          </div>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p className="font-bold">Projects:</p>
+          <ul className="list-disc pl-4 text-left">
+            {user.projects.map(p => (
+              <li key={p.id}>{p.name}</li>
+            ))}
+          </ul>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 };
 
@@ -79,10 +94,13 @@ const BillingStats = ({ invoices }: { invoices: Invoice[] }) => {
         .filter(member => member.role === 'admin')
         .forEach(admin => {
           if (!acc[admin.id]) {
-            acc[admin.id] = { ...admin, projectCount: 0, totalValue: 0 };
+            acc[admin.id] = { ...admin, projectCount: 0, totalValue: 0, projects: [] };
           }
           acc[admin.id].projectCount++;
           acc[admin.id].totalValue += invoice.amount;
+          if (!acc[admin.id].projects.some(p => p.id === invoice.rawProjectId)) {
+            acc[admin.id].projects.push({ id: invoice.rawProjectId, name: invoice.projectName, slug: invoice.projectId, rawProjectId: invoice.rawProjectId });
+          }
         });
       return acc;
     }, {} as Record<string, UserStatData>);
