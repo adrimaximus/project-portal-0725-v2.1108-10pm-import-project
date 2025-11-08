@@ -6,7 +6,6 @@ import { Label } from "@/components/ui/label";
 import { PROJECT_STATUS_OPTIONS } from "@/types";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
-import { useMediaQuery } from "@/hooks/use-media-query";
 import {
   Drawer,
   DrawerContent,
@@ -41,7 +40,6 @@ interface ProjectAdvancedFiltersProps {
 
 const ProjectAdvancedFilters = ({ filters, onFiltersChange, allPeople, allOwners }: ProjectAdvancedFiltersProps) => {
   const [open, setOpen] = useState(false);
-  const isDesktop = useMediaQuery("(min-width: 768px)");
 
   const handleOwnerToggle = (personId: string) => {
     const currentOwners = filters.ownerIds || [];
@@ -168,10 +166,11 @@ const ProjectAdvancedFilters = ({ filters, onFiltersChange, allPeople, allOwners
     </div>
   );
 
-  if (isDesktop) {
-    return (
-      <TooltipProvider>
-        <div className="flex items-center gap-1">
+  return (
+    <>
+      {/* Desktop View */}
+      <div className="hidden md:flex items-center gap-1">
+        <TooltipProvider>
           <Popover>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -233,33 +232,34 @@ const ProjectAdvancedFilters = ({ filters, onFiltersChange, allPeople, allOwners
               </Tooltip>
             </>
           )}
-        </div>
-      </TooltipProvider>
-    );
-  }
+        </TooltipProvider>
+      </div>
 
-  return (
-    <Drawer open={open} onOpenChange={setOpen}>
-      <DrawerTrigger asChild>
-        <Button variant="outline" size="icon" className="relative">
-          <FilterX className="h-4 w-4" />
-          {activeFilterCount > 0 && (
-            <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">{activeFilterCount}</span>
-          )}
-        </Button>
-      </DrawerTrigger>
-      <DrawerContent>
-        <DrawerHeader className="text-left">
-          <DrawerTitle>Advanced Filters</DrawerTitle>
-          <DrawerDescription>Refine the project list by owner, member, or status.</DrawerDescription>
-        </DrawerHeader>
-        <div className="p-4">{filterContent}</div>
-        <DrawerFooter className="pt-2">
-          <DrawerClose asChild><Button>Apply</Button></DrawerClose>
-          {activeFilterCount > 0 && <Button variant="outline" onClick={clearFilters}>Clear Filters</Button>}
-        </DrawerFooter>
-      </DrawerContent>
-    </Drawer>
+      {/* Mobile View */}
+      <div className="md:hidden">
+        <Drawer open={open} onOpenChange={setOpen}>
+          <DrawerTrigger asChild>
+            <Button variant="outline" size="icon" className="relative">
+              <FilterX className="h-4 w-4" />
+              {activeFilterCount > 0 && (
+                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">{activeFilterCount}</span>
+              )}
+            </Button>
+          </DrawerTrigger>
+          <DrawerContent>
+            <DrawerHeader className="text-left">
+              <DrawerTitle>Advanced Filters</DrawerTitle>
+              <DrawerDescription>Refine the project list by owner, member, or status.</DrawerDescription>
+            </DrawerHeader>
+            <div className="p-4">{filterContent}</div>
+            <DrawerFooter className="pt-2">
+              <DrawerClose asChild><Button>Apply</Button></DrawerClose>
+              {activeFilterCount > 0 && <Button variant="outline" onClick={clearFilters}>Clear Filters</Button>}
+            </DrawerFooter>
+          </DrawerContent>
+        </Drawer>
+      </div>
+    </>
   );
 };
 
