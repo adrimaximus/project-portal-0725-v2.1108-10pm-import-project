@@ -4,7 +4,6 @@ import TasksKanbanColumn from './TasksKanbanColumn';
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, MouseSensor, TouchSensor, useSensor, useSensors, DragOverEvent } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
 import TasksKanbanCard from './TasksKanbanCard';
-import { useTaskMutations } from '@/hooks/useTaskMutations';
 
 interface TasksKanbanViewProps {
   tasks: Task[];
@@ -12,12 +11,12 @@ interface TasksKanbanViewProps {
   onDelete: (taskId: string) => void;
   refetch: () => void;
   tasksQueryKey: any[];
+  onTaskOrderChange: (payload: any) => void;
 }
 
-const TasksKanbanView = ({ tasks, onEdit, onDelete, refetch, tasksQueryKey }: TasksKanbanViewProps) => {
+const TasksKanbanView = ({ tasks, onEdit, onDelete, refetch, tasksQueryKey, onTaskOrderChange }: TasksKanbanViewProps) => {
   const [collapsedColumns, setCollapsedColumns] = useState<Set<TaskStatus>>(new Set());
   const [activeTask, setActiveTask] = useState<Task | null>(null);
-  const { updateTaskStatusAndOrder } = useTaskMutations(refetch);
   const [tasksByStatus, setTasksByStatus] = useState<Record<TaskStatus, Task[]>>({} as Record<TaskStatus, Task[]>);
 
   useEffect(() => {
@@ -134,7 +133,7 @@ const TasksKanbanView = ({ tasks, onEdit, onDelete, refetch, tasksQueryKey }: Ta
     const newTasks = Object.values(tasksByStatus).flat();
     const orderedTaskIds = newTasks.map(t => t.id);
 
-    updateTaskStatusAndOrder({ 
+    onTaskOrderChange({ 
         taskId: activeId, 
         newStatus: overContainer, 
         orderedTaskIds: orderedTaskIds,

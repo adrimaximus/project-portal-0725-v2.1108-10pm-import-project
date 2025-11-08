@@ -176,7 +176,7 @@ const ProjectsPage = () => {
     else refetchProjects();
   }, [isTaskView, refetchTasks, refetchProjects]);
 
-  const { deleteTask, toggleTaskCompletion, isToggling, upsertTask } = useTaskMutations(refetch);
+  const { deleteTask, toggleTaskCompletion, isToggling, upsertTask, updateTaskStatusAndOrder } = useTaskMutations(refetch);
   const { updateProjectStatus } = useProjectMutations();
 
   const filteredTasks = useMemo(() => {
@@ -270,6 +270,10 @@ const ProjectsPage = () => {
     updateProjectStatus.mutate({ projectId, status: newStatus });
   };
 
+  const handleTaskOrderChange = (payload: { taskId: string; newStatus: TaskStatus; orderedTaskIds: string[]; newTasks: ProjectTask[]; queryKey: any[] }) => {
+    updateTaskStatusAndOrder(payload);
+  };
+
   const tasksQueryKey = ['tasks', { 
     projectIds: projectIdsForTaskView, 
     hideCompleted: hideCompletedTasks, 
@@ -350,6 +354,7 @@ const ProjectsPage = () => {
               highlightedTaskId={highlightedTaskId}
               onHighlightComplete={onHighlightComplete}
               onStatusChange={handleStatusChange}
+              onTaskOrderChange={handleTaskOrderChange}
             />
           </div>
           {hasNextPage && (

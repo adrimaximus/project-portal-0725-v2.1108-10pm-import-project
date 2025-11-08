@@ -6,8 +6,6 @@ import KanbanView from './KanbanView';
 import TasksView from './TasksView';
 import TasksKanbanView from './TasksKanbanView';
 
-type ViewMode = 'table' | 'list' | 'kanban' | 'tasks' | 'tasks-kanban';
-
 interface ProjectViewContainerProps {
   view: ViewMode;
   projects: Project[];
@@ -31,12 +29,16 @@ interface ProjectViewContainerProps {
   highlightedTaskId: string | null;
   onHighlightComplete: () => void;
   onStatusChange: (projectId: string, newStatus: ProjectStatus) => void;
+  onTaskOrderChange: (payload: any) => void;
 }
+
+type ViewMode = 'table' | 'list' | 'kanban' | 'tasks' | 'tasks-kanban';
 
 const ProjectViewContainer = ({
   view, projects, tasks, isLoading, isTasksLoading, onDeleteProject, sortConfig, requestSort, rowRefs,
   kanbanGroupBy, onEditTask, onDeleteTask, onToggleTaskCompletion, onTaskStatusChange, isToggling,
-  taskSortConfig, requestTaskSort, refetch, tasksQueryKey, highlightedTaskId, onHighlightComplete, onStatusChange
+  taskSortConfig, requestTaskSort, refetch, tasksQueryKey, highlightedTaskId, onHighlightComplete, onStatusChange,
+  onTaskOrderChange
 }: ProjectViewContainerProps) => {
   switch (view) {
     case 'table':
@@ -67,6 +69,7 @@ const ProjectViewContainer = ({
         onDelete={onDeleteTask}
         refetch={refetch}
         tasksQueryKey={tasksQueryKey}
+        onTaskOrderChange={onTaskOrderChange}
       />;
     default:
       return null;
