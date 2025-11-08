@@ -208,6 +208,7 @@ const ProjectMainContent = ({
         </TabsContent>
         <TabsContent value="tasks" className="mt-4">
           <ProjectTasks
+            project={project}
             tasks={project.tasks || []}
             projectId={project.id}
             projectSlug={project.slug}

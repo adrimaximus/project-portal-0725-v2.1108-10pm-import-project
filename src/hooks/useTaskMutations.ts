@@ -262,5 +262,19 @@ export const useTaskMutations = (refetch?: () => void) => {
     }
   });
 
-  return { upsertTask, isUpserting, deleteTask, toggleTaskCompletion, isToggling, updateTaskStatusAndOrder, toggleTaskReaction, sendReminder, isSendingReminder };
+  const { mutate: createTasks, isPending: isCreatingTasks } = useMutation({
+    mutationFn: async (tasksToCreate: { title: string, project_id: string, created_by: string }[]) => {
+      const { error } = await supabase.from('tasks').insert(tasksToCreate.map(task => ({ ...task, status: 'To do' })));
+      if (error) throw error;
+    },
+    onSuccess: (_, variables) => {
+      toast.success(`${variables.length} task(s) added successfully.`);
+      invalidateQueries();
+    },
+    onError: (error: any) => {
+      toast.error("Failed to add tasks.", { description: getErrorMessage(error) });
+    }
+  });
+
+  return { upsertTask, isUpserting, deleteTask, toggleTaskCompletion, isToggling, updateTaskStatusAndOrder, toggleTaskReaction, sendReminder, isSendingReminder, createTasks, isCreatingTasks };
 };
