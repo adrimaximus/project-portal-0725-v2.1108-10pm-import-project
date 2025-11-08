@@ -1,5 +1,35 @@
 import { RealtimeChannel } from '@supabase/supabase-js';
 
+export type Theme =
+  | "light"
+  | "dark"
+  | "system"
+  | "claude"
+  | "claude-light"
+  | "nature"
+  | "nature-light"
+  | "corporate"
+  | "corporate-light"
+  | "ahensi"
+  | "ahensi-light"
+  | "brand-activator"
+  | "brand-activator-light";
+
+export interface AppNotification {
+  id: string;
+  type: string;
+  title: string;
+  description: string;
+  timestamp: string;
+  read: boolean;
+  link: string;
+  actor: {
+    id: string;
+    name: string;
+    avatar_url: string | null;
+  };
+}
+
 export interface User {
   id: string;
   name?: string;
@@ -10,6 +40,7 @@ export interface User {
   role?: string;
   initials?: string;
   permissions?: string[];
+  theme?: Theme;
 }
 
 export interface Collaborator extends User {
@@ -58,6 +89,7 @@ export interface Profile extends User {
   sidebar_order?: any;
   notification_preferences?: any;
   permissions?: string[];
+  theme?: Theme;
 }
 
 export interface Tag {
