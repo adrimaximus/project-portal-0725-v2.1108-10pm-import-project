@@ -43,6 +43,8 @@ export interface User {
   theme?: Theme;
 }
 
+export type AssignedUser = User & { role: string };
+
 export interface Collaborator extends User {
   isIdle?: boolean;
   last_active_at?: string;
@@ -97,6 +99,7 @@ export interface Tag {
   name: string;
   color: string;
   user_id: string | null;
+  isNew?: boolean;
 }
 
 export const CUSTOM_PROPERTY_TYPES = [
@@ -199,6 +202,21 @@ export interface Task {
   last_reminder_sent_at?: string | null;
 }
 
+export interface Activity {
+  id: string;
+  type: string;
+  details: {
+    description: string;
+  };
+  timestamp: string;
+  user: {
+    id: string;
+    name: string;
+    avatar_url: string | null;
+    initials: string;
+  };
+}
+
 export interface Project {
   id: string;
   name: string;
@@ -213,12 +231,12 @@ export interface Project {
   payment_status: PaymentStatus;
   payment_due_date: string | null;
   created_by: User;
-  assignedTo: User[];
+  assignedTo: AssignedUser[];
   tasks: Task[];
   comments: Comment[];
   services: string[];
   briefFiles: any[];
-  activities: any[];
+  activities: Activity[];
   tags: Tag[];
   client_name: string | null;
   client_avatar_url: string | null;
@@ -340,4 +358,14 @@ export interface AdvancedFiltersState {
   ownerIds: string[];
   memberIds: string[];
   excludedStatus: string[];
+}
+
+export interface Service {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  icon_color: string;
+  is_featured: boolean;
+  created_at?: string;
 }
