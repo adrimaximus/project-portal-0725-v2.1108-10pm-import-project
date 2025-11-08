@@ -7,20 +7,31 @@ import SafeLocalStorage from '@/lib/localStorage';
 
 type ViewMode = 'table' | 'list' | 'kanban' | 'tasks' | 'tasks-kanban';
 
+const PROJECTS_VIEW_MODE_KEY = 'projects_view_mode';
+const PROJECTS_HIDE_COMPLETED_KEY = 'projects_hide_completed';
+const PROJECTS_KANBAN_GROUPBY_KEY = 'projects_kanban_groupby';
+const PROJECTS_ADVANCED_FILTERS_KEY = 'projects_advanced_filters';
+
 export const useProjectFilters = (projects: Project[]) => {
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // --- State derived from URL ---
-  const view = (searchParams.get('view') as ViewMode) || 'list';
+  // --- State derived from URL or localStorage ---
+  const view = (searchParams.get('view') as ViewMode) || (SafeLocalStorage.getItem(PROJECTS_VIEW_MODE_KEY, 'list') as ViewMode);
   const searchTerm = searchParams.get('search') || '';
-  const kanbanGroupBy = (searchParams.get('groupBy') as 'status' | 'payment_status') || 'status';
-  const hideCompletedTasks = searchParams.get('hideCompleted') === 'true';
+  const kanbanGroupBy = (searchParams.get('groupBy') as 'status' | 'payment_status') || (SafeLocalStorage.getItem(PROJECTS_KANBAN_GROUPBY_KEY, 'status') as 'status' | 'payment_status');
+  const hideCompletedTasks = searchParams.has('hideCompleted') ? searchParams.get('hideCompleted') === 'true' : SafeLocalStorage.getItem(PROJECTS_HIDE_COMPLETED_KEY, false);
   
-  const advancedFilters: AdvancedFiltersState = useMemo(() => ({
-    ownerIds: searchParams.getAll('owner'),
-    memberIds: searchParams.getAll('member'),
-    excludedStatus: searchParams.getAll('excludeStatus'),
-  }), [searchParams]);
+  const advancedFilters: AdvancedFiltersState = useMemo(() => {
+    const fromUrl = {
+      ownerIds: searchParams.getAll('owner'),
+      memberIds: searchParams.getAll('member'),
+      excludedStatus: searchParams.getAll('excludeStatus'),
+    };
+    if (fromUrl.ownerIds.length > 0 || fromUrl.memberIds.length > 0 || fromUrl.excludedStatus.length > 0) {
+      return fromUrl;
+    }
+    return SafeLocalStorage.getItem(PROJECTS_ADVANCED_FILTERS_KEY, { ownerIds: [], memberIds: [], excludedStatus: [] });
+  }, [searchParams]);
 
   const dateRange = useMemo(() => {
     const fromParam = searchParams.get('from');
@@ -38,7 +49,7 @@ export const useProjectFilters = (projects: Project[]) => {
     direction: (searchParams.get('sortDir') as 'ascending' | 'descending') || 'ascending',
   }), [searchParams]);
 
-  // --- Setter functions that update the URL ---
+  // --- Setter functions that update URL and localStorage ---
   const updateSearchParams = useCallback((updates: Record<string, string | string[] | null | boolean>) => {
     const newSearchParams = new URLSearchParams(searchParams);
     Object.entries(updates).forEach(([key, value]) => {
@@ -55,17 +66,28 @@ export const useProjectFilters = (projects: Project[]) => {
   }, [searchParams, setSearchParams]);
 
   const handleViewChange = (newView: ViewMode | null) => {
-    if (newView) updateSearchParams({ view: newView });
+    if (newView) {
+      updateSearchParams({ view: newView });
+      SafeLocalStorage.setItem(PROJECTS_VIEW_MODE_KEY, newView);
+    }
   };
   const handleSearchChange = (term: string) => updateSearchParams({ search: term });
-  const setKanbanGroupBy = (value: 'status' | 'payment_status') => updateSearchParams({ groupBy: value });
-  const toggleHideCompleted = () => updateSearchParams({ hideCompleted: !hideCompletedTasks });
+  const setKanbanGroupBy = (value: 'status' | 'payment_status') => {
+    updateSearchParams({ groupBy: value });
+    SafeLocalStorage.setItem(PROJECTS_KANBAN_GROUPBY_KEY, value);
+  };
+  const toggleHideCompleted = () => {
+    const newHide = !hideCompletedTasks;
+    updateSearchParams({ hideCompleted: newHide });
+    SafeLocalStorage.setItem(PROJECTS_HIDE_COMPLETED_KEY, newHide);
+  };
   const handleAdvancedFiltersChange = (filters: AdvancedFiltersState) => {
     updateSearchParams({
       owner: filters.ownerIds,
       member: filters.memberIds,
       excludeStatus: filters.excludedStatus,
     });
+    SafeLocalStorage.setItem(PROJECTS_ADVANCED_FILTERS_KEY, filters);
   };
   const setDateRange = (range: DateRange | undefined) => {
     updateSearchParams({
