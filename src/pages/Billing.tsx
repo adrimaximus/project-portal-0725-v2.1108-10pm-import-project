@@ -19,6 +19,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useProjects } from "@/hooks/useProjects";
 
 const fetchInvoices = async (): Promise<Invoice[]> => {
   const { data, error } = await supabase.rpc('get_all_invoices');
@@ -32,18 +33,13 @@ const fetchInvoices = async (): Promise<Invoice[]> => {
 };
 
 const Billing = () => {
-  const { data: invoices = [], isLoading } = useQuery<Invoice[]>({
+  const { data: invoices = [], isLoading: isLoadingInvoices } = useQuery<Invoice[]>({
     queryKey: ['invoices'],
     queryFn: fetchInvoices,
   });
-  const { data: projectsData = [] } = useQuery<Project[]>({
-    queryKey: ['projects'],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('projects').select('*');
-      if (error) throw error;
-      return data;
-    }
-  });
+  const { data: projectsPages, isLoading: isLoadingProjects } = useProjects({ fetchAll: true });
+  const projectsData = useMemo(() => projectsPages?.pages.flatMap(page => page.projects) ?? [], [projectsPages]);
+  const isLoading = isLoadingInvoices || isLoadingProjects;
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
