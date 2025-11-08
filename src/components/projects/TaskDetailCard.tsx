@@ -437,7 +437,6 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
         <div className="flex-shrink-0 p-4 border-t">
           <CommentInput
             ref={commentInputRef}
-            project={task as any}
             onAddCommentOrTicket={handleAddComment}
             allUsers={allUsers}
             replyTo={replyTo}

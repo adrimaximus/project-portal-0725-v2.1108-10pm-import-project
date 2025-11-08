@@ -37,12 +37,34 @@ export const useCommentManager = ({ scope }: UseCommentManagerProps) => {
   const addCommentMutation = useMutation({
     mutationFn: async ({ text, isTicket, attachments, replyToId }: { text: string, isTicket: boolean, attachments: File[] | null, replyToId?: string | null }) => {
       if (!user) throw new Error("User not authenticated");
+
+      let projectId = scope.projectId;
+
+      // If we have a taskId but no projectId, fetch it from the task.
+      if (scope.taskId && !scope.projectId) {
+        const { data: taskData, error: taskError } = await supabase
+          .from('tasks')
+          .select('project_id')
+          .eq('id', scope.taskId)
+          .single();
+        if (taskError) throw new Error(`Could not find project for task: ${taskError.message}`);
+        if (taskData) {
+          projectId = taskData.project_id;
+        } else {
+          throw new Error(`Task with id ${scope.taskId} not found.`);
+        }
+      }
+
+      if (!projectId) {
+        throw new Error("Project ID is missing for this comment.");
+      }
+
       let attachmentsJsonb: any[] = [];
       if (attachments && attachments.length > 0) {
         const uploadPromises = attachments.map(async (file) => {
           const fileId = uuidv4();
           const sanitizedFileName = file.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
-          const filePath = `${scope.projectId || 'tasks'}/comments/${Date.now()}-${sanitizedFileName}`;
+          const filePath = `${projectId}/comments/${Date.now()}-${sanitizedFileName}`;
           const { error: uploadError } = await supabase.storage.from('project-files').upload(filePath, file);
           if (uploadError) throw new Error(`Failed to upload ${file.name}: ${uploadError.message}`);
           const { data: urlData } = supabase.storage.from('project-files').getPublicUrl(filePath);
@@ -52,13 +74,13 @@ export const useCommentManager = ({ scope }: UseCommentManagerProps) => {
         attachmentsJsonb = await Promise.all(uploadPromises);
       }
       const { data, error } = await supabase.from('comments').insert({ 
-        project_id: scope.projectId, 
+        project_id: projectId, 
         task_id: scope.taskId, 
         author_id: user.id, 
         text, 
         is_ticket: isTicket, 
         attachments_jsonb: attachmentsJsonb,
-        reply_to_comment_id: replyToId,
+        reply_to_message_id: replyToId,
       }).select().single();
       if (error) throw error;
       return data;

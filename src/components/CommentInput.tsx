@@ -1,5 +1,5 @@
 import { useState, useRef, forwardRef, useImperativeHandle, useEffect } from 'react';
-import { Project, User, Comment as CommentType } from "@/types";
+import { User, Comment as CommentType } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Ticket, Paperclip, X } from "lucide-react";
@@ -10,7 +10,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 
 interface CommentInputProps {
-  project: Project;
   onAddCommentOrTicket: (text: string, isTicket: boolean, attachments: File[] | null, mentionedUserIds: string[], replyToId?: string | null) => void;
   allUsers: User[];
   initialValue?: string;
@@ -18,7 +17,7 @@ interface CommentInputProps {
   onCancelReply?: () => void;
 }
 
-const CommentInput = forwardRef(({ project, onAddCommentOrTicket, allUsers, initialValue, replyTo, onCancelReply }: CommentInputProps, ref) => {
+const CommentInput = forwardRef(({ onAddCommentOrTicket, allUsers, initialValue, replyTo, onCancelReply }: CommentInputProps, ref) => {
   const { user } = useAuth();
   const [text, setText] = useState(initialValue || '');
   const [isTicket, setIsTicket] = useState(false);

@@ -81,7 +81,6 @@ const ProjectComments: React.FC<ProjectCommentsProps> = ({
       <div className="flex-shrink-0 pb-4 border-b mb-4">
         <CommentInput
           ref={commentInputRef}
-          project={project}
           onAddCommentOrTicket={onAddCommentOrTicket}
           allUsers={allUsers}
           replyTo={replyTo}
