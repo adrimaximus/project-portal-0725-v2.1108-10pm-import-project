@@ -21,7 +21,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ChevronsUpDown, Filter, CheckCircle, Clock, AlertTriangle, PlusSquare, ArrowUp, ArrowDown } from "lucide-react";
+import { ChevronsUpDown, Filter, CheckCircle, Clock, AlertTriangle, PlusSquare, ArrowUp, ArrowDown, ListChecks } from "lucide-react";
 import { generatePastelColor, getAvatarUrl, cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from "@/components/ui/button";
@@ -372,6 +372,13 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
           <TooltipContent>
             <div className="space-y-2 text-sm">
               <p className="font-bold">Task Productivity</p>
+              <div className="flex items-center gap-2">
+                <ListChecks className="h-4 w-4 text-blue-500" />
+                <div>
+                  <p><strong>{c.completionRate.toFixed(0)}%</strong> Overall Completion</p>
+                  <p className="text-xs text-muted-foreground">{c.completedAssignedTaskCount} of {c.assignedTaskCount} assigned tasks</p>
+                </div>
+              </div>
               <div className="flex items-center gap-2">
                 <CheckCircle className="h-4 w-4 text-green-500" />
                 <div>
