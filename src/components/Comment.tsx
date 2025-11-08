@@ -172,7 +172,8 @@ const Comment: React.FC<CommentProps> = ({
               <CommentReactions reactions={comment.reactions || []} onToggleReaction={(emoji) => onToggleReaction(comment.id, emoji)} />
               {!comment.is_ticket && (
                 <Button variant="ghost" size="sm" className="text-muted-foreground h-auto p-1 text-xs" onClick={() => onCreateTicketFromComment(comment)}>
-                  <Ticket className="h-3 w-3 mr-1" /> Create Ticket
+                  <Ticket className="h-3 w-3 sm:mr-1" />
+                  <span className="hidden sm:inline">Create Ticket</span>
                 </Button>
               )}
             </div>
