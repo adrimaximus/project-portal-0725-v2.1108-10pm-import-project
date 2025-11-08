@@ -31,7 +31,7 @@ interface ProjectMainContentProps {
   };
   defaultTab: string;
   onEditTask: (task: Task) => void;
-  onDeleteTask: (task: Task) => void;
+  onDeleteTask: (taskId: string) => void;
   onToggleTaskCompletion: (task: Task, completed: boolean) => void;
   highlightedTaskId: string | null;
   onHighlightComplete: () => void;
@@ -177,7 +177,7 @@ const ProjectMainContent = ({
             projectId={project.id}
             projectSlug={project.slug}
             onEditTask={onEditTask}
-            onDeleteTask={onDeleteTask}
+            onDeleteTask={(task) => onDeleteTask(task.id)}
             onToggleTaskCompletion={onToggleTaskCompletion}
             highlightedTaskId={highlightedTaskId}
             onHighlightComplete={onHighlightComplete}

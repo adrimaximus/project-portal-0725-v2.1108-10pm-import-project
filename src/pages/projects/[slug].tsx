@@ -141,6 +141,13 @@ const ProjectDetailPage = () => {
     }
   };
 
+  const handleDeleteTask = (taskId: string) => {
+    const task = project?.tasks?.find(t => t.id === taskId);
+    if (task) {
+      setTaskToDelete(task);
+    }
+  };
+
   const confirmDeleteTask = () => { if (taskToDelete) { deleteTask(taskToDelete.id); setTaskToDelete(null); } };
   const handleToggleTaskCompletion = (task: Task, completed: boolean) => toggleTaskCompletion({ task, completed });
 
@@ -192,7 +199,7 @@ const ProjectDetailPage = () => {
                 mutations={{ addFiles, deleteFile }}
                 defaultTab={searchParams.get('tab') || 'overview'}
                 onEditTask={(task) => onOpenTaskModal(task, undefined, project)}
-                onDeleteTask={setTaskToDelete}
+                onDeleteTask={handleDeleteTask}
                 onToggleTaskCompletion={handleToggleTaskCompletion}
                 highlightedTaskId={searchParams.get('task')}
                 onHighlightComplete={() => {

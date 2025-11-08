@@ -186,6 +186,7 @@ const TaskRow = ({ task, onToggleTaskCompletion, onEditTask, onDeleteTask, handl
 };
 
 const ProjectTasks = ({ tasks, projectId, projectSlug, onEditTask, onDeleteTask, onToggleTaskCompletion, highlightedTaskId, onHighlightComplete, onTaskClick }: ProjectTasksProps) => {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { toggleTaskReaction } = useTaskMutations();
   const taskRefs = useRef<Map<string, HTMLDivElement>>(new Map());

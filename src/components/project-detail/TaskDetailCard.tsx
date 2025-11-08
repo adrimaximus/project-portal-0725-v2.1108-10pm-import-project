@@ -34,7 +34,7 @@ import {
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu';
 import { Link } from 'react-router-dom';
-import TaskCommentsList from './TaskCommentsList';
+import TaskCommentsList from '../projects/TaskCommentsList';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 import { toast } from 'sonner';
@@ -55,7 +55,7 @@ interface TaskDetailCardProps {
   task: Task;
   onClose: () => void;
   onEdit: (task: Task) => void;
-  onDelete: (task: Task) => void;
+  onDelete: (taskId: string) => void;
 }
 
 const aggregateAttachments = (task: Task): TaskAttachment[] => {
@@ -323,7 +323,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
                 <DropdownMenuItem onSelect={handleCopyLink}>
                   <LinkIcon className="mr-2 h-4 w-4" /> Copy Link
                 </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => { onDelete(task); onClose(); }} className="text-destructive">
+                <DropdownMenuItem onSelect={() => { onDelete(task.id); onClose(); }} className="text-destructive">
                   <Trash2 className="mr-2 h-4 w-4" /> Delete
                 </DropdownMenuItem>
               </DropdownMenuContent>
