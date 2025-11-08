@@ -143,12 +143,15 @@ const Comment: React.FC<CommentProps> = ({
         ) : (
           <>
             {comment.repliedMessage && (
-              <div className="text-xs border-l-2 border-primary pl-3 py-2 mb-2 bg-muted rounded-md">
-                <p className="font-semibold text-primary">Replying to {comment.repliedMessage.senderName}</p>
-                <div className="italic line-clamp-1 prose prose-sm dark:prose-invert max-w-none text-muted-foreground">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
-                    {formatMentionsForDisplay(comment.repliedMessage.content || '')}
-                  </ReactMarkdown>
+              <div className="flex items-start gap-2 text-xs p-2 mb-2 bg-muted rounded-md">
+                <div className="w-0.5 bg-primary rounded-full self-stretch"></div>
+                <div className="flex-1">
+                  <p className="font-semibold text-primary">Replying to {comment.repliedMessage.senderName}</p>
+                  <div className="italic line-clamp-1 prose prose-sm dark:prose-invert max-w-none text-muted-foreground">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
+                      {formatMentionsForDisplay(comment.repliedMessage.content || '')}
+                    </ReactMarkdown>
+                  </div>
                 </div>
               </div>
             )}
