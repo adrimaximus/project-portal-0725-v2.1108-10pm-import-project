@@ -17,14 +17,8 @@ const BillingKanbanView = ({ invoices, onEditInvoice }: BillingKanbanViewProps) 
     const [activeInvoice, setActiveInvoice] = useState<Invoice | null>(null);
     const { updateProjectOrder } = useProjectKanbanMutations();
     const [groupedInvoices, setGroupedInvoices] = useState<Record<string, Invoice[]>>({});
-    const isOptimisticUpdate = useRef(false);
 
     useEffect(() => {
-        if (isOptimisticUpdate.current) {
-            isOptimisticUpdate.current = false;
-            return;
-        }
-
         if (!activeInvoice) {
             const groups: Record<string, Invoice[]> = {};
             PAYMENT_STATUS_OPTIONS.forEach(opt => {
@@ -103,8 +97,6 @@ const BillingKanbanView = ({ invoices, onEditInvoice }: BillingKanbanViewProps) 
         const overIsItem = !!over.data.current?.sortable;
         const overContainer = overIsItem ? over.data.current?.sortable.containerId as string : String(over.id);
         
-        isOptimisticUpdate.current = true;
-
         const activeInvoiceInstance = invoices.find(i => i.rawProjectId === activeId);
         if (!activeInvoiceInstance || !activeContainer || !overContainer) return;
 
