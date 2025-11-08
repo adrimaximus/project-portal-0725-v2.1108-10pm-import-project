@@ -22,15 +22,15 @@ export const useProjectFilters = (projects: Project[], advancedFilters: Advanced
         return projectStart <= filterEnd && effectiveProjectEnd >= filterStart;
       })();
 
-      const matchesOwner = advancedFilters.ownerIds.length === 0 ||
+      const matchesOwner = (advancedFilters.ownerIds?.length || 0) === 0 ||
         (project.created_by && advancedFilters.ownerIds.includes(project.created_by.id));
 
-      const matchesMember = advancedFilters.memberIds.length === 0 ||
+      const matchesMember = (advancedFilters.memberIds?.length || 0) === 0 ||
         (project.assignedTo && project.assignedTo.some(person => 
           person.id !== project.created_by?.id && advancedFilters.memberIds.includes(person.id)
         ));
 
-      const matchesStatus = advancedFilters.excludedStatus.length === 0 ||
+      const matchesStatus = (advancedFilters.excludedStatus?.length || 0) === 0 ||
         !advancedFilters.excludedStatus.includes(project.status);
 
       return matchesDate && matchesOwner && matchesMember && matchesStatus;
