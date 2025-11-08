@@ -2,7 +2,7 @@ import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { Task, TaskAttachment, Reaction, User, Comment as CommentType, TaskStatus, TASK_STATUS_OPTIONS } from '@/types';
 import { DrawerContent } from '@/components/ui/drawer';
 import { Button } from '../ui/button';
-import { format, isPast } from 'date-fns';
+import { format, isPast, addHours } from 'date-fns';
 import { cn, isOverdue, formatTaskText, getPriorityStyles, getTaskStatusStyles, getDueDateClassName, getAvatarUrl, generatePastelColor, getInitials, formatMentionsForDisplay } from '@/lib/utils';
 import {
   Edit,
