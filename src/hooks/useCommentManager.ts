@@ -101,8 +101,7 @@ export const useCommentManager = ({ scope }: UseCommentManagerProps) => {
         const newAttachmentsJsonb = await Promise.all(uploadPromises);
         attachmentsJsonb = [...attachmentsJsonb, ...newAttachmentsJsonb];
       }
-
-      const updatePayload: { text: string, is_ticket?: boolean, attachments_jsonb?: any[] } = { text, attachments_jsonb };
+      const updatePayload: { text: string, is_ticket?: boolean, attachments_jsonb?: any[] } = { text, attachments_jsonb: attachmentsJsonb };
       if (isTicket !== undefined) {
         updatePayload.is_ticket = isTicket;
       }

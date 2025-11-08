@@ -34,7 +34,7 @@ interface ProjectMainContentProps {
   onDeleteTask: (task: Task) => void;
   onToggleTaskCompletion: (task: Task, completed: boolean) => void;
   highlightedTaskId: string | null;
-  onTaskHighlightComplete: () => void;
+  onHighlightComplete: () => void;
   onSetIsEditing: (isEditing: boolean) => void;
   isUploading: boolean;
   onSaveChanges: () => void;
@@ -51,14 +51,13 @@ const ProjectMainContent = ({
   onDeleteTask,
   onToggleTaskCompletion,
   highlightedTaskId,
-  onTaskHighlightComplete,
+  onHighlightComplete,
   onSetIsEditing,
   isUploading,
   onSaveChanges,
   onOpenTaskModal,
 }: ProjectMainContentProps) => {
   const { user } = useAuth();
-  const { data: allUsers = [] } = useProfiles();
   const [activeTab, setActiveTab] = useState(defaultTab);
   const [lastViewedDiscussion, setLastViewedDiscussion] = useState(() => new Date());
   const [searchParams, setSearchParams] = useSearchParams();
@@ -181,7 +180,7 @@ const ProjectMainContent = ({
             onDeleteTask={onDeleteTask}
             onToggleTaskCompletion={onToggleTaskCompletion}
             highlightedTaskId={highlightedTaskId}
-            onTaskHighlightComplete={onTaskHighlightComplete}
+            onHighlightComplete={onTaskHighlightComplete}
             onTaskClick={setSelectedTaskToView}
           />
         </TabsContent>
@@ -190,7 +189,6 @@ const ProjectMainContent = ({
             project={project}
             initialMention={initialMention}
             onMentionConsumed={handleMentionConsumed}
-            allUsers={allUsers}
             onReply={setReplyTo}
             replyTo={replyTo}
             onCancelReply={() => setReplyTo(null)}
@@ -207,7 +205,7 @@ const ProjectMainContent = ({
             task={selectedTaskToView}
             onClose={() => setSelectedTaskToView(null)}
             onEdit={onEditTask}
-            onDelete={(task) => onDeleteTask(task)}
+            onDelete={onDeleteTask}
           />
         )}
       </Dialog>

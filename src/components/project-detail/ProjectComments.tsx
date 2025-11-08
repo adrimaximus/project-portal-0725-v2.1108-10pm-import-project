@@ -126,7 +126,7 @@ const ProjectComments = ({
               handleCancelEdit={handleCancelEdit}
               onEdit={handleEditClick}
               onDelete={setCommentToDelete}
-              onToggleReaction={toggleReaction.mutate}
+              onToggleReaction={(commentId, emoji) => toggleReaction.mutate({ commentId, emoji })}
               onReply={onReply}
               onCreateTicketFromComment={handleCreateTicket}
               newAttachments={newAttachments}
