@@ -72,88 +72,98 @@ const ProjectAdvancedFilters = ({ filters, onFiltersChange, allPeople }: Project
     onFiltersChange({ ownerIds: [], memberIds: [], excludedStatus: [] });
   };
 
+  const ownerFilterContent = (
+    <div className="space-y-2">
+      <Label>Filter by Project Owner</Label>
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button variant="outline" role="combobox" className="w-full justify-between font-normal">
+            {filters.ownerIds?.length > 0 ? `${filters.ownerIds.length} owner(s) selected` : "Select owners..."}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+          <Command>
+            <CommandInput placeholder="Search person..." />
+            <CommandList>
+              <CommandEmpty>No person found.</CommandEmpty>
+              <CommandGroup>
+                {allPeople.map((person) => (
+                  <CommandItem key={person.id} value={person.name} onSelect={() => handleOwnerToggle(person.id)}>
+                    <Check className={cn("mr-2 h-4 w-4", filters.ownerIds?.includes(person.id) ? "opacity-100" : "opacity-0")} />
+                    {person.name}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+
+  const memberFilterContent = (
+    <div className="space-y-2">
+      <Label>Filter by Project Member</Label>
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button variant="outline" role="combobox" className="w-full justify-between font-normal">
+            {filters.memberIds?.length > 0 ? `${filters.memberIds.length} member(s) selected` : "Select members..."}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+          <Command>
+            <CommandInput placeholder="Search person..." />
+            <CommandList>
+              <CommandEmpty>No person found.</CommandEmpty>
+              <CommandGroup>
+                {allPeople.map((person) => (
+                  <CommandItem key={person.id} value={person.name} onSelect={() => handleMemberToggle(person.id)}>
+                    <Check className={cn("mr-2 h-4 w-4", filters.memberIds?.includes(person.id) ? "opacity-100" : "opacity-0")} />
+                    {person.name}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+
+  const statusFilterContent = (
+    <div className="space-y-2">
+      <Label>Exclude Project Statuses</Label>
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button variant="outline" role="combobox" className="w-full justify-between font-normal">
+            {filters.excludedStatus?.length > 0 ? `${filters.excludedStatus.length} status(es) excluded` : "Select statuses to exclude..."}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+          <Command>
+            <CommandInput placeholder="Search status..." />
+            <CommandList>
+              <CommandEmpty>No status found.</CommandEmpty>
+              <CommandGroup>
+                {PROJECT_STATUS_OPTIONS.map((status) => (
+                  <CommandItem key={status.value} value={status.label} onSelect={() => handleStatusToggle(status.value)}>
+                    <Check className={cn("mr-2 h-4 w-4", filters.excludedStatus?.includes(status.value) ? "opacity-100" : "opacity-0")} />
+                    {status.label}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+
   const filterContent = (
     <div className="grid gap-4">
-      <div className="space-y-2">
-        <Label>Filter by Project Owner</Label>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="outline" role="combobox" className="w-full justify-between font-normal">
-              {filters.ownerIds?.length > 0 ? `${filters.ownerIds.length} owner(s) selected` : "Select owners..."}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-            <Command>
-              <CommandInput placeholder="Search person..." />
-              <CommandList>
-                <CommandEmpty>No person found.</CommandEmpty>
-                <CommandGroup>
-                  {allPeople.map((person) => (
-                    <CommandItem key={person.id} value={person.name} onSelect={() => handleOwnerToggle(person.id)}>
-                      <Check className={cn("mr-2 h-4 w-4", filters.ownerIds?.includes(person.id) ? "opacity-100" : "opacity-0")} />
-                      {person.name}
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              </CommandList>
-            </Command>
-          </PopoverContent>
-        </Popover>
-      </div>
-
-      <div className="space-y-2">
-        <Label>Filter by Project Member</Label>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="outline" role="combobox" className="w-full justify-between font-normal">
-              {filters.memberIds?.length > 0 ? `${filters.memberIds.length} member(s) selected` : "Select members..."}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-            <Command>
-              <CommandInput placeholder="Search person..." />
-              <CommandList>
-                <CommandEmpty>No person found.</CommandEmpty>
-                <CommandGroup>
-                  {allPeople.map((person) => (
-                    <CommandItem key={person.id} value={person.name} onSelect={() => handleMemberToggle(person.id)}>
-                      <Check className={cn("mr-2 h-4 w-4", filters.memberIds?.includes(person.id) ? "opacity-100" : "opacity-0")} />
-                      {person.name}
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              </CommandList>
-            </Command>
-          </PopoverContent>
-        </Popover>
-      </div>
-
-      <div className="space-y-2">
-        <Label>Exclude Project Statuses</Label>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="outline" role="combobox" className="w-full justify-between font-normal">
-              {filters.excludedStatus?.length > 0 ? `${filters.excludedStatus.length} status(es) excluded` : "Select statuses to exclude..."}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-            <Command>
-              <CommandInput placeholder="Search status..." />
-              <CommandList>
-                <CommandEmpty>No status found.</CommandEmpty>
-                <CommandGroup>
-                  {PROJECT_STATUS_OPTIONS.map((status) => (
-                    <CommandItem key={status.value} value={status.label} onSelect={() => handleStatusToggle(status.value)}>
-                      <Check className={cn("mr-2 h-4 w-4", filters.excludedStatus?.includes(status.value) ? "opacity-100" : "opacity-0")} />
-                      {status.label}
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              </CommandList>
-            </Command>
-          </PopoverContent>
-        </Popover>
-      </div>
+      {ownerFilterContent}
+      {memberFilterContent}
+      {statusFilterContent}
     </div>
   );
 
@@ -161,9 +171,9 @@ const ProjectAdvancedFilters = ({ filters, onFiltersChange, allPeople }: Project
     return (
       <TooltipProvider>
         <div className="flex items-center gap-1">
-          <Popover><PopoverTrigger asChild><Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" className={cn(filters.ownerIds?.length > 0 && "text-primary bg-muted")}><UserCog className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent><p>Filter by Project Owner</p></TooltipContent></Tooltip></PopoverTrigger><PopoverContent className="w-80 p-4">{filterContent}</PopoverContent></Popover>
-          <Popover><PopoverTrigger asChild><Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" className={cn(filters.memberIds?.length > 0 && "text-primary bg-muted")}><Users className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent><p>Filter by Project Member</p></TooltipContent></Tooltip></PopoverTrigger><PopoverContent className="w-80 p-4">{filterContent}</PopoverContent></Popover>
-          <Popover><PopoverTrigger asChild><Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" className={cn(filters.excludedStatus?.length > 0 && "text-primary bg-muted")}><ListX className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent><p>Exclude Project Statuses</p></TooltipContent></Tooltip></PopoverTrigger><PopoverContent className="w-80 p-4">{filterContent}</PopoverContent></Popover>
+          <Popover><PopoverTrigger asChild><Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" className={cn(filters.ownerIds?.length > 0 && "text-primary bg-muted")}><UserCog className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent><p>Filter by Project Owner</p></TooltipContent></Tooltip></PopoverTrigger><PopoverContent className="w-80 p-4">{ownerFilterContent}</PopoverContent></Popover>
+          <Popover><PopoverTrigger asChild><Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" className={cn(filters.memberIds?.length > 0 && "text-primary bg-muted")}><Users className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent><p>Filter by Project Member</p></TooltipContent></Tooltip></PopoverTrigger><PopoverContent className="w-80 p-4">{memberFilterContent}</PopoverContent></Popover>
+          <Popover><PopoverTrigger asChild><Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" className={cn(filters.excludedStatus?.length > 0 && "text-primary bg-muted")}><ListX className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent><p>Exclude Project Statuses</p></TooltipContent></Tooltip></PopoverTrigger><PopoverContent className="w-80 p-4">{statusFilterContent}</PopoverContent></Popover>
           {activeFilterCount > 0 && (
             <>
               <Separator orientation="vertical" className="h-6 mx-1" />
