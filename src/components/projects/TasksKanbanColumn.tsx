@@ -51,7 +51,7 @@ const TasksKanbanColumn = ({ status, tasks, isCollapsed, onToggleCollapse, onEdi
           </div>
         ) : (
           <div className="flex-grow min-h-0 overflow-y-auto p-2 pt-0">
-            <SortableContext items={tasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
+            <SortableContext id={status} items={tasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
               {tasks.map(task => (
                 <TasksKanbanCard key={task.id} task={task} onEdit={onEdit} onDelete={onDelete} />
               ))}

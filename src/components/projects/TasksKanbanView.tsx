@@ -89,43 +89,55 @@ const TasksKanbanView = ({ tasks, onEdit, onDelete, refetch, tasksQueryKey, onTa
     const overId = String(over.id);
 
     const activeContainer = active.data.current?.sortable.containerId as TaskStatus;
-    const overContainer = over.data.current?.sortable?.containerId as TaskStatus || over.id as TaskStatus;
+    const overContainer = (over.data.current?.sortable?.containerId || over.id) as TaskStatus;
 
-    if (!activeContainer || !overContainer) return;
+    if (!activeContainer || !overContainer) {
+      console.error("Could not determine drag and drop containers.");
+      return;
+    }
 
-    let newTasksByStatus = { ...tasksByStatus };
+    let finalTasksByStatusState: Record<TaskStatus, Task[]>;
 
     if (activeContainer === overContainer) {
-      if (activeId === overId) return;
-      const items = newTasksByStatus[activeContainer];
+      const items = tasksByStatus[activeContainer];
       const oldIndex = items.findIndex(t => t.id === activeId);
       const newIndex = items.findIndex(t => t.id === overId);
-      if (oldIndex !== -1 && newIndex !== -1) {
-        newTasksByStatus[activeContainer] = arrayMove(items, oldIndex, newIndex);
-      }
+      if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) return;
+      
+      finalTasksByStatusState = {
+        ...tasksByStatus,
+        [activeContainer]: arrayMove(items, oldIndex, newIndex),
+      };
     } else {
-      const sourceItems = [...newTasksByStatus[activeContainer]];
-      const destItems = [...newTasksByStatus[overContainer]];
+      const sourceItems = tasksByStatus[activeContainer];
+      const destItems = tasksByStatus[overContainer];
       
       const activeIndex = sourceItems.findIndex(t => t.id === activeId);
       if (activeIndex === -1) return;
 
-      const [movedItem] = sourceItems.splice(activeIndex, 1);
-      const updatedMovedItem = { ...movedItem, status: overContainer };
+      const [movedItem] = sourceItems.filter(t => t.id === activeId);
+      const newSourceItems = sourceItems.filter(t => t.id !== activeId);
+      
+      const newDestItems = [...destItems];
+      const overIndex = destItems.findIndex(t => t.id === overId);
+      
+      if (overIndex !== -1) {
+        newDestItems.splice(overIndex, 0, { ...movedItem, status: overContainer });
+      } else {
+        newDestItems.push({ ...movedItem, status: overContainer });
+      }
 
-      const overIndex = over.data.current?.sortable ? destItems.findIndex(t => t.id === overId) : destItems.length;
-      destItems.splice(overIndex, 0, updatedMovedItem);
-
-      newTasksByStatus[activeContainer] = sourceItems;
-      newTasksByStatus[overContainer] = destItems;
+      finalTasksByStatusState = {
+        ...tasksByStatus,
+        [activeContainer]: newSourceItems,
+        [overContainer]: newDestItems,
+      };
     }
 
-    // Perbarui UI secara optimis
-    setTasksByStatus(newTasksByStatus);
+    setTasksByStatus(finalTasksByStatusState);
 
-    // Ratakan tugas dalam urutan yang konsisten untuk pembaruan backend
     const finalOrderedTasks = TASK_STATUS_OPTIONS.flatMap(option => 
-      (newTasksByStatus[option.value] || []).map((task, index) => ({ ...task, kanban_order: index }))
+      (finalTasksByStatusState[option.value] || []).map((task, index) => ({ ...task, kanban_order: index }))
     );
     const orderedTaskIds = finalOrderedTasks.map(t => t.id);
 
