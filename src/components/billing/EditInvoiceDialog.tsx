@@ -3,14 +3,17 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Project, PaymentStatus, InvoiceAttachment, PAYMENT_STATUS_OPTIONS } from '@/types';
+import { Project, PaymentStatus, InvoiceAttachment, PAYMENT_STATUS_OPTIONS, Company } from '@/types';
 import { DatePicker } from '../ui/date-picker';
 import { CurrencyInput } from '../ui/currency-input';
 import { Input } from '../ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Paperclip, X, Loader2, Plus, Wand2 } from 'lucide-react';
-import { useQueryClient } from '@tanstack/react-query';
+import { Paperclip, X, Loader2, Plus, Wand2, Building, Layers } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import CompanySelector from '../people/CompanySelector';
+import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
+import { v4 as uuidv4 } from 'uuid';
 
 type Invoice = {
   id: string;
@@ -25,19 +28,20 @@ interface EditInvoiceDialogProps {
   project: Project | null;
 }
 
-type Term = {
+type SplitInvoice = {
+  id: string;
+  client_company_id: string | null;
   amount: number | null;
-  date: Date | undefined;
+  payment_due_date: Date | undefined;
+  invoice_number?: string;
+  po_number?: string;
+  payment_status?: PaymentStatus;
+  paid_date?: Date | undefined;
+  email_sending_date?: Date | undefined;
+  hardcopy_sending_date?: Date | undefined;
+  channel?: string;
+  payment_terms?: any[];
 };
-
-const channelOptions = [
-  'Email',
-  'JNE TIKI',
-  'Kurir',
-  'Lalamove',
-  'Portal',
-  'Rex',
-];
 
 const toRoman = (num: number) => {
     const roman: { [key: string]: number } = { M: 1000, CM: 900, D: 500, CD: 400, C: 100, XC: 90, L: 50, XL: 40, X: 10, IX: 9, V: 5, IV: 4, I: 1 };
@@ -52,206 +56,86 @@ const toRoman = (num: number) => {
 
 export const EditInvoiceDialog = ({ isOpen, onClose, invoice, project }: EditInvoiceDialogProps) => {
   const queryClient = useQueryClient();
-  const [invoiceNumber, setInvoiceNumber] = useState('');
-  const [poNumber, setPoNumber] = useState('');
-  const [amount, setAmount] = useState(0);
-  const [status, setStatus] = useState<PaymentStatus>('Unpaid');
-  const [paidDate, setPaidDate] = useState<Date | undefined>();
-  const [emailSendingDate, setEmailSendingDate] = useState<Date | undefined>();
-  const [hardcopySendingDate, setHardcopySendingDate] = useState<Date | undefined>();
-  const [channel, setChannel] = useState('');
-  
-  const [terms, setTerms] = useState<Term[]>([{ amount: null, date: undefined }]);
-  
-  const [currentAttachments, setCurrentAttachments] = useState<InvoiceAttachment[]>([]);
-  const [newAttachments, setNewAttachments] = useState<File[]>([]);
-  const [attachmentsToRemove, setAttachmentsToRemove] = useState<string[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [splitMode, setSplitMode] = useState<'term' | 'company'>('term');
+  const [splitInvoices, setSplitInvoices] = useState<SplitInvoice[]>([]);
+
+  const { data: companies = [] } = useQuery<Company[]>({
+    queryKey: ['companies'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('companies').select('*').order('name');
+      if (error) throw error;
+      return data;
+    },
+    enabled: isOpen,
+  });
 
   useEffect(() => {
-    if (invoice && project) {
-      setInvoiceNumber(project.invoice_number || invoice.id);
-      setPoNumber(project.po_number || '');
-      setAmount(project.budget || 0);
-      setStatus(project.payment_status as PaymentStatus || 'Unpaid');
-      setPaidDate(project.paid_date ? new Date(project.paid_date) : undefined);
-      setEmailSendingDate(project.email_sending_date ? new Date(project.email_sending_date) : undefined);
-      setHardcopySendingDate(project.hardcopy_sending_date ? new Date(project.hardcopy_sending_date) : undefined);
-      setChannel(project.channel || '');
-      
-      setCurrentAttachments(project.invoice_attachments || []);
-      setNewAttachments([]);
-      setAttachmentsToRemove([]);
-
-      if (project.payment_terms && Array.isArray(project.payment_terms) && project.payment_terms.length > 0) {
-        setTerms(project.payment_terms.map(t => ({
-            amount: t.amount || null,
-            date: t.date ? new Date(t.date) : undefined
-        })));
-      } else {
-        setTerms([{ amount: null, date: undefined }]);
+    const fetchSplitInvoices = async () => {
+      if (invoice && project) {
+        const { data, error } = await supabase.from('split_invoices').select('*').eq('project_id', project.id);
+        if (error) {
+          toast.error("Failed to load split invoice details.");
+          setSplitInvoices([]);
+        } else if (data && data.length > 0) {
+          setSplitInvoices(data.map(d => ({
+            ...d,
+            payment_due_date: d.payment_due_date ? new Date(d.payment_due_date) : undefined,
+            paid_date: d.paid_date ? new Date(d.paid_date) : undefined,
+            email_sending_date: d.email_sending_date ? new Date(d.email_sending_date) : undefined,
+            hardcopy_sending_date: d.hardcopy_sending_date ? new Date(d.hardcopy_sending_date) : undefined,
+          })));
+          if (data.some(d => d.client_company_id)) {
+            setSplitMode('company');
+          } else {
+            setSplitMode('term');
+          }
+        } else {
+          setSplitInvoices([{
+            id: `new-${uuidv4()}`,
+            client_company_id: project.client_company_id,
+            amount: project.budget,
+            payment_due_date: project.payment_due_date ? new Date(project.payment_due_date) : undefined,
+            invoice_number: project.invoice_number || '',
+            po_number: project.po_number || '',
+            payment_status: project.payment_status as PaymentStatus,
+            paid_date: project.paid_date ? new Date(project.paid_date) : undefined,
+            email_sending_date: project.email_sending_date ? new Date(project.email_sending_date) : undefined,
+            hardcopy_sending_date: project.hardcopy_sending_date ? new Date(project.hardcopy_sending_date) : undefined,
+            channel: project.channel || '',
+            payment_terms: project.payment_terms || [],
+          }]);
+          setSplitMode('term');
+        }
       }
+    };
+
+    if (isOpen) {
+      fetchSplitInvoices();
     }
   }, [invoice, project, isOpen]);
-
-  const balance = useMemo(() => {
-    const totalAmount = amount || 0;
-    const totalPaid = terms.reduce((sum, term) => sum + (Number(term.amount) || 0), 0);
-    return totalAmount - totalPaid;
-  }, [amount, terms]);
-
-  const handleGenerateInvoiceNumber = async () => {
-    if (!project) return;
-    setIsGenerating(true);
-    try {
-        const clientName = project.client_company_name || project.client_name || '';
-        const projectKeywords = project.name.split(' ').slice(0, 3).join(' ');
-
-        let sequence = 1;
-        if (project.client_company_id) {
-            const { count, error } = await supabase
-                .from('projects')
-                .select('id', { count: 'exact', head: true })
-                .eq('client_company_id', project.client_company_id)
-                .not('invoice_number', 'is', null);
-
-            if (error) throw error;
-            sequence = (count || 0) + 1;
-        } else {
-            sequence = 1;
-            toast.info("Could not determine invoice sequence automatically.", {
-                description: "This project is not linked to a company record. The sequence number has been set to 1."
-            });
-        }
-
-        const now = new Date();
-        const monthRoman = toRoman(now.getMonth() + 1);
-        const yearShort = now.getFullYear().toString().slice(-2);
-
-        const invoicePrefix = clientName ? `${clientName} ` : '';
-        const newInvoiceNumber = `INV/${invoicePrefix}${projectKeywords}-${sequence}/${monthRoman}/${yearShort}`;
-        setInvoiceNumber(newInvoiceNumber);
-        toast.success("Invoice number generated!");
-
-    } catch (error: any) {
-        toast.error("Failed to generate invoice number.", { description: error.message });
-    } finally {
-        setIsGenerating(false);
-    }
-  };
-
-  const handleTermChange = (index: number, field: 'amount' | 'date', value: number | null | Date | undefined) => {
-    const newTerms = [...terms];
-    const termToUpdate = { ...newTerms[index] };
-    
-    if (field === 'amount') {
-      termToUpdate.amount = value as number | null;
-    } else if (field === 'date') {
-      termToUpdate.date = value as Date | undefined;
-    }
-    
-    newTerms[index] = termToUpdate;
-    setTerms(newTerms);
-  };
-
-  const addTerm = () => {
-    setTerms([...terms, { amount: null, date: undefined }]);
-  };
-
-  const removeTerm = (index: number) => {
-    setTerms(terms.filter((_, i) => i !== index));
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      setNewAttachments(prev => [...prev, ...Array.from(e.target.files!)]);
-    }
-  };
-
-  const handleRemoveCurrentAttachment = (attachmentId: string) => {
-    setAttachmentsToRemove(prev => [...prev, attachmentId]);
-    setCurrentAttachments(prev => prev.filter(att => att.id !== attachmentId));
-  };
-
-  const handleRemoveNewAttachment = (fileToRemove: File) => {
-    setNewAttachments(prev => prev.filter(file => file !== fileToRemove));
-  };
 
   const handleSave = async () => {
     if (!project) return;
     setIsProcessing(true);
 
+    const payload = splitInvoices.map(si => ({
+      ...si,
+      id: si.id.startsWith('new-') ? null : si.id,
+      project_id: project.id,
+    }));
+
     try {
-      const processedTerms = terms
-        .map(term => ({
-            amount: Number(term.amount) || 0,
-            date: term.date ? term.date.toISOString() : null,
-        }))
-        .filter(term => term.amount > 0 || term.date);
+      const { error } = await supabase.rpc('upsert_split_invoices', {
+        p_project_id: project.id,
+        p_invoices: payload,
+      });
+      if (error) throw error;
 
-      const projectUpdatePayload = {
-        invoice_number: invoiceNumber,
-        po_number: poNumber || null,
-        budget: amount,
-        payment_status: status,
-        paid_date: status === 'Paid' && paidDate ? paidDate.toISOString() : null,
-        email_sending_date: emailSendingDate ? emailSendingDate.toISOString() : null,
-        hardcopy_sending_date: hardcopySendingDate ? hardcopySendingDate.toISOString() : null,
-        channel: channel || null,
-        payment_terms: processedTerms,
-      };
-
-      const { error: projectUpdateError } = await supabase
-        .from('projects')
-        .update(projectUpdatePayload)
-        .eq('id', project.id);
-      
-      if (projectUpdateError) throw projectUpdateError;
-
-      if (attachmentsToRemove.length > 0) {
-        const attachmentsToDelete = project.invoice_attachments?.filter(att => attachmentsToRemove.includes(att.id));
-        if (attachmentsToDelete && attachmentsToDelete.length > 0) {
-          const storagePaths = attachmentsToDelete.map(att => att.storage_path).filter(Boolean);
-          if (storagePaths.length > 0) {
-            await supabase.storage.from('project-files').remove(storagePaths);
-          }
-          const { error: deleteError } = await supabase.from('invoice_attachments').delete().in('id', attachmentsToRemove);
-          if (deleteError) throw deleteError;
-        }
-      }
-
-      if (newAttachments.length > 0) {
-        toast.info(`Uploading ${newAttachments.length} attachment(s)...`);
-        const uploadPromises = newAttachments.map(file => {
-          const sanitizedFileName = file.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
-          const filePath = `invoice-attachments/${project.id}/${Date.now()}-${sanitizedFileName}`;
-          return supabase.storage.from('project-files').upload(filePath, file).then(result => {
-            if (result.error) throw result.error;
-            return { ...result, filePath, originalFile: file };
-          });
-        });
-
-        const uploadResults = await Promise.all(uploadPromises);
-
-        const newAttachmentRecords = uploadResults.map(result => {
-          const { data: urlData } = supabase.storage.from('project-files').getPublicUrl(result.filePath);
-          return {
-            project_id: project.id,
-            file_name: result.originalFile.name,
-            file_url: urlData.publicUrl,
-            storage_path: result.data.path,
-            file_type: result.originalFile.type,
-            file_size: result.originalFile.size,
-          };
-        });
-
-        const { error: insertError } = await supabase.from('invoice_attachments').insert(newAttachmentRecords);
-        if (insertError) throw insertError;
-      }
-
-      toast.success('Invoice updated successfully!');
+      toast.success('Invoice details updated successfully!');
       queryClient.invalidateQueries({ queryKey: ['projects'] });
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
       onClose();
     } catch (error: any) {
       toast.error('An error occurred', { description: error.message });
@@ -260,182 +144,102 @@ export const EditInvoiceDialog = ({ isOpen, onClose, invoice, project }: EditInv
     }
   };
 
-  if (!invoice || !project) return null;
+  const handleSplitInvoiceChange = (index: number, field: keyof SplitInvoice, value: any) => {
+    const newSplits = [...splitInvoices];
+    newSplits[index] = { ...newSplits[index], [field]: value };
+    setSplitInvoices(newSplits);
+  };
+
+  const addSplit = () => {
+    setSplitInvoices([...splitInvoices, {
+      id: `new-${uuidv4()}`,
+      client_company_id: null,
+      amount: null,
+      payment_due_date: undefined,
+      payment_status: 'Proposed',
+    }]);
+  };
+
+  const removeSplit = (index: number) => {
+    setSplitInvoices(splitInvoices.filter((_, i) => i !== index));
+  };
+
+  const totalAmount = useMemo(() => splitInvoices.reduce((sum, si) => sum + (si.amount || 0), 0), [splitInvoices]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>Edit Invoice</DialogTitle>
           <DialogDescription>
-            Update details for invoice related to project "{invoice.projectName}".
+            Update details for invoice related to project "{invoice?.projectName}".
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-4">
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="invoiceNumber" className="text-right">
-              Invoice #
-            </Label>
-            <div className="col-span-3 flex items-center gap-2">
-              <Input
-                id="invoiceNumber"
-                value={invoiceNumber}
-                onChange={(e) => setInvoiceNumber(e.target.value)}
-                className="flex-1"
-              />
-              <Button type="button" size="icon" variant="outline" onClick={handleGenerateInvoiceNumber} disabled={isGenerating}>
-                  {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
-              </Button>
-            </div>
+          <div className="flex items-center gap-2">
+            <Label>Split by:</Label>
+            <Button variant={splitMode === 'term' ? 'secondary' : 'ghost'} size="sm" onClick={() => setSplitMode('term')}><Layers className="mr-2 h-4 w-4" /> Term</Button>
+            <Button variant={splitMode === 'company' ? 'secondary' : 'ghost'} size="sm" onClick={() => setSplitMode('company')}><Building className="mr-2 h-4 w-4" /> Company</Button>
           </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="poNumber" className="text-right">
-              PO
-            </Label>
-            <Input
-              id="poNumber"
-              value={poNumber}
-              onChange={(e) => setPoNumber(e.target.value)}
-              className="col-span-3"
-              placeholder="Optional"
-            />
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="amount" className="text-right">
-              Amount (Rp)
-            </Label>
-            <CurrencyInput
-              id="amount"
-              value={amount}
-              onChange={setAmount}
-              className="col-span-3"
-            />
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label className="text-right">Balance (Rp)</Label>
-            <Input value={balance.toLocaleString('id-ID')} className="col-span-3 bg-muted" readOnly />
-          </div>
-
-          {terms.map((term, index) => (
-            <div key={index} className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor={`term-amount-${index}`} className="text-right">
-                Paid Term {index + 1}
-              </Label>
-              <div className="col-span-3 flex items-center gap-2">
-                <CurrencyInput
-                  id={`term-amount-${index}`}
-                  value={term.amount}
-                  onChange={(value) => handleTermChange(index, 'amount', value)}
-                  placeholder="Amount"
-                />
-                <DatePicker
-                  date={term.date}
-                  onDateChange={(date) => handleTermChange(index, 'date', date)}
-                />
-                {index === terms.length - 1 && (
-                  <Button type="button" size="icon" variant="outline" onClick={addTerm}>
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                )}
-                {terms.length > 1 && (
-                  <Button type="button" size="icon" variant="ghost" onClick={() => removeTerm(index)}>
-                    <X className="h-4 w-4" />
-                  </Button>
-                )}
-              </div>
-            </div>
-          ))}
-
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="status" className="text-right">
-              Status
-            </Label>
-            <Select value={status} onValueChange={(value) => setStatus(value as PaymentStatus)}>
-              <SelectTrigger className="col-span-3">
-                <SelectValue placeholder="Select status" />
-              </SelectTrigger>
-              <SelectContent>
-                {PAYMENT_STATUS_OPTIONS.map((s) => (
-                  <SelectItem key={s.value} value={s.value}>
-                    {s.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          {status === 'Paid' && (
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="paidDate" className="text-right">
-                Paid Date
-              </Label>
-              <div className="col-span-3">
-                <DatePicker date={paidDate} onDateChange={setPaidDate} />
-              </div>
-            </div>
-          )}
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="emailSendingDate" className="text-right">
-              Email Sending
-            </Label>
-            <div className="col-span-3">
-              <DatePicker date={emailSendingDate} onDateChange={setEmailSendingDate} />
-            </div>
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="hardcopySendingDate" className="text-right">
-              Hardcopy/Approved
-            </Label>
-            <div className="col-span-3">
-              <DatePicker date={hardcopySendingDate} onDateChange={setHardcopySendingDate} />
-            </div>
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="channel" className="text-right">
-              Channel
-            </Label>
-            <Select value={channel} onValueChange={setChannel}>
-              <SelectTrigger className="col-span-3">
-                <SelectValue placeholder="Select channel" />
-              </SelectTrigger>
-              <SelectContent>
-                {channelOptions.map((c) => (
-                  <SelectItem key={c} value={c}>
-                    {c}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="grid grid-cols-4 items-start gap-4 pt-2">
-            <Label htmlFor="attachment" className="text-right pt-2">
-              Attachments
-            </Label>
-            <div className="col-span-3 space-y-2">
-              {currentAttachments.map(att => (
-                <div key={att.id} className="flex items-center justify-between text-sm p-2 border rounded-md bg-muted/50">
-                  <a href={att.file_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-blue-600 hover:underline truncate">
-                    <Paperclip className="h-4 w-4 flex-shrink-0" />
-                    <span className="truncate" title={att.file_name}>{att.file_name}</span>
-                  </a>
-                  <Button variant="ghost" size="icon" className="h-6 w-6 flex-shrink-0" onClick={() => handleRemoveCurrentAttachment(att.id)} disabled={isProcessing}>
-                    <X className="h-4 w-4" />
-                  </Button>
+          {splitInvoices.map((split, index) => {
+            const company = companies.find(c => c.id === split.client_company_id);
+            return (
+              <div key={split.id} className="grid grid-cols-4 items-start gap-4 border-t pt-4">
+                <div className="text-right flex flex-col items-end gap-2">
+                  {splitMode === 'company' ? (
+                    <div className="w-full">
+                      <CompanySelector value={split.client_company_id} onChange={(val) => handleSplitInvoiceChange(index, 'client_company_id', val)} />
+                      {company && (
+                        <div className="flex items-center gap-2 mt-2 justify-end">
+                          <span className="text-xs text-muted-foreground">{company.name}</span>
+                          <Avatar className="h-6 w-6">
+                            <AvatarImage src={company.logo_url || undefined} />
+                            <AvatarFallback><Building className="h-3 w-3" /></AvatarFallback>
+                          </Avatar>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <Label htmlFor={`term-amount-${index}`} className="pt-2">
+                      Term {index + 1}
+                    </Label>
+                  )}
                 </div>
-              ))}
-              {newAttachments.map((file, index) => (
-                <div key={index} className="flex items-center justify-between text-sm p-2 border rounded-md bg-muted/50">
-                  <div className="flex items-center gap-2 truncate">
-                    <Paperclip className="h-4 w-4 flex-shrink-0" />
-                    <span className="truncate" title={file.name}>{file.name}</span>
+                <div className="col-span-3 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <CurrencyInput
+                      id={`term-amount-${index}`}
+                      value={split.amount}
+                      onChange={(value) => handleSplitInvoiceChange(index, 'amount', value)}
+                      placeholder="Amount"
+                    />
+                    <DatePicker
+                      date={split.payment_due_date}
+                      onDateChange={(date) => handleSplitInvoiceChange(index, 'payment_due_date', date)}
+                    />
+                    {index === splitInvoices.length - 1 && (
+                      <Button type="button" size="icon" variant="outline" onClick={addSplit}>
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    )}
+                    {splitInvoices.length > 1 && (
+                      <Button type="button" size="icon" variant="ghost" onClick={() => removeSplit(index)}>
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
-                  <Button variant="ghost" size="icon" className="h-6 w-6 flex-shrink-0" onClick={() => handleRemoveNewAttachment(file)} disabled={isProcessing}>
-                    <X className="h-4 w-4" />
-                  </Button>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Input placeholder="Invoice #" value={split.invoice_number || ''} onChange={(e) => handleSplitInvoiceChange(index, 'invoice_number', e.target.value)} />
+                    <Input placeholder="PO #" value={split.po_number || ''} onChange={(e) => handleSplitInvoiceChange(index, 'po_number', e.target.value)} />
+                  </div>
                 </div>
-              ))}
-              <div>
-                <Input id="attachment" type="file" multiple onChange={handleFileChange} className="text-sm" disabled={isProcessing} />
               </div>
+            );
+          })}
+          <div className="grid grid-cols-4 items-center gap-4 border-t pt-4 mt-4">
+            <Label className="text-right font-bold">Total Amount</Label>
+            <div className="col-span-3">
+              <Input value={`Rp ${totalAmount.toLocaleString('id-ID')}`} readOnly className="font-bold" />
             </div>
           </div>
         </div>

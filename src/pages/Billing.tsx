@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import PortalLayout from "@/components/PortalLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useProjects } from "@/hooks/useProjects";
 import { PaymentStatus, Project, Invoice, Member, Owner } from "@/types";
 import { isPast } from "date-fns";
 import { Loader2 } from "lucide-react";
@@ -17,13 +16,35 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
+const fetchInvoices = async (): Promise<Invoice[]> => {
+  const { data, error } = await supabase.rpc('get_all_invoices');
+  if (error) throw error;
+  return data.map((d: any) => ({
+    ...d,
+    dueDate: new Date(d.payment_due_date),
+    rawProjectId: d.project_id,
+    projectId: d.project_slug,
+  })) as Invoice[];
+};
+
 const Billing = () => {
-  const { data: projectsData, isLoading } = useProjects({ fetchAll: true });
-  const projects = useMemo(() => projectsData?.pages.flatMap(page => page.projects) ?? [], [projectsData]);
+  const { data: invoices = [], isLoading } = useQuery<Invoice[]>({
+    queryKey: ['invoices'],
+    queryFn: fetchInvoices,
+  });
+  const { data: projectsData = [] } = useQuery<Project[]>({
+    queryKey: ['projects'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('projects').select('*');
+      if (error) throw error;
+      return data;
+    }
+  });
+
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [sortColumn, setSortColumn] = useState<keyof Invoice>('dueDate');
@@ -41,27 +62,12 @@ const Billing = () => {
             .eq('id', projectId);
         if (error) throw error;
     },
-    onMutate: async ({ projectId, newStatus }) => {
-        await queryClient.cancelQueries({ queryKey: ['projects'] });
-        const previousProjects = queryClient.getQueryData<Project[]>(['projects']);
-        
-        queryClient.setQueryData<Project[]>(['projects'], (old) =>
-            old?.map(p => p.id === projectId ? { ...p, payment_status: newStatus } : p)
-        );
-
-        return { previousProjects };
-    },
-    onError: (err: any, variables, context) => {
-        if (context?.previousProjects) {
-            queryClient.setQueryData(['projects'], context.previousProjects);
-        }
-        toast.error("Failed to update payment status.", { description: err.message });
-    },
     onSuccess: () => {
       toast.success("Payment status updated.");
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
     },
-    onSettled: () => {
-        queryClient.invalidateQueries({ queryKey: ['projects'] });
+    onError: (err: any) => {
+        toast.error("Failed to update payment status.", { description: err.message });
     },
   });
 
@@ -69,52 +75,11 @@ const Billing = () => {
       updatePaymentStatusMutation.mutate({ projectId, newStatus });
   };
   
-  const invoices: Invoice[] = useMemo(() => projects
-    .map(project => {
-      const eventDate = project.due_date || project.start_date;
-      if (!project.payment_status || !project.budget || !eventDate) {
-        return null;
-      }
-      
-      const dueDate = project.payment_due_date ? new Date(project.payment_due_date) : new Date(eventDate);
-
-      let finalStatus: PaymentStatus = project.payment_status as PaymentStatus;
-      if (['Requested', 'Proposed', 'Quo Approved', 'Inv Approved', 'In Process', 'Pending', 'Partially Paid'].includes(finalStatus) && isPast(dueDate)) {
-        finalStatus = 'Overdue';
-      }
-
-      return {
-        id: project.invoice_number || `INV-${project.id.substring(0, 8).toUpperCase()}`,
-        projectId: project.slug,
-        projectName: project.name,
-        amount: project.budget,
-        dueDate: dueDate,
-        status: finalStatus,
-        rawProjectId: project.id,
-        projectStartDate: project.start_date ? new Date(project.start_date) : null,
-        projectEndDate: project.due_date ? new Date(project.due_date) : null,
-        poNumber: project.po_number || null,
-        paidDate: project.paid_date ? new Date(project.paid_date) : null,
-        emailSendingDate: project.email_sending_date ? new Date(project.email_sending_date) : null,
-        hardcopySendingDate: project.hardcopy_sending_date ? new Date(project.hardcopy_sending_date) : null,
-        channel: project.channel || null,
-        clientName: project.client_name || null,
-        clientAvatarUrl: project.client_avatar_url || null,
-        clientLogo: project.client_company_logo_url || null,
-        clientCompanyName: project.client_company_name || null,
-        projectOwner: project.created_by as Owner | null,
-        assignedMembers: (project.assignedTo as Member[]) || [],
-        invoiceAttachments: project.invoice_attachments || [],
-        payment_terms: project.payment_terms || [],
-      };
-    })
-    .filter((invoice): invoice is Invoice => invoice !== null), [projects]);
-
   const filteredInvoices = useMemo(() => {
     return invoices.filter(invoice => {
       const searchTermLower = searchTerm.toLowerCase();
       const matchesSearch =
-        invoice.id.toLowerCase().includes(searchTermLower) ||
+        (invoice.invoice_number && invoice.invoice_number.toLowerCase().includes(searchTermLower)) ||
         invoice.projectName.toLowerCase().includes(searchTermLower) ||
         (invoice.clientName && invoice.clientName.toLowerCase().includes(searchTermLower)) ||
         (invoice.poNumber && invoice.poNumber.toLowerCase().includes(searchTermLower)) ||
@@ -147,33 +112,12 @@ const Billing = () => {
     }
   };
 
-  const sortedInvoices = useMemo(() => {
-    if (!sortColumn) return filteredInvoices;
-    return [...filteredInvoices].sort((a, b) => {
-      let aValue: any = a[sortColumn];
-      let bValue: any = b[sortColumn];
-      if (sortColumn === 'projectOwner') {
-        aValue = a.projectOwner?.name;
-        bValue = b.projectOwner?.name;
-      } else if (sortColumn === 'assignedMembers') {
-        aValue = a.assignedMembers?.find(m => m.role === 'admin')?.name;
-        bValue = b.assignedMembers?.find(m => m.role === 'admin')?.name;
-      }
-      if (aValue === null || aValue === undefined) return 1;
-      if (bValue === null || bValue === undefined) return -1;
-      if (typeof aValue === 'string' && typeof bValue === 'string') {
-        return sortDirection === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
-      }
-      return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
-    });
-  }, [filteredInvoices, sortColumn, sortDirection]);
-
   const { activeInvoices, archivedInvoices } = useMemo(() => {
     const active: Invoice[] = [];
     const archived: Invoice[] = [];
     const archivedStatuses: PaymentStatus[] = ['Paid', 'Cancelled', 'Bid Lost'];
 
-    sortedInvoices.forEach(invoice => {
+    filteredInvoices.forEach(invoice => {
       if (archivedStatuses.includes(invoice.status)) {
         archived.push(invoice);
       } else {
@@ -182,7 +126,7 @@ const Billing = () => {
     });
 
     return { activeInvoices: active, archivedInvoices: archived };
-  }, [sortedInvoices]);
+  }, [filteredInvoices]);
 
   const handleEdit = (invoice: Invoice) => {
     setSelectedInvoice(invoice);
@@ -270,7 +214,7 @@ const Billing = () => {
         isOpen={isFormOpen}
         onClose={() => setIsFormOpen(false)}
         invoice={selectedInvoice}
-        project={projects.find(p => p.id === selectedInvoice?.rawProjectId) || null}
+        project={projectsData.find(p => p.id === selectedInvoice?.rawProjectId) || null}
       />
     </PortalLayout>
   );
