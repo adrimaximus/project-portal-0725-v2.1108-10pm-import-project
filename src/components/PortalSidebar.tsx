@@ -170,7 +170,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
       return {
         navItems: [
           { id: 'dashboard', href: '/dashboard', label: 'Dashboard', icon: Home, folder_id: null },
-          { id: 'projects', href: '/projects', label: 'Projects', icon: LayoutGrid, folder_id: null },
+          { id: 'projects', href: '/projects?view=list', label: 'Projects', icon: LayoutGrid, folder_id: null },
           { id: 'chat', href: '/chat', label: 'Chat', icon: MessageSquare, badge: hasUnreadChat ? 1 : undefined, folder_id: null },
           { id: 'goals', href: '/goals', label: 'Goals', icon: Target, folder_id: null },
           { id: 'people', href: '/people', label: 'People', icon: Users, folder_id: null },
@@ -207,6 +207,9 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
         }
 
         const itemNameLower = item.name.toLowerCase();
+        if (itemNameLower === 'projects') {
+            href = '/projects?view=list';
+        }
         if (itemNameLower === 'knowledge base' && href !== '/knowledge-base') {
             href = '/knowledge-base';
         }
