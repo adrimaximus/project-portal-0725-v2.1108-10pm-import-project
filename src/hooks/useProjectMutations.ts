@@ -131,7 +131,7 @@ export const useProjectMutations = (slug?: string) => {
 
     const deleteFile = useMutation({
         mutationFn: async (file: { id: string, storage_path: string }) => {
-            const { error: storageError } = await supabase.storage.from('task-attachments').remove([file.storage_path]);
+            const { error: storageError } = await supabase.storage.from('project-files').remove([file.storage_path]);
             if (storageError) throw new Error(`Failed to delete file from storage: ${storageError.message}`);
             
             const { error: dbError } = await supabase.from('project_files').delete().eq('id', file.id);
