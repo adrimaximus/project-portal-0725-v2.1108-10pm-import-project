@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import MonthlyProgressChart from "@/components/dashboard/MonthlyProgressChart";
 import UnsplashImage from "@/components/dashboard/UnsplashImage";
 import MyTasksWidget from "@/components/dashboard/MyTasksWidget";
+import GlobalActivityFeed from "@/components/dashboard/GlobalActivityFeed";
 
 const Index = () => {
   const [date, setDate] = useState<DateRange | undefined>({
@@ -103,6 +104,7 @@ const Index = () => {
               <UnsplashImage />
             </div>
             <MyTasksWidget />
+            <GlobalActivityFeed />
             <DashboardStatsGrid projects={filteredProjects} />
             <CollaboratorsList projects={filteredProjects} />
         </div>
