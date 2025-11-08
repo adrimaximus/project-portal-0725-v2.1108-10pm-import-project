@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import rehypeRaw from 'rehype-raw';
 import TaskAttachmentList from '../projects/TaskAttachmentList';
 import { useTaskMutations } from '@/hooks/useTaskMutations';
 import { useQueryClient, useMutation, useQuery } from '@tanstack/react-query';
@@ -272,6 +273,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
   const description = task.description || '';
   const isLongDescription = description.length > 500;
   const displayedDescription = isLongDescription && !showFullDescription ? `${description.substring(0, 500)}...` : description;
+  const formattedDescription = formatMentionsForDisplay(displayedDescription);
 
   const handleToggleReaction = (emoji: string) => {
     toggleTaskReaction({ taskId: task.id, emoji });
@@ -469,7 +471,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
             <div className="pt-4 border-t">
               <h4 className="font-semibold mb-2">Description</h4>
               <div className="prose prose-sm dark:prose-invert max-w-none break-words">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>{displayedDescription}</ReactMarkdown>
+                <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{formattedDescription}</ReactMarkdown>
               </div>
               {isLongDescription && (
                 <Button variant="link" size="sm" onClick={() => setShowFullDescription(!showFullDescription)} className="px-0 h-auto">
