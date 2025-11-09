@@ -2,7 +2,7 @@ import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { Task, TaskAttachment, Reaction, User, Comment as CommentType, TaskStatus, TASK_STATUS_OPTIONS } from '@/types';
 import { DrawerContent } from '@/components/ui/drawer';
 import { Button } from '../ui/button';
-import { format, isPast } from 'date-fns';
+import { format, isPast, formatDistanceToNow } from 'date-fns';
 import { cn, isOverdue, formatTaskText, getPriorityStyles, getTaskStatusStyles, getDueDateClassName, getAvatarUrl, generatePastelColor, getInitials, formatMentionsForDisplay } from '@/lib/utils';
 import {
   Edit,
@@ -393,9 +393,23 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
                 <div className={cn("flex items-center gap-1.5", getDueDateClassName(task.due_date, task.completed))}>
                   <span>{task.due_date ? format(new Date(task.due_date), "MMM d, yyyy, p") : 'No due date'}</span>
                   {isOverdue(task.due_date) && !task.completed && (
-                    <Button variant="ghost" size="icon" className="h-6 w-6 text-blue-500" onClick={handleSendReminder} disabled={isSendingReminder}>
-                      {isSendingReminder ? <Loader2 className="h-3 w-3 animate-spin" /> : <BellRing className="h-3 w-3" />}
-                    </Button>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-6 w-6 text-blue-500" onClick={handleSendReminder} disabled={isSendingReminder}>
+                            {isSendingReminder ? <Loader2 className="h-3 w-3 animate-spin" /> : <BellRing className="h-3 w-3" />}
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Send reminder to assignees</p>
+                          {task.last_reminder_sent_at && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Last sent: {formatDistanceToNow(new Date(task.last_reminder_sent_at), { addSuffix: true })}
+                            </p>
+                          )}
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   )}
                 </div>
               </div>
