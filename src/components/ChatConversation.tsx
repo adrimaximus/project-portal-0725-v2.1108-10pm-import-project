@@ -245,7 +245,7 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                                         <span className="text-xs text-white/90 py-0.5">
                                           {formatTimestamp(message.timestamp)}
                                         </span>
-                                        <ChatMessageActions message={message} isCurrentUser={isCurrentUser} onReply={onReply} className="text-white/90 hover:bg-white/20" />
+                                        <ChatMessageActions message={message} isCurrentUser={isCurrentUser} className="text-white/90 hover:bg-white/20" />
                                       </div>
                                     </div>
                                   )}

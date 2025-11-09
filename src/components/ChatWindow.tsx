@@ -15,8 +15,7 @@ interface ChatWindowProps {
 }
 
 export const ChatWindow = forwardRef<HTMLTextAreaElement, ChatWindowProps>(({ onBack }, ref) => {
-  const { selectedConversation, isSomeoneTyping, sendMessage, sendTyping, isSendingMessage, leaveGroup, refetchConversations } = useChatContext();
-  const [replyTo, setReplyTo] = useState<Message | null>(null);
+  const { selectedConversation, isSomeoneTyping, sendMessage, sendTyping, isSendingMessage, leaveGroup, refetchConversations, replyingTo, setReplyingTo } = useChatContext();
 
   const handleClearChat = async (conversationId: string) => {
     const { error } = await supabase.from('messages').delete().eq('conversation_id', conversationId);
@@ -36,8 +35,7 @@ export const ChatWindow = forwardRef<HTMLTextAreaElement, ChatWindowProps>(({ on
   }
 
   const handleSendMessage = (text: string, attachmentFile: File | null) => {
-    sendMessage(text, attachmentFile, replyTo?.id);
-    setReplyTo(null);
+    sendMessage(text, attachmentFile, replyingTo?.id);
   };
 
   return (
@@ -53,7 +51,7 @@ export const ChatWindow = forwardRef<HTMLTextAreaElement, ChatWindowProps>(({ on
       <ChatConversation
         messages={selectedConversation.messages}
         members={selectedConversation.members || []}
-        onReply={setReplyTo}
+        onReply={setReplyingTo}
       />
       <ChatInput 
         ref={ref} 
@@ -61,8 +59,8 @@ export const ChatWindow = forwardRef<HTMLTextAreaElement, ChatWindowProps>(({ on
         onTyping={sendTyping}
         isSending={isSendingMessage}
         conversationId={selectedConversation.id}
-        replyTo={replyTo}
-        onCancelReply={() => setReplyTo(null)}
+        replyTo={replyingTo}
+        onCancelReply={() => setReplyingTo(null)}
       />
     </div>
   );
