@@ -13,10 +13,11 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getAvatarUrl, generatePastelColor, getInitials } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useTaskModal } from '@/contexts/TaskModalContext';
+import { getProjectBySlug } from '@/lib/projectsApi';
 
 const TaskItem = ({ task }: { task: Task }) => {
   const { toggleTaskCompletion } = useTaskMutations();
-  const { openTaskModal } = useTaskModal();
+  const { onOpen: onOpenTaskModal } = useTaskModal();
 
   const handleToggle = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -24,8 +25,16 @@ const TaskItem = ({ task }: { task: Task }) => {
     toggleTaskCompletion({ task, completed: !task.completed });
   };
 
-  const handleTaskClick = () => {
-    openTaskModal(task.id, task.project_id);
+  const handleTaskClick = async () => {
+    try {
+      const projectForTask = await getProjectBySlug(task.project_slug);
+      if (!projectForTask) {
+        throw new Error("Project for this task could not be found.");
+      }
+      onOpenTaskModal(task, undefined, projectForTask);
+    } catch (error) {
+      toast.error("Could not open task details.", { description: (error as Error).message });
+    }
   };
 
   const dueDate = task.due_date ? new Date(task.due_date) : null;
