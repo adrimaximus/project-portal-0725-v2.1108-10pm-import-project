@@ -1,7 +1,7 @@
 import { useRef, useState, forwardRef, useImperativeHandle, useEffect } from "react";
 import { useDropzone } from 'react-dropzone';
 import { Button } from "./ui/button";
-import { Paperclip, Send, X, Loader2, UploadCloud, Smile } from "lucide-react";
+import { Paperclip, Send, X, Loader2, UploadCloud, Smile, Camera, Mic } from "lucide-react";
 import { cn, formatMentionsForDisplay } from "@/lib/utils";
 import { Message } from "@/types";
 import VoiceMessageRecorder from "./VoiceMessageRecorder";
@@ -152,12 +152,25 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
       )}
 
       {replyTo && (
-        <div className="p-2 mb-2 bg-muted rounded-md flex justify-between items-center">
-          <div className="text-sm overflow-hidden">
-            <p className="font-semibold text-primary">Replying to {replyTo.sender.name}</p>
-            <p className="text-xs text-muted-foreground truncate" dangerouslySetInnerHTML={{ __html: formatMentionsForDisplay(replyTo.text || '') }} />
+        <div className="p-2 mb-2 bg-muted rounded-md flex justify-between items-start gap-2">
+          <div className="flex-1 flex items-start gap-3 overflow-hidden">
+            <div className="flex-1 text-sm overflow-hidden">
+              <p className="font-semibold text-primary">Replying to {replyTo.sender.name}</p>
+              <div className="text-xs text-muted-foreground flex items-center gap-1.5">
+                {replyTo.attachment?.type.startsWith('image/') && <Camera className="h-3 w-3 flex-shrink-0" />}
+                {replyTo.attachment?.type.startsWith('audio/') && <Mic className="h-3 w-3 flex-shrink-0" />}
+                {replyTo.text ? (
+                  <p className="truncate" dangerouslySetInnerHTML={{ __html: formatMentionsForDisplay(replyTo.text) }} />
+                ) : (
+                  replyTo.attachment?.type.startsWith('image/') ? 'Photo' : replyTo.attachment?.type.startsWith('audio/') ? 'Voice message' : 'Attachment'
+                )}
+              </div>
+            </div>
+            {replyTo.attachment?.type.startsWith('image/') && (
+              <img src={replyTo.attachment.url} alt="Reply preview" className="h-10 w-10 object-cover rounded-md flex-shrink-0" />
+            )}
           </div>
-          <Button variant="ghost" size="icon" onClick={onCancelReply} className="h-7 w-7">
+          <Button variant="ghost" size="icon" onClick={onCancelReply} className="h-7 w-7 flex-shrink-0">
             <X className="h-4 w-4" />
           </Button>
         </div>
