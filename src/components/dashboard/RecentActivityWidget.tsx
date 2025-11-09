@@ -32,7 +32,7 @@ const RecentActivityWidget = () => {
   }
 
   return (
-    <div className="divide-y divide-border -mx-6 -my-6 max-h-[500px] overflow-y-auto">
+    <div className="divide-y divide-border -mx-6 -my-6 max-h-[300px] overflow-y-auto">
       {recentActivities.map(activity => (
         <div key={activity.id} className="flex items-start gap-3 px-6 py-3">
           <Avatar className="h-8 w-8">
