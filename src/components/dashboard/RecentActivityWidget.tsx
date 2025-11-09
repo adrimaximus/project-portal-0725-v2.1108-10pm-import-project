@@ -35,7 +35,7 @@ const RecentActivityWidget = () => {
       {recentActivities.map(activity => (
         <div key={activity.id} className="flex items-start gap-3 px-6 py-3">
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted">
-            <ActivityIcon type={activity.type} className="h-4 w-4 text-muted-foreground" />
+            <ActivityIcon type={activity.type} className="h-4 w-4 text-primary" />
           </div>
           <div className="text-sm flex-grow">
             <p className="text-foreground">
@@ -43,7 +43,7 @@ const RecentActivityWidget = () => {
               {' '}{activity.details.description}
             </p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              <Link to={`/projects/${activity.project_slug}`} className="hover:underline">{activity.project_name}</Link>
+              <Link to={`/projects/${activity.project_slug}`} className="hover:underline text-primary font-medium">{activity.project_name}</Link>
               {' · '}
               {formatDistanceToNow(new Date(activity.created_at), { addSuffix: true })}
             </p>
