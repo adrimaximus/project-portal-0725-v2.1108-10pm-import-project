@@ -1,67 +1,77 @@
-import React, { useState, useEffect } from 'react';
-import { ChatProvider, useChatContext } from '@/contexts/ChatContext';
-import { ChatConversation } from '@/components/ChatConversation';
-import ChatInput from '@/components/ChatInput';
-import { Message, Collaborator } from '@/types';
-import { useAuth } from '@/contexts/AuthContext';
-
-// Dummy data for demonstration
-const dummyMembers: Collaborator[] = [
-  { id: '1', name: 'You', initials: 'Y', email: 'you@example.com' },
-  { id: '2', name: 'Jane Doe', initials: 'JD', email: 'jane@example.com' },
-  { id: 'ai-assistant', name: 'AI Assistant', initials: 'AI' },
-];
-
-const dummyMessages: Message[] = [
-  {
-    id: 'msg1',
-    sender: dummyMembers[1],
-    text: 'Hey, how is the project going?',
-    timestamp: new Date(Date.now() - 1000 * 60 * 5).toISOString(),
-  },
-  {
-    id: 'msg2',
-    sender: dummyMembers[0],
-    text: 'Going well! Almost done with the chat UI.',
-    timestamp: new Date(Date.now() - 1000 * 60 * 4).toISOString(),
-  },
-  {
-    id: 'msg3',
-    sender: dummyMembers[1],
-    text: 'Great! Can you show me how to edit a message?',
-    timestamp: new Date(Date.now() - 1000 * 60 * 3).toISOString(),
-  },
-];
+import { useRef, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
+import ChatList from "@/components/ChatList";
+import { ChatWindow } from "@/components/ChatWindow";
+import PortalLayout from "@/components/PortalLayout";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { useChatContext } from "@/contexts/ChatContext";
+import {
+  ResizablePanelGroup,
+  ResizablePanel,
+  ResizableHandle,
+} from "@/components/ui/resizable";
+import { cn } from "@/lib/utils";
 
 const ChatPageContent = () => {
-  const { user } = useAuth();
-  const [messages, setMessages] = useState<Message[]>(dummyMessages);
-  const [members, setMembers] = useState<Collaborator[]>(dummyMembers);
+  const isMobile = useIsMobile();
+  const { selectedConversation, selectConversation, setIsChatPageActive } = useChatContext();
+  const chatInputRef = useRef<HTMLTextAreaElement>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const highlightedId = searchParams.get('highlight');
 
-  // Replace dummy user ID with current user's ID
   useEffect(() => {
-    if (user) {
-      setMembers(prev => prev.map(m => m.id === '1' ? { ...m, id: user.id, name: 'You' } : m));
-      setMessages(prev => prev.map(msg => msg.sender.id === '1' ? { ...msg, sender: { ...msg.sender, id: user.id, name: 'You' } } : msg));
+    setIsChatPageActive(true);
+    return () => {
+      setIsChatPageActive(false);
+    };
+  }, [setIsChatPageActive]);
+
+  useEffect(() => {
+    if (selectedConversation && chatInputRef.current) {
+      setTimeout(() => {
+        chatInputRef.current?.focus();
+      }, 100);
     }
-  }, [user]);
+  }, [selectedConversation]);
+
+  const onHighlightComplete = () => {
+    searchParams.delete('highlight');
+    setSearchParams(searchParams, { replace: true });
+  };
+
+  if (isMobile) {
+    return (
+      <div className="flex-1 h-full">
+        {!selectedConversation ? (
+          <ChatList highlightedId={highlightedId} onHighlightComplete={onHighlightComplete} />
+        ) : (
+          <ChatWindow ref={chatInputRef} onBack={() => selectConversation(null)} />
+        )}
+      </div>
+    );
+  }
 
   return (
-    <div className="flex flex-col h-screen bg-background">
-      <header className="p-4 border-b">
-        <h1 className="text-lg font-semibold">Chat</h1>
-      </header>
-      <ChatConversation messages={messages} members={members} />
-      <ChatInput />
-    </div>
+    <ResizablePanelGroup
+      direction="horizontal"
+      className="flex-1 items-stretch"
+    >
+      <ResizablePanel defaultSize={35} minSize={25} maxSize={50} className="min-w-[400px]">
+        <ChatList highlightedId={highlightedId} onHighlightComplete={onHighlightComplete} />
+      </ResizablePanel>
+      <ResizableHandle withHandle />
+      <ResizablePanel defaultSize={65}>
+        <ChatWindow ref={chatInputRef} />
+      </ResizablePanel>
+    </ResizablePanelGroup>
   );
 };
 
 const ChatPage = () => {
   return (
-    <ChatProvider>
+    <PortalLayout noPadding disableMainScroll>
       <ChatPageContent />
-    </ChatProvider>
+    </PortalLayout>
   );
 };
 

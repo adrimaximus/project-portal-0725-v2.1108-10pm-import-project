@@ -3,11 +3,11 @@ import { Message, Collaborator } from "@/types";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import MessageAttachment from "./MessageAttachment";
 import { useAuth } from "@/contexts/AuthContext";
-import { cn, generatePastelColor, formatMentionsForDisplay, getAvatarUrl } from "@/lib/utils";
+import { cn, generatePastelColor, formatMentionsForDisplay, getInitials, getAvatarUrl } from "@/lib/utils";
 import { format, isToday, isYesterday, isSameDay, parseISO } from 'date-fns';
 import ReactMarkdown from 'react-markdown';
 import { Link } from 'react-router-dom';
-import { Loader2, Share, Camera, Mic, Ban, Pencil } from "lucide-react";
+import { Loader2, Share, Camera, Mic, Ban } from "lucide-react";
 import VoiceMessagePlayer from "./VoiceMessagePlayer";
 import MessageReactions from "./MessageReactions";
 import { useChatContext } from "@/contexts/ChatContext";
@@ -20,6 +20,7 @@ interface ChatConversationProps {
   messages: Message[];
   members: Collaborator[];
   isLoading?: boolean;
+  onReply: (message: Message) => void;
 }
 
 const isEmojiOnly = (text: string | null | undefined): boolean => {
@@ -49,7 +50,7 @@ const formatDateSeparator = (timestamp: string) => {
   }
 };
 
-export const ChatConversation = ({ messages, members, isLoading }: ChatConversationProps) => {
+export const ChatConversation = ({ messages, members, isLoading, onReply }: ChatConversationProps) => {
   const { user: currentUser } = useAuth();
   const { toggleReaction } = useChatContext();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -90,8 +91,6 @@ export const ChatConversation = ({ messages, members, isLoading }: ChatConversat
           
           const showDateSeparator = !prevMessage || !isSameDay(parseISO(prevMessage.timestamp), parseISO(message.timestamp));
           
-          const messageText = message.text || message.content;
-
           return (
             <React.Fragment key={message.id || index}>
               {showDateSeparator && (
@@ -118,7 +117,7 @@ export const ChatConversation = ({ messages, members, isLoading }: ChatConversat
                 (() => {
                   const isImageAttachment = message.attachment?.type.startsWith('image/');
                   const isAudioAttachment = message.attachment?.type.startsWith('audio/');
-                  const isOnlyEmoji = isEmojiOnly(messageText);
+                  const isOnlyEmoji = isEmojiOnly(message.text);
 
                   return (
                     <div
@@ -204,18 +203,18 @@ export const ChatConversation = ({ messages, members, isLoading }: ChatConversat
                                     <a href={message.attachment!.url} target="_blank" rel="noopener noreferrer">
                                       <img src={message.attachment!.url} alt={message.attachment!.name} className="max-w-full h-auto rounded-md" />
                                     </a>
-                                    {!messageText && (
+                                    {!message.text && (
                                       <div className="absolute bottom-1 right-1 flex items-end">
                                         <div className="flex-shrink-0 self-end flex items-center gap-0 bg-black/40 rounded-full pl-1.5">
                                           <span className="text-xs text-white/90 py-0.5">
                                             {formatTimestamp(message.timestamp)}
                                           </span>
-                                          <ChatMessageActions message={message} isCurrentUser={isCurrentUser} className="text-white/90 hover:bg-white/20" />
+                                          <ChatMessageActions message={message} isCurrentUser={isCurrentUser} onReply={onReply} className="text-white/90 hover:bg-white/20" />
                                         </div>
                                       </div>
                                     )}
                                   </div>
-                                  {messageText && (
+                                  {message.text && (
                                     <div className="pt-2 px-1 flex items-end gap-2">
                                       <div className="min-w-0 flex-grow">
                                         <div className={cn(
@@ -233,9 +232,24 @@ export const ChatConversation = ({ messages, members, isLoading }: ChatConversat
                                                 }
                                                 return <a {...props} target="_blank" rel="noopener noreferrer" className="font-medium underline" />;
                                               },
+                                              p: ({ node, ...props }) => {
+                                                const processedChildren = React.Children.map(props.children, child => {
+                                                  if (typeof child === 'string') {
+                                                    const emojiRegex = /(\p{Emoji_Presentation}|\p{Emoji_Modifier_Base}|\p{Emoji_Component}|\p{Extended_Pictographic}|[\u200D\uFE0F]+)/u;
+                                                    const parts = child.split(emojiRegex);
+                                                    return parts.map((part, i) => 
+                                                      part.match(emojiRegex) 
+                                                        ? <span key={i} className="text-lg inline-block align-middle">{part}</span> 
+                                                        : part
+                                                    );
+                                                  }
+                                                  return child;
+                                                });
+                                                return <p {...props}>{processedChildren}</p>;
+                                              }
                                             }}
                                           >
-                                            {formatMentionsForDisplay(messageText || '')}
+                                            {formatMentionsForDisplay(message.text || '')}
                                           </ReactMarkdown>
                                         </div>
                                       </div>
@@ -246,7 +260,7 @@ export const ChatConversation = ({ messages, members, isLoading }: ChatConversat
                                         )}>
                                             {formatTimestamp(message.timestamp)}
                                         </span>
-                                        <ChatMessageActions message={message} isCurrentUser={isCurrentUser} />
+                                        <ChatMessageActions message={message} isCurrentUser={isCurrentUser} onReply={onReply} />
                                       </div>
                                     </div>
                                   )}
@@ -259,15 +273,15 @@ export const ChatConversation = ({ messages, members, isLoading }: ChatConversat
                                     isCurrentUser={isCurrentUser}
                                   />
                                   <div className="pl-1">
-                                    <ChatMessageActions message={message} isCurrentUser={isCurrentUser} />
+                                    <ChatMessageActions message={message} isCurrentUser={isCurrentUser} onReply={onReply} />
                                   </div>
                                 </div>
                               ) : (
                                 <div className="flex items-end gap-2">
                                   <div className="min-w-0 flex-grow">
-                                    {messageText && (
+                                    {message.text && (
                                       isOnlyEmoji ? (
-                                        <div className="text-3xl">{messageText}</div>
+                                        <div className="text-3xl">{message.text}</div>
                                       ) : (
                                         <div className={cn(
                                           "text-sm whitespace-pre-wrap break-words prose prose-sm max-w-none [&_p]:my-0",
@@ -284,9 +298,24 @@ export const ChatConversation = ({ messages, members, isLoading }: ChatConversat
                                                 }
                                                 return <a {...props} target="_blank" rel="noopener noreferrer" className="font-medium underline" />;
                                               },
+                                              p: ({ node, ...props }) => {
+                                                const processedChildren = React.Children.map(props.children, child => {
+                                                  if (typeof child === 'string') {
+                                                    const emojiRegex = /(\p{Emoji_Presentation}|\p{Emoji_Modifier_Base}|\p{Emoji_Component}|\p{Extended_Pictographic}|[\u200D\uFE0F]+)/u;
+                                                    const parts = child.split(emojiRegex);
+                                                    return parts.map((part, i) => 
+                                                      part.match(emojiRegex) 
+                                                        ? <span key={i} className="text-lg inline-block align-middle">{part}</span> 
+                                                        : part
+                                                    );
+                                                  }
+                                                  return child;
+                                                });
+                                                return <p {...props}>{processedChildren}</p>;
+                                              }
                                             }}
                                           >
-                                            {formatMentionsForDisplay(messageText || '')}
+                                            {formatMentionsForDisplay(message.text || '')}
                                           </ReactMarkdown>
                                         </div>
                                       )
@@ -302,7 +331,7 @@ export const ChatConversation = ({ messages, members, isLoading }: ChatConversat
                                       )}>
                                           {formatTimestamp(message.timestamp)}
                                       </span>
-                                      <ChatMessageActions message={message} isCurrentUser={isCurrentUser} />
+                                      <ChatMessageActions message={message} isCurrentUser={isCurrentUser} onReply={onReply} />
                                   </div>
                                 </div>
                               )}
