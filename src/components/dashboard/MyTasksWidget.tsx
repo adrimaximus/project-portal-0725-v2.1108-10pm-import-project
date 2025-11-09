@@ -11,6 +11,8 @@ import { getAvatarUrl, generatePastelColor, getInitials } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useTaskDrawer } from '@/contexts/TaskDrawerContext';
 import { getProjectBySlug } from '@/lib/projectsApi';
+import { Button } from '@/components/ui/button';
+import { Link } from 'react-router-dom';
 
 const TaskItem = ({ task }: { task: Task }) => {
   const { onOpen: onOpenTaskDrawer } = useTaskDrawer();
@@ -157,6 +159,13 @@ const MyTasksWidget = () => {
       <div className="space-y-2 pr-2">
         {overdueTasks.map(task => <TaskItem key={task.id} task={task} />)}
         {upcomingTasks.map(task => <TaskItem key={task.id} task={task} />)}
+      </div>
+      <div className="pt-2 text-center">
+        <Button variant="link" asChild>
+          <Link to={`/projects?view=tasks&member=${user?.id}`}>
+            View all my tasks
+          </Link>
+        </Button>
       </div>
     </div>
   );
