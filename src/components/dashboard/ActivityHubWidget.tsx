@@ -18,13 +18,15 @@ import { useTaskModal } from '@/contexts/TaskModalContext';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import RecentActivityWidget from './RecentActivityWidget';
 import CollaboratorsTab from './CollaboratorsTab';
+import MyTasksWidget from './MyTasksWidget';
 
 const ActivityHubWidget = ({ projects }: { projects: Project[] }) => {
   return (
     <Card>
-      <Tabs defaultValue="recent-activity" className="w-full">
+      <Tabs defaultValue="my-tasks" className="w-full">
         <CardHeader className="flex flex-row items-center justify-between gap-2 pb-4">
           <TabsList>
+            <TabsTrigger value="my-tasks">My Tasks</TabsTrigger>
             <TabsTrigger value="recent-activity">Recent Activity</TabsTrigger>
             <TabsTrigger value="collaborators">Collaborators</TabsTrigger>
           </TabsList>
@@ -33,6 +35,9 @@ const ActivityHubWidget = ({ projects }: { projects: Project[] }) => {
           </Button>
         </CardHeader>
         <CardContent>
+          <TabsContent value="my-tasks" className="mt-0">
+            <MyTasksWidget />
+          </TabsContent>
           <TabsContent value="recent-activity" className="mt-0">
             <RecentActivityWidget />
           </TabsContent>
