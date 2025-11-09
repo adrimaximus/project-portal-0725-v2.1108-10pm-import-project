@@ -27,11 +27,11 @@ const TasksKanbanColumn = ({ status, tasks, isCollapsed, onToggleCollapse, onEdi
     <div
       ref={setNodeRef}
       className={cn(
-        "flex-shrink-0 transition-all duration-300 ease-in-out",
+        "flex-shrink-0 transition-all duration-300 ease-in-out h-full",
         isCollapsed ? "w-14" : "w-72"
       )}
     >
-      <div className="flex flex-col bg-muted/50 rounded-lg">
+      <div className="h-full flex flex-col bg-muted/50 rounded-lg">
         <div className="font-semibold p-3 text-base flex items-center justify-between flex-shrink-0">
           {!isCollapsed && (
             <h3 className="flex items-center gap-2 truncate">
@@ -45,14 +45,14 @@ const TasksKanbanColumn = ({ status, tasks, isCollapsed, onToggleCollapse, onEdi
         </div>
 
         {isCollapsed ? (
-          <div className="flex-grow min-h-[6rem] flex items-center justify-center cursor-pointer p-3" onClick={() => onToggleCollapse(status)}>
+          <div className="flex-grow min-h-0 flex items-center justify-center cursor-pointer p-3" onClick={() => onToggleCollapse(status)}>
             <div className="[writing-mode:vertical-rl] rotate-180 whitespace-nowrap flex items-center gap-2 text-sm font-medium">
               <span className="truncate">{statusLabel}</span>
               <Badge variant="secondary">{tasks.length}</Badge>
             </div>
           </div>
         ) : (
-          <div className="min-h-[6rem] p-2 pt-0">
+          <div className="flex-grow min-h-0 overflow-y-auto p-2 pt-0">
             <SortableContext id={status} items={taskIds} strategy={verticalListSortingStrategy}>
               {tasks.map(task => (
                 <TasksKanbanCard key={task.id} task={task} onEdit={onEdit} onDelete={onDelete} />
