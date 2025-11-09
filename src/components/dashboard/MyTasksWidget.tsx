@@ -140,10 +140,19 @@ const MyTasksWidget = () => {
             <p className="text-lg font-bold flex items-center justify-center gap-1"><AlertTriangle className="h-4 w-4 text-red-500" />{overdueTasks.length}</p>
           </div>
         </div>
-        <div className="flex items-center gap-4 w-1/3">
-          <Progress value={completionPercentage} className="flex-1" />
-          <span className="text-sm font-semibold">{completionPercentage.toFixed(0)}%</span>
-        </div>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="flex items-center gap-4 w-1/3 cursor-help">
+                <Progress value={completionPercentage} className="flex-1" />
+                <span className="text-sm font-semibold">{completionPercentage.toFixed(0)}%</span>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Persentase dari total tugas Anda yang telah selesai.</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </div>
       <div className="space-y-2 pr-2">
         {overdueTasks.map(task => <TaskItem key={task.id} task={task} />)}
