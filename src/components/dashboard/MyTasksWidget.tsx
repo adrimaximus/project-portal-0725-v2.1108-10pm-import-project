@@ -12,12 +12,12 @@ import { toast } from 'sonner';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getAvatarUrl, generatePastelColor, getInitials } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { useTaskModal } from '@/contexts/TaskModalContext';
+import { useTaskDrawer } from '@/contexts/TaskDrawerContext';
 import { getProjectBySlug } from '@/lib/projectsApi';
 
 const TaskItem = ({ task }: { task: Task }) => {
   const { toggleTaskCompletion } = useTaskMutations();
-  const { onOpen: onOpenTaskModal } = useTaskModal();
+  const { onOpen: onOpenTaskDrawer } = useTaskDrawer();
 
   const handleToggle = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -31,7 +31,7 @@ const TaskItem = ({ task }: { task: Task }) => {
       if (!projectForTask) {
         throw new Error("Project for this task could not be found.");
       }
-      onOpenTaskModal(task, undefined, projectForTask);
+      onOpenTaskDrawer(task, projectForTask);
     } catch (error) {
       toast.error("Could not open task details.", { description: (error as Error).message });
     }
