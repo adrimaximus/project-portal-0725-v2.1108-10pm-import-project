@@ -12,14 +12,20 @@ import { toast } from 'sonner';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getAvatarUrl, generatePastelColor, getInitials } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useTaskModal } from '@/contexts/TaskModalContext';
 
 const TaskItem = ({ task }: { task: Task }) => {
   const { toggleTaskCompletion } = useTaskMutations();
+  const { openTaskModal } = useTaskModal();
 
   const handleToggle = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     toggleTaskCompletion({ task, completed: !task.completed });
+  };
+
+  const handleTaskClick = () => {
+    openTaskModal(task.id, task.project_id);
   };
 
   const dueDate = task.due_date ? new Date(task.due_date) : null;
@@ -42,7 +48,10 @@ const TaskItem = ({ task }: { task: Task }) => {
   }
 
   return (
-    <div className="flex items-center gap-3 p-2 rounded-md hover:bg-muted/50">
+    <div 
+      className="flex items-center gap-3 p-2 rounded-md hover:bg-muted/50 cursor-pointer"
+      onClick={handleTaskClick}
+    >
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
@@ -55,10 +64,10 @@ const TaskItem = ({ task }: { task: Task }) => {
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
-      <Link to={`/projects/${task.project_slug}?tab=tasks&task=${task.id}`} className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0">
         <p className="text-sm font-medium truncate">{task.title}</p>
         <p className="text-xs text-muted-foreground truncate">{task.project_name}</p>
-      </Link>
+      </div>
       <div className="flex items-center gap-2 flex-shrink-0">
         {dueDateText && <span className={`text-xs font-medium ${dueDateColor}`}>{dueDateText}</span>}
         <div className="flex -space-x-2">
