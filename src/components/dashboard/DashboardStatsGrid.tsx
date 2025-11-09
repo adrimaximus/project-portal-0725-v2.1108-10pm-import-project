@@ -65,12 +65,14 @@ const UserStat = ({ user, metric, metricType, canViewValue }: { user: UserStatDa
           </div>
         </TooltipTrigger>
         <TooltipContent>
-          <p className="text-xs text-muted-foreground">Projects:</p>
-          <ul className="list-disc pl-4 text-left text-xs">
-            {user.projects.map(p => (
-              <li key={p.id}>{p.name}</li>
-            ))}
-          </ul>
+          <div className="max-h-[200px] overflow-y-auto">
+            <p className="text-xs text-muted-foreground">Projects:</p>
+            <ul className="list-disc pl-4 text-left text-xs">
+              {user.projects.map(p => (
+                <li key={p.id}>{p.name}</li>
+              ))}
+            </ul>
+          </div>
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
@@ -234,10 +236,12 @@ const DashboardStatsGrid = ({ projects }: DashboardStatsGridProps) => {
                         </div>
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p className="text-xs text-muted-foreground">Projects:</p>
-                        <ul className="list-disc pl-4 text-left text-xs">
-                          {projectsInStatus.map(p => <li key={p.id}>{p.name}</li>)}
-                        </ul>
+                        <div className="max-h-[200px] overflow-y-auto">
+                          <p className="text-xs text-muted-foreground">Projects:</p>
+                          <ul className="list-disc pl-4 text-left text-xs">
+                            {projectsInStatus.map(p => <li key={p.id}>{p.name}</li>)}
+                          </ul>
+                        </div>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
@@ -269,10 +273,12 @@ const DashboardStatsGrid = ({ projects }: DashboardStatsGridProps) => {
                         </div>
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p className="text-xs text-muted-foreground">Projects:</p>
-                        <ul className="list-disc pl-4 text-left text-xs">
-                          {projectsInStatus.map(p => <li key={p.id}>{p.name}</li>)}
-                        </ul>
+                        <div className="max-h-[200px] overflow-y-auto">
+                          <p className="text-xs text-muted-foreground">Projects:</p>
+                          <ul className="list-disc pl-4 text-left text-xs">
+                            {projectsInStatus.map(p => <li key={p.id}>{p.name}</li>)}
+                          </ul>
+                        </div>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>

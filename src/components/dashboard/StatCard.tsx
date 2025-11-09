@@ -74,9 +74,9 @@ const StatCard = ({ title, value, icon, description, permission, projects }: Sta
                 {valueDisplay}
               </TooltipTrigger>
               <TooltipContent>
-                <div className="p-1">
+                <div className="p-1 max-h-[200px] overflow-y-auto">
                   <p className="text-xs text-muted-foreground mb-1">Projects:</p>
-                  <ul className="list-disc list-inside space-y-1 max-h-48 overflow-y-auto">
+                  <ul className="list-disc list-inside space-y-1">
                     {projects.map((project, index) => (
                       <li key={index} className="text-xs">{project.name}</li>
                     ))}
