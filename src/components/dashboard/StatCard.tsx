@@ -88,7 +88,17 @@ const StatCard = ({ title, value, icon, description, permission, projects }: Sta
         ) : (
           valueDisplay
         )}
-        {description && <p className="text-xs text-muted-foreground">{description}</p>}
+        
+        {(projects && projects.length > 0 && canView || description) && (
+          <div className="mt-1">
+            {projects && projects.length > 0 && canView && (
+              <p className="text-xs text-muted-foreground">
+                from {projects.length} project{projects.length > 1 ? 's' : ''}
+              </p>
+            )}
+            {description && <p className="text-xs text-muted-foreground">{description}</p>}
+          </div>
+        )}
       </CardContent>
     </Card>
   );
