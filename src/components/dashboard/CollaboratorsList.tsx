@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Project, User, PROJECT_STATUS_OPTIONS } from '@/types';
-import { Card, CardContent, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Tooltip,
   TooltipContent,
@@ -513,7 +513,7 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
       </CardHeader>
       <CardContent>
         {/* Mobile View */}
-        <div className="md:hidden overflow-y-auto">
+        <div className="md:hidden max-h-[500px] overflow-y-auto">
           {Object.entries(collaboratorsByRole).map(([role, collaboratorsInRole]) => (
             <div key={role}>
               <h3 className="text-sm font-semibold uppercase text-muted-foreground tracking-wider pt-6 pb-2">
@@ -551,7 +551,7 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
         </div>
 
         {/* Desktop View */}
-        <div className="hidden md:block overflow-auto">
+        <div className="hidden md:block overflow-auto max-h-[500px]">
           <Table>
               <TableHeader>
                   <TableRow>
