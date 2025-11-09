@@ -73,7 +73,7 @@ const StatCard = ({ title, value, icon, description, permission, projects }: Sta
               <TooltipTrigger asChild>
                 {valueDisplay}
               </TooltipTrigger>
-              <TooltipContent>
+              <TooltipContent className="max-w-[350px]">
                 <div className="p-1 max-h-[200px] overflow-y-auto">
                   <p className="text-xs text-muted-foreground mb-1">Projects:</p>
                   <ul className="list-disc list-inside space-y-1">

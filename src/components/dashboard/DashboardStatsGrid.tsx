@@ -64,7 +64,7 @@ const UserStat = ({ user, metric, metricType, canViewValue }: { user: UserStatDa
             </div>
           </div>
         </TooltipTrigger>
-        <TooltipContent>
+        <TooltipContent className="max-w-[350px]">
           <div className="max-h-[200px] overflow-y-auto">
             <p className="text-xs text-muted-foreground">Projects:</p>
             <ul className="list-disc pl-4 text-left text-xs">
@@ -235,7 +235,7 @@ const DashboardStatsGrid = ({ projects }: DashboardStatsGridProps) => {
                           </span>
                         </div>
                       </TooltipTrigger>
-                      <TooltipContent>
+                      <TooltipContent className="max-w-[350px]">
                         <div className="max-h-[200px] overflow-y-auto">
                           <p className="text-xs text-muted-foreground">Projects:</p>
                           <ul className="list-disc pl-4 text-left text-xs">
@@ -272,7 +272,7 @@ const DashboardStatsGrid = ({ projects }: DashboardStatsGridProps) => {
                           </span>
                         </div>
                       </TooltipTrigger>
-                      <TooltipContent>
+                      <TooltipContent className="max-w-[350px]">
                         <div className="max-h-[200px] overflow-y-auto">
                           <p className="text-xs text-muted-foreground">Projects:</p>
                           <ul className="list-disc pl-4 text-left text-xs">
