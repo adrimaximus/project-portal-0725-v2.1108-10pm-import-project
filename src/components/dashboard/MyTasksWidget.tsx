@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useTasks } from '@/hooks/useTasks';
 import { useAuth } from '@/contexts/AuthContext';
-import { Loader2, Clock, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Loader2, Clock, CheckCircle2, AlertTriangle, ListChecks } from 'lucide-react';
 import { Task } from '@/types';
 import { format, isPast, isToday, isTomorrow, differenceInDays } from 'date-fns';
 import { Progress } from '@/components/ui/progress';
@@ -94,6 +94,10 @@ const MyTasksWidget = () => {
     upcomingTasks,
     overdueTasks,
     completionPercentage,
+    totalCompleted,
+    totalTasks,
+    onTimeCompletionPercentage,
+    onTimeCompletedCount,
   } = useMemo(() => {
     const active = myTasks.filter(t => !t.completed);
     const completed = myTasks.filter(t => t.completed);
@@ -104,9 +108,29 @@ const MyTasksWidget = () => {
     const overdue = active.filter(t => t.due_date && isPast(new Date(t.due_date)));
 
     const totalTasks = myTasks.length;
-    const completionPercentage = totalTasks > 0 ? (completed.length / totalTasks) * 100 : 0;
+    const totalCompleted = completed.length;
+    const completionPercentage = totalTasks > 0 ? (totalCompleted / totalTasks) * 100 : 0;
 
-    return { activeTasks: active, completedToday, upcomingTasks: upcoming, overdueTasks: overdue, completionPercentage };
+    const onTimeCompleted = completed.filter(task => {
+      if (!task.due_date) return true; // No due date, considered on-time
+      if (!task.updated_at) return false; // Should not happen for completed tasks, but for safety
+      // Task is on time if completion date is on or before the due date
+      return new Date(task.updated_at) <= new Date(task.due_date);
+    });
+    const onTimeCompletedCount = onTimeCompleted.length;
+    const onTimeCompletionPercentage = totalCompleted > 0 ? (onTimeCompletedCount / totalCompleted) * 100 : 0;
+
+    return { 
+      activeTasks: active, 
+      completedToday, 
+      upcomingTasks: upcoming, 
+      overdueTasks: overdue, 
+      completionPercentage,
+      totalCompleted,
+      totalTasks,
+      onTimeCompletionPercentage,
+      onTimeCompletedCount,
+    };
   }, [myTasks]);
 
   if (isLoading) {
@@ -150,8 +174,31 @@ const MyTasksWidget = () => {
                 <span className="text-sm font-semibold">{completionPercentage.toFixed(0)}%</span>
               </div>
             </TooltipTrigger>
-            <TooltipContent>
-              <p>Persentase dari total tugas Anda yang telah selesai.</p>
+            <TooltipContent className="p-4 bg-background border shadow-lg rounded-lg">
+              <div className="space-y-3">
+                <h4 className="font-semibold text-sm">Produktivitas Tugas</h4>
+                <div className="flex items-center gap-3">
+                  <ListChecks className="h-5 w-5 text-blue-500" />
+                  <div>
+                    <p className="font-bold">{completionPercentage.toFixed(0)}% Penyelesaian Keseluruhan</p>
+                    <p className="text-xs text-muted-foreground">{totalCompleted} dari {totalTasks} tugas yang diberikan</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <CheckCircle2 className="h-5 w-5 text-green-500" />
+                  <div>
+                    <p className="font-bold">{onTimeCompletionPercentage.toFixed(0)}% Penyelesaian Tepat Waktu</p>
+                    <p className="text-xs text-muted-foreground">{onTimeCompletedCount} dari {totalCompleted} tugas yang selesai</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <AlertTriangle className="h-5 w-5 text-red-500" />
+                  <div>
+                    <p className="font-bold">{overdueTasks.length} Tugas Terlambat</p>
+                    <p className="text-xs text-muted-foreground">{overdueTasks.length} tugas melewati tenggat</p>
+                  </div>
+                </div>
+              </div>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
