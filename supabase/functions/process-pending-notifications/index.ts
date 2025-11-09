@@ -188,7 +188,7 @@ serve(async (req) => {
     }
 
     const { data: notifications, error: fetchError } = await supabaseAdmin
-      .from('pending_whatsapp_notifications')
+      .from('pending_notifications')
       .select('*, recipient:profiles(*)')
       .eq('status', 'pending')
       .lte('send_at', new Date().toISOString())
@@ -244,7 +244,7 @@ serve(async (req) => {
       try {
         const recipient = notification.recipient;
         if (!recipient) {
-          await supabaseAdmin.from('pending_whatsapp_notifications').update({ status: 'skipped', error_message: 'Recipient profile not found.', processed_at: new Date().toISOString() }).eq('id', notification.id);
+          await supabaseAdmin.from('pending_notifications').update({ status: 'skipped', error_message: 'Recipient profile not found.', processed_at: new Date().toISOString() }).eq('id', notification.id);
           skippedCount++;
           continue;
         }
@@ -256,7 +256,7 @@ serve(async (req) => {
         switch (notification.notification_type) {
           case 'discussion_mention': {
             if (!recipient.phone) {
-              await supabaseAdmin.from('pending_whatsapp_notifications').update({ status: 'skipped', error_message: 'Recipient phone not found.', processed_at: new Date().toISOString() }).eq('id', notification.id);
+              await supabaseAdmin.from('pending_notifications').update({ status: 'skipped', error_message: 'Recipient phone not found.', processed_at: new Date().toISOString() }).eq('id', notification.id);
               skippedCount++;
               continue;
             }
@@ -274,7 +274,7 @@ serve(async (req) => {
           }
           case 'discussion_mention_email': {
             if (!recipient.email) {
-              await supabaseAdmin.from('pending_whatsapp_notifications').update({ status: 'skipped', error_message: 'Recipient email not found.', processed_at: new Date().toISOString() }).eq('id', notification.id);
+              await supabaseAdmin.from('pending_notifications').update({ status: 'skipped', error_message: 'Recipient email not found.', processed_at: new Date().toISOString() }).eq('id', notification.id);
               skippedCount++;
               continue;
             }
@@ -305,7 +305,7 @@ serve(async (req) => {
           }
           case 'task_assignment': {
             if (!recipient.phone) {
-              await supabaseAdmin.from('pending_whatsapp_notifications').update({ status: 'skipped', error_message: 'Recipient phone not found.', processed_at: new Date().toISOString() }).eq('id', notification.id);
+              await supabaseAdmin.from('pending_notifications').update({ status: 'skipped', error_message: 'Recipient phone not found.', processed_at: new Date().toISOString() }).eq('id', notification.id);
               skippedCount++;
               continue;
             }
@@ -323,7 +323,7 @@ serve(async (req) => {
           }
           case 'goal_invite': {
             if (!recipient.phone) {
-              await supabaseAdmin.from('pending_whatsapp_notifications').update({ status: 'skipped', error_message: 'Recipient phone not found.', processed_at: new Date().toISOString() }).eq('id', notification.id);
+              await supabaseAdmin.from('pending_notifications').update({ status: 'skipped', error_message: 'Recipient phone not found.', processed_at: new Date().toISOString() }).eq('id', notification.id);
               skippedCount++;
               continue;
             }
@@ -339,7 +339,7 @@ serve(async (req) => {
           }
           case 'kb_invite': {
             if (!recipient.phone) {
-              await supabaseAdmin.from('pending_whatsapp_notifications').update({ status: 'skipped', error_message: 'Recipient phone not found.', processed_at: new Date().toISOString() }).eq('id', notification.id);
+              await supabaseAdmin.from('pending_notifications').update({ status: 'skipped', error_message: 'Recipient phone not found.', processed_at: new Date().toISOString() }).eq('id', notification.id);
               skippedCount++;
               continue;
             }
@@ -355,7 +355,7 @@ serve(async (req) => {
           }
           case 'goal_progress_update': {
             if (!recipient.phone) {
-              await supabaseAdmin.from('pending_whatsapp_notifications').update({ status: 'skipped', error_message: 'Recipient phone not found.', processed_at: new Date().toISOString() }).eq('id', notification.id);
+              await supabaseAdmin.from('pending_notifications').update({ status: 'skipped', error_message: 'Recipient phone not found.', processed_at: new Date().toISOString() }).eq('id', notification.id);
               skippedCount++;
               continue;
             }
@@ -371,7 +371,7 @@ serve(async (req) => {
           }
           case 'goal_invite_email': {
             if (!recipient.email) {
-              await supabaseAdmin.from('pending_whatsapp_notifications').update({ status: 'skipped', error_message: 'Recipient email not found.', processed_at: new Date().toISOString() }).eq('id', notification.id);
+              await supabaseAdmin.from('pending_notifications').update({ status: 'skipped', error_message: 'Recipient email not found.', processed_at: new Date().toISOString() }).eq('id', notification.id);
               skippedCount++;
               continue;
             }
@@ -395,7 +395,7 @@ serve(async (req) => {
           }
           case 'kb_invite_email': {
             if (!recipient.email) {
-              await supabaseAdmin.from('pending_whatsapp_notifications').update({ status: 'skipped', error_message: 'Recipient email not found.', processed_at: new Date().toISOString() }).eq('id', notification.id);
+              await supabaseAdmin.from('pending_notifications').update({ status: 'skipped', error_message: 'Recipient email not found.', processed_at: new Date().toISOString() }).eq('id', notification.id);
               skippedCount++;
               continue;
             }
@@ -419,7 +419,7 @@ serve(async (req) => {
           }
           case 'goal_progress_update_email': {
             if (!recipient.email) {
-              await supabaseAdmin.from('pending_whatsapp_notifications').update({ status: 'skipped', error_message: 'Recipient email not found.', processed_at: new Date().toISOString() }).eq('id', notification.id);
+              await supabaseAdmin.from('pending_notifications').update({ status: 'skipped', error_message: 'Recipient email not found.', processed_at: new Date().toISOString() }).eq('id', notification.id);
               skippedCount++;
               continue;
             }
@@ -446,13 +446,13 @@ serve(async (req) => {
             throw new Error(`Unsupported notification type: ${notification.notification_type}`);
         }
 
-        await supabaseAdmin.from('pending_whatsapp_notifications').update({ status: 'processed', processed_at: new Date().toISOString() }).eq('id', notification.id);
+        await supabaseAdmin.from('pending_notifications').update({ status: 'processed', processed_at: new Date().toISOString() }).eq('id', notification.id);
         successCount++;
 
       } catch (e) {
         failureCount++;
         console.error(`Failed to process notification ${notification.id}:`, e.message);
-        await supabaseAdmin.from('pending_whatsapp_notifications').update({ status: 'error', error_message: e.message, processed_at: new Date().toISOString() }).eq('id', notification.id);
+        await supabaseAdmin.from('pending_notifications').update({ status: 'error', error_message: e.message, processed_at: new Date().toISOString() }).eq('id', notification.id);
       }
     }
 
