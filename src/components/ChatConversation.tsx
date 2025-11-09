@@ -23,10 +23,12 @@ interface ChatConversationProps {
   onReply: (message: Message) => void;
 }
 
-const isEmojiOnly = (text: string | null | undefined): boolean => {
-  if (!text) return false;
-  const emojiRegex = /^(?:\p{Emoji_Presentation}|\p{Emoji_Modifier_Base}|\p{Emoji_Component}|\p{Extended_Pictographic}|[\u200D\uFE0F]|\s)+$/u;
-  return emojiRegex.test(text.trim());
+const isEmojiOnly = (str: string | null | undefined): boolean => {
+  if (!str) return false;
+  // This regex checks for any character that is NOT an emoji-related character or whitespace.
+  // If such a character is found, it's not an emoji-only string. This correctly excludes numbers.
+  const nonEmojiRegex = /[^\p{Emoji_Presentation}\p{Emoji_Modifier_Base}\p{Emoji_Component}\u200D\uFE0F\s]/u;
+  return !nonEmojiRegex.test(str.trim());
 };
 
 const formatTimestamp = (timestamp: string) => {
