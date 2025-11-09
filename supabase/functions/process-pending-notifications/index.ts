@@ -266,7 +266,34 @@ serve(async (req) => {
             await sendEmail(recipient.email, subject, html, text);
             break;
           }
-          // ... other cases would be added here, fetching their own context
+          case 'task_overdue': {
+            if (!recipient.phone) {
+              await supabaseAdmin.from('pending_notifications').update({ status: 'skipped', error_message: 'Recipient phone not found.', processed_at: new Date().toISOString() }).eq('id', notification.id);
+              skippedCount++;
+              continue;
+            }
+            const { task_title, project_name, project_slug, task_id, days_overdue, triggered_by } = context;
+            
+            const { data: triggererData } = await supabaseAdmin.from('profiles').select('first_name, last_name, email').eq('id', triggered_by).single();
+            const triggererName = triggererData ? getFullName(triggererData) : 'The system';
+          
+            const url = `${APP_URL}/projects/${project_slug}?tab=tasks&task=${task_id}`;
+            
+            userPrompt = `Buat notifikasi pengingat tugas yang terlambat.
+- Jenis: Pengingat Tugas Terlambat
+- Penerima: ${recipientName}
+- Proyek: "${project_name}"
+- Tugas: "${task_title}"
+- Jumlah Hari Terlambat: ${days_overdue} hari
+- Pengingat dikirim oleh: ${triggererName}
+- URL: ${url}
+
+Pesan harus menyebutkan bahwa ini adalah pengingat dan siapa yang mengirimkannya (jika bukan sistem).`;
+          
+            const aiMessage = await generateAiMessage(userPrompt);
+            await sendWhatsappMessage(recipient.phone, aiMessage);
+            break;
+          }
           default:
             throw new Error(`Unsupported notification type: ${notification.notification_type}`);
         }
@@ -277,7 +304,7 @@ serve(async (req) => {
       } catch (e) {
         failureCount++;
         const newRetryCount = (notification.retry_count || 0) + 1;
-        const newStatus = newRetryCount > 3 ? 'failed' : 'pending';
+        const newStatus = newRetryCount >= 3 ? 'failed' : 'pending';
         console.error(`Failed to process notification ${notification.id} (attempt ${newRetryCount}):`, e.message);
         await supabaseAdmin.from('pending_notifications').update({ 
           status: newStatus, 
