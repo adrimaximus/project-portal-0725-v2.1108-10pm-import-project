@@ -295,42 +295,71 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     if (!user) return;
 
-    const channel = supabase.channel('public:messages');
-    channel
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, async (payload) => {
-        const eventType = payload.eventType;
-
-        if (eventType === 'INSERT') {
-          const newMessage = payload.new as any;
-          const isSender = newMessage.sender_id === user.id;
-          if (!isSender && !isChatPageActive) {
-            setUnreadConversationIds(prev => new Set(prev).add(newMessage.conversation_id));
-          }
-          fetchConversations();
-        } else if (eventType === 'UPDATE') {
-          const updatedMessage = payload.new as any;
-          setConversations(prevConvos =>
-            prevConvos.map(convo => {
-              if (convo.id === updatedMessage.conversation_id) {
-                return {
-                  ...convo,
-                  messages: convo.messages.map(msg => {
-                    if (msg.id === updatedMessage.id) {
-                      return { ...msg, text: updatedMessage.content, is_deleted: updatedMessage.is_deleted };
-                    }
-                    return msg;
-                  }),
-                };
-              }
-              return convo;
-            })
-          );
+    const messagesChannel = supabase.channel('public:messages');
+    messagesChannel
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
+        const newMessage = payload.new as any;
+        const isSender = newMessage.sender_id === user.id;
+        if (!isSender && !isChatPageActive) {
+          setUnreadConversationIds(prev => new Set(prev).add(newMessage.conversation_id));
         }
+        fetchConversations();
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages' }, (payload) => {
+        const updatedMessage = payload.new as any;
+        setConversations(prevConvos =>
+          prevConvos.map(convo => {
+            if (convo.id === updatedMessage.conversation_id) {
+              return {
+                ...convo,
+                messages: convo.messages.map(msg => {
+                  if (msg.id === updatedMessage.id) {
+                    return { 
+                      ...msg, 
+                      text: updatedMessage.content, 
+                      is_deleted: updatedMessage.is_deleted 
+                    };
+                  }
+                  return msg;
+                }),
+              };
+            }
+            return convo;
+          })
+        );
+      })
+      .subscribe();
+
+    const reactionsChannel = supabase.channel('public:message_reactions');
+    reactionsChannel
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'message_reactions' }, async (payload) => {
+        const reaction = (payload.eventType === 'DELETE' ? payload.old : payload.new) as any;
+        if (!reaction || !reaction.message_id) return;
+
+        let conversationId: string | null = null;
+        
+        setConversations(currentConversations => {
+          for (const convo of currentConversations) {
+            if (convo.messages.some(m => m.id === reaction.message_id)) {
+              conversationId = convo.id;
+              break;
+            }
+          }
+          
+          if (conversationId) {
+            apiFetchMessages(conversationId).then(messages => {
+              setConversations(prev => prev.map(c => c.id === conversationId ? { ...c, messages } : c));
+            });
+          }
+
+          return currentConversations;
+        });
       })
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(messagesChannel);
+      supabase.removeChannel(reactionsChannel);
     };
   }, [user, isChatPageActive, fetchConversations]);
 
