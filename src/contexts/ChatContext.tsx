@@ -75,14 +75,29 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     if (!user) return;
     setIsLoadingConversations(true);
     try {
-      const convos = await apiFetchConversations();
-      const convosWithMessages = await Promise.all(
-        convos.map(async (convo) => ({
-          ...convo,
-          messages: [],
-        }))
-      );
-      setConversations(convosWithMessages);
+      const newConvos = await apiFetchConversations();
+      setConversations(prevConvos => {
+        const newConvoMap = new Map(newConvos.map(c => [c.id, c]));
+        const mergedConvos = prevConvos.map(oldConvo => {
+          const newConvoData = newConvoMap.get(oldConvo.id);
+          if (newConvoData) {
+            newConvoMap.delete(oldConvo.id);
+            return {
+              ...oldConvo,
+              ...newConvoData,
+            };
+          }
+          return null;
+        }).filter(Boolean) as Conversation[];
+
+        const brandNewConvos = Array.from(newConvoMap.values()).map(c => ({...c, messages: []}));
+        
+        return [...mergedConvos, ...brandNewConvos].sort((a, b) => {
+            const dateA = a.last_message_at ? new Date(a.last_message_at).getTime() : 0;
+            const dateB = b.last_message_at ? new Date(b.last_message_at).getTime() : 0;
+            return dateB - dateA;
+        });
+      });
     } catch (error) {
       toast.error("Failed to load conversations.");
     } finally {
@@ -154,7 +169,6 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
           .update({ content: text.trim() })
           .eq('id', editingMessage.id);
         if (error) throw error;
-        toast.success("Message updated.");
         setEditingMessage(null);
       } else {
         const messageId = uuidv4();
@@ -294,28 +308,18 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
           }
           fetchConversations();
         } else if (eventType === 'UPDATE') {
-          const updatedMessage = payload.new as Message;
+          const updatedMessage = payload.new as any;
           setConversations(prevConvos =>
             prevConvos.map(convo => {
               if (convo.id === updatedMessage.conversation_id) {
                 return {
                   ...convo,
-                  messages: convo.messages.map(msg =>
-                    msg.id === updatedMessage.id ? { ...msg, ...updatedMessage } : msg
-                  ),
-                };
-              }
-              return convo;
-            })
-          );
-        } else if (eventType === 'DELETE') {
-          const oldMessage = payload.old as any;
-          setConversations(prevConvos =>
-            prevConvos.map(convo => {
-              if (convo.id === oldMessage.conversation_id) {
-                return {
-                  ...convo,
-                  messages: convo.messages.filter(msg => msg.id !== oldMessage.id),
+                  messages: convo.messages.map(msg => {
+                    if (msg.id === updatedMessage.id) {
+                      return { ...msg, text: updatedMessage.content, is_deleted: updatedMessage.is_deleted };
+                    }
+                    return msg;
+                  }),
                 };
               }
               return convo;
