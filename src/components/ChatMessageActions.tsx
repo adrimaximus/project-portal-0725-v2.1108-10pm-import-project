@@ -3,13 +3,18 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuPortal,
 } from "@/components/ui/dropdown-menu"
 import { Button } from "./ui/button"
-import { MoreHorizontal, Reply, Pencil, Copy, Trash2, Share2 } from "lucide-react"
+import { MoreHorizontal, Reply, Pencil, Copy, Trash2, Share2, Smile } from "lucide-react"
 import { Message } from "@/types"
 import { useChatContext } from "@/contexts/ChatContext"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import { supabase } from "@/integrations/supabase/client"
 
 interface ChatMessageActionsProps {
   message: Message
@@ -28,6 +33,20 @@ export function ChatMessageActions({ message, isCurrentUser, onReply, className 
     }
   }
 
+  const handleReact = async (emoji: string) => {
+    const { error } = await supabase.rpc('toggle_message_reaction', {
+      p_message_id: message.id,
+      p_emoji: emoji,
+    })
+
+    if (error) {
+      toast.error("Failed to react to message")
+      console.error(error)
+    }
+  }
+
+  const commonReactions = ["👍", "❤️", "😂", "😮", "😢", "🙏"]
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -36,6 +55,29 @@ export function ChatMessageActions({ message, isCurrentUser, onReply, className 
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent>
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger>
+            <Smile className="mr-2 h-4 w-4" />
+            <span>React</span>
+          </DropdownMenuSubTrigger>
+          <DropdownMenuPortal>
+            <DropdownMenuSubContent>
+              <div className="flex p-1">
+                {commonReactions.map((emoji) => (
+                  <Button
+                    key={emoji}
+                    variant="ghost"
+                    size="icon"
+                    className="rounded-full h-8 w-8 text-xl"
+                    onClick={() => handleReact(emoji)}
+                  >
+                    {emoji}
+                  </Button>
+                ))}
+              </div>
+            </DropdownMenuSubContent>
+          </DropdownMenuPortal>
+        </DropdownMenuSub>
         {onReply && (
           <DropdownMenuItem onClick={() => onReply(message)}>
             <Reply className="mr-2 h-4 w-4" />
