@@ -1,10 +1,9 @@
 import { useMemo } from 'react';
 import { useActivities } from '@/hooks/useActivities';
 import { Loader2 } from 'lucide-react';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { getAvatarUrl, getInitials, generatePastelColor } from '@/lib/utils';
 import { formatDistanceToNow, subDays } from 'date-fns';
 import { Link } from 'react-router-dom';
+import ActivityIcon from './ActivityIcon';
 
 const RecentActivityWidget = () => {
   const { data: activities, isLoading } = useActivities();
@@ -35,12 +34,9 @@ const RecentActivityWidget = () => {
     <div className="divide-y divide-border -mx-6 -my-6 max-h-[300px] overflow-y-auto">
       {recentActivities.map(activity => (
         <div key={activity.id} className="flex items-start gap-3 px-6 py-3">
-          <Avatar className="h-8 w-8">
-            <AvatarImage src={getAvatarUrl(activity.user_avatar_url, activity.user_id)} alt={activity.user_name || ''} />
-            <AvatarFallback style={generatePastelColor(activity.user_id)} className="text-xs">
-              {activity.user_initials}
-            </AvatarFallback>
-          </Avatar>
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted">
+            <ActivityIcon type={activity.type} className="h-4 w-4 text-muted-foreground" />
+          </div>
           <div className="text-sm flex-grow">
             <p className="text-foreground">
               <span className="font-semibold">{activity.user_name}</span>
