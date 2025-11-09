@@ -87,7 +87,7 @@ const VoiceMessageRecorder = ({ onSend, disabled }: VoiceMessageRecorderProps) =
 
   return (
     <Button variant="ghost" size="icon" onClick={startRecording} disabled={disabled}>
-      <Mic className="h-5 w-5" />
+      <Mic className="h-8 w-8" />
     </Button>
   );
 };
