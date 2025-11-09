@@ -396,16 +396,22 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-6 w-6 text-blue-500" onClick={handleSendReminder} disabled={isSendingReminder}>
+                          <Button variant="ghost" size="icon" className="h-6 w-6 text-red-500" onClick={handleSendReminder} disabled={isSendingReminder || !task.assignedTo || task.assignedTo.length === 0}>
                             {isSendingReminder ? <Loader2 className="h-3 w-3 animate-spin" /> : <BellRing className="h-3 w-3" />}
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p>Send reminder to assignees</p>
-                          {task.last_reminder_sent_at && (
-                            <p className="text-xs text-muted-foreground mt-1">
-                              Last sent: {formatDistanceToNow(new Date(task.last_reminder_sent_at), { addSuffix: true })}
-                            </p>
+                          {(!task.assignedTo || task.assignedTo.length === 0) ? (
+                            <p>No assignees to remind</p>
+                          ) : (
+                            <>
+                              <p>Send reminder to assignees</p>
+                              {task.last_reminder_sent_at && (
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  Last sent: {formatDistanceToNow(new Date(task.last_reminder_sent_at), { addSuffix: true })}
+                                </p>
+                              )}
+                            </>
                           )}
                         </TooltipContent>
                       </Tooltip>
