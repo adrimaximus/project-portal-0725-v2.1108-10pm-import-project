@@ -65,8 +65,8 @@ const UserStat = ({ user, metric, metricType, canViewValue }: { user: UserStatDa
           </div>
         </TooltipTrigger>
         <TooltipContent>
-          <p className="font-bold">Projects:</p>
-          <ul className="list-disc pl-4 text-left">
+          <p className="text-xs text-muted-foreground">Projects:</p>
+          <ul className="list-disc pl-4 text-left text-xs">
             {user.projects.map(p => (
               <li key={p.id}>{p.name}</li>
             ))}
@@ -234,8 +234,8 @@ const DashboardStatsGrid = ({ projects }: DashboardStatsGridProps) => {
                         </div>
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p className="font-bold">Projects:</p>
-                        <ul className="list-disc pl-4 text-left">
+                        <p className="text-xs text-muted-foreground">Projects:</p>
+                        <ul className="list-disc pl-4 text-left text-xs">
                           {projectsInStatus.map(p => <li key={p.id}>{p.name}</li>)}
                         </ul>
                       </TooltipContent>
@@ -269,8 +269,8 @@ const DashboardStatsGrid = ({ projects }: DashboardStatsGridProps) => {
                         </div>
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p className="font-bold">Projects:</p>
-                        <ul className="list-disc pl-4 text-left">
+                        <p className="text-xs text-muted-foreground">Projects:</p>
+                        <ul className="list-disc pl-4 text-left text-xs">
                           {projectsInStatus.map(p => <li key={p.id}>{p.name}</li>)}
                         </ul>
                       </TooltipContent>
