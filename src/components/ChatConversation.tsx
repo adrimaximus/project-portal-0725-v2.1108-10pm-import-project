@@ -91,7 +91,7 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
 
   return (
     <div className="flex-1 relative">
-      <div ref={scrollContainerRef} className="absolute inset-0 overflow-y-auto px-1 py-4 space-y-1">
+      <div ref={scrollContainerRef} className="absolute inset-0 overflow-y-auto px-0.5 py-4 space-y-1">
         {messages.map((message, index) => {
           const isCurrentUser = message.sender.id === currentUser.id;
           const sender = members.find(m => m.id === message.sender.id) || message.sender;
@@ -155,7 +155,7 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                         <div className={cn("flex flex-col", isCurrentUser ? "items-end" : "items-start", !isCurrentUser && isSameSenderAsPrevious && "ml-10")}>
                           <div
                             className={cn(
-                              "max-w-xs md:max-w-md lg:max-w-lg rounded-lg relative group",
+                              "max-w-sm md:max-w-lg lg:max-w-xl rounded-lg relative group",
                               isCurrentUser
                                 ? "bg-primary text-primary-foreground"
                                 : "bg-muted",
