@@ -3,16 +3,27 @@ import TaskDetailCard from '@/components/projects/TaskDetailCard';
 import { useTaskModal } from '@/contexts/TaskModalContext';
 import { Drawer } from '@/components/ui/drawer';
 import { useTaskMutations } from '@/hooks/useTaskMutations';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from 'sonner';
-import { Task } from '@/types';
+import { Task, Project } from '@/types';
+import { useTasks } from '@/hooks/useTasks';
 
 const GlobalTaskDrawer = () => {
-  const { isOpen, onClose, task, project } = useTaskDrawer();
+  const { isOpen, onClose, task: initialTask, project } = useTaskDrawer();
   const { onOpen: onOpenTaskModal } = useTaskModal();
   const { deleteTask } = useTaskMutations();
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
+
+  // This will use the cached data from MyTasksWidget if the query key matches
+  const { data: allTasks } = useTasks({ sortConfig: { key: 'due_date', direction: 'asc' } });
+
+  const task = useMemo(() => {
+    if (!initialTask) return null;
+    // Find the latest version of the task from the main query
+    const updatedTask = allTasks?.find(t => t.id === initialTask.id);
+    return updatedTask || initialTask;
+  }, [initialTask, allTasks]);
 
   const handleEdit = (taskToEdit: Task) => {
     onClose(); // Close the drawer
