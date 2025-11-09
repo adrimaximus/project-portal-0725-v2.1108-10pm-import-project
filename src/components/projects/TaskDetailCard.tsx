@@ -444,23 +444,17 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent>
-                          {(!task.assignedTo || task.assignedTo.length === 0) ? (
-                            <p>No assignees to remind</p>
-                          ) : (
-                            <>
-                              <p>Send reminder to assignees</p>
-                              {task.last_reminder_sent_at && (
-                                <p className="text-xs text-muted-foreground mt-1">
-                                  Last sent: {formatDistanceToNow(new Date(task.last_reminder_sent_at), { addSuffix: true })}
-                                </p>
-                              )}
-                            </>
-                          )}
+                          <p>Send reminder to assignees</p>
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
                   )}
                 </div>
+                {task.last_reminder_sent_at && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Last reminder sent: {formatDistanceToNow(new Date(task.last_reminder_sent_at), { addSuffix: true })}
+                  </p>
+                )}
               </div>
             </div>
             {allTags.length > 0 && (
