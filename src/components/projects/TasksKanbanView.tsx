@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
-import { Task, TaskStatus, TASK_STATUS_OPTIONS } from '@/types';
+import { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
+import { Task, TaskStatus, TASK_STATUS_OPTIONS, Project } from '@/types';
 import TasksKanbanColumn from './TasksKanbanColumn';
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, MouseSensor, TouchSensor, useSensor, useSensors, DragOverEvent, DropAnimation, defaultDropAnimationSideEffects } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
@@ -11,8 +11,13 @@ interface TasksKanbanViewProps {
   onDelete: (taskId: string) => void;
   refetch: () => void;
   tasksQueryKey: any[];
-  onTaskOrderChange: (payload: any) => void;
+  onTaskOrderChange: (payload: { taskId: string; newStatus: TaskStatus; orderedTaskIds: string[]; newTasks: Task[]; queryKey: any[]; movedColumns: boolean; }) => void;
+  onNewTask: (status: TaskStatus) => void;
 }
+
+type KanbanViewHandle = {
+  // You can add methods here if needed, e.g., to open settings
+};
 
 const dropAnimation: DropAnimation = {
   sideEffects: defaultDropAnimationSideEffects({
@@ -24,7 +29,7 @@ const dropAnimation: DropAnimation = {
   }),
 };
 
-const TasksKanbanView = ({ tasks, onEdit, onDelete, refetch, tasksQueryKey, onTaskOrderChange }: TasksKanbanViewProps) => {
+const TasksKanbanView = forwardRef<KanbanViewHandle, TasksKanbanViewProps>(({ tasks, onEdit, onDelete, refetch, tasksQueryKey, onTaskOrderChange, onNewTask }, ref) => {
   const [collapsedColumns, setCollapsedColumns] = useState<Set<TaskStatus>>(new Set());
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [tasksByStatus, setTasksByStatus] = useState<Record<TaskStatus, Task[]>>({} as Record<TaskStatus, Task[]>);
@@ -225,7 +230,7 @@ const TasksKanbanView = ({ tasks, onEdit, onDelete, refetch, tasksQueryKey, onTa
 
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd} onDragCancel={handleDragCancel}>
-      <div className="flex gap-4 overflow-x-auto p-2 sm:p-4 h-full">
+      <div className="flex gap-4 overflow-x-auto p-2 sm:p-4 h-full items-start">
         {TASK_STATUS_OPTIONS.map(option => (
           <TasksKanbanColumn
             key={option.value}
@@ -235,6 +240,7 @@ const TasksKanbanView = ({ tasks, onEdit, onDelete, refetch, tasksQueryKey, onTa
             onToggleCollapse={toggleColumnCollapse}
             onEdit={onEdit}
             onDelete={onDelete}
+            onNewTask={onNewTask}
           />
         ))}
       </div>
@@ -243,6 +249,6 @@ const TasksKanbanView = ({ tasks, onEdit, onDelete, refetch, tasksQueryKey, onTa
       </DragOverlay>
     </DndContext>
   );
-};
+});
 
 export default TasksKanbanView;
