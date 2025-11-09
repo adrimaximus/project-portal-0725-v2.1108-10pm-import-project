@@ -25,6 +25,7 @@ interface ChatContextType {
   sendMessage: (text: string, attachment: File | null, replyToId?: string | null) => void;
   isSendingMessage: boolean;
   deleteConversation: (conversationId: string) => void;
+  deleteMessage: (messageId: string) => void;
   startNewChat: (collaborator: Collaborator) => void;
   startNewGroupChat: (collaborators: Collaborator[], groupName: string) => void;
   leaveGroup: (conversationId: string) => void;
@@ -177,6 +178,13 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const deleteMessage = async (messageId: string) => {
+    const { error } = await supabase.rpc('soft_delete_message', { p_message_id: messageId });
+    if (error) {
+      toast.error(`Failed to delete message: ${error.message}`);
+    }
+  };
+
   const deleteConversation = async (conversationId: string) => {
     try {
       await apiHideConversation(conversationId);
@@ -276,20 +284,43 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     const channel = supabase.channel('public:messages');
     channel
       .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, async (payload) => {
-        const newMessage = payload.new as any;
-        const oldMessage = payload.old as any;
         const eventType = payload.eventType;
 
         if (eventType === 'INSERT') {
+          const newMessage = payload.new as any;
           const isSender = newMessage.sender_id === user.id;
           if (!isSender && !isChatPageActive) {
             setUnreadConversationIds(prev => new Set(prev).add(newMessage.conversation_id));
           }
           fetchConversations();
         } else if (eventType === 'UPDATE') {
-          fetchConversations();
+          const updatedMessage = payload.new as Message;
+          setConversations(prevConvos =>
+            prevConvos.map(convo => {
+              if (convo.id === updatedMessage.conversation_id) {
+                return {
+                  ...convo,
+                  messages: convo.messages.map(msg =>
+                    msg.id === updatedMessage.id ? { ...msg, ...updatedMessage } : msg
+                  ),
+                };
+              }
+              return convo;
+            })
+          );
         } else if (eventType === 'DELETE') {
-          fetchConversations();
+          const oldMessage = payload.old as any;
+          setConversations(prevConvos =>
+            prevConvos.map(convo => {
+              if (convo.id === oldMessage.conversation_id) {
+                return {
+                  ...convo,
+                  messages: convo.messages.filter(msg => msg.id !== oldMessage.id),
+                };
+              }
+              return convo;
+            })
+          );
         }
       })
       .subscribe();
@@ -335,6 +366,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     sendMessage,
     isSendingMessage,
     deleteConversation,
+    deleteMessage,
     startNewChat,
     startNewGroupChat,
     leaveGroup,
