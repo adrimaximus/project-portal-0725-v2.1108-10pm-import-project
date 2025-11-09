@@ -17,6 +17,12 @@ interface ChatListProps {
   onHighlightComplete?: () => void;
 }
 
+const isOnlyEmoji = (str: string) => {
+  if (!str) return false;
+  const emojiRegex = /^\p{Extended_Pictographic}+$/u;
+  return emojiRegex.test(str.trim());
+};
+
 const ChatList = ({ highlightedId, onHighlightComplete }: ChatListProps) => {
   const [isNewConversationOpen, setIsNewConversationOpen] = useState(false);
   const {
@@ -124,6 +130,7 @@ const ChatList = ({ highlightedId, onHighlightComplete }: ChatListProps) => {
           const onlineStatus = otherUser ? onlineCollaborators.find(onlineUser => onlineUser.id === otherUser.id) : null;
           const isOnline = onlineStatus && !onlineStatus.isIdle;
           const isIdle = onlineStatus && onlineStatus.isIdle;
+          const isLastMessageEmoji = isOnlyEmoji(c.lastMessage);
 
           return (
             <div
@@ -156,7 +163,11 @@ const ChatList = ({ highlightedId, onHighlightComplete }: ChatListProps) => {
                     <span className="text-xs text-muted-foreground flex-shrink-0">{formatTimestamp(c.lastMessageTimestamp)}</span>
                   </div>
                   <div className="flex items-center justify-between gap-2">
-                    <p className={cn("text-sm text-muted-foreground", isUnread && "text-foreground font-medium")}>
+                    <p className={cn(
+                      "text-sm text-muted-foreground truncate",
+                      isUnread && "text-foreground font-medium",
+                      isLastMessageEmoji && "text-xl"
+                    )}>
                       {formatLastMessage(c.lastMessage)}
                     </p>
                     {isUnread && <div className="h-2 w-2 rounded-full bg-primary flex-shrink-0" />}
