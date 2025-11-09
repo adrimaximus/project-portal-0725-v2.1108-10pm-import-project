@@ -31,10 +31,6 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import Picker from '@emoji-mart/react';
 import data from '@emoji-mart/data';
 import { useTheme } from "@/contexts/ThemeProvider";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { supabase } from "@/integrations/supabase/client";
 
 interface ChatMessageActionsProps {
   message: Message;
@@ -51,10 +47,8 @@ export const ChatMessageActions = ({
   onReply,
   className,
 }: ChatMessageActionsProps) => {
-  const { deleteMessage, toggleReaction, openForwardDialog } = useChatContext();
+  const { deleteMessage, toggleReaction, openForwardDialog, setEditingMessage } = useChatContext();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [editedText, setEditedText] = useState(message.text || '');
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { theme } = useTheme();
@@ -92,27 +86,9 @@ export const ChatMessageActions = ({
   };
 
   const handleEdit = () => {
-    setEditedText(message.text || '');
-    setIsEditDialogOpen(true);
-  };
-
-  const handleSaveEdit = async () => {
-    if (!editedText.trim() || editedText.trim() === message.text) {
-      setIsEditDialogOpen(false);
-      return;
+    if (message.text) {
+      setEditingMessage(message);
     }
-  
-    const { error } = await supabase
-      .from('messages')
-      .update({ content: editedText.trim() })
-      .eq('id', message.id);
-  
-    if (error) {
-      toast.error(`Failed to edit message: ${error.message}`);
-    } else {
-      toast.success("Message updated.");
-    }
-    setIsEditDialogOpen(false);
   };
 
   const handleReactionSelect = (emoji: string) => {
@@ -195,7 +171,7 @@ export const ChatMessageActions = ({
               <span>Copy</span>
             </DropdownMenuItem>
           )}
-          {isCurrentUser && !message.is_deleted && (
+          {isCurrentUser && !message.is_deleted && message.text && (
             <>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleEdit}>
@@ -230,27 +206,6 @@ export const ChatMessageActions = ({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit Message</DialogTitle>
-          </DialogHeader>
-          <div className="py-4">
-            <Label htmlFor="edit-message-textarea" className="sr-only">Edit Message</Label>
-            <Textarea
-              id="edit-message-textarea"
-              value={editedText}
-              onChange={(e) => setEditedText(e.target.value)}
-              className="min-h-[80px]"
-            />
-          </div>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setIsEditDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSaveEdit}>Save</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </>
   );
 };
