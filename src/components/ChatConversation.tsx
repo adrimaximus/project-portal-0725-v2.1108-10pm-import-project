@@ -218,7 +218,7 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                                 <div>
                                   <div className="relative group/image">
                                     <a href={message.attachment!.url} target="_blank" rel="noopener noreferrer">
-                                      <img src={message.attachment!.url} alt={message.attachment!.name} className="max-w-full h-auto" />
+                                      <img src={message.attachment!.url} alt={message.attachment!.name} className="max-w-full h-auto rounded-md" />
                                     </a>
                                     {!message.text && (
                                       <div className="absolute bottom-1 right-1 flex items-end">
