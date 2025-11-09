@@ -334,8 +334,8 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     { previousDataMap: Map<any[], any> }
   >({
     mutationFn: async ({ messageId, emoji }) => {
-      if (!currentUser) throw new Error("User not authenticated");
-      return chatApi.toggleReaction(messageId, emoji, currentUser.id);
+      if (!user) throw new Error("User not authenticated");
+      return chatApi.toggleReaction(messageId, emoji, user.id);
     },
     onMutate: async ({ messageId, emoji }) => {
       await queryClient.cancelQueries({ queryKey: ['messages', selectedConversationId] });
