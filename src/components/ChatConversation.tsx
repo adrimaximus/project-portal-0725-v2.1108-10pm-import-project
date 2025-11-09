@@ -180,7 +180,7 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                               {message.repliedMessage && message.reply_to_message_id && (
                                 <button 
                                   onClick={() => handleScrollToMessage(message.reply_to_message_id!)}
-                                  className="w-full text-left p-2 mb-1 text-sm bg-black/10 dark:bg-white/10 rounded-md border-l-2 border-primary hover:bg-black/20 dark:hover:bg-white/20 transition-colors"
+                                  className="w-full text-left p-1 mb-1 text-sm bg-black/10 dark:bg-white/10 rounded-md border-l-2 border-primary hover:bg-black/20 dark:hover:bg-white/20 transition-colors"
                                 >
                                   <div className="flex justify-between items-start">
                                     <div className="flex-1 overflow-hidden">
