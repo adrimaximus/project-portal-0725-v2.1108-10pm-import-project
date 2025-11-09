@@ -75,8 +75,17 @@ const CollaboratorsTab = ({ projects }: CollaboratorsTabProps) => {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const isDesktop = useMediaQuery("(min-width: 768px)");
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'projectCount', direction: 'desc' });
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   const projectFilterOptions = PROJECT_STATUS_OPTIONS;
+
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setCurrentUserId(user?.id ?? null);
+    };
+    fetchCurrentUser();
+  }, []);
 
   useEffect(() => {
     const fetchTasks = async () => {
@@ -243,6 +252,11 @@ const CollaboratorsTab = ({ projects }: CollaboratorsTabProps) => {
         });
 
     collaboratorsWithMetrics.sort((a, b) => {
+        if (currentUserId) {
+            if (a.id === currentUserId && b.id !== currentUserId) return -1;
+            if (b.id === currentUserId && a.id !== currentUserId) return 1;
+        }
+
         const key = sortConfig.key as keyof typeof a;
         const aValue = a[key];
         const bValue = b[key];
@@ -267,7 +281,7 @@ const CollaboratorsTab = ({ projects }: CollaboratorsTabProps) => {
     });
     
     return { collaboratorsByRole: orderedGrouped };
-  }, [projects, tasks, projectFilters, taskFilters, sortConfig]);
+  }, [projects, tasks, projectFilters, taskFilters, sortConfig, currentUserId]);
 
   const getFilteredProjects = (collaborator: CollaboratorStat) => {
     if (projectFilters.length === 0) return [];
