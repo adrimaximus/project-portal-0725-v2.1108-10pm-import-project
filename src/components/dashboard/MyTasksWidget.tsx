@@ -148,8 +148,8 @@ const MyTasksWidget = () => {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-4">
-        <Progress value={completionPercentage} className="flex-1" />
         <span className="text-sm font-semibold">{completionPercentage.toFixed(0)}%</span>
+        <Progress value={completionPercentage} className="flex-1" />
       </div>
       <div className="grid grid-cols-3 gap-4 text-center">
         <div>
