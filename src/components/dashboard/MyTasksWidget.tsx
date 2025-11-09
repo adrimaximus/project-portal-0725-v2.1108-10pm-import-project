@@ -125,22 +125,24 @@ const MyTasksWidget = () => {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-4">
-        <Progress value={completionPercentage} className="flex-1" />
-        <span className="text-sm font-semibold">{completionPercentage.toFixed(0)}%</span>
-      </div>
-      <div className="grid grid-cols-3 gap-4 text-center">
-        <div>
-          <p className="text-xs text-muted-foreground">Completed Today</p>
-          <p className="text-lg font-bold flex items-center justify-center gap-1"><CheckCircle2 className="h-4 w-4 text-green-500" />{completedToday}</p>
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-4 text-center">
+          <div>
+            <p className="text-xs text-muted-foreground">Completed Today</p>
+            <p className="text-lg font-bold flex items-center justify-center gap-1"><CheckCircle2 className="h-4 w-4 text-green-500" />{completedToday}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Upcoming</p>
+            <p className="text-lg font-bold flex items-center justify-center gap-1"><Clock className="h-4 w-4 text-blue-500" />{upcomingTasks.length}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Overdue</p>
+            <p className="text-lg font-bold flex items-center justify-center gap-1"><AlertTriangle className="h-4 w-4 text-red-500" />{overdueTasks.length}</p>
+          </div>
         </div>
-        <div>
-          <p className="text-xs text-muted-foreground">Upcoming</p>
-          <p className="text-lg font-bold flex items-center justify-center gap-1"><Clock className="h-4 w-4 text-blue-500" />{upcomingTasks.length}</p>
-        </div>
-        <div>
-          <p className="text-xs text-muted-foreground">Overdue</p>
-          <p className="text-lg font-bold flex items-center justify-center gap-1"><AlertTriangle className="h-4 w-4 text-red-500" />{overdueTasks.length}</p>
+        <div className="flex items-center gap-4 w-1/3">
+          <Progress value={completionPercentage} className="flex-1" />
+          <span className="text-sm font-semibold">{completionPercentage.toFixed(0)}%</span>
         </div>
       </div>
       <div className="space-y-2 max-h-64 overflow-y-auto pr-2">
