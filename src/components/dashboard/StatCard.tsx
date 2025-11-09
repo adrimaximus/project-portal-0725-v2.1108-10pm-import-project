@@ -3,6 +3,12 @@ import React from "react";
 import { useAnimatedCounter } from "@/hooks/useAnimatedCounter";
 import { useAuth } from "@/contexts/AuthContext";
 import { Lock } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface StatCardProps {
   title: string;
@@ -10,9 +16,10 @@ interface StatCardProps {
   icon: React.ReactNode;
   description?: string;
   permission?: string;
+  projects?: { name: string }[];
 }
 
-const StatCard = ({ title, value, icon, description, permission }: StatCardProps) => {
+const StatCard = ({ title, value, icon, description, permission, projects }: StatCardProps) => {
   const { hasPermission } = useAuth();
   const canView = !permission || hasPermission(permission);
 
@@ -51,6 +58,8 @@ const StatCard = ({ title, value, icon, description, permission }: StatCardProps
     return value; // Render non-numeric values directly
   };
 
+  const valueDisplay = <div className="text-xl font-bold sm:text-2xl break-words">{displayValue()}</div>;
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -58,7 +67,27 @@ const StatCard = ({ title, value, icon, description, permission }: StatCardProps
         {icon}
       </CardHeader>
       <CardContent>
-        <div className="text-xl font-bold sm:text-2xl break-words">{displayValue()}</div>
+        {projects && projects.length > 0 && canView ? (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                {valueDisplay}
+              </TooltipTrigger>
+              <TooltipContent>
+                <div className="p-1">
+                  <p className="font-semibold mb-1 text-sm">Projects:</p>
+                  <ul className="list-disc list-inside space-y-1 max-h-48 overflow-y-auto">
+                    {projects.map((project, index) => (
+                      <li key={index} className="text-xs">{project.name}</li>
+                    ))}
+                  </ul>
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        ) : (
+          valueDisplay
+        )}
         {description && <p className="text-xs text-muted-foreground">{description}</p>}
       </CardContent>
     </Card>
