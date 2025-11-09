@@ -17,12 +17,15 @@ import { Progress } from '@/components/ui/progress';
 import { useTaskModal } from '@/contexts/TaskModalContext';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import RecentActivityWidget from './RecentActivityWidget';
+import CollaboratorsList from './CollaboratorsList';
+import { useProjects } from '@/hooks/useProjects';
 
 const ActivityHubWidget = () => {
   const { user } = useAuth();
   const { data: allTasks = [], isLoading, refetch } = useTasks({
     sortConfig: { key: 'due_date', direction: 'asc' },
   });
+  const { data: projects = [], isLoading: isLoadingProjects } = useProjects();
   const { onOpen: onOpenTaskModal } = useTaskModal();
 
   const [filter, setFilter] = useState<'upcoming' | 'overdue'>('upcoming');
@@ -108,6 +111,7 @@ const ActivityHubWidget = () => {
           <TabsList>
             <TabsTrigger value="my-tasks">My Tasks</TabsTrigger>
             <TabsTrigger value="recent-activity">Recent Activity</TabsTrigger>
+            <TabsTrigger value="collaborators">Collaborators</TabsTrigger>
           </TabsList>
           <Button asChild variant="link" className="text-sm -my-2 -mr-4">
             <Link to="/projects?view=tasks">View all</Link>
@@ -249,6 +253,15 @@ const ActivityHubWidget = () => {
           </TabsContent>
           <TabsContent value="recent-activity" className="mt-0">
             <RecentActivityWidget />
+          </TabsContent>
+          <TabsContent value="collaborators" className="mt-0">
+            {isLoadingProjects ? (
+              <div className="flex justify-center items-center h-48">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : (
+              <CollaboratorsList projects={projects} />
+            )}
           </TabsContent>
         </CardContent>
       </Tabs>
