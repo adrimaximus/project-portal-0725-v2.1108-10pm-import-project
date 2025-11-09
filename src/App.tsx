@@ -3,7 +3,7 @@ import ProtectedRouteLayout from "./components/ProtectedRouteLayout";
 import LoginPage from "./pages/LoginPage";
 import Dashboard from "./pages/Index";
 import Projects from "./pages/Projects";
-import ProjectDetail from "./pages/projects/[slug]";
+import ProjectDetail from "./pages/ProjectDetail";
 import Request from "./pages/Request";
 import Chat from "./pages/ChatPage";
 import MoodTracker from "./pages/MoodTracker";
