@@ -239,7 +239,7 @@ const TasksKanbanView = ({ tasks, onEdit, onDelete, refetch, tasksQueryKey, onTa
         ))}
       </div>
       <DragOverlay dropAnimation={dropAnimation}>
-        {activeTask ? <TasksKanbanCard task={activeTask} onEdit={onEdit} onDelete={onDelete} /> : null}
+        {activeTask ? <TasksKanbanCard task={activeTask} /> : null}
       </DragOverlay>
     </DndContext>
   );

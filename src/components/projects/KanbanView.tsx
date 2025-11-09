@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
-import { DndContext, DragOverlay, DragStartEvent, DragEndEvent, MouseSensor, TouchSensor, useSensor, useSensors, DragOverEvent } from '@dnd-kit/core';
+import { DndContext, DragOverlay, DragStartEvent, DragEndEvent, MouseSensor, TouchSensor, useSensor, useSensors, DragOverEvent, DropAnimation, defaultDropAnimationSideEffects } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
 import { Project, PROJECT_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS, ProjectStatus, PaymentStatus } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
@@ -10,6 +10,17 @@ import { CheckCircle } from 'lucide-react';
 import KanbanColumn from './KanbanColumn';
 import { useProjectKanbanMutations } from '@/hooks/useProjectKanbanMutations';
 import { isSameDay, subDays } from 'date-fns';
+import KanbanCard from './KanbanCard';
+
+const dropAnimation: DropAnimation = {
+  sideEffects: defaultDropAnimationSideEffects({
+    styles: {
+      active: {
+        opacity: '0.5',
+      },
+    },
+  }),
+};
 
 const KanbanView = ({ projects, groupBy }: { projects: Project[], groupBy: 'status' | 'payment_status' }) => {
   const [collapsedColumns, setCollapsedColumns] = useState<string[]>([]);
@@ -166,29 +177,6 @@ const KanbanView = ({ projects, groupBy }: { projects: Project[], groupBy: 'stat
     }
   };
 
-  const renderDateBadgeForOverlay = (project: Project) => {
-    const { start_date, due_date } = project;
-    if (!start_date) return null;
-    const startDate = new Date(start_date);
-    let dueDate = due_date ? new Date(due_date) : startDate;
-
-    const isExclusiveEndDate = 
-      due_date &&
-      dueDate.getUTCHours() === 0 &&
-      dueDate.getUTCMinutes() === 0 &&
-      dueDate.getUTCSeconds() === 0 &&
-      dueDate.getUTCMilliseconds() === 0 &&
-      !isSameDay(startDate, dueDate);
-
-    const adjustedDueDate = isExclusiveEndDate ? subDays(dueDate, 1) : dueDate;
-
-    if (isSameDay(startDate, adjustedDueDate)) return <Badge variant="outline" className="text-xs font-normal">{formatInJakarta(start_date, 'd MMM')}</Badge>;
-    const startMonth = formatInJakarta(start_date, 'MMM');
-    const endMonth = formatInJakarta(adjustedDueDate, 'MMM');
-    if (startMonth === endMonth) return <Badge variant="outline" className="text-xs font-normal">{`${formatInJakarta(start_date, 'd')}-${formatInJakarta(adjustedDueDate, 'd')} ${startMonth}`}</Badge>;
-    return <Badge variant="outline" className="text-xs font-normal">{`${formatInJakarta(start_date, 'd MMM')} - ${formatInJakarta(adjustedDueDate, 'd MMM')}`}</Badge>;
-  };
-
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd} onDragCancel={() => setActiveProject(null)}>
       <div className="flex flex-row gap-4 overflow-x-auto pb-4 h-full">
@@ -207,52 +195,9 @@ const KanbanView = ({ projects, groupBy }: { projects: Project[], groupBy: 'stat
           );
         })}
       </div>
-      <DragOverlay dropAnimation={null}>
+      <DragOverlay dropAnimation={dropAnimation}>
         {activeProject ? (
-          <Card className="shadow-xl w-72">
-            <CardContent className="p-3">
-              <div className="space-y-2 block">
-                <h4 className="font-semibold text-sm leading-snug flex items-center gap-1.5">
-                  {activeProject.status === 'Completed' && <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />}
-                  {activeProject.name}
-                </h4>
-                {activeProject.tags && activeProject.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-1 pt-1">
-                    {activeProject.tags.slice(0, 2).map(tag => (
-                      <Badge
-                        key={tag.id}
-                        variant="outline"
-                        className="text-xs font-normal"
-                        style={{
-                          backgroundColor: `${tag.color}20`,
-                          borderColor: tag.color,
-                          color: tag.color,
-                        }}
-                      >
-                        {tag.name}
-                      </Badge>
-                    ))}
-                    {activeProject.tags.length > 2 && (
-                      <Badge variant="outline" className="text-xs font-normal">
-                        +{activeProject.tags.length - 2}
-                      </Badge>
-                    )}
-                  </div>
-                )}
-                <div className="flex justify-between items-center pt-1">
-                  <div className="flex -space-x-2">
-                    {activeProject.assignedTo.slice(0, 3).map(user => (
-                      <Avatar key={user.id} className="h-6 w-6 border-2 border-card">
-                        <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
-                        <AvatarFallback style={generatePastelColor(user.id)}>{user.initials}</AvatarFallback>
-                      </Avatar>
-                    ))}
-                  </div>
-                  {renderDateBadgeForOverlay(activeProject)}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <KanbanCard project={activeProject} dragHappened={dragHappened} />
         ) : null}
       </DragOverlay>
     </DndContext>
