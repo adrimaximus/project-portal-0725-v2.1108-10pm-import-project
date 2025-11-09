@@ -142,7 +142,7 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                               isCurrentUser
                                 ? "bg-primary text-primary-foreground"
                                 : "bg-muted",
-                              isImageAttachment ? "p-1 overflow-hidden" : "px-3 py-2",
+                              isImageAttachment ? "p-px overflow-hidden" : "px-2 py-1",
                               isAudioAttachment ? "p-0" : ""
                             )}
                           >
