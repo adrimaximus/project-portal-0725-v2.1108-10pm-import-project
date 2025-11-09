@@ -133,7 +133,6 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                         : "bg-muted",
                       isImageAttachment ? "p-1 overflow-hidden" : (message.is_deleted ? "" : "px-3 py-2"),
                       isAudioAttachment ? "p-0" : "",
-                      isOnlyEmoji && !isImageAttachment && !isAudioAttachment ? "bg-transparent shadow-none" : "",
                       !isCurrentUser && isSameSenderAsPrevious && "ml-10"
                     )}
                   >
