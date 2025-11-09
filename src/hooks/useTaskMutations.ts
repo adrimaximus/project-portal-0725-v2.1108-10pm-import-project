@@ -266,7 +266,7 @@ export const useTaskMutations = (refetch?: () => void) => {
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Reminder sent!");
+      toast.success("Reminder has been queued for delivery.");
       invalidateQueries();
     },
     onError: (error: any) => {
