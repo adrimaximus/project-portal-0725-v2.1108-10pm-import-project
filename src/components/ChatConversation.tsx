@@ -62,7 +62,7 @@ const formatDateSeparator = (timestamp: string) => {
 
 export const ChatConversation = ({ messages, members, isLoading, onReply }: ChatConversationProps) => {
   const { user: currentUser } = useAuth();
-  const { toggleReaction } = useChatContext();
+  const { toggleReaction, editingMessage } = useChatContext();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -100,6 +100,7 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
           const isSameSenderAsPrevious = prevMessage && prevMessage.sender.id === message.sender.id;
           
           const showDateSeparator = !prevMessage || !isSameDay(parseISO(prevMessage.timestamp), parseISO(message.timestamp));
+          const isBeingEdited = editingMessage && editingMessage.id === message.id;
           
           return (
             <React.Fragment key={message.id || index}>
@@ -139,7 +140,8 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                       className={cn(
                         "flex items-end gap-2",
                         isCurrentUser ? "justify-end" : "justify-start",
-                        isSameSenderAsPrevious ? "mt-1" : "mt-4"
+                        isSameSenderAsPrevious ? "mt-1" : "mt-4",
+                        isBeingEdited && "bg-primary/10 rounded-md"
                       )}
                     >
                       <div className={cn("flex items-center gap-1", isCurrentUser ? "flex-row-reverse" : "flex-row")}>

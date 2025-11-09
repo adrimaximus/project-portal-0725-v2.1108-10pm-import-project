@@ -40,6 +40,11 @@ interface ChatContextType {
   isForwarding: boolean;
   isChatPageActive: boolean;
   setIsChatPageActive: (isActive: boolean) => void;
+  editingMessage: Message | null;
+  startEditingMessage: (message: Message) => void;
+  cancelEditingMessage: () => void;
+  editMessage: (messageId: string, newText: string) => void;
+  isEditingMessage: boolean;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -55,6 +60,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
   const [isChatPageActive, setIsChatPageActive] = useState(false);
   const isChatPageActiveRef = useRef(isChatPageActive);
   const recentlyProcessedIds = useRef(new Set<string>());
+  const [editingMessage, setEditingMessage] = useState<Message | null>(null);
   
   const { user: currentUser } = useAuth();
   const queryClient = useQueryClient();
@@ -425,6 +431,23 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     },
   });
 
+  const editMessageMutation = useMutation({
+    mutationFn: async ({ messageId, newText }: { messageId: string, newText: string }) => {
+      const { error } = await supabase
+        .from('messages')
+        .update({ content: newText })
+        .eq('id', messageId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Message updated.");
+      queryClient.invalidateQueries({ queryKey: ['messages', selectedConversationId] });
+    },
+    onError: (error: any) => {
+      toast.error("Failed to edit message.", { description: error.message });
+    }
+  });
+
   useEffect(() => {
     const collaboratorToChat = (location.state as any)?.selectedCollaborator as Collaborator | undefined;
     if (collaboratorToChat) {
@@ -468,6 +491,19 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const startEditingMessage = (message: Message) => {
+    setEditingMessage(message);
+  };
+
+  const cancelEditingMessage = () => {
+    setEditingMessage(null);
+  };
+
+  const editMessage = (messageId: string, newText: string) => {
+    editMessageMutation.mutate({ messageId, newText });
+    cancelEditingMessage();
+  };
+
   const value: ChatContextType = {
     conversations: filteredConversations,
     isLoadingConversations,
@@ -495,6 +531,11 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     isForwarding: forwardMessageMutation.isPending,
     isChatPageActive,
     setIsChatPageActive,
+    editingMessage,
+    startEditingMessage,
+    cancelEditingMessage,
+    editMessage,
+    isEditingMessage: editMessageMutation.isPending,
   };
 
   return (

@@ -1,7 +1,7 @@
-import { useRef, useState, forwardRef, useImperativeHandle, useEffect } from "react";
+import { useRef, useState, forwardRef, useImperativeHandle, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Button } from "./ui/button";
-import { Paperclip, Send, X, Loader2, UploadCloud, Smile, Camera, Mic } from "lucide-react";
+import { Paperclip, Send, X, Loader2, UploadCloud, Smile, Camera, Mic, Check, Pencil } from "lucide-react";
 import { cn, formatMentionsForDisplay } from "@/lib/utils";
 import { Message } from "@/types";
 import VoiceMessageRecorder from "./VoiceMessageRecorder";
@@ -21,6 +21,8 @@ interface ChatInputProps {
   conversationId: string;
   replyTo: Message | null;
   onCancelReply: () => void;
+  editingMessage: Message | null;
+  onCancelEdit: () => void;
 }
 
 export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({ 
@@ -30,12 +32,15 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
   conversationId,
   replyTo,
   onCancelReply,
+  editingMessage,
+  onCancelEdit,
 }, ref) => {
   const [text, setText] = useState("");
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
   const lastTypingSentAtRef = useRef<number>(0);
   const { selectedConversation } = useChatContext();
   const { theme } = useTheme();
+  const mentionsInputRef = useRef<any>(null);
 
   const [isProjectMentionActive, setIsProjectMentionActive] = useState(false);
   const [projectSearchTerm, setProjectSearchTerm] = useState('');
@@ -46,6 +51,16 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
     queryFn: () => chatApi.searchProjects(debouncedProjectSearchTerm),
     enabled: isProjectMentionActive,
   });
+
+  useEffect(() => {
+    if (editingMessage) {
+      setText(editingMessage.text || '');
+      onCancelReply(); // Can't edit and reply at the same time
+      if (mentionsInputRef.current?.inputElement) {
+        mentionsInputRef.current.inputElement.focus();
+      }
+    }
+  }, [editingMessage, onCancelReply]);
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -114,7 +129,6 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
     onSendMessage(text, attachmentFile, replyTo?.id);
     setText("");
     setAttachmentFile(null);
-    onCancelReply();
   };
 
   const handleSendVoiceMessage = (file: File) => {
@@ -151,7 +165,22 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
         </div>
       )}
 
-      {replyTo && (
+      {editingMessage && (
+        <div className="p-2 mb-2 bg-muted rounded-md flex justify-between items-start gap-2">
+          <div className="flex-1 flex items-start gap-3 overflow-hidden">
+            <Pencil className="h-4 w-4 text-primary mt-1 flex-shrink-0" />
+            <div className="flex-1 text-sm overflow-hidden">
+              <p className="font-semibold text-primary">Editing Message</p>
+              <p className="text-xs text-muted-foreground truncate" dangerouslySetInnerHTML={{ __html: formatMentionsForDisplay(editingMessage.text || '') }} />
+            </div>
+          </div>
+          <Button variant="ghost" size="icon" onClick={onCancelEdit} className="h-7 w-7 flex-shrink-0">
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
+
+      {replyTo && !editingMessage && (
         <div className="p-2 mb-2 bg-muted rounded-md flex justify-between items-start gap-2">
           <div className="flex-1 flex items-start gap-3 overflow-hidden">
             <div className="flex-1 text-sm overflow-hidden">
@@ -213,7 +242,7 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
         </div>
         {text.trim() || attachmentFile ? (
           <Button size="icon" onClick={handleSend} disabled={isSending}>
-            {isSending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
+            {isSending ? <Loader2 className="h-5 w-5 animate-spin" /> : (editingMessage ? <Check className="h-5 w-5" /> : <Send className="h-5 w-5" />)}
           </Button>
         ) : (
           <VoiceMessageRecorder onSend={handleSendVoiceMessage} disabled={isSending} />

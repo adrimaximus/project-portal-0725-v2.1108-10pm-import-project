@@ -1,9 +1,8 @@
-import { useRef, useState } from "react";
+import { useRef, useState, forwardRef, useImperativeHandle, useEffect } from "react";
 import ChatHeader from "./ChatHeader";
 import { ChatConversation } from "./ChatConversation";
 import { ChatInput } from "./ChatInput";
 import ChatPlaceholder from "./ChatPlaceholder";
-import { forwardRef } from "react";
 import { useChatContext } from "@/contexts/ChatContext";
 import AiChatView from "./AiChatView";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,7 +14,19 @@ interface ChatWindowProps {
 }
 
 export const ChatWindow = forwardRef<HTMLTextAreaElement, ChatWindowProps>(({ onBack }, ref) => {
-  const { selectedConversation, isSomeoneTyping, sendMessage, sendTyping, isSendingMessage, leaveGroup, refetchConversations } = useChatContext();
+  const {
+    selectedConversation,
+    isSomeoneTyping,
+    sendMessage,
+    sendTyping,
+    isSendingMessage,
+    leaveGroup,
+    refetchConversations,
+    editingMessage,
+    cancelEditingMessage,
+    editMessage,
+    isEditingMessage,
+  } = useChatContext();
   const [replyTo, setReplyTo] = useState<Message | null>(null);
 
   const handleClearChat = async (conversationId: string) => {
@@ -36,7 +47,11 @@ export const ChatWindow = forwardRef<HTMLTextAreaElement, ChatWindowProps>(({ on
   }
 
   const handleSendMessage = (text: string, attachmentFile: File | null) => {
-    sendMessage(text, attachmentFile, replyTo?.id);
+    if (editingMessage) {
+      editMessage(editingMessage.id, text);
+    } else {
+      sendMessage(text, attachmentFile, replyTo?.id);
+    }
     setReplyTo(null);
   };
 
@@ -59,10 +74,12 @@ export const ChatWindow = forwardRef<HTMLTextAreaElement, ChatWindowProps>(({ on
         ref={ref} 
         onSendMessage={handleSendMessage}
         onTyping={sendTyping}
-        isSending={isSendingMessage}
+        isSending={isSendingMessage || isEditingMessage}
         conversationId={selectedConversation.id}
         replyTo={replyTo}
         onCancelReply={() => setReplyTo(null)}
+        editingMessage={editingMessage}
+        onCancelEdit={cancelEditingMessage}
       />
     </div>
   );
