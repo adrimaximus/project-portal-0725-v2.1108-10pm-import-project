@@ -273,7 +273,7 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                                         </div>
                                       </div>
                                       <div className="flex-shrink-0 self-end flex items-center gap-0">
-                                        {wasEdited && <span className="text-xs italic text-muted-foreground/70 mr-1">Edited</span>}
+                                        {wasEdited && <span className={cn("text-xs italic mr-1", isCurrentUser ? "text-primary-foreground/70" : "text-muted-foreground")}>Edited</span>}
                                         <span className={cn(
                                             "text-xs",
                                             isCurrentUser ? "text-primary-foreground/70" : "text-muted-foreground"
@@ -346,7 +346,7 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                                     )}
                                   </div>
                                   <div className="flex-shrink-0 self-end flex items-center gap-0">
-                                      {wasEdited && <span className="text-xs italic text-muted-foreground/70 mr-1">Edited</span>}
+                                      {wasEdited && <span className={cn("text-xs italic mr-1", isCurrentUser ? "text-primary-foreground/70" : "text-muted-foreground")}>Edited</span>}
                                       <span className={cn(
                                           "text-xs",
                                           isCurrentUser ? "text-primary-foreground/70" : "text-muted-foreground"
