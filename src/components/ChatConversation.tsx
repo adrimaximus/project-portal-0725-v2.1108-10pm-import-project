@@ -101,6 +101,7 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
           
           const showDateSeparator = !prevMessage || !isSameDay(parseISO(prevMessage.timestamp), parseISO(message.timestamp));
           const isBeingEdited = editingMessage && editingMessage.id === message.id;
+          const wasEdited = message.updated_at && (new Date(message.updated_at).getTime() - new Date(message.timestamp).getTime() > 10000);
           
           return (
             <React.Fragment key={message.id || index}>
@@ -222,6 +223,7 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                                     {!message.text && (
                                       <div className="absolute bottom-1 right-1 flex items-end">
                                         <div className="flex-shrink-0 self-end flex items-center gap-0 bg-black/40 rounded-full pl-1.5">
+                                          {wasEdited && <span className="text-xs italic text-white/70 mr-1">Edited</span>}
                                           <span className="text-xs text-white/90 py-0.5">
                                             {formatTimestamp(message.timestamp)}
                                           </span>
@@ -271,6 +273,7 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                                         </div>
                                       </div>
                                       <div className="flex-shrink-0 self-end flex items-center gap-0">
+                                        {wasEdited && <span className="text-xs italic text-muted-foreground/70 mr-1">Edited</span>}
                                         <span className={cn(
                                             "text-xs",
                                             isCurrentUser ? "text-primary-foreground/70" : "text-muted-foreground"
@@ -343,6 +346,7 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                                     )}
                                   </div>
                                   <div className="flex-shrink-0 self-end flex items-center gap-0">
+                                      {wasEdited && <span className="text-xs italic text-muted-foreground/70 mr-1">Edited</span>}
                                       <span className={cn(
                                           "text-xs",
                                           isCurrentUser ? "text-primary-foreground/70" : "text-muted-foreground"

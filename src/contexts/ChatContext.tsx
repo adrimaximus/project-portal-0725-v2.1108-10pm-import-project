@@ -440,7 +440,6 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Message updated.");
       queryClient.invalidateQueries({ queryKey: ['messages', selectedConversationId] });
     },
     onError: (error: any) => {

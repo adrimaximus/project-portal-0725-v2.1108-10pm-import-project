@@ -69,6 +69,7 @@ export interface Message {
   id: string;
   text: string | null;
   timestamp: string;
+  updated_at?: string;
   sender: User;
   attachment?: ChatMessageAttachment;
   reactions?: Reaction[];
