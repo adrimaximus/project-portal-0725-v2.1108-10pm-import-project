@@ -248,10 +248,48 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
 
   const toggleReaction = async (messageId: string, emoji: string) => {
     if (!user) return;
+
+    const originalConversations = conversations;
+
+    setConversations(prevConvos =>
+      prevConvos.map(convo => {
+        const messageExists = convo.messages.some(m => m.id === messageId);
+        if (!messageExists) return convo;
+
+        return {
+          ...convo,
+          messages: convo.messages.map(msg => {
+            if (msg.id === messageId) {
+              const existingReaction = msg.reactions?.find(r => r.user_id === user.id);
+              let newReactions = [...(msg.reactions || [])];
+
+              if (existingReaction) {
+                if (existingReaction.emoji === emoji) {
+                  newReactions = newReactions.filter(r => r.user_id !== user.id);
+                } else {
+                  newReactions = newReactions.map(r => (r.user_id === user.id ? { ...r, emoji } : r));
+                }
+              } else {
+                newReactions.push({
+                  id: uuidv4(),
+                  emoji,
+                  user_id: user.id,
+                  user_name: user.name || user.email || 'You',
+                });
+              }
+              return { ...msg, reactions: newReactions };
+            }
+            return msg;
+          }),
+        };
+      })
+    );
+
     try {
       await apiToggleReaction(messageId, emoji, user.id);
     } catch (error: any) {
       toast.error(`Failed to update reaction: ${error.message}`);
+      setConversations(originalConversations);
     }
   };
 
@@ -338,22 +376,17 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
 
         let conversationId: string | null = null;
         
-        setConversations(currentConversations => {
-          for (const convo of currentConversations) {
-            if (convo.messages.some(m => m.id === reaction.message_id)) {
-              conversationId = convo.id;
-              break;
-            }
+        for (const convo of conversations) {
+          if (convo.messages.some(m => m.id === reaction.message_id)) {
+            conversationId = convo.id;
+            break;
           }
-          
-          if (conversationId) {
-            apiFetchMessages(conversationId).then(messages => {
-              setConversations(prev => prev.map(c => c.id === conversationId ? { ...c, messages } : c));
-            });
-          }
-
-          return currentConversations;
-        });
+        }
+        
+        if (conversationId) {
+          const messages = await apiFetchMessages(conversationId);
+          setConversations(prev => prev.map(c => c.id === conversationId ? { ...c, messages } : c));
+        }
       })
       .subscribe();
 
@@ -361,7 +394,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
       supabase.removeChannel(messagesChannel);
       supabase.removeChannel(reactionsChannel);
     };
-  }, [user, isChatPageActive, fetchConversations]);
+  }, [user, isChatPageActive, fetchConversations, conversations]);
 
   useEffect(() => {
     if (selectedConversationId) {
