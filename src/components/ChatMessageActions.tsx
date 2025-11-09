@@ -3,13 +3,9 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
-  DropdownMenuPortal,
 } from "@/components/ui/dropdown-menu"
 import { Button } from "./ui/button"
-import { MoreHorizontal, Reply, Pencil, Copy, Trash2, Share2, Smile } from "lucide-react"
+import { MoreHorizontal, Reply, Pencil, Copy, Trash2, Share2 } from "lucide-react"
 import { Message } from "@/types"
 import { useChatContext } from "@/contexts/ChatContext"
 import { toast } from "sonner"
@@ -23,17 +19,13 @@ interface ChatMessageActionsProps {
 }
 
 export function ChatMessageActions({ message, isCurrentUser, onReply, className }: ChatMessageActionsProps) {
-  const { setEditingMessage, openForwardDialog, deleteMessage, toggleReaction } = useChatContext()
+  const { setEditingMessage, openForwardDialog, deleteMessage } = useChatContext()
 
   const handleCopy = () => {
     if (message.text) {
       navigator.clipboard.writeText(message.text)
       toast.success("Message copied to clipboard")
     }
-  }
-
-  const handleReaction = (emoji: string) => {
-    toggleReaction(message.id, emoji)
   }
 
   return (
@@ -50,24 +42,6 @@ export function ChatMessageActions({ message, isCurrentUser, onReply, className 
             <span>Reply</span>
           </DropdownMenuItem>
         )}
-        <DropdownMenuSub>
-          <DropdownMenuSubTrigger>
-            <Smile className="mr-2 h-4 w-4" />
-            <span>React</span>
-          </DropdownMenuSubTrigger>
-          <DropdownMenuPortal>
-            <DropdownMenuSubContent>
-              <div className="flex p-1">
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-xl" onClick={() => handleReaction("👍")}>👍</Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-xl" onClick={() => handleReaction("❤️")}>❤️</Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-xl" onClick={() => handleReaction("😂")}>😂</Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-xl" onClick={() => handleReaction("😮")}>😮</Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-xl" onClick={() => handleReaction("😢")}>😢</Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-xl" onClick={() => handleReaction("🙏")}>🙏</Button>
-              </div>
-            </DropdownMenuSubContent>
-          </DropdownMenuPortal>
-        </DropdownMenuSub>
         {message.text && (
           <DropdownMenuItem onClick={handleCopy}>
             <Copy className="mr-2 h-4 w-4" />
