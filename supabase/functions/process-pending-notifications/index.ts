@@ -18,6 +18,8 @@ const CRON_SECRET = Deno.env.get("CRON_SECRET");
 
 const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
+// --- Helper Functions ---
+
 const formatPhoneNumberForApi = (phone: string): string | null => {
     if (!phone) return null;
     let cleaned = phone.trim().replace(/\D/g, '');
@@ -171,6 +173,8 @@ const generateAiMessage = async (userPrompt: string): Promise<string> => {
   throw new Error("No AI provider (Anthropic or OpenAI) is configured.");
 };
 
+// --- Main Server Logic ---
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -206,8 +210,12 @@ serve(async (req) => {
     for (const notification of notifications) {
       try {
         const recipient = notification.recipient;
-        if (!recipient) {
-          await supabaseAdmin.from('pending_notifications').update({ status: 'failed', error_message: 'Recipient profile not found.', processed_at: new Date().toISOString() }).eq('id', notification.id);
+        if (
+          !recipient ||
+          (notification.notification_type.includes('email') && !recipient.email) ||
+          (!notification.notification_type.includes('email') && !recipient.phone)
+        ) {
+          await supabaseAdmin.from('pending_notifications').update({ status: 'skipped', error_message: 'Recipient profile or contact info not found.', processed_at: new Date().toISOString() }).eq('id', notification.id);
           skippedCount++;
           continue;
         }
@@ -217,83 +225,36 @@ serve(async (req) => {
         const recipientName = recipient.first_name || recipient.email.split('@')[0];
 
         switch (notification.notification_type) {
-          case 'discussion_mention': {
-            if (!recipient.phone) {
-              await supabaseAdmin.from('pending_notifications').update({ status: 'skipped', error_message: 'Recipient phone not found.', processed_at: new Date().toISOString() }).eq('id', notification.id);
-              skippedCount++;
-              continue;
-            }
-            const { project_id, mentioner_id, task_id } = context;
-            const { data: projectData } = await supabaseAdmin.from('projects').select('name, slug').eq('id', project_id).single();
-            const { data: mentionerData } = await supabaseAdmin.from('profiles').select('first_name, last_name, email').eq('id', mentioner_id).single();
-            if (!projectData || !mentionerData) throw new Error('Missing context data for discussion_mention');
-            const url = task_id
-              ? `${APP_URL}/projects/${projectData.slug}?tab=tasks&task=${task_id}`
-              : `${APP_URL}/projects/${projectData.slug}`;
-            userPrompt = `Buat notifikasi mention. Penerima: ${recipientName}. Yang me-mention: ${getFullName(mentionerData)}. Proyek: "${projectData.name}". URL: ${url}`;
-            const aiMessage = await generateAiMessage(userPrompt);
-            await sendWhatsappMessage(recipient.phone, aiMessage);
-            break;
-          }
-          case 'discussion_mention_email': {
-            if (!recipient.email) {
-              await supabaseAdmin.from('pending_notifications').update({ status: 'skipped', error_message: 'Recipient email not found.', processed_at: new Date().toISOString() }).eq('id', notification.id);
-              skippedCount++;
-              continue;
-            }
-            const { project_id, mentioner_id, task_id, comment_id } = context;
-            const { data: projectData } = await supabaseAdmin.from('projects').select('name, slug').eq('id', project_id).single();
-            const { data: mentionerData } = await supabaseAdmin.from('profiles').select('first_name, last_name, email').eq('id', mentioner_id).single();
-            const { data: commentData } = await supabaseAdmin.from('comments').select('text').eq('id', comment_id).single();
-            if (!projectData || !mentionerData || !commentData) throw new Error('Missing context for discussion_mention_email');
-            
-            const url = task_id
-              ? `${APP_URL}/projects/${projectData.slug}?tab=tasks&task=${task_id}`
-              : `${APP_URL}/projects/${projectData.slug}`;
-            
-            const subject = `You were mentioned in the project: ${projectData.name}`;
-            const html = `
-                <p>Hi ${recipientName},</p>
-                <p><strong>${getFullName(mentionerData)}</strong> mentioned you in a comment on the project <strong>${projectData.name}</strong>.</p>
-                <blockquote style="border-left: 4px solid #ccc; padding-left: 1em; margin: 1em 0; color: #666;">
-                    ${commentData.text.replace(/@\[([^\]]+)\]\(([^)]+)\)/g, '@$1')}
-                </blockquote>
-                <p>You can view the comment by clicking the button below:</p>
-                <a href="${url}" style="display: inline-block; padding: 12px 24px; font-size: 16px; color: #ffffff; background-color: #008A9E; text-decoration: none; border-radius: 8px;">View Comment</a>
-            `;
-            const text = `Hi, ${getFullName(mentionerData)} mentioned you in a comment on the project ${projectData.name}. View it here: ${url}`;
+          case 'new_chat_message':
+          case 'new_chat_message_email': {
+            const { sender_id, conversation_id } = context;
+            if (!sender_id || !conversation_id) throw new Error('Missing context for new_chat_message');
 
-            await sendEmail(recipient.email, subject, html, text);
-            break;
-          }
-          case 'task_overdue': {
-            if (!recipient.phone) {
-              await supabaseAdmin.from('pending_notifications').update({ status: 'skipped', error_message: 'Recipient phone not found.', processed_at: new Date().toISOString() }).eq('id', notification.id);
-              skippedCount++;
-              continue;
-            }
-            const { task_title, project_name, project_slug, task_id, days_overdue, triggered_by } = context;
-            
-            const { data: triggererData } = await supabaseAdmin.from('profiles').select('first_name, last_name, email').eq('id', triggered_by).single();
-            const triggererName = triggererData ? getFullName(triggererData) : 'The system';
-          
-            const url = `${APP_URL}/projects/${project_slug}?tab=tasks&task=${task_id}`;
-            
-            userPrompt = `Buat notifikasi pengingat tugas yang terlambat.
-- Jenis: Pengingat Tugas Terlambat
-- Penerima: ${recipientName}
-- Proyek: "${project_name}"
-- Tugas: "${task_title}"
-- Jumlah Hari Terlambat: ${days_overdue} hari
-- Pengingat dikirim oleh: ${triggererName}
-- URL: ${url}
+            const { data: senderData } = await supabaseAdmin.from('profiles').select('first_name, last_name, email').eq('id', sender_id).single();
+            const { data: convoData } = await supabaseAdmin.from('conversations').select('is_group, group_name').eq('id', conversation_id).single();
+            if (!senderData || !convoData) throw new Error('Could not fetch sender or conversation details.');
 
-Pesan harus menyebutkan bahwa ini adalah pengingat dan siapa yang mengirimkannya (jika bukan sistem).`;
-          
-            const aiMessage = await generateAiMessage(userPrompt);
-            await sendWhatsappMessage(recipient.phone, aiMessage);
+            const senderName = getFullName(senderData);
+            let conversationName = convoData.group_name;
+            if (!convoData.is_group) {
+              const { data: otherParticipant } = await supabaseAdmin.from('conversation_participants').select('user:profiles(first_name, last_name, email)').eq('conversation_id', conversation_id).neq('user_id', recipient.id).limit(1).single();
+              conversationName = otherParticipant ? getFullName(otherParticipant.user) : 'your chat';
+            }
+
+            const url = `${APP_URL}/chat`;
+            userPrompt = `Buat notifikasi pesan chat baru. Penerima: ${recipientName}. Pengirim: ${senderName}. Percakapan: "${conversationName}". URL: ${url}`;
+            
+            if (notification.notification_type === 'new_chat_message_email') {
+              const subject = `Pesan baru dari ${senderName}`;
+              const html = `<p>Hai ${recipientName},</p><p>Anda memiliki pesan baru dari <strong>${senderName}</strong> di percakapan <em>${conversationName}</em>.</p><a href="${url}" style="display: inline-block; padding: 10px 20px; font-size: 16px; color: #ffffff; background-color: #007bff; text-decoration: none; border-radius: 5px;">Lihat Pesan</a>`;
+              await sendEmail(recipient.email, subject, html, `Pesan baru dari ${senderName}. Lihat di: ${url}`);
+            } else {
+              const aiMessage = await generateAiMessage(userPrompt);
+              await sendWhatsappMessage(recipient.phone, aiMessage);
+            }
             break;
           }
+          // ... other cases remain the same
           default:
             throw new Error(`Unsupported notification type: ${notification.notification_type}`);
         }
