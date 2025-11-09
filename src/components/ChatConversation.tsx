@@ -184,18 +184,6 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                               <a href={message.attachment!.url} target="_blank" rel="noopener noreferrer">
                                 <img src={message.attachment!.url} alt={message.attachment!.name} className="max-w-full h-auto rounded-md" />
                               </a>
-                              <div className="absolute top-1 right-1 opacity-0 group-hover/image:opacity-100 transition-opacity">
-                                <a
-                                  href={message.attachment!.url}
-                                  download={message.attachment!.name}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                >
-                                  <Button variant="ghost" size="icon" className="h-8 w-8 bg-black/40 hover:bg-black/60 text-white hover:text-white">
-                                    <Download className="h-4 w-4" />
-                                  </Button>
-                                </a>
-                              </div>
                               {!message.text && (
                                 <div className="absolute bottom-1 right-1 flex items-end">
                                   <div className="flex-shrink-0 self-end flex items-center gap-0 bg-black/40 rounded-full pl-1.5">
