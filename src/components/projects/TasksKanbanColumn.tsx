@@ -5,7 +5,7 @@ import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useMemo } from 'react';
 import { Button } from '../ui/button';
-import { ChevronsLeft, Plus } from 'lucide-react';
+import { ChevronsLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface TasksKanbanColumnProps {
@@ -15,10 +15,9 @@ interface TasksKanbanColumnProps {
   onToggleCollapse: (status: TaskStatus) => void;
   onEdit: (task: Task) => void;
   onDelete: (taskId: string) => void;
-  onNewTask: (status: TaskStatus) => void;
 }
 
-const TasksKanbanColumn = ({ status, tasks, isCollapsed, onToggleCollapse, onEdit, onDelete, onNewTask }: TasksKanbanColumnProps) => {
+const TasksKanbanColumn = ({ status, tasks, isCollapsed, onToggleCollapse, onEdit, onDelete }: TasksKanbanColumnProps) => {
   const { setNodeRef } = useDroppable({ id: status });
   const taskIds = useMemo(() => tasks.map(t => t.id), [tasks]);
 
@@ -32,7 +31,7 @@ const TasksKanbanColumn = ({ status, tasks, isCollapsed, onToggleCollapse, onEdi
         isCollapsed ? "w-14" : "w-72"
       )}
     >
-      <div className="flex flex-col bg-muted/50 rounded-lg h-full">
+      <div className="flex flex-col bg-muted/50 rounded-lg">
         <div className="font-semibold p-3 text-base flex items-center justify-between flex-shrink-0">
           {!isCollapsed && (
             <h3 className="flex items-center gap-2 truncate">
@@ -46,32 +45,25 @@ const TasksKanbanColumn = ({ status, tasks, isCollapsed, onToggleCollapse, onEdi
         </div>
 
         {isCollapsed ? (
-          <div className="flex-grow min-h-0 flex items-center justify-center cursor-pointer p-3" onClick={() => onToggleCollapse(status)}>
+          <div className="flex-grow min-h-[6rem] flex items-center justify-center cursor-pointer p-3" onClick={() => onToggleCollapse(status)}>
             <div className="[writing-mode:vertical-rl] rotate-180 whitespace-nowrap flex items-center gap-2 text-sm font-medium">
               <span className="truncate">{statusLabel}</span>
               <Badge variant="secondary">{tasks.length}</Badge>
             </div>
           </div>
         ) : (
-          <>
-            <div className="flex-grow min-h-0 overflow-y-auto p-2 pt-0">
-              <SortableContext id={status} items={taskIds} strategy={verticalListSortingStrategy}>
-                {tasks.map(task => (
-                  <TasksKanbanCard key={task.id} task={task} onEdit={onEdit} onDelete={onDelete} />
-                ))}
-              </SortableContext>
-              {tasks.length === 0 && (
-                <div className="flex items-center justify-center h-20 m-2 border-2 border-dashed border-border rounded-lg">
-                  <p className="text-sm text-muted-foreground">No tasks</p>
-                </div>
-              )}
-            </div>
-            <div className="p-2 border-t border-border/50 flex-shrink-0">
-              <Button variant="ghost" className="w-full justify-start" onClick={() => onNewTask(status)}>
-                <Plus className="h-4 w-4 mr-2" /> New task
-              </Button>
-            </div>
-          </>
+          <div className="min-h-[6rem] p-2 pt-0">
+            <SortableContext id={status} items={taskIds} strategy={verticalListSortingStrategy}>
+              {tasks.map(task => (
+                <TasksKanbanCard key={task.id} task={task} onEdit={onEdit} onDelete={onDelete} />
+              ))}
+            </SortableContext>
+            {tasks.length === 0 && (
+              <div className="flex items-center justify-center h-20 m-2 border-2 border-dashed border-border rounded-lg">
+                <p className="text-sm text-muted-foreground">No tasks</p>
+              </div>
+            )}
+          </div>
         )}
       </div>
     </div>

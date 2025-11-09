@@ -273,10 +273,6 @@ const ProjectsPage = () => {
     updateTaskStatusAndOrder(payload);
   };
 
-  const handleNewTask = (status: TaskStatus) => {
-    onOpenTaskModal(null, { status });
-  };
-
   const handleEditTask = async (task: ProjectTask) => {
     try {
       const projectForTask = await getProjectBySlug(task.project_slug);
@@ -366,7 +362,6 @@ const ProjectsPage = () => {
               onHighlightComplete={onHighlightComplete}
               onStatusChange={handleStatusChange}
               onTaskOrderChange={handleTaskOrderChange}
-              onNewTask={handleNewTask}
             />
           </div>
           {hasNextPage && (

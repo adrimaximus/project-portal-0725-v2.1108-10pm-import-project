@@ -30,7 +30,6 @@ interface ProjectViewContainerProps {
   onHighlightComplete: () => void;
   onStatusChange: (projectId: string, newStatus: ProjectStatus) => void;
   onTaskOrderChange: (payload: any) => void;
-  onNewTask: (status: TaskStatus) => void;
 }
 
 type ViewMode = 'table' | 'list' | 'kanban' | 'tasks' | 'tasks-kanban';
@@ -39,7 +38,7 @@ const ProjectViewContainer = ({
   view, projects, tasks, isLoading, isTasksLoading, onDeleteProject, sortConfig, requestSort, rowRefs,
   kanbanGroupBy, onEditTask, onDeleteTask, onToggleTaskCompletion, onTaskStatusChange, isToggling,
   taskSortConfig, requestTaskSort, refetch, tasksQueryKey, highlightedTaskId, onHighlightComplete, onStatusChange,
-  onTaskOrderChange, onNewTask
+  onTaskOrderChange
 }: ProjectViewContainerProps) => {
   switch (view) {
     case 'table':
@@ -71,7 +70,6 @@ const ProjectViewContainer = ({
         refetch={refetch}
         tasksQueryKey={tasksQueryKey}
         onTaskOrderChange={onTaskOrderChange}
-        onNewTask={onNewTask}
       />;
     default:
       return null;
