@@ -7,7 +7,7 @@ import { useEffect, useRef } from "react";
 import { format, isToday, isYesterday, isSameDay, parseISO } from 'date-fns';
 import ReactMarkdown from 'react-markdown';
 import { Link } from 'react-router-dom';
-import { Loader2, Download, Share } from "lucide-react";
+import { Loader2, Download, Share, Camera, Mic } from "lucide-react";
 import { Button } from "./ui/button";
 import VoiceMessagePlayer from "./VoiceMessagePlayer";
 import MessageReactions from "./MessageReactions";
@@ -16,6 +16,7 @@ import { ChatMessageActions } from "./ChatMessageActions";
 import rehypeRaw from 'rehype-raw';
 import remarkGfm from "remark-gfm";
 import React from 'react';
+import FileIcon from './FileIcon';
 
 interface ChatConversationProps {
   messages: Message[];
@@ -168,16 +169,34 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                             onClick={() => handleScrollToMessage(message.reply_to_message_id!)}
                             className="w-full text-left p-2 mb-1 text-sm bg-black/10 dark:bg-white/10 rounded-md border-l-2 border-primary hover:bg-black/20 dark:hover:bg-white/20 transition-colors"
                           >
-                            <p className="font-semibold">{message.repliedMessage.senderName}</p>
-                            <div className={cn(
-                                "text-xs line-clamp-2 opacity-80 prose prose-sm max-w-none",
-                                isCurrentUser 
-                                    ? "prose-invert prose-p:text-primary-foreground prose-a:text-primary-foreground" 
-                                    : "dark:prose-invert"
-                            )}>
-                              <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
-                                {message.repliedMessage.isDeleted ? "This message was deleted." : formatMentionsForDisplay(message.repliedMessage.content)}
-                              </ReactMarkdown>
+                            <div className="flex justify-between items-start">
+                              <div className="flex-1 overflow-hidden">
+                                <p className="font-semibold">{message.repliedMessage.senderName}</p>
+                                <div className={cn(
+                                    "text-xs line-clamp-2 opacity-80 prose prose-sm max-w-none",
+                                    isCurrentUser 
+                                        ? "prose-invert prose-p:text-primary-foreground prose-a:text-primary-foreground" 
+                                        : "dark:prose-invert"
+                                )}>
+                                  {message.repliedMessage.isDeleted ? (
+                                    <p className="italic">This message was deleted.</p>
+                                  ) : message.repliedMessage.attachment ? (
+                                    <div className="flex items-center gap-1.5">
+                                      {message.repliedMessage.attachment.type?.startsWith('image/') && <Camera className="h-3 w-3 flex-shrink-0" />}
+                                      {message.repliedMessage.attachment.type?.startsWith('audio/') && <Mic className="h-3 w-3 flex-shrink-0" />}
+                                      {!message.repliedMessage.attachment.type?.startsWith('image/') && !message.repliedMessage.attachment.type?.startsWith('audio/') && <FileIcon fileType={message.repliedMessage.attachment.type || ''} className="h-3 w-3 flex-shrink-0" />}
+                                      <span className="truncate">{message.repliedMessage.content || message.repliedMessage.attachment.name}</span>
+                                    </div>
+                                  ) : (
+                                    <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
+                                      {formatMentionsForDisplay(message.repliedMessage.content)}
+                                    </ReactMarkdown>
+                                  )}
+                                </div>
+                              </div>
+                              {message.repliedMessage.attachment?.type?.startsWith('image/') && (
+                                <img src={message.repliedMessage.attachment.url} alt="Reply preview" className="h-10 w-10 object-cover rounded-md ml-2 flex-shrink-0" />
+                              )}
                             </div>
                           </button>
                         )}

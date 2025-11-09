@@ -222,6 +222,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
                     content: repliedMsg.text,
                     senderName: repliedMsg.sender.name,
                     isDeleted: false,
+                    attachment: repliedMsg.attachment,
                 };
             }
         }

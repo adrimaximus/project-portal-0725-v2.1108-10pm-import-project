@@ -56,6 +56,11 @@ export const fetchMessages = async (conversationId: string): Promise<Message[]> 
         content: m.replied_message_content,
         senderName: m.replied_message_sender_name,
         isDeleted: m.replied_message_is_deleted,
+        attachment: m.replied_message_attachment_url ? {
+          name: m.replied_message_attachment_name,
+          url: m.replied_message_attachment_url,
+          type: m.replied_message_attachment_type,
+        } : null,
       } : null,
       reactions: m.reactions as Reaction[],
     };

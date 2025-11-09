@@ -77,6 +77,7 @@ export interface Message {
     content: string | null;
     senderName: string;
     isDeleted: boolean;
+    attachment?: ChatMessageAttachment | null;
   } | null;
   is_deleted?: boolean;
   is_forwarded?: boolean;
