@@ -4,10 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Loader2, Clock, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { Task } from '@/types';
 import { format, isPast, isToday, isTomorrow, differenceInDays } from 'date-fns';
-import { Link } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { useTaskMutations } from '@/hooks/useTaskMutations';
 import { toast } from 'sonner';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getAvatarUrl, generatePastelColor, getInitials } from '@/lib/utils';
@@ -16,14 +13,7 @@ import { useTaskDrawer } from '@/contexts/TaskDrawerContext';
 import { getProjectBySlug } from '@/lib/projectsApi';
 
 const TaskItem = ({ task }: { task: Task }) => {
-  const { toggleTaskCompletion } = useTaskMutations();
   const { onOpen: onOpenTaskDrawer } = useTaskDrawer();
-
-  const handleToggle = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    toggleTaskCompletion({ task, completed: !task.completed });
-  };
 
   const handleTaskClick = async () => {
     try {
@@ -61,18 +51,6 @@ const TaskItem = ({ task }: { task: Task }) => {
       className="flex items-center gap-3 p-2 rounded-md hover:bg-muted/50 cursor-pointer"
       onClick={handleTaskClick}
     >
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button onClick={handleToggle}>
-              <div className={`w-4 h-4 rounded-full border-2 ${task.completed ? 'bg-primary border-primary' : 'border-muted-foreground'}`} />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Mark as {task.completed ? 'incomplete' : 'complete'}</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium truncate">{task.title}</p>
         <p className="text-xs text-muted-foreground truncate">{task.project_name}</p>
