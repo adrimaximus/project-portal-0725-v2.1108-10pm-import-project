@@ -251,8 +251,17 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                                   )}
                                 </div>
                                 {message.text && (
-                                  <div className="pt-2 px-1 flex items-end gap-2">
-                                    <div className="min-w-0 flex-grow">
+                                  <div className="pt-2 px-1 flow-root">
+                                    <div className="float-right ml-2 flex items-center gap-0" style={{ transform: 'translateY(4px)' }}>
+                                      <span className={cn(
+                                          "text-xs",
+                                          isCurrentUser ? "text-primary-foreground/70" : "text-muted-foreground"
+                                      )}>
+                                          {formatTimestamp(message.timestamp)}
+                                      </span>
+                                      <ChatMessageActions message={message} isCurrentUser={isCurrentUser} onReply={onReply} />
+                                    </div>
+                                    <div className="min-w-0">
                                       <div className={cn(
                                         "text-sm whitespace-pre-wrap break-words prose prose-sm max-w-none [&_p]:my-0",
                                         isCurrentUser ? "prose-invert prose-p:text-primary-foreground prose-a:text-primary-foreground" : "dark:prose-invert"
@@ -289,15 +298,6 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                                         </ReactMarkdown>
                                       </div>
                                     </div>
-                                    <div className="flex-shrink-0 self-end flex items-center gap-0">
-                                      <span className={cn(
-                                          "text-xs",
-                                          isCurrentUser ? "text-primary-foreground/70" : "text-muted-foreground"
-                                      )}>
-                                          {formatTimestamp(message.timestamp)}
-                                      </span>
-                                      <ChatMessageActions message={message} isCurrentUser={isCurrentUser} onReply={onReply} />
-                                    </div>
                                   </div>
                                 )}
                               </div>
@@ -313,8 +313,17 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                                 </div>
                               </div>
                             ) : (
-                              <div className="flex items-end gap-2">
-                                <div className="min-w-0 flex-grow">
+                              <div className="flow-root">
+                                <div className="float-right ml-2 flex items-center gap-0" style={{ transform: 'translateY(4px)' }}>
+                                    <span className={cn(
+                                        "text-xs",
+                                        isCurrentUser ? "text-primary-foreground/70" : "text-muted-foreground"
+                                    )}>
+                                        {formatTimestamp(message.timestamp)}
+                                    </span>
+                                    <ChatMessageActions message={message} isCurrentUser={isCurrentUser} onReply={onReply} />
+                                </div>
+                                <div className="min-w-0">
                                   {message.text && (
                                     isOnlyEmoji ? (
                                       <div className="text-3xl">{message.text}</div>
@@ -359,15 +368,6 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                                   {message.attachment && (
                                     <MessageAttachment attachment={message.attachment} />
                                   )}
-                                </div>
-                                <div className="flex-shrink-0 self-end flex items-center gap-0">
-                                    <span className={cn(
-                                        "text-xs",
-                                        isCurrentUser ? "text-primary-foreground/70" : "text-muted-foreground"
-                                    )}>
-                                        {formatTimestamp(message.timestamp)}
-                                    </span>
-                                    <ChatMessageActions message={message} isCurrentUser={isCurrentUser} onReply={onReply} />
                                 </div>
                               </div>
                             )}
