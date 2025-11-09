@@ -1,15 +1,19 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { DateRangePicker } from "@/components/DateRangePicker";
 import { DateRange } from "react-day-picker";
 import PortalLayout from "@/components/PortalLayout";
 import DashboardStatsGrid from "@/components/dashboard/DashboardStatsGrid";
-import CollaboratorsList from "@/components/dashboard/CollaboratorsList";
 import { useProjects } from "@/hooks/useProjects";
 import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import MonthlyProgressChart from "@/components/dashboard/MonthlyProgressChart";
 import UnsplashImage from "@/components/dashboard/UnsplashImage";
-import ActivityHubWidget from "@/components/dashboard/ActivityHubWidget";
+import MyTasksWidget from "@/components/dashboard/MyTasksWidget";
+import RecentActivityWidget from "@/components/dashboard/RecentActivityWidget";
+import CollaboratorsWidget from "@/components/dashboard/CollaboratorsWidget";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
 
 const Index = () => {
   const [date, setDate] = useState<DateRange | undefined>({
@@ -102,9 +106,40 @@ const Index = () => {
               <MonthlyProgressChart projects={filteredProjects} />
               <UnsplashImage />
             </div>
-            <ActivityHubWidget />
+            
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              <div className="lg:col-span-1">
+                <MyTasksWidget />
+              </div>
+              <div className="lg:col-span-1">
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between">
+                    <CardTitle className="text-base font-medium">Recent Activity</CardTitle>
+                    <Button asChild variant="link" className="text-sm -my-2 -mr-4">
+                      <Link to="/projects?view=activity">View all</Link>
+                    </Button>
+                  </CardHeader>
+                  <CardContent>
+                    <RecentActivityWidget />
+                  </CardContent>
+                </Card>
+              </div>
+              <div className="lg:col-span-1">
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between">
+                    <CardTitle className="text-base font-medium">Online Collaborators</CardTitle>
+                    <Button asChild variant="link" className="text-sm -my-2 -mr-4">
+                      <Link to="/team-overview">View all</Link>
+                    </Button>
+                  </CardHeader>
+                  <CardContent>
+                    <CollaboratorsWidget />
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+
             <DashboardStatsGrid projects={filteredProjects} />
-            <CollaboratorsList projects={filteredProjects} />
         </div>
       </div>
     </PortalLayout>
