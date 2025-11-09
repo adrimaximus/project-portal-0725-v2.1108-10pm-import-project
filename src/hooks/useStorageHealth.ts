@@ -8,6 +8,8 @@ interface StorageHealth {
   itemCount: number;
   lastCleanup: number | null;
   warnings: string[];
+  used: number;
+  total: number;
 }
 
 const useStorageHealth = () => {
@@ -17,6 +19,8 @@ const useStorageHealth = () => {
     itemCount: 0,
     lastCleanup: null,
     warnings: [],
+    used: 0,
+    total: 0,
   });
 
   const checkHealth = useCallback(() => {
@@ -52,6 +56,8 @@ const useStorageHealth = () => {
       itemCount: info.items,
       lastCleanup,
       warnings,
+      used: info.used,
+      total: info.total,
     });
 
     return { isHealthy, warnings };
