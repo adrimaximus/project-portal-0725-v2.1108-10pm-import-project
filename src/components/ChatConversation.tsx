@@ -159,7 +159,7 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                               isCurrentUser
                                 ? "bg-primary text-primary-foreground"
                                 : "bg-muted",
-                              isImageAttachment ? "p-0.5 overflow-hidden" : "p-1",
+                              isImageAttachment ? "p-1 overflow-hidden" : "p-1",
                               isAudioAttachment ? "p-0" : ""
                             )}
                           >
@@ -218,7 +218,7 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                                 <div>
                                   <div className="relative group/image">
                                     <a href={message.attachment!.url} target="_blank" rel="noopener noreferrer">
-                                      <img src={message.attachment!.url} alt={message.attachment!.name} className="max-w-full h-auto rounded-md" />
+                                      <img src={message.attachment!.url} alt={message.attachment!.name} className="max-w-xs h-auto rounded-md" />
                                     </a>
                                     {!message.text && (
                                       <div className="absolute bottom-1 right-1 flex items-end">
