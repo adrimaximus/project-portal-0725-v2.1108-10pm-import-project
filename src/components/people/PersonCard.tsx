@@ -33,7 +33,7 @@ const PersonCard = ({ person, onViewProfile }: PersonCardProps) => {
   useEffect(() => {
     setImageError(false);
     setLogoError(false);
-  }, [person.avatar_url, person.company_logo_url]);
+  }, [person.id]);
 
   const handleImageError = () => {
     setImageError(true);
