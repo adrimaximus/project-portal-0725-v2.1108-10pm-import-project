@@ -65,7 +65,6 @@ export async function sendHybridMessage({
     attachment_name: payload.attachment_name,
     attachment_type: payload.attachment_type,
     reply_to_message_id: payload.reply_to_message_id,
-    created_at: payload.created_at,
   })
   if (error) {
     console.error('❌ Failed to insert message:', error)
