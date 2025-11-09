@@ -110,35 +110,12 @@ export const leaveGroup = async (conversationId: string) => {
   if (error) throw error;
 };
 
-export const toggleReaction = async (messageId: string, emoji: string, userId: string) => {
-  const { data, error: selectError } = await supabase
-    .from('message_reactions')
-    .select('id')
-    .eq('message_id', messageId)
-    .eq('user_id', userId)
-    .eq('emoji', emoji)
-    .maybeSingle();
-
-  if (selectError) {
-    throw selectError;
-  }
-
-  if (data) {
-    const { error: deleteError } = await supabase
-      .from('message_reactions')
-      .delete()
-      .eq('id', data.id);
-    if (deleteError) throw deleteError;
-  } else {
-    const { error: insertError } = await supabase
-      .from('message_reactions')
-      .insert({
-        message_id: messageId,
-        user_id: userId,
-        emoji: emoji,
-      });
-    if (insertError) throw insertError;
-  }
+export const toggleReaction = async (messageId: string, emoji: string) => {
+  const { error } = await supabase.rpc('toggle_message_reaction', {
+    p_message_id: messageId,
+    p_emoji: emoji,
+  });
+  if (error) throw error;
 };
 
 export const searchProjects = async (searchTerm: string): Promise<{ id: string, name: string, slug: string }[]> => {
