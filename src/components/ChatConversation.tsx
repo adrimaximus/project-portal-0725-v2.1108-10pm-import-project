@@ -91,7 +91,7 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
 
   return (
     <div className="flex-1 relative">
-      <div ref={scrollContainerRef} className="absolute inset-0 overflow-y-auto p-4 space-y-1">
+      <div ref={scrollContainerRef} className="absolute inset-0 overflow-y-auto px-2 py-4 space-y-1">
         {messages.map((message, index) => {
           const isCurrentUser = message.sender.id === currentUser.id;
           const sender = members.find(m => m.id === message.sender.id) || message.sender;
