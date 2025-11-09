@@ -8,19 +8,14 @@ import SafeLocalStorage from '@/lib/localStorage';
 import { toast } from 'sonner';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import useStorageHealth from '@/hooks/useStorageHealth';
 
 const StorageManagementCard = () => {
-  const [storageInfo, setStorageInfo] = useState({
-    used: 0,
-    available: 0,
-    total: 0,
-    items: 0,
-  });
+  const { health, checkHealth, performCleanup } = useStorageHealth();
   const [storageKeys, setStorageKeys] = useState<string[]>([]);
 
   const refreshStorageInfo = () => {
-    const info = SafeLocalStorage.getStorageInfo();
-    setStorageInfo(info);
+    checkHealth();
     const data = SafeLocalStorage.exportData();
     setStorageKeys(Object.keys(data));
   };
@@ -30,8 +25,7 @@ const StorageManagementCard = () => {
   }, []);
 
   const handleCleanup = () => {
-    const cleanedCount = SafeLocalStorage.cleanup();
-    toast.success(`Cleaned up ${cleanedCount} expired items`);
+    performCleanup();
     refreshStorageInfo();
   };
 
@@ -79,7 +73,7 @@ const StorageManagementCard = () => {
     reader.readAsText(file);
   };
 
-  const usedPercentage = storageInfo.total > 0 ? (storageInfo.used / storageInfo.total) * 100 : 0;
+  const usedPercentage = health.usagePercentage;
   const isNearLimit = usedPercentage > 80;
 
   const formatBytes = (bytes: number) => {
@@ -116,7 +110,7 @@ const StorageManagementCard = () => {
         <div className="space-y-2">
           <div className="flex justify-between text-sm">
             <span>Storage Usage</span>
-            <span>{formatBytes(storageInfo.used)} / {formatBytes(storageInfo.total)}</span>
+            <span>{formatBytes(health.used)} / {formatBytes(health.total)}</span>
           </div>
           <Progress 
             value={usedPercentage} 
@@ -126,7 +120,7 @@ const StorageManagementCard = () => {
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <span className="cursor-help underline decoration-dotted">{storageInfo.items} items stored</span>
+                  <span className="cursor-help underline decoration-dotted">{health.itemCount} items stored</span>
                 </TooltipTrigger>
                 <TooltipContent>
                   <div className="max-h-48 overflow-y-auto p-1">

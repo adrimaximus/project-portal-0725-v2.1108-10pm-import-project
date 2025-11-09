@@ -57,7 +57,7 @@ const useStorageHealth = () => {
     return { isHealthy, warnings };
   }, []);
 
-  const performCleanup = useCallback(() => {
+  const performCleanup = useCallback((silent = false) => {
     // Step 1: Clean up expired items
     const expiredCount = SafeLocalStorage.cleanup();
     
@@ -76,10 +76,12 @@ const useStorageHealth = () => {
     SafeLocalStorage.setItem('last_cleanup_timestamp', Date.now());
     
     const totalCleaned = expiredCount + cachedCount;
-    if (totalCleaned > 0) {
-      toast.success(`Cleaned up ${totalCleaned} item(s) (${expiredCount} expired, ${cachedCount} cached).`);
-    } else {
-      toast.info("No expired or temporary items to clean up.");
+    if (!silent) {
+      if (totalCleaned > 0) {
+        toast.success(`Cleaned up ${totalCleaned} item(s) (${expiredCount} expired, ${cachedCount} cached).`);
+      } else {
+        toast.info("No expired or temporary items to clean up.");
+      }
     }
     
     checkHealth();
@@ -90,7 +92,7 @@ const useStorageHealth = () => {
     const { isHealthy, warnings } = checkHealth();
     
     if (!isHealthy || warnings.some(w => w.includes('cleanup recommended'))) {
-      performCleanup();
+      performCleanup(true);
     }
   }, [checkHealth, performCleanup]);
 
