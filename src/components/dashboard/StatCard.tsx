@@ -22,6 +22,7 @@ interface StatCardProps {
 const StatCard = ({ title, value, icon, description, permission, projects }: StatCardProps) => {
   const { hasPermission } = useAuth();
   const canView = !permission || hasPermission(permission);
+  const hasProjects = projects && projects.length > 0 && canView;
 
   let targetValue: number | null = null;
   let isCurrency = false;
@@ -63,11 +64,11 @@ const StatCard = ({ title, value, icon, description, permission, projects }: Sta
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">{title}</CardTitle>
+        <CardTitle className="text-sm font-medium">{!hasProjects ? title : ' '}</CardTitle>
         {icon}
       </CardHeader>
       <CardContent>
-        {projects && projects.length > 0 && canView ? (
+        {hasProjects ? (
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -89,12 +90,15 @@ const StatCard = ({ title, value, icon, description, permission, projects }: Sta
           valueDisplay
         )}
         
-        {(projects && projects.length > 0 && canView || description) && (
+        {(hasProjects || description) && (
           <div className="mt-1">
-            {projects && projects.length > 0 && canView && (
-              <p className="text-xs text-muted-foreground">
-                from {projects.length} project{projects.length > 1 ? 's' : ''}
-              </p>
+            {hasProjects && (
+              <>
+                <p className="text-xs text-muted-foreground">
+                  from {projects.length} project{projects.length > 1 ? 's' : ''}
+                </p>
+                <p className="text-xs text-muted-foreground">{title}</p>
+              </>
             )}
             {description && <p className="text-xs text-muted-foreground">{description}</p>}
           </div>
