@@ -58,15 +58,32 @@ const useStorageHealth = () => {
   }, []);
 
   const performCleanup = useCallback(() => {
-    const cleanedCount = SafeLocalStorage.cleanup();
+    // Step 1: Clean up expired items
+    const expiredCount = SafeLocalStorage.cleanup();
+    
+    // Step 2: Clean up non-expired but safe-to-remove cache items
+    let cachedCount = 0;
+    const safeCachePrefixes = ['projects-cache-'];
+    const allKeys = Object.keys(SafeLocalStorage.exportData());
+
+    for (const key of allKeys) {
+      if (safeCachePrefixes.some(prefix => key.startsWith(prefix))) {
+        SafeLocalStorage.removeItem(key);
+        cachedCount++;
+      }
+    }
+
     SafeLocalStorage.setItem('last_cleanup_timestamp', Date.now());
     
-    if (cleanedCount > 0) {
-      toast.success(`Cleaned up ${cleanedCount} expired items`);
+    const totalCleaned = expiredCount + cachedCount;
+    if (totalCleaned > 0) {
+      toast.success(`Cleaned up ${totalCleaned} item(s) (${expiredCount} expired, ${cachedCount} cached).`);
+    } else {
+      toast.info("No expired or temporary items to clean up.");
     }
     
     checkHealth();
-    return cleanedCount;
+    return totalCleaned;
   }, [checkHealth]);
 
   const autoCleanup = useCallback(() => {

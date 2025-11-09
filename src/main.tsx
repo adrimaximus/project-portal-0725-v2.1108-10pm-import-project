@@ -7,6 +7,10 @@ import { AuthProvider } from './contexts/AuthContext.tsx'
 import { ThemeProvider } from './contexts/ThemeProvider.tsx'
 import { Toaster } from 'sonner'
 import { BrowserRouter as Router } from 'react-router-dom';
+import SafeLocalStorage from './lib/localStorage.ts';
+
+// Automatically clean up expired items from local storage on startup
+SafeLocalStorage.cleanup();
 
 const queryClient = new QueryClient()
 
