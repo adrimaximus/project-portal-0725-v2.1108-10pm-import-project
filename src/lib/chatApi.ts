@@ -63,6 +63,7 @@ export const fetchMessages = async (conversationId: string): Promise<Message[]> 
         } : null,
       } : null,
       reactions: m.reactions as Reaction[],
+      is_deleted: m.is_deleted,
     };
   });
 };
