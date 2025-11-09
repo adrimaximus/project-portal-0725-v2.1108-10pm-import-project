@@ -25,10 +25,23 @@ interface ChatConversationProps {
 
 const isEmojiOnly = (str: string | null | undefined): boolean => {
   if (!str) return false;
-  // This regex checks for any character that is NOT an emoji-related character or whitespace.
-  // If such a character is found, it's not an emoji-only string. This correctly excludes numbers.
-  const nonEmojiRegex = /[^\p{Emoji_Presentation}\p{Emoji_Modifier_Base}\p{Emoji_Component}\u200D\uFE0F\s]/u;
-  return !nonEmojiRegex.test(str.trim());
+  const trimmed = str.trim();
+  if (!trimmed) return false;
+
+  // If it contains any letters, it's not emoji-only.
+  if (/[a-zA-Z]/.test(trimmed)) {
+    return false;
+  }
+
+  // If it's just numbers and common punctuation/whitespace, it's not emoji-only.
+  if (/^[0-9\s.,!?;:"'()\[\]{}]+$/.test(trimmed)) {
+    return false;
+  }
+
+  // At this point, it contains no letters and is not purely numeric/punctuation.
+  // It's highly likely to be emoji-only. Let's check if it has at least one emoji-like character to be sure.
+  const hasEmoji = /\p{Extended_Pictographic}/u;
+  return hasEmoji.test(trimmed);
 };
 
 const formatTimestamp = (timestamp: string) => {
