@@ -27,7 +27,7 @@ const TasksKanbanColumn = ({ status, tasks, isCollapsed, onToggleCollapse, onEdi
     <div
       ref={setNodeRef}
       className={cn(
-        "flex-shrink-0 transition-all duration-300 ease-in-out h-full flex flex-col bg-muted/50 rounded-lg max-h-[800px]",
+        "flex-shrink-0 transition-all duration-300 ease-in-out h-full flex flex-col bg-muted/50 rounded-lg max-h-[700px]",
         isCollapsed ? "w-14" : "w-72"
       )}
     >
