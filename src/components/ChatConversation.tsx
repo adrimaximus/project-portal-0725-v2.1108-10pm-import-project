@@ -15,6 +15,7 @@ import { useChatContext } from "@/contexts/ChatContext";
 import { ChatMessageActions } from "./ChatMessageActions";
 import rehypeRaw from 'rehype-raw';
 import remarkGfm from "remark-gfm";
+import React from 'react';
 
 interface ChatConversationProps {
   messages: Message[];
@@ -132,6 +133,7 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                         : "bg-muted",
                       isImageAttachment ? "p-1 overflow-hidden" : (message.is_deleted ? "" : "px-3 py-2"),
                       isAudioAttachment ? "p-0" : "",
+                      isOnlyEmoji && !isImageAttachment && !isAudioAttachment ? "bg-transparent shadow-none" : "",
                       !isCurrentUser && isSameSenderAsPrevious && "ml-10"
                     )}
                   >
@@ -237,10 +239,25 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                                             return <Link to={href} {...props} className="font-medium underline" />;
                                           }
                                           return <a {...props} target="_blank" rel="noopener noreferrer" className="font-medium underline" />;
+                                        },
+                                        p: ({ node, ...props }) => {
+                                          const processedChildren = React.Children.map(props.children, child => {
+                                            if (typeof child === 'string') {
+                                              const emojiRegex = /(\p{Emoji_Presentation}|\p{Emoji_Modifier_Base}|\p{Emoji_Component}|\p{Extended_Pictographic}|[\u200D\uFE0F]+)/u;
+                                              const parts = child.split(emojiRegex);
+                                              return parts.map((part, i) => 
+                                                part.match(emojiRegex) 
+                                                  ? <span key={i} className="text-lg inline-block align-middle">{part}</span> 
+                                                  : part
+                                              );
+                                            }
+                                            return child;
+                                          });
+                                          return <p {...props}>{processedChildren}</p>;
                                         }
                                       }}
                                     >
-                                      {formatMentionsForDisplay(message.text)}
+                                      {formatMentionsForDisplay(message.text || '')}
                                     </ReactMarkdown>
                                   </div>
                                 )
