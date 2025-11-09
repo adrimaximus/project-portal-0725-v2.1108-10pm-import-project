@@ -285,8 +285,10 @@ export const useTaskMutations = (refetch?: () => void) => {
       const { error } = await supabase.rpc('manually_trigger_task_reminder', { p_task_id: taskId });
       if (error) throw error;
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success("Reminder has been queued for delivery.");
+      // Add a small delay to allow the database to update before refetching
+      await new Promise(resolve => setTimeout(resolve, 1000));
       invalidateQueries();
     },
     onError: (error: any) => {
