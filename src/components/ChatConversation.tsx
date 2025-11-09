@@ -104,6 +104,7 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
           
           const typedMessage = message as Message & { updated_at?: string };
           const isEdited = typedMessage.updated_at && typedMessage.timestamp && Math.abs(new Date(typedMessage.updated_at).getTime() - new Date(typedMessage.timestamp).getTime()) > 1000;
+          const isImageAttachment = message.attachment?.type.startsWith('image/');
 
           return (
             <React.Fragment key={message.id || index}>
@@ -133,7 +134,6 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                 </div>
               ) : (
                 (() => {
-                  const isImageAttachment = message.attachment?.type.startsWith('image/');
                   const isAudioAttachment = message.attachment?.type.startsWith('audio/');
                   const isOnlyEmoji = isEmojiOnly(message.text);
 
@@ -157,11 +157,14 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                         <div className={cn("flex flex-col", isCurrentUser ? "items-end" : "items-start", !isCurrentUser && isSameSenderAsPrevious && "ml-10")}>
                           <div
                             className={cn(
-                              "max-w-xs md:max-w-md lg:max-w-lg rounded-lg relative group",
+                              "rounded-lg relative group",
+                              isImageAttachment 
+                                ? "max-w-[18rem] md:max-w-sm lg:max-w-md" 
+                                : "max-w-xs md:max-w-md lg:max-w-lg",
                               isCurrentUser
                                 ? "bg-primary text-primary-foreground"
                                 : "bg-muted",
-                              isImageAttachment ? "p-px overflow-hidden" : "px-2 py-1",
+                              isImageAttachment ? "p-1 overflow-hidden" : "px-2 py-1",
                               isAudioAttachment ? "p-0" : ""
                             )}
                           >
