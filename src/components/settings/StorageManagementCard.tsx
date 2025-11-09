@@ -7,6 +7,7 @@ import { Trash2, Download, Upload, HardDrive, AlertTriangle } from 'lucide-react
 import SafeLocalStorage from '@/lib/localStorage';
 import { toast } from 'sonner';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const StorageManagementCard = () => {
   const [storageInfo, setStorageInfo] = useState({
@@ -15,10 +16,13 @@ const StorageManagementCard = () => {
     total: 0,
     items: 0,
   });
+  const [storageKeys, setStorageKeys] = useState<string[]>([]);
 
   const refreshStorageInfo = () => {
     const info = SafeLocalStorage.getStorageInfo();
     setStorageInfo(info);
+    const data = SafeLocalStorage.exportData();
+    setStorageKeys(Object.keys(data));
   };
 
   useEffect(() => {
@@ -119,7 +123,27 @@ const StorageManagementCard = () => {
             className={`h-2 ${isNearLimit ? '[&>div]:bg-red-500' : ''}`}
           />
           <div className="flex justify-between text-xs text-muted-foreground">
-            <span>{storageInfo.items} items stored</span>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="cursor-help underline decoration-dotted">{storageInfo.items} items stored</span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <div className="max-h-48 overflow-y-auto p-1">
+                    <p className="font-semibold mb-2">Stored Keys:</p>
+                    <ul className="list-disc list-inside space-y-1 text-xs">
+                      {storageKeys.length > 0 ? (
+                        storageKeys.map(key => (
+                          <li key={key} className="truncate">{key}</li>
+                        ))
+                      ) : (
+                        <li>No items found.</li>
+                      )}
+                    </ul>
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
             <span>{usedPercentage.toFixed(1)}% used</span>
           </div>
         </div>
