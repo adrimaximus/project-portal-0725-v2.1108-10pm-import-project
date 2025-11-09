@@ -93,7 +93,7 @@ export function subscribeToConversation({
   // 2️⃣ Realtime DB untuk sync penuh (misal kalau reload)
   channel.on(
     'postgres_changes',
-    { event: 'INSERT', schema: 'public', table: 'messages', filter: `conversation_id=eq.${conversationId}` },
+    { event: '*', schema: 'public', table: 'messages', filter: `conversation_id=eq.${conversationId}` },
     (payload) => {
       onNewMessage(payload.new)
     }
