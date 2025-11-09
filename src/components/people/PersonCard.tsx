@@ -1,12 +1,10 @@
-import { useState, useEffect, useMemo, memo } from 'react';
+import { useState, useEffect, memo } from 'react';
 import { Person as BasePerson } from '@/types';
 import { Card } from '@/components/ui/card';
 import { User as UserIcon, Instagram, Briefcase, Mail } from 'lucide-react';
 import { generatePastelColor, getAvatarUrl } from '@/lib/utils';
 import WhatsappIcon from '../icons/WhatsappIcon';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { useQuery } from '@tanstack/react-query';
 
 type Person = BasePerson & { company_id?: string | null; company_logo_url?: string | null };
 
@@ -30,10 +28,12 @@ const formatPhoneNumberForWhatsApp = (phone: string | undefined) => {
 
 const PersonCard = ({ person, onViewProfile }: PersonCardProps) => {
   const [imageError, setImageError] = useState(false);
+  const [logoError, setLogoError] = useState(false);
 
   useEffect(() => {
     setImageError(false);
-  }, [person.avatar_url]);
+    setLogoError(false);
+  }, [person.avatar_url, person.company_logo_url]);
 
   const handleImageError = () => {
     setImageError(true);
@@ -47,12 +47,10 @@ const PersonCard = ({ person, onViewProfile }: PersonCardProps) => {
     }
   };
 
-  const googleMapsUrl = person.address 
-    ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(person.address)}`
-    : '#';
-
   const emailToDisplay = person.contact?.emails?.[0] || person.email;
   const phoneToDisplay = (person.contact as any)?.phones?.[0] || person.phone;
+
+  const showCompanyLogo = person.company_logo_url && !logoError;
 
   return (
     <Card 
@@ -75,13 +73,14 @@ const PersonCard = ({ person, onViewProfile }: PersonCardProps) => {
             </div>
           )}
         </div>
-        {person.company_logo_url && (
+        {showCompanyLogo && (
           <div className="absolute -bottom-6 left-4 bg-background p-0.5 rounded-lg shadow-md flex items-center justify-center">
             <img
               src={person.company_logo_url}
-              alt={`${person.company} logo`}
+              alt={`${person.company || ''} logo`}
               className="h-10 w-10 object-contain rounded-md"
               loading="lazy"
+              onError={() => setLogoError(true)}
             />
           </div>
         )}
@@ -111,7 +110,7 @@ const PersonCard = ({ person, onViewProfile }: PersonCardProps) => {
           </div>
         </div>
         
-        <div className={`min-w-0 ${person.company_logo_url ? 'pt-2' : ''}`}>
+        <div className={`min-w-0 ${showCompanyLogo ? 'pt-2' : ''}`}>
           <h3 className="font-bold text-sm truncate">{person.full_name}</h3>
         </div>
         
