@@ -281,7 +281,7 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                                   <div className="min-w-0 flex-grow">
                                     {message.text && (
                                       isOnlyEmoji ? (
-                                        <div className="text-lg">{message.text}</div>
+                                        <div className="text-3xl">{message.text}</div>
                                       ) : (
                                         <div className={cn(
                                           "text-sm whitespace-pre-wrap break-words prose prose-sm max-w-none [&_p]:my-0",
