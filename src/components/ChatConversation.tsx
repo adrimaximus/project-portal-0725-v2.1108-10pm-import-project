@@ -28,18 +28,13 @@ const isEmojiOnly = (str: string | null | undefined): boolean => {
   const trimmed = str.trim();
   if (!trimmed) return false;
 
-  // If it contains any letters, it's not emoji-only.
-  if (/[a-zA-Z]/.test(trimmed)) {
+  // Regex to check for any letters or digits
+  const hasAlphanumeric = /[a-zA-Z0-9]/;
+  if (hasAlphanumeric.test(trimmed)) {
     return false;
   }
 
-  // If it's just numbers and common punctuation/whitespace, it's not emoji-only.
-  if (/^[0-9\s.,!?;:"'()\[\]{}]+$/.test(trimmed)) {
-    return false;
-  }
-
-  // At this point, it contains no letters and is not purely numeric/punctuation.
-  // It's highly likely to be emoji-only. Let's check if it has at least one emoji-like character to be sure.
+  // Regex to ensure it has at least one emoji character, to avoid matching only punctuation
   const hasEmoji = /\p{Extended_Pictographic}/u;
   return hasEmoji.test(trimmed);
 };
@@ -252,11 +247,12 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                                                   if (typeof child === 'string') {
                                                     const emojiRegex = /(\p{Emoji_Presentation}|\p{Emoji_Modifier_Base}|\p{Emoji_Component}|\p{Extended_Pictographic}|[\u200D\uFE0F]+)/u;
                                                     const parts = child.split(emojiRegex);
-                                                    return parts.map((part, i) => 
-                                                      part.match(emojiRegex) 
+                                                    return parts.map((part, i) => {
+                                                      const isPurelyNumeric = /^\d+$/.test(part);
+                                                      return part.match(emojiRegex) && !isPurelyNumeric
                                                         ? <span key={i} className="text-lg inline-block align-middle">{part}</span> 
-                                                        : part
-                                                    );
+                                                        : part;
+                                                    });
                                                   }
                                                   return child;
                                                 });
@@ -318,11 +314,12 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                                                   if (typeof child === 'string') {
                                                     const emojiRegex = /(\p{Emoji_Presentation}|\p{Emoji_Modifier_Base}|\p{Emoji_Component}|\p{Extended_Pictographic}|[\u200D\uFE0F]+)/u;
                                                     const parts = child.split(emojiRegex);
-                                                    return parts.map((part, i) => 
-                                                      part.match(emojiRegex) 
+                                                    return parts.map((part, i) => {
+                                                      const isPurelyNumeric = /^\d+$/.test(part);
+                                                      return part.match(emojiRegex) && !isPurelyNumeric
                                                         ? <span key={i} className="text-lg inline-block align-middle">{part}</span> 
-                                                        : part
-                                                    );
+                                                        : part;
+                                                    });
                                                   }
                                                   return child;
                                                 });
