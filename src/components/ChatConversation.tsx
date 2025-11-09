@@ -169,7 +169,12 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                             className="w-full text-left p-2 mb-1 text-sm bg-black/10 dark:bg-white/10 rounded-md border-l-2 border-primary hover:bg-black/20 dark:hover:bg-white/20 transition-colors"
                           >
                             <p className="font-semibold">{message.repliedMessage.senderName}</p>
-                            <div className="text-xs line-clamp-2 opacity-80 prose prose-sm dark:prose-invert max-w-none">
+                            <div className={cn(
+                                "text-xs line-clamp-2 opacity-80 prose prose-sm max-w-none",
+                                isCurrentUser 
+                                    ? "prose-invert prose-p:text-primary-foreground prose-a:text-primary-foreground" 
+                                    : "dark:prose-invert"
+                            )}>
                               <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
                                 {message.repliedMessage.isDeleted ? "This message was deleted." : formatMentionsForDisplay(message.repliedMessage.content)}
                               </ReactMarkdown>
