@@ -56,6 +56,7 @@ export const ChatMessageActions = ({
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editedText, setEditedText] = useState(message.text || '');
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { theme } = useTheme();
 
   const handleCopy = () => {
@@ -114,9 +115,15 @@ export const ChatMessageActions = ({
     setIsEditDialogOpen(false);
   };
 
+  const handleReactionSelect = (emoji: string) => {
+    toggleReaction(message.id, emoji);
+    setEmojiPickerOpen(false);
+    setIsMenuOpen(false);
+  };
+
   return (
     <>
-      <DropdownMenu>
+      <DropdownMenu open={isMenuOpen} onOpenChange={setIsMenuOpen}>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" size="icon" className={cn("h-6 w-6 opacity-0 group-hover:opacity-100 data-[state=open]:opacity-100 transition-opacity flex-shrink-0", className)}>
             <ChevronDown className="h-4 w-4" />
@@ -144,7 +151,7 @@ export const ChatMessageActions = ({
                       className="h-8 w-8 text-xl"
                       onClick={(e) => {
                         e.stopPropagation();
-                        toggleReaction(message.id, emoji);
+                        handleReactionSelect(emoji);
                       }}
                     >
                       {emoji}
@@ -160,8 +167,7 @@ export const ChatMessageActions = ({
                       <Picker
                         data={data}
                         onEmojiSelect={(emoji: any) => {
-                          toggleReaction(message.id, emoji.native);
-                          setEmojiPickerOpen(false);
+                          handleReactionSelect(emoji.native);
                         }}
                         theme={theme === 'dark' ? 'dark' : 'light'}
                         previewPosition="none"
