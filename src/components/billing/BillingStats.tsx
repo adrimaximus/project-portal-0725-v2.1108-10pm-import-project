@@ -79,15 +79,17 @@ const BillingStats = ({ invoices }: { invoices: Invoice[] }) => {
   const canViewValue = hasPermission('projects:view_value');
 
   const stats = useMemo(() => {
-    const outstandingBalance = invoices
-      .filter(inv => ['Overdue', 'Proposed', 'Pending', 'In Process'].includes(inv.status))
-      .reduce((sum, inv) => sum + inv.amount, 0);
+    const outstandingInvoices = invoices
+      .filter(inv => ['Overdue', 'Proposed', 'Pending', 'In Process'].includes(inv.status));
+    const outstandingBalance = outstandingInvoices.reduce((sum, inv) => sum + inv.amount, 0);
 
-    const nextDueDate = invoices
+    const nextDueInvoice = invoices
       .filter(inv => ['Proposed', 'Pending', 'In Process'].includes(inv.status))
-      .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())[0]?.dueDate;
+      .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())[0];
+    const nextDueDate = nextDueInvoice?.dueDate;
 
-    const overdueInvoicesCount = invoices.filter(inv => inv.status === 'Overdue').length;
+    const overdueInvoices = invoices.filter(inv => inv.status === 'Overdue');
+    const overdueInvoicesCount = overdueInvoices.length;
 
     const projectAdmins = invoices.reduce((acc, invoice) => {
       invoice.assignedMembers
@@ -105,7 +107,15 @@ const BillingStats = ({ invoices }: { invoices: Invoice[] }) => {
       return acc;
     }, {} as Record<string, UserStatData>);
 
-    return { outstandingBalance, nextDueDate, overdueInvoicesCount, projectAdmins };
+    return { 
+      outstandingBalance, 
+      nextDueDate, 
+      overdueInvoicesCount, 
+      projectAdmins,
+      outstandingInvoices,
+      nextDueInvoice,
+      overdueInvoices,
+    };
   }, [invoices]);
 
   const sortedAdmins = useMemo(() => {
@@ -124,18 +134,21 @@ const BillingStats = ({ invoices }: { invoices: Invoice[] }) => {
         icon={<DollarSign className="h-4 w-4 text-muted-foreground" />}
         description="Total amount due"
         permission="projects:view_value"
+        projects={stats.outstandingInvoices.map(p => ({ name: p.projectName }))}
       />
       <StatCard
         title="Next Payment Due"
         value={stats.nextDueDate ? format(stats.nextDueDate, 'MMM dd, yyyy') : 'N/A'}
         icon={<Clock className="h-4 w-4 text-muted-foreground" />}
         description="Date of next invoice payment"
+        projects={stats.nextDueInvoice ? [{ name: stats.nextDueInvoice.projectName }] : []}
       />
       <StatCard
         title="Overdue Invoices"
         value={stats.overdueInvoicesCount}
         icon={<AlertTriangle className="h-4 w-4 text-muted-foreground" />}
         description="Invoices past their due date"
+        projects={stats.overdueInvoices.map(p => ({ name: p.projectName }))}
       />
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

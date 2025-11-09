@@ -202,12 +202,14 @@ const DashboardStatsGrid = ({ projects }: DashboardStatsGridProps) => {
           title="Total Projects"
           value={stats.totalProjects}
           icon={<Briefcase className="h-4 w-4 text-muted-foreground" />}
+          projects={projects.map(p => ({ name: p.name }))}
         />
         <StatCard
           title="Total Project Value"
           value={`Rp\u00A0${new Intl.NumberFormat('id-ID').format(stats.totalValue)}`}
           icon={<DollarSign className="h-4 w-4 text-muted-foreground" />}
           permission="projects:view_value"
+          projects={projects.map(p => ({ name: p.name }))}
         />
         <StatCard
           title="Project Status"
@@ -219,13 +221,26 @@ const DashboardStatsGrid = ({ projects }: DashboardStatsGridProps) => {
                 const value = stats.projectStatusValues[option.value] || 0;
                 const metric = viewMode === 'quantity' ? count : value;
                 if (metric === 0) return null;
+                const projectsInStatus = projects.filter(p => p.status === option.value);
                 return (
-                  <div key={option.value} className="flex justify-between">
-                    <span>{option.label}</span>
-                    <span className="font-semibold">
-                      {viewMode === 'quantity' ? count : (canViewValue ? `Rp\u00A0${new Intl.NumberFormat('id-ID').format(value)}` : '***')}
-                    </span>
-                  </div>
+                  <TooltipProvider key={option.value}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="flex justify-between cursor-help">
+                          <span>{option.label}</span>
+                          <span className="font-semibold">
+                            {viewMode === 'quantity' ? count : (canViewValue ? `Rp\u00A0${new Intl.NumberFormat('id-ID').format(value)}` : '***')}
+                          </span>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="font-bold">Projects:</p>
+                        <ul className="list-disc pl-4 text-left">
+                          {projectsInStatus.map(p => <li key={p.id}>{p.name}</li>)}
+                        </ul>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 );
               })}
             </div>
@@ -241,13 +256,26 @@ const DashboardStatsGrid = ({ projects }: DashboardStatsGridProps) => {
                 const value = stats.paymentStatusValues[option.value] || 0;
                 const metric = viewMode === 'quantity' ? count : value;
                 if (metric === 0) return null;
+                const projectsInStatus = projects.filter(p => p.payment_status === option.value);
                 return (
-                  <div key={option.value} className="flex justify-between">
-                    <span>{option.label}</span>
-                    <span className="font-semibold">
-                      {viewMode === 'quantity' ? count : (canViewValue ? `Rp\u00A0${new Intl.NumberFormat('id-ID').format(value)}` : '***')}
-                    </span>
-                  </div>
+                  <TooltipProvider key={option.value}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="flex justify-between cursor-help">
+                          <span>{option.label}</span>
+                          <span className="font-semibold">
+                            {viewMode === 'quantity' ? count : (canViewValue ? `Rp\u00A0${new Intl.NumberFormat('id-ID').format(value)}` : '***')}
+                          </span>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="font-bold">Projects:</p>
+                        <ul className="list-disc pl-4 text-left">
+                          {projectsInStatus.map(p => <li key={p.id}>{p.name}</li>)}
+                        </ul>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 );
               })}
             </div>
