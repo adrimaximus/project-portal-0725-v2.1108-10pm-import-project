@@ -2,11 +2,6 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Project, User, PROJECT_STATUS_OPTIONS } from '@/types';
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
@@ -71,7 +66,6 @@ interface CollaboratorStat extends User {
 }
 
 const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
-  const [isOpen, setIsOpen] = useState(false);
   const [tasks, setTasks] = useState<any[]>([]);
   const [projectFilters, setProjectFilters] = useState<string[]>(() => {
     return PROJECT_STATUS_OPTIONS
@@ -513,128 +507,98 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
 
   return (
     <Card>
-      <TooltipProvider>
-        <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-          <CollapsibleTrigger className="w-full p-6">
-            <div className="flex items-center justify-between">
-              <CardTitle>Collaborators</CardTitle>
-              <div className="flex items-center gap-4">
-                {!isOpen && (
-                  <div className="flex items-center -space-x-2">
-                    {allCollaborators.slice(0, 5).map(c => (
-                      <Tooltip key={c.id}>
-                        <TooltipTrigger asChild>
-                          <Avatar className="h-8 w-8 border-2 border-card">
-                            <AvatarImage src={getAvatarUrl(c.avatar_url, c.id)} alt={c.name} />
-                            <AvatarFallback style={generatePastelColor(c.id)}>{c.initials}</AvatarFallback>
-                          </Avatar>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>{c.name}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    ))}
-                  </div>
-                )}
-                <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />
-              </div>
-            </div>
-          </CollapsibleTrigger>
-          <CollapsibleContent>
-            <CardContent className="px-6 pb-6 pt-0">
-              <div className="flex justify-end mb-4">
-                {FilterComponent}
-              </div>
-              {/* Mobile View */}
-              <div className="md:hidden max-h-[500px] overflow-y-auto">
-                {Object.entries(collaboratorsByRole).map(([role, collaboratorsInRole]) => (
-                  <div key={role}>
-                    <h3 className="text-sm font-semibold uppercase text-muted-foreground tracking-wider pt-6 pb-2">
-                      {role.replace('_', ' ')}
-                    </h3>
-                    <div className="space-y-4">
-                      {collaboratorsInRole.map(c => (
-                        <div key={c.id} className="bg-muted/50 p-4 rounded-lg">
-                          <div className="flex items-center gap-3 mb-4">
-                            <Avatar className="h-10 w-10">
-                              <AvatarImage src={getAvatarUrl(c.avatar_url, c.id)} alt={c.name} />
-                              <AvatarFallback style={generatePastelColor(c.id)}>{c.initials}</AvatarFallback>
-                            </Avatar>
-                            <span className="font-medium">{c.name}</span>
-                          </div>
-                          <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                            <div className="text-muted-foreground">Total Projects</div>
-                            <div className="text-right font-medium">{c.projectCount}</div>
-                            <div className="text-muted-foreground">Filtered Projects</div>
-                            <div className="text-right font-medium">{renderFilteredProjectCount(c)}</div>
-                            <div className="text-muted-foreground">Filtered Tasks</div>
-                            <div className="text-right font-medium">{renderFilteredTaskCount(c)}</div>
-                            <div className="text-muted-foreground">Completion Rate</div>
-                            <div className="text-right font-medium">{renderCompletionRate(c)}</div>
-                            <div className="text-muted-foreground">Overdue Tasks</div>
-                            <div className="text-right font-medium">{c.overdueTaskCount}</div>
-                            <div className="text-muted-foreground">Overdue Bill</div>
-                            <div className="text-right font-medium">{c.overdueBillCount}</div>
-                          </div>
-                        </div>
-                      ))}
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle>Collaborators</CardTitle>
+        {FilterComponent}
+      </CardHeader>
+      <CardContent>
+        {/* Mobile View */}
+        <div className="md:hidden overflow-y-auto">
+          {Object.entries(collaboratorsByRole).map(([role, collaboratorsInRole]) => (
+            <div key={role}>
+              <h3 className="text-sm font-semibold uppercase text-muted-foreground tracking-wider pt-6 pb-2">
+                {role.replace('_', ' ')}
+              </h3>
+              <div className="space-y-4">
+                {collaboratorsInRole.map(c => (
+                  <div key={c.id} className="bg-muted/50 p-4 rounded-lg">
+                    <div className="flex items-center gap-3 mb-4">
+                      <Avatar className="h-10 w-10">
+                        <AvatarImage src={getAvatarUrl(c.avatar_url, c.id)} alt={c.name} />
+                        <AvatarFallback style={generatePastelColor(c.id)}>{c.initials}</AvatarFallback>
+                      </Avatar>
+                      <span className="font-medium">{c.name}</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                      <div className="text-muted-foreground">Total Projects</div>
+                      <div className="text-right font-medium">{c.projectCount}</div>
+                      <div className="text-muted-foreground">Filtered Projects</div>
+                      <div className="text-right font-medium">{renderFilteredProjectCount(c)}</div>
+                      <div className="text-muted-foreground">Filtered Tasks</div>
+                      <div className="text-right font-medium">{renderFilteredTaskCount(c)}</div>
+                      <div className="text-muted-foreground">Completion Rate</div>
+                      <div className="text-right font-medium">{renderCompletionRate(c)}</div>
+                      <div className="text-muted-foreground">Overdue Tasks</div>
+                      <div className="text-right font-medium">{c.overdueTaskCount}</div>
+                      <div className="text-muted-foreground">Overdue Bill</div>
+                      <div className="text-right font-medium">{c.overdueBillCount}</div>
                     </div>
                   </div>
                 ))}
               </div>
+            </div>
+          ))}
+        </div>
 
-              {/* Desktop View */}
-              <div className="hidden md:block overflow-auto max-h-[500px]">
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Collaborator</TableHead>
-                            <SortableTableHead columnKey="projectCount">Total Projects</SortableTableHead>
-                            <TableHead className="text-right">Filtered Projects</TableHead>
-                            <TableHead className="text-right">Filtered Tasks</TableHead>
-                            <SortableTableHead columnKey="completionRate">Completion Rate</SortableTableHead>
-                            <SortableTableHead columnKey="overdueTaskCount">Overdue Tasks</SortableTableHead>
-                            <SortableTableHead columnKey="overdueBillCount">Overdue Bill</SortableTableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {Object.entries(collaboratorsByRole).map(([role, collaboratorsInRole]) => (
-                          <React.Fragment key={role}>
-                            <TableRow className="border-b-0 hover:bg-transparent">
-                              <TableCell colSpan={7} className="pt-6 pb-2">
-                                <h3 className="text-sm font-semibold uppercase text-muted-foreground tracking-wider">
-                                  {role.replace('_', ' ')}
-                                </h3>
+        {/* Desktop View */}
+        <div className="hidden md:block overflow-auto">
+          <Table>
+              <TableHeader>
+                  <TableRow>
+                      <TableHead>Collaborator</TableHead>
+                      <SortableTableHead columnKey="projectCount">Total Projects</SortableTableHead>
+                      <TableHead className="text-right">Filtered Projects</TableHead>
+                      <TableHead className="text-right">Filtered Tasks</TableHead>
+                      <SortableTableHead columnKey="completionRate">Completion Rate</SortableTableHead>
+                      <SortableTableHead columnKey="overdueTaskCount">Overdue Tasks</SortableTableHead>
+                      <SortableTableHead columnKey="overdueBillCount">Overdue Bill</SortableTableHead>
+                  </TableRow>
+              </TableHeader>
+              <TableBody>
+                  {Object.entries(collaboratorsByRole).map(([role, collaboratorsInRole]) => (
+                    <React.Fragment key={role}>
+                      <TableRow className="border-b-0 hover:bg-transparent">
+                        <TableCell colSpan={7} className="pt-6 pb-2">
+                          <h3 className="text-sm font-semibold uppercase text-muted-foreground tracking-wider">
+                            {role.replace('_', ' ')}
+                          </h3>
+                        </TableCell>
+                      </TableRow>
+                      {collaboratorsInRole.map(c => (
+                          <TableRow key={c.id}>
+                              <TableCell>
+                                  <div className="flex items-center gap-3">
+                                      <Avatar className="h-8 w-8">
+                                          <AvatarImage src={getAvatarUrl(c.avatar_url, c.id)} alt={c.name} />
+                                          <AvatarFallback style={generatePastelColor(c.id)}>{c.initials}</AvatarFallback>
+                                      </Avatar>
+                                      <span className="font-medium whitespace-nowrap">{c.name}</span>
+                                  </div>
                               </TableCell>
-                            </TableRow>
-                            {collaboratorsInRole.map(c => (
-                                <TableRow key={c.id}>
-                                    <TableCell>
-                                        <div className="flex items-center gap-3">
-                                            <Avatar className="h-8 w-8">
-                                                <AvatarImage src={getAvatarUrl(c.avatar_url, c.id)} alt={c.name} />
-                                                <AvatarFallback style={generatePastelColor(c.id)}>{c.initials}</AvatarFallback>
-                                            </Avatar>
-                                            <span className="font-medium whitespace-nowrap">{c.name}</span>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell className="text-right font-medium">{c.projectCount}</TableCell>
-                                    <TableCell className="text-right font-medium">{renderFilteredProjectCount(c)}</TableCell>
-                                    <TableCell className="text-right font-medium">{renderFilteredTaskCount(c)}</TableCell>
-                                    <TableCell className="text-right font-medium">{renderCompletionRate(c)}</TableCell>
-                                    <TableCell className="text-right font-medium">{c.overdueTaskCount}</TableCell>
-                                    <TableCell className="text-right font-medium">{c.overdueBillCount}</TableCell>
-                                </TableRow>
-                            ))}
-                          </React.Fragment>
-                        ))}
-                    </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </CollapsibleContent>
-        </Collapsible>
-      </TooltipProvider>
+                              <TableCell className="text-right font-medium">{c.projectCount}</TableCell>
+                              <TableCell className="text-right font-medium">{renderFilteredProjectCount(c)}</TableCell>
+                              <TableCell className="text-right font-medium">{renderFilteredTaskCount(c)}</TableCell>
+                              <TableCell className="text-right font-medium">{renderCompletionRate(c)}</TableCell>
+                              <TableCell className="text-right font-medium">{c.overdueTaskCount}</TableCell>
+                              <TableCell className="text-right font-medium">{c.overdueBillCount}</TableCell>
+                          </TableRow>
+                      ))}
+                    </React.Fragment>
+                  ))}
+              </TableBody>
+          </Table>
+        </div>
+      </CardContent>
     </Card>
   );
 };

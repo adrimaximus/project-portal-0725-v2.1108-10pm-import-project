@@ -17,16 +17,15 @@ import { Progress } from '@/components/ui/progress';
 import { useTaskModal } from '@/contexts/TaskModalContext';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import RecentActivityWidget from './RecentActivityWidget';
-import CollaboratorsList from './CollaboratorsList';
-import { useProjects } from '@/hooks/useProjects';
+import CollaboratorsWidget from './CollaboratorsWidget';
 
 const ActivityHubWidget = () => {
   const { user } = useAuth();
   const { data: allTasks = [], isLoading, refetch } = useTasks({
     sortConfig: { key: 'due_date', direction: 'asc' },
   });
-  const { data: projects = [], isLoading: isLoadingProjects } = useProjects();
   const { onOpen: onOpenTaskModal } = useTaskModal();
+  const [activeTab, setActiveTab] = useState('my-tasks');
 
   const [filter, setFilter] = useState<'upcoming' | 'overdue'>('upcoming');
 
@@ -104,18 +103,26 @@ const ActivityHubWidget = () => {
     toggleTaskReaction({ taskId, emoji });
   };
 
+  const viewAllLinks: Record<string, string> = {
+    'my-tasks': '/projects?view=tasks',
+    'collaborators': '/team-overview',
+  };
+  const viewAllLink = viewAllLinks[activeTab];
+
   return (
     <Card>
-      <Tabs defaultValue="my-tasks" className="w-full">
+      <Tabs defaultValue="my-tasks" className="w-full" onValueChange={setActiveTab}>
         <CardHeader className="flex flex-row items-center justify-between gap-2 pb-4">
           <TabsList>
             <TabsTrigger value="my-tasks">My Tasks</TabsTrigger>
             <TabsTrigger value="recent-activity">Recent Activity</TabsTrigger>
             <TabsTrigger value="collaborators">Collaborators</TabsTrigger>
           </TabsList>
-          <Button asChild variant="link" className="text-sm -my-2 -mr-4">
-            <Link to="/projects?view=tasks">View all</Link>
-          </Button>
+          {viewAllLink && (
+            <Button asChild variant="link" className="text-sm -my-2 -mr-4">
+              <Link to={viewAllLink}>View all</Link>
+            </Button>
+          )}
         </CardHeader>
         <CardContent>
           <TabsContent value="my-tasks" className="mt-0 space-y-4">
@@ -255,13 +262,7 @@ const ActivityHubWidget = () => {
             <RecentActivityWidget />
           </TabsContent>
           <TabsContent value="collaborators" className="mt-0">
-            {isLoadingProjects ? (
-              <div className="flex justify-center items-center h-48">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-              </div>
-            ) : (
-              <CollaboratorsList projects={projects} />
-            )}
+            <CollaboratorsWidget />
           </TabsContent>
         </CardContent>
       </Tabs>
