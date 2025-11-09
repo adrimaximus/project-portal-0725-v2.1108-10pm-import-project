@@ -24,7 +24,7 @@ const KanbanColumn = ({ status, projects, dragHappened, isCollapsed, onToggleCol
     <div 
       ref={setNodeRef} 
       className={cn(
-        "flex-shrink-0 transition-all duration-300 ease-in-out",
+        "flex-shrink-0 transition-all duration-300 ease-in-out h-full",
         isCollapsed ? "w-14" : "w-[280px] sm:w-72"
       )}
     >
