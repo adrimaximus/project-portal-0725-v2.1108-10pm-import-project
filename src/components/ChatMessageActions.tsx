@@ -126,7 +126,7 @@ export const ChatMessageActions = ({
       <DropdownMenu open={isMenuOpen} onOpenChange={setIsMenuOpen}>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" size="icon" className={cn("h-6 w-6 opacity-0 group-hover:opacity-100 data-[state=open]:opacity-100 transition-opacity flex-shrink-0", className)}>
-            <ChevronDown className="h-4 w-4" />
+            <ChevronDown className="h-3 w-3" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align={isCurrentUser ? "end" : "start"} onClick={(e) => e.stopPropagation()}>
