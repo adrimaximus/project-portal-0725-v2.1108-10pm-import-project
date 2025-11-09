@@ -43,7 +43,6 @@ export const fetchMessages = async (conversationId: string): Promise<Message[]> 
       id: m.id,
       text: m.content,
       timestamp: m.created_at,
-      updated_at: m.updated_at,
       sender: {
         id: m.sender_id,
         name: senderName || m.sender_email,

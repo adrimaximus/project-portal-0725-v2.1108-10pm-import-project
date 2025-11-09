@@ -91,7 +91,7 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
 
   return (
     <div className="flex-1 relative">
-      <div ref={scrollContainerRef} className="absolute inset-0 overflow-y-auto px-0.5 py-4 space-y-1">
+      <div ref={scrollContainerRef} className="absolute inset-0 overflow-y-auto p-4 space-y-1">
         {messages.map((message, index) => {
           const isCurrentUser = message.sender.id === currentUser.id;
           const sender = members.find(m => m.id === message.sender.id) || message.sender;
@@ -101,7 +101,6 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
           
           const showDateSeparator = !prevMessage || !isSameDay(parseISO(prevMessage.timestamp), parseISO(message.timestamp));
           const isBeingEdited = editingMessage && editingMessage.id === message.id;
-          const wasEdited = message.updated_at && (new Date(message.updated_at).getTime() - new Date(message.timestamp).getTime() > 10000);
           
           return (
             <React.Fragment key={message.id || index}>
@@ -155,11 +154,11 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                         <div className={cn("flex flex-col", isCurrentUser ? "items-end" : "items-start", !isCurrentUser && isSameSenderAsPrevious && "ml-10")}>
                           <div
                             className={cn(
-                              "max-w-sm md:max-w-lg lg:max-w-xl rounded-lg relative group",
+                              "max-w-xs md:max-w-md lg:max-w-lg rounded-lg relative group",
                               isCurrentUser
                                 ? "bg-primary text-primary-foreground"
                                 : "bg-muted",
-                              isImageAttachment ? "p-1 overflow-hidden" : "p-1",
+                              isImageAttachment ? "p-px overflow-hidden" : "px-2 py-1",
                               isAudioAttachment ? "p-0" : ""
                             )}
                           >
@@ -180,7 +179,7 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                               {message.repliedMessage && message.reply_to_message_id && (
                                 <button 
                                   onClick={() => handleScrollToMessage(message.reply_to_message_id!)}
-                                  className="w-full text-left p-1 mb-1 text-sm bg-black/10 dark:bg-white/10 rounded-md border-l-2 border-primary hover:bg-black/20 dark:hover:bg-white/20 transition-colors"
+                                  className="w-full text-left p-2 mb-1 text-sm bg-black/10 dark:bg-white/10 rounded-md border-l-2 border-primary hover:bg-black/20 dark:hover:bg-white/20 transition-colors"
                                 >
                                   <div className="flex justify-between items-start">
                                     <div className="flex-1 overflow-hidden">
@@ -218,12 +217,11 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                                 <div>
                                   <div className="relative group/image">
                                     <a href={message.attachment!.url} target="_blank" rel="noopener noreferrer">
-                                      <img src={message.attachment!.url} alt={message.attachment!.name} className="max-w-xs h-auto rounded-md" />
+                                      <img src={message.attachment!.url} alt={message.attachment!.name} className="max-w-full h-auto rounded-md" />
                                     </a>
                                     {!message.text && (
                                       <div className="absolute bottom-1 right-1 flex items-end">
                                         <div className="flex-shrink-0 self-end flex items-center gap-0 bg-black/40 rounded-full pl-1.5">
-                                          {wasEdited && <span className="text-xs italic text-white/70 mr-1">Edited</span>}
                                           <span className="text-xs text-white/90 py-0.5">
                                             {formatTimestamp(message.timestamp)}
                                           </span>
@@ -273,7 +271,6 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                                         </div>
                                       </div>
                                       <div className="flex-shrink-0 self-end flex items-center gap-0">
-                                        {wasEdited && <span className={cn("text-xs italic mr-1", isCurrentUser ? "text-primary-foreground/70" : "text-muted-foreground")}>Edited</span>}
                                         <span className={cn(
                                             "text-xs",
                                             isCurrentUser ? "text-primary-foreground/70" : "text-muted-foreground"
@@ -346,7 +343,6 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                                     )}
                                   </div>
                                   <div className="flex-shrink-0 self-end flex items-center gap-0">
-                                      {wasEdited && <span className={cn("text-xs italic mr-1", isCurrentUser ? "text-primary-foreground/70" : "text-muted-foreground")}>Edited</span>}
                                       <span className={cn(
                                           "text-xs",
                                           isCurrentUser ? "text-primary-foreground/70" : "text-muted-foreground"
