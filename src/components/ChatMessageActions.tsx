@@ -20,6 +20,7 @@ import {
   Pencil,
   Trash2,
   MoreHorizontal,
+  Download,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useChatContext } from "@/contexts/ChatContext";
@@ -61,6 +62,18 @@ export const ChatMessageActions = ({
     if (message.text) {
       navigator.clipboard.writeText(message.text);
       toast.success("Message copied to clipboard.");
+    }
+  };
+
+  const handleDownload = () => {
+    if (message.attachment) {
+      const link = document.createElement('a');
+      link.href = message.attachment.url;
+      link.download = message.attachment.name || 'download';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      toast.success("Download started.");
     }
   };
 
@@ -152,6 +165,12 @@ export const ChatMessageActions = ({
               <Share className="mr-2 h-4 w-4" />
               <span>Forward</span>
             </DropdownMenuItem>
+            {message.attachment && (
+              <DropdownMenuItem onClick={handleDownload}>
+                <Download className="mr-2 h-4 w-4" />
+                <span>Download</span>
+              </DropdownMenuItem>
+            )}
             {message.text && (
               <DropdownMenuItem onClick={handleCopy}>
                 <Copy className="mr-2 h-4 w-4" />
