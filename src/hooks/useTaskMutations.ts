@@ -136,6 +136,26 @@ export const useTaskMutations = (refetch?: () => void) => {
     },
   });
 
+  const { mutate: updateTask, isPending: isUpdatingTask } = useMutation({
+    mutationFn: async (payload: { taskId: string; updates: Partial<Task> }) => {
+      const { error } = await supabase
+        .from('tasks')
+        .update(payload.updates)
+        .eq('id', payload.taskId);
+      if (error) throw error;
+      return payload;
+    },
+    onSuccess: (_, { updates }) => {
+      const updatedField = Object.keys(updates)[0] || 'Task';
+      const capitalizedField = updatedField.charAt(0).toUpperCase() + updatedField.slice(1);
+      toast.success(`${capitalizedField} updated successfully.`);
+      invalidateQueries();
+    },
+    onError: (error: any) => {
+      toast.error('Failed to update task.', { description: getErrorMessage(error) });
+    },
+  });
+
   const { mutate: updateTaskStatusAndOrder } = useMutation<
     void,
     Error,
@@ -288,5 +308,5 @@ export const useTaskMutations = (refetch?: () => void) => {
     }
   });
 
-  return { upsertTask, isUpserting, deleteTask, toggleTaskCompletion, isToggling, updateTaskStatusAndOrder, toggleTaskReaction, sendReminder, isSendingReminder, createTasks, isCreatingTasks };
+  return { upsertTask, isUpserting, deleteTask, toggleTaskCompletion, isToggling, updateTaskStatusAndOrder, toggleTaskReaction, sendReminder, isSendingReminder, createTasks, isCreatingTasks, updateTask, isUpdatingTask };
 };

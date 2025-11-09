@@ -51,6 +51,7 @@ import { Textarea } from '../ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../ui/collapsible';
 import { useTaskModal } from '@/contexts/TaskModalContext';
+import { Input } from '../ui/input';
 
 interface TaskDetailCardProps {
   task: Task;
@@ -95,7 +96,9 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
     sendReminder, 
     isSendingReminder, 
     updateTaskStatusAndOrder,
-    toggleTaskCompletion
+    toggleTaskCompletion,
+    updateTask,
+    isUpdatingTask,
   } = useTaskMutations();
   const { 
     comments, 
@@ -116,6 +119,28 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
   const { data: allUsers = [] } = useProfiles();
   const { onOpen: onOpenTaskModal } = useTaskModal();
   const [replyTo, setReplyTo] = useState<CommentType | null>(null);
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [editedTitle, setEditedTitle] = useState(task.title);
+
+  useEffect(() => {
+    setEditedTitle(task.title);
+  }, [task.title]);
+
+  const handleTitleSave = () => {
+    if (editedTitle.trim() && editedTitle !== task.title) {
+      updateTask({ taskId: task.id, updates: { title: editedTitle } });
+    }
+    setIsEditingTitle(false);
+  };
+
+  const handleTitleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleTitleSave();
+    } else if (e.key === 'Escape') {
+      setEditedTitle(task.title);
+      setIsEditingTitle(false);
+    }
+  };
 
   const handleToggleCompletion = () => {
     if (toggleTaskCompletion) {
@@ -239,9 +264,27 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 text-base sm:text-lg font-semibold leading-none tracking-tight">
                 {task.origin_ticket_id && <Ticket className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />}
-                <span className={cn("min-w-0 break-words whitespace-normal", task.completed && "line-through text-muted-foreground")}>
-                  {task.title}
-                </span>
+                {isEditingTitle ? (
+                  <Input
+                    value={editedTitle}
+                    onChange={(e) => setEditedTitle(e.target.value)}
+                    onBlur={handleTitleSave}
+                    onKeyDown={handleTitleKeyDown}
+                    className="text-lg font-semibold h-auto p-0 border-0 shadow-none focus-visible:ring-1 focus-visible:ring-ring"
+                    autoFocus
+                    disabled={isUpdatingTask}
+                  />
+                ) : (
+                  <span
+                    className={cn(
+                      "min-w-0 break-words whitespace-normal cursor-pointer",
+                      task.completed && "line-through text-muted-foreground"
+                    )}
+                    onClick={() => !task.completed && setIsEditingTitle(true)}
+                  >
+                    {task.title}
+                  </span>
+                )}
               </div>
               <p className="text-xs text-muted-foreground mt-1">
                 Created on {format(new Date(task.created_at), "MMM d, yyyy")}
