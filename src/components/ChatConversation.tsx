@@ -117,7 +117,12 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
               )}
               {message.is_deleted ? (
                 <div id={`message-${message.id}`} className={cn("flex my-2", isCurrentUser ? "justify-end" : "justify-start")}>
-                  <div className="flex items-center gap-2 rounded-lg px-3 py-2 bg-muted text-muted-foreground text-sm italic">
+                  <div className={cn(
+                    "flex items-center gap-2 rounded-lg px-3 py-2 text-sm italic",
+                    isCurrentUser
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-muted-foreground"
+                  )}>
                     <Ban className="h-4 w-4 flex-shrink-0" />
                     <p>This message was deleted</p>
                   </div>
