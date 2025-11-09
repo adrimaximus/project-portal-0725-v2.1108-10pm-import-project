@@ -116,98 +116,99 @@ export const ChatMessageActions = ({
 
   return (
     <>
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className={cn("h-6 w-6 opacity-0 group-hover:opacity-100 data-[state=open]:opacity-100 transition-opacity flex-shrink-0", className)}>
-              <ChevronDown className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align={isCurrentUser ? "end" : "start"} onClick={(e) => e.stopPropagation()}>
-            <DropdownMenuItem onClick={() => onReply(message)}>
-              <CornerUpLeft className="mr-2 h-4 w-4" />
-              <span>Reply</span>
-            </DropdownMenuItem>
-            
-            <DropdownMenuSub>
-              <DropdownMenuSubTrigger>
-                <Smile className="mr-2 h-4 w-4" />
-                <span>React</span>
-              </DropdownMenuSubTrigger>
-              <DropdownMenuPortal>
-                <DropdownMenuSubContent>
-                  <div className="flex p-1 items-center">
-                    {QUICK_REACTIONS.map(emoji => (
-                      <Button
-                        key={emoji}
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-xl"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleReaction(message.id, emoji);
-                        }}
-                      >
-                        {emoji}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="icon" className={cn("h-6 w-6 opacity-0 group-hover:opacity-100 data-[state=open]:opacity-100 transition-opacity flex-shrink-0", className)}>
+            <ChevronDown className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align={isCurrentUser ? "end" : "start"} onClick={(e) => e.stopPropagation()}>
+          <DropdownMenuItem onClick={() => onReply(message)}>
+            <CornerUpLeft className="mr-2 h-4 w-4" />
+            <span>Reply</span>
+          </DropdownMenuItem>
+          
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>
+              <Smile className="mr-2 h-4 w-4" />
+              <span>React</span>
+            </DropdownMenuSubTrigger>
+            <DropdownMenuPortal>
+              <DropdownMenuSubContent>
+                <div className="flex p-1 items-center">
+                  {QUICK_REACTIONS.map(emoji => (
+                    <Button
+                      key={emoji}
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-xl"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleReaction(message.id, emoji);
+                      }}
+                    >
+                      {emoji}
+                    </Button>
+                  ))}
+                  <Popover open={emojiPickerOpen} onOpenChange={setEmojiPickerOpen}>
+                    <PopoverTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
+                        <MoreHorizontal className="h-4 w-4" />
                       </Button>
-                    ))}
-                    <Popover open={emojiPickerOpen} onOpenChange={setEmojiPickerOpen}>
-                      <PopoverTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="p-0 w-auto border-none" onClick={(e) => e.stopPropagation()}>
-                        <Picker
-                          data={data}
-                          onEmojiSelect={(emoji: any) => {
-                            toggleReaction(message.id, emoji.native);
-                            setEmojiPickerOpen(false);
-                          }}
-                          theme={theme === 'dark' ? 'dark' : 'light'}
-                          previewPosition="none"
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                </DropdownMenuSubContent>
-              </DropdownMenuPortal>
-            </DropdownMenuSub>
+                    </PopoverTrigger>
+                    <PopoverContent className="p-0 w-auto border-none" onClick={(e) => e.stopPropagation()}>
+                      <Picker
+                        data={data}
+                        onEmojiSelect={(emoji: any) => {
+                          toggleReaction(message.id, emoji.native);
+                          setEmojiPickerOpen(false);
+                        }}
+                        theme={theme === 'dark' ? 'dark' : 'light'}
+                        previewPosition="none"
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </DropdownMenuSubContent>
+            </DropdownMenuPortal>
+          </DropdownMenuSub>
 
-            <DropdownMenuItem onClick={() => openForwardDialog(message)}>
-              <Share className="mr-2 h-4 w-4" />
-              <span>Forward</span>
+          <DropdownMenuItem onClick={() => openForwardDialog(message)}>
+            <Share className="mr-2 h-4 w-4" />
+            <span>Forward</span>
+          </DropdownMenuItem>
+          {message.attachment && (
+            <DropdownMenuItem onClick={handleDownload}>
+              <Download className="mr-2 h-4 w-4" />
+              <span>Download</span>
             </DropdownMenuItem>
-            {message.attachment && (
-              <DropdownMenuItem onClick={handleDownload}>
-                <Download className="mr-2 h-4 w-4" />
-                <span>Download</span>
+          )}
+          {message.text && (
+            <DropdownMenuItem onClick={handleCopy}>
+              <Copy className="mr-2 h-4 w-4" />
+              <span>Copy</span>
+            </DropdownMenuItem>
+          )}
+          {isCurrentUser && !message.is_deleted && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleEdit}>
+                <Pencil className="mr-2 h-4 w-4" />
+                <span>Edit</span>
               </DropdownMenuItem>
-            )}
-            {message.text && (
-              <DropdownMenuItem onClick={handleCopy}>
-                <Copy className="mr-2 h-4 w-4" />
-                <span>Copy</span>
+              <DropdownMenuItem
+                className="text-destructive focus:text-destructive"
+                onClick={() => setIsDeleteDialogOpen(true)}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                <span>Delete</span>
               </DropdownMenuItem>
-            )}
-            {isCurrentUser && !message.is_deleted && (
-              <>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleEdit}>
-                  <Pencil className="mr-2 h-4 w-4" />
-                  <span>Edit</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  className="text-destructive focus:text-destructive"
-                  onClick={() => setIsDeleteDialogOpen(true)}
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  <span>Delete</span>
-                </DropdownMenuItem>
-              </>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
+            </>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+      
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent onClick={(e) => e.stopPropagation()}>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Message?</AlertDialogTitle>
