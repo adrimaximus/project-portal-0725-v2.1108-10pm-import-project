@@ -90,7 +90,13 @@ const aggregateAttachments = (task: Task): TaskAttachment[] => {
 
 const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, onDelete }) => {
   const { user } = useAuth();
-  const { toggleTaskReaction, sendReminder, isSendingReminder, updateTaskStatusAndOrder } = useTaskMutations();
+  const { 
+    toggleTaskReaction, 
+    sendReminder, 
+    isSendingReminder, 
+    updateTaskStatusAndOrder,
+    toggleTaskCompletion
+  } = useTaskMutations();
   const { 
     comments, 
     isLoadingComments, 
@@ -110,6 +116,12 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
   const { data: allUsers = [] } = useProfiles();
   const { onOpen: onOpenTaskModal } = useTaskModal();
   const [replyTo, setReplyTo] = useState<CommentType | null>(null);
+
+  const handleToggleCompletion = () => {
+    if (toggleTaskCompletion) {
+      toggleTaskCompletion({ task, completed: !task.completed });
+    }
+  };
 
   const handleAddComment = (text: string, isTicket: boolean, attachments: File[] | null, mentionedUserIds: string[]) => {
     addComment.mutate({ text, isTicket, attachments, replyToId: replyTo?.id });
@@ -236,24 +248,32 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
               </p>
             </div>
 
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8">
-                  <MoreHorizontal className="h-4 w-4" />
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {!task.completed && (
+                <Button size="sm" variant="outline" onClick={handleToggleCompletion} className="h-8">
+                  <CheckCircle className="mr-2 h-4 w-4" />
+                  Mark complete
                 </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onSelect={() => { onEdit(task); onClose(); }}>
-                  <Edit className="mr-2 h-4 w-4" /> Edit
-                </DropdownMenuItem>
-                <DropdownMenuItem onSelect={handleCopyLink}>
-                  <LinkIcon className="mr-2 h-4 w-4" /> Copy Link
-                </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => { onDelete(task); onClose(); }} className="text-destructive">
-                  <Trash2 className="mr-2 h-4 w-4" /> Delete
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+              )}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onSelect={() => { onEdit(task); onClose(); }}>
+                    <Edit className="mr-2 h-4 w-4" /> Edit
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={handleCopyLink}>
+                    <LinkIcon className="mr-2 h-4 w-4" /> Copy Link
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => { onDelete(task); onClose(); }} className="text-destructive">
+                    <Trash2 className="mr-2 h-4 w-4" /> Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
         </div>
 
