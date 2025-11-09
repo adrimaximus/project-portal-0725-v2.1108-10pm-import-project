@@ -49,7 +49,17 @@ interface ChatContextType {
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
-export const ChatProvider = ({ children }: { children: ReactNode }) => {
+const DialogRenderer = ({ message, onClose }: { message: Message | null, onClose: () => void }) => {
+  return (
+    <ForwardMessageDialog
+      message={message}
+      isOpen={!!message}
+      onClose={onClose}
+    />
+  );
+};
+
+const ChatProviderComponent = ({ children }: { children: ReactNode }) => {
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const selectedConversationIdRef = useRef<string | null>(null);
   const [isSomeoneTyping, setIsSomeoneTyping] = useState(false);
@@ -435,7 +445,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     mutationFn: async ({ messageId, newText }: { messageId: string, newText: string }) => {
       const { error } = await supabase
         .from('messages')
-        .update({ content: newText })
+        .update({ content: newText, updated_at: new Date().toISOString() })
         .eq('id', messageId);
       if (error) throw error;
     },
@@ -541,13 +551,13 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
   return (
     <ChatContext.Provider value={value}>
       {children}
-      <ForwardMessageDialog
-        message={messageToForward}
-        isOpen={!!messageToForward}
-        onClose={() => setMessageToForward(null)}
-      />
+      <DialogRenderer message={messageToForward} onClose={() => setMessageToForward(null)} />
     </ChatContext.Provider>
   );
+};
+
+export const ChatProvider = ({ children }: { children: ReactNode }) => {
+  return <ChatProviderComponent>{children}</ChatProviderComponent>;
 };
 
 export const useChatContext = () => {

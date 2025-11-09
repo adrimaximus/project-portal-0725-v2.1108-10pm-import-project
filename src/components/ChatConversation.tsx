@@ -102,6 +102,9 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
           const showDateSeparator = !prevMessage || !isSameDay(parseISO(prevMessage.timestamp), parseISO(message.timestamp));
           const isBeingEdited = editingMessage && editingMessage.id === message.id;
           
+          const typedMessage = message as Message & { updated_at?: string };
+          const isEdited = typedMessage.updated_at && typedMessage.timestamp && Math.abs(new Date(typedMessage.updated_at).getTime() - new Date(typedMessage.timestamp).getTime()) > 1000;
+
           return (
             <React.Fragment key={message.id || index}>
               {showDateSeparator && (
@@ -221,7 +224,8 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                                     </a>
                                     {!message.text && (
                                       <div className="absolute bottom-1 right-1 flex items-end">
-                                        <div className="flex-shrink-0 self-end flex items-center gap-0 bg-black/40 rounded-full pl-1.5">
+                                        <div className="flex-shrink-0 self-end flex items-center gap-1 bg-black/40 rounded-full pl-1.5">
+                                          {isEdited && <span className="text-xs text-white/90">Edited</span>}
                                           <span className="text-xs text-white/90 py-0.5">
                                             {formatTimestamp(message.timestamp)}
                                           </span>
@@ -270,7 +274,8 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                                           </ReactMarkdown>
                                         </div>
                                       </div>
-                                      <div className="flex-shrink-0 self-end flex items-center gap-0">
+                                      <div className="flex-shrink-0 self-end flex items-center gap-1">
+                                        {isEdited && <span className={cn("text-xs", isCurrentUser ? "text-primary-foreground/70" : "text-muted-foreground")}>Edited</span>}
                                         <span className={cn(
                                             "text-xs",
                                             isCurrentUser ? "text-primary-foreground/70" : "text-muted-foreground"
@@ -342,7 +347,8 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                                       <MessageAttachment attachment={message.attachment} />
                                     )}
                                   </div>
-                                  <div className="flex-shrink-0 self-end flex items-center gap-0">
+                                  <div className="flex-shrink-0 self-end flex items-center gap-1">
+                                      {isEdited && <span className={cn("text-xs", isCurrentUser ? "text-primary-foreground/70" : "text-muted-foreground")}>Edited</span>}
                                       <span className={cn(
                                           "text-xs",
                                           isCurrentUser ? "text-primary-foreground/70" : "text-muted-foreground"
