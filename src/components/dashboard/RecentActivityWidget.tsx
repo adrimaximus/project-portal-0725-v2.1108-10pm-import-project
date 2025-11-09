@@ -1,12 +1,19 @@
+import { useMemo } from 'react';
 import { useActivities } from '@/hooks/useActivities';
 import { Loader2 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getAvatarUrl, getInitials, generatePastelColor } from '@/lib/utils';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow, subDays } from 'date-fns';
 import { Link } from 'react-router-dom';
 
 const RecentActivityWidget = () => {
   const { data: activities, isLoading } = useActivities();
+
+  const recentActivities = useMemo(() => {
+    if (!activities) return [];
+    const twentyFourHoursAgo = subDays(new Date(), 1);
+    return activities.filter(activity => new Date(activity.created_at) > twentyFourHoursAgo);
+  }, [activities]);
 
   if (isLoading) {
     return (
@@ -16,17 +23,17 @@ const RecentActivityWidget = () => {
     );
   }
 
-  if (!activities || activities.length === 0) {
+  if (!recentActivities || recentActivities.length === 0) {
     return (
       <div className="text-center py-10">
-        <p className="text-sm text-muted-foreground">No recent activity.</p>
+        <p className="text-sm text-muted-foreground">No activity in the last 24 hours.</p>
       </div>
     );
   }
 
   return (
-    <div className="divide-y divide-border -mx-6 -my-6">
-      {activities.map(activity => (
+    <div className="divide-y divide-border -mx-6 -my-6 max-h-[500px] overflow-y-auto">
+      {recentActivities.map(activity => (
         <div key={activity.id} className="flex items-start gap-3 px-6 py-3">
           <Avatar className="h-8 w-8">
             <AvatarImage src={getAvatarUrl(activity.user_avatar_url, activity.user_id)} alt={activity.user_name || ''} />
