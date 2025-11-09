@@ -249,7 +249,12 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
             </div>
 
             <div className="flex items-center gap-2 flex-shrink-0">
-              {!task.completed && (
+              {task.completed ? (
+                <Button size="sm" variant="outline" onClick={handleToggleCompletion} className="h-8 border-green-500 bg-green-500/10 text-green-500 hover:bg-green-500/20 hover:text-green-600">
+                  <CheckCircle className="mr-2 h-4 w-4" />
+                  Completed
+                </Button>
+              ) : (
                 <Button size="sm" variant="outline" onClick={handleToggleCompletion} className="h-8">
                   <CheckCircle className="mr-2 h-4 w-4" />
                   Mark complete
