@@ -65,15 +65,28 @@ export const ChatMessageActions = ({
     }
   };
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     if (message.attachment) {
-      const link = document.createElement('a');
-      link.href = message.attachment.url;
-      link.download = message.attachment.name || 'download';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      toast.success("Download started.");
+      const loadingToast = toast.loading("Preparing download...");
+      try {
+        const response = await fetch(message.attachment.url);
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = message.attachment.name || 'download';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+        toast.success("Download started.", { id: loadingToast });
+      } catch (error) {
+        console.error("Download failed:", error);
+        toast.error("Failed to download file.", { id: loadingToast });
+      }
     }
   };
 
