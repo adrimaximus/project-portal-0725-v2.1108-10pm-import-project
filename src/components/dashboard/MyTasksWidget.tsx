@@ -145,7 +145,7 @@ const MyTasksWidget = () => {
           <span className="text-sm font-semibold">{completionPercentage.toFixed(0)}%</span>
         </div>
       </div>
-      <div className="space-y-2 max-h-64 overflow-y-auto pr-2">
+      <div className="space-y-2 pr-2">
         {overdueTasks.map(task => <TaskItem key={task.id} task={task} />)}
         {upcomingTasks.map(task => <TaskItem key={task.id} task={task} />)}
       </div>
