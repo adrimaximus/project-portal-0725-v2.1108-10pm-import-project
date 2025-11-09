@@ -179,33 +179,84 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                         )}
 
                         {isImageAttachment ? (
-                          <div className="relative group/image">
-                            <a href={message.attachment!.url} target="_blank" rel="noopener noreferrer">
-                              <img src={message.attachment!.url} alt={message.attachment!.name} className="max-w-full h-auto rounded-md" />
-                            </a>
-                            <div className="absolute top-1 right-1 opacity-0 group-hover/image:opacity-100 transition-opacity">
-                              <a
-                                href={message.attachment!.url}
-                                download={message.attachment!.name}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                              >
-                                <Button variant="ghost" size="icon" className="h-8 w-8 bg-black/40 hover:bg-black/60 text-white hover:text-white">
-                                  <Download className="h-4 w-4" />
-                                </Button>
+                          <div>
+                            <div className="relative group/image">
+                              <a href={message.attachment!.url} target="_blank" rel="noopener noreferrer">
+                                <img src={message.attachment!.url} alt={message.attachment!.name} className="max-w-full h-auto rounded-md" />
                               </a>
-                            </div>
-                            <div className="absolute bottom-1 right-1 flex items-end gap-2 w-full p-1 justify-end">
-                              <div className="flex-grow min-w-0">
-                                {message.text && <p className="text-white text-sm break-words bg-black/40 rounded-md px-2 py-1 inline-block">{message.text}</p>}
+                              <div className="absolute top-1 right-1 opacity-0 group-hover/image:opacity-100 transition-opacity">
+                                <a
+                                  href={message.attachment!.url}
+                                  download={message.attachment!.name}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                >
+                                  <Button variant="ghost" size="icon" className="h-8 w-8 bg-black/40 hover:bg-black/60 text-white hover:text-white">
+                                    <Download className="h-4 w-4" />
+                                  </Button>
+                                </a>
                               </div>
-                              <div className="flex-shrink-0 self-end flex items-center gap-0 bg-black/40 rounded-full pl-1.5">
-                                <span className="text-xs text-white/90 py-0.5">
-                                  {formatTimestamp(message.timestamp)}
-                                </span>
-                                <ChatMessageActions message={message} isCurrentUser={isCurrentUser} onReply={onReply} className="text-white/90 hover:bg-white/20" />
-                              </div>
+                              {!message.text && (
+                                <div className="absolute bottom-1 right-1 flex items-end">
+                                  <div className="flex-shrink-0 self-end flex items-center gap-0 bg-black/40 rounded-full pl-1.5">
+                                    <span className="text-xs text-white/90 py-0.5">
+                                      {formatTimestamp(message.timestamp)}
+                                    </span>
+                                    <ChatMessageActions message={message} isCurrentUser={isCurrentUser} onReply={onReply} className="text-white/90 hover:bg-white/20" />
+                                  </div>
+                                </div>
+                              )}
                             </div>
+                            {message.text && (
+                              <div className="pt-2 px-1 flex items-end gap-2">
+                                <div className="min-w-0 flex-grow">
+                                  <div className={cn(
+                                    "text-sm whitespace-pre-wrap break-words prose prose-sm max-w-none [&_p]:my-0",
+                                    isCurrentUser ? "prose-invert prose-a:text-primary-foreground" : "dark:prose-invert"
+                                  )}>
+                                    <ReactMarkdown
+                                      remarkPlugins={[remarkGfm]}
+                                      rehypePlugins={[rehypeRaw]}
+                                      components={{
+                                        a: ({ node, ...props }) => {
+                                          const href = props.href || '';
+                                          if (href.startsWith('/')) {
+                                            return <Link to={href} {...props} className="font-medium underline" />;
+                                          }
+                                          return <a {...props} target="_blank" rel="noopener noreferrer" className="font-medium underline" />;
+                                        },
+                                        p: ({ node, ...props }) => {
+                                          const processedChildren = React.Children.map(props.children, child => {
+                                            if (typeof child === 'string') {
+                                              const emojiRegex = /(\p{Emoji_Presentation}|\p{Emoji_Modifier_Base}|\p{Emoji_Component}|\p{Extended_Pictographic}|[\u200D\uFE0F]+)/u;
+                                              const parts = child.split(emojiRegex);
+                                              return parts.map((part, i) => 
+                                                part.match(emojiRegex) 
+                                                  ? <span key={i} className="text-lg inline-block align-middle">{part}</span> 
+                                                  : part
+                                              );
+                                            }
+                                            return child;
+                                          });
+                                          return <p {...props}>{processedChildren}</p>;
+                                        }
+                                      }}
+                                    >
+                                      {formatMentionsForDisplay(message.text || '')}
+                                    </ReactMarkdown>
+                                  </div>
+                                </div>
+                                <div className="flex-shrink-0 self-end flex items-center gap-0">
+                                  <span className={cn(
+                                      "text-xs",
+                                      isCurrentUser ? "text-primary-foreground/70" : "text-muted-foreground"
+                                  )}>
+                                      {formatTimestamp(message.timestamp)}
+                                  </span>
+                                  <ChatMessageActions message={message} isCurrentUser={isCurrentUser} onReply={onReply} />
+                                </div>
+                              </div>
+                            )}
                           </div>
                         ) : isAudioAttachment ? (
                           <div className="flex items-center">
