@@ -23,6 +23,14 @@ interface ChatConversationProps {
   onReply: (message: Message) => void;
 }
 
+const isEmojiOnly = (text: string | null | undefined): boolean => {
+  if (!text) return false;
+  // This regex checks for a string that consists of only emojis and whitespace.
+  // It handles various emoji presentations, modifiers, and sequences.
+  const emojiRegex = /^(?:\p{Emoji_Presentation}|\p{Emoji_Modifier_Base}|\p{Emoji_Component}|\p{Extended_Pictographic}|[\u200D\uFE0F]|\s)+$/u;
+  return emojiRegex.test(text.trim());
+};
+
 const formatTimestamp = (timestamp: string) => {
   try {
     const date = parseISO(timestamp);
@@ -86,6 +94,7 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
           const showDateSeparator = !prevMessage || !isSameDay(parseISO(prevMessage.timestamp), parseISO(message.timestamp));
           const isImageAttachment = message.attachment?.type.startsWith('image/');
           const isAudioAttachment = message.attachment?.type.startsWith('audio/');
+          const isOnlyEmoji = isEmojiOnly(message.text);
 
           return (
             <div key={message.id || index} id={`message-${message.id}`} className="transition-all duration-500">
@@ -123,6 +132,7 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                         : "bg-muted",
                       isImageAttachment ? "p-1 overflow-hidden" : (message.is_deleted ? "" : "px-3 py-2"),
                       isAudioAttachment ? "p-0" : "",
+                      isOnlyEmoji && !isImageAttachment && !isAudioAttachment ? "bg-transparent shadow-none" : "",
                       !isCurrentUser && isSameSenderAsPrevious && "ml-10"
                     )}
                   >
@@ -211,26 +221,30 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                           <div className="flex items-end gap-2">
                             <div className="min-w-0 flex-grow">
                               {message.text && (
-                                <div className={cn(
-                                  "text-sm whitespace-pre-wrap break-words prose prose-sm max-w-none [&_p]:my-0",
-                                  isCurrentUser ? "prose-invert prose-a:text-primary-foreground" : "dark:prose-invert"
-                                )}>
-                                  <ReactMarkdown
-                                    remarkPlugins={[remarkGfm]}
-                                    rehypePlugins={[rehypeRaw]}
-                                    components={{
-                                      a: ({ node, ...props }) => {
-                                        const href = props.href || '';
-                                        if (href.startsWith('/')) {
-                                          return <Link to={href} {...props} className="font-medium underline" />;
+                                isOnlyEmoji ? (
+                                  <div className="text-3xl">{message.text}</div>
+                                ) : (
+                                  <div className={cn(
+                                    "text-sm whitespace-pre-wrap break-words prose prose-sm max-w-none [&_p]:my-0",
+                                    isCurrentUser ? "prose-invert prose-a:text-primary-foreground" : "dark:prose-invert"
+                                  )}>
+                                    <ReactMarkdown
+                                      remarkPlugins={[remarkGfm]}
+                                      rehypePlugins={[rehypeRaw]}
+                                      components={{
+                                        a: ({ node, ...props }) => {
+                                          const href = props.href || '';
+                                          if (href.startsWith('/')) {
+                                            return <Link to={href} {...props} className="font-medium underline" />;
+                                          }
+                                          return <a {...props} target="_blank" rel="noopener noreferrer" className="font-medium underline" />;
                                         }
-                                        return <a {...props} target="_blank" rel="noopener noreferrer" className="font-medium underline" />;
-                                      }
-                                    }}
-                                  >
-                                    {formatMentionsForDisplay(message.text)}
-                                  </ReactMarkdown>
-                                </div>
+                                      }}
+                                    >
+                                      {formatMentionsForDisplay(message.text)}
+                                    </ReactMarkdown>
+                                  </div>
+                                )
                               )}
                               {message.attachment && (
                                 <MessageAttachment attachment={message.attachment} />
