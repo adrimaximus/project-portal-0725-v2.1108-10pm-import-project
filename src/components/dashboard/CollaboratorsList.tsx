@@ -546,7 +546,7 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
                 {FilterComponent}
               </div>
               {/* Mobile View */}
-              <div className="md:hidden">
+              <div className="md:hidden max-h-[500px] overflow-y-auto">
                 {Object.entries(collaboratorsByRole).map(([role, collaboratorsInRole]) => (
                   <div key={role}>
                     <h3 className="text-sm font-semibold uppercase text-muted-foreground tracking-wider pt-6 pb-2">
@@ -584,7 +584,7 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
               </div>
 
               {/* Desktop View */}
-              <div className="hidden md:block overflow-x-auto">
+              <div className="hidden md:block overflow-auto max-h-[500px]">
                 <Table>
                     <TableHeader>
                         <TableRow>
