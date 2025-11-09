@@ -107,47 +107,12 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                 </div>
               )}
               {message.is_deleted ? (
-                <div
-                  id={`message-${message.id}`}
-                  className={cn(
-                    "flex items-end gap-2",
-                    isCurrentUser ? "justify-end" : "justify-start",
-                    isSameSenderAsPrevious ? "mt-1" : "mt-4"
-                  )}
-                >
-                  <div className={cn("flex items-center gap-1", isCurrentUser ? "flex-row-reverse" : "flex-row")}>
-                    {!isCurrentUser && !isSameSenderAsPrevious && (
-                      <Avatar className="h-8 w-8 self-end">
-                        <AvatarImage src={sender.avatar_url} />
-                        <AvatarFallback style={generatePastelColor(sender.id)}>{sender.initials}</AvatarFallback>
-                      </Avatar>
-                    )}
-                    <div
-                      className={cn(
-                        "max-w-xs md:max-w-md lg:max-w-lg rounded-lg px-3 py-2 flex items-end gap-2",
-                        isCurrentUser
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-muted",
-                        !isCurrentUser && isSameSenderAsPrevious && "ml-10"
-                      )}
-                    >
-                      <div className={cn(
-                          "flex items-center gap-2 italic text-sm",
-                          isCurrentUser ? "text-primary-foreground/80" : "text-muted-foreground"
-                      )}>
-                        <Ban className="h-4 w-4 flex-shrink-0" />
-                        <p>
-                          {isCurrentUser ? "You deleted this message" : "This message was deleted"}
-                        </p>
-                      </div>
-                      <span className={cn(
-                          "text-xs flex-shrink-0",
-                          isCurrentUser ? "text-primary-foreground/70" : "text-muted-foreground"
-                      )}>
-                          {formatTimestamp(message.timestamp)}
-                      </span>
-                    </div>
-                  </div>
+                <div id={`message-${message.id}`} className="flex justify-center items-center gap-2 my-2 text-muted-foreground text-sm py-1">
+                  <Ban className="h-4 w-4 flex-shrink-0" />
+                  <p className="italic">
+                    {isCurrentUser ? "You deleted this message" : `${sender.name} deleted this message`}
+                  </p>
+                  <span className="text-xs text-muted-foreground/80">{formatTimestamp(message.timestamp)}</span>
                 </div>
               ) : (
                 (() => {
@@ -245,7 +210,7 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                                         <span className="text-xs text-white/90 py-0.5">
                                           {formatTimestamp(message.timestamp)}
                                         </span>
-                                        <ChatMessageActions message={message} isCurrentUser={isCurrentUser} className="text-white/90 hover:bg-white/20" />
+                                        <ChatMessageActions message={message} isCurrentUser={isCurrentUser} onReply={onReply} className="text-white/90 hover:bg-white/20" />
                                       </div>
                                     </div>
                                   )}
