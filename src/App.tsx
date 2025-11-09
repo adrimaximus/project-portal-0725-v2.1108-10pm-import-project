@@ -3,7 +3,7 @@ import ProtectedRouteLayout from "./components/ProtectedRouteLayout";
 import LoginPage from "./pages/LoginPage";
 import Dashboard from "./pages/Index";
 import Projects from "./pages/Projects";
-import ProjectDetail from "./pages/ProjectDetail";
+import ProjectDetail from "./pages/projects/[slug]";
 import Request from "./pages/Request";
 import Chat from "./pages/ChatPage";
 import MoodTracker from "./pages/MoodTracker";
@@ -55,7 +55,6 @@ import PaymentStatusesPage from "./pages/settings/PaymentStatusesPage";
 import { TaskModalProvider } from "./contexts/TaskModalContext";
 import GlobalTaskModal from "./components/GlobalTaskModal";
 import NotificationSettingsPage from "./pages/NotificationSettingsPage";
-import TeamOverviewPage from "./pages/TeamOverviewPage";
 
 function App() {
   return (
@@ -113,7 +112,6 @@ function App() {
             <Route path="/settings/project-statuses" element={<ProjectStatusesPage />} />
             <Route path="/settings/payment-statuses" element={<PaymentStatusesPage />} />
             <Route path="/settings/notifications" element={<NotificationSettingsPage />} />
-            <Route path="/team-overview" element={<TeamOverviewPage />} />
             <Route path="/custom/:slug" element={<CustomPage />} />
             <Route path="/multipage/:slug" element={<MultiEmbedPage />} />
             <Route path="/multipage/:slug/:itemSlug" element={<MultiEmbedItemPage />} />

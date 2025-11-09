@@ -17,7 +17,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useTasks } from '@/hooks/useTasks';
 import { useProjects } from '@/hooks/useProjects';
 import { useCreateProject } from '@/hooks/useCreateProject';
-import { useTaskMutations, UpdateTaskOrderPayload } from '@/hooks/useTaskMutations';
+import { useTaskMutations } from '@/hooks/useTaskMutations';
 import { useProjectMutations } from '@/hooks/useProjectMutations';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import PortalLayout from '@/components/PortalLayout';
@@ -58,10 +58,7 @@ const ProjectsPage = () => {
     hasNextPage, 
     isFetchingNextPage,
     refetch: refetchProjects 
-  } = useProjects({ 
-    fetchAll: false,
-    searchTerm: searchParams.get('search') || null,
-  });
+  } = useProjects({ fetchAll: true });
 
   const projectsData = useMemo(() => data?.pages.flatMap(page => page.projects) ?? [], [data]);
   
@@ -190,9 +187,14 @@ const ProjectsPage = () => {
             task.assignedTo?.some(assignee => uniqueSelectedPeopleIds.includes(assignee.id))
         );
     }
-    // Search is now handled server-side for tasks, so we don't need to filter by searchTerm here.
-    return tasksToFilter;
-  }, [tasksData, advancedFilters.ownerIds, advancedFilters.memberIds]);
+    if (!searchTerm) return tasksToFilter;
+    const lowercasedFilter = searchTerm.toLowerCase();
+    return tasksToFilter.filter(task => 
+      task.title.toLowerCase().includes(lowercasedFilter) ||
+      (task.description && task.description.toLowerCase().includes(lowercasedFilter)) ||
+      (task.project_name && task.project_name.toLowerCase().includes(lowercasedFilter))
+    );
+  }, [tasksData, searchTerm, advancedFilters.ownerIds, advancedFilters.memberIds]);
 
   const deleteProjectMutation = useMutation({
     mutationFn: async (projectId: string) => {
@@ -267,7 +269,7 @@ const ProjectsPage = () => {
     updateProjectStatus.mutate({ projectId, status: newStatus });
   };
 
-  const handleTaskOrderChange = (payload: UpdateTaskOrderPayload) => {
+  const handleTaskOrderChange = (payload: { taskId: string; newStatus: TaskStatus; orderedTaskIds: string[]; newTasks: ProjectTask[]; queryKey: any[], movedColumns: boolean }) => {
     updateTaskStatusAndOrder(payload);
   };
 
