@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useEffect, useRef, useMemo } from 'react';
 import { Task as ProjectTask, User, TaskStatus, TASK_STATUS_OPTIONS } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -80,9 +80,9 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
   }, [tasksProp, sortConfig, requestSort]);
 
   const sortedTasks = useMemo(() => {
-    let tasksToSet = [...tasksProp];
-    if (sortConfig.key) {
-      tasksToSet.sort((a, b) => {
+    let sortableItems = [...tasksProp];
+    if (sortConfig.key !== null) {
+      sortableItems.sort((a, b) => {
         let valA: any, valB: any;
         switch (sortConfig.key) {
           case 'priority':
@@ -105,12 +105,16 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
         }
         if (valA === null || valA === undefined) return 1;
         if (valB === null || valB === undefined) return -1;
-        if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
-        if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
+        if (valA < valB) {
+          return sortConfig.direction === 'ascending' ? -1 : 1;
+        }
+        if (valA > valB) {
+          return sortConfig.direction === 'ascending' ? 1 : -1;
+        }
         return 0;
       });
     }
-    return tasksToSet;
+    return sortableItems;
   }, [tasksProp, sortConfig]);
 
   if (isLoading) {
@@ -260,10 +264,9 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
                 </div>
               </TableCell>
             </TableRow>
-          ))
-        )}
-      </TableBody>
-    </Table>
+          ))}
+        </TableBody>
+      </Table>
     </div>
   );
 };
