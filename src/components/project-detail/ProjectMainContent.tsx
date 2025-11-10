@@ -75,7 +75,7 @@ const ProjectMainContent = ({
 
   const handleAddCommentOrTicket = (text: string, isTicket: boolean, attachments: File[] | null, mentionedUserIds: string[]) => {
     addComment.mutate({ text, isTicket, attachments, mentionedUserIds, replyToId: replyTo?.id }, {
-      onSuccess: () => {
+      onSuccess: (result) => {
         setReplyTo(null);
       }
     });
@@ -205,7 +205,7 @@ const ProjectMainContent = ({
             tasks={project.tasks || []}
             projectId={project.id}
             projectSlug={project.slug}
-            onEditTask={onEditTask}
+            onEditTask={(task) => onOpenTaskModal(task, undefined, project)}
             onDeleteTask={onDeleteTask}
             onToggleTaskCompletion={onToggleTaskCompletion}
             highlightedTaskId={searchParams.get('task')}
