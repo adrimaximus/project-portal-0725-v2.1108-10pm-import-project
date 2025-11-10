@@ -172,10 +172,11 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
                 else rowRefs.current.delete(task.id);
               }}
               data-state={task.completed ? "completed" : ""}
-              onClick={() => onTaskClick(task)}
-              className="cursor-pointer"
             >
-              <TableCell className="font-medium w-[40%] sm:w-[30%]">
+              <TableCell 
+                className="font-medium w-[40%] sm:w-[30%] cursor-pointer"
+                onClick={() => onTaskClick(task)}
+              >
                 <div className="flex items-start gap-3">
                   <div onClick={(e) => e.stopPropagation()}>
                     <Checkbox
