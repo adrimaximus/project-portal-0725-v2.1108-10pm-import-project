@@ -12,6 +12,7 @@ import GoalDetail from "./pages/GoalDetailPage";
 import Billing from "./pages/Billing";
 import People from "./pages/PeoplePage";
 import PersonProfile from "./pages/people/PersonProfilePage";
+import CompanyProfilePage from "./pages/CompanyProfilePage";
 import KnowledgeBase from "./pages/KnowledgeBasePage";
 import FolderDetail from "./pages/kb/FolderDetailPage";
 import ArticleDetail from "./pages/kb/Page";
@@ -86,6 +87,7 @@ function App() {
               <Route path="/billing" element={<Billing />} />
               <Route path="/people" element={<People />} />
               <Route path="/people/:slug" element={<PersonProfile />} />
+              <Route path="/companies/:slug" element={<CompanyProfilePage />} />
               <Route path="/users/:id" element={<UserProfilePage />} />
               <Route path="/knowledge-base" element={<KnowledgeBase />} />
               <Route path="/knowledge-base/folders/:slug" element={<FolderDetail />} />

@@ -9,7 +9,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { toast } from "sonner";
 import CompanyFormDialog from './CompanyFormDialog';
 import { Company, CustomProperty } from '@/types';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -153,7 +153,7 @@ const CompaniesView = () => {
                                     return (
                                         <TableRow key={company.id}>
                                             <TableCell className="md:sticky left-0 bg-card">
-                                                <div className="flex items-center gap-3">
+                                                <Link to={`/companies/${company.slug}`} className="flex items-center gap-3 group">
                                                     {logoUrl ? (
                                                         <img src={logoUrl} alt={company.name} className="h-10 w-10 object-contain rounded-md bg-muted p-1" />
                                                     ) : (
@@ -161,8 +161,8 @@ const CompaniesView = () => {
                                                             <Building className="h-5 w-5 text-muted-foreground" />
                                                         </div>
                                                     )}
-                                                    <span className="font-medium">{company.name}</span>
-                                                </div>
+                                                    <span className="font-medium group-hover:underline">{company.name}</span>
+                                                </Link>
                                             </TableCell>
                                             <TableCell>{company.legal_name || '-'}</TableCell>
                                             <TableCell>

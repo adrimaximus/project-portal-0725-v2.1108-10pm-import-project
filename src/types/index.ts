@@ -392,6 +392,7 @@ export interface Company {
   updated_at: string;
   user_id?: string | null;
   custom_properties?: Record<string, any> | null;
+  slug?: string;
 }
 
 export interface AdvancedFiltersState {
