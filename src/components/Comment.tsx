@@ -146,9 +146,9 @@ const Comment: React.FC<CommentProps> = ({
           <>
             {comment.repliedMessage && (
               <button
-                onClick={() => onGoToReply && comment.reply_to_message_id && onGoToReply(comment.reply_to_message_id)}
+                onClick={() => onGoToReply && comment.reply_to_comment_id && onGoToReply(comment.reply_to_comment_id)}
                 className="w-full text-left flex items-start gap-2 text-xs p-2 mb-2 bg-muted rounded-md hover:bg-muted/80 transition-colors"
-                disabled={!onGoToReply || !comment.reply_to_message_id}
+                disabled={!onGoToReply || !comment.reply_to_comment_id}
               >
                 <div className="w-0.5 bg-primary rounded-full self-stretch"></div>
                 <div className="flex-1 overflow-hidden">

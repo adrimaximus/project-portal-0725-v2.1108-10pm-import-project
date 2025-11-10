@@ -158,7 +158,7 @@ export interface Comment {
   attachments_jsonb?: TaskAttachment[] | null;
   project_id: string;
   task_id: string | null;
-  reply_to_message_id?: string | null;
+  reply_to_comment_id?: string | null;
   repliedMessage?: {
     content: string;
     senderName: string;
