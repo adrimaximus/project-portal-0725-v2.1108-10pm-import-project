@@ -1,6 +1,6 @@
-import { Task, User, TaskAttachment, Reaction, Project } from '@/types';
-import { Checkbox } from '@/components/ui/checkbox';
-import { ListChecks, Plus, MoreHorizontal, Edit, Trash2, Ticket, Paperclip, Eye, Download, File as FileIconLucide, ChevronDown, Loader2, SmilePlus, Sparkles } from 'lucide-react';
+import { Task, User, TaskAttachment, Reaction, Project } from "@/types";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ListChecks, Plus, MoreHorizontal, Edit, Trash2, Ticket, Paperclip, Eye, Download, File as FileIconLucide, ChevronDown, Loader2, Sparkles } from "lucide-react";
 import { Button } from "../ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -10,7 +10,7 @@ import { useMemo, useRef, useEffect, useState } from "react";
 import FileIcon from "../FileIcon";
 import TaskReactions from '../projects/TaskReactions';
 import { useTaskMutations } from '@/hooks/useTaskMutations';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import TaskAttachmentList from './TaskAttachmentList';
 import { cn, getErrorMessage, formatBytes } from "@/lib/utils";
@@ -34,19 +34,23 @@ interface ProjectTasksProps {
   onToggleTaskCompletion: (task: Task, completed: boolean) => void;
   highlightedTaskId?: string | null;
   onHighlightComplete?: () => void;
-  onTaskClick: (task: Task) => void;
 }
 
-const TaskRow = ({ task, onToggleTaskCompletion, onEditTask, onDeleteTask, handleToggleReaction, setRef, onTaskClick, currentUserId }: {
+const TaskRow = ({ task, onToggleTaskCompletion, onEditTask, onDeleteTask, handleToggleReaction, setRef, currentUserId }: {
   task: Task;
   onToggleTaskCompletion: (task: Task, completed: boolean) => void;
   onEditTask: (task: Task) => void;
   onDeleteTask: (task: Task) => void;
   handleToggleReaction: (taskId: string, emoji: string) => void;
   setRef: (el: HTMLDivElement | null) => void;
-  onTaskClick: (task: Task) => void;
   currentUserId?: string;
 }) => {
+  const navigate = useNavigate();
+
+  const handleTitleClick = () => {
+    navigate(`/projects?view=tasks&highlight=${task.id}`);
+  };
+
   const allAttachments = useMemo(() => {
     let attachments: TaskAttachment[] = [...(task.attachments || [])];
     if (task.ticket_attachments && task.ticket_attachments.length > 0) {
@@ -91,7 +95,7 @@ const TaskRow = ({ task, onToggleTaskCompletion, onEditTask, onDeleteTask, handl
             task.completed && "line-through"
           )}
           title={task.title}
-          onClick={() => onTaskClick(task)}
+          onClick={handleTitleClick}
         >
           {task.title}
         </span>
@@ -187,8 +191,7 @@ const TaskRow = ({ task, onToggleTaskCompletion, onEditTask, onDeleteTask, handl
   );
 };
 
-const ProjectTasks = ({ project, tasks, projectId, projectSlug, onEditTask, onDeleteTask, onToggleTaskCompletion, highlightedTaskId, onHighlightComplete, onTaskClick }: ProjectTasksProps) => {
-  const navigate = useNavigate();
+const ProjectTasks = ({ project, tasks, projectId, projectSlug, onEditTask, onDeleteTask, onToggleTaskCompletion, highlightedTaskId, onHighlightComplete }: ProjectTasksProps) => {
   const queryClient = useQueryClient();
   const { toggleTaskReaction, createTasks, isCreatingTasks } = useTaskMutations(() => queryClient.invalidateQueries({ queryKey: ['project', projectSlug] }));
   const taskRefs = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -343,7 +346,6 @@ const ProjectTasks = ({ project, tasks, projectId, projectSlug, onEditTask, onDe
             onEditTask={onEditTask}
             onDeleteTask={onDeleteTask}
             handleToggleReaction={handleToggleReaction}
-            onTaskClick={onTaskClick}
             currentUserId={user?.id}
             setRef={(el) => {
               if (el) taskRefs.current.set(task.id, el);
@@ -403,7 +405,6 @@ const ProjectTasks = ({ project, tasks, projectId, projectSlug, onEditTask, onDe
                     onEditTask={onEditTask}
                     onDeleteTask={onDeleteTask}
                     handleToggleReaction={handleToggleReaction}
-                    onTaskClick={onTaskClick}
                     currentUserId={user?.id}
                     setRef={(el) => {
                       if (el) taskRefs.current.set(task.id, el);
