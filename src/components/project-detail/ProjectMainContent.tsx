@@ -168,6 +168,17 @@ const ProjectMainContent = ({
 
   const uncompletedTasksCount = project.tasks?.filter(task => !task.completed).length ?? 0;
 
+  const handleScrollToMessage = (messageId: string) => {
+    const element = document.getElementById(`message-${messageId}`);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      element.classList.add('bg-primary/10', 'rounded-md');
+      setTimeout(() => {
+        element.classList.remove('bg-primary/10', 'rounded-md');
+      }, 1500);
+    }
+  };
+
   return (
     <div className="p-4">
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
@@ -260,6 +271,7 @@ const ProjectMainContent = ({
             initialMention={initialMention}
             onMentionConsumed={handleMentionConsumed}
             allUsers={allUsers}
+            onGoToReply={handleScrollToMessage}
           />
         </TabsContent>
         <TabsContent value="activity" className="mt-4 h-[350px] overflow-y-auto pr-4">

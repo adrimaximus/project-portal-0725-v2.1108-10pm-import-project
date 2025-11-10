@@ -27,6 +27,7 @@ interface ProjectCommentsProps {
   initialMention?: { id: string; name: string } | null;
   onMentionConsumed: () => void;
   allUsers: User[];
+  onGoToReply: (messageId: string) => void;
 }
 
 const ProjectComments = forwardRef<CommentInputHandle, ProjectCommentsProps>(({
@@ -53,6 +54,7 @@ const ProjectComments = forwardRef<CommentInputHandle, ProjectCommentsProps>(({
   initialMention,
   onMentionConsumed,
   allUsers,
+  onGoToReply,
 }, ref) => {
   const [commentToDelete, setCommentToDelete] = useState<CommentType | null>(null);
   const lastProcessedMentionId = useRef<string | null>(null);
@@ -71,17 +73,6 @@ const ProjectComments = forwardRef<CommentInputHandle, ProjectCommentsProps>(({
     if (commentToDelete) {
       onDeleteComment(commentToDelete);
       setCommentToDelete(null);
-    }
-  };
-
-  const handleScrollToMessage = (messageId: string) => {
-    const element = document.getElementById(`message-${messageId}`);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      element.classList.add('bg-primary/10', 'rounded-md');
-      setTimeout(() => {
-        element.classList.remove('bg-primary/10', 'rounded-md');
-      }, 1500);
     }
   };
 
@@ -118,7 +109,7 @@ const ProjectComments = forwardRef<CommentInputHandle, ProjectCommentsProps>(({
               removeNewAttachment={removeNewAttachment}
               handleEditFileChange={handleEditFileChange}
               editFileInputRef={editFileInputRef}
-              onGoToReply={handleScrollToMessage}
+              onGoToReply={onGoToReply}
             />
           ))
         ) : (
