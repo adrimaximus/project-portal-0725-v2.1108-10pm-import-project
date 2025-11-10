@@ -156,12 +156,11 @@ const Comment: React.FC<CommentProps> = ({
             {comment.repliedMessage && comment.reply_to_message_id && (
               <button
                 onClick={() => handleScrollToMessage(comment.reply_to_message_id!)}
-                className="w-full text-left flex items-start gap-2 text-xs p-2 mb-2 bg-muted rounded-md hover:bg-muted/80 transition-colors"
+                className="w-full text-left p-2 mb-2 bg-primary/10 rounded-md border-l-2 border-primary hover:bg-primary/20 transition-colors"
               >
-                <div className="w-0.5 bg-primary rounded-full self-stretch"></div>
                 <div className="flex-1 overflow-hidden">
-                  <p className="font-semibold text-primary">Replying to {comment.repliedMessage.senderName}</p>
-                  <div className="italic line-clamp-1 text-muted-foreground">
+                  <p className="font-semibold text-primary text-sm">Replying to {comment.repliedMessage.senderName}</p>
+                  <div className="text-xs text-muted-foreground italic line-clamp-1">
                     <ReactMarkdown
                       remarkPlugins={[remarkGfm]}
                       rehypePlugins={[rehypeRaw]}
@@ -176,7 +175,7 @@ const Comment: React.FC<CommentProps> = ({
                 </div>
               </button>
             )}
-            <div className="text-sm whitespace-pre-wrap break-words prose prose-sm dark:prose-invert max-w-none [&_p]:my-0">
+            <div className="text-sm whitespace-pre-wrap break-words">
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
                 rehypePlugins={[rehypeRaw]}
@@ -188,6 +187,7 @@ const Comment: React.FC<CommentProps> = ({
                     }
                     return <a {...props} target="_blank" rel="noopener noreferrer" className="font-medium underline text-primary" />;
                   },
+                  p: ({node, ...props}) => <p className="my-1" {...props} />
                 }}
               >{formattedText}</ReactMarkdown>
             </div>
