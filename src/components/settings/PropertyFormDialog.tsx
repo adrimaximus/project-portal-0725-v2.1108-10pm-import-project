@@ -1,139 +1,132 @@
-import { useEffect } from 'react';
-import { useForm, Controller } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
-import { CustomProperty, CUSTOM_PROPERTY_TYPES } from '@/types';
-import { Loader2, X } from 'lucide-react';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from 'sonner';
 
-const propertySchema = z.object({
-  label: z.string().min(1, 'Label is required'),
-  name: z.string().min(1, 'Name is required').regex(/^[a-z0-9_]+$/, 'Name can only contain lowercase letters, numbers, and underscores.'),
-  type: z.enum(CUSTOM_PROPERTY_TYPES),
-  options: z.array(z.string()).optional(),
-});
-
-export type PropertyFormValues = z.infer<typeof propertySchema>;
-
-interface PropertyFormDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onSave: (data: PropertyFormValues) => void;
-  property: CustomProperty | null;
-  isSaving: boolean;
-  properties: CustomProperty[];
+interface CustomProperty {
+  id: string;
+  name: string;
+  label: string;
+  type: string;
+  category: string;
+  options?: any;
 }
 
-const PropertyFormDialog = ({ open, onOpenChange, onSave, property, isSaving, properties }: PropertyFormDialogProps) => {
-  const isEditMode = !!property;
+interface PropertyFormDialogProps {
+  isOpen: boolean;
+  setIsOpen: (isOpen: boolean) => void;
+  property: CustomProperty | null;
+  category: string;
+  onSuccess: () => void;
+}
 
-  const form = useForm<PropertyFormValues>({
-    resolver: zodResolver(propertySchema.superRefine((data, ctx) => {
-      if (properties.some(p => p.name === data.name && p.id !== property?.id)) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: 'A property with this name already exists. Please use a different label.',
-          path: ['label'],
-        });
-      }
-    })),
-    defaultValues: {
-      label: '',
-      name: '',
-      type: 'text',
-    }
-  });
+const propertyTypes = ['Text', 'Number', 'Date', 'URL', 'Email', 'Phone', 'Select'];
 
-  const { control, handleSubmit, reset, setValue, watch } = form;
-  const labelValue = watch('label');
+export const PropertyFormDialog = ({ isOpen, setIsOpen, property, category, onSuccess }: PropertyFormDialogProps) => {
+  const [label, setLabel] = useState('');
+  const [type, setType] = useState('Text');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    if (open) {
-      if (property) {
-        form.reset(property);
-      } else {
-        form.reset({ label: '', name: '', type: 'text' });
-      }
+    if (property) {
+      setLabel(property.label);
+      setType(property.type);
+    } else {
+      setLabel('');
+      setType('Text');
     }
-  }, [property, open, form]);
+  }, [property, isOpen]);
 
-  useEffect(() => {
-    const newName = labelValue?.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '') || '';
-    setValue('name', newName, { shouldValidate: true });
-  }, [labelValue, setValue]);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
 
-  const onSubmit = (data: PropertyFormValues) => {
-    onSave(data);
+    const name = label.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+    if (!name) {
+        toast.error("Label must contain alphanumeric characters.");
+        setIsSubmitting(false);
+        return;
+    }
+
+    const propertyData = {
+      id: property?.id,
+      name,
+      label,
+      type,
+      category,
+    };
+
+    const { error } = await supabase.from('custom_properties').upsert(propertyData);
+
+    if (error) {
+      toast.error('Failed to save property.');
+      console.error('Error saving property:', error);
+    } else {
+      toast.success(`Property ${property ? 'updated' : 'created'} successfully.`);
+      onSuccess();
+      setIsOpen(false);
+    }
+    setIsSubmitting(false);
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>{property ? 'Edit Property' : 'New Property'}</DialogTitle>
-          <DialogDescription>Define a new custom field for your contacts.</DialogDescription>
+          <DialogDescription>
+            {property ? 'Modify the details of your custom property.' : 'Create a new custom field for your records.'}
+          </DialogDescription>
         </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={handleSubmit(onSubmit)} id="property-form" className="space-y-4">
-            <FormField
-              control={control}
-              name="label"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Label</FormLabel>
-                  <FormControl><Input {...field} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={control}
-              name="type"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Type</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a type" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="text">Text</SelectItem>
-                      <SelectItem value="textarea">Text Area</SelectItem>
-                      <SelectItem value="number">Number</SelectItem>
-                      <SelectItem value="date">Date</SelectItem>
-                      <SelectItem value="email">Email</SelectItem>
-                      <SelectItem value="phone">Phone</SelectItem>
-                      <SelectItem value="url">URL</SelectItem>
-                      <SelectItem value="image">Image</SelectItem>
-                      <SelectItem value="multi-image">Multi-Image</SelectItem>
-                      <SelectItem value="select">Select</SelectItem>
-                      <SelectItem value="multi-select">Multi-Select</SelectItem>
-                      <SelectItem value="checkbox">Checkbox</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </form>
-        </Form>
-        <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button type="submit" form="property-form" disabled={isSaving}>
-            {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Save
-          </Button>
-        </DialogFooter>
+        <form onSubmit={handleSubmit}>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="label" className="text-right">
+                Label
+              </Label>
+              <Input
+                id="label"
+                value={label}
+                onChange={(e) => setLabel(e.target.value)}
+                className="col-span-3"
+                required
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="type" className="text-right">
+                Type
+              </Label>
+              <Select value={type} onValueChange={setType}>
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Select a type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {propertyTypes.map((t) => (
+                    <SelectItem key={t} value={t}>{t}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>Cancel</Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? 'Saving...' : 'Save'}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );
 };
-
-export default PropertyFormDialog;
