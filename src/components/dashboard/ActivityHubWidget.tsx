@@ -3,7 +3,7 @@ import { useTasks } from '@/hooks/useTasks';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Link } from 'react-router-dom';
-import { Loader2, Clock, CheckCircle2, CheckCircle, AlertTriangle, PlusSquare, ArrowUp, ArrowDown, ListChecks } from 'lucide-react';
+import { Loader2, Clock, CheckCircle2, CheckCircle, AlertTriangle, PlusSquare, ArrowUp, ArrowDown, ListChecks, Activity, Users } from 'lucide-react';
 import { Task, Project } from '@/types';
 import { format, isPast, isToday, isTomorrow, differenceInDays } from 'date-fns';
 import { cn, getInitials, getAvatarUrl, generatePastelColor } from '@/lib/utils';
@@ -26,9 +26,18 @@ const ActivityHubWidget = () => {
       <Tabs defaultValue="my-tasks" className="w-full">
         <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 pb-4">
           <TabsList className="grid w-full grid-cols-3 sm:w-auto sm:inline-flex">
-            <TabsTrigger value="my-tasks">My Tasks</TabsTrigger>
-            <TabsTrigger value="recent-activity">Recent Activity</TabsTrigger>
-            <TabsTrigger value="collaborators">Collaborators</TabsTrigger>
+            <TabsTrigger value="my-tasks">
+              <ListChecks className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">My Tasks</span>
+            </TabsTrigger>
+            <TabsTrigger value="recent-activity">
+              <Activity className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Recent Activity</span>
+            </TabsTrigger>
+            <TabsTrigger value="collaborators">
+              <Users className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Collaborators</span>
+            </TabsTrigger>
           </TabsList>
           <Button asChild variant="link" className="text-sm -my-2 self-end sm:self-center">
             <Link to="/projects?view=tasks">View all</Link>
