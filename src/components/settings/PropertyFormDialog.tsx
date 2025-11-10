@@ -33,7 +33,7 @@ interface PropertyFormDialogProps {
 
 const propertyTypes = ['Text', 'Number', 'Date', 'URL', 'Email', 'Phone', 'Select'];
 
-export const PropertyFormDialog = ({ isOpen, setIsOpen, property, category, onSuccess }: PropertyFormDialogProps) => {
+const PropertyFormDialog = ({ isOpen, setIsOpen, property, category, onSuccess }: PropertyFormDialogProps) => {
   const [label, setLabel] = useState('');
   const [type, setType] = useState('Text');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -130,3 +130,5 @@ export const PropertyFormDialog = ({ isOpen, setIsOpen, property, category, onSu
     </Dialog>
   );
 };
+
+export default PropertyFormDialog;
