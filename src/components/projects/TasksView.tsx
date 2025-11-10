@@ -27,7 +27,7 @@ interface TasksViewProps {
   rowRefs: React.MutableRefObject<Map<string, HTMLTableRowElement>>;
   highlightedTaskId: string | null;
   onHighlightComplete: () => void;
-  onTaskClick: (task: ProjectTask) => void;
+  onTaskClick?: (task: ProjectTask) => void;
 }
 
 const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTaskCompletion, onStatusChange, isToggling, sortConfig, requestSort, rowRefs, highlightedTaskId, onHighlightComplete, onTaskClick }: TasksViewProps) => {
@@ -175,7 +175,7 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
             >
               <TableCell 
                 className="font-medium w-[40%] sm:w-[30%] cursor-pointer"
-                onClick={() => onTaskClick(task)}
+                onClick={() => onTaskClick && onTaskClick(task)}
               >
                 <div className="flex items-start gap-3">
                   <div onClick={(e) => e.stopPropagation()}>
