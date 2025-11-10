@@ -7,8 +7,6 @@ import TasksKanbanCard from './TasksKanbanCard';
 
 interface TasksKanbanViewProps {
   tasks: Task[];
-  onEdit: (task: Task) => void;
-  onDelete: (task: Task) => void;
   refetch: () => void;
   tasksQueryKey: any[];
   onTaskOrderChange: (payload: any) => void;
@@ -25,7 +23,7 @@ const dropAnimation: DropAnimation = {
   }),
 };
 
-const TasksKanbanView = ({ tasks, onEdit, onDelete, refetch, tasksQueryKey, onTaskOrderChange, onTaskClick }: TasksKanbanViewProps) => {
+const TasksKanbanView = ({ tasks, refetch, tasksQueryKey, onTaskOrderChange, onTaskClick }: TasksKanbanViewProps) => {
   const [collapsedColumns, setCollapsedColumns] = useState<Set<TaskStatus>>(new Set());
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [tasksByStatus, setTasksByStatus] = useState<Record<TaskStatus, Task[]>>({} as Record<TaskStatus, Task[]>);
@@ -234,8 +232,6 @@ const TasksKanbanView = ({ tasks, onEdit, onDelete, refetch, tasksQueryKey, onTa
             tasks={tasksByStatus[option.value] || []}
             isCollapsed={collapsedColumns.has(option.value)}
             onToggleCollapse={toggleColumnCollapse}
-            onEdit={onEdit}
-            onDelete={onDelete}
             onTaskClick={onTaskClick}
           />
         ))}

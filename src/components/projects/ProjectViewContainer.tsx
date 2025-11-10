@@ -17,8 +17,6 @@ interface ProjectViewContainerProps {
   requestSort: (key: keyof Project) => void;
   rowRefs: React.MutableRefObject<Map<string, HTMLTableRowElement>>;
   kanbanGroupBy: 'status' | 'payment_status';
-  onEditTask: (task: ProjectTask) => void;
-  onDeleteTask: (task: ProjectTask) => void;
   onToggleTaskCompletion: (task: ProjectTask, completed: boolean) => void;
   onTaskStatusChange: (task: ProjectTask, newStatus: TaskStatus) => void;
   isToggling: boolean;
@@ -37,7 +35,7 @@ type ViewMode = 'table' | 'list' | 'kanban' | 'tasks' | 'tasks-kanban';
 
 const ProjectViewContainer = ({
   view, projects, tasks, isLoading, isTasksLoading, onDeleteProject, sortConfig, requestSort, rowRefs,
-  kanbanGroupBy, onEditTask, onDeleteTask, onToggleTaskCompletion, onTaskStatusChange, isToggling,
+  kanbanGroupBy, onToggleTaskCompletion, onTaskStatusChange, isToggling,
   taskSortConfig, requestTaskSort, refetch, tasksQueryKey, highlightedTaskId, onHighlightComplete, onStatusChange,
   onTaskOrderChange, onTaskClick
 }: ProjectViewContainerProps) => {
@@ -52,8 +50,6 @@ const ProjectViewContainer = ({
       return <TasksView 
         tasks={tasks} 
         isLoading={isTasksLoading} 
-        onEdit={onEditTask}
-        onDelete={onDeleteTask}
         onToggleTaskCompletion={onToggleTaskCompletion}
         onStatusChange={onTaskStatusChange}
         isToggling={isToggling}
@@ -67,8 +63,6 @@ const ProjectViewContainer = ({
     case 'tasks-kanban':
       return <TasksKanbanView 
         tasks={tasks} 
-        onEdit={onEditTask}
-        onDelete={onDeleteTask}
         refetch={refetch}
         tasksQueryKey={tasksQueryKey}
         onTaskOrderChange={onTaskOrderChange}

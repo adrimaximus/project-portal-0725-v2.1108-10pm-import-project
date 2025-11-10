@@ -17,8 +17,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 interface TasksViewProps {
   tasks: ProjectTask[];
   isLoading: boolean;
-  onEdit: (task: ProjectTask) => void;
-  onDelete: (task: ProjectTask) => void;
   onToggleTaskCompletion: (task: ProjectTask, completed: boolean) => void;
   onStatusChange: (task: ProjectTask, newStatus: TaskStatus) => void;
   isToggling: boolean;
@@ -30,7 +28,7 @@ interface TasksViewProps {
   onTaskClick?: (task: ProjectTask) => void;
 }
 
-const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTaskCompletion, onStatusChange, isToggling, sortConfig, requestSort, rowRefs, highlightedTaskId, onHighlightComplete, onTaskClick }: TasksViewProps) => {
+const TasksView = ({ tasks: tasksProp, isLoading, onToggleTaskCompletion, onStatusChange, isToggling, sortConfig, requestSort, rowRefs, highlightedTaskId, onHighlightComplete, onTaskClick }: TasksViewProps) => {
   const initialSortSet = useRef(false);
 
   useEffect(() => {
@@ -160,7 +158,6 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
             <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => requestSort('updated_at')}>
               Last Updated
             </TableHead>
-            <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -172,10 +169,11 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
                 else rowRefs.current.delete(task.id);
               }}
               data-state={task.completed ? "completed" : ""}
+              onClick={() => onTaskClick && onTaskClick(task)}
+              className="cursor-pointer"
             >
               <TableCell 
-                className="font-medium w-[40%] sm:w-[30%] cursor-pointer"
-                onClick={() => onTaskClick && onTaskClick(task)}
+                className="font-medium w-[40%] sm:w-[30%]"
               >
                 <div className="flex items-start gap-3">
                   <div onClick={(e) => e.stopPropagation()}>
@@ -199,34 +197,36 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
               </TableCell>
               <TableCell className="w-[20%]">
                 {task.project_name && task.project_name !== 'General Tasks' ? (
-                  <Link to={`/projects/${task.project_slug}`} className="hover:underline text-primary text-xs block max-w-[50ch] break-words">
+                  <Link to={`/projects/${task.project_slug}`} className="hover:underline text-primary text-xs block max-w-[50ch] break-words" onClick={(e) => e.stopPropagation()}>
                     {task.project_name}
                   </Link>
                 ) : null}
               </TableCell>
               <TableCell>
-                <Select
-                  value={task.status}
-                  onValueChange={(newStatus: TaskStatus) => onStatusChange(task, newStatus)}
-                >
-                  <SelectTrigger className={cn(
-                    "h-auto border-0 focus:ring-0 focus:ring-offset-0 shadow-none bg-transparent p-0 w-auto",
-                    isOverdue(task.due_date) && !task.completed && "ring-2 ring-destructive rounded-md px-1"
-                  )}>
-                    <SelectValue>
-                      <Badge variant="outline" className={cn(getTaskStatusStyles(task.status).tw, 'border-transparent font-normal')}>
-                        {task.status}
-                      </Badge>
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {TASK_STATUS_OPTIONS.map(option => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div onClick={(e) => e.stopPropagation()}>
+                  <Select
+                    value={task.status}
+                    onValueChange={(newStatus: TaskStatus) => onStatusChange(task, newStatus)}
+                  >
+                    <SelectTrigger className={cn(
+                      "h-auto border-0 focus:ring-0 focus:ring-offset-0 shadow-none bg-transparent p-0 w-auto",
+                      isOverdue(task.due_date) && !task.completed && "ring-2 ring-destructive rounded-md px-1"
+                    )}>
+                      <SelectValue>
+                        <Badge variant="outline" className={cn(getTaskStatusStyles(task.status).tw, 'border-transparent font-normal')}>
+                          {task.status}
+                        </Badge>
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {TASK_STATUS_OPTIONS.map(option => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </TableCell>
               <TableCell>
                 <Badge className={getPriorityStyles(getEffectivePriority(task)).tw}>{getEffectivePriority(task)}</Badge>
@@ -244,28 +244,6 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
                     {format(new Date(task.updated_at), "MMM d, yyyy, p")}
                   </span>
                 ) : <span className="text-muted-foreground text-xs">-</span>}
-              </TableCell>
-              <TableCell className="text-right">
-                <div onClick={(e) => e.stopPropagation()}>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 p-0">
-                        <span className="sr-only">Open menu</span>
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onSelect={() => onEdit(task)}>
-                        <Edit className="mr-2 h-4 w-4" />
-                        Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onSelect={() => onDelete(task)} className="text-destructive">
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
               </TableCell>
             </TableRow>
           ))}

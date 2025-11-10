@@ -125,35 +125,27 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onDelete
   const { data: allTags = [] } = useTags();
   const { onOpen: onOpenTaskModal } = useTaskModal();
   const [replyTo, setReplyTo] = useState<CommentType | null>(null);
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [editedTitle, setEditedTitle] = useState(task.title);
 
-  const handleEditToggle = () => {
-    if (isEditing) {
-      setEditedTask({});
-    } else {
-      setEditedTask({
-        title: task.title,
-        description: task.description,
-        status: task.status,
-        priority: task.priority,
-        due_date: task.due_date,
-        assignedTo: task.assignedTo,
-        tags: task.tags,
-      });
+  useEffect(() => {
+    setEditedTitle(task.title);
+  }, [task.title]);
+
+  const handleTitleSave = () => {
+    if (editedTitle.trim() && editedTitle !== task.title) {
+      updateTask({ taskId: task.id, updates: { title: editedTitle } });
     }
-    setIsEditing(!isEditing);
+    setIsEditingTitle(false);
   };
 
-  const handleFieldChange = (field: keyof Task, value: any) => {
-    setEditedTask(prev => ({ ...prev, [field]: value }));
-  };
-
-  const handleSaveChanges = () => {
-    updateTask({ taskId: task.id, updates: editedTask }, {
-      onSuccess: () => {
-        setIsEditing(false);
-        setEditedTask({});
-      }
-    });
+  const handleTitleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleTitleSave();
+    } else if (e.key === 'Escape') {
+      setEditedTitle(task.title);
+      setIsEditingTitle(false);
+    }
   };
 
   const handleToggleCompletion = () => {
@@ -234,7 +226,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onDelete
   };
 
   const allAttachments = useMemo(() => (task ? aggregateAttachments(task) : []), [task]);
-  const allTags = useMemo(() => {
+  const displayTags = useMemo(() => {
     const tags = [...(task?.tags || [])];
     if (task?.origin_ticket_id) {
       const hasTicketTag = tags.some(t => t.name === 'Ticket');
@@ -278,14 +270,27 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onDelete
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 text-base sm:text-lg font-semibold leading-none tracking-tight">
                 {task.origin_ticket_id && <Ticket className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />}
-                <span
-                  className={cn(
-                    "min-w-0 break-words whitespace-normal",
-                    task.completed && "line-through text-muted-foreground"
-                  )}
-                >
-                  {task.title}
-                </span>
+                {isEditingTitle ? (
+                  <Input
+                    value={editedTitle}
+                    onChange={(e) => setEditedTitle(e.target.value)}
+                    onBlur={handleTitleSave}
+                    onKeyDown={handleTitleKeyDown}
+                    className="text-lg font-semibold h-auto p-0 border-0 shadow-none focus-visible:ring-1 focus-visible:ring-ring"
+                    autoFocus
+                    disabled={isUpdatingTask}
+                  />
+                ) : (
+                  <span
+                    className={cn(
+                      "min-w-0 break-words whitespace-normal cursor-pointer",
+                      task.completed && "line-through text-muted-foreground"
+                    )}
+                    onClick={() => !task.completed && setIsEditingTitle(true)}
+                  >
+                    {task.title}
+                  </span>
+                )}
               </div>
               <p className="text-xs text-muted-foreground mt-1">
                 Created on {format(new Date(task.created_at), "MMM d, yyyy")}
@@ -511,7 +516,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onDelete
                 )}
               </div>
             </div>
-            {allTags.length > 0 && (
+            {displayTags.length > 0 && (
               <div className="flex items-start gap-3">
                 <Tag className="h-4 w-4 mt-1 flex-shrink-0 text-muted-foreground" />
                 <div>
@@ -525,7 +530,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onDelete
                     />
                   ) : (
                     <div className="flex flex-wrap gap-1 mt-1">
-                      {allTags.map(tag => (
+                      {displayTags.map(tag => (
                         <Badge key={tag.id} variant="outline" style={{ backgroundColor: `${tag.color}20`, borderColor: tag.color, color: tag.color }}>
                           {tag.name}
                         </Badge>
