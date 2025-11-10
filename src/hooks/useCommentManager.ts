@@ -83,11 +83,16 @@ export const useCommentManager = ({ scope }: UseCommentManagerProps) => {
         reply_to_comment_id: replyToId,
       }).select().single();
       if (error) throw error;
-      return data;
+      return { data, isTicket };
     },
-    onSuccess: () => {
+    onSuccess: ({ isTicket }) => {
       toast.success("Comment added.");
       queryClient.invalidateQueries({ queryKey });
+      if (isTicket) {
+        queryClient.invalidateQueries({ queryKey: ['tasks'] });
+        queryClient.invalidateQueries({ queryKey: ['project', scope.projectId] });
+        queryClient.invalidateQueries({ queryKey: ['projects'] });
+      }
     },
     onError: (error: any) => toast.error("Failed to add comment.", { description: getErrorMessage(error) }),
   });

@@ -102,20 +102,15 @@ const ProjectMainContent = ({
     }, 500);
   };
 
-  const handleAddCommentOrTicket = async (text: string, isTicket: boolean, attachments: File[] | null, mentionedUserIds: string[]) => {
-    if (isTicket) {
-      try {
-        const newComment = await addComment.mutateAsync({ text, isTicket, attachments, replyToId: replyTo?.id });
-        if (newComment) {
+  const handleAddCommentOrTicket = (text: string, isTicket: boolean, attachments: File[] | null, mentionedUserIds: string[]) => {
+    addComment.mutate({ text, isTicket, attachments, replyToId: replyTo?.id }, {
+      onSuccess: (result) => {
+        if (result.isTicket) {
           toast.info("Ticket created. Finding associated task...");
-          pollForTask(newComment.id);
+          pollForTask(result.data.id);
         }
-      } catch (error) {
-        // Error is already handled by the mutation's onError
       }
-    } else {
-      addComment.mutate({ text, isTicket, attachments, replyToId: replyTo?.id });
-    }
+    });
     setReplyTo(null);
   };
 
@@ -149,13 +144,12 @@ const ProjectMainContent = ({
   };
 
   const onCreateTicketFromComment = async (comment: CommentType) => {
-    try {
-      await updateComment.mutateAsync({ commentId: comment.id, text: comment.text || '', isTicket: true });
-      toast.info("Comment converted to ticket. Finding associated task...");
-      pollForTask(comment.id);
-    } catch (error) {
-      // Error handled in mutation
-    }
+    updateComment.mutate({ commentId: comment.id, text: comment.text || '', isTicket: true }, {
+      onSuccess: () => {
+        toast.info("Comment converted to ticket. Finding associated task...");
+        pollForTask(comment.id);
+      }
+    });
   };
 
   const handleMentionConsumed = useCallback(() => {
