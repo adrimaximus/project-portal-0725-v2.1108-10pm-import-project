@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, PlusCircle } from "lucide-react";
-import { PropertyFormDialog } from './PropertyFormDialog';
+import PropertyFormDialog from './PropertyFormDialog';
 import { toast } from 'sonner';
 
 interface CustomProperty {
@@ -135,8 +135,8 @@ const CustomPropertiesManager = ({ category, title, description }: CustomPropert
       </Card>
 
       <PropertyFormDialog
-        isOpen={isDialogOpen}
-        setIsOpen={setIsDialogOpen}
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
         property={editingProperty}
         category={category}
         onSuccess={fetchProperties}

@@ -91,7 +91,7 @@ const ProjectMainContent = ({
           .single();
         
         if (fullTaskData && !fullTaskError) {
-          onOpenTaskModal(fullTaskData, undefined, project);
+          onOpenTaskModal(fullTaskData as Task, undefined, project);
         } else {
           toast.error("Could not open the new task for editing.");
         }

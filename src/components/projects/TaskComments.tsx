@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { useCommentManager } from '@/hooks/useCommentManager';
-import { Comment as CommentType, User } from '@/types';
+import { Comment as CommentType, User, Task } from '@/types';
 import CommentInput from '../CommentInput';
 import TaskCommentsList from './TaskCommentsList';
 import { useProfiles } from '@/hooks/useProfiles';
@@ -52,7 +52,7 @@ const TaskComments: React.FC<TaskCommentsProps> = ({ taskId, projectId }) => {
           .single();
         
         if (fullTaskData && !fullTaskError) {
-          onOpenTaskModal(fullTaskData, undefined, undefined);
+          onOpenTaskModal(fullTaskData as Task, undefined, undefined);
         } else {
           toast.error("Could not open the new task for editing.");
         }
