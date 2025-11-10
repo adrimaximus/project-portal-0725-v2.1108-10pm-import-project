@@ -5,17 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, PlusCircle } from "lucide-react";
-import PropertyFormDialog from './PropertyFormDialog';
+import PropertyFormDialog, { PropertyFormValues } from './PropertyFormDialog';
 import { toast } from 'sonner';
-
-interface CustomProperty {
-  id: string;
-  name: string;
-  label: string;
-  type: string;
-  category: string;
-  options?: any;
-}
+import { CustomProperty } from '@/types';
 
 interface CustomPropertiesManagerProps {
   category: 'contact' | 'company' | 'project' | 'billing';
@@ -28,6 +20,7 @@ const CustomPropertiesManager = ({ category, title, description }: CustomPropert
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProperty, setEditingProperty] = useState<CustomProperty | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   const fetchProperties = async () => {
     setLoading(true);
@@ -67,6 +60,28 @@ const CustomPropertiesManager = ({ category, title, description }: CustomPropert
   const handleOpenDialog = (property: CustomProperty | null = null) => {
     setEditingProperty(property);
     setIsDialogOpen(true);
+  };
+
+  const handleSave = async (propertyData: PropertyFormValues) => {
+    setIsSaving(true);
+    const name = propertyData.label.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+    const { id, is_default, ...dataToSave } = editingProperty || {};
+    const upsertData = { ...dataToSave, ...propertyData, name, is_default: false, category };
+
+    const promise = editingProperty?.id
+      ? supabase.from('custom_properties').update(upsertData).eq('id', editingProperty.id)
+      : supabase.from('custom_properties').insert(upsertData);
+
+    const { error } = await promise;
+    setIsSaving(false);
+
+    if (error) {
+      toast.error(`Failed to save property: ${error.message}`);
+    } else {
+      toast.success(`Property "${propertyData.label}" saved.`);
+      fetchProperties();
+      setIsDialogOpen(false);
+    }
   };
 
   return (
@@ -138,8 +153,9 @@ const CustomPropertiesManager = ({ category, title, description }: CustomPropert
         open={isDialogOpen}
         onOpenChange={setIsDialogOpen}
         property={editingProperty}
-        category={category}
-        onSuccess={fetchProperties}
+        onSave={handleSave}
+        isSaving={isSaving}
+        properties={properties}
       />
     </>
   );
