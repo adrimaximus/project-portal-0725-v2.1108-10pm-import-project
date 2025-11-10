@@ -92,7 +92,7 @@ serve(async (req) => {
 
     if (notificationsToInsert.length > 0) {
       const { error: insertError } = await supabaseAdmin
-        .from('pending_whatsapp_notifications')
+        .from('pending_notifications')
         .insert(notificationsToInsert);
       
       if (insertError) {

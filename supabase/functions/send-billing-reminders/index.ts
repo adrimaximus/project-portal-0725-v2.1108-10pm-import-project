@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2.54.0';
-import Anthropic from 'npm:@anthropic-ai/sdk@0.22.0';
+import Anthropic from 'npm:@anthropic-ai/sdk@^0.22.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -115,7 +115,7 @@ serve(async (req) => {
 
         if (isEnabled && statusesToNotify.includes(project.payment_status)) {
           const { error: insertError } = await supabaseAdmin
-            .from('pending_whatsapp_notifications')
+            .from('pending_notifications')
             .insert({
                 recipient_id: userId,
                 send_at: new Date(),
