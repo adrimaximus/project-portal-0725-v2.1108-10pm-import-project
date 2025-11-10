@@ -2,7 +2,7 @@ import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { Task, TaskAttachment, Reaction, User, Comment as CommentType, TaskStatus, TASK_STATUS_OPTIONS } from '@/types';
 import { DrawerContent } from '@/components/ui/drawer';
 import { Button } from '../ui/button';
-import { format, isPast } from 'date-fns';
+import { format, isPast, formatDistanceToNow } from 'date-fns';
 import { cn, isOverdue, formatTaskText, getPriorityStyles, getTaskStatusStyles, getDueDateClassName, getAvatarUrl, generatePastelColor, getInitials, formatMentionsForDisplay } from '@/lib/utils';
 import {
   Edit,
@@ -51,6 +51,7 @@ import { Textarea } from '../ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../ui/collapsible';
 import { useTaskModal } from '@/contexts/TaskModalContext';
+import { Input } from '../ui/input';
 
 interface TaskDetailCardProps {
   task: Task;
@@ -90,7 +91,7 @@ const aggregateAttachments = (task: Task): TaskAttachment[] => {
 
 const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, onDelete }) => {
   const { user } = useAuth();
-  const { toggleTaskReaction, sendReminder, isSendingReminder, updateTaskStatusAndOrder } = useTaskMutations();
+  const { toggleTaskReaction, sendReminder, isSendingReminder, updateTaskStatusAndOrder, toggleTaskCompletion, updateTask, isUpdatingTask } = useTaskMutations();
   const { 
     comments, 
     isLoadingComments, 
@@ -110,9 +111,73 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
   const { data: allUsers = [] } = useProfiles();
   const { onOpen: onOpenTaskModal } = useTaskModal();
   const [replyTo, setReplyTo] = useState<CommentType | null>(null);
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [editedTitle, setEditedTitle] = useState(task.title);
+
+  useEffect(() => {
+    setEditedTitle(task.title);
+  }, [task.title]);
+
+  const handleTitleSave = () => {
+    if (editedTitle.trim() && editedTitle !== task.title) {
+      updateTask({ taskId: task.id, updates: { title: editedTitle } });
+    }
+    setIsEditingTitle(false);
+  };
+
+  const handleTitleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleTitleSave();
+    } else if (e.key === 'Escape') {
+      setEditedTitle(task.title);
+      setIsEditingTitle(false);
+    }
+  };
+
+  const handleToggleCompletion = () => {
+    if (toggleTaskCompletion) {
+      toggleTaskCompletion({ task, completed: !task.completed });
+    }
+  };
+
+  const pollForTask = (commentId: string) => {
+    let attempts = 0;
+    const interval = setInterval(async () => {
+      attempts++;
+      const { data: taskData, error: taskError } = await supabase
+        .from('tasks')
+        .select('id, project_id')
+        .eq('origin_ticket_id', commentId)
+        .single();
+      
+      if (taskData) {
+        clearInterval(interval);
+        const { data: fullTaskData, error: fullTaskError } = await supabase
+          .rpc('get_project_tasks', { p_project_ids: [taskData.project_id] })
+          .eq('id', taskData.id)
+          .single();
+        
+        if (fullTaskData && !fullTaskError) {
+          onOpenTaskModal(fullTaskData as Task, undefined, undefined);
+        } else {
+          toast.error("Could not open the new task for editing.");
+        }
+      } else if (attempts > 10) { // Timeout after ~5 seconds
+        clearInterval(interval);
+        toast.error("Could not find the created task. It may appear shortly.");
+      }
+    }, 500);
+  };
 
   const handleAddComment = (text: string, isTicket: boolean, attachments: File[] | null, mentionedUserIds: string[]) => {
-    addComment.mutate({ text, isTicket, attachments, replyToId: replyTo?.id });
+    addComment.mutate({ text, isTicket, attachments, replyToId: replyTo?.id }, {
+      onSuccess: (result) => {
+        if (result.isTicket) {
+          toast.info("Ticket created. Finding associated task...");
+          pollForTask(result.data.id);
+        }
+      }
+    });
     setReplyTo(null);
   };
 
@@ -156,18 +221,8 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
   const handleCreateTicketFromComment = async (comment: CommentType) => {
     updateComment.mutate({ commentId: comment.id, text: comment.text || '', isTicket: true }, {
       onSuccess: () => {
-        const fullCommentText = comment.text || '';
-        const taskTitle = fullCommentText.length > 80 ? `${fullCommentText.substring(0, 80)}...` : fullCommentText;
-        
-        onOpenTaskModal(undefined, {
-          title: taskTitle,
-          description: fullCommentText,
-          project_id: comment.project_id,
-          status: 'To do',
-          priority: 'Normal',
-          due_date: null,
-          origin_ticket_id: comment.id,
-        });
+        toast.info("Comment converted to ticket. Finding associated task...");
+        pollForTask(comment.id);
       }
     });
   };
@@ -227,33 +282,64 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 text-base sm:text-lg font-semibold leading-none tracking-tight">
                 {task.origin_ticket_id && <Ticket className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />}
-                <span className={cn("min-w-0 break-words whitespace-normal", task.completed && "line-through text-muted-foreground")}>
-                  {task.title}
-                </span>
+                {isEditingTitle ? (
+                  <Input
+                    value={editedTitle}
+                    onChange={(e) => setEditedTitle(e.target.value)}
+                    onBlur={handleTitleSave}
+                    onKeyDown={handleTitleKeyDown}
+                    className="text-lg font-semibold h-auto p-0 border-0 shadow-none focus-visible:ring-1 focus-visible:ring-ring"
+                    autoFocus
+                    disabled={isUpdatingTask}
+                  />
+                ) : (
+                  <span
+                    className={cn(
+                      "min-w-0 break-words whitespace-normal cursor-pointer",
+                      task.completed && "line-through text-muted-foreground"
+                    )}
+                    onClick={() => !task.completed && setIsEditingTitle(true)}
+                  >
+                    {task.title}
+                  </span>
+                )}
               </div>
               <p className="text-xs text-muted-foreground mt-1">
                 Created on {format(new Date(task.created_at), "MMM d, yyyy")}
               </p>
             </div>
 
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8">
-                  <MoreHorizontal className="h-4 w-4" />
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {task.completed ? (
+                <Button size="sm" variant="outline" onClick={handleToggleCompletion} className="h-8 border-green-500 bg-green-500/10 text-green-500 hover:bg-green-500/20 hover:text-green-600">
+                  <CheckCircle className="mr-2 h-4 w-4" />
+                  Completed
                 </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onSelect={() => { onEdit(task); onClose(); }}>
-                  <Edit className="mr-2 h-4 w-4" /> Edit
-                </DropdownMenuItem>
-                <DropdownMenuItem onSelect={handleCopyLink}>
-                  <LinkIcon className="mr-2 h-4 w-4" /> Copy Link
-                </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => { onDelete(task); onClose(); }} className="text-destructive">
-                  <Trash2 className="mr-2 h-4 w-4" /> Delete
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+              ) : (
+                <Button size="sm" variant="outline" onClick={handleToggleCompletion} className="h-8">
+                  <CheckCircle className="mr-2 h-4 w-4" />
+                  Mark complete
+                </Button>
+              )}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onSelect={() => { onEdit(task); onClose(); }}>
+                    <Edit className="mr-2 h-4 w-4" /> Edit
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={handleCopyLink}>
+                    <LinkIcon className="mr-2 h-4 w-4" /> Copy Link
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => { onDelete(task); onClose(); }} className="text-destructive">
+                    <Trash2 className="mr-2 h-4 w-4" /> Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
         </div>
 
@@ -368,11 +454,36 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
                 <div className={cn("flex items-center gap-1.5", getDueDateClassName(task.due_date, task.completed))}>
                   <span>{task.due_date ? format(new Date(task.due_date), "MMM d, yyyy, p") : 'No due date'}</span>
                   {isOverdue(task.due_date) && !task.completed && (
-                    <Button variant="ghost" size="icon" className="h-6 w-6 text-blue-500" onClick={handleSendReminder} disabled={isSendingReminder}>
-                      {isSendingReminder ? <Loader2 className="h-3 w-3 animate-spin" /> : <BellRing className="h-3 w-3" />}
-                    </Button>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-6 w-6 text-red-500" onClick={handleSendReminder} disabled={isSendingReminder || !task.assignedTo || task.assignedTo.length === 0}>
+                            {isSendingReminder ? <Loader2 className="h-3 w-3 animate-spin" /> : <BellRing className="h-3 w-3" />}
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {(!task.assignedTo || task.assignedTo.length === 0) ? (
+                            <p>No assignees to remind</p>
+                          ) : (
+                            <>
+                              <p>Send reminder to assignees</p>
+                              {task.last_reminder_sent_at && (
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  Last sent: {formatDistanceToNow(new Date(task.last_reminder_sent_at), { addSuffix: true })}
+                                </p>
+                              )}
+                            </>
+                          )}
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   )}
                 </div>
+                {task.last_reminder_sent_at && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Last reminder sent: {formatDistanceToNow(new Date(task.last_reminder_sent_at), { addSuffix: true })}
+                  </p>
+                )}
               </div>
             </div>
             {allTags.length > 0 && (
@@ -396,7 +507,21 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
             <div className="pt-4 border-t">
               <h4 className="font-semibold mb-2">Description</h4>
               <div className="prose prose-sm dark:prose-invert max-w-none break-words">
-                <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{formattedDescription}</ReactMarkdown>
+                <ReactMarkdown 
+                  remarkPlugins={[remarkGfm]} 
+                  rehypePlugins={[rehypeRaw]}
+                  components={{
+                    a: ({ node, ...props }) => {
+                      const href = props.href || '';
+                      if (href.startsWith('/')) {
+                        return <Link to={href} {...props} className="font-medium underline" />;
+                      }
+                      return <a {...props} target="_blank" rel="noopener noreferrer" className="font-medium underline" />;
+                    },
+                  }}
+                >
+                  {formattedDescription}
+                </ReactMarkdown>
               </div>
               {isLongDescription && (
                 <Button variant="link" size="sm" onClick={() => setShowFullDescription(!showFullDescription)} className="px-0 h-auto">
