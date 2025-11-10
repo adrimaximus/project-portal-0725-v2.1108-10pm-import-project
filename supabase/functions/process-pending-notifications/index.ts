@@ -254,6 +254,18 @@ serve(async (req) => {
             }
             break;
           }
+          case 'discussion_mention': {
+            const { project_name: projectName, project_slug: projectSlug, mentioner_name: mentionerName, task_id: taskId } = context;
+            const url = taskId
+              ? `${APP_URL}/projects/${projectSlug}?tab=tasks&task=${taskId}`
+              : `${APP_URL}/projects/${projectSlug}?tab=discussion`;
+            
+            userPrompt = `Buat notifikasi mention. Penerima: ${recipientName}. Pengirim: ${mentionerName}. Proyek: "${projectName}". URL: ${url}`;
+            
+            const aiMessage = await generateAiMessage(userPrompt);
+            await sendWhatsappMessage(recipient.phone, aiMessage);
+            break;
+          }
           case 'discussion_mention_email': {
             const { project_name: projectName, project_slug: projectSlug, mentioner_name: mentionerName, comment_text: commentText, task_id: taskId } = context;
             const url = taskId
