@@ -32,6 +32,7 @@ interface ProjectMainContentProps {
   isUploading: boolean;
   onSaveChanges: () => void;
   onOpenTaskModal: (task?: Task | null, initialData?: Partial<UpsertTaskPayload>, project?: Project | null) => void;
+  onTaskClick: (task: Task, project: Project) => void;
 }
 
 const ProjectMainContent = ({ 
@@ -49,6 +50,7 @@ const ProjectMainContent = ({
   isUploading,
   onSaveChanges,
   onOpenTaskModal,
+  onTaskClick,
 }: ProjectMainContentProps) => {
   const [activeTab, setActiveTab] = useState(defaultTab);
   const [lastViewedDiscussion, setLastViewedDiscussion] = useState(() => new Date());
@@ -244,7 +246,7 @@ const ProjectMainContent = ({
             onToggleTaskCompletion={onToggleTaskCompletion}
             highlightedTaskId={highlightedTaskId}
             onHighlightComplete={onHighlightComplete}
-            onTaskClick={onOpenTaskModal}
+            onTaskClick={onTaskClick}
           />
         </TabsContent>
         <TabsContent value="discussion" className="mt-4">

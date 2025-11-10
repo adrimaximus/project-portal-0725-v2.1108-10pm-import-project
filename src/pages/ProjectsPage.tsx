@@ -17,7 +17,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useTasks } from '@/hooks/useTasks';
 import { useProjects } from '@/hooks/useProjects';
 import { useCreateProject } from '@/hooks/useCreateProject';
-import { useTaskMutations, UpdateTaskOrderPayload } from '@/hooks/useTaskMutations';
+import { useTaskMutations } from '@/hooks/useTaskMutations';
 import { useProjectMutations } from '@/hooks/useProjectMutations';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import PortalLayout from '@/components/PortalLayout';
@@ -26,6 +26,7 @@ import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 import { useTaskModal } from '@/contexts/TaskModalContext';
 import { getProjectBySlug } from '@/lib/projectsApi';
+import { useTaskDrawer } from '@/contexts/TaskDrawerContext';
 
 type ViewMode = 'table' | 'list' | 'kanban' | 'tasks' | 'tasks-kanban';
 
@@ -37,6 +38,7 @@ const ProjectsPage = () => {
   const { user } = useAuth();
   const { taskId: taskIdFromParams } = useParams<{ taskId: string }>();
   const { onOpen: onOpenTaskModal } = useTaskModal();
+  const { onOpen: onOpenTaskDrawer } = useTaskDrawer();
   
   const highlightedTaskId = taskIdFromParams || searchParams.get('highlight');
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -269,7 +271,7 @@ const ProjectsPage = () => {
     updateProjectStatus.mutate({ projectId, status: newStatus });
   };
 
-  const handleTaskOrderChange = (payload: UpdateTaskOrderPayload) => {
+  const handleTaskOrderChange = (payload: any) => {
     updateTaskStatusAndOrder(payload);
   };
 
@@ -282,6 +284,18 @@ const ProjectsPage = () => {
       onOpenTaskModal(task, undefined, projectForTask);
     } catch (error) {
       toast.error("Could not open task editor.", { description: getErrorMessage(error) });
+    }
+  };
+
+  const handleTaskClick = async (task: ProjectTask) => {
+    try {
+      const projectForTask = await getProjectBySlug(task.project_slug);
+      if (!projectForTask) {
+        throw new Error("Project for this task could not be found.");
+      }
+      onOpenTaskDrawer(task, projectForTask);
+    } catch (error) {
+      toast.error("Could not open task details.", { description: getErrorMessage(error) });
     }
   };
 
@@ -362,6 +376,7 @@ const ProjectsPage = () => {
               onHighlightComplete={onHighlightComplete}
               onStatusChange={handleStatusChange}
               onTaskOrderChange={handleTaskOrderChange}
+              onTaskClick={handleTaskClick}
             />
           </div>
           {hasNextPage && (
