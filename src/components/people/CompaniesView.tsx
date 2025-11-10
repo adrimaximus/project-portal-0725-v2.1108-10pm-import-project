@@ -14,6 +14,8 @@ import { formatDistanceToNow } from 'date-fns';
 import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { SortableTableHead } from '../ui/SortableTableHead';
+import { useIsMobile } from '@/hooks/use-mobile';
+import CompanyListCard from './CompanyListCard';
 
 const CompaniesView = () => {
     const [isFormOpen, setIsFormOpen] = useState(false);
@@ -23,6 +25,7 @@ const CompaniesView = () => {
     const [sortConfig, setSortConfig] = useState<{ key: keyof Company; direction: 'asc' | 'desc' }>({ key: 'name', direction: 'asc' });
     const queryClient = useQueryClient();
     const navigate = useNavigate();
+    const isMobile = useIsMobile();
 
     const { data: companies = [], isLoading: isLoadingCompanies } = useQuery<Company[]>({
         queryKey: ['companies'],
@@ -97,6 +100,14 @@ const CompaniesView = () => {
         setCompanyToDelete(null);
     };
 
+    const handleViewProfile = (company: Company) => {
+        if (company.slug) {
+            navigate(`/companies/${company.slug}`);
+        } else {
+            toast.error('Cannot view profile, slug is missing.');
+        }
+    };
+
     const findImageUrlInCustomProps = (props: Record<string, any> | null | undefined): string | null => {
         if (!props) return null;
         for (const key in props) {
@@ -125,6 +136,76 @@ const CompaniesView = () => {
 
     const visibleProperties = properties.filter(prop => prop.type !== 'image');
     const totalColumns = 4 + visibleProperties.length;
+
+    if (isMobile) {
+        return (
+            <>
+                <div className="h-full flex flex-col space-y-4">
+                    <div className="flex justify-between items-center gap-4">
+                        <div className="relative flex-1">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input
+                                placeholder="Search companies..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="pl-10"
+                            />
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <TooltipProvider>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button onClick={handleAddNew} size="icon">
+                                            <PlusCircle className="h-4 w-4" />
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <p>Add Company</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
+                        </div>
+                    </div>
+                    <div className="overflow-y-auto h-full space-y-2">
+                        {isLoading ? (
+                            <div className="text-center py-10 text-muted-foreground">Loading...</div>
+                        ) : sortedAndFilteredCompanies.length === 0 ? (
+                            <div className="text-center py-10 text-muted-foreground">{searchTerm ? 'No companies match your search.' : 'No companies found.'}</div>
+                        ) : (
+                            sortedAndFilteredCompanies.map(company => (
+                                <CompanyListCard
+                                    key={company.id}
+                                    company={company}
+                                    onEdit={handleEdit}
+                                    onDelete={setCompanyToDelete}
+                                    onViewProfile={handleViewProfile}
+                                />
+                            ))
+                        )}
+                    </div>
+                </div>
+                <CompanyFormDialog
+                    open={isFormOpen}
+                    onOpenChange={setIsFormOpen}
+                    company={companyToEdit}
+                />
+                <AlertDialog open={!!companyToDelete} onOpenChange={(open) => !open && setCompanyToDelete(null)}>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                This will permanently delete {companyToDelete?.name}. This action cannot be undone.
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+            </>
+        );
+    }
 
     return (
         <TooltipProvider>
