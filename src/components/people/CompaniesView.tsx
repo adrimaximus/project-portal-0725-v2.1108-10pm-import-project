@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { MoreHorizontal, PlusCircle, Edit, Trash2, Building, Loader2, Search } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Edit, Trash2, Building, Loader2, Search, ArrowUp, ArrowDown } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
@@ -13,12 +13,14 @@ import { Link, useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { cn } from '@/lib/utils';
 
 const CompaniesView = () => {
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [companyToEdit, setCompanyToEdit] = useState<Company | null>(null);
     const [companyToDelete, setCompanyToDelete] = useState<Company | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
+    const [sortConfig, setSortConfig] = useState<{ key: keyof Company; direction: 'asc' | 'desc' }>({ key: 'name', direction: 'asc' });
     const queryClient = useQueryClient();
     const navigate = useNavigate();
 
@@ -42,11 +44,34 @@ const CompaniesView = () => {
 
     const isLoading = isLoadingCompanies || isLoadingProperties;
 
-    const filteredCompanies = companies.filter(company =>
-        company.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (company.legal_name && company.legal_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (company.address && company.address.toLowerCase().includes(searchTerm.toLowerCase()))
-    );
+    const handleSort = (key: keyof Company) => {
+        let direction: 'asc' | 'desc' = 'asc';
+        if (sortConfig.key === key && sortConfig.direction === 'asc') {
+            direction = 'desc';
+        }
+        setSortConfig({ key, direction });
+    };
+
+    const sortedAndFilteredCompanies = useMemo(() => {
+        const filtered = companies.filter(company =>
+            company.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (company.legal_name && company.legal_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+            (company.address && company.address.toLowerCase().includes(searchTerm.toLowerCase()))
+        );
+
+        if (sortConfig.key) {
+            filtered.sort((a, b) => {
+                const aValue = a[sortConfig.key!];
+                const bValue = b[sortConfig.key!];
+                if (aValue === null || aValue === undefined) return 1;
+                if (bValue === null || bValue === undefined) return -1;
+                if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+                if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+                return 0;
+            });
+        }
+        return filtered;
+    }, [companies, searchTerm, sortConfig]);
 
     const handleAddNew = () => {
         setCompanyToEdit(null);
@@ -98,6 +123,17 @@ const CompaniesView = () => {
         return String(value);
     };
 
+    const SortableHeader = ({ columnKey, label }: { columnKey: keyof Company, label: string }) => (
+        <TableHead className="p-2">
+            <Button variant="ghost" onClick={() => handleSort(columnKey)} className="px-2">
+                {label}
+                {sortConfig.key === columnKey ? (
+                    sortConfig.direction === 'asc' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />
+                ) : null}
+            </Button>
+        </TableHead>
+    );
+
     const visibleProperties = properties.filter(prop => prop.type !== 'image');
     const totalColumns = 4 + visibleProperties.length;
 
@@ -131,23 +167,23 @@ const CompaniesView = () => {
                     <Table className="min-w-[1200px]">
                         <TableHeader>
                             <TableRow>
-                                <TableHead className="min-w-[250px] md:sticky left-0 bg-card">Company</TableHead>
-                                <TableHead className="min-w-[200px]">Legal Name</TableHead>
-                                <TableHead className="min-w-[300px]">Address</TableHead>
+                                <SortableHeader columnKey="name" label="Company" />
+                                <SortableHeader columnKey="legal_name" label="Legal Name" />
+                                <SortableHeader columnKey="address" label="Address" />
                                 {visibleProperties.map(prop => (
                                     <TableHead key={prop.id} className="min-w-[200px]">{prop.label}</TableHead>
                                 ))}
-                                <TableHead className="min-w-[150px]">Updated At</TableHead>
+                                <SortableHeader columnKey="updated_at" label="Updated At" />
                                 <TableHead className="text-right md:sticky right-0 bg-card">Actions</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {isLoading ? (
                                 <TableRow><TableCell colSpan={totalColumns} className="text-center h-24"><Loader2 className="mx-auto h-6 w-6 animate-spin text-muted-foreground" /></TableCell></TableRow>
-                            ) : filteredCompanies.length === 0 ? (
+                            ) : sortedAndFilteredCompanies.length === 0 ? (
                                 <TableRow><TableCell colSpan={totalColumns} className="text-center h-24">{searchTerm ? 'No companies match your search.' : 'No companies found. Add one to get started.'}</TableCell></TableRow>
                             ) : (
-                                filteredCompanies.map(company => {
+                                sortedAndFilteredCompanies.map(company => {
                                     const customLogoUrl = findImageUrlInCustomProps(company.custom_properties);
                                     const logoUrl = company.logo_url || customLogoUrl;
                                     return (
