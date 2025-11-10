@@ -61,17 +61,17 @@ const PropertiesSettingsPage = () => {
               </p>
             </CardContent>
           </Card>
-          <Card onClick={() => navigate('/settings/project-statuses')} className="cursor-pointer hover:bg-muted/50 transition-colors">
+          <Card onClick={() => navigate('/settings/project-properties')} className="cursor-pointer hover:bg-muted/50 transition-colors">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-base font-medium flex items-center gap-2">
                 <Briefcase className="h-4 w-4" />
-                Project Statuses
+                Project Properties
               </CardTitle>
               <ChevronRight className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">
-                Manage the different statuses for your projects.
+                Manage statuses, categories, and other project fields.
               </p>
             </CardContent>
           </Card>
