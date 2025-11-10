@@ -136,7 +136,7 @@ export interface CustomProperty {
   type: (typeof CUSTOM_PROPERTY_TYPES)[number];
   options?: string[] | null;
   is_default: boolean;
-  category: 'contact' | 'company' | 'tag';
+  category: 'contact' | 'company' | 'tag' | 'project' | 'billing';
 }
 
 export interface Reaction {
