@@ -215,7 +215,7 @@ export const formatActivityDescription = (text: string | null | undefined, type?
   }
 
   const urlRegex = /(https?:\/\/[^\s]+|www\.[^\s]+)/g;
-  const mentionRegex = /@\[([^\]]+)\]\s*\(([^)]+)\)/g;
+  const mentionRegex = /@\[([^\]]+)\]\(([^)]+)\)/g;
 
   // General improvement for other activities: remove quotes and bold the value.
   let formattedText = text.replace(/ to "(.*?)"$/, ' to <strong class="font-semibold text-foreground">$1</strong>');
