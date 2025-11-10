@@ -19,10 +19,11 @@ interface TaskCommentsListProps {
   editFileInputRef: React.RefObject<HTMLInputElement>;
   onReply: (comment: CommentType) => void;
   onCreateTicketFromComment: (comment: CommentType) => void;
+  onGoToReply: (messageId: string) => void;
 }
 
 const TaskCommentsList: React.FC<TaskCommentsListProps> = (props) => {
-  const { comments, isLoading, ...rest } = props;
+  const { comments, isLoading, onGoToReply, ...rest } = props;
 
   if (isLoading) {
     return <div>Loading comments...</div>;
@@ -35,6 +36,7 @@ const TaskCommentsList: React.FC<TaskCommentsListProps> = (props) => {
           key={comment.id}
           comment={comment}
           isEditing={props.editingCommentId === comment.id}
+          onGoToReply={onGoToReply}
           {...rest}
         />
       ))}

@@ -236,6 +236,17 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
 
   const handleSendReminder = () => sendReminder(task.id);
 
+  const handleScrollToMessage = (messageId: string) => {
+    const element = document.getElementById(`message-${messageId}`);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      element.classList.add('bg-primary/10', 'rounded-md');
+      setTimeout(() => {
+        element.classList.remove('bg-primary/10', 'rounded-md');
+      }, 1500);
+    }
+  };
+
   return (
     <>
       <DrawerContent className="mx-auto w-full max-w-[650px] flex flex-col max-h-[90vh]">
@@ -472,7 +483,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
           {description && (
             <div className="pt-4 border-t">
               <h4 className="font-semibold mb-2">Description</h4>
-              <div className="prose prose-sm dark:prose-invert max-w-none break-words">
+              <div className="prose prose-sm dark:prose-invert max-w-none break-all">
                 <ReactMarkdown 
                   remarkPlugins={[remarkGfm]} 
                   rehypePlugins={[rehypeRaw]}
@@ -522,6 +533,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
               editFileInputRef={editFileInputRef}
               onReply={handleReply}
               onCreateTicketFromComment={handleCreateTicketFromComment}
+              onGoToReply={handleScrollToMessage}
             />
           </div>
         </div>

@@ -76,6 +76,17 @@ const ProjectComments: React.FC<ProjectCommentsProps> = ({
     }
   };
 
+  const handleScrollToMessage = (messageId: string) => {
+    const element = document.getElementById(`message-${messageId}`);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      element.classList.add('bg-primary/10', 'rounded-md');
+      setTimeout(() => {
+        element.classList.remove('bg-primary/10', 'rounded-md');
+      }, 1500);
+    }
+  };
+
   return (
     <div className="flex flex-col h-full min-h-[400px] sm:min-h-[500px]">
       <div className="flex-shrink-0 pb-4 border-b mb-4">
@@ -109,6 +120,7 @@ const ProjectComments: React.FC<ProjectCommentsProps> = ({
               removeNewAttachment={removeNewAttachment}
               handleEditFileChange={handleEditFileChange}
               editFileInputRef={editFileInputRef}
+              onGoToReply={handleScrollToMessage}
             />
           ))
         ) : (

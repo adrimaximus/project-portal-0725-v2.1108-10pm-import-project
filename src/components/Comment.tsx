@@ -34,6 +34,7 @@ interface CommentProps {
   removeNewAttachment?: (index: number) => void;
   handleEditFileChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
   editFileInputRef?: React.RefObject<HTMLInputElement>;
+  onGoToReply?: (messageId: string) => void;
 }
 
 const Comment: React.FC<CommentProps> = ({
@@ -52,6 +53,7 @@ const Comment: React.FC<CommentProps> = ({
   removeNewAttachment,
   handleEditFileChange,
   editFileInputRef,
+  onGoToReply,
 }) => {
   const { user } = useAuth();
   
@@ -62,7 +64,7 @@ const Comment: React.FC<CommentProps> = ({
   const attachments: any[] = Array.isArray(attachmentsData) ? attachmentsData : attachmentsData ? [attachmentsData] : [];
 
   return (
-    <div className="flex items-start gap-3">
+    <div id={`message-${comment.id}`} className="flex items-start gap-3">
       <Avatar className="h-8 w-8">
         <AvatarImage src={getAvatarUrl(author.avatar_url, author.id)} />
         <AvatarFallback style={generatePastelColor(author.id)}>
@@ -143,9 +145,13 @@ const Comment: React.FC<CommentProps> = ({
         ) : (
           <>
             {comment.repliedMessage && (
-              <div className="flex items-start gap-2 text-xs p-2 mb-2 bg-muted rounded-md">
+              <button
+                onClick={() => onGoToReply && comment.reply_to_message_id && onGoToReply(comment.reply_to_message_id)}
+                className="w-full text-left flex items-start gap-2 text-xs p-2 mb-2 bg-muted rounded-md hover:bg-muted/80 transition-colors"
+                disabled={!onGoToReply || !comment.reply_to_message_id}
+              >
                 <div className="w-0.5 bg-primary rounded-full self-stretch"></div>
-                <div className="flex-1">
+                <div className="flex-1 overflow-hidden">
                   <p className="font-semibold text-primary">Replying to {comment.repliedMessage.senderName}</p>
                   <div className="italic line-clamp-1 prose prose-sm dark:prose-invert max-w-none text-muted-foreground">
                     <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
@@ -153,7 +159,7 @@ const Comment: React.FC<CommentProps> = ({
                     </ReactMarkdown>
                   </div>
                 </div>
-              </div>
+              </button>
             )}
             <div className="prose prose-sm dark:prose-invert max-w-none break-all">
               <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{formattedText}</ReactMarkdown>
