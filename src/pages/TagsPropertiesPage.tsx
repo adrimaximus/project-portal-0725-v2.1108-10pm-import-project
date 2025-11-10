@@ -45,8 +45,9 @@ const TagsPropertiesPage = () => {
 
   const handleSave = async (propertyData: PropertyFormValues) => {
     setIsSaving(true);
+    const name = propertyData.label.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
     const { id, is_default, ...dataToSave } = propertyToEdit || {};
-    const upsertData = { ...dataToSave, ...propertyData, is_default: false, category: 'tag' as 'tag' };
+    const upsertData = { ...dataToSave, ...propertyData, name, is_default: false, category: 'tag' as 'tag' };
 
     const promise = propertyToEdit?.id
       ? supabase.from('custom_properties').update(upsertData).eq('id', propertyToEdit.id)

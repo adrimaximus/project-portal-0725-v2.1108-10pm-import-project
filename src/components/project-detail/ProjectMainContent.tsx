@@ -244,7 +244,7 @@ const ProjectMainContent = ({
             onToggleTaskCompletion={onToggleTaskCompletion}
             highlightedTaskId={highlightedTaskId}
             onHighlightComplete={onHighlightComplete}
-            onTaskClick={(task) => onOpenTaskModal(task, undefined, project)}
+            onTaskClick={(task: Task) => onOpenTaskModal(task, undefined, project)}
           />
         </TabsContent>
         <TabsContent value="discussion" className="mt-4">

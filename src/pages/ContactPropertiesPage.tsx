@@ -45,8 +45,9 @@ const ContactPropertiesPage = () => {
 
   const handleSave = async (propertyData: PropertyFormValues) => {
     setIsSaving(true);
+    const name = propertyData.label.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
     const { id, is_default, ...dataToSave } = propertyToEdit || {};
-    const upsertData = { ...dataToSave, ...propertyData, is_default: false, category: 'contact' };
+    const upsertData = { ...dataToSave, ...propertyData, name, is_default: false, category: 'contact' };
 
     const promise = propertyToEdit?.id
       ? supabase.from('custom_properties').update(upsertData).eq('id', propertyToEdit.id)
@@ -121,15 +122,17 @@ const ContactPropertiesPage = () => {
                     <TableCell className="font-medium">{prop.label}</TableCell>
                     <TableCell><Badge variant="outline" className="capitalize">{prop.type}</Badge></TableCell>
                     <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onSelect={() => handleEdit(prop)}><Edit className="mr-2 h-4 w-4" /> Edit</DropdownMenuItem>
-                          <DropdownMenuItem onSelect={() => setPropertyToDelete(prop)} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Delete</DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      {!(prop as any).is_default && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onSelect={() => handleEdit(prop)}><Edit className="mr-2 h-4 w-4" /> Edit</DropdownMenuItem>
+                            <DropdownMenuItem onSelect={() => setPropertyToDelete(prop)} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Delete</DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
