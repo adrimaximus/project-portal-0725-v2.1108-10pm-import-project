@@ -31,11 +31,10 @@ interface TasksViewProps {
 }
 
 const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTaskCompletion, onStatusChange, isToggling, sortConfig, requestSort, rowRefs, highlightedTaskId, onHighlightComplete, onTaskClick }: TasksViewProps) => {
-  const [tasks, setTasks] = useState<ProjectTask[]>(tasksProp);
   const initialSortSet = useRef(false);
 
   useEffect(() => {
-    if (highlightedTaskId && tasks.length > 0) {
+    if (highlightedTaskId && tasksProp.length > 0) {
       const element = rowRefs.current.get(highlightedTaskId);
       if (element) {
         element.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -48,7 +47,7 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
         }, 2000);
       }
     }
-  }, [highlightedTaskId, onHighlightComplete, rowRefs, tasks]);
+  }, [highlightedTaskId, onHighlightComplete, rowRefs, tasksProp]);
 
   const getDueDateClassName = (dueDateStr: string | null, completed: boolean): string => {
     if (!dueDateStr || completed) {
@@ -80,7 +79,7 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
     }
   }, [tasksProp, sortConfig, requestSort]);
 
-  useEffect(() => {
+  const sortedTasks = useMemo(() => {
     let tasksToSet = [...tasksProp];
     if (sortConfig.key) {
       tasksToSet.sort((a, b) => {
@@ -111,7 +110,7 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
         return 0;
       });
     }
-    setTasks(tasksToSet);
+    return tasksToSet;
   }, [tasksProp, sortConfig]);
 
   if (isLoading) {
@@ -132,7 +131,7 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
     );
   }
 
-  if (tasks.length === 0) {
+  if (sortedTasks.length === 0) {
     return <div className="text-center text-muted-foreground p-8">No tasks found.</div>;
   }
 
@@ -161,7 +160,7 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
           </TableRow>
         </TableHeader>
         <TableBody>
-          {tasks.map(task => (
+          {sortedTasks.map(task => (
             <TableRow 
               key={task.id}
               ref={el => {
