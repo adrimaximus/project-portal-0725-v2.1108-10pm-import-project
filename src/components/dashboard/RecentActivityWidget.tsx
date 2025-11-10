@@ -4,6 +4,7 @@ import { Loader2 } from 'lucide-react';
 import { formatDistanceToNow, subDays } from 'date-fns';
 import { Link } from 'react-router-dom';
 import ActivityIcon from './ActivityIcon';
+import { formatActivityDescription } from '@/lib/utils';
 
 const RecentActivityWidget = () => {
   const { data: activities, isLoading } = useActivities();
@@ -40,7 +41,8 @@ const RecentActivityWidget = () => {
           <div className="text-sm flex-grow">
             <p className="text-foreground">
               <span className="font-semibold">{activity.user_name}</span>
-              {' '}{activity.details.description}
+              {' '}
+              <span dangerouslySetInnerHTML={{ __html: formatActivityDescription(activity.details.description, activity.type) }} />
             </p>
             <p className="text-xs text-muted-foreground mt-0.5">
               <Link to={`/projects/${activity.project_slug}`} className="hover:underline text-primary font-medium">{activity.project_name}</Link>

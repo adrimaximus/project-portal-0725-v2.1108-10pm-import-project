@@ -2,6 +2,7 @@ import { Activity } from "@/types";
 import { formatDistanceToNow } from "date-fns";
 import { History } from "lucide-react";
 import ActivityIcon from "./ActivityIcon";
+import { formatActivityDescription } from "@/lib/utils";
 
 interface ProjectActivityFeedProps {
   activities: Activity[];
@@ -49,41 +50,12 @@ const ProjectActivityFeed = ({ activities }: ProjectActivityFeedProps) => {
     );
   }
 
-  const formatDescription = (text: string, type: string) => {
-    if (!text) return "";
-
-    // Specific override for VENUE_UPDATED as requested
-    if (type === 'VENUE_UPDATED') {
-      const venueMatch = text.match(/updated the venue to "(.*)"/s);
-      if (venueMatch && venueMatch[1]) {
-        const venueText = venueMatch[1].replace(/\n/g, ', ');
-        return `updated venue: <strong class="font-semibold text-card-foreground">${venueText}</strong>`;
-      }
-    }
-
-    const urlRegex = /(https?:\/\/[^\s]+|www\.[^\s]+)/g;
-    const mentionRegex = /@\[([^\]]+)\]\(([^)]+)\)/g;
-
-    // General improvement for other activities: remove quotes and bold the value.
-    let formattedText = text.replace(/ to "(.*?)"$/, ' to <strong class="font-semibold text-card-foreground">$1</strong>');
-
-    return formattedText
-      .replace(/\\"/g, "") // Remove any remaining escaped quotes
-      .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-card-foreground">$1</strong>')
-      .replace(/`(.*?)`/g, '<code class="bg-muted text-muted-foreground font-mono text-xs px-1 py-0.5 rounded">$1</code>')
-      .replace(urlRegex, (url) => {
-        const href = url.startsWith('www.') ? `https://${url}` : url;
-        return `<a href="${href}" target="_blank" rel="noopener noreferrer" class="text-primary underline hover:text-primary/80">${url}</a>`;
-      })
-      .replace(mentionRegex, '<span class="text-primary font-semibold">@$1</span>');
-  };
-
   return (
     <div className="flow-root">
       <ul className="-mb-8">
         {filteredActivities.map((activity, activityIdx) => {
           const userName = activity.user?.name || "System";
-          const descriptionHtml = { __html: formatDescription(activity.details.description, activity.type) };
+          const descriptionHtml = { __html: formatActivityDescription(activity.details.description, activity.type) };
 
           return (
             <li key={activity.id}>

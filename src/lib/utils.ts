@@ -201,3 +201,32 @@ export const getTaskStatusStyles = (status: string | null | undefined) => {
       return { tw: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300' };
   }
 };
+
+export const formatActivityDescription = (text: string | null | undefined, type?: string | null): string => {
+  if (!text) return "";
+
+  // Specific override for VENUE_UPDATED
+  if (type === 'VENUE_UPDATED') {
+    const venueMatch = text.match(/updated the venue to "(.*)"/s);
+    if (venueMatch && venueMatch[1]) {
+      const venueText = venueMatch[1].replace(/\n/g, ', ');
+      return `updated venue: <strong class="font-semibold text-foreground">${venueText}</strong>`;
+    }
+  }
+
+  const urlRegex = /(https?:\/\/[^\s]+|www\.[^\s]+)/g;
+  const mentionRegex = /@\[([^\]]+)\]\(([^)]+)\)/g;
+
+  // General improvement for other activities: remove quotes and bold the value.
+  let formattedText = text.replace(/ to "(.*?)"$/, ' to <strong class="font-semibold text-foreground">$1</strong>');
+
+  return formattedText
+    .replace(/\\"/g, '"') // Unescape quotes
+    .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-foreground">$1</strong>')
+    .replace(/`(.*?)`/g, '<code class="bg-muted text-muted-foreground font-mono text-xs px-1 py-0.5 rounded">$1</code>')
+    .replace(urlRegex, (url) => {
+      const href = url.startsWith('www.') ? `https://${url}` : url;
+      return `<a href="${href}" target="_blank" rel="noopener noreferrer" class="text-primary underline hover:text-primary/80">${url}</a>`;
+    })
+    .replace(mentionRegex, '<span class="text-primary font-semibold">@$1</span>');
+};
