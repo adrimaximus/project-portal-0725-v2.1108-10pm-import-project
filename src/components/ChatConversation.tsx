@@ -3,7 +3,7 @@ import { Message, Collaborator } from "@/types";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import MessageAttachment from "./MessageAttachment";
 import { useAuth } from "@/contexts/AuthContext";
-import { cn, generatePastelColor, formatMentionsForDisplay, getInitials, getAvatarUrl } from "@/lib/utils";
+import { cn, generatePastelColor, formatMentionsForDisplay, getInitials, getAvatarUrl, isEmojiOnly } from "@/lib/utils";
 import { format, isToday, isYesterday, isSameDay, parseISO } from 'date-fns';
 import ReactMarkdown from 'react-markdown';
 import { Link } from 'react-router-dom';
@@ -22,22 +22,6 @@ interface ChatConversationProps {
   isLoading?: boolean;
   onReply: (message: Message) => void;
 }
-
-const isEmojiOnly = (str: string | null | undefined): boolean => {
-  if (!str) return false;
-  const trimmed = str.trim();
-  if (!trimmed) return false;
-
-  // Regex to check for any letters or digits
-  const hasAlphanumeric = /[a-zA-Z0-9]/;
-  if (hasAlphanumeric.test(trimmed)) {
-    return false;
-  }
-
-  // Regex to ensure it has at least one emoji character, to avoid matching only punctuation
-  const hasEmoji = /\p{Extended_Pictographic}/u;
-  return hasEmoji.test(trimmed);
-};
 
 const formatTimestamp = (timestamp: string) => {
   try {

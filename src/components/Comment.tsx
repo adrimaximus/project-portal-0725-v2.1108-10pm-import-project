@@ -3,7 +3,7 @@ import { Comment as CommentType, User } from '@/types';
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-import { getAvatarUrl, generatePastelColor, getInitials, formatMentionsForDisplay } from '@/lib/utils';
+import { getAvatarUrl, generatePastelColor, getInitials, formatMentionsForDisplay, isEmojiOnly } from '@/lib/utils';
 import { Button } from './ui/button';
 import { MoreHorizontal, Edit, Trash2, Ticket, CornerUpLeft, Paperclip, X, FileText } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu';
@@ -20,14 +20,16 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/t
 import { useCommentManager } from '@/hooks/useCommentManager';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 interface CommentProps {
   comment: CommentType;
   onReply: (comment: CommentType) => void;
   onGoToReply?: (messageId: string) => void;
+  onCreateTicketFromComment: (comment: CommentType) => void;
 }
 
-const Comment: React.FC<CommentProps> = ({ comment, onReply, onGoToReply }) => {
+const Comment: React.FC<CommentProps> = ({ comment, onReply, onGoToReply, onCreateTicketFromComment }) => {
   const { user } = useAuth();
   const { updateComment, deleteComment, toggleReaction } = useCommentManager({ scope: { projectId: comment.project_id, taskId: comment.task_id } });
 
@@ -42,6 +44,7 @@ const Comment: React.FC<CommentProps> = ({ comment, onReply, onGoToReply }) => {
   const formattedText = formatMentionsForDisplay(comment.text || '');
   const attachmentsData = comment.attachments_jsonb;
   const attachments: any[] = Array.isArray(attachmentsData) ? attachmentsData : attachmentsData ? [attachmentsData] : [];
+  const isOnlyEmoji = isEmojiOnly(comment.text);
 
   const handleEditClick = () => {
     setIsEditing(true);
@@ -67,14 +70,6 @@ const Comment: React.FC<CommentProps> = ({ comment, onReply, onGoToReply }) => {
 
   const handleToggleReaction = (emoji: string) => {
     toggleReaction.mutate({ commentId: comment.id, emoji });
-  };
-
-  const handleCreateTicketFromComment = () => {
-    updateComment.mutate({ commentId: comment.id, text: comment.text || '', isTicket: true }, {
-      onSuccess: () => {
-        toast.success("Comment converted to ticket.");
-      }
-    });
   };
 
   const handleEditFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -186,7 +181,7 @@ const Comment: React.FC<CommentProps> = ({ comment, onReply, onGoToReply }) => {
                   </div>
                 </button>
               )}
-              <div className="prose prose-sm dark:prose-invert max-w-none break-all">
+              <div className={cn("prose prose-sm dark:prose-invert max-w-none break-all", isOnlyEmoji && "text-3xl")}>
                 <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{formattedText}</ReactMarkdown>
               </div>
               {attachments.length > 0 && (
@@ -202,7 +197,7 @@ const Comment: React.FC<CommentProps> = ({ comment, onReply, onGoToReply }) => {
                 </Button>
                 <CommentReactions reactions={comment.reactions || []} onToggleReaction={handleToggleReaction} />
                 {!comment.is_ticket && (
-                  <Button variant="ghost" size="sm" className="text-muted-foreground h-auto p-1 text-xs" onClick={handleCreateTicketFromComment}>
+                  <Button variant="ghost" size="sm" className="text-muted-foreground h-auto p-1 text-xs" onClick={() => onCreateTicketFromComment(comment)}>
                     <Ticket className="h-3 w-3 sm:mr-1" />
                     <span className="hidden sm:inline">Create Ticket</span>
                   </Button>
