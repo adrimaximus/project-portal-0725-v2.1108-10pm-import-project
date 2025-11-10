@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from 'sonner';
+import * as z from 'zod';
 
 interface CustomProperty {
   id: string;
@@ -24,16 +25,21 @@ interface CustomProperty {
 }
 
 interface PropertyFormDialogProps {
-  isOpen: boolean;
-  setIsOpen: (isOpen: boolean) => void;
+  open: boolean;
+  onOpenChange: (isOpen: boolean) => void;
   property: CustomProperty | null;
   category: string;
   onSuccess: () => void;
 }
 
-const propertyTypes = ['Text', 'Number', 'Date', 'URL', 'Email', 'Phone', 'Select'];
+const createPropertySchema = (properties: CustomProperty[], property: CustomProperty | null) => z.object({
+  label: z.string().min(1, 'Label is required'),
+  type: z.string(),
+});
 
-const PropertyFormDialog = ({ isOpen, setIsOpen, property, category, onSuccess }: PropertyFormDialogProps) => {
+export type PropertyFormValues = z.infer<ReturnType<typeof createPropertySchema>>;
+
+const PropertyFormDialog = ({ open, onOpenChange, property, category, onSuccess }: PropertyFormDialogProps) => {
   const [label, setLabel] = useState('');
   const [type, setType] = useState('Text');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -46,7 +52,7 @@ const PropertyFormDialog = ({ isOpen, setIsOpen, property, category, onSuccess }
       setLabel('');
       setType('Text');
     }
-  }, [property, isOpen]);
+  }, [property, open]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,13 +81,15 @@ const PropertyFormDialog = ({ isOpen, setIsOpen, property, category, onSuccess }
     } else {
       toast.success(`Property ${property ? 'updated' : 'created'} successfully.`);
       onSuccess();
-      setIsOpen(false);
+      onOpenChange(false);
     }
     setIsSubmitting(false);
   };
 
+  const propertyTypes = ['Text', 'Number', 'Date', 'URL', 'Email', 'Phone', 'Select'];
+
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>{property ? 'Edit Property' : 'New Property'}</DialogTitle>
@@ -120,7 +128,7 @@ const PropertyFormDialog = ({ isOpen, setIsOpen, property, category, onSuccess }
             </div>
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>Cancel</Button>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting ? 'Saving...' : 'Save'}
             </Button>

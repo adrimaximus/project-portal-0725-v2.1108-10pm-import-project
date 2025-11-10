@@ -102,6 +102,8 @@ const AiChatView = forwardRef<HTMLTextAreaElement, AiChatViewProps>(({ onBack },
         conversationId="ai-assistant"
         replyTo={replyTo}
         onCancelReply={() => setReplyTo(null)}
+        editingMessage={null}
+        onCancelEdit={() => {}}
       />
     </div>
   );
