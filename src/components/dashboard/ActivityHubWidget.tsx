@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Link } from 'react-router-dom';
 import { Loader2, Clock, CheckCircle2, CheckCircle, AlertTriangle, PlusSquare, ArrowUp, ArrowDown, ListChecks } from 'lucide-react';
 import { Task, Project } from '@/types';
-import { format, isPast } from 'date-fns';
+import { format, isPast, isToday, isTomorrow, differenceInDays } from 'date-fns';
 import { cn, getInitials, getAvatarUrl, generatePastelColor } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -20,7 +20,7 @@ import RecentActivityWidget from './RecentActivityWidget';
 import CollaboratorsTab from './CollaboratorsTab';
 import MyTasksWidget from './MyTasksWidget';
 
-const ActivityHubWidget = ({ projects }: { projects: Project[] }) => {
+const ActivityHubWidget = () => {
   return (
     <Card>
       <Tabs defaultValue="my-tasks" className="w-full">
@@ -42,7 +42,7 @@ const ActivityHubWidget = ({ projects }: { projects: Project[] }) => {
             <RecentActivityWidget />
           </TabsContent>
           <TabsContent value="collaborators" className="mt-0 h-[300px] overflow-y-auto">
-            <CollaboratorsTab projects={projects} />
+            <CollaboratorsTab />
           </TabsContent>
         </CardContent>
       </Tabs>
