@@ -458,6 +458,29 @@ serve(async (req) => {
             }
             break;
           }
+          case 'billing_reminder':
+          case 'billing_reminder_email': {
+            const { project_name, days_overdue } = context;
+            const url = `${APP_URL}/billing`;
+            let urgency = 'sedikit mendesak';
+            if (days_overdue > 30) {
+              urgency = 'sangat mendesak dan perlu segera ditindaklanjuti';
+            } else if (days_overdue > 7) {
+              urgency = 'cukup mendesak';
+            }
+            
+            userPrompt = `Buat notifikasi pengingat tagihan. Penerima: ${recipientName}. Proyek: "${project_name}". Terlambat: ${days_overdue} hari. Tingkat Urgensi: ${urgency}. URL: ${url}`;
+            
+            if (notification.notification_type === 'billing_reminder_email') {
+              const subject = `PENGINGAT: Pembayaran untuk proyek ${project_name} telah jatuh tempo`;
+              const html = `<p>Hai ${recipientName},</p><p>Ini adalah pengingat bahwa pembayaran untuk proyek <strong>${project_name}</strong> telah melewati tenggat waktu selama <strong>${days_overdue} hari</strong>.</p><p>Mohon segera selesaikan pembayaran ini.</p><a href="${url}" style="display: inline-block; padding: 10px 20px; font-size: 16px; color: #ffffff; background-color: #dc3545; text-decoration: none; border-radius: 5px;">Lihat Tagihan</a>`;
+              await sendEmail(recipient.email, subject, html, `Pembayaran untuk proyek ${project_name} terlambat. Lihat di: ${url}`);
+            } else {
+              const aiMessage = await generateAiMessage(userPrompt);
+              await sendWhatsappMessage(recipient.phone, aiMessage);
+            }
+            break;
+          }
           default:
             throw new Error(`Unsupported notification type: ${notification.notification_type}`);
         }
