@@ -66,7 +66,7 @@ export function GlobalSearch() {
 
     try {
       const [projectsRes, usersRes, goalsRes, billsRes, tasksRes] = await Promise.all([
-        supabase.from('projects').select('id, name, slug').ilike('name', `%${searchQuery}%`).limit(5),
+        supabase.rpc('search_projects', { p_search_term: searchQuery, p_limit: 5 }),
         supabase.from('profiles').select('id, first_name, last_name, email').or(`first_name.ilike.%${searchQuery}%,last_name.ilike.%${searchQuery}%,email.ilike.%${searchQuery}%`).limit(5),
         supabase.from('goals').select('id, title, slug').ilike('title', `%${searchQuery}%`).limit(5),
         supabase.from('projects').select('id, name, slug, payment_status').in('payment_status', ['Unpaid', 'Overdue']).ilike('name', `%${searchQuery}%`).limit(5),
