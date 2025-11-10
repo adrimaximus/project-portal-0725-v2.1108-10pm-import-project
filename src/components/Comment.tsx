@@ -155,7 +155,7 @@ const Comment: React.FC<CommentProps> = ({
                 </div>
               </div>
             )}
-            <div className="prose prose-sm dark:prose-invert max-w-none break-words">
+            <div className="prose prose-sm dark:prose-invert max-w-none break-all">
               <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{formattedText}</ReactMarkdown>
             </div>
             {attachments.length > 0 && (

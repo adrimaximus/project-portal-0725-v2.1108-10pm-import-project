@@ -149,8 +149,11 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
   };
 
   const handleAddComment = (text: string, isTicket: boolean, attachments: File[] | null, mentionedUserIds: string[]) => {
-    addComment.mutate({ text, isTicket, attachments, replyToId: replyTo?.id });
-    setReplyTo(null);
+    addComment.mutate({ text, isTicket, attachments, replyToId: replyTo?.id }, {
+      onSuccess: (result) => {
+        setReplyTo(null);
+      }
+    });
   };
 
   const handleEditClick = (comment: CommentType) => {
@@ -193,18 +196,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
   const handleCreateTicketFromComment = async (comment: CommentType) => {
     updateComment.mutate({ commentId: comment.id, text: comment.text || '', isTicket: true }, {
       onSuccess: () => {
-        const fullCommentText = comment.text || '';
-        const taskTitle = fullCommentText.length > 80 ? `${fullCommentText.substring(0, 80)}...` : fullCommentText;
-        
-        onOpenTaskModal(undefined, {
-          title: taskTitle,
-          description: fullCommentText,
-          project_id: comment.project_id,
-          status: 'To do',
-          priority: 'Normal',
-          due_date: null,
-          origin_ticket_id: comment.id,
-        });
+        toast.success("Comment converted to ticket.");
       }
     });
   };
@@ -488,8 +480,22 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
           {description && (
             <div className="pt-4 border-t">
               <h4 className="font-semibold mb-2">Description</h4>
-              <div className="prose prose-sm dark:prose-invert max-w-none break-words">
-                <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{formattedDescription}</ReactMarkdown>
+              <div className="prose prose-sm dark:prose-invert max-w-none break-all">
+                <ReactMarkdown 
+                  remarkPlugins={[remarkGfm]} 
+                  rehypePlugins={[rehypeRaw]}
+                  components={{
+                    a: ({ node, ...props }) => {
+                      const href = props.href || '';
+                      if (href.startsWith('/')) {
+                        return <Link to={href} {...props} className="font-medium underline" />;
+                      }
+                      return <a {...props} target="_blank" rel="noopener noreferrer" className="font-medium underline" />;
+                    },
+                  }}
+                >
+                  {formattedDescription}
+                </ReactMarkdown>
               </div>
               {isLongDescription && (
                 <Button variant="link" size="sm" onClick={() => setShowFullDescription(!showFullDescription)} className="px-0 h-auto">

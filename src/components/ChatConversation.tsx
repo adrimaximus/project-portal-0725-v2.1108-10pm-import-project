@@ -241,7 +241,7 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                                     <div className="pt-2 px-1 flex items-end gap-2">
                                       <div className="min-w-0 flex-grow">
                                         <div className={cn(
-                                          "text-sm whitespace-pre-wrap break-words prose prose-sm max-w-none [&_p]:my-0",
+                                          "text-sm whitespace-pre-wrap break-all prose prose-sm max-w-none [&_p]:my-0",
                                           isCurrentUser ? "prose-invert prose-p:text-primary-foreground prose-a:text-primary-foreground" : "dark:prose-invert"
                                         )}>
                                           <ReactMarkdown
@@ -309,7 +309,7 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                                         <div className="text-3xl">{message.text}</div>
                                       ) : (
                                         <div className={cn(
-                                          "text-sm whitespace-pre-wrap break-words prose prose-sm max-w-none [&_p]:my-0",
+                                          "text-sm whitespace-pre-wrap break-all prose prose-sm max-w-none [&_p]:my-0",
                                           isCurrentUser ? "prose-invert prose-p:text-primary-foreground prose-a:text-primary-foreground" : "dark:prose-invert"
                                         )}>
                                           <ReactMarkdown
