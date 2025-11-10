@@ -12,6 +12,7 @@ import { useCommentManager } from '@/hooks/useCommentManager';
 import ProjectComments from '@/components/project-detail/ProjectComments';
 import { useProfiles } from '@/hooks/useProfiles';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ProjectMainContentProps {
   project: Project;
@@ -72,8 +73,49 @@ const ProjectMainContent = ({
   const editFileInputRef = useRef<HTMLInputElement>(null);
   const { data: allUsers = [] } = useProfiles();
 
-  const handleAddCommentOrTicket = (text: string, isTicket: boolean, attachments: File[] | null, mentionedUserIds: string[]) => {
-    addComment.mutate({ text, isTicket, attachments, replyToId: replyTo?.id });
+  const pollForTask = (commentId: string) => {
+    let attempts = 0;
+    const interval = setInterval(async () => {
+      attempts++;
+      const { data: taskData, error: taskError } = await supabase
+        .from('tasks')
+        .select('id, project_id')
+        .eq('origin_ticket_id', commentId)
+        .single();
+      
+      if (taskData) {
+        clearInterval(interval);
+        const { data: fullTaskData, error: fullTaskError } = await supabase
+          .rpc('get_project_tasks', { p_project_ids: [taskData.project_id] })
+          .eq('id', taskData.id)
+          .single();
+        
+        if (fullTaskData && !fullTaskError) {
+          onOpenTaskModal(fullTaskData, undefined, project);
+        } else {
+          toast.error("Could not open the new task for editing.");
+        }
+      } else if (attempts > 10) { // Timeout after ~5 seconds
+        clearInterval(interval);
+        toast.error("Could not find the created task. It may appear shortly.");
+      }
+    }, 500);
+  };
+
+  const handleAddCommentOrTicket = async (text: string, isTicket: boolean, attachments: File[] | null, mentionedUserIds: string[]) => {
+    if (isTicket) {
+      try {
+        const newComment = await addComment.mutateAsync({ text, isTicket, attachments, replyToId: replyTo?.id });
+        if (newComment) {
+          toast.info("Ticket created. Finding associated task...");
+          pollForTask(newComment.id);
+        }
+      } catch (error) {
+        // Error is already handled by the mutation's onError
+      }
+    } else {
+      addComment.mutate({ text, isTicket, attachments, replyToId: replyTo?.id });
+    }
     setReplyTo(null);
   };
 
@@ -106,23 +148,14 @@ const ProjectMainContent = ({
     setNewAttachments(prev => prev.filter((_, i) => i !== index));
   };
 
-  const onCreateTicketFromComment = (comment: CommentType) => {
-    const cleanText = comment.text?.replace(/@\[[^\]]+\]\(([^)]+)\)/g, '').trim() || 'New Ticket';
-    const taskTitle = `Ticket: ${cleanText.substring(0, 50)}${cleanText.length > 50 ? '...' : ''}`;
-
-    updateComment.mutate({ commentId: comment.id, text: comment.text || '', isTicket: true }, {
-      onSuccess: () => {
-        onOpenTaskModal(undefined, {
-          title: taskTitle,
-          description: cleanText,
-          project_id: comment.project_id,
-          status: 'To do',
-          priority: 'Normal',
-          due_date: addHours(new Date(), 24).toISOString(),
-          origin_ticket_id: comment.id,
-        }, project);
-      }
-    });
+  const onCreateTicketFromComment = async (comment: CommentType) => {
+    try {
+      await updateComment.mutateAsync({ commentId: comment.id, text: comment.text || '', isTicket: true });
+      toast.info("Comment converted to ticket. Finding associated task...");
+      pollForTask(comment.id);
+    } catch (error) {
+      // Error handled in mutation
+    }
   };
 
   const handleMentionConsumed = useCallback(() => {
