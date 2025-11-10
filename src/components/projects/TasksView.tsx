@@ -13,7 +13,6 @@ import { MoreHorizontal, Edit, Trash2 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { User as AuthUser } from '@supabase/supabase-js';
 
 interface TasksViewProps {
   tasks: ProjectTask[];
@@ -208,7 +207,8 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
                 >
                   <SelectTrigger className={cn(
                     "h-auto border-0 focus:ring-0 focus:ring-offset-0 shadow-none bg-transparent p-0 w-auto",
-                    isOverdue(task.due_date) && !task.completed && "ring-2 ring-destructive rounded-md px-1"
+                    isOverdue(task.due_date) && 
+                    !task.completed && "ring-2 ring-destructive rounded-md px-1"
                   )}>
                     <SelectValue>
                       <Badge variant="outline" className={cn(getTaskStatusStyles(task.status).tw, 'border-transparent font-normal')}>
