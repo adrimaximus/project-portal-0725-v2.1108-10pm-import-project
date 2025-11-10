@@ -13,7 +13,7 @@ import { useTaskMutations } from '@/hooks/useTaskMutations';
 import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import TaskAttachmentList from './TaskAttachmentList';
-import { cn, getErrorMessage, formatBytes } from "@/lib/utils";
+import { cn, getErrorMessage, formatBytes, formatActivityDescription } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { Separator } from "@/components/ui/separator";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -96,9 +96,8 @@ const TaskRow = ({ task, onToggleTaskCompletion, onEditTask, onDeleteTask, handl
           )}
           title={task.title}
           onClick={handleTitleClick}
-        >
-          {task.title}
-        </span>
+          dangerouslySetInnerHTML={{ __html: formatActivityDescription(task.title) }}
+        />
       </div>
 
       <div className="flex items-center gap-2 ml-auto">
