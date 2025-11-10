@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Task as ProjectTask, Reaction, User, TaskStatus, TASK_STATUS_OPTIONS } from '@/types';
+import { Task as ProjectTask, User, TaskStatus, TASK_STATUS_OPTIONS } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -207,8 +207,7 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
                 >
                   <SelectTrigger className={cn(
                     "h-auto border-0 focus:ring-0 focus:ring-offset-0 shadow-none bg-transparent p-0 w-auto",
-                    isOverdue(task.due_date) && 
-                    !task.completed && "ring-2 ring-destructive rounded-md px-1"
+                    isOverdue(task.due_date) && !task.completed && "ring-2 ring-destructive rounded-md px-1"
                   )}>
                     <SelectValue>
                       <Badge variant="outline" className={cn(getTaskStatusStyles(task.status).tw, 'border-transparent font-normal')}>
