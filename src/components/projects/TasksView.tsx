@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Link } from "react-router-dom";
 import { format, isPast } from "date-fns";
-import { generatePastelColor, getPriorityStyles, getTaskStatusStyles, isOverdue, cn, getAvatarUrl, getInitials, formatTaskText, truncateText } from "@/lib/utils";
+import { generatePastelColor, getPriorityStyles, getTaskStatusStyles, isOverdue, cn, getAvatarUrl, getInitials, formatTaskText, truncateText, formatActivityDescription } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "../ui/button";
@@ -14,8 +14,6 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Checkbox } from "@/components/ui/checkbox";
 import TaskAttachmentList from '../projects/TaskAttachmentList';
 import { Drawer, DrawerContent, DrawerTrigger } from "@/components/ui/drawer";
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 import TaskDetailCard from './TaskDetailCard';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import EmojiPicker, { EmojiStyle } from "emoji-picker-react";
@@ -402,9 +400,7 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
                           <div className="flex flex-col cursor-pointer text-sm md:text-base w-full" onClick={() => setSelectedTaskId(task.id)}>
                             <div className="flex items-center gap-2">
                               <div className={`${task.completed ? 'line-through text-muted-foreground' : ''}`}>
-                                <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ p: 'span' }}>
-                                  {formatTaskText(task.title)}
-                                </ReactMarkdown>
+                                <span dangerouslySetInnerHTML={{ __html: formatActivityDescription(task.title) }} />
                               </div>
                             </div>
                             {task.origin_ticket_id && task.created_by && (
