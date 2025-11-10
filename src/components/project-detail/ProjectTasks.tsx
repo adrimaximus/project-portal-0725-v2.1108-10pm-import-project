@@ -36,16 +36,21 @@ interface ProjectTasksProps {
   onHighlightComplete?: () => void;
 }
 
-const TaskRow = ({ task, onToggleTaskCompletion, onEditTask, onDeleteTask, handleToggleReaction, setRef, onTaskClick, currentUserId }: {
+const TaskRow = ({ task, onToggleTaskCompletion, onEditTask, onDeleteTask, handleToggleReaction, setRef, currentUserId }: {
   task: Task;
   onToggleTaskCompletion: (task: Task, completed: boolean) => void;
   onEditTask: (task: Task) => void;
   onDeleteTask: (task: Task) => void;
   handleToggleReaction: (taskId: string, emoji: string) => void;
   setRef: (el: HTMLDivElement | null) => void;
-  onTaskClick: (task: Task) => void;
   currentUserId?: string;
 }) => {
+  const navigate = useNavigate();
+
+  const handleTitleClick = () => {
+    navigate(`/projects?view=tasks&highlight=${task.id}`);
+  };
+
   const allAttachments = useMemo(() => {
     let attachments: TaskAttachment[] = [...(task.attachments || [])];
     if (task.ticket_attachments && task.ticket_attachments.length > 0) {
@@ -90,7 +95,7 @@ const TaskRow = ({ task, onToggleTaskCompletion, onEditTask, onDeleteTask, handl
             task.completed && "line-through"
           )}
           title={task.title}
-          onClick={() => onTaskClick(task)}
+          onClick={handleTitleClick}
         >
           {task.title}
         </span>
@@ -187,7 +192,6 @@ const TaskRow = ({ task, onToggleTaskCompletion, onEditTask, onDeleteTask, handl
 };
 
 const ProjectTasks = ({ project, tasks, projectId, projectSlug, onEditTask, onDeleteTask, onToggleTaskCompletion, highlightedTaskId, onHighlightComplete }: ProjectTasksProps) => {
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { toggleTaskReaction, createTasks, isCreatingTasks } = useTaskMutations(() => queryClient.invalidateQueries({ queryKey: ['project', projectSlug] }));
   const taskRefs = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -283,10 +287,6 @@ const ProjectTasks = ({ project, tasks, projectId, projectSlug, onEditTask, onDe
     });
   };
 
-  const handleTitleClick = (task: Task) => {
-    navigate(`/projects?view=tasks&highlight=${task.id}`);
-  };
-
   const { undoneTasks, doneTasks } = useMemo(() => {
     const undone: Task[] = [];
     const done: Task[] = [];
@@ -346,7 +346,7 @@ const ProjectTasks = ({ project, tasks, projectId, projectSlug, onEditTask, onDe
             onEditTask={onEditTask}
             onDeleteTask={onDeleteTask}
             handleToggleReaction={handleToggleReaction}
-            onTaskClick={handleTitleClick}
+            onTaskClick={onEditTask}
             currentUserId={user?.id}
             setRef={(el) => {
               if (el) taskRefs.current.set(task.id, el);
@@ -406,7 +406,7 @@ const ProjectTasks = ({ project, tasks, projectId, projectSlug, onEditTask, onDe
                     onEditTask={onEditTask}
                     onDeleteTask={onDeleteTask}
                     handleToggleReaction={handleToggleReaction}
-                    onTaskClick={handleTitleClick}
+                    onTaskClick={onEditTask}
                     currentUserId={user?.id}
                     setRef={(el) => {
                       if (el) taskRefs.current.set(task.id, el);
