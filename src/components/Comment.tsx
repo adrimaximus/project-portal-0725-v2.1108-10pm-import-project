@@ -61,8 +61,19 @@ const Comment: React.FC<CommentProps> = ({
   const attachmentsData = comment.attachments_jsonb;
   const attachments: any[] = Array.isArray(attachmentsData) ? attachmentsData : attachmentsData ? [attachmentsData] : [];
 
+  const handleScrollToMessage = (messageId: string) => {
+    const element = document.getElementById(`message-${messageId}`);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      element.classList.add('bg-primary/10', 'rounded-md');
+      setTimeout(() => {
+        element.classList.remove('bg-primary/10', 'rounded-md');
+      }, 1500);
+    }
+  };
+
   return (
-    <div className="flex items-start gap-3">
+    <div id={`message-${comment.id}`} className="flex items-start gap-3">
       <Avatar className="h-8 w-8">
         <AvatarImage src={getAvatarUrl(author.avatar_url, author.id)} />
         <AvatarFallback style={generatePastelColor(author.id)}>
@@ -142,10 +153,13 @@ const Comment: React.FC<CommentProps> = ({
           </div>
         ) : (
           <>
-            {comment.repliedMessage && (
-              <div className="flex items-start gap-2 text-xs p-2 mb-2 bg-muted rounded-md">
+            {comment.repliedMessage && comment.reply_to_message_id && (
+              <button
+                onClick={() => handleScrollToMessage(comment.reply_to_message_id!)}
+                className="w-full text-left flex items-start gap-2 text-xs p-2 mb-2 bg-muted rounded-md hover:bg-muted/80 transition-colors"
+              >
                 <div className="w-0.5 bg-primary rounded-full self-stretch"></div>
-                <div className="flex-1">
+                <div className="flex-1 overflow-hidden">
                   <p className="font-semibold text-primary">Replying to {comment.repliedMessage.senderName}</p>
                   <div className="italic line-clamp-1 prose prose-sm dark:prose-invert max-w-none text-muted-foreground">
                     <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
@@ -153,7 +167,7 @@ const Comment: React.FC<CommentProps> = ({
                     </ReactMarkdown>
                   </div>
                 </div>
-              </div>
+              </button>
             )}
             <div className="prose prose-sm dark:prose-invert max-w-none break-words">
               <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{formattedText}</ReactMarkdown>
