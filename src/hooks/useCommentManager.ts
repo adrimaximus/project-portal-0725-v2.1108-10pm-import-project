@@ -96,7 +96,7 @@ export const useCommentManager = ({ scope }: UseCommentManagerProps) => {
           reply_to_comment_id: replyToId,
         }).select().single();
         if (error) throw error;
-        return { isTicket: false, comment: data };
+        return { isTicket: false, data };
       }
     },
     onSuccess: ({ isTicket }) => {
@@ -138,8 +138,10 @@ export const useCommentManager = ({ scope }: UseCommentManagerProps) => {
       const { error } = await supabase.from('comments').update(updatePayload).eq('id', commentId);
       if (error) throw error;
     },
-    onSuccess: () => {
-      toast.success("Comment updated.");
+    onSuccess: (_, variables) => {
+      if (!variables.isTicket) {
+        toast.success("Comment updated.");
+      }
       queryClient.invalidateQueries({ queryKey });
     },
     onError: (error: any) => toast.error("Failed to update comment.", { description: getErrorMessage(error) }),

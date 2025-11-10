@@ -142,20 +142,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
 
   const handleAddComment = (text: string, isTicket: boolean, attachments: File[] | null, mentionedUserIds: string[]) => {
     addComment.mutate({ text, isTicket, attachments, replyToId: replyTo?.id }, {
-      onSuccess: async (result) => {
-        if (result.isTicket && result.taskId) {
-          toast.info("Ticket created. Opening task details...");
-          const { data: fullTaskData, error: fullTaskError } = await supabase
-            .rpc('get_project_tasks', { p_project_ids: [task.project_id] })
-            .eq('id', result.taskId)
-            .single();
-          
-          if (fullTaskData && !fullTaskError) {
-            onOpenTaskModal(fullTaskData as Task, undefined, undefined);
-          } else {
-            toast.error("Could not open the new task for editing.", { description: fullTaskError?.message });
-          }
-        }
+      onSuccess: () => {
         setReplyTo(null);
       }
     });
@@ -200,21 +187,8 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
 
   const handleCreateTicketFromComment = async (comment: CommentType) => {
     updateComment.mutate({ commentId: comment.id, text: comment.text || '', isTicket: true }, {
-      onSuccess: async () => {
-        toast.info("Comment converted to ticket. Finding associated task...");
-        let attempts = 0;
-        const interval = setInterval(async () => {
-          attempts++;
-          const { data: taskData } = await supabase.from('tasks').select('id').eq('origin_ticket_id', comment.id).single();
-          if (taskData) {
-            clearInterval(interval);
-            const { data: fullTaskData } = await supabase.rpc('get_project_tasks', { p_project_ids: [task.project_id] }).eq('id', taskData.id).single();
-            if (fullTaskData) onOpenTaskModal(fullTaskData as Task, undefined, undefined);
-          } else if (attempts > 10) {
-            clearInterval(interval);
-            toast.error("Could not find the created task.");
-          }
-        }, 500);
+      onSuccess: () => {
+        toast.success("Comment converted to ticket.");
       }
     });
   };
