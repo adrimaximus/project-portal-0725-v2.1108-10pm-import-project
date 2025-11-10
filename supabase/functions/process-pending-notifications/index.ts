@@ -296,6 +296,15 @@ serve(async (req) => {
             await sendWhatsappMessage(recipient.phone, aiMessage);
             break;
           }
+          case 'new_ticket': {
+            const { creator_name, ticket_content, project_name, project_slug, task_id } = context;
+            const url = `${APP_URL}/projects/${project_slug}?tab=tasks&task=${task_id}`;
+            userPrompt = `Buat notifikasi tiket baru. Penerima: ${recipientName}. Pembuat tiket: ${creator_name}. Isi tiket: "${ticket_content}". Proyek: "${project_name}". URL: ${url}`;
+            
+            const aiMessage = await generateAiMessage(userPrompt);
+            await sendWhatsappMessage(recipient.phone, aiMessage);
+            break;
+          }
           // ... other cases remain the same
           default:
             throw new Error(`Unsupported notification type: ${notification.notification_type}`);
