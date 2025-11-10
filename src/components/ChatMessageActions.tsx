@@ -21,7 +21,6 @@ import {
   Trash2,
   MoreHorizontal,
   Download,
-  Pin,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useChatContext } from "@/contexts/ChatContext";
@@ -48,7 +47,7 @@ export const ChatMessageActions = ({
   onReply,
   className,
 }: ChatMessageActionsProps) => {
-  const { deleteMessage, toggleReaction, openForwardDialog, startEditingMessage, pinMessage, selectedConversation } = useChatContext();
+  const { deleteMessage, toggleReaction, openForwardDialog, startEditingMessage } = useChatContext();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -96,8 +95,6 @@ export const ChatMessageActions = ({
     setEmojiPickerOpen(false);
     setIsMenuOpen(false);
   };
-
-  const isPinned = selectedConversation?.pinned_message_id === message.id;
 
   return (
     <>
@@ -156,11 +153,6 @@ export const ChatMessageActions = ({
               </DropdownMenuSubContent>
             </DropdownMenuPortal>
           </DropdownMenuSub>
-
-          <DropdownMenuItem onClick={() => pinMessage(message.id)}>
-            <Pin className="mr-2 h-4 w-4" />
-            <span>{isPinned ? 'Unpin Message' : 'Pin Message'}</span>
-          </DropdownMenuItem>
 
           <DropdownMenuItem onClick={() => openForwardDialog(message)}>
             <Share className="mr-2 h-4 w-4" />

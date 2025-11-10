@@ -16,7 +16,6 @@ const mapConversationData = (c: any): Omit<Conversation, 'messages'> => ({
     initials: p.initials,
   })),
   created_by: c.created_by,
-  pinned_message_id: c.pinned_message_id,
 });
 
 export const fetchConversations = async (): Promise<Omit<Conversation, 'messages'>[]> => {

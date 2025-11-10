@@ -62,8 +62,14 @@ const formatDateSeparator = (timestamp: string) => {
 
 export const ChatConversation = ({ messages, members, isLoading, onReply }: ChatConversationProps) => {
   const { user: currentUser } = useAuth();
-  const { toggleReaction, editingMessage, messageToScrollTo, setMessageToScrollTo } = useChatContext();
+  const { toggleReaction, editingMessage } = useChatContext();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
+    }
+  }, [messages, isLoading]);
 
   const handleScrollToMessage = (messageId: string) => {
     const element = document.getElementById(`message-${messageId}`);
@@ -75,19 +81,6 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
       }, 1500);
     }
   };
-
-  useEffect(() => {
-    if (messageToScrollTo) {
-      handleScrollToMessage(messageToScrollTo);
-      setMessageToScrollTo(null);
-    }
-  }, [messageToScrollTo, setMessageToScrollTo]);
-
-  useEffect(() => {
-    if (scrollContainerRef.current && !messageToScrollTo) {
-      scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
-    }
-  }, [messages, isLoading, messageToScrollTo]);
 
   if (!currentUser) {
     return <div>Loading...</div>;
