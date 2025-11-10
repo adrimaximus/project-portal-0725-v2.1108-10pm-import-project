@@ -58,7 +58,7 @@ const ProjectsPage = () => {
     hasNextPage, 
     isFetchingNextPage,
     refetch: refetchProjects 
-  } = useProjects({ fetchAll: true });
+  } = useProjects({});
 
   const projectsData = useMemo(() => data?.pages.flatMap(page => page.projects) ?? [], [data]);
   
@@ -269,7 +269,7 @@ const ProjectsPage = () => {
     updateProjectStatus.mutate({ projectId, status: newStatus });
   };
 
-  const handleTaskOrderChange = (payload: { taskId: string; newStatus: TaskStatus; orderedTaskIds: string[]; newTasks: ProjectTask[]; queryKey: any[], movedColumns: boolean }) => {
+  const handleTaskOrderChange = (payload: UpdateTaskOrderPayload) => {
     updateTaskStatusAndOrder(payload);
   };
 

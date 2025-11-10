@@ -25,7 +25,7 @@ const fetchProjects = async ({ pageParam = 0, searchTerm, excludeOtherPersonal, 
   };
 };
 
-export const useProjects = ({ searchTerm, fetchAll = false, excludeOtherPersonal = false, year }: { searchTerm?: string, fetchAll?: boolean, excludeOtherPersonal?: boolean, year?: number | null } = {}) => {
+export const useProjects = ({ searchTerm, excludeOtherPersonal = false, year }: { searchTerm?: string, fetchAll?: boolean, excludeOtherPersonal?: boolean, year?: number | null } = {}) => {
   const queryKey = ['projects', { searchTerm, excludeOtherPersonal, year }];
   const cacheKey = `projects-cache-${JSON.stringify({ searchTerm, excludeOtherPersonal, year })}`;
 
@@ -55,12 +55,6 @@ export const useProjects = ({ searchTerm, fetchAll = false, excludeOtherPersonal
       SafeLocalStorage.setItem(cacheKey, query.data, 5 * 60 * 1000); // 5 minute cache
     }
   }, [query.data, query.isPlaceholderData, cacheKey]);
-
-  useEffect(() => {
-    if (fetchAll && query.hasNextPage && !query.isFetchingNextPage) {
-      query.fetchNextPage();
-    }
-  }, [fetchAll, query.hasNextPage, query.isFetchingNextPage, query.fetchNextPage]);
 
   return query;
 };

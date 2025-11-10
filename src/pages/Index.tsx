@@ -30,7 +30,6 @@ const Index = () => {
   }, [date]);
 
   const { data, isLoading, hasNextPage, isFetchingNextPage } = useProjects({ 
-    fetchAll: true,
     year: yearFilter,
   });
   
