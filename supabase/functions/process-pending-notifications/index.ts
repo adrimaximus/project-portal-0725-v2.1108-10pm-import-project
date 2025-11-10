@@ -130,11 +130,10 @@ const getSystemPrompt = () => `Anda adalah asisten AI untuk platform manajemen p
 2.  **Nada:** Gunakan sapaan yang ramah (misalnya, "Hai [Nama],"), diikuti dengan pesan yang jelas dan positif.
 3.  **Emoji:** Awali setiap pesan dengan SATU emoji yang relevan dengan konteks notifikasi.
 4.  **Format:** Gunakan format tebal WhatsApp (*kata*) untuk menyorot detail penting seperti nama proyek, judul tugas, atau nama orang.
-5.  **Mention:** Saat menyebut nama pengguna, formatnya adalah **@Nama Pengguna**. JANGAN gunakan format \`[]()\` atau ID internal.
-6.  **URL:** Sertakan HANYA SATU URL lengkap di baris terakhir pesan. Jangan menambah teks lain setelah URL.
-7.  **Singkat:** Buat pesan seefisien mungkin, langsung ke intinya.
-
-Anda akan diberikan konteks untuk setiap notifikasi. Gunakan konteks tersebut untuk membuat pesan yang sesuai.`;
+5.  **Mention:** Saat menyebut nama pengguna dalam output Anda, formatnya adalah **@Nama Pengguna**. JANGAN gunakan format \`[]()\` atau ID internal.
+6.  **URL WAJIB:** Selalu sertakan URL yang diberikan dalam prompt di baris terakhir pesan. Ini adalah satu-satunya URL yang harus ada di pesan. Jangan menambah teks lain setelah URL.
+7.  **Singkat:** Buat pesan seefisien mungkin, langsung ke intinya. Jangan mengulangi informasi yang sudah ada di prompt kecuali jika diperlukan untuk kejelasan.
+8.  **Struktur Pesan:** Pesan Anda HARUS mengikuti struktur ini: [Emoji] [Sapaan], [Isi Pesan]. [URL]`;
 
 const getFullName = (profile: any) => `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email;
 
@@ -171,6 +170,11 @@ const generateAiMessage = async (userPrompt: string): Promise<string> => {
   }
 
   throw new Error("No AI provider (Anthropic or OpenAI) is configured.");
+};
+
+const truncate = (str: string, n: number) => {
+  if (!str) return '';
+  return (str.length > n) ? str.slice(0, n-1) + '...' : str;
 };
 
 // --- Main Server Logic ---
@@ -301,8 +305,9 @@ serve(async (req) => {
           case 'new_ticket':
           case 'new_ticket_email': {
             const { creator_name, ticket_content, project_name, project_slug, task_id } = context;
+            const truncatedContent = truncate(ticket_content, 100);
             const url = `${APP_URL}/projects/${project_slug}?tab=tasks&task=${task_id}`;
-            userPrompt = `Buat notifikasi tiket baru. Penerima: ${recipientName}. Pembuat tiket: ${creator_name}. Isi tiket: "${ticket_content}". Proyek: "${project_name}". URL: ${url}`;
+            userPrompt = `Buat notifikasi tiket baru. Penerima: ${recipientName}. Pembuat tiket: ${creator_name}. Isi tiket (ringkasan): "${truncatedContent}". Proyek: "${project_name}". URL: ${url}`;
             
             if (notification.notification_type === 'new_ticket_email') {
               const subject = `Tiket baru di proyek: ${project_name}`;
