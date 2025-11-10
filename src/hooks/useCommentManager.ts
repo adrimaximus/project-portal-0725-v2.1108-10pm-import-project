@@ -35,7 +35,7 @@ export const useCommentManager = ({ scope }: UseCommentManagerProps) => {
   });
 
   const addCommentMutation = useMutation({
-    mutationFn: async ({ text, isTicket, attachments, replyToId }: { text: string, isTicket: boolean, attachments: File[] | null, replyToId?: string | null }) => {
+    mutationFn: async ({ text, isTicket, attachments, mentionedUserIds, replyToId }: { text: string, isTicket: boolean, attachments: File[] | null, mentionedUserIds: string[], replyToId?: string | null }) => {
       if (!user) throw new Error("User not authenticated");
 
       let projectId = scope.projectId;
@@ -73,20 +73,34 @@ export const useCommentManager = ({ scope }: UseCommentManagerProps) => {
         });
         attachmentsJsonb = await Promise.all(uploadPromises);
       }
-      const { data, error } = await supabase.from('comments').insert({ 
-        project_id: projectId, 
-        task_id: scope.taskId, 
-        author_id: user.id, 
-        text, 
-        is_ticket: isTicket, 
-        attachments_jsonb: attachmentsJsonb,
-        reply_to_comment_id: replyToId,
-      }).select().single();
-      if (error) throw error;
-      return { data, isTicket };
+      
+      if (isTicket) {
+        const { data: taskId, error } = await supabase.rpc('create_ticket_and_assign_mentions', {
+          p_project_id: projectId,
+          p_author_id: user.id,
+          p_comment_text: text,
+          p_attachments: attachmentsJsonb,
+          p_mentioned_user_ids: mentionedUserIds,
+          p_reply_to_id: replyToId,
+        });
+        if (error) throw error;
+        return { isTicket: true, taskId };
+      } else {
+        const { data, error } = await supabase.from('comments').insert({ 
+          project_id: projectId, 
+          task_id: scope.taskId, 
+          author_id: user.id, 
+          text, 
+          is_ticket: false, 
+          attachments_jsonb: attachmentsJsonb,
+          reply_to_comment_id: replyToId,
+        }).select().single();
+        if (error) throw error;
+        return { isTicket: false, comment: data };
+      }
     },
     onSuccess: ({ isTicket }) => {
-      toast.success("Comment added.");
+      toast.success(isTicket ? "Ticket created and assigned." : "Comment added.");
       queryClient.invalidateQueries({ queryKey });
       if (isTicket) {
         queryClient.invalidateQueries({ queryKey: ['tasks'] });
