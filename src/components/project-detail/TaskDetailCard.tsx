@@ -35,7 +35,6 @@ import {
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu';
 import { Link } from 'react-router-dom';
-import TaskCommentsList from './TaskCommentsList';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 import { toast } from 'sonner';
@@ -43,15 +42,10 @@ import { Badge } from '../ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { v4 as uuidv4 } from 'uuid';
-import CommentInput from '../CommentInput';
-import { useProfiles } from '@/hooks/useProfiles';
-import { useCommentManager } from '@/hooks/useCommentManager';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../ui/alert-dialog';
-import { Textarea } from '../ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../ui/collapsible';
-import { useTaskModal } from '@/contexts/TaskModalContext';
 import { Input } from '../ui/input';
+import TaskComments from './TaskComments';
 
 interface TaskDetailCardProps {
   task: Task;
@@ -92,25 +86,8 @@ const aggregateAttachments = (task: Task): TaskAttachment[] => {
 const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, onDelete }) => {
   const { user } = useAuth();
   const { toggleTaskReaction, sendReminder, isSendingReminder, updateTaskStatusAndOrder, toggleTaskCompletion, updateTask, isUpdatingTask } = useTaskMutations();
-  const { 
-    comments, 
-    isLoadingComments, 
-    addComment, 
-    updateComment, 
-    deleteComment, 
-    toggleReaction 
-  } = useCommentManager({ scope: { taskId: task.id, projectId: task.project_id } });
   
   const [showFullDescription, setShowFullDescription] = useState(false);
-  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
-  const [editedText, setEditedText] = useState('');
-  const [commentToDelete, setCommentToDelete] = useState<CommentType | null>(null);
-  const [newAttachments, setNewAttachments] = useState<File[]>([]);
-  const editFileInputRef = useRef<HTMLInputElement>(null);
-  const commentInputRef = useRef<{ setText: (text: string, append?: boolean) => void, focus: () => void }>(null);
-  const { data: allUsers = [] } = useProfiles();
-  const { onOpen: onOpenTaskModal } = useTaskModal();
-  const [replyTo, setReplyTo] = useState<CommentType | null>(null);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editedTitle, setEditedTitle] = useState(task.title);
 
@@ -140,69 +117,6 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
     }
   };
 
-  const handleAddComment = (text: string, isTicket: boolean, attachments: File[] | null, mentionedUserIds: string[]) => {
-    addComment.mutate({ text, isTicket, attachments, replyToId: replyTo?.id }, {
-      onSuccess: () => {
-        setReplyTo(null);
-      }
-    });
-  };
-
-  const handleEditClick = (comment: CommentType) => {
-    setEditingCommentId(comment.id);
-    setEditedText(comment.text || '');
-    setNewAttachments([]);
-  };
-
-  const handleCancelEdit = () => {
-    setEditingCommentId(null);
-    setEditedText('');
-    setNewAttachments([]);
-  };
-
-  const handleSaveEdit = () => {
-    if (editingCommentId) {
-      updateComment.mutate({ commentId: editingCommentId, text: editedText, attachments: newAttachments });
-    }
-    handleCancelEdit();
-  };
-
-  const handleDeleteConfirm = () => {
-    if (commentToDelete) {
-      deleteComment.mutate(commentToDelete.id);
-      setCommentToDelete(null);
-    }
-  };
-
-  const handleReply = (comment: CommentType) => {
-    setReplyTo(comment);
-    if (commentInputRef.current) {
-      const author = comment.author as User;
-      const authorName = [author.first_name, author.last_name].filter(Boolean).join(' ') || author.email;
-      const mentionText = `@[${authorName}](${author.id}) `;
-      commentInputRef.current.setText(mentionText, true);
-      commentInputRef.current.focus();
-    }
-  };
-
-  const handleCreateTicketFromComment = async (comment: CommentType) => {
-    updateComment.mutate({ commentId: comment.id, text: comment.text || '', isTicket: true }, {
-      onSuccess: () => {
-        toast.success("Comment converted to ticket.");
-      }
-    });
-  };
-
-  const handleEditFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files) {
-      setNewAttachments(prev => [...prev, ...Array.from(event.target.files!)]);
-    }
-  };
-
-  const removeNewAttachment = (index: number) => {
-    setNewAttachments(prev => prev.filter((_, i) => i !== index));
-  };
-
   const allAttachments = useMemo(() => (task ? aggregateAttachments(task) : []), [task]);
   const allTags = useMemo(() => {
     const tags = [...(task?.tags || [])];
@@ -220,14 +134,6 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
   const displayedDescription = isLongDescription && !showFullDescription ? `${description.substring(0, 500)}...` : description;
   const formattedDescription = formatMentionsForDisplay(displayedDescription);
 
-  const handleToggleReaction = (emoji: string) => {
-    toggleTaskReaction({ taskId: task.id, emoji });
-  };
-
-  const handleToggleCommentReaction = (commentId: string, emoji: string) => {
-    toggleReaction.mutate({ commentId, emoji });
-  };
-
   const handleCopyLink = () => {
     const url = `${window.location.origin}/tasks/${task.id}`;
     navigator.clipboard.writeText(`${task.project_name || 'Project'} | ${task.title}\n${url}`);
@@ -235,17 +141,6 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
   };
 
   const handleSendReminder = () => sendReminder(task.id);
-
-  const handleScrollToMessage = (messageId: string) => {
-    const element = document.getElementById(`message-${messageId}`);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      element.classList.add('bg-primary/10', 'rounded-md');
-      setTimeout(() => {
-        element.classList.remove('bg-primary/10', 'rounded-md');
-      }, 1500);
-    }
-  };
 
   return (
     <>
@@ -516,52 +411,10 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
           )}
 
           <div className="pt-4 border-t">
-            <TaskCommentsList
-              comments={comments}
-              isLoading={isLoadingComments}
-              onEdit={handleEditClick}
-              onDelete={setCommentToDelete}
-              onToggleReaction={handleToggleCommentReaction}
-              editingCommentId={editingCommentId}
-              editedText={editedText}
-              setEditedText={setEditedText}
-              handleSaveEdit={handleSaveEdit}
-              handleCancelEdit={handleCancelEdit}
-              newAttachments={newAttachments}
-              removeNewAttachment={removeNewAttachment}
-              handleEditFileChange={handleEditFileChange}
-              editFileInputRef={editFileInputRef}
-              onReply={handleReply}
-              onCreateTicketFromComment={handleCreateTicketFromComment}
-              onGoToReply={handleScrollToMessage}
-            />
+            <TaskComments taskId={task.id} projectId={task.project_id} />
           </div>
         </div>
-
-        <div className="flex-shrink-0 p-4 border-t">
-          <CommentInput
-            ref={commentInputRef}
-            onAddCommentOrTicket={handleAddComment}
-            allUsers={allUsers}
-            replyTo={replyTo}
-            onCancelReply={() => setReplyTo(null)}
-          />
-        </div>
       </DrawerContent>
-      <AlertDialog open={!!commentToDelete} onOpenChange={() => setCommentToDelete(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete the comment. This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteConfirm}>Delete</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
   );
 };
