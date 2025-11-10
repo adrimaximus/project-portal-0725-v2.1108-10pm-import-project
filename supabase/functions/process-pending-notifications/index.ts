@@ -254,6 +254,27 @@ serve(async (req) => {
             }
             break;
           }
+          case 'discussion_mention_email': {
+            const { project_name: projectName, project_slug: projectSlug, mentioner_name: mentionerName, comment_text: commentText, task_id: taskId } = context;
+            const url = taskId
+              ? `${APP_URL}/projects/${projectSlug}?tab=tasks&task=${taskId}`
+              : `${APP_URL}/projects/${projectSlug}?tab=discussion`;
+            
+            const subject = `You were mentioned in the project: ${projectName}`;
+            const html = `
+                <p>Hi ${recipientName},</p>
+                <p><strong>${mentionerName}</strong> mentioned you in a comment on the project <strong>${projectName}</strong>.</p>
+                <blockquote style="border-left: 4px solid #ccc; padding-left: 1em; margin: 1em 0; color: #666;">
+                    ${commentText.replace(/@\[([^\]]+)\]\(([^)]+)\)/g, '@$1')}
+                </blockquote>
+                <p>You can view the comment by clicking the button below:</p>
+                <a href="${url}" style="display: inline-block; padding: 12px 24px; font-size: 16px; color: #ffffff; background-color: #008A9E; text-decoration: none; border-radius: 8px;">View Comment</a>
+            `;
+            const text = `Hi, ${mentionerName} mentioned you in a comment on the project ${projectName}. View it here: ${url}`;
+
+            await sendEmail(recipient.email, subject, html, text);
+            break;
+          }
           // ... other cases remain the same
           default:
             throw new Error(`Unsupported notification type: ${notification.notification_type}`);
