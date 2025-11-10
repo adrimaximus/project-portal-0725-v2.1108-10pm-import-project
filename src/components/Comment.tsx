@@ -161,16 +161,35 @@ const Comment: React.FC<CommentProps> = ({
                 <div className="w-0.5 bg-primary rounded-full self-stretch"></div>
                 <div className="flex-1 overflow-hidden">
                   <p className="font-semibold text-primary">Replying to {comment.repliedMessage.senderName}</p>
-                  <div className="italic line-clamp-1 prose prose-sm dark:prose-invert max-w-none text-muted-foreground">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
+                  <div className="italic line-clamp-1 text-muted-foreground">
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      rehypePlugins={[rehypeRaw]}
+                      components={{
+                        p: ({node, ...props}) => <span {...props} />,
+                        a: ({ node, ...props }) => <span {...props} className="text-primary">{props.children}</span>,
+                      }}
+                    >
                       {formatMentionsForDisplay(comment.repliedMessage.content || '')}
                     </ReactMarkdown>
                   </div>
                 </div>
               </button>
             )}
-            <div className="prose prose-sm dark:prose-invert max-w-none break-words">
-              <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{formattedText}</ReactMarkdown>
+            <div className="text-sm whitespace-pre-wrap break-words prose prose-sm dark:prose-invert max-w-none [&_p]:my-0">
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                rehypePlugins={[rehypeRaw]}
+                components={{
+                  a: ({ node, ...props }) => {
+                    const href = props.href || '';
+                    if (href.startsWith('/')) {
+                      return <Link to={href} {...props} className="font-medium underline text-primary" />;
+                    }
+                    return <a {...props} target="_blank" rel="noopener noreferrer" className="font-medium underline text-primary" />;
+                  },
+                }}
+              >{formattedText}</ReactMarkdown>
             </div>
             {attachments.length > 0 && (
               <div className="mt-2 space-y-2">
