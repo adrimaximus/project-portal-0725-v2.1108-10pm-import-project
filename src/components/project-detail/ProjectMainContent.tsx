@@ -13,6 +13,7 @@ import ProjectComments from '@/components/project-detail/ProjectComments';
 import { useProfiles } from '@/hooks/useProfiles';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { CommentInputHandle } from '../CommentInput';
 
 interface ProjectMainContentProps {
   project: Project;
@@ -56,6 +57,7 @@ const ProjectMainContent = ({
   const [initialMention, setInitialMention] = useState<{ id: string; name: string } | null>(null);
   const [replyTo, setReplyTo] = useState<CommentType | null>(null);
   const { user } = useAuth();
+  const commentInputRef = useRef<CommentInputHandle>(null);
 
   // Comment Management Logic
   const { 
@@ -116,6 +118,22 @@ const ProjectMainContent = ({
         toast.success("Comment converted to ticket.");
       }
     });
+  };
+
+  const handleReply = (comment: CommentType) => {
+    setReplyTo(comment);
+    if (commentInputRef.current) {
+      const author = comment.author as User;
+      const authorName = [author.first_name, author.last_name].filter(Boolean).join(' ') || author.email;
+      const mentionText = `@[${authorName}](${author.id}) `;
+      commentInputRef.current.scrollIntoView();
+      setTimeout(() => {
+        if (commentInputRef.current) {
+          commentInputRef.current.setText(mentionText, true);
+          commentInputRef.current.focus();
+        }
+      }, 300);
+    }
   };
 
   const handleMentionConsumed = useCallback(() => {
@@ -218,6 +236,7 @@ const ProjectMainContent = ({
         </TabsContent>
         <TabsContent value="discussion" className="mt-4">
           <ProjectComments
+            ref={commentInputRef}
             project={project}
             comments={comments}
             isLoadingComments={isLoadingComments}
@@ -230,7 +249,7 @@ const ProjectMainContent = ({
             handleSaveEdit={handleSaveEdit}
             handleCancelEdit={handleCancelEdit}
             onEdit={handleEditClick}
-            onReply={setReplyTo}
+            onReply={handleReply}
             replyTo={replyTo}
             onCancelReply={() => setReplyTo(null)}
             onCreateTicketFromComment={onCreateTicketFromComment}

@@ -3,7 +3,7 @@ import { User, Comment as CommentType } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Ticket, Paperclip, X } from "lucide-react";
-import { getInitials, generatePastelColor, parseMentions, getAvatarUrl, formatMentionsForDisplay } from "@/lib/utils";
+import { getInitials, generatePastelColor, getAvatarUrl, formatMentionsForDisplay } from "@/lib/utils";
 import { MentionsInput, Mention, SuggestionDataItem } from 'react-mentions';
 import '@/styles/mentions.css';
 import { useAuth } from '@/contexts/AuthContext';
@@ -17,13 +17,20 @@ interface CommentInputProps {
   onCancelReply?: () => void;
 }
 
-const CommentInput = forwardRef(({ onAddCommentOrTicket, allUsers, initialValue, replyTo, onCancelReply }: CommentInputProps, ref) => {
+export interface CommentInputHandle {
+  setText: (newText: string, append?: boolean) => void;
+  focus: () => void;
+  scrollIntoView: () => void;
+}
+
+const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({ onAddCommentOrTicket, allUsers, initialValue, replyTo, onCancelReply }: CommentInputProps, ref) => {
   const { user } = useAuth();
   const [text, setText] = useState(initialValue || '');
   const [isTicket, setIsTicket] = useState(false);
   const [attachments, setAttachments] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mentionsInputRef = useRef<any>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useImperativeHandle(ref, () => ({
     setText: (newText: string, append: boolean = false) => {
@@ -31,6 +38,9 @@ const CommentInput = forwardRef(({ onAddCommentOrTicket, allUsers, initialValue,
     },
     focus: () => {
       mentionsInputRef.current?.inputElement?.focus();
+    },
+    scrollIntoView: () => {
+      containerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
   }));
 
@@ -73,7 +83,7 @@ const CommentInput = forwardRef(({ onAddCommentOrTicket, allUsers, initialValue,
   }));
 
   return (
-    <div className="flex items-start space-x-4">
+    <div ref={containerRef} className="flex items-start space-x-4">
       <Avatar>
         <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
         <AvatarFallback style={generatePastelColor(user.id)}>
