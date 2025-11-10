@@ -43,7 +43,7 @@ import { Badge } from '../ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { v4 as uuidv4 } from 'uuid';
-import CommentInput from '../CommentInput';
+import CommentInput, { CommentInputHandle } from '../CommentInput';
 import { useProfiles } from '@/hooks/useProfiles';
 import { useCommentManager } from '@/hooks/useCommentManager';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../ui/alert-dialog';
@@ -107,7 +107,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
   const [commentToDelete, setCommentToDelete] = useState<CommentType | null>(null);
   const [newAttachments, setNewAttachments] = useState<File[]>([]);
   const editFileInputRef = useRef<HTMLInputElement>(null);
-  const commentInputRef = useRef<{ setText: (text: string, append?: boolean) => void, focus: () => void }>(null);
+  const commentInputRef = useRef<CommentInputHandle>(null);
   const { data: allUsers = [] } = useProfiles();
   const { onOpen: onOpenTaskModal } = useTaskModal();
   const [replyTo, setReplyTo] = useState<CommentType | null>(null);
@@ -142,7 +142,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
 
   const handleAddComment = (text: string, isTicket: boolean, attachments: File[] | null, mentionedUserIds: string[]) => {
     addComment.mutate({ text, isTicket, attachments, replyToId: replyTo?.id }, {
-      onSuccess: () => {
+      onSuccess: (result) => {
         setReplyTo(null);
       }
     });
@@ -180,8 +180,13 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
       const author = comment.author as User;
       const authorName = [author.first_name, author.last_name].filter(Boolean).join(' ') || author.email;
       const mentionText = `@[${authorName}](${author.id}) `;
-      commentInputRef.current.setText(mentionText, true);
-      commentInputRef.current.focus();
+      commentInputRef.current.scrollIntoView();
+      setTimeout(() => {
+        if (commentInputRef.current) {
+          commentInputRef.current.setText(mentionText, true);
+          commentInputRef.current.focus();
+        }
+      }, 300);
     }
   };
 

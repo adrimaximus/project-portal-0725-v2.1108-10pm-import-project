@@ -16,6 +16,7 @@ interface ProjectCommentsProps {
   setEditedText: (text: string) => void;
   handleSaveEdit: () => void;
   handleCancelEdit: () => void;
+  onEdit: (comment: CommentType) => void;
   onReply: (comment: CommentType) => void;
   replyTo: CommentType | null;
   onCancelReply: () => void;
