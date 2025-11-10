@@ -57,13 +57,13 @@ export function getInitials(name?: string | null, email?: string | null): string
 
 export function formatMentionsForDisplay(text: string): string {
   if (!text) return '';
-  return text.replace(/@\[([^\]]+)\]\(([^)]+)\)/g, '<span class="bg-primary/10 text-primary rounded px-1 py-0.5 font-medium">@$1</span>');
+  return text.replace(/@\[([^\]]+)\]\s*\(([^)]+)\)/g, '<span class="bg-primary/10 text-primary rounded px-1 py-0.5 font-medium">@$1</span>');
 }
 
 export function parseMentions(text: string): string[] {
-  const mentionRegex = /@\[[^\]]+\]\(([^)]+)\)/g;
+  const mentionRegex = /@\[([^\]]+)\]\s*\(([^)]+)\)/g;
   const matches = text.matchAll(mentionRegex);
-  return Array.from(matches, match => match[1]);
+  return Array.from(matches, match => match[2]);
 }
 
 export function truncateText(text: string, maxLength: number): string {
@@ -158,7 +158,7 @@ export const formatBytes = (bytes: number | null | undefined, decimals = 2) => {
 
 export const formatTaskText = (text: string, maxLength?: number): string => {
   if (!text) return '';
-  let processedText = text.replace(/@\[([^\]]+)\]\(([^)]+)\)/g, '@$1');
+  let processedText = text.replace(/@\[([^\]]+)\]\s*\(([^)]+)\)/g, '@$1');
   if (maxLength && processedText.length > maxLength) {
     processedText = `${processedText.substring(0, maxLength)}...`;
   }
