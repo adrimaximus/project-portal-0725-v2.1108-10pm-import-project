@@ -50,6 +50,13 @@ const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({ onAddC
     }
   }, [initialValue]);
 
+  const parseMentions = (text: string): string[] => {
+    const mentionRegex = /@\[[^\]]+\]\(([^)]+)\)/g;
+    const matches = text.matchAll(mentionRegex);
+    const userIds = Array.from(matches, match => match[1]);
+    return [...new Set(userIds)];
+  };
+
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) {
       setAttachments(prev => [...prev, ...Array.from(event.target.files!)]);
