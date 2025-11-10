@@ -3,7 +3,7 @@ import CustomPropertiesManager from "@/components/settings/CustomPropertiesManag
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import { Link } from "react-router-dom";
 
-const CompanyPropertiesPage = () => {
+const ProjectPropertiesPage = () => {
   return (
     <PortalLayout>
       <div className="space-y-6">
@@ -22,19 +22,19 @@ const CompanyPropertiesPage = () => {
             </BreadcrumbItem>
             <BreadcrumbSeparator />
             <BreadcrumbItem>
-              <BreadcrumbPage>Company Properties</BreadcrumbPage>
+              <BreadcrumbPage>Project Properties</BreadcrumbPage>
             </BreadcrumbItem>
           </BreadcrumbList>
         </Breadcrumb>
         
         <CustomPropertiesManager 
-          category="company"
-          title="Company Properties"
-          description="Create and manage custom fields for companies."
+          category="project"
+          title="Project Properties"
+          description="Manage statuses, categories, and other project fields."
         />
       </div>
     </PortalLayout>
   );
 };
 
-export default CompanyPropertiesPage;
+export default ProjectPropertiesPage;
