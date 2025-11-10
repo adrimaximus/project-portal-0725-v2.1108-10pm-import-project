@@ -48,7 +48,7 @@ const TaskRow = ({ task, onToggleTaskCompletion, onEditTask, onDeleteTask, handl
   const navigate = useNavigate();
 
   const handleTitleClick = () => {
-    onEditTask(task);
+    navigate(`/projects?view=tasks&highlight=${task.id}`);
   };
 
   const allAttachments = useMemo(() => {
