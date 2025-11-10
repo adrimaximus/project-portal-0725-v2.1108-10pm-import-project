@@ -13,6 +13,7 @@ import { useTaskDrawer } from '@/contexts/TaskDrawerContext';
 import { getProjectBySlug } from '@/lib/projectsApi';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const TaskItem = ({ task }: { task: Task }) => {
   const { onOpen: onOpenTaskDrawer } = useTaskDrawer();
@@ -66,7 +67,9 @@ const TaskItem = ({ task }: { task: Task }) => {
                 <TooltipTrigger>
                   <Avatar className="h-6 w-6 border-2 border-background">
                     <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
-                    <AvatarFallback style={generatePastelColor(user.id)}>{getInitials(user.name, user.email)}</AvatarFallback>
+                    <AvatarFallback style={generatePastelColor(user.id)}>
+                      {getInitials([user.first_name, user.last_name].filter(Boolean).join(' '), user.email || undefined)}
+                    </AvatarFallback>
                   </Avatar>
                 </TooltipTrigger>
                 <TooltipContent><p>{user.name}</p></TooltipContent>
@@ -93,6 +96,7 @@ const MyTasksWidget = () => {
     completedToday,
     upcomingTasks,
     overdueTasks,
+    noDueDateTasks,
     completionPercentage,
     totalCompleted,
     totalTasks,
@@ -106,6 +110,7 @@ const MyTasksWidget = () => {
     
     const upcoming = active.filter(t => t.due_date && !isPast(new Date(t.due_date)));
     const overdue = active.filter(t => t.due_date && isPast(new Date(t.due_date)));
+    const noDueDate = active.filter(t => !t.due_date);
 
     const totalTasks = myTasks.length;
     const totalCompleted = completed.length;
@@ -125,6 +130,7 @@ const MyTasksWidget = () => {
       completedToday, 
       upcomingTasks: upcoming, 
       overdueTasks: overdue, 
+      noDueDateTasks: noDueDate,
       completionPercentage,
       totalCompleted,
       totalTasks,
@@ -203,10 +209,34 @@ const MyTasksWidget = () => {
           </Tooltip>
         </TooltipProvider>
       </div>
-      <div className="space-y-2 pr-2">
-        {overdueTasks.map(task => <TaskItem key={task.id} task={task} />)}
-        {upcomingTasks.map(task => <TaskItem key={task.id} task={task} />)}
-      </div>
+      <ScrollArea className="h-48 pr-2">
+        <div className="space-y-4">
+          {overdueTasks.length > 0 && (
+            <div>
+              <h4 className="text-xs font-semibold text-muted-foreground mb-2 px-2">Overdue</h4>
+              <div className="space-y-1">
+                {overdueTasks.map(task => <TaskItem key={task.id} task={task} />)}
+              </div>
+            </div>
+          )}
+          {upcomingTasks.length > 0 && (
+            <div>
+              <h4 className="text-xs font-semibold text-muted-foreground mb-2 px-2">Upcoming</h4>
+              <div className="space-y-1">
+                {upcomingTasks.map(task => <TaskItem key={task.id} task={task} />)}
+              </div>
+            </div>
+          )}
+          {noDueDateTasks.length > 0 && (
+            <div>
+              <h4 className="text-xs font-semibold text-muted-foreground mb-2 px-2">No Due Date</h4>
+              <div className="space-y-1">
+                {noDueDateTasks.map(task => <TaskItem key={task.id} task={task} />)}
+              </div>
+            </div>
+          )}
+        </div>
+      </ScrollArea>
       <div className="pt-2 text-center">
         <Button variant="link" asChild>
           <Link to={`/projects?view=tasks&member=${user?.id}`}>
