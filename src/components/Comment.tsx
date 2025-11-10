@@ -17,6 +17,7 @@ import { Badge } from './ui/badge';
 import CommentReactions from './CommentReactions';
 import CommentAttachmentItem from './CommentAttachmentItem';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
+import { cn } from '@/lib/utils';
 
 interface CommentProps {
   comment: CommentType;
@@ -175,7 +176,7 @@ const Comment: React.FC<CommentProps> = ({
                 </div>
               </button>
             )}
-            <div className="text-sm whitespace-pre-wrap break-words">
+            <div className="prose prose-sm dark:prose-invert max-w-none">
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
                 rehypePlugins={[rehypeRaw]}
@@ -187,7 +188,22 @@ const Comment: React.FC<CommentProps> = ({
                     }
                     return <a {...props} target="_blank" rel="noopener noreferrer" className="font-medium underline text-primary" />;
                   },
-                  p: ({node, ...props}) => <p className="my-1" {...props} />
+                  p: ({ node, ...props }) => {
+                    const processedChildren = React.Children.map(props.children, child => {
+                      if (typeof child === 'string') {
+                        const emojiRegex = /(\p{Emoji_Presentation}|\p{Emoji_Modifier_Base}|\p{Emoji_Component}|\p{Extended_Pictographic}|[\u200D\uFE0F]+)/u;
+                        const parts = child.split(emojiRegex);
+                        return parts.map((part, i) => {
+                          const isPurelyNumeric = /^\d+$/.test(part);
+                          return part.match(emojiRegex) && !isPurelyNumeric
+                            ? <span key={i} className="text-lg inline-block align-middle">{part}</span> 
+                            : part;
+                        });
+                      }
+                      return child;
+                    });
+                    return <p {...props} className="my-1">{processedChildren}</p>;
+                  }
                 }}
               >{formattedText}</ReactMarkdown>
             </div>
