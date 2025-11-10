@@ -1,11 +1,22 @@
 import { supabase } from '@/integrations/supabase/client';
 import { Project } from '@/types';
 
+const safeParse = (value: any) => {
+  if (typeof value === 'string') {
+    try {
+      return JSON.parse(value);
+    } catch {
+      return value;
+    }
+  }
+  return value;
+};
+
 export const getDashboardProjects = async ({ limit, offset, searchTerm, excludeOtherPersonal, year }: { limit: number, offset: number, searchTerm: string | null, excludeOtherPersonal: boolean, year: number | null }): Promise<Project[]> => {
   const { data, error } = await supabase.rpc('get_dashboard_projects', {
     p_limit: limit,
     p_offset: offset,
-    p_search_term: searchTerm,
+    p_search_term: searchTerm || null,
     p_exclude_other_personal: excludeOtherPersonal,
     p_year: year,
   });
