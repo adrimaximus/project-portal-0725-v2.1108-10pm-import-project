@@ -80,7 +80,7 @@ export const useCommentManager = ({ scope }: UseCommentManagerProps) => {
         text, 
         is_ticket: isTicket, 
         attachments_jsonb: attachmentsJsonb,
-        reply_to_message_id: replyToId,
+        reply_to_comment_id: replyToId,
       }).select().single();
       if (error) throw error;
       return data;
