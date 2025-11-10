@@ -2,11 +2,29 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Project, Comment as CommentType, User } from "@/types";
 import CommentInput from "../CommentInput";
 import Comment from '../Comment';
-import { useCommentManager } from '@/hooks/useCommentManager';
-import { toast } from 'sonner';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 interface ProjectCommentsProps {
   project: Project;
+  comments: CommentType[];
+  isLoadingComments: boolean;
+  onAddCommentOrTicket: (text: string, isTicket: boolean, attachments: File[] | null, mentionedUserIds: string[]) => void;
+  onDeleteComment: (comment: CommentType) => void;
+  onToggleCommentReaction: (commentId: string, emoji: string) => void;
+  editingCommentId: string | null;
+  editedText: string;
+  setEditedText: (text: string) => void;
+  handleSaveEdit: () => void;
+  handleCancelEdit: () => void;
+  onEdit: (comment: CommentType) => void;
+  onReply: (comment: CommentType) => void;
+  replyTo: CommentType | null;
+  onCancelReply: () => void;
+  onCreateTicketFromComment: (comment: CommentType) => void;
+  newAttachments: File[];
+  removeNewAttachment: (index: number) => void;
+  handleEditFileChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  editFileInputRef: React.RefObject<HTMLInputElement>;
   initialMention?: { id: string; name: string } | null;
   onMentionConsumed: () => void;
   allUsers: User[];
@@ -14,18 +32,30 @@ interface ProjectCommentsProps {
 
 const ProjectComments: React.FC<ProjectCommentsProps> = ({
   project,
+  comments,
+  isLoadingComments,
+  onAddCommentOrTicket,
+  onDeleteComment,
+  onToggleCommentReaction,
+  editingCommentId,
+  editedText,
+  setEditedText,
+  handleSaveEdit,
+  handleCancelEdit,
+  onEdit,
+  onReply,
+  replyTo,
+  onCancelReply,
+  onCreateTicketFromComment,
+  newAttachments,
+  removeNewAttachment,
+  handleEditFileChange,
+  editFileInputRef,
   initialMention,
   onMentionConsumed,
   allUsers,
 }) => {
-  const { 
-    comments, 
-    isLoadingComments,
-    addComment, 
-    updateComment,
-  } = useCommentManager({ scope: { projectId: project.id } });
-
-  const [replyTo, setReplyTo] = useState<CommentType | null>(null);
+  const [commentToDelete, setCommentToDelete] = useState<CommentType | null>(null);
   const commentInputRef = useRef<{ setText: (text: string, append?: boolean) => void, focus: () => void }>(null);
   const lastProcessedMentionId = useRef<string | null>(null);
 
@@ -39,32 +69,11 @@ const ProjectComments: React.FC<ProjectCommentsProps> = ({
     }
   }, [initialMention, onMentionConsumed]);
 
-  const handleAddCommentOrTicket = (text: string, isTicket: boolean, attachments: File[] | null, mentionedUserIds: string[]) => {
-    addComment.mutate({ text, isTicket, attachments, mentionedUserIds, replyToId: replyTo?.id }, {
-      onSuccess: () => {
-        setReplyTo(null);
-      }
-    });
-  };
-
-  const handleReply = (comment: CommentType) => {
-    setReplyTo(comment);
-    if (commentInputRef.current) {
-      const author = comment.author as User;
-      const authorName = [author.first_name, author.last_name].filter(Boolean).join(' ') || author.email;
-      const mentionText = `@[${authorName}](${author.id}) `;
-      commentInputRef.current.setText(mentionText, true);
-      commentInputRef.current.focus();
+  const handleDeleteConfirm = () => {
+    if (commentToDelete) {
+      onDeleteComment(commentToDelete);
+      setCommentToDelete(null);
     }
-  };
-
-  const handleCreateTicketFromComment = (comment: CommentType) => {
-    updateComment.mutate({ commentId: comment.id, text: comment.text || '', isTicket: true }, {
-      onSuccess: () => {
-        toast.info("Comment converted to ticket. Finding associated task...");
-        // The polling logic is now handled within the mutation's onSuccess in the parent component
-      }
-    });
   };
 
   const handleScrollToMessage = (messageId: string) => {
@@ -83,10 +92,10 @@ const ProjectComments: React.FC<ProjectCommentsProps> = ({
       <div className="flex-shrink-0 pb-4 border-b mb-4">
         <CommentInput
           ref={commentInputRef}
-          onAddCommentOrTicket={handleAddCommentOrTicket}
+          onAddCommentOrTicket={onAddCommentOrTicket}
           allUsers={allUsers}
           replyTo={replyTo}
-          onCancelReply={() => setReplyTo(null)}
+          onCancelReply={onCancelReply}
         />
       </div>
       <div className="flex-1 overflow-y-auto pr-4 space-y-4">
@@ -97,8 +106,20 @@ const ProjectComments: React.FC<ProjectCommentsProps> = ({
             <Comment
               key={comment.id}
               comment={comment}
-              onReply={handleReply}
-              onCreateTicketFromComment={handleCreateTicketFromComment}
+              isEditing={editingCommentId === comment.id}
+              editedText={editedText}
+              setEditedText={setEditedText}
+              handleSaveEdit={handleSaveEdit}
+              handleCancelEdit={handleCancelEdit}
+              onEdit={onEdit}
+              onDelete={setCommentToDelete}
+              onToggleReaction={onToggleCommentReaction}
+              onReply={onReply}
+              onCreateTicketFromComment={onCreateTicketFromComment}
+              newAttachments={newAttachments}
+              removeNewAttachment={removeNewAttachment}
+              handleEditFileChange={handleEditFileChange}
+              editFileInputRef={editFileInputRef}
               onGoToReply={handleScrollToMessage}
             />
           ))
@@ -106,6 +127,20 @@ const ProjectComments: React.FC<ProjectCommentsProps> = ({
           <p className="text-sm text-muted-foreground text-center pt-10">No comments yet. Start the discussion!</p>
         )}
       </div>
+      <AlertDialog open={!!commentToDelete} onOpenChange={() => setCommentToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the comment. If this is a ticket, the associated task will also be deleted. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteConfirm}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

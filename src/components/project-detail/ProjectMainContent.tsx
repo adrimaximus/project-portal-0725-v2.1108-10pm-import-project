@@ -6,8 +6,13 @@ import ProjectTasks from '../projects/ProjectTasks';
 import ProjectActivityFeed from './ProjectActivityFeed';
 import { LayoutGrid, ListChecks, MessageSquare, Activity } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
-import { useProfiles } from '@/hooks/useProfiles';
+import { addHours } from 'date-fns';
+import { toast } from 'sonner';
+import { useCommentManager } from '@/hooks/useCommentManager';
 import ProjectComments from '@/components/project-detail/ProjectComments';
+import { useProfiles } from '@/hooks/useProfiles';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ProjectMainContentProps {
   project: Project;
@@ -49,7 +54,69 @@ const ProjectMainContent = ({
   const [lastViewedDiscussion, setLastViewedDiscussion] = useState(() => new Date());
   const [searchParams, setSearchParams] = useSearchParams();
   const [initialMention, setInitialMention] = useState<{ id: string; name: string } | null>(null);
+  const [replyTo, setReplyTo] = useState<CommentType | null>(null);
+  const { user } = useAuth();
+
+  // Comment Management Logic
+  const { 
+    comments, 
+    isLoadingComments,
+    addComment, 
+    updateComment, 
+    deleteComment, 
+    toggleReaction 
+  } = useCommentManager({ scope: { projectId: project.id } });
+
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editedText, setEditedText] = useState('');
+  const [newAttachments, setNewAttachments] = useState<File[]>([]);
+  const editFileInputRef = useRef<HTMLInputElement>(null);
   const { data: allUsers = [] } = useProfiles();
+
+  const handleAddCommentOrTicket = (text: string, isTicket: boolean, attachments: File[] | null, mentionedUserIds: string[]) => {
+    addComment.mutate({ text, isTicket, attachments, mentionedUserIds, replyToId: replyTo?.id }, {
+      onSuccess: (result) => {
+        setReplyTo(null);
+      }
+    });
+  };
+
+  const handleEditClick = (comment: CommentType) => {
+    setEditingCommentId(comment.id);
+    setEditedText(comment.text || '');
+    setNewAttachments([]);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingCommentId(null);
+    setEditedText('');
+    setNewAttachments([]);
+  };
+
+  const handleSaveEdit = () => {
+    if (editingCommentId) {
+      updateComment.mutate({ commentId: editingCommentId, text: editedText, attachments: newAttachments });
+    }
+    handleCancelEdit();
+  };
+
+  const handleEditFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files) {
+      setNewAttachments(prev => [...prev, ...Array.from(event.target.files!)]);
+    }
+  };
+
+  const removeNewAttachment = (index: number) => {
+    setNewAttachments(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const onCreateTicketFromComment = async (comment: CommentType) => {
+    updateComment.mutate({ commentId: comment.id, text: comment.text || '', isTicket: true }, {
+      onSuccess: () => {
+        toast.success("Comment converted to ticket.");
+      }
+    });
+  };
 
   const handleMentionConsumed = useCallback(() => {
     setInitialMention(null);
@@ -77,8 +144,8 @@ const ProjectMainContent = ({
     }
   };
 
-  const newCommentsCount = project.comments?.filter(
-    comment => comment.author.id !== project.created_by.id && new Date(comment.created_at) > lastViewedDiscussion
+  const newCommentsCount = comments?.filter(
+    comment => user && comment.author.id !== user.id && new Date(comment.created_at) > lastViewedDiscussion
   ).length ?? 0;
 
   const uncompletedTasksCount = project.tasks?.filter(task => !task.completed).length ?? 0;
@@ -119,7 +186,7 @@ const ProjectMainContent = ({
             project={project}
             isEditing={isEditing}
             onDescriptionChange={(value) => onFieldChange('description', value)}
-            onFilesAdd={(files) => mutations.addFiles.mutate({ files, project, user: project.created_by })}
+            onFilesAdd={(files) => mutations.addFiles.mutate({ files, project, user })}
             onFileDelete={(fileId) => {
               const file = project.briefFiles.find(f => f.id === fileId);
               if (file) mutations.deleteFile.mutate(file);
@@ -152,6 +219,25 @@ const ProjectMainContent = ({
         <TabsContent value="discussion" className="mt-4">
           <ProjectComments
             project={project}
+            comments={comments}
+            isLoadingComments={isLoadingComments}
+            onAddCommentOrTicket={handleAddCommentOrTicket}
+            onDeleteComment={(comment: CommentType) => deleteComment.mutate(comment.id)}
+            onToggleCommentReaction={(commentId: string, emoji: string) => toggleReaction.mutate({ commentId, emoji })}
+            editingCommentId={editingCommentId}
+            editedText={editedText}
+            setEditedText={setEditedText}
+            handleSaveEdit={handleSaveEdit}
+            handleCancelEdit={handleCancelEdit}
+            onEdit={handleEditClick}
+            onReply={setReplyTo}
+            replyTo={replyTo}
+            onCancelReply={() => setReplyTo(null)}
+            onCreateTicketFromComment={onCreateTicketFromComment}
+            newAttachments={newAttachments}
+            removeNewAttachment={removeNewAttachment}
+            handleEditFileChange={handleEditFileChange}
+            editFileInputRef={editFileInputRef}
             initialMention={initialMention}
             onMentionConsumed={handleMentionConsumed}
             allUsers={allUsers}

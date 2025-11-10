@@ -5,12 +5,25 @@ import Comment from '../Comment';
 interface TaskCommentsListProps {
   comments: CommentType[];
   isLoading: boolean;
+  onEdit: (comment: CommentType) => void;
+  onDelete: (comment: CommentType) => void;
+  onToggleReaction: (commentId: string, emoji: string) => void;
+  editingCommentId: string | null;
+  editedText: string;
+  setEditedText: (text: string) => void;
+  handleSaveEdit: () => void;
+  handleCancelEdit: () => void;
+  newAttachments: File[];
+  removeNewAttachment: (index: number) => void;
+  handleEditFileChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  editFileInputRef: React.RefObject<HTMLInputElement>;
   onReply: (comment: CommentType) => void;
+  onCreateTicketFromComment: (comment: CommentType) => void;
   onGoToReply: (messageId: string) => void;
 }
 
 const TaskCommentsList: React.FC<TaskCommentsListProps> = (props) => {
-  const { comments, isLoading, onReply, onGoToReply } = props;
+  const { comments, isLoading, onGoToReply, ...rest } = props;
 
   if (isLoading) {
     return <div>Loading comments...</div>;
@@ -22,9 +35,9 @@ const TaskCommentsList: React.FC<TaskCommentsListProps> = (props) => {
         <Comment
           key={comment.id}
           comment={comment}
-          onReply={onReply}
+          isEditing={props.editingCommentId === comment.id}
           onGoToReply={onGoToReply}
-          onCreateTicketFromComment={() => {}} // This is handled in the parent for now
+          {...rest}
         />
       ))}
     </div>
