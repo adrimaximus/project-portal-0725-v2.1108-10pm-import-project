@@ -154,7 +154,7 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                             <AvatarFallback style={generatePastelColor(sender.id)}>{sender.initials}</AvatarFallback>
                           </Avatar>
                         )}
-                        <div className={cn("flex flex-col", isCurrentUser ? "items-end" : "items-start", !isCurrentUser && isSameSenderAsPrevious && "ml-10")}>
+                        <div className={cn("flex-1 min-w-0 flex flex-col", isCurrentUser ? "items-end" : "items-start", !isCurrentUser && isSameSenderAsPrevious && "ml-10")}>
                           <div
                             className={cn(
                               "rounded-lg relative group",
