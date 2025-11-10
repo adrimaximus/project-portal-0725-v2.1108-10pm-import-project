@@ -17,6 +17,8 @@ interface ProjectViewContainerProps {
   requestSort: (key: keyof Project) => void;
   rowRefs: React.MutableRefObject<Map<string, HTMLTableRowElement>>;
   kanbanGroupBy: 'status' | 'payment_status';
+  onEditTask: (task: ProjectTask) => void;
+  onDeleteTask: (taskId: string) => void;
   onToggleTaskCompletion: (task: ProjectTask, completed: boolean) => void;
   onTaskStatusChange: (task: ProjectTask, newStatus: TaskStatus) => void;
   isToggling: boolean;
@@ -28,16 +30,15 @@ interface ProjectViewContainerProps {
   onHighlightComplete: () => void;
   onStatusChange: (projectId: string, newStatus: ProjectStatus) => void;
   onTaskOrderChange: (payload: any) => void;
-  onTaskClick: (task: ProjectTask) => void;
 }
 
 type ViewMode = 'table' | 'list' | 'kanban' | 'tasks' | 'tasks-kanban';
 
 const ProjectViewContainer = ({
   view, projects, tasks, isLoading, isTasksLoading, onDeleteProject, sortConfig, requestSort, rowRefs,
-  kanbanGroupBy, onToggleTaskCompletion, onTaskStatusChange, isToggling,
+  kanbanGroupBy, onEditTask, onDeleteTask, onToggleTaskCompletion, onTaskStatusChange, isToggling,
   taskSortConfig, requestTaskSort, refetch, tasksQueryKey, highlightedTaskId, onHighlightComplete, onStatusChange,
-  onTaskOrderChange, onTaskClick
+  onTaskOrderChange
 }: ProjectViewContainerProps) => {
   switch (view) {
     case 'table':
@@ -50,6 +51,8 @@ const ProjectViewContainer = ({
       return <TasksView 
         tasks={tasks} 
         isLoading={isTasksLoading} 
+        onEdit={onEditTask}
+        onDelete={onDeleteTask}
         onToggleTaskCompletion={onToggleTaskCompletion}
         onStatusChange={onTaskStatusChange}
         isToggling={isToggling}
@@ -58,15 +61,15 @@ const ProjectViewContainer = ({
         rowRefs={rowRefs}
         highlightedTaskId={highlightedTaskId}
         onHighlightComplete={onHighlightComplete}
-        onTaskClick={onTaskClick}
       />;
     case 'tasks-kanban':
       return <TasksKanbanView 
         tasks={tasks} 
+        onEdit={onEditTask}
+        onDelete={onDeleteTask}
         refetch={refetch}
         tasksQueryKey={tasksQueryKey}
         onTaskOrderChange={onTaskOrderChange}
-        onTaskClick={onTaskClick}
       />;
     default:
       return null;

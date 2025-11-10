@@ -14,7 +14,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 
 interface TasksKanbanCardProps {
   task: Task;
-  onTaskClick: (task: Task) => void;
+  onEdit?: (task: Task) => void;
+  onDelete?: (taskId: string) => void;
 }
 
 const priorityColors: { [key: string]: string } = {
@@ -24,7 +25,7 @@ const priorityColors: { [key: string]: string } = {
   'Low': 'bg-green-500',
 };
 
-const TasksKanbanCard: React.FC<TasksKanbanCardProps> = ({ task, onTaskClick }) => {
+const TasksKanbanCard: React.FC<TasksKanbanCardProps> = ({ task, onEdit, onDelete }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ 
     id: task.id,
     data: {
@@ -32,14 +33,10 @@ const TasksKanbanCard: React.FC<TasksKanbanCardProps> = ({ task, onTaskClick }) 
       task,
     }
   });
-  
+
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-  };
-
-  const handleClick = () => {
-    onTaskClick(task);
   };
 
   const assignedTo = task.assignedTo || [];
@@ -52,7 +49,7 @@ const TasksKanbanCard: React.FC<TasksKanbanCardProps> = ({ task, onTaskClick }) 
       {...listeners}
       className={cn("mb-3 cursor-grab active:cursor-grabbing", isDragging && "opacity-30")}
     >
-      <Card className="hover:shadow-md transition-shadow" onClick={handleClick}>
+      <Card className="hover:shadow-md transition-shadow">
         <CardContent className="p-3">
           <div className="flex justify-between items-start">
             <TooltipProvider>
@@ -65,6 +62,23 @@ const TasksKanbanCard: React.FC<TasksKanbanCardProps> = ({ task, onTaskClick }) 
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
+            {onEdit && onDelete && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-7 w-7 flex-shrink-0 -mt-1 -mr-1">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onSelect={() => onEdit(task)}>
+                    <Edit className="mr-2 h-4 w-4" /> Edit
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => onDelete(task.id)} className="text-destructive">
+                    <Trash2 className="mr-2 h-4 w-4" /> Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </div>
 
           {task.tags && task.tags.length > 0 && (

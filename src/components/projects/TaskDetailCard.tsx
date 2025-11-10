@@ -1,8 +1,8 @@
 import React, { useMemo, useState, useRef, useEffect } from 'react';
-import { Task, TaskAttachment, Reaction, User, Comment as CommentType, TaskStatus, TASK_STATUS_OPTIONS, TaskPriority, TASK_PRIORITY_OPTIONS } from '@/types';
+import { Task, TaskAttachment, Reaction, User, Comment as CommentType, TaskStatus, TASK_STATUS_OPTIONS } from '@/types';
 import { DrawerContent } from '@/components/ui/drawer';
 import { Button } from '../ui/button';
-import { format, isPast } from 'date-fns';
+import { format, isPast, formatDistanceToNow } from 'date-fns';
 import { cn, isOverdue, formatTaskText, getPriorityStyles, getTaskStatusStyles, getDueDateClassName, getAvatarUrl, generatePastelColor, getInitials, formatMentionsForDisplay } from '@/lib/utils';
 import {
   Edit,
@@ -52,14 +52,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../ui/collapsible';
 import { useTaskModal } from '@/contexts/TaskModalContext';
 import { Input } from '../ui/input';
-import { useTags } from '@/hooks/useTags';
-import { AssigneeCombobox } from './AssigneeCombobox';
-import { TagsMultiselect } from '../ui/TagsMultiselect';
-import { DatePicker } from '../ui/date-picker';
 
 interface TaskDetailCardProps {
   task: Task;
   onClose: () => void;
+  onEdit: (task: Task) => void;
   onDelete: (task: Task) => void;
 }
 
@@ -92,7 +89,7 @@ const aggregateAttachments = (task: Task): TaskAttachment[] => {
   return attachments;
 };
 
-const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onDelete }) => {
+const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, onDelete }) => {
   const { user } = useAuth();
   const { 
     toggleTaskReaction, 
@@ -112,8 +109,6 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onDelete
     toggleReaction 
   } = useCommentManager({ scope: { taskId: task.id, projectId: task.project_id } });
   
-  const [isEditing, setIsEditing] = useState(false);
-  const [editedTask, setEditedTask] = useState<Partial<Task>>({});
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editedText, setEditedText] = useState('');
@@ -122,7 +117,6 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onDelete
   const editFileInputRef = useRef<HTMLInputElement>(null);
   const commentInputRef = useRef<{ setText: (text: string, append?: boolean) => void, focus: () => void }>(null);
   const { data: allUsers = [] } = useProfiles();
-  const { data: allTags = [] } = useTags();
   const { onOpen: onOpenTaskModal } = useTaskModal();
   const [replyTo, setReplyTo] = useState<CommentType | null>(null);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -226,7 +220,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onDelete
   };
 
   const allAttachments = useMemo(() => (task ? aggregateAttachments(task) : []), [task]);
-  const displayTags = useMemo(() => {
+  const allTags = useMemo(() => {
     const tags = [...(task?.tags || [])];
     if (task?.origin_ticket_id) {
       const hasTicketTag = tags.some(t => t.name === 'Ticket');
@@ -237,10 +231,10 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onDelete
     return tags;
   }, [task?.tags, task?.origin_ticket_id, task?.created_by.id]);
 
-  const description = isEditing ? editedTask.description : task.description || '';
-  const isLongDescription = description && description.length > 500;
+  const description = task.description || '';
+  const isLongDescription = description.length > 500;
   const displayedDescription = isLongDescription && !showFullDescription ? `${description.substring(0, 500)}...` : description;
-  const formattedDescription = formatMentionsForDisplay(displayedDescription || '');
+  const formattedDescription = formatMentionsForDisplay(displayedDescription);
 
   const handleToggleReaction = (emoji: string) => {
     toggleTaskReaction({ taskId: task.id, emoji });
@@ -298,47 +292,35 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onDelete
             </div>
 
             <div className="flex items-center gap-2 flex-shrink-0">
-              {isEditing ? (
-                <>
-                  <Button size="sm" variant="outline" onClick={handleEditToggle}>Cancel</Button>
-                  <Button size="sm" onClick={handleSaveChanges} disabled={isUpdatingTask}>
-                    {isUpdatingTask && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Save
-                  </Button>
-                </>
+              {task.completed ? (
+                <Button size="sm" variant="outline" onClick={handleToggleCompletion} className="h-8 border-green-500 bg-green-500/10 text-green-500 hover:bg-green-500/20 hover:text-green-600">
+                  <CheckCircle className="mr-2 h-4 w-4" />
+                  Completed
+                </Button>
               ) : (
-                <>
-                  {task.completed ? (
-                    <Button size="sm" variant="outline" onClick={handleToggleCompletion} className="h-8 border-green-500 bg-green-500/10 text-green-500 hover:bg-green-500/20 hover:text-green-600">
-                      <CheckCircle className="mr-2 h-4 w-4" />
-                      Completed
-                    </Button>
-                  ) : (
-                    <Button size="sm" variant="outline" onClick={handleToggleCompletion} className="h-8">
-                      <CheckCircle className="mr-2 h-4 w-4" />
-                      Mark complete
-                    </Button>
-                  )}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onSelect={handleEditToggle}>
-                        <Edit className="mr-2 h-4 w-4" /> Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onSelect={handleCopyLink}>
-                        <LinkIcon className="mr-2 h-4 w-4" /> Copy Link
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onSelect={() => { onDelete(task); onClose(); }} className="text-destructive">
-                        <Trash2 className="mr-2 h-4 w-4" /> Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </>
+                <Button size="sm" variant="outline" onClick={handleToggleCompletion} className="h-8">
+                  <CheckCircle className="mr-2 h-4 w-4" />
+                  Mark complete
+                </Button>
               )}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onSelect={() => { onEdit(task); onClose(); }}>
+                    <Edit className="mr-2 h-4 w-4" /> Edit
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={handleCopyLink}>
+                    <LinkIcon className="mr-2 h-4 w-4" /> Copy Link
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => { onDelete(task); onClose(); }} className="text-destructive">
+                    <Trash2 className="mr-2 h-4 w-4" /> Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </div>
@@ -358,27 +340,22 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onDelete
               <div>
                 <p className="font-medium">Status</p>
                 <Select
-                  value={isEditing ? editedTask.status : task.status}
+                  value={task.status}
                   onValueChange={(newStatus: TaskStatus) => {
-                    if (isEditing) {
-                      handleFieldChange('status', newStatus);
-                    } else {
-                      updateTaskStatusAndOrder({
-                        taskId: task.id,
-                        newStatus,
-                        orderedTaskIds: [],
-                        newTasks: [],
-                        queryKey: ['tasks'],
-                        movedColumns: false,
-                      });
-                    }
+                    updateTaskStatusAndOrder({
+                      taskId: task.id,
+                      newStatus,
+                      orderedTaskIds: [],
+                      newTasks: [],
+                      queryKey: ['tasks'],
+                      movedColumns: false,
+                    });
                   }}
-                  disabled={!isEditing}
                 >
-                  <SelectTrigger className="h-auto p-0 border-0 focus:ring-0 focus:ring-offset-0 w-auto bg-transparent shadow-none disabled:opacity-100 disabled:cursor-default">
+                  <SelectTrigger className="h-auto p-0 border-0 focus:ring-0 focus:ring-offset-0 w-auto bg-transparent shadow-none">
                     <SelectValue>
-                      <Badge variant="outline" className={cn(getTaskStatusStyles(isEditing ? editedTask.status : task.status).tw, 'border-transparent font-normal')}>
-                        {isEditing ? editedTask.status : task.status}
+                      <Badge variant="outline" className={cn(getTaskStatusStyles(task.status).tw, 'border-transparent font-normal')}>
+                        {task.status}
                       </Badge>
                     </SelectValue>
                   </SelectTrigger>
@@ -396,56 +373,35 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onDelete
               <Flag className="h-4 w-4 mt-1 flex-shrink-0 text-muted-foreground" />
               <div>
                 <p className="font-medium">Priority</p>
-                {isEditing ? (
-                  <Select value={editedTask.priority} onValueChange={(value) => handleFieldChange('priority', value)}>
-                    <SelectTrigger className="h-auto p-0 border-0 focus:ring-0 focus:ring-offset-0 w-auto bg-transparent shadow-none">
-                      <SelectValue>
-                        <Badge className={getPriorityStyles(editedTask.priority).tw}>{editedTask.priority}</Badge>
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {TASK_PRIORITY_OPTIONS.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  <Badge className={getPriorityStyles(task.priority).tw}>{task.priority}</Badge>
-                )}
+                <Badge className={getPriorityStyles(task.priority).tw}>{task.priority}</Badge>
               </div>
             </div>
             <div className="flex items-start gap-3">
               <Users className="h-4 w-4 mt-1 flex-shrink-0 text-muted-foreground" />
               <div>
                 <p className="font-medium">Assignees</p>
-                {isEditing ? (
-                  <AssigneeCombobox
-                    users={allUsers}
-                    selectedUsers={allUsers.filter(u => editedTask.assignedTo?.some(a => a.id === u.id))}
-                    onChange={(users) => handleFieldChange('assignedTo', users)}
-                  />
-                ) : (
-                  <div className="flex items-center -space-x-2 mt-1">
-                    {task.assignedTo?.map((assignee: User) => {
-                      const displayName = [assignee.first_name, assignee.last_name].filter(Boolean).join(' ').trim() || assignee.email?.split('@')[0] || 'Unknown User';
-                      return (
-                        <TooltipProvider key={assignee.id}>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Avatar className="h-6 w-6 border-2 border-background">
-                                <AvatarImage src={getAvatarUrl(assignee.avatar_url, assignee.id)} />
-                                <AvatarFallback style={generatePastelColor(assignee.id)}>
-                                  {getInitials([assignee.first_name, assignee.last_name].filter(Boolean).join(' '), assignee.email || undefined)}
-                                </AvatarFallback>
-                              </Avatar>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>{displayName}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      );
-                    })}
-                  </div>
-                )}
+                <div className="flex items-center -space-x-2 mt-1">
+                  {task.assignedTo?.map((assignee: User) => {
+                    const displayName = [assignee.first_name, assignee.last_name].filter(Boolean).join(' ').trim() || assignee.email?.split('@')[0] || 'Unknown User';
+                    return (
+                      <TooltipProvider key={assignee.id}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Avatar className="h-6 w-6 border-2 border-background">
+                              <AvatarImage src={getAvatarUrl(assignee.avatar_url, assignee.id)} />
+                              <AvatarFallback style={generatePastelColor(assignee.id)}>
+                                {getInitials([assignee.first_name, assignee.last_name].filter(Boolean).join(' '), assignee.email || undefined)}
+                              </AvatarFallback>
+                            </Avatar>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>{displayName}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    );
+                  })}
+                </div>
               </div>
             </div>
             {task.created_by && (
@@ -477,66 +433,53 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onDelete
               <Calendar className="h-4 w-4 mt-1 flex-shrink-0 text-muted-foreground" />
               <div>
                 <p className="font-medium">Due Date</p>
-                {isEditing ? (
-                  <DatePicker date={editedTask.due_date ? new Date(editedTask.due_date) : undefined} onDateChange={(date) => handleFieldChange('due_date', date?.toISOString())} />
-                ) : (
-                  <div className={cn("flex items-center gap-1.5", getDueDateClassName(task.due_date, task.completed))}>
-                    <span>{task.due_date ? format(new Date(task.due_date), "MMM d, yyyy, p") : 'No due date'}</span>
-                    {isOverdue(task.due_date) && !task.completed && (
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-6 w-6 text-red-500" onClick={handleSendReminder} disabled={isSendingReminder || !task.assignedTo || task.assignedTo.length === 0}>
-                              {isSendingReminder ? <Loader2 className="h-3 w-3 animate-spin" /> : <BellRing className="h-3 w-3" />}
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            {(!task.assignedTo || task.assignedTo.length === 0) ? (
-                              <p>No assignees to remind</p>
-                            ) : (
-                              <>
-                                <p>Send reminder to assignees</p>
-                                {task.last_reminder_sent_at && (
-                                  <p className="text-xs text-muted-foreground mt-1">
-                                    Last sent: {formatDistanceToNow(new Date(task.last_reminder_sent_at), { addSuffix: true })}
-                                  </p>
-                                )}
-                              </>
-                            )}
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    )}
-                  </div>
-                )}
-                {task.last_reminder_sent_at && !isEditing && (
+                <div className={cn("flex items-center gap-1.5", getDueDateClassName(task.due_date, task.completed))}>
+                  <span>{task.due_date ? format(new Date(task.due_date), "MMM d, yyyy, p") : 'No due date'}</span>
+                  {isOverdue(task.due_date) && !task.completed && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-6 w-6 text-red-500" onClick={handleSendReminder} disabled={isSendingReminder || !task.assignedTo || task.assignedTo.length === 0}>
+                            {isSendingReminder ? <Loader2 className="h-3 w-3 animate-spin" /> : <BellRing className="h-3 w-3" />}
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {(!task.assignedTo || task.assignedTo.length === 0) ? (
+                            <p>No assignees to remind</p>
+                          ) : (
+                            <>
+                              <p>Send reminder to assignees</p>
+                              {task.last_reminder_sent_at && (
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  Last sent: {formatDistanceToNow(new Date(task.last_reminder_sent_at), { addSuffix: true })}
+                                </p>
+                              )}
+                            </>
+                          )}
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
+                </div>
+                {task.last_reminder_sent_at && (
                   <p className="text-xs text-muted-foreground mt-1">
                     Last reminder sent: {formatDistanceToNow(new Date(task.last_reminder_sent_at), { addSuffix: true })}
                   </p>
                 )}
               </div>
             </div>
-            {displayTags.length > 0 && (
+            {allTags.length > 0 && (
               <div className="flex items-start gap-3">
                 <Tag className="h-4 w-4 mt-1 flex-shrink-0 text-muted-foreground" />
                 <div>
                   <p className="font-medium">Tags</p>
-                  {isEditing ? (
-                    <TagsMultiselect
-                      options={allTags}
-                      value={editedTask.tags || []}
-                      onChange={(tags) => handleFieldChange('tags', tags)}
-                      onTagCreate={(name) => ({ id: `new-${name}`, name, color: '#808080', user_id: user!.id })}
-                    />
-                  ) : (
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {displayTags.map(tag => (
-                        <Badge key={tag.id} variant="outline" style={{ backgroundColor: `${tag.color}20`, borderColor: tag.color, color: tag.color }}>
-                          {tag.name}
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {allTags.map(tag => (
+                      <Badge key={tag.id} variant="outline" style={{ backgroundColor: `${tag.color}20`, borderColor: tag.color, color: tag.color }}>
+                        {tag.name}
+                      </Badge>
+                    ))}
+                  </div>
                 </div>
               </div>
             )}
@@ -545,19 +488,13 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onDelete
           {description && (
             <div className="pt-4 border-t">
               <h4 className="font-semibold mb-2">Description</h4>
-              {isEditing ? (
-                <Textarea value={editedTask.description || ''} onChange={(e) => handleFieldChange('description', e.target.value)} rows={5} />
-              ) : (
-                <>
-                  <div className="prose prose-sm dark:prose-invert max-w-none break-words">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{formattedDescription}</ReactMarkdown>
-                  </div>
-                  {isLongDescription && (
-                    <Button variant="link" size="sm" onClick={() => setShowFullDescription(!showFullDescription)} className="px-0 h-auto">
-                      {showFullDescription ? 'Show less' : 'Show more'}
-                    </Button>
-                  )}
-                </>
+              <div className="prose prose-sm dark:prose-invert max-w-none break-words">
+                <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{formattedDescription}</ReactMarkdown>
+              </div>
+              {isLongDescription && (
+                <Button variant="link" size="sm" onClick={() => setShowFullDescription(!showFullDescription)} className="px-0 h-auto">
+                  {showFullDescription ? 'Show less' : 'Show more'}
+                </Button>
               )}
             </div>
           )}
