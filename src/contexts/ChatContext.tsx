@@ -48,6 +48,10 @@ interface ChatContextType {
   projectSuggestions: Project[];
   taskSuggestions: Task[];
   billSuggestions: Project[];
+  pinMessage: (messageId: string) => void;
+  isPinningMessage: boolean;
+  messageToScrollTo: string | null;
+  setMessageToScrollTo: (id: string | null) => void;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -74,6 +78,7 @@ const ChatProviderComponent = ({ children }: { children: ReactNode }) => {
   const isChatPageActiveRef = useRef(isChatPageActive);
   const recentlyProcessedIds = useRef(new Set<string>());
   const [editingMessage, setEditingMessage] = useState<Message | null>(null);
+  const [messageToScrollTo, setMessageToScrollTo] = useState<string | null>(null);
   
   const { user: currentUser } = useAuth();
   const queryClient = useQueryClient();
@@ -495,6 +500,26 @@ const ChatProviderComponent = ({ children }: { children: ReactNode }) => {
     }
   });
 
+  const pinMessageMutation = useMutation({
+    mutationFn: async (messageId: string) => {
+      if (!selectedConversationId) throw new Error("No conversation selected");
+      const { error } = await supabase.rpc('toggle_pinned_message', {
+        p_conversation_id: selectedConversationId,
+        p_message_id: messageId,
+      });
+      if (error) throw error;
+      return messageId;
+    },
+    onSuccess: (messageId) => {
+      queryClient.invalidateQueries({ queryKey: ['conversations', currentUser?.id] });
+      queryClient.invalidateQueries({ queryKey: ['messages', selectedConversationId] });
+      toast.success("Message pin status updated.");
+    },
+    onError: (error: any) => {
+      toast.error("Failed to pin message.", { description: error.message });
+    }
+  });
+
   useEffect(() => {
     const collaboratorToChat = (location.state as any)?.selectedCollaborator as Collaborator | undefined;
     if (collaboratorToChat) {
@@ -586,6 +611,10 @@ const ChatProviderComponent = ({ children }: { children: ReactNode }) => {
     projectSuggestions: userProjects,
     taskSuggestions: userTasks,
     billSuggestions: userBills,
+    pinMessage: pinMessageMutation.mutate,
+    isPinningMessage: pinMessageMutation.isPending,
+    messageToScrollTo,
+    setMessageToScrollTo,
   };
 
   return (

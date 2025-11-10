@@ -94,6 +94,7 @@ export interface Conversation {
   lastMessageTimestamp: string;
   unreadCount: number;
   created_by: string;
+  pinned_message_id?: string | null;
 }
 
 export interface Profile extends User {

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,14 +19,15 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { ArrowLeft, MoreVertical, Trash2, UserX, Users, Settings, Bot } from "lucide-react";
+import { ArrowLeft, MoreVertical, Trash2, UserX, Users, Settings, Bot, Pin, X } from "lucide-react";
 import StackedAvatar from "./StackedAvatar";
-import { getInitials, generatePastelColor } from "@/lib/utils";
+import { getInitials, generatePastelColor, getAvatarUrl } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import GroupSettingsDialog from "./GroupSettingsDialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 import { Conversation } from "@/types";
+import { useChatContext } from "@/contexts/ChatContext";
 
 interface ChatHeaderProps {
   conversation: Conversation;
@@ -41,6 +42,14 @@ const ChatHeader = ({ conversation, onBack, typing = false, onLeaveGroup, onClea
   const { user: currentUser, onlineCollaborators } = useAuth();
   const navigate = useNavigate();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const { messages, setMessageToScrollTo, pinMessage } = useChatContext();
+
+  const pinnedMessage = useMemo(() => {
+    if (!conversation?.pinned_message_id || messages.length === 0) {
+      return null;
+    }
+    return messages.find(m => m.id === conversation.pinned_message_id);
+  }, [conversation, messages]);
 
   if (!conversation) {
     return (
@@ -196,6 +205,25 @@ const ChatHeader = ({ conversation, onBack, typing = false, onLeaveGroup, onClea
           </AlertDialog>
         </div>
       </div>
+      {pinnedMessage && (
+        <div className="p-2 border-b bg-muted/50 flex items-center justify-between gap-2">
+          <div 
+            className="flex items-center gap-2 text-sm cursor-pointer flex-1 min-w-0" 
+            onClick={() => setMessageToScrollTo(pinnedMessage.id)}
+          >
+            <Pin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+            <div className="flex-1 overflow-hidden">
+              <p className="font-semibold text-primary">Pinned Message</p>
+              <p className="text-xs text-muted-foreground truncate">
+                <span className="font-medium">{pinnedMessage.sender.name}:</span> {pinnedMessage.text}
+              </p>
+            </div>
+          </div>
+          <Button variant="ghost" size="icon" className="h-7 w-7 flex-shrink-0" onClick={() => pinMessage(pinnedMessage.id)}>
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
       {isGroup && (
         <GroupSettingsDialog
           open={isSettingsOpen}
