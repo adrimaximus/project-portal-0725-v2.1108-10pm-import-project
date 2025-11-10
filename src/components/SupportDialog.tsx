@@ -21,8 +21,8 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { FileUp } from "lucide-react";
-import { addDays } from "date-fns";
+import { FileUp, X, Paperclip } from "lucide-react";
+import { v4 as uuidv4 } from 'uuid';
 
 interface SupportDialogProps {
   isOpen: boolean;
@@ -33,20 +33,9 @@ export const SupportDialog = ({ isOpen, onOpenChange }: SupportDialogProps) => {
   const { user } = useAuth();
   const [reportType, setReportType] = useState("bug");
   const [description, setDescription] = useState("");
-  const [attachment, setAttachment] = useState<File | null>(null);
+  const [attachments, setAttachments] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const getTaskTitle = (type: string) => {
-    switch (type) {
-      case 'bug':
-        return 'Bug Report';
-      case 'suggestion':
-        return 'Idea / Suggestion';
-      default:
-        return 'Support: Other';
-    }
-  };
 
   const getPlaceholder = (type: string) => {
     switch (type) {
@@ -57,6 +46,16 @@ export const SupportDialog = ({ isOpen, onOpenChange }: SupportDialogProps) => {
       default:
         return "Please describe the issue.";
     }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      setAttachments(prev => [...prev, ...Array.from(e.target.files!)]);
+    }
+  };
+
+  const removeAttachment = (fileToRemove: File) => {
+    setAttachments(prev => prev.filter(file => file !== fileToRemove));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -71,82 +70,44 @@ export const SupportDialog = ({ isOpen, onOpenChange }: SupportDialogProps) => {
     }
 
     setIsSubmitting(true);
-    let attachmentUrl: string | null = null;
-    let attachmentName: string | null = null;
+    let attachmentsJsonb: any[] = [];
 
     try {
-      // 1. Upload attachment if it exists
-      if (attachment) {
-        const sanitizedFileName = attachment.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
-        const filePath = `support/${user.id}/${Date.now()}-${sanitizedFileName}`;
-        const { error: uploadError } = await supabase.storage
-          .from('support-attachments')
-          .upload(filePath, attachment);
-
-        if (uploadError) {
-          throw new Error(`Failed to upload attachment: ${uploadError.message}`);
-        }
-
-        const { data: urlData } = supabase.storage
-          .from('support-attachments')
-          .getPublicUrl(filePath);
-        
-        attachmentUrl = urlData.publicUrl;
-        attachmentName = attachment.name;
+      // 1. Upload attachments if they exist
+      if (attachments.length > 0) {
+        const uploadPromises = attachments.map(async (file) => {
+          const fileId = uuidv4();
+          const sanitizedFileName = file.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
+          const filePath = `support-tickets/${user.id}/${Date.now()}-${sanitizedFileName}`;
+          const { error: uploadError } = await supabase.storage.from('project-files').upload(filePath, file);
+          if (uploadError) throw new Error(`Failed to upload ${file.name}: ${uploadError.message}`);
+          
+          const { data: urlData } = supabase.storage.from('project-files').getPublicUrl(filePath);
+          if (!urlData || !urlData.publicUrl) throw new Error(`Failed to get public URL for ${file.name}.`);
+          
+          return { id: fileId, file_name: file.name, file_url: urlData.publicUrl, file_type: file.type, file_size: file.size, storage_path: filePath, created_at: new Date().toISOString() };
+        });
+        attachmentsJsonb = await Promise.all(uploadPromises);
       }
 
-      // 2. Insert into support_tickets table
-      const { error } = await supabase.from('support_tickets').insert({
+      // 2. Insert into support_tickets table (for logging/backup)
+      const { error: ticketError } = await supabase.from('support_tickets').insert({
         user_id: user.id,
         user_name: user.name,
         user_email: user.email,
         report_type: reportType,
         description,
-        attachment_url: attachmentUrl,
+        attachment_url: attachmentsJsonb.length > 0 ? attachmentsJsonb[0].file_url : null,
       });
+      if (ticketError) throw ticketError;
 
-      if (error) throw error;
-
-      // 3. Find or create 'General Tasks' project and ensure membership
-      const { data: projectId, error: projectError } = await supabase
-        .rpc('ensure_general_tasks_project_and_membership');
-
+      // 3. Ensure 'Support Tasks' project exists and get its ID
+      const { data: projectId, error: projectError } = await supabase.rpc('ensure_support_project');
       if (projectError || !projectId) {
-        throw new Error(`Could not access the 'General Tasks' project. Task cannot be created. ${projectError?.message || ''}`);
+        throw new Error(`Could not access the 'Support Tasks' project. Task cannot be created. ${projectError?.message || ''}`);
       }
 
-      // 4. Find assignees (BD and master admin)
-      const { data: assignees, error: assigneesError } = await supabase
-        .from('profiles')
-        .select('id')
-        .in('role', ['BD', 'master admin']);
-      
-      if (assigneesError) {
-        console.warn("Could not find assignees for support ticket:", assigneesError.message);
-      }
-      const assigneeIds = assignees ? assignees.map(a => a.id) : [];
-
-      // 5. Find or create 'support' tag
-      let { data: supportTag, error: tagError } = await supabase
-        .from('tags')
-        .select('id')
-        .eq('name', 'support')
-        .single();
-
-      if (!supportTag && (!tagError || tagError.code === 'PGRST116')) {
-        const { data: newTag, error: newTagError } = await supabase
-          .from('tags')
-          .insert({ name: 'support', color: '#ff4d4f', user_id: user.id })
-          .select('id')
-          .single();
-        if (newTagError) throw new Error(`Failed to create 'support' tag: ${newTagError.message}`);
-        supportTag = newTag;
-      } else if (tagError && tagError.code !== 'PGRST116') {
-        throw new Error(`Failed to query for 'support' tag: ${tagError.message}`);
-      }
-      const tagId = supportTag?.id;
-
-      // 6. Create a comment that represents the ticket
+      // 4. Create a comment that represents the ticket, which will trigger task creation
       const { data: newComment, error: commentError } = await supabase
         .from('comments')
         .insert({
@@ -154,8 +115,7 @@ export const SupportDialog = ({ isOpen, onOpenChange }: SupportDialogProps) => {
           author_id: user.id,
           text: description,
           is_ticket: true,
-          attachment_url: attachmentUrl,
-          attachment_name: attachmentName,
+          attachments_jsonb: attachmentsJsonb,
         })
         .select('id')
         .single();
@@ -163,47 +123,11 @@ export const SupportDialog = ({ isOpen, onOpenChange }: SupportDialogProps) => {
       if (commentError || !newComment) {
         throw new Error(`Failed to create a comment for the ticket: ${commentError?.message}`);
       }
-      const commentId = newComment.id;
-
-      // 7. Create the task
-      const dueDate = addDays(new Date(), 7).toISOString();
-      const { data: newTask, error: taskError } = await supabase
-        .from('tasks')
-        .insert({
-          project_id: projectId,
-          created_by: user.id,
-          title: getTaskTitle(reportType),
-          description: description,
-          status: 'To do',
-          priority: 'Normal',
-          due_date: dueDate,
-          origin_ticket_id: commentId,
-        })
-        .select('id')
-        .single();
-
-      if (taskError || !newTask) {
-        throw new Error(`Failed to create the task: ${taskError?.message}`);
-      }
-      const taskId = newTask.id;
-
-      // 8. Assign the task
-      if (assigneeIds.length > 0) {
-        const assignments = assigneeIds.map(userId => ({ task_id: taskId, user_id: userId }));
-        const { error: assignmentError } = await supabase.from('task_assignees').insert(assignments);
-        if (assignmentError) console.warn("Failed to assign task:", assignmentError.message);
-      }
-
-      // 9. Tag the task
-      if (tagId) {
-        const { error: taskTagError } = await supabase.from('task_tags').insert({ task_id: taskId, tag_id: tagId });
-        if (taskTagError) console.warn("Failed to tag task:", taskTagError.message);
-      }
 
       toast.success("Your report has been sent and a task has been created. Thank you!");
       onOpenChange(false);
       setDescription("");
-      setAttachment(null);
+      setAttachments([]);
     } catch (error: any) {
       toast.error("Failed to submit your report.", { description: error.message });
     } finally {
@@ -235,7 +159,6 @@ export const SupportDialog = ({ isOpen, onOpenChange }: SupportDialogProps) => {
                 disabled
               />
             </div>
-            <input type="hidden" name="email" value={user.email} />
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="reportType" className="text-right">
                 Type
@@ -264,27 +187,37 @@ export const SupportDialog = ({ isOpen, onOpenChange }: SupportDialogProps) => {
                 required
               />
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="attachment" className="text-right">
-                Attachment
+            <div className="grid grid-cols-4 items-start gap-4">
+              <Label htmlFor="attachment" className="text-right pt-2">
+                Attachments
               </Label>
-              <div className="col-span-3">
+              <div className="col-span-3 space-y-2">
                 <Button type="button" variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
                   <FileUp className="mr-2 h-4 w-4" />
-                  {attachment ? "Change file" : "Upload screenshot"}
+                  Upload Files
                 </Button>
                 <Input
                   id="attachment"
                   type="file"
+                  multiple
                   ref={fileInputRef}
                   className="hidden"
-                  accept="image/*"
-                  onChange={(e) => setAttachment(e.target.files ? e.target.files[0] : null)}
+                  onChange={handleFileChange}
                 />
-                {attachment && (
-                    <p className="text-xs text-muted-foreground mt-2 truncate">
-                        {attachment.name}
-                    </p>
+                {attachments.length > 0 && (
+                  <div className="space-y-2">
+                    {attachments.map((file, index) => (
+                      <div key={index} className="flex items-center justify-between text-sm bg-muted p-2 rounded-md">
+                        <div className="flex items-center gap-2 truncate">
+                          <Paperclip className="h-4 w-4 flex-shrink-0" />
+                          <span className="truncate">{file.name}</span>
+                        </div>
+                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeAttachment(file)}>
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
             </div>
