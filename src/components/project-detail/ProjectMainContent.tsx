@@ -208,9 +208,12 @@ const ProjectMainContent = ({
             onEditTask={onEditTask}
             onDeleteTask={onDeleteTask}
             onToggleTaskCompletion={onToggleTaskCompletion}
-            highlightedTaskId={highlightedTaskId}
-            onHighlightComplete={onHighlightComplete}
-            onTaskClick={(task: Task) => onOpenTaskModal(task, undefined, project)}
+            highlightedTaskId={searchParams.get('task')}
+            onHighlightComplete={() => {
+              const newParams = new URLSearchParams(searchParams);
+              newParams.delete('task');
+              setSearchParams(newParams, { replace: true });
+            }}
           />
         </TabsContent>
         <TabsContent value="discussion" className="mt-4">
