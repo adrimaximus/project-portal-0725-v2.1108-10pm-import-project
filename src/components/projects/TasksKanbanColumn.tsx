@@ -14,10 +14,11 @@ interface TasksKanbanColumnProps {
   isCollapsed: boolean;
   onToggleCollapse: (status: TaskStatus) => void;
   onEdit: (task: Task) => void;
-  onDelete: (taskId: string) => void;
+  onDelete: (task: Task) => void;
+  onTaskClick: (task: Task) => void;
 }
 
-const TasksKanbanColumn = ({ status, tasks, isCollapsed, onToggleCollapse, onEdit, onDelete }: TasksKanbanColumnProps) => {
+const TasksKanbanColumn = ({ status, tasks, isCollapsed, onToggleCollapse, onEdit, onDelete, onTaskClick }: TasksKanbanColumnProps) => {
   const { setNodeRef } = useDroppable({ id: status });
   const taskIds = useMemo(() => tasks.map(t => t.id), [tasks]);
 
@@ -54,7 +55,7 @@ const TasksKanbanColumn = ({ status, tasks, isCollapsed, onToggleCollapse, onEdi
         <div className="flex-grow min-h-0 overflow-y-auto p-2 pt-0">
           <SortableContext id={status} items={taskIds} strategy={verticalListSortingStrategy}>
             {tasks.map(task => (
-              <TasksKanbanCard key={task.id} task={task} onEdit={onEdit} onDelete={onDelete} />
+              <TasksKanbanCard key={task.id} task={task} onEdit={onEdit} onDelete={onDelete} onTaskClick={onTaskClick} />
             ))}
           </SortableContext>
           {tasks.length === 0 && (

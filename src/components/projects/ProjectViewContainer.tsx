@@ -18,7 +18,7 @@ interface ProjectViewContainerProps {
   rowRefs: React.MutableRefObject<Map<string, HTMLTableRowElement>>;
   kanbanGroupBy: 'status' | 'payment_status';
   onEditTask: (task: ProjectTask) => void;
-  onDeleteTask: (taskId: string) => void;
+  onDeleteTask: (task: ProjectTask) => void;
   onToggleTaskCompletion: (task: ProjectTask, completed: boolean) => void;
   onTaskStatusChange: (task: ProjectTask, newStatus: TaskStatus) => void;
   isToggling: boolean;
@@ -72,6 +72,7 @@ const ProjectViewContainer = ({
         refetch={refetch}
         tasksQueryKey={tasksQueryKey}
         onTaskOrderChange={onTaskOrderChange}
+        onTaskClick={onTaskClick}
       />;
     default:
       return null;

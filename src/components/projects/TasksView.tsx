@@ -18,7 +18,7 @@ interface TasksViewProps {
   tasks: ProjectTask[];
   isLoading: boolean;
   onEdit: (task: ProjectTask) => void;
-  onDelete: (taskId: string) => void;
+  onDelete: (task: ProjectTask) => void;
   onToggleTaskCompletion: (task: ProjectTask, completed: boolean) => void;
   onStatusChange: (task: ProjectTask, newStatus: TaskStatus) => void;
   isToggling: boolean;
@@ -248,14 +248,17 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
                 <div onClick={(e) => e.stopPropagation()}>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 p-0">
+                        <span className="sr-only">Open menu</span>
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem onSelect={() => onEdit(task)}>
                         <Edit className="mr-2 h-4 w-4" />
                         Edit
                       </DropdownMenuItem>
-                      <DropdownMenuItem onSelect={() => onDelete(task.id)} className="text-destructive">
+                      <DropdownMenuItem onSelect={() => onDelete(task)} className="text-destructive">
                         <Trash2 className="mr-2 h-4 w-4" />
                         Delete
                       </DropdownMenuItem>

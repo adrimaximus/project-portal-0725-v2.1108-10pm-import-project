@@ -8,10 +8,11 @@ import TasksKanbanCard from './TasksKanbanCard';
 interface TasksKanbanViewProps {
   tasks: Task[];
   onEdit: (task: Task) => void;
-  onDelete: (taskId: string) => void;
+  onDelete: (task: Task) => void;
   refetch: () => void;
   tasksQueryKey: any[];
   onTaskOrderChange: (payload: any) => void;
+  onTaskClick: (task: Task) => void;
 }
 
 const dropAnimation: DropAnimation = {
@@ -24,7 +25,7 @@ const dropAnimation: DropAnimation = {
   }),
 };
 
-const TasksKanbanView = ({ tasks, onEdit, onDelete, refetch, tasksQueryKey, onTaskOrderChange }: TasksKanbanViewProps) => {
+const TasksKanbanView = ({ tasks, onEdit, onDelete, refetch, tasksQueryKey, onTaskOrderChange, onTaskClick }: TasksKanbanViewProps) => {
   const [collapsedColumns, setCollapsedColumns] = useState<Set<TaskStatus>>(new Set());
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [tasksByStatus, setTasksByStatus] = useState<Record<TaskStatus, Task[]>>({} as Record<TaskStatus, Task[]>);
@@ -36,6 +37,19 @@ const TasksKanbanView = ({ tasks, onEdit, onDelete, refetch, tasksQueryKey, onTa
       setCollapsedColumns(new Set(JSON.parse(savedState)));
     }
   }, []);
+
+  const toggleColumnCollapse = (status: TaskStatus) => {
+    setCollapsedColumns(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(status)) {
+        newSet.delete(status);
+      } else {
+        newSet.add(status);
+      }
+      localStorage.setItem('tasksKanbanCollapsedColumns', JSON.stringify(Array.from(newSet)));
+      return newSet;
+    });
+  };
 
   useEffect(() => {
     if (justDropped.current) {
@@ -62,19 +76,6 @@ const TasksKanbanView = ({ tasks, onEdit, onDelete, refetch, tasksQueryKey, onTa
     }
     setTasksByStatus(grouped);
   }, [tasks]);
-
-  const toggleColumnCollapse = (status: TaskStatus) => {
-    setCollapsedColumns(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(status)) {
-        newSet.delete(status);
-      } else {
-        newSet.add(status);
-      }
-      localStorage.setItem('tasksKanbanCollapsedColumns', JSON.stringify(Array.from(newSet)));
-      return newSet;
-    });
-  };
 
   const sensors = useSensors(
     useSensor(MouseSensor, {
@@ -235,11 +236,12 @@ const TasksKanbanView = ({ tasks, onEdit, onDelete, refetch, tasksQueryKey, onTa
             onToggleCollapse={toggleColumnCollapse}
             onEdit={onEdit}
             onDelete={onDelete}
+            onTaskClick={onTaskClick}
           />
         ))}
       </div>
       <DragOverlay dropAnimation={dropAnimation}>
-        {activeTask ? <TasksKanbanCard task={activeTask} /> : null}
+        {activeTask ? <TasksKanbanCard task={activeTask} onTaskClick={() => {}} /> : null}
       </DragOverlay>
     </DndContext>
   );

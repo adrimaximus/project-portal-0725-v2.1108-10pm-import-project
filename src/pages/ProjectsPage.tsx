@@ -144,7 +144,7 @@ const ProjectsPage = () => {
   }, [highlightedTaskId, tasksData]);
 
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
-  const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
+  const [taskToDelete, setTaskToDelete] = useState<ProjectTask | null>(null);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
 
   const { data: isGCalConnected } = useQuery({
@@ -234,7 +234,7 @@ const ProjectsPage = () => {
 
   const confirmDeleteTask = () => {
     if (taskToDelete) {
-      deleteTask(taskToDelete, {
+      deleteTask(taskToDelete.id, {
         onSuccess: () => {
           setTaskToDelete(null);
         }
