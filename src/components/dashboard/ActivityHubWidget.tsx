@@ -14,7 +14,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import TaskReactions from '@/components/projects/TaskReactions';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Progress } from '@/components/ui/progress';
-import { useTaskModal } from '@/contexts/TaskModalContext';
+import { useTaskModal } from '@/contexts/TaskDrawerContext';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import RecentActivityWidget from './RecentActivityWidget';
 import CollaboratorsTab from './CollaboratorsTab';
@@ -24,13 +24,13 @@ const ActivityHubWidget = () => {
   return (
     <Card>
       <Tabs defaultValue="my-tasks" className="w-full">
-        <CardHeader className="flex flex-row items-center justify-between gap-2 pb-4">
-          <TabsList>
+        <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 pb-4">
+          <TabsList className="grid w-full grid-cols-3 sm:w-auto sm:inline-flex">
             <TabsTrigger value="my-tasks">My Tasks</TabsTrigger>
             <TabsTrigger value="recent-activity">Recent Activity</TabsTrigger>
             <TabsTrigger value="collaborators">Collaborators</TabsTrigger>
           </TabsList>
-          <Button asChild variant="link" className="text-sm -my-2 -mr-4">
+          <Button asChild variant="link" className="text-sm -my-2 self-end sm:self-center">
             <Link to="/projects?view=tasks">View all</Link>
           </Button>
         </CardHeader>
