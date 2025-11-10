@@ -12,7 +12,7 @@ import TaskReactions from '../projects/TaskReactions';
 import { useTaskMutations } from '@/hooks/useTaskMutations';
 import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
-import TaskAttachmentList from '../projects/TaskAttachmentList';
+import TaskAttachmentList from './TaskAttachmentList';
 import { cn, getErrorMessage, formatBytes } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { Separator } from "@/components/ui/separator";
@@ -48,7 +48,7 @@ const TaskRow = ({ task, onToggleTaskCompletion, onEditTask, onDeleteTask, handl
   const navigate = useNavigate();
 
   const handleTitleClick = () => {
-    navigate(`/projects?view=tasks&highlight=${task.id}`);
+    onEditTask(task);
   };
 
   const allAttachments = useMemo(() => {
@@ -346,7 +346,6 @@ const ProjectTasks = ({ project, tasks, projectId, projectSlug, onEditTask, onDe
             onEditTask={onEditTask}
             onDeleteTask={onDeleteTask}
             handleToggleReaction={handleToggleReaction}
-            onTaskClick={onEditTask}
             currentUserId={user?.id}
             setRef={(el) => {
               if (el) taskRefs.current.set(task.id, el);
@@ -406,7 +405,6 @@ const ProjectTasks = ({ project, tasks, projectId, projectSlug, onEditTask, onDe
                     onEditTask={onEditTask}
                     onDeleteTask={onDeleteTask}
                     handleToggleReaction={handleToggleReaction}
-                    onTaskClick={onEditTask}
                     currentUserId={user?.id}
                     setRef={(el) => {
                       if (el) taskRefs.current.set(task.id, el);
