@@ -254,100 +254,144 @@ serve(async (req) => {
             }
             break;
           }
-          case 'discussion_mention': {
-            const { project_name: projectName, project_slug: projectSlug, mentioner_name: mentionerName, task_id: taskId } = context;
-            const url = taskId
-              ? `${APP_URL}/projects/${projectSlug}?tab=tasks&task=${taskId}`
-              : `${APP_URL}/projects/${projectSlug}?tab=discussion`;
-            
-            userPrompt = `Buat notifikasi mention. Penerima: ${recipientName}. Pengirim: ${mentionerName}. Proyek: "${projectName}". URL: ${url}`;
-            
-            const aiMessage = await generateAiMessage(userPrompt);
-            await sendWhatsappMessage(recipient.phone, aiMessage);
-            break;
-          }
+          case 'discussion_mention':
           case 'discussion_mention_email': {
             const { project_name: projectName, project_slug: projectSlug, mentioner_name: mentionerName, comment_text: commentText, task_id: taskId } = context;
             const url = taskId
               ? `${APP_URL}/projects/${projectSlug}?tab=tasks&task=${taskId}`
               : `${APP_URL}/projects/${projectSlug}?tab=discussion`;
             
-            const subject = `You were mentioned in the project: ${projectName}`;
-            const html = `
-                <p>Hi ${recipientName},</p>
-                <p><strong>${mentionerName}</strong> mentioned you in a comment on the project <strong>${projectName}</strong>.</p>
-                <blockquote style="border-left: 4px solid #ccc; padding-left: 1em; margin: 1em 0; color: #666;">
-                    ${commentText.replace(/@\[([^\]]+)\]\(([^)]+)\)/g, '@$1')}
-                </blockquote>
-                <p>You can view the comment by clicking the button below:</p>
-                <a href="${url}" style="display: inline-block; padding: 12px 24px; font-size: 16px; color: #ffffff; background-color: #008A9E; text-decoration: none; border-radius: 8px;">View Comment</a>
-            `;
-            const text = `Hi, ${mentionerName} mentioned you in a comment on the project ${projectName}. View it here: ${url}`;
-
-            await sendEmail(recipient.email, subject, html, text);
+            userPrompt = `Buat notifikasi mention. Penerima: ${recipientName}. Pengirim: ${mentionerName}. Proyek: "${projectName}". URL: ${url}`;
+            
+            if (notification.notification_type === 'discussion_mention_email') {
+              const subject = `You were mentioned in the project: ${projectName}`;
+              const html = `
+                  <p>Hi ${recipientName},</p>
+                  <p><strong>${mentionerName}</strong> mentioned you in a comment on the project <strong>${projectName}</strong>.</p>
+                  <blockquote style="border-left: 4px solid #ccc; padding-left: 1em; margin: 1em 0; color: #666;">
+                      ${commentText.replace(/@\[([^\]]+)\]\(([^)]+)\)/g, '@$1')}
+                  </blockquote>
+                  <p>You can view the comment by clicking the button below:</p>
+                  <a href="${url}" style="display: inline-block; padding: 12px 24px; font-size: 16px; color: #ffffff; background-color: #008A9E; text-decoration: none; border-radius: 8px;">View Comment</a>
+              `;
+              const text = `Hi, ${mentionerName} mentioned you in a comment on the project ${projectName}. View it here: ${url}`;
+              await sendEmail(recipient.email, subject, html, text);
+            } else {
+              const aiMessage = await generateAiMessage(userPrompt);
+              await sendWhatsappMessage(recipient.phone, aiMessage);
+            }
             break;
           }
-          case 'new_task': {
+          case 'new_task':
+          case 'new_task_email': {
             const { creator_name, task_title, project_name, project_slug, task_id } = context;
             const url = `${APP_URL}/projects/${project_slug}?tab=tasks&task=${task_id}`;
             userPrompt = `Buat notifikasi tugas baru. Penerima: ${recipientName}. Pembuat tugas: ${creator_name}. Judul tugas: "${task_title}". Proyek: "${project_name}". URL: ${url}`;
             
-            const aiMessage = await generateAiMessage(userPrompt);
-            await sendWhatsappMessage(recipient.phone, aiMessage);
+            if (notification.notification_type === 'new_task_email') {
+              const subject = `Tugas baru dibuat di proyek: ${project_name}`;
+              const html = `<p>Hai ${recipientName},</p><p><strong>${creator_name}</strong> baru saja membuat tugas baru, <em>"${task_title}"</em>, di proyek <strong>${project_name}</strong>.</p><a href="${url}" style="display: inline-block; padding: 10px 20px; font-size: 16px; color: #ffffff; background-color: #007bff; text-decoration: none; border-radius: 5px;">Lihat Tugas</a>`;
+              await sendEmail(recipient.email, subject, html, `Tugas baru "${task_title}" di proyek ${project_name}. Lihat di: ${url}`);
+            } else {
+              const aiMessage = await generateAiMessage(userPrompt);
+              await sendWhatsappMessage(recipient.phone, aiMessage);
+            }
             break;
           }
-          case 'new_ticket': {
+          case 'new_ticket':
+          case 'new_ticket_email': {
             const { creator_name, ticket_content, project_name, project_slug, task_id } = context;
             const url = `${APP_URL}/projects/${project_slug}?tab=tasks&task=${task_id}`;
             userPrompt = `Buat notifikasi tiket baru. Penerima: ${recipientName}. Pembuat tiket: ${creator_name}. Isi tiket: "${ticket_content}". Proyek: "${project_name}". URL: ${url}`;
             
-            const aiMessage = await generateAiMessage(userPrompt);
-            await sendWhatsappMessage(recipient.phone, aiMessage);
+            if (notification.notification_type === 'new_ticket_email') {
+              const subject = `Tiket baru di proyek: ${project_name}`;
+              const html = `<p>Hai ${recipientName},</p><p><strong>${creator_name}</strong> membuat tiket baru di proyek <strong>${project_name}</strong>:</p><blockquote>${ticket_content}</blockquote><a href="${url}" style="display: inline-block; padding: 10px 20px; font-size: 16px; color: #ffffff; background-color: #007bff; text-decoration: none; border-radius: 5px;">Lihat Tiket</a>`;
+              await sendEmail(recipient.email, subject, html, `Tiket baru di proyek ${project_name}. Lihat di: ${url}`);
+            } else {
+              const aiMessage = await generateAiMessage(userPrompt);
+              await sendWhatsappMessage(recipient.phone, aiMessage);
+            }
             break;
           }
-          case 'task_assignment': {
+          case 'task_assignment':
+          case 'task_assignment_email': {
             const { assigner_name, task_title, project_name, project_slug, task_id } = context;
             const url = `${APP_URL}/projects/${project_slug}?tab=tasks&task=${task_id}`;
             userPrompt = `Buat notifikasi penugasan tugas. Penerima: ${recipientName}. Pemberi tugas: ${assigner_name}. Judul tugas: "${task_title}". Proyek: "${project_name}". URL: ${url}`;
             
-            const aiMessage = await generateAiMessage(userPrompt);
-            await sendWhatsappMessage(recipient.phone, aiMessage);
+            if (notification.notification_type === 'task_assignment_email') {
+              const subject = `Anda ditugaskan untuk tugas baru: ${task_title}`;
+              const html = `<p>Hai ${recipientName},</p><p><strong>${assigner_name}</strong> menugaskan Anda untuk tugas <em>"${task_title}"</em> di proyek <strong>${project_name}</strong>.</p><a href="${url}" style="display: inline-block; padding: 10px 20px; font-size: 16px; color: #ffffff; background-color: #007bff; text-decoration: none; border-radius: 5px;">Lihat Tugas</a>`;
+              await sendEmail(recipient.email, subject, html, `Anda ditugaskan untuk tugas "${task_title}". Lihat di: ${url}`);
+            } else {
+              const aiMessage = await generateAiMessage(userPrompt);
+              await sendWhatsappMessage(recipient.phone, aiMessage);
+            }
             break;
           }
-          case 'task_completed': {
+          case 'task_completed':
+          case 'task_completed_email': {
             const { completer_name, task_title, project_name, project_slug } = context;
             const url = `${APP_URL}/projects/${project_slug}`;
             userPrompt = `Buat notifikasi penyelesaian tugas. Penerima: ${recipientName}. Yang menyelesaikan: ${completer_name}. Judul tugas: "${task_title}". Proyek: "${project_name}". URL: ${url}`;
             
-            const aiMessage = await generateAiMessage(userPrompt);
-            await sendWhatsappMessage(recipient.phone, aiMessage);
+            if (notification.notification_type === 'task_completed_email') {
+              const subject = `Tugas selesai: ${task_title}`;
+              const html = `<p>Hai ${recipientName},</p><p>Tugas <em>"${task_title}"</em> di proyek <strong>${project_name}</strong> telah diselesaikan oleh <strong>${completer_name}</strong>.</p><a href="${url}" style="display: inline-block; padding: 10px 20px; font-size: 16px; color: #ffffff; background-color: #007bff; text-decoration: none; border-radius: 5px;">Lihat Proyek</a>`;
+              await sendEmail(recipient.email, subject, html, `Tugas "${task_title}" telah selesai. Lihat di: ${url}`);
+            } else {
+              const aiMessage = await generateAiMessage(userPrompt);
+              await sendWhatsappMessage(recipient.phone, aiMessage);
+            }
             break;
           }
-          case 'project_status_updated': {
+          case 'project_status_updated':
+          case 'project_status_updated_email': {
             const { updater_name, project_name, new_status, project_slug } = context;
             const url = `${APP_URL}/projects/${project_slug}`;
             userPrompt = `Buat notifikasi pembaruan status proyek. Penerima: ${recipientName}. Pengubah status: ${updater_name}. Proyek: "${project_name}". Status baru: "${new_status}". URL: ${url}`;
             
-            const aiMessage = await generateAiMessage(userPrompt);
-            await sendWhatsappMessage(recipient.phone, aiMessage);
+            if (notification.notification_type === 'project_status_updated_email') {
+              const subject = `Status proyek ${project_name} diperbarui menjadi ${new_status}`;
+              const html = `<p>Hai ${recipientName},</p><p>Status proyek <strong>${project_name}</strong> telah diperbarui menjadi <strong>${new_status}</strong> oleh <strong>${updater_name}</strong>.</p><a href="${url}" style="display: inline-block; padding: 10px 20px; font-size: 16px; color: #ffffff; background-color: #007bff; text-decoration: none; border-radius: 5px;">Lihat Proyek</a>`;
+              await sendEmail(recipient.email, subject, html, `Status proyek ${project_name} diperbarui. Lihat di: ${url}`);
+            } else {
+              const aiMessage = await generateAiMessage(userPrompt);
+              await sendWhatsappMessage(recipient.phone, aiMessage);
+            }
             break;
           }
-          case 'project_invite': {
+          case 'project_invite':
+          case 'project_invite_email': {
             const { inviter_name, project_name, project_slug } = context;
             const url = `${APP_URL}/projects/${project_slug}`;
             userPrompt = `Buat notifikasi undangan proyek. Penerima: ${recipientName}. Pengundang: ${inviter_name}. Proyek: "${project_name}". URL: ${url}`;
             
-            const aiMessage = await generateAiMessage(userPrompt);
-            await sendWhatsappMessage(recipient.phone, aiMessage);
+            if (notification.notification_type === 'project_invite_email') {
+              const subject = `Anda diundang ke proyek: ${project_name}`;
+              const html = `<p>Hai ${recipientName},</p><p><strong>${inviter_name}</strong> telah mengundang Anda untuk berkolaborasi di proyek <strong>${project_name}</strong>.</p><a href="${url}" style="display: inline-block; padding: 10px 20px; font-size: 16px; color: #ffffff; background-color: #007bff; text-decoration: none; border-radius: 5px;">Lihat Proyek</a>`;
+              await sendEmail(recipient.email, subject, html, `Anda diundang ke proyek ${project_name}. Lihat di: ${url}`);
+            } else {
+              const aiMessage = await generateAiMessage(userPrompt);
+              await sendWhatsappMessage(recipient.phone, aiMessage);
+            }
             break;
           }
-          case 'task_overdue': {
+          case 'task_overdue':
+          case 'task_overdue_email': {
             const { task_title, project_name, project_slug, task_id, days_overdue } = context;
             const url = `${APP_URL}/projects/${project_slug}?tab=tasks&task=${task_id}`;
             userPrompt = `Buat notifikasi tugas terlambat. Penerima: ${recipientName}. Judul tugas: "${task_title}". Proyek: "${project_name}". Terlambat: ${days_overdue} hari. URL: ${url}`;
             
-            const aiMessage = await generateAiMessage(userPrompt);
-            await sendWhatsappMessage(recipient.phone, aiMessage);
+            if (notification.notification_type === 'task_overdue_email') {
+              const subject = `PENGINGAT: Tugas "${task_title}" telah jatuh tempo`;
+              const html = `<p>Hai ${recipientName},</p><p>Ini adalah pengingat bahwa tugas <em>"${task_title}"</em> di proyek <strong>${project_name}</strong> telah melewati tenggat waktu selama <strong>${days_overdue} hari</strong>.</p><p>Mohon segera selesaikan tugas ini.</p><a href="${url}" style="display: inline-block; padding: 10px 20px; font-size: 16px; color: #ffffff; background-color: #dc3545; text-decoration: none; border-radius: 5px;">Lihat Tugas</a>`;
+              await sendEmail(recipient.email, subject, html, `Tugas "${task_title}" terlambat. Lihat di: ${url}`);
+            } else {
+              const aiMessage = await generateAiMessage(userPrompt);
+              await sendWhatsappMessage(recipient.phone, aiMessage);
+            }
             break;
           }
           case 'goal_invite':
