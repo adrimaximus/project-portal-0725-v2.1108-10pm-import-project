@@ -1,13 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, PlusCircle } from "lucide-react";
-import PropertyFormDialog from './PropertyFormDialog';
+import { PropertyFormDialog } from './PropertyFormDialog';
 import { toast } from 'sonner';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 interface CustomProperty {
   id: string;
@@ -25,22 +24,31 @@ interface CustomPropertiesManagerProps {
 }
 
 const CustomPropertiesManager = ({ category, title, description }: CustomPropertiesManagerProps) => {
-  const queryClient = useQueryClient();
+  const [properties, setProperties] = useState<CustomProperty[]>([]);
+  const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProperty, setEditingProperty] = useState<CustomProperty | null>(null);
 
-  const { data: properties = [], isLoading } = useQuery<CustomProperty[]>({
-    queryKey: ['custom_properties', category],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('custom_properties')
-        .select('*')
-        .eq('category', category)
-        .order('created_at', { ascending: true });
-      if (error) throw error;
-      return data;
+  const fetchProperties = async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('custom_properties')
+      .select('*')
+      .eq('category', category)
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching properties:', error);
+      toast.error('Failed to fetch properties.');
+    } else {
+      setProperties(data || []);
     }
-  });
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchProperties();
+  }, [category]);
 
   const handleDelete = async (id: string) => {
     if (!window.confirm('Are you sure you want to delete this property?')) {
@@ -49,19 +57,16 @@ const CustomPropertiesManager = ({ category, title, description }: CustomPropert
     const { error } = await supabase.from('custom_properties').delete().eq('id', id);
     if (error) {
       toast.error('Failed to delete property.');
+      console.error('Error deleting property:', error);
     } else {
       toast.success('Property deleted successfully.');
-      queryClient.invalidateQueries({ queryKey: ['custom_properties', category] });
+      fetchProperties();
     }
   };
 
   const handleOpenDialog = (property: CustomProperty | null = null) => {
     setEditingProperty(property);
     setIsDialogOpen(true);
-  };
-
-  const handleSuccess = () => {
-    queryClient.invalidateQueries({ queryKey: ['custom_properties', category] });
   };
 
   return (
@@ -82,7 +87,7 @@ const CustomPropertiesManager = ({ category, title, description }: CustomPropert
           <CardTitle>Custom Properties</CardTitle>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
+          {loading ? (
             <div className="text-center py-10">Loading...</div>
           ) : properties.length === 0 ? (
             <div className="text-center py-10">
@@ -134,7 +139,7 @@ const CustomPropertiesManager = ({ category, title, description }: CustomPropert
         setIsOpen={setIsDialogOpen}
         property={editingProperty}
         category={category}
-        onSuccess={handleSuccess}
+        onSuccess={fetchProperties}
       />
     </>
   );
