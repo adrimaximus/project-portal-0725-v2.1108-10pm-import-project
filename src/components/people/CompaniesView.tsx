@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { MoreHorizontal, PlusCircle, Edit, Trash2, Building, Loader2, Search, ArrowUp, ArrowDown } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Edit, Trash2, Building, Loader2, Search } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
@@ -13,7 +13,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { cn } from '@/lib/utils';
+import { SortableTableHead } from '../ui/SortableTableHead';
 
 const CompaniesView = () => {
     const [isFormOpen, setIsFormOpen] = useState(false);
@@ -123,17 +123,6 @@ const CompaniesView = () => {
         return String(value);
     };
 
-    const SortableHeader = ({ columnKey, label }: { columnKey: keyof Company, label: string }) => (
-        <TableHead className="p-2">
-            <Button variant="ghost" onClick={() => handleSort(columnKey)} className="px-2">
-                {label}
-                {sortConfig.key === columnKey ? (
-                    sortConfig.direction === 'asc' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />
-                ) : null}
-            </Button>
-        </TableHead>
-    );
-
     const visibleProperties = properties.filter(prop => prop.type !== 'image');
     const totalColumns = 4 + visibleProperties.length;
 
@@ -167,13 +156,13 @@ const CompaniesView = () => {
                     <Table className="min-w-[1200px]">
                         <TableHeader>
                             <TableRow>
-                                <SortableHeader columnKey="name" label="Company" />
-                                <SortableHeader columnKey="legal_name" label="Legal Name" />
-                                <SortableHeader columnKey="address" label="Address" />
+                                <SortableTableHead columnKey="name" onSort={handleSort} sortConfig={sortConfig}>Company</SortableTableHead>
+                                <SortableTableHead columnKey="legal_name" onSort={handleSort} sortConfig={sortConfig}>Legal Name</SortableTableHead>
+                                <SortableTableHead columnKey="address" onSort={handleSort} sortConfig={sortConfig}>Address</SortableTableHead>
                                 {visibleProperties.map(prop => (
                                     <TableHead key={prop.id} className="min-w-[200px]">{prop.label}</TableHead>
                                 ))}
-                                <SortableHeader columnKey="updated_at" label="Updated At" />
+                                <SortableTableHead columnKey="updated_at" onSort={handleSort} sortConfig={sortConfig}>Updated At</SortableTableHead>
                                 <TableHead className="text-right md:sticky right-0 bg-card">Actions</TableHead>
                             </TableRow>
                         </TableHeader>

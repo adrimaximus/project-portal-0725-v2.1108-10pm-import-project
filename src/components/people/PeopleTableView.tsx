@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { useIsMobile } from '@/hooks/use-mobile';
 import PersonListCard from './PersonListCard';
 import { formatDistanceToNow } from 'date-fns';
+import { SortableTableHead } from '../ui/SortableTableHead';
 
 interface PeopleTableViewProps {
   people: Person[];
@@ -84,20 +85,20 @@ const PeopleTableView: React.FC<PeopleTableViewProps> = ({ people, isLoading, on
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-[250px] sticky left-0 bg-card z-10">
-              <Button variant="ghost" onClick={() => requestSort('full_name')} className="px-2">Name</Button>
-            </TableHead>
-            <TableHead className="hidden sm:table-cell">
-              <Button variant="ghost" onClick={() => requestSort('job_title')} className="px-2">Work</Button>
-            </TableHead>
-            <TableHead className="hidden lg:table-cell">
-              <Button variant="ghost" onClick={() => requestSort('address')} className="px-2">Address</Button>
-            </TableHead>
+            <SortableTableHead columnKey="full_name" onSort={requestSort} sortConfig={sortConfig} className="w-[250px] sticky left-0 bg-card z-10">
+              Name
+            </SortableTableHead>
+            <SortableTableHead columnKey="job_title" onSort={requestSort} sortConfig={sortConfig} className="hidden sm:table-cell">
+              Work
+            </SortableTableHead>
+            <SortableTableHead columnKey="address" onSort={requestSort} sortConfig={sortConfig} className="hidden lg:table-cell">
+              Address
+            </SortableTableHead>
             <TableHead className="hidden md:table-cell">Contact</TableHead>
             <TableHead className="hidden sm:table-cell">Tags</TableHead>
-            <TableHead className="hidden lg:table-cell">
-              <Button variant="ghost" onClick={() => requestSort('updated_at')} className="px-2">Last Activity</Button>
-            </TableHead>
+            <SortableTableHead columnKey="updated_at" onSort={requestSort} sortConfig={sortConfig} className="hidden lg:table-cell">
+              Last Activity
+            </SortableTableHead>
             <TableHead className="text-right sticky right-0 bg-card z-10">Actions</TableHead>
           </TableRow>
         </TableHeader>
