@@ -5,14 +5,12 @@ import { Paperclip, Send, X, Loader2, UploadCloud, Smile, Camera, Mic, Check, Pe
 import { cn, formatMentionsForDisplay } from "@/lib/utils";
 import { Message } from "@/types";
 import VoiceMessageRecorder from "./VoiceMessageRecorder";
-import MentionInput, { UserSuggestion, ProjectSuggestion } from "./MentionInput";
+import MentionInput, { UserSuggestion, ProjectSuggestion, TaskSuggestion, BillSuggestion } from "./MentionInput";
 import { useChatContext } from "@/contexts/ChatContext";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import Picker from '@emoji-mart/react';
 import data from '@emoji-mart/data';
 import { useTheme } from "@/contexts/ThemeProvider";
-import { useQuery } from "@tanstack/react-query";
-import * as chatApi from '@/lib/chatApi';
 
 interface ChatInputProps {
   onSendMessage: (text: string, attachment: File | null, replyToMessageId?: string | null) => void;
@@ -38,19 +36,9 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
   const [text, setText] = useState("");
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
   const lastTypingSentAtRef = useRef<number>(0);
-  const { selectedConversation } = useChatContext();
+  const { selectedConversation, projectSuggestions, taskSuggestions, billSuggestions } = useChatContext();
   const { theme } = useTheme();
   const mentionsInputRef = useRef<any>(null);
-
-  const [isProjectMentionActive, setIsProjectMentionActive] = useState(false);
-  const [projectSearchTerm, setProjectSearchTerm] = useState('');
-  const [debouncedProjectSearchTerm, setDebouncedProjectSearchTerm] = useState('');
-
-  const { data: projectSuggestionsData } = useQuery({
-    queryKey: ['project-search', debouncedProjectSearchTerm],
-    queryFn: () => chatApi.searchProjects(debouncedProjectSearchTerm),
-    enabled: isProjectMentionActive,
-  });
 
   useEffect(() => {
     if (editingMessage) {
@@ -62,38 +50,17 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
     }
   }, [editingMessage, onCancelReply]);
 
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedProjectSearchTerm(projectSearchTerm);
-    }, 300);
-
-    return () => {
-      clearTimeout(handler);
-    };
-  }, [projectSearchTerm]);
-
-  const handleSearchTermChange = (trigger: '@' | '/' | null, term: string) => {
-    if (trigger === '/') {
-      setIsProjectMentionActive(true);
-      setProjectSearchTerm(term);
-    } else {
-      setIsProjectMentionActive(false);
-      setProjectSearchTerm('');
-    }
-  };
-
-  const projectSuggestions: ProjectSuggestion[] = (projectSuggestionsData || []).map(p => ({
-    id: p.id,
-    display: p.name,
-    slug: p.slug,
-  }));
-
   const userSuggestions: UserSuggestion[] = (selectedConversation?.members || []).map(m => ({
     id: m.id,
     display: m.name,
     avatar_url: m.avatar_url,
     initials: m.initials,
+    email: m.email,
   }));
+
+  const projectSuggestionData: ProjectSuggestion[] = (projectSuggestions || []).map(p => ({ id: p.id, display: p.name, slug: p.slug }));
+  const taskSuggestionData: TaskSuggestion[] = (taskSuggestions || []).map(t => ({ id: t.id, display: t.title, project_slug: t.project_slug }));
+  const billSuggestionData: BillSuggestion[] = (billSuggestions || []).map(b => ({ id: b.id, display: b.name, slug: b.slug }));
 
   const onDrop = (acceptedFiles: File[]) => {
     if (acceptedFiles && acceptedFiles.length > 0) {
@@ -214,8 +181,9 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
             onChange={handleTextChange}
             onKeyDown={handleKeyDown}
             userSuggestions={userSuggestions}
-            projectSuggestions={projectSuggestions}
-            onSearchTermChange={handleSearchTermChange}
+            projectSuggestions={projectSuggestionData}
+            taskSuggestions={taskSuggestionData}
+            billSuggestions={billSuggestionData}
             disabled={isSending}
             className="pr-24"
           />

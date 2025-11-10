@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useAuth } from './AuthContext';
 import * as chatApi from '@/lib/chatApi';
-import { Conversation, Message, Collaborator, Reaction, User } from '@/types/index';
+import { Conversation, Message, Collaborator, Reaction, User, Project, Task } from '@/types/index';
 import debounce from 'lodash.debounce';
 import { ForwardMessageDialog } from '@/components/ForwardMessageDialog';
 import { v4 as uuidv4 } from 'uuid';
@@ -45,6 +45,9 @@ interface ChatContextType {
   cancelEditingMessage: () => void;
   editMessage: (messageId: string, newText: string) => void;
   isEditingMessage: boolean;
+  projectSuggestions: Project[];
+  taskSuggestions: Task[];
+  billSuggestions: Project[];
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -96,6 +99,40 @@ const ChatProviderComponent = ({ children }: { children: ReactNode }) => {
     queryFn: () => chatApi.fetchMessages(selectedConversationId!),
     enabled: !!selectedConversationId && selectedConversationId !== 'ai-assistant',
   });
+
+  const { data: userProjects = [] } = useQuery<Project[]>({
+    queryKey: ['userProjectsForMentions', currentUser?.id],
+    queryFn: async () => {
+      if (!currentUser) return [];
+      const { data, error } = await supabase.rpc('get_dashboard_projects', { p_limit: 500, p_exclude_other_personal: false });
+      if (error) {
+        console.error("Error fetching user projects for mentions:", error);
+        return [];
+      }
+      return data;
+    },
+    enabled: !!currentUser,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  const { data: userTasks = [] } = useQuery<Task[]>({
+    queryKey: ['userTasksForMentions', currentUser?.id],
+    queryFn: async () => {
+      if (!currentUser) return [];
+      const { data, error } = await supabase.rpc('get_project_tasks', { p_limit: 500 });
+      if (error) {
+        console.error("Error fetching user tasks for mentions:", error);
+        return [];
+      }
+      return data;
+    },
+    enabled: !!currentUser,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  const userBills = useMemo(() => {
+    return userProjects.filter(p => p.payment_status && p.budget);
+  }, [userProjects]);
 
   useEffect(() => {
     if (!currentUser || conversations.length === 0) return;
@@ -546,6 +583,9 @@ const ChatProviderComponent = ({ children }: { children: ReactNode }) => {
     cancelEditingMessage,
     editMessage,
     isEditingMessage: editMessageMutation.isPending,
+    projectSuggestions: userProjects,
+    taskSuggestions: userTasks,
+    billSuggestions: userBills,
   };
 
   return (

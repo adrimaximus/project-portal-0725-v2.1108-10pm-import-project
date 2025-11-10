@@ -1,16 +1,17 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, forwardRef, useImperativeHandle, useEffect, useMemo } from 'react';
 import { Popover, PopoverContent, PopoverAnchor } from '@/components/ui/popover';
 import { Command, CommandInput, CommandList, CommandEmpty, CommandItem, CommandGroup } from '@/components/ui/command';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { generatePastelColor, getAvatarUrl } from '@/lib/utils';
-import { Briefcase } from 'lucide-react';
+import { Briefcase, ListChecks, CreditCard } from 'lucide-react';
 
 export interface UserSuggestion {
   id: string;
   display: string;
   avatar_url?: string;
   initials: string;
+  email?: string;
 }
 
 export interface ProjectSuggestion {
@@ -19,7 +20,19 @@ export interface ProjectSuggestion {
   slug: string;
 }
 
-type Suggestion = UserSuggestion | ProjectSuggestion;
+export interface TaskSuggestion {
+  id: string;
+  display: string;
+  project_slug: string;
+}
+
+export interface BillSuggestion {
+  id: string;
+  display: string;
+  slug: string;
+}
+
+type Suggestion = UserSuggestion | ProjectSuggestion | TaskSuggestion | BillSuggestion;
 
 interface MentionInputProps {
   value: string;
@@ -27,47 +40,31 @@ interface MentionInputProps {
   onKeyDown?: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
   userSuggestions: UserSuggestion[];
   projectSuggestions: ProjectSuggestion[];
-  onSearchTermChange?: (trigger: '@' | '/' | null, term: string) => void;
+  taskSuggestions?: TaskSuggestion[];
+  billSuggestions?: BillSuggestion[];
   placeholder?: string;
   disabled?: boolean;
   className?: string;
 }
 
-const MentionInput = React.forwardRef<HTMLTextAreaElement, MentionInputProps>(
-  ({ value, onChange, onKeyDown, userSuggestions, projectSuggestions, onSearchTermChange, placeholder, disabled, className }, ref) => {
+const MentionInput = forwardRef<HTMLTextAreaElement, MentionInputProps>(
+  ({ value, onChange, onKeyDown, userSuggestions, projectSuggestions, taskSuggestions, billSuggestions, placeholder, disabled, className }, ref) => {
     const [open, setOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
-    const [activeIndex, setActiveIndex] = useState(0);
     const [activeTrigger, setActiveTrigger] = useState<'@' | '/' | null>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-    const suggestions = activeTrigger === '@' ? userSuggestions : projectSuggestions;
-    const filteredSuggestions = (suggestions || []).filter(s =>
-      s.display.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    useImperativeHandle(ref, () => textareaRef.current!);
 
-    const handleLocalKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      if (open && filteredSuggestions.length > 0) {
-        if (e.key === 'ArrowDown') {
-          e.preventDefault();
-          setActiveIndex((prev) => (prev + 1) % filteredSuggestions.length);
-        } else if (e.key === 'ArrowUp') {
-          e.preventDefault();
-          setActiveIndex((prev) => (prev - 1 + filteredSuggestions.length) % filteredSuggestions.length);
-        } else if (e.key === 'Enter' || e.key === 'Tab') {
-          e.preventDefault();
-          handleSelect(filteredSuggestions[activeIndex]);
-          return;
-        } else if (e.key === 'Escape') {
-          e.preventDefault();
-          setOpen(false);
-        }
-      }
-      
-      if (onKeyDown) {
-        onKeyDown(e);
-      }
-    };
+    const { filteredUserSuggestions, filteredProjectSuggestions, filteredTaskSuggestions, filteredBillSuggestions } = useMemo(() => {
+        const term = searchTerm.toLowerCase();
+        return {
+            filteredUserSuggestions: (userSuggestions || []).filter(s => s.display.toLowerCase().includes(term)),
+            filteredProjectSuggestions: (projectSuggestions || []).filter(s => s.display.toLowerCase().includes(term)),
+            filteredTaskSuggestions: (taskSuggestions || []).filter(s => s.display.toLowerCase().includes(term)),
+            filteredBillSuggestions: (billSuggestions || []).filter(s => s.display.toLowerCase().includes(term)),
+        };
+    }, [userSuggestions, projectSuggestions, taskSuggestions, billSuggestions, searchTerm]);
 
     const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
       const text = e.target.value;
@@ -75,7 +72,7 @@ const MentionInput = React.forwardRef<HTMLTextAreaElement, MentionInputProps>(
 
       const cursorPos = e.target.selectionStart;
       const textBeforeCursor = text.substring(0, cursorPos);
-      const match = textBeforeCursor.match(/([@\/])([\w-]*)$/);
+      const match = textBeforeCursor.match(/([@\/])([\w\s-]*)$/);
 
       if (match) {
         const trigger = match[1] as '@' | '/';
@@ -83,20 +80,13 @@ const MentionInput = React.forwardRef<HTMLTextAreaElement, MentionInputProps>(
         setOpen(true);
         setSearchTerm(term);
         setActiveTrigger(trigger);
-        setActiveIndex(0);
-        if (onSearchTermChange) {
-          onSearchTermChange(trigger, term);
-        }
       } else {
         setOpen(false);
         setActiveTrigger(null);
-        if (onSearchTermChange) {
-          onSearchTermChange(null, '');
-        }
       }
     };
 
-    const handleSelect = (suggestion: Suggestion) => {
+    const handleSelect = (suggestion: Suggestion, type: 'user' | 'project' | 'task' | 'bill') => {
       if (!textareaRef.current) return;
 
       const text = value;
@@ -107,12 +97,18 @@ const MentionInput = React.forwardRef<HTMLTextAreaElement, MentionInputProps>(
       if (!match) return;
 
       let mentionText = '';
-      if (activeTrigger === '@') {
+      if (type === 'user') {
         const user = suggestion as UserSuggestion;
-        mentionText = `@${user.display} `;
-      } else if (activeTrigger === '/') {
+        mentionText = `@[${user.display}](${user.id}) `;
+      } else if (type === 'project') {
         const proj = suggestion as ProjectSuggestion;
         mentionText = `[${proj.display}](/projects/${proj.slug}) `;
+      } else if (type === 'task') {
+        const task = suggestion as TaskSuggestion;
+        mentionText = `[${task.display}](/projects/${task.project_slug}?tab=tasks&task=${task.id}) `;
+      } else if (type === 'bill') {
+        const bill = suggestion as BillSuggestion;
+        mentionText = `[${bill.display}](/projects/${bill.slug}?tab=billing) `;
       }
       
       const startIndex = match.index!;
@@ -124,11 +120,8 @@ const MentionInput = React.forwardRef<HTMLTextAreaElement, MentionInputProps>(
 
       onChange(newValue);
       setOpen(false);
-      setSearchTerm(''); // Reset search term
-      setActiveTrigger(null); // Reset active trigger
-      if (onSearchTermChange) {
-        onSearchTermChange(null, ''); // Notify parent component to reset search state
-      }
+      setSearchTerm('');
+      setActiveTrigger(null);
 
       setTimeout(() => {
         if (textareaRef.current) {
@@ -140,7 +133,14 @@ const MentionInput = React.forwardRef<HTMLTextAreaElement, MentionInputProps>(
       }, 0);
     };
 
-    React.useImperativeHandle(ref, () => textareaRef.current!);
+    const handleLocalKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (open && (e.key === 'Enter' || e.key === 'Tab')) {
+        // Let cmdk handle the selection via onSelect, but prevent form submission.
+        e.preventDefault();
+      } else if (onKeyDown) {
+        onKeyDown(e);
+      }
+    };
 
     return (
       <Popover open={open} onOpenChange={setOpen}>
@@ -158,37 +158,66 @@ const MentionInput = React.forwardRef<HTMLTextAreaElement, MentionInputProps>(
         <PopoverContent className="w-[300px] p-0" align="start">
           <Command>
             <CommandInput 
-              placeholder={activeTrigger === '@' ? "Search user..." : "Search project..."}
+              placeholder={activeTrigger === '@' ? "Search user..." : "Search project, task, or bill..."}
               value={searchTerm}
               onValueChange={setSearchTerm}
               className="border-none focus:ring-0"
             />
             <CommandList>
               <CommandEmpty>No results found.</CommandEmpty>
-              <CommandGroup>
-                {filteredSuggestions.map((suggestion, index) => (
-                  <CommandItem
-                    key={suggestion.id}
-                    onSelect={() => handleSelect(suggestion)}
-                    className={index === activeIndex ? 'bg-accent' : ''}
-                  >
-                    {activeTrigger === '@' ? (
-                      <>
-                        <Avatar className="h-8 w-8 mr-2">
-                          <AvatarImage src={getAvatarUrl((suggestion as UserSuggestion).avatar_url, suggestion.id)} />
-                          <AvatarFallback style={generatePastelColor(suggestion.id)}>{(suggestion as UserSuggestion).initials}</AvatarFallback>
-                        </Avatar>
-                        <span>{suggestion.display}</span>
-                      </>
-                    ) : (
-                      <div className="flex items-center">
-                        <Briefcase className="h-4 w-4 mr-2 text-muted-foreground" />
-                        <span>{suggestion.display}</span>
+              {activeTrigger === '@' && filteredUserSuggestions.length > 0 && (
+                <CommandGroup>
+                  {filteredUserSuggestions.map((suggestion) => (
+                    <CommandItem
+                      key={suggestion.id}
+                      onSelect={() => handleSelect(suggestion, 'user')}
+                    >
+                      <Avatar className="h-8 w-8 mr-2">
+                        <AvatarImage src={getAvatarUrl(suggestion.avatar_url, suggestion.id)} />
+                        <AvatarFallback style={generatePastelColor(suggestion.id)}>{suggestion.initials}</AvatarFallback>
+                      </Avatar>
+                      <div className="flex flex-col">
+                        <span className="font-medium">{suggestion.display}</span>
+                        <span className="text-xs text-muted-foreground">{suggestion.email}</span>
                       </div>
-                    )}
-                  </CommandItem>
-                ))}
-              </CommandGroup>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              )}
+              {activeTrigger === '/' && (
+                <>
+                  {filteredProjectSuggestions.length > 0 && (
+                    <CommandGroup heading="Projects">
+                      {filteredProjectSuggestions.map((suggestion) => (
+                        <CommandItem key={suggestion.id} onSelect={() => handleSelect(suggestion, 'project')}>
+                          <Briefcase className="mr-2 h-4 w-4" />
+                          <span>{suggestion.display}</span>
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  )}
+                  {filteredTaskSuggestions && filteredTaskSuggestions.length > 0 && (
+                    <CommandGroup heading="Tasks">
+                      {filteredTaskSuggestions.map((suggestion) => (
+                        <CommandItem key={suggestion.id} onSelect={() => handleSelect(suggestion, 'task')}>
+                          <ListChecks className="mr-2 h-4 w-4" />
+                          <span>{suggestion.display}</span>
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  )}
+                  {filteredBillSuggestions && filteredBillSuggestions.length > 0 && (
+                    <CommandGroup heading="Bills">
+                      {filteredBillSuggestions.map((suggestion) => (
+                        <CommandItem key={suggestion.id} onSelect={() => handleSelect(suggestion, 'bill')}>
+                          <CreditCard className="mr-2 h-4 w-4" />
+                          <span>{suggestion.display}</span>
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  )}
+                </>
+              )}
             </CommandList>
           </Command>
         </PopoverContent>
