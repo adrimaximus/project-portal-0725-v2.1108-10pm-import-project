@@ -17,7 +17,6 @@ import { Badge } from './ui/badge';
 import CommentReactions from './CommentReactions';
 import CommentAttachmentItem from './CommentAttachmentItem';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
-import { cn } from '@/lib/utils';
 
 interface CommentProps {
   comment: CommentType;
@@ -157,7 +156,7 @@ const Comment: React.FC<CommentProps> = ({
             {comment.repliedMessage && comment.reply_to_message_id && (
               <button
                 onClick={() => handleScrollToMessage(comment.reply_to_message_id!)}
-                className="w-full text-left p-2 mb-2 bg-primary/10 rounded-md border-l-2 border-primary hover:bg-primary/20 transition-colors"
+                className="w-full text-left p-2 mb-2 bg-muted rounded-md border-l-2 border-primary hover:bg-muted/80 transition-colors"
               >
                 <div className="flex-1 overflow-hidden">
                   <p className="font-semibold text-primary text-sm">Replying to {comment.repliedMessage.senderName}</p>
@@ -176,7 +175,7 @@ const Comment: React.FC<CommentProps> = ({
                 </div>
               </button>
             )}
-            <div className="prose prose-sm dark:prose-invert max-w-none">
+            <div className="text-sm text-foreground whitespace-pre-wrap break-words">
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
                 rehypePlugins={[rehypeRaw]}
