@@ -1,6 +1,6 @@
 import { Task, User, TaskAttachment, Reaction, Project } from '@/types';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ListChecks, Plus, MoreHorizontal, Edit, Trash2, Ticket, Paperclip, Eye, Download, File as FileIconLucide, ChevronDown, Loader2, SmilePlus, Sparkles } from 'lucide-react';
+import { ListChecks, Plus, MoreHorizontal, Edit, Trash2, Ticket, Paperclip, Eye, Download, File as FileIconLucide, ChevronDown, Loader2, Sparkles } from 'lucide-react';
 import { Button } from "../ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -10,7 +10,7 @@ import { useMemo, useRef, useEffect, useState } from "react";
 import FileIcon from "../FileIcon";
 import TaskReactions from '../projects/TaskReactions';
 import { useTaskMutations } from '@/hooks/useTaskMutations';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import TaskAttachmentList from './TaskAttachmentList';
 import { cn, getErrorMessage, formatBytes } from "@/lib/utils";
@@ -23,6 +23,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { Textarea } from "../ui/textarea";
 import TaskSuggestionDialog from './TaskSuggestionDialog';
+import { useTaskDrawer } from '@/contexts/TaskDrawerContext';
+import { getProjectBySlug } from '@/lib/projectsApi';
 
 interface ProjectTasksProps {
   project: Project;
@@ -34,18 +36,19 @@ interface ProjectTasksProps {
   onToggleTaskCompletion: (task: Task, completed: boolean) => void;
   highlightedTaskId?: string | null;
   onHighlightComplete?: () => void;
-  onTaskClick: (task: Task) => void;
+  onTaskClick: (task: Task, project: Project) => void;
 }
 
-const TaskRow = ({ task, onToggleTaskCompletion, onEditTask, onDeleteTask, handleToggleReaction, setRef, onTaskClick, currentUserId }: {
+const TaskRow = ({ task, onToggleTaskCompletion, onEditTask, onDeleteTask, handleToggleReaction, setRef, onTaskClick, currentUserId, project }: {
   task: Task;
   onToggleTaskCompletion: (task: Task, completed: boolean) => void;
   onEditTask: (task: Task) => void;
   onDeleteTask: (task: Task) => void;
   handleToggleReaction: (taskId: string, emoji: string) => void;
   setRef: (el: HTMLDivElement | null) => void;
-  onTaskClick: (task: Task) => void;
+  onTaskClick: (task: Task, project: Project) => void;
   currentUserId?: string;
+  project: Project;
 }) => {
   const allAttachments = useMemo(() => {
     let attachments: TaskAttachment[] = [...(task.attachments || [])];
@@ -91,7 +94,7 @@ const TaskRow = ({ task, onToggleTaskCompletion, onEditTask, onDeleteTask, handl
             task.completed && "line-through"
           )}
           title={task.title}
-          onClick={() => onTaskClick(task)}
+          onClick={() => onTaskClick(task, project)}
         >
           {task.title}
         </span>
@@ -345,6 +348,7 @@ const ProjectTasks = ({ project, tasks, projectId, projectSlug, onEditTask, onDe
             handleToggleReaction={handleToggleReaction}
             onTaskClick={onTaskClick}
             currentUserId={user?.id}
+            project={project}
             setRef={(el) => {
               if (el) taskRefs.current.set(task.id, el);
               else taskRefs.current.delete(task.id);
@@ -405,6 +409,7 @@ const ProjectTasks = ({ project, tasks, projectId, projectSlug, onEditTask, onDe
                     handleToggleReaction={handleToggleReaction}
                     onTaskClick={onTaskClick}
                     currentUserId={user?.id}
+                    project={project}
                     setRef={(el) => {
                       if (el) taskRefs.current.set(task.id, el);
                       else taskRefs.current.delete(task.id);
