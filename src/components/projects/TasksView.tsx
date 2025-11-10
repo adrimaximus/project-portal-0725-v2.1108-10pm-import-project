@@ -172,7 +172,7 @@ const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTask
                 else rowRefs.current.delete(task.id);
               }}
               data-state={task.completed ? "completed" : ""}
-              onClick={() => onTaskClick && onTaskClick(task)}
+              onClick={() => onTaskClick(task)}
               className="cursor-pointer"
             >
               <TableCell className="font-medium w-[40%] sm:w-[30%]">
