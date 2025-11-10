@@ -305,7 +305,115 @@ serve(async (req) => {
             await sendWhatsappMessage(recipient.phone, aiMessage);
             break;
           }
-          // ... other cases remain the same
+          case 'task_assignment': {
+            const { assigner_name, task_title, project_name, project_slug, task_id } = context;
+            const url = `${APP_URL}/projects/${project_slug}?tab=tasks&task=${task_id}`;
+            userPrompt = `Buat notifikasi penugasan tugas. Penerima: ${recipientName}. Pemberi tugas: ${assigner_name}. Judul tugas: "${task_title}". Proyek: "${project_name}". URL: ${url}`;
+            
+            const aiMessage = await generateAiMessage(userPrompt);
+            await sendWhatsappMessage(recipient.phone, aiMessage);
+            break;
+          }
+          case 'task_completed': {
+            const { completer_name, task_title, project_name, project_slug } = context;
+            const url = `${APP_URL}/projects/${project_slug}`;
+            userPrompt = `Buat notifikasi penyelesaian tugas. Penerima: ${recipientName}. Yang menyelesaikan: ${completer_name}. Judul tugas: "${task_title}". Proyek: "${project_name}". URL: ${url}`;
+            
+            const aiMessage = await generateAiMessage(userPrompt);
+            await sendWhatsappMessage(recipient.phone, aiMessage);
+            break;
+          }
+          case 'project_status_updated': {
+            const { updater_name, project_name, new_status, project_slug } = context;
+            const url = `${APP_URL}/projects/${project_slug}`;
+            userPrompt = `Buat notifikasi pembaruan status proyek. Penerima: ${recipientName}. Pengubah status: ${updater_name}. Proyek: "${project_name}". Status baru: "${new_status}". URL: ${url}`;
+            
+            const aiMessage = await generateAiMessage(userPrompt);
+            await sendWhatsappMessage(recipient.phone, aiMessage);
+            break;
+          }
+          case 'project_invite': {
+            const { inviter_name, project_name, project_slug } = context;
+            const url = `${APP_URL}/projects/${project_slug}`;
+            userPrompt = `Buat notifikasi undangan proyek. Penerima: ${recipientName}. Pengundang: ${inviter_name}. Proyek: "${project_name}". URL: ${url}`;
+            
+            const aiMessage = await generateAiMessage(userPrompt);
+            await sendWhatsappMessage(recipient.phone, aiMessage);
+            break;
+          }
+          case 'task_overdue': {
+            const { task_title, project_name, project_slug, task_id, days_overdue } = context;
+            const url = `${APP_URL}/projects/${project_slug}?tab=tasks&task=${task_id}`;
+            userPrompt = `Buat notifikasi tugas terlambat. Penerima: ${recipientName}. Judul tugas: "${task_title}". Proyek: "${project_name}". Terlambat: ${days_overdue} hari. URL: ${url}`;
+            
+            const aiMessage = await generateAiMessage(userPrompt);
+            await sendWhatsappMessage(recipient.phone, aiMessage);
+            break;
+          }
+          case 'goal_invite':
+          case 'goal_invite_email': {
+            const { goal_id, inviter_id } = context;
+            const { data: goalData } = await supabaseAdmin.from('goals').select('title, slug').eq('id', goal_id).single();
+            const { data: inviterData } = await supabaseAdmin.from('profiles').select('first_name, last_name, email').eq('id', inviter_id).single();
+            if (!goalData || !inviterData) throw new Error('Missing context for goal_invite');
+            
+            const inviterName = getFullName(inviterData);
+            const url = `${APP_URL}/goals/${goalData.slug}`;
+            userPrompt = `Buat notifikasi undangan kolaborasi goal. Penerima: ${recipientName}. Pengundang: ${inviterName}. Goal: "${goalData.title}". URL: ${url}`;
+
+            if (notification.notification_type === 'goal_invite_email') {
+              const subject = `Anda diundang untuk berkolaborasi pada sebuah goal: ${goalData.title}`;
+              const html = `<p>Hai ${recipientName},</p><p><strong>${inviterName}</strong> mengundang Anda untuk berkolaborasi pada goal <em>"${goalData.title}"</em>.</p><a href="${url}" style="display: inline-block; padding: 10px 20px; font-size: 16px; color: #ffffff; background-color: #007bff; text-decoration: none; border-radius: 5px;">Lihat Goal</a>`;
+              await sendEmail(recipient.email, subject, html, `Anda diundang ke goal "${goalData.title}". Lihat di: ${url}`);
+            } else {
+              const aiMessage = await generateAiMessage(userPrompt);
+              await sendWhatsappMessage(recipient.phone, aiMessage);
+            }
+            break;
+          }
+          case 'kb_invite':
+          case 'kb_invite_email': {
+            const { folder_id, inviter_id } = context;
+            const { data: folderData } = await supabaseAdmin.from('kb_folders').select('name, slug').eq('id', folder_id).single();
+            const { data: inviterData } = await supabaseAdmin.from('profiles').select('first_name, last_name, email').eq('id', inviter_id).single();
+            if (!folderData || !inviterData) throw new Error('Missing context for kb_invite');
+
+            const inviterName = getFullName(inviterData);
+            const url = `${APP_URL}/knowledge-base/folders/${folderData.slug}`;
+            userPrompt = `Buat notifikasi undangan kolaborasi folder. Penerima: ${recipientName}. Pengundang: ${inviterName}. Folder: "${folderData.name}". URL: ${url}`;
+
+            if (notification.notification_type === 'kb_invite_email') {
+              const subject = `Anda diundang untuk berkolaborasi pada folder: ${folderData.name}`;
+              const html = `<p>Hai ${recipientName},</p><p><strong>${inviterName}</strong> mengundang Anda untuk berkolaborasi pada folder <em>"${folderData.name}"</em>.</p><a href="${url}" style="display: inline-block; padding: 10px 20px; font-size: 16px; color: #ffffff; background-color: #007bff; text-decoration: none; border-radius: 5px;">Lihat Folder</a>`;
+              await sendEmail(recipient.email, subject, html, `Anda diundang ke folder "${folderData.name}". Lihat di: ${url}`);
+            } else {
+              const aiMessage = await generateAiMessage(userPrompt);
+              await sendWhatsappMessage(recipient.phone, aiMessage);
+            }
+            break;
+          }
+          case 'goal_progress_update':
+          case 'goal_progress_update_email': {
+            const { goal_id, updater_id, value_logged } = context;
+            const { data: goalData } = await supabaseAdmin.from('goals').select('title, slug, unit').eq('id', goal_id).single();
+            const { data: updaterData } = await supabaseAdmin.from('profiles').select('first_name, last_name, email').eq('id', updater_id).single();
+            if (!goalData || !updaterData) throw new Error('Missing context for goal_progress_update');
+
+            const updaterName = getFullName(updaterData);
+            const url = `${APP_URL}/goals/${goalData.slug}`;
+            const progressText = value_logged ? `${value_logged} ${goalData.unit || ''}`.trim() : 'progres';
+            userPrompt = `Buat notifikasi progres goal. Penerima: ${recipientName}. Pencatat progres: ${updaterName}. Goal: "${goalData.title}". Progres yang dicatat: ${progressText}. URL: ${url}`;
+
+            if (notification.notification_type === 'goal_progress_update_email') {
+              const subject = `Progres baru pada goal: ${goalData.title}`;
+              const html = `<p>Hai ${recipientName},</p><p><strong>${updaterName}</strong> baru saja mencatat progres (${progressText}) pada goal bersama Anda, <em>"${goalData.title}"</em>.</p><a href="${url}" style="display: inline-block; padding: 10px 20px; font-size: 16px; color: #ffffff; background-color: #007bff; text-decoration: none; border-radius: 5px;">Lihat Progres</a>`;
+              await sendEmail(recipient.email, subject, html, `Progres baru pada goal "${goalData.title}". Lihat di: ${url}`);
+            } else {
+              const aiMessage = await generateAiMessage(userPrompt);
+              await sendWhatsappMessage(recipient.phone, aiMessage);
+            }
+            break;
+          }
           default:
             throw new Error(`Unsupported notification type: ${notification.notification_type}`);
         }
