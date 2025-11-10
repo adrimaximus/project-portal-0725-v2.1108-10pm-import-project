@@ -6,6 +6,7 @@ import StorageWarning from "./StorageWarning";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import PullToRefreshIndicator from "./PullToRefreshIndicator";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 
 type PortalLayoutProps = {
   children: ReactNode;
@@ -17,14 +18,12 @@ type PortalLayoutProps = {
 
 export default function PortalLayout({ children, summary, pageHeader, disableMainScroll, noPadding }: PortalLayoutProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const queryClient = useQueryClient();
 
   const handleRefresh = async () => {
-    toast.info("Refreshing...");
-    // Jeda singkat agar pengguna dapat melihat toast sebelum halaman dimuat ulang
-    await new Promise(resolve => setTimeout(resolve, 300));
-    window.location.reload();
-    // Promise ini kemungkinan tidak akan selesai karena halaman dimuat ulang
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    toast.info("Refreshing data...");
+    await queryClient.invalidateQueries();
+    toast.success("Data refreshed!");
   };
 
   const { isRefreshing, pullPosition, handlers, setRef } = usePullToRefresh(handleRefresh);
