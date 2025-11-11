@@ -1,21 +1,23 @@
 import { useMemo } from 'react';
 import { useTasks } from '@/hooks/useTasks';
 import { useAuth } from '@/contexts/AuthContext';
-import { Loader2, Clock, CheckCircle2, AlertTriangle, ListChecks } from 'lucide-react';
+import { Loader2, Clock, CheckCircle2, AlertTriangle, ListChecks, PlusSquare } from 'lucide-react';
 import { Task } from '@/types';
 import { format, isPast, isToday, isTomorrow, differenceInDays } from 'date-fns';
-import { Progress } from '@/components/ui/progress';
-import { toast } from 'sonner';
+import { cn, getAvatarUrl, generatePastelColor, getInitials } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { useTaskMutations } from '@/hooks/useTaskMutations';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { getAvatarUrl, generatePastelColor, getInitials } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Progress } from '@/components/ui/progress';
 import { useTaskDrawer } from '@/contexts/TaskDrawerContext';
 import { getProjectBySlug } from '@/lib/projectsApi';
-import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Checkbox } from '@/components/ui/checkbox';
 
-const TaskItem = ({ task }: { task: Task }) => {
+const TaskItem = ({ task, onToggle, isToggling }: { task: Task, onToggle: (task: Task, completed: boolean) => void, isToggling: boolean }) => {
   const { onOpen: onOpenTaskDrawer } = useTaskDrawer();
 
   const handleTaskClick = async () => {
@@ -40,7 +42,7 @@ const TaskItem = ({ task }: { task: Task }) => {
       dueDateColor = 'text-primary';
     } else if (isTomorrow(dueDate)) {
       dueDateText = 'Tomorrow';
-    } else if (isPast(dueDate)) {
+    } else if (isPast(dueDate) && !task.completed) {
       const daysOverdue = differenceInDays(new Date(), dueDate);
       dueDateText = `${daysOverdue}d ago`;
       dueDateColor = 'text-destructive';
@@ -50,12 +52,17 @@ const TaskItem = ({ task }: { task: Task }) => {
   }
 
   return (
-    <div 
-      className="flex items-center gap-3 p-2 rounded-md hover:bg-muted/50 cursor-pointer"
-      onClick={handleTaskClick}
-    >
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium truncate">{task.title}</p>
+    <div className="flex items-center gap-3 p-2 rounded-md hover:bg-muted/50">
+      <Checkbox
+        id={`task-dash-${task.id}`}
+        checked={task.completed}
+        onCheckedChange={(checked) => onToggle(task, !!checked)}
+        className="mt-1"
+        onClick={(e) => e.stopPropagation()}
+        disabled={isToggling}
+      />
+      <div className="flex-1 min-w-0 cursor-pointer" onClick={handleTaskClick}>
+        <p className={cn("font-medium text-sm", task.completed && "line-through text-muted-foreground")}>{task.title}</p>
         <p className="text-xs text-muted-foreground truncate">{task.project_name}</p>
       </div>
       <div className="flex items-center gap-2 flex-shrink-0">
@@ -84,7 +91,8 @@ const TaskItem = ({ task }: { task: Task }) => {
 
 const MyTasksWidget = () => {
   const { user } = useAuth();
-  const { data: allTasks, isLoading } = useTasks({ sortConfig: { key: 'due_date', direction: 'asc' } });
+  const { data: allTasks, isLoading, refetch } = useTasks({ sortConfig: { key: 'due_date', direction: 'asc' } });
+  const { toggleTaskCompletion, isToggling } = useTaskMutations(refetch);
 
   const myTasks = useMemo(() => {
     if (!user || !allTasks) return [];
@@ -182,26 +190,26 @@ const MyTasksWidget = () => {
             </TooltipTrigger>
             <TooltipContent className="p-4 bg-background border shadow-lg rounded-lg">
               <div className="space-y-3">
-                <h4 className="font-semibold text-sm">Produktivitas Tugas</h4>
+                <h4 className="font-semibold text-sm">Task Productivity</h4>
                 <div className="flex items-center gap-3">
                   <ListChecks className="h-5 w-5 text-blue-500" />
                   <div>
-                    <p className="font-bold">{completionPercentage.toFixed(0)}% Penyelesaian Keseluruhan</p>
-                    <p className="text-xs text-muted-foreground">{totalCompleted} dari {totalTasks} tugas yang diberikan</p>
+                    <p className="font-bold">{completionPercentage.toFixed(0)}% Overall Completion</p>
+                    <p className="text-xs text-muted-foreground">{totalCompleted} of {totalTasks} assigned</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
                   <CheckCircle2 className="h-5 w-5 text-green-500" />
                   <div>
-                    <p className="font-bold">{onTimeCompletionPercentage.toFixed(0)}% Penyelesaian Tepat Waktu</p>
-                    <p className="text-xs text-muted-foreground">{onTimeCompletedCount} dari {totalCompleted} tugas yang selesai</p>
+                    <p className="font-bold">{onTimeCompletionPercentage.toFixed(0)}% On-Time Completion</p>
+                    <p className="text-xs text-muted-foreground">{onTimeCompletedCount} of {totalCompleted} completed</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
                   <AlertTriangle className="h-5 w-5 text-red-500" />
                   <div>
-                    <p className="font-bold">{overdueTasks.length} Tugas Terlambat</p>
-                    <p className="text-xs text-muted-foreground">{overdueTasks.length} tugas melewati tenggat</p>
+                    <p className="font-bold">{overdueTasks.length} Overdue Task(s)</p>
+                    <p className="text-xs text-muted-foreground">{overdueTasks.length} tasks past due</p>
                   </div>
                 </div>
               </div>
@@ -215,7 +223,7 @@ const MyTasksWidget = () => {
             <div>
               <h4 className="text-xs font-semibold text-muted-foreground mb-2 px-2">Overdue</h4>
               <div className="space-y-1">
-                {overdueTasks.map(task => <TaskItem key={task.id} task={task} />)}
+                {overdueTasks.map(task => <TaskItem key={task.id} task={task} onToggle={toggleTaskCompletion} isToggling={isToggling} />)}
               </div>
             </div>
           )}
@@ -223,7 +231,7 @@ const MyTasksWidget = () => {
             <div>
               <h4 className="text-xs font-semibold text-muted-foreground mb-2 px-2">Upcoming</h4>
               <div className="space-y-1">
-                {upcomingTasks.map(task => <TaskItem key={task.id} task={task} />)}
+                {upcomingTasks.map(task => <TaskItem key={task.id} task={task} onToggle={toggleTaskCompletion} isToggling={isToggling} />)}
               </div>
             </div>
           )}
@@ -231,7 +239,7 @@ const MyTasksWidget = () => {
             <div>
               <h4 className="text-xs font-semibold text-muted-foreground mb-2 px-2">No Due Date</h4>
               <div className="space-y-1">
-                {noDueDateTasks.map(task => <TaskItem key={task.id} task={task} />)}
+                {noDueDateTasks.map(task => <TaskItem key={task.id} task={task} onToggle={toggleTaskCompletion} isToggling={isToggling} />)}
               </div>
             </div>
           )}
