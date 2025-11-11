@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import Anthropic from 'npm:@anthropic-ai/sdk@^0.22.0';
+import Anthropic from 'https://esm.sh/@anthropic-ai/sdk@0.22.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',

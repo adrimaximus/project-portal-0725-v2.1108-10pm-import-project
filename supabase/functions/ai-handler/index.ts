@@ -1,8 +1,8 @@
 // @ts-nocheck
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
-import { createClient as createSupabaseClient } from 'npm:@supabase/supabase-js@2.54.0';
-import OpenAI from 'npm:openai@4.29.2';
-import Anthropic from 'npm:@anthropic-ai/sdk@^0.22.0';
+import { createClient as createSupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.54.0';
+import OpenAI from 'https://esm.sh/openai@4.29.2';
+import Anthropic from 'https://esm.sh/@anthropic-ai/sdk@0.22.0';
 import { createApi } from 'https://esm.sh/unsplash-js@7.0.19';
 import * as pdfjs from 'https://esm.sh/pdfjs-dist@4.4.168';
 import mammoth from 'https://esm.sh/mammoth@1.7.2';

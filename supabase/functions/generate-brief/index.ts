@@ -1,7 +1,7 @@
 /// <reference types="https://esm.sh/@supabase/functions-js@2/src/edge-runtime.d.ts" />
 
-import { serve } from 'https://deno.land/std@0.224.0/http/server.ts'
-import Anthropic from 'npm:@anthropic-ai/sdk@^0.22.0';
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts"
+import Anthropic from 'https://esm.sh/@anthropic-ai/sdk@0.22.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',

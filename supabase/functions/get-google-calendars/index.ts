@@ -2,8 +2,8 @@
 /// <reference types="https://unpkg.com/@supabase/functions-js@2/src/edge-runtime.d.ts" />
 
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
-import { createClient } from 'npm:@supabase/supabase-js@2.54.0';
-import { google } from "npm:googleapis";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.54.0';
+import { google } from "https://esm.sh/googleapis";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',

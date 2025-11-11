@@ -1,6 +1,6 @@
 // @ts-nocheck
-import { createClient } from 'npm:@supabase/supabase-js@2.54.0';
-import OpenAI from 'npm:openai@4.29.2';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.54.0';
+import OpenAI from 'https://esm.sh/openai@4.29.2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
