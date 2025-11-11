@@ -34,7 +34,7 @@ serve(async (req) => {
 
     const today = new Date().toISOString();
 
-    // Fetch overdue tasks with their project and assignees
+    // Fetch the 50 most overdue tasks with their project and assignees
     const { data: overdueTasks, error: tasksError } = await supabaseAdmin
       .from('tasks')
       .select(`
@@ -45,7 +45,9 @@ serve(async (req) => {
         assignees:task_assignees ( user:profiles (id, notification_preferences) )
       `)
       .lt('due_date', today)
-      .eq('completed', false);
+      .eq('completed', false)
+      .order('due_date', { ascending: true })
+      .limit(50);
 
     if (tasksError) throw tasksError;
 

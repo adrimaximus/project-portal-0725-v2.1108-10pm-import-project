@@ -250,6 +250,7 @@ serve(async (req) => {
       .eq('status', 'pending')
       .lte('send_at', new Date().toISOString())
       .lt('retry_count', 3)
+      .order('created_at', { ascending: true })
       .limit(20);
 
     if (fetchError) throw fetchError;
