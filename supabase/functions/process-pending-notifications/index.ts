@@ -286,19 +286,19 @@ serve(async (req) => {
                 ? `${APP_URL}/chat`
                 : (taskId ? `${APP_URL}/projects/${contextSlug}?tab=tasks&task=${taskId}` : `${APP_URL}/projects/${contextSlug}?tab=discussion`);
             
-            const subject = `Anda disebut dalam: ${contextName}`;
+            const subject = `You were mentioned in: ${contextName}`;
             const bodyHtml = `
-                <p>Hai ${recipientName},</p>
-                <p><strong>${mentionerName}</strong> menyebut Anda dalam sebuah komentar di <strong>${contextName}</strong>.</p>
+                <p>Hi ${recipientName},</p>
+                <p><strong>${mentionerName}</strong> mentioned you in a comment in <strong>${contextName}</strong>.</p>
                 <blockquote>
                     ${commentText.replace(/@\[([^\]]+)\]\(([^)]+)\)/g, '<strong>@$1</strong>')}
                 </blockquote>
             `;
-            const text = `Hai, ${mentionerName} menyebut Anda dalam sebuah komentar di ${contextName}. Lihat di sini: ${url}`;
+            const text = `Hi, ${mentionerName} mentioned you in a comment in ${contextName}. View it here: ${url}`;
             const html = createEmailTemplate({
-                title: `Anda disebut di "${contextName}"`,
+                title: `You were mentioned in "${contextName}"`,
                 bodyHtml,
-                buttonText: "Lihat Komentar",
+                buttonText: "View Comment",
                 buttonUrl: url,
             });
             await sendEmail(recipient.email, subject, html, text);
@@ -307,13 +307,13 @@ serve(async (req) => {
           case 'task_assignment_email': {
             const { assigner_name, task_title, project_name, project_slug, task_id } = context;
             const url = `${APP_URL}/projects/${project_slug}?tab=tasks&task=${task_id}`;
-            const subject = `Tugas baru untuk Anda: ${task_title}`;
-            const bodyHtml = `<p>Hai ${recipientName},</p><p><strong>${assigner_name}</strong> telah memberikan tugas baru untuk Anda, <em>"${task_title}"</em>, di proyek <strong>${project_name}</strong>.</p>`;
-            const text = `Anda mendapat tugas baru: "${task_title}". Lihat di sini: ${url}`;
+            const subject = `New task assigned to you: ${task_title}`;
+            const bodyHtml = `<p>Hi ${recipientName},</p><p><strong>${assigner_name}</strong> has assigned you a new task, <em>"${task_title}"</em>, in the project <strong>${project_name}</strong>.</p>`;
+            const text = `You have been assigned a new task: "${task_title}". View it here: ${url}`;
             const html = createEmailTemplate({
-                title: `Tugas Baru di "${project_name}"`,
+                title: `New Task Assigned in "${project_name}"`,
                 bodyHtml,
-                buttonText: "Lihat Tugas",
+                buttonText: "View Task",
                 buttonUrl: url,
             });
             await sendEmail(recipient.email, subject, html, text);
@@ -322,13 +322,13 @@ serve(async (req) => {
           case 'project_status_updated_email': {
             const { updater_name, project_name, new_status, project_slug } = context;
             const url = `${APP_URL}/projects/${project_slug}`;
-            const subject = `Status Proyek Diperbarui: ${project_name} sekarang ${new_status}`;
-            const bodyHtml = `<p>Hai ${recipientName},</p><p>Status untuk proyek <strong>${project_name}</strong> telah diperbarui menjadi <strong>${new_status}</strong> oleh <strong>${updater_name}</strong>.</p>`;
-            const text = `Status untuk proyek ${project_name} telah diperbarui menjadi ${new_status}. Lihat proyek: ${url}`;
+            const subject = `Project Status Updated: ${project_name} is now ${new_status}`;
+            const bodyHtml = `<p>Hi ${recipientName},</p><p>The status for the project <strong>${project_name}</strong> has been updated to <strong>${new_status}</strong> by <strong>${updater_name}</strong>.</p>`;
+            const text = `The status for project ${project_name} has been updated to ${new_status}. View project: ${url}`;
             const html = createEmailTemplate({
-                title: `Status Proyek: ${new_status}`,
+                title: `Project Status: ${new_status}`,
                 bodyHtml,
-                buttonText: "Lihat Proyek",
+                buttonText: "View Project",
                 buttonUrl: url,
             });
             await sendEmail(recipient.email, subject, html, text);
@@ -337,13 +337,13 @@ serve(async (req) => {
           case 'project_invite_email': {
             const { inviter_name, project_name, project_slug } = context;
             const url = `${APP_URL}/projects/${project_slug}`;
-            const subject = `Anda diundang ke proyek: ${project_name}`;
-            const bodyHtml = `<p>Hai ${recipientName},</p><p><strong>${inviter_name}</strong> telah mengundang Anda untuk berkolaborasi di proyek <strong>${project_name}</strong>.</p>`;
-            const text = `Anda diundang untuk berkolaborasi di proyek: ${project_name}. Lihat di sini: ${url}`;
+            const subject = `You've been invited to the project: ${project_name}`;
+            const bodyHtml = `<p>Hi ${recipientName},</p><p><strong>${inviter_name}</strong> has invited you to collaborate on the project <strong>${project_name}</strong>.</p>`;
+            const text = `You've been invited to collaborate on the project: ${project_name}. View it here: ${url}`;
             const html = createEmailTemplate({
-                title: `Undangan untuk Berkolaborasi`,
+                title: `Invitation to Collaborate`,
                 bodyHtml,
-                buttonText: "Lihat Proyek",
+                buttonText: "View Project",
                 buttonUrl: url,
             });
             await sendEmail(recipient.email, subject, html, text);
@@ -352,13 +352,13 @@ serve(async (req) => {
           case 'task_overdue_email': {
             const { task_title, project_name, project_slug, task_id, days_overdue } = context;
             const url = `${APP_URL}/projects/${project_slug}?tab=tasks&task=${task_id}`;
-            const subject = `PENGINGAT: Tugas "${task_title}" telah jatuh tempo`;
-            const bodyHtml = `<p>Hai ${recipientName},</p><p>Ini adalah pengingat bahwa tugas <em>"${task_title}"</em> di proyek <strong>${project_name}</strong> sekarang telah <strong>${days_overdue} hari</strong> melewati tenggat waktu.</p><p>Mohon untuk segera ditindaklanjuti.</p>`;
-            const text = `PENGINGAT: Tugas "${task_title}" telah jatuh tempo selama ${days_overdue} hari. Lihat di sini: ${url}`;
+            const subject = `REMINDER: Task "${task_title}" is overdue`;
+            const bodyHtml = `<p>Hi ${recipientName},</p><p>This is a reminder that the task <em>"${task_title}"</em> in the project <strong>${project_name}</strong> is now <strong>${days_overdue} day(s)</strong> overdue.</p><p>Please take action as soon as possible.</p>`;
+            const text = `REMINDER: The task "${task_title}" is overdue by ${days_overdue} day(s). View it here: ${url}`;
             const html = createEmailTemplate({
-                title: `Tugas Jatuh Tempo: ${task_title}`,
+                title: `Task Overdue: ${task_title}`,
                 bodyHtml,
-                buttonText: "Lihat Tugas",
+                buttonText: "View Task",
                 buttonUrl: url,
             });
             await sendEmail(recipient.email, subject, html, text);

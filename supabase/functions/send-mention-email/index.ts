@@ -139,7 +139,7 @@ serve(async (req) => {
       ? `${siteUrl}/projects/${projectData.slug}?tab=tasks&task=${task_id}`
       : `${siteUrl}/projects/${projectData.slug}?tab=discussion`;
     
-    const subject = `You were mentioned in the project: ${projectData.name}`;
+    const subject = `You were mentioned in: ${projectData.name}`;
     const bodyHtml = `
         <p>Hi ${recipientName},</p>
         <p><strong>${getFullName(mentionerData)}</strong> mentioned you in a comment on the project <strong>${projectData.name}</strong>.</p>
