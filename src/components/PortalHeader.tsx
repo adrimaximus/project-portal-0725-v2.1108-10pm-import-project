@@ -1,3 +1,4 @@
+import { useState, ReactNode } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Menu, Sun, Moon, Laptop, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -13,10 +14,9 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import PortalSidebar from "./PortalSidebar";
 import { useAuth } from "@/contexts/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
-import { ReactNode, useState } from "react";
 import { useTheme } from "@/contexts/ThemeProvider";
 import { GlobalSearch } from "./GlobalSearch";
-import { generatePastelColor, getAvatarUrl, formatTaskText } from "@/lib/utils";
+import { generatePastelColor, getAvatarUrl, cn } from "@/lib/utils";
 import { useNotifications } from "@/hooks/useNotifications";
 import { Badge } from "./ui/badge";
 import { useFeatures } from "@/contexts/FeaturesContext";
@@ -24,6 +24,8 @@ import { notificationIcons } from "@/data/notifications";
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { SupportDialog } from "./SupportDialog";
+import InteractiveText from "./InteractiveText";
+import { useProfiles } from "@/hooks/useProfiles";
 
 interface PortalHeaderProps {
     summary?: ReactNode;
@@ -36,6 +38,7 @@ const PortalHeader = ({ summary }: PortalHeaderProps) => {
   const { notifications, unreadCount, markAsRead } = useNotifications();
   const { isFeatureEnabled } = useFeatures();
   const [isSupportDialogOpen, setIsSupportDialogOpen] = useState(false);
+  const { data: allUsers = [] } = useProfiles();
 
   const recentNotifications = notifications.slice(0, 5);
 
@@ -123,8 +126,8 @@ const PortalHeader = ({ summary }: PortalHeaderProps) => {
                     }} className="flex items-start gap-3 p-3 cursor-pointer">
                       <Icon className="h-4 w-4 mt-1 text-muted-foreground flex-shrink-0" />
                       <div className="flex-1 space-y-1 min-w-0">
-                        <p className="text-sm font-medium leading-none whitespace-normal">{formatTaskText(notification.title)}</p>
-                        <p className="text-xs text-muted-foreground line-clamp-2">{formatTaskText(notification.description)}</p>
+                        <p className="text-sm font-medium leading-none whitespace-normal"><InteractiveText text={notification.title} members={allUsers} /></p>
+                        <p className="text-xs text-muted-foreground line-clamp-2"><InteractiveText text={notification.description} members={allUsers} /></p>
                         <p className="text-xs text-muted-foreground">
                           {formatDistanceToNow(new Date(notification.timestamp), { addSuffix: true, locale: id })}
                         </p>
