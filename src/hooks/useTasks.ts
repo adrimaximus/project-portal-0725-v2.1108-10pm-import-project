@@ -13,8 +13,15 @@ export const useTasks = ({ projectIds, hideCompleted, sortConfig, enabled = true
   return useQuery<Task[], Error>({
     queryKey: ['tasks', { projectIds, hideCompleted, sortConfig }],
     queryFn: async () => {
+      // If an empty array is passed for projectIds, it means no projects matched the filters.
+      // In this case, we should return no tasks without making an RPC call.
+      // If projectIds is undefined or null, we proceed to fetch all tasks for the user.
+      if (projectIds && projectIds.length === 0) {
+        return [];
+      }
+
       const { data, error } = await supabase.rpc('get_project_tasks', {
-        p_project_ids: projectIds && projectIds.length > 0 ? projectIds : null,
+        p_project_ids: projectIds || null,
         p_completed: hideCompleted ? false : null,
         p_order_by: sortConfig.key,
         p_order_direction: sortConfig.direction,

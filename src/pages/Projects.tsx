@@ -17,7 +17,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useTasks } from '@/hooks/useTasks';
 import { useProjects } from '@/hooks/useProjects';
 import { useCreateProject } from '@/hooks/useCreateProject';
-import { useTaskMutations } from '@/hooks/useTaskMutations';
+import { useTaskMutations, UpdateTaskOrderPayload } from '@/hooks/useTaskMutations';
 import { useProjectMutations } from '@/hooks/useProjectMutations';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import PortalLayout from '@/components/PortalLayout';
@@ -26,6 +26,7 @@ import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 import { useTaskModal } from '@/contexts/TaskModalContext';
 import { getProjectBySlug } from '@/lib/projectsApi';
+import { useUnreadTasks } from '@/hooks/useUnreadTasks';
 
 type ViewMode = 'table' | 'list' | 'kanban' | 'tasks' | 'tasks-kanban';
 
@@ -38,8 +39,11 @@ const ProjectsPage = () => {
   const { taskId: taskIdFromParams } = useParams<{ taskId: string }>();
   const { onOpen: onOpenTaskModal } = useTaskModal();
   
-  const highlightedTaskId = taskIdFromParams || searchParams.get('highlight');
+  const [taskToHighlight, setTaskToHighlight] = useState<string | null>(null);
+  const highlightedTaskId = taskIdFromParams || searchParams.get('highlight') || taskToHighlight;
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  const { unreadTaskIds } = useUnreadTasks();
 
   const onHighlightComplete = useCallback(() => {
     if (taskIdFromParams) {
@@ -49,6 +53,7 @@ const ProjectsPage = () => {
       newSearchParams.delete('highlight');
       setSearchParams(newSearchParams, { replace: true });
     }
+    setTaskToHighlight(null);
   }, [searchParams, setSearchParams, taskIdFromParams, navigate]);
 
   const { 
@@ -58,7 +63,7 @@ const ProjectsPage = () => {
     hasNextPage, 
     isFetchingNextPage,
     refetch: refetchProjects 
-  } = useProjects({});
+  } = useProjects({ fetchAll: true });
 
   const projectsData = useMemo(() => data?.pages.flatMap(page => page.projects) ?? [], [data]);
   
@@ -112,6 +117,8 @@ const ProjectsPage = () => {
 
   const projectIdsForTaskView = useMemo(() => {
     if (!isTaskView) return undefined;
+    // When projects are loading, we don't have the IDs yet. Return undefined to keep useTasks disabled.
+    if (isLoadingProjects) return undefined;
   
     const visibleProjects = projectsData.filter(project => 
       !(advancedFilters.excludedStatus || []).includes(project.status)
@@ -119,7 +126,7 @@ const ProjectsPage = () => {
     
     return visibleProjects.map(project => project.id);
   
-  }, [isTaskView, projectsData, advancedFilters.excludedStatus]);
+  }, [isTaskView, projectsData, advancedFilters.excludedStatus, isLoadingProjects]);
 
   const finalTaskSortConfig = view === 'tasks-kanban' ? { key: 'kanban_order', direction: 'asc' as const } : taskSortConfig;
 
@@ -127,7 +134,7 @@ const ProjectsPage = () => {
     projectIds: projectIdsForTaskView,
     hideCompleted: hideCompletedTasks,
     sortConfig: finalTaskSortConfig,
-    enabled: !isLoadingProjects,
+    enabled: isTaskView && projectIdsForTaskView !== undefined,
   });
 
   useEffect(() => {
@@ -140,6 +147,22 @@ const ProjectsPage = () => {
       }
     }
   }, [highlightedTaskId, tasksData]);
+
+  useEffect(() => {
+    if (isLoadingProjects || isLoadingTasks || searchParams.get('highlight') || taskIdFromParams) {
+      return;
+    }
+
+    if (tasksData.length > 0 && unreadTaskIds.length > 0) {
+      const unreadTasks = tasksData.filter(task => unreadTaskIds.includes(task.id));
+      
+      if (unreadTasks.length > 0) {
+        unreadTasks.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+        const newestUnreadTask = unreadTasks[0];
+        setTaskToHighlight(newestUnreadTask.id);
+      }
+    }
+  }, [tasksData, unreadTaskIds, isLoadingProjects, isLoadingTasks, searchParams, taskIdFromParams]);
 
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
   const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
@@ -362,6 +385,7 @@ const ProjectsPage = () => {
               onHighlightComplete={onHighlightComplete}
               onStatusChange={handleStatusChange}
               onTaskOrderChange={handleTaskOrderChange}
+              unreadTaskIds={unreadTaskIds}
             />
           </div>
           {hasNextPage && (
