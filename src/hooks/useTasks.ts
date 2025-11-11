@@ -14,7 +14,7 @@ export const useTasks = ({ projectIds, hideCompleted, sortConfig, enabled = true
     queryKey: ['tasks', { projectIds, hideCompleted, sortConfig }],
     queryFn: async () => {
       const { data, error } = await supabase.rpc('get_project_tasks', {
-        p_project_ids: projectIds || null,
+        p_project_ids: projectIds && projectIds.length > 0 ? projectIds : null,
         p_completed: hideCompleted ? false : null,
         p_order_by: sortConfig.key,
         p_order_direction: sortConfig.direction,
