@@ -310,5 +310,20 @@ export const useTaskMutations = (refetch?: () => void) => {
     }
   });
 
-  return { upsertTask, isUpserting, deleteTask, toggleTaskCompletion, isToggling, updateTaskStatusAndOrder, toggleTaskReaction, sendReminder, isSendingReminder, createTasks, isCreatingTasks, updateTask, isUpdatingTask };
+  const { mutate: markTaskAsRead } = useMutation({
+    mutationFn: async (taskId: string) => {
+      const { error } = await supabase.rpc('mark_task_as_read', { p_task_id: taskId });
+      if (error) throw error;
+    },
+    onSuccess: (_, taskId) => {
+      queryClient.setQueryData(['unreadTaskIds', user?.id], (old: string[] | undefined) => {
+        return old ? old.filter(id => id !== taskId) : [];
+      });
+    },
+    onError: (error: any) => {
+      console.error("Failed to mark task as read:", error);
+    }
+  });
+
+  return { upsertTask, isUpserting, deleteTask, toggleTaskCompletion, isToggling, updateTaskStatusAndOrder, toggleTaskReaction, sendReminder, isSendingReminder, createTasks, isCreatingTasks, updateTask, isUpdatingTask, markTaskAsRead };
 };
