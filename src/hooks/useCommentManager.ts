@@ -81,7 +81,7 @@ export const useCommentManager = ({ scope }: UseCommentManagerProps) => {
           p_comment_text: text,
           p_attachments: attachmentsJsonb,
           p_mentioned_user_ids: mentionedUserIds,
-          p_reply_to_id: replyToId,
+          p_reply_to_id: replyToId || null,
         });
         if (error) throw error;
         return { isTicket: true, taskId };
