@@ -3,22 +3,34 @@ import { useTasks } from '@/hooks/useTasks';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2, Clock, CheckCircle2, AlertTriangle, ListChecks } from 'lucide-react';
 import { Task } from '@/types';
-import { format, isPast, isToday, isTomorrow, differenceInDays } from 'date-fns';
+import { isToday, isPast, isTomorrow } from 'date-fns';
 import { Progress } from '@/components/ui/progress';
-import { toast } from 'sonner';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getAvatarUrl, generatePastelColor, getInitials } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useTaskDrawer } from '@/contexts/TaskDrawerContext';
 import { getProjectBySlug } from '@/lib/projectsApi';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import TaskListItem from '@/components/tasks/TaskListItem';
+import { useTaskMutations } from '@/hooks/useTaskMutations';
+import { useUnreadTasks } from '@/hooks/useUnreadTasks';
 
-const TaskItem = ({ task }: { task: Task }) => {
+const MyTasksWidget = () => {
+  const { user } = useAuth();
+  const { data: allTasks, isLoading, refetch } = useTasks({ sortConfig: { key: 'due_date', direction: 'asc' } });
   const { onOpen: onOpenTaskDrawer } = useTaskDrawer();
+  const { toggleTaskCompletion } = useTaskMutations(refetch);
+  const { unreadTaskIds } = useUnreadTasks();
 
-  const handleTaskClick = async () => {
+  const myTasks = useMemo(() => {
+    if (!user || !allTasks) return [];
+    return allTasks.filter(task => task.assignedTo?.some(assignee => assignee.id === user.id));
+  }, [allTasks, user]);
+
+  const handleTaskClick = async (task: Task) => {
     try {
       const projectForTask = await getProjectBySlug(task.project_slug);
       if (!projectForTask) {
@@ -30,66 +42,9 @@ const TaskItem = ({ task }: { task: Task }) => {
     }
   };
 
-  const dueDate = task.due_date ? new Date(task.due_date) : null;
-  let dueDateText = '';
-  let dueDateColor = 'text-muted-foreground';
-
-  if (dueDate) {
-    if (isToday(dueDate)) {
-      dueDateText = 'Today';
-      dueDateColor = 'text-primary';
-    } else if (isTomorrow(dueDate)) {
-      dueDateText = 'Tomorrow';
-    } else if (isPast(dueDate)) {
-      const daysOverdue = differenceInDays(new Date(), dueDate);
-      dueDateText = `${daysOverdue}d ago`;
-      dueDateColor = 'text-destructive';
-    } else {
-      dueDateText = format(dueDate, 'MMM d');
-    }
-  }
-
-  return (
-    <div 
-      className="flex items-center gap-3 p-2 rounded-md hover:bg-muted/50 cursor-pointer"
-      onClick={handleTaskClick}
-    >
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium truncate">{task.title}</p>
-        <p className="text-xs text-muted-foreground truncate">{task.project_name}</p>
-      </div>
-      <div className="flex items-center gap-2 flex-shrink-0">
-        {dueDateText && <span className={`text-xs font-medium ${dueDateColor}`}>{dueDateText}</span>}
-        <div className="flex -space-x-2">
-          {task.assignedTo?.slice(0, 2).map(user => (
-            <TooltipProvider key={user.id}>
-              <Tooltip>
-                <TooltipTrigger>
-                  <Avatar className="h-6 w-6 border-2 border-background">
-                    <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
-                    <AvatarFallback style={generatePastelColor(user.id)}>
-                      {getInitials([user.first_name, user.last_name].filter(Boolean).join(' '), user.email || undefined)}
-                    </AvatarFallback>
-                  </Avatar>
-                </TooltipTrigger>
-                <TooltipContent><p>{user.name}</p></TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const MyTasksWidget = () => {
-  const { user } = useAuth();
-  const { data: allTasks, isLoading } = useTasks({ sortConfig: { key: 'due_date', direction: 'asc' } });
-
-  const myTasks = useMemo(() => {
-    if (!user || !allTasks) return [];
-    return allTasks.filter(task => task.assignedTo?.some(assignee => assignee.id === user.id));
-  }, [allTasks, user]);
+  const handleToggleCompletion = (task: Task, completed: boolean) => {
+    toggleTaskCompletion({ task, completed });
+  };
 
   const {
     activeTasks,
@@ -210,12 +165,12 @@ const MyTasksWidget = () => {
         </TooltipProvider>
       </div>
       <ScrollArea className="h-48 pr-2">
-        <div className="space-y-4">
+        <div className="space-y-1">
           {overdueTasks.length > 0 && (
             <div>
               <h4 className="text-xs font-semibold text-muted-foreground mb-2 px-2">Overdue</h4>
               <div className="space-y-1">
-                {overdueTasks.map(task => <TaskItem key={task.id} task={task} />)}
+                {overdueTasks.map(task => <TaskListItem key={task.id} task={task} onClick={handleTaskClick} onToggleCompletion={handleToggleCompletion} isUnread={unreadTaskIds.includes(task.id)} currentUserId={user?.id} />)}
               </div>
             </div>
           )}
@@ -223,7 +178,7 @@ const MyTasksWidget = () => {
             <div>
               <h4 className="text-xs font-semibold text-muted-foreground mb-2 px-2">Upcoming</h4>
               <div className="space-y-1">
-                {upcomingTasks.map(task => <TaskItem key={task.id} task={task} />)}
+                {upcomingTasks.map(task => <TaskListItem key={task.id} task={task} onClick={handleTaskClick} onToggleCompletion={handleToggleCompletion} isUnread={unreadTaskIds.includes(task.id)} currentUserId={user?.id} />)}
               </div>
             </div>
           )}
@@ -231,7 +186,7 @@ const MyTasksWidget = () => {
             <div>
               <h4 className="text-xs font-semibold text-muted-foreground mb-2 px-2">No Due Date</h4>
               <div className="space-y-1">
-                {noDueDateTasks.map(task => <TaskItem key={task.id} task={task} />)}
+                {noDueDateTasks.map(task => <TaskListItem key={task.id} task={task} onClick={handleTaskClick} onToggleCompletion={handleToggleCompletion} isUnread={unreadTaskIds.includes(task.id)} currentUserId={user?.id} />)}
               </div>
             </div>
           )}
