@@ -14,6 +14,7 @@ import { NavItem as DbNavItem, NavFolder } from "@/pages/NavigationSettingsPage"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./ui/collapsible";
 import { toast } from "sonner";
 import { useChatContext } from "@/contexts/ChatContext";
+import { useUnreadTasks } from "@/hooks/useUnreadTasks";
 
 type PortalSidebarProps = { isCollapsed: boolean; onToggle: () => void; };
 type NavItem = { id: string; href: string; label: string; icon: LucideIcon; badge?: number; folder_id: string | null; };
@@ -50,9 +51,6 @@ const NavLink = ({ item, isCollapsed }: { item: NavItem, isCollapsed: boolean })
       isActive = true;
   }
 
-  const isChatLink = item.label.toLowerCase() === 'chat';
-  const isNotificationsLink = item.label.toLowerCase() === 'notifications';
-
   if (isCollapsed) {
     return (
       <Tooltip>
@@ -60,10 +58,8 @@ const NavLink = ({ item, isCollapsed }: { item: NavItem, isCollapsed: boolean })
           <Link to={item.href} className={cn("flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-primary md:h-8 md:w-8 relative", isActive && "bg-muted text-primary")}>
             <item.icon className="h-5 w-5" />
             <span className="sr-only">{item.label}</span>
-            {(isChatLink || isNotificationsLink) && item.badge ? (
+            {item.badge && (
               <span className="absolute top-1.5 right-1.5 block h-2 w-2 rounded-full bg-red-500 ring-1 ring-background" />
-            ) : (
-              item.badge && <Badge className="absolute -top-1 -right-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full p-0 text-xs">{item.badge}</Badge>
             )}
           </Link>
         </TooltipTrigger>
@@ -75,11 +71,9 @@ const NavLink = ({ item, isCollapsed }: { item: NavItem, isCollapsed: boolean })
     <Link to={item.href} className={cn("flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary group", isActive && "bg-muted text-primary")}>
       <item.icon className="h-4 w-4" />
       {item.label}
-      {(isChatLink || isNotificationsLink) && item.badge ? (
+      {item.badge ? (
         <span className="ml-auto block h-2 w-2 rounded-full bg-red-500" />
-      ) : (
-        item.badge && <Badge className="ml-auto flex h-6 w-6 shrink-0 items-center justify-center rounded-full">{item.badge}</Badge>
-      )}
+      ) : null}
     </Link>
   );
 };
@@ -88,6 +82,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
   const { user, hasPermission } = useAuth();
   const { hasImportantUnread } = useNotifications();
   const { unreadConversationIds } = useChatContext();
+  const { unreadTaskIds } = useUnreadTasks();
   const queryClient = useQueryClient();
   const backfillAttempted = useRef(false);
 
@@ -231,6 +226,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
 
         if (itemNameLower === 'chat') badge = hasUnreadChat ? 1 : undefined;
         if (itemNameLower === 'notifications') badge = hasImportantUnread ? 1 : undefined;
+        if (itemNameLower === 'tasks') badge = unreadTaskIds.length > 0 ? 1 : undefined;
         
         return {
           id: item.id,
@@ -246,7 +242,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
     const otherItems = allItems.filter(item => item.href !== '/settings');
 
     return { navItems: otherItems, settingsItem: settings };
-  }, [customNavItems, hasImportantUnread, navItemsError, foldersError, hasPermission, unreadConversationIds]);
+  }, [customNavItems, hasImportantUnread, navItemsError, foldersError, hasPermission, unreadConversationIds, unreadTaskIds]);
 
   const topLevelItems = useMemo(() => navItems.filter(item => !item.folder_id), [navItems]);
 
