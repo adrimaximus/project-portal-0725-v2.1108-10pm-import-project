@@ -26,6 +26,7 @@ import ProjectTeamCard from '@/components/project-detail/ProjectTeamCard';
 import ProjectMainContent from '@/components/project-detail/ProjectMainContent';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTaskModal } from '@/contexts/TaskModalContext';
+import { useUnreadTasks } from '@/hooks/useUnreadTasks';
 
 const ProjectDetailPage = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -34,6 +35,7 @@ const ProjectDetailPage = () => {
   const queryClient = useQueryClient();
   const { user, hasPermission } = useAuth();
   const { onOpen: onOpenTaskModal } = useTaskModal();
+  const { unreadTaskIds } = useUnreadTasks();
 
   const [isEditing, setIsEditing] = useState(false);
   const [editedProject, setEditedProject] = useState<Project | null>(null);
@@ -141,10 +143,6 @@ const ProjectDetailPage = () => {
     }
   };
 
-  const handleDeleteTask = (task: Task) => {
-    setTaskToDelete(task);
-  };
-
   const confirmDeleteTask = () => { if (taskToDelete) { deleteTask(taskToDelete.id); setTaskToDelete(null); } };
   const handleToggleTaskCompletion = (task: Task, completed: boolean) => toggleTaskCompletion({ task, completed });
 
@@ -196,7 +194,7 @@ const ProjectDetailPage = () => {
                 mutations={{ addFiles, deleteFile }}
                 defaultTab={searchParams.get('tab') || 'overview'}
                 onEditTask={(task) => onOpenTaskModal(task, undefined, project)}
-                onDeleteTask={handleDeleteTask}
+                onDeleteTask={setTaskToDelete}
                 onToggleTaskCompletion={handleToggleTaskCompletion}
                 highlightedTaskId={searchParams.get('task')}
                 onHighlightComplete={() => {
@@ -208,6 +206,7 @@ const ProjectDetailPage = () => {
                 isUploading={addFiles.isPending}
                 onSaveChanges={handleSaveChanges}
                 onOpenTaskModal={onOpenTaskModal}
+                unreadTaskIds={unreadTaskIds}
               />
             </div>
             <div className="lg:col-span-1 space-y-6">

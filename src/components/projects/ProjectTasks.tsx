@@ -24,7 +24,6 @@ import { toast } from "sonner";
 import { Textarea } from "../ui/textarea";
 import TaskSuggestionDialog from './TaskSuggestionDialog';
 import { useTaskDrawer } from "@/contexts/TaskDrawerContext";
-import { useUnreadTasks } from "@/hooks/useUnreadTasks";
 
 interface ProjectTasksProps {
   project: Project;
@@ -36,6 +35,7 @@ interface ProjectTasksProps {
   onToggleTaskCompletion: (task: Task, completed: boolean) => void;
   highlightedTaskId?: string | null;
   onHighlightComplete?: () => void;
+  unreadTaskIds: string[];
 }
 
 const TaskRow = ({ task, onToggleTaskCompletion, onEditTask, onDeleteTask, handleToggleReaction, setRef, currentUserId, isUnread, onClick }: {
@@ -196,7 +196,7 @@ const TaskRow = ({ task, onToggleTaskCompletion, onEditTask, onDeleteTask, handl
   );
 };
 
-const ProjectTasks = ({ project, tasks, projectId, projectSlug, onEditTask, onDeleteTask, onToggleTaskCompletion, highlightedTaskId, onHighlightComplete }: ProjectTasksProps) => {
+const ProjectTasks = ({ project, tasks, projectId, projectSlug, onEditTask, onDeleteTask, onToggleTaskCompletion, highlightedTaskId, onHighlightComplete, unreadTaskIds }: ProjectTasksProps) => {
   const queryClient = useQueryClient();
   const { toggleTaskReaction, createTasks, isCreatingTasks } = useTaskMutations(() => queryClient.invalidateQueries({ queryKey: ['project', projectSlug] }));
   const taskRefs = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -209,7 +209,6 @@ const ProjectTasks = ({ project, tasks, projectId, projectSlug, onEditTask, onDe
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [isSuggestionDialogOpen, setIsSuggestionDialogOpen] = useState(false);
   const { onOpen: onOpenTaskDrawer } = useTaskDrawer();
-  const { unreadTaskIds } = useUnreadTasks();
 
   const handleTaskClick = (task: Task) => {
     onOpenTaskDrawer(task, project);

@@ -33,6 +33,7 @@ interface ProjectMainContentProps {
   isUploading: boolean;
   onSaveChanges: () => void;
   onOpenTaskModal: (task?: Task | null, initialData?: Partial<UpsertTaskPayload>, project?: Project | null) => void;
+  unreadTaskIds: string[];
 }
 
 const ProjectMainContent = ({ 
@@ -50,6 +51,7 @@ const ProjectMainContent = ({
   isUploading,
   onSaveChanges,
   onOpenTaskModal,
+  unreadTaskIds,
 }: ProjectMainContentProps) => {
   const [activeTab, setActiveTab] = useState(defaultTab);
   const [lastViewedDiscussion, setLastViewedDiscussion] = useState(() => new Date());
@@ -243,6 +245,7 @@ const ProjectMainContent = ({
               newParams.delete('task');
               setSearchParams(newParams, { replace: true });
             }}
+            unreadTaskIds={unreadTaskIds}
           />
         </TabsContent>
         <TabsContent value="discussion" className="mt-4">
