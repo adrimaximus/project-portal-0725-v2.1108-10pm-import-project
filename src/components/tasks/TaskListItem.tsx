@@ -1,10 +1,11 @@
 import React from 'react';
 import { Task, User } from '@/types';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { format, isPast, isToday, isTomorrow, differenceInDays } from 'date-fns';
 import { cn, getAvatarUrl, generatePastelColor, getInitials, formatActivityDescription } from '@/lib/utils';
+import { CheckCircle, Circle } from 'lucide-react';
+import { Button } from '../ui/button';
 
 interface TaskListItemProps {
   task: Task;
@@ -41,6 +42,11 @@ const TaskListItem: React.FC<TaskListItemProps> = ({ task, onClick, onToggleComp
 
   const isUrgent = task.priority?.toLowerCase() === 'urgent';
 
+  const handleToggle = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onToggleCompletion(task, !task.completed);
+  };
+
   return (
     <div
       className={cn(
@@ -49,14 +55,18 @@ const TaskListItem: React.FC<TaskListItemProps> = ({ task, onClick, onToggleComp
       )}
       onClick={() => onClick(task)}
     >
-      <div onClick={(e) => e.stopPropagation()}>
-        <Checkbox
-          id={`task-item-${task.id}`}
-          checked={task.completed}
-          onCheckedChange={(checked) => onToggleCompletion(task, !!checked)}
-          className="mt-1"
-        />
-      </div>
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={handleToggle}
+        className="mt-0.5 h-6 w-6 rounded-full p-0 border-none bg-transparent hover:bg-muted"
+      >
+        {task.completed ? (
+          <CheckCircle className="h-5 w-5 text-green-500" />
+        ) : (
+          <Circle className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+        )}
+      </Button>
       <div className="flex-1 min-w-0 text-sm">
         <div className="flex items-center gap-2">
           {isUnread && <div className="h-2 w-2 rounded-full bg-red-500 flex-shrink-0" />}
