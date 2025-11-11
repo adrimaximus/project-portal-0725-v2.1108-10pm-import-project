@@ -71,7 +71,7 @@ const aggregateAttachments = (task: ProjectTask): TaskAttachment[] => {
   return attachments;
 };
 
-const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTaskCompletion, onStatusChange, isToggling, sortConfig, requestSort, rowRefs, highlightedTaskId, onHighlightComplete, unreadTaskIds }: TasksViewProps) => {
+const TasksView = ({ tasks: tasksProp, isLoading, onEdit, onDelete, onToggleTaskCompletion, onStatusChange, isToggling, sortConfig, requestSort, rowRefs, highlightedTaskId, onHighlightComplete, unreadTaskIds = [] }: TasksViewProps) => {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const { user } = useAuth();
   const [tasks, setTasks] = useState<ProjectTask[]>(tasksProp);
