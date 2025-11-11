@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useTasks } from '@/hooks/useTasks';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2, Clock, CheckCircle2, AlertTriangle, ListChecks, PlusSquare } from 'lucide-react';
-import { Task } from '@/types';
+import { Task, User } from '@/types';
 import { format, isPast, isToday, isTomorrow, differenceInDays } from 'date-fns';
 import { cn, getAvatarUrl, generatePastelColor, getInitials } from '@/lib/utils';
 import { Button } from '@/components/ui/button';

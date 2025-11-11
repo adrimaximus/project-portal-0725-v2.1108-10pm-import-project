@@ -3,18 +3,15 @@ import { Message, Collaborator } from "@/types";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import MessageAttachment from "./MessageAttachment";
 import { useAuth } from "@/contexts/AuthContext";
-import { cn, generatePastelColor, formatMentionsForDisplay, getInitials, getAvatarUrl } from "@/lib/utils";
+import { cn, generatePastelColor, getInitials, getAvatarUrl } from "@/lib/utils";
 import { format, isToday, isYesterday, isSameDay, parseISO } from 'date-fns';
-import ReactMarkdown from 'react-markdown';
-import { Link } from 'react-router-dom';
 import { Loader2, Share, Camera, Mic, Ban } from "lucide-react";
 import VoiceMessagePlayer from "./VoiceMessagePlayer";
 import MessageReactions from "./MessageReactions";
 import { useChatContext } from "@/contexts/ChatContext";
 import { ChatMessageActions } from "./ChatMessageActions";
-import rehypeRaw from 'rehype-raw';
-import remarkGfm from "remark-gfm";
 import FileIcon from './FileIcon';
+import InteractiveText from './InteractiveText';
 
 interface ChatConversationProps {
   messages: Message[];
@@ -206,9 +203,7 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                                             <span className="truncate">{message.repliedMessage.content || message.repliedMessage.attachment.name}</span>
                                           </div>
                                         ) : (
-                                          <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
-                                            {formatMentionsForDisplay(message.repliedMessage.content || '')}
-                                          </ReactMarkdown>
+                                          <InteractiveText text={message.repliedMessage.content || ''} members={members} />
                                         )}
                                       </div>
                                     </div>
@@ -244,37 +239,7 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                                           "text-sm whitespace-pre-wrap break-all prose prose-sm max-w-none [&_p]:my-0",
                                           isCurrentUser ? "prose-invert prose-p:text-primary-foreground prose-a:text-primary-foreground" : "dark:prose-invert"
                                         )}>
-                                          <ReactMarkdown
-                                            remarkPlugins={[remarkGfm]}
-                                            rehypePlugins={[rehypeRaw]}
-                                            components={{
-                                              a: ({ node, ...props }) => {
-                                                const href = props.href || '';
-                                                if (href.startsWith('/')) {
-                                                  return <Link to={href} {...props} className="font-medium underline" />;
-                                                }
-                                                return <a {...props} target="_blank" rel="noopener noreferrer" className="font-medium underline" />;
-                                              },
-                                              p: ({ node, ...props }) => {
-                                                const processedChildren = React.Children.map(props.children, child => {
-                                                  if (typeof child === 'string') {
-                                                    const emojiRegex = /(\p{Emoji_Presentation}|\p{Emoji_Modifier_Base}|\p{Emoji_Component}|\p{Extended_Pictographic}|[\u200D\uFE0F]+)/u;
-                                                    const parts = child.split(emojiRegex);
-                                                    return parts.map((part, i) => {
-                                                      const isPurelyNumeric = /^\d+$/.test(part);
-                                                      return part.match(emojiRegex) && !isPurelyNumeric
-                                                        ? <span key={i} className="text-lg inline-block align-middle">{part}</span> 
-                                                        : part;
-                                                    });
-                                                  }
-                                                  return child;
-                                                });
-                                                return <p {...props}>{processedChildren}</p>;
-                                              }
-                                            }}
-                                          >
-                                            {formatMentionsForDisplay(message.text || '')}
-                                          </ReactMarkdown>
+                                          <InteractiveText text={message.text || ''} members={members} />
                                         </div>
                                       </div>
                                       <div className="flex-shrink-0 self-end flex items-center gap-1">
@@ -312,37 +277,7 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                                           "text-sm whitespace-pre-wrap break-all prose prose-sm max-w-none [&_p]:my-0",
                                           isCurrentUser ? "prose-invert prose-p:text-primary-foreground prose-a:text-primary-foreground" : "dark:prose-invert"
                                         )}>
-                                          <ReactMarkdown
-                                            remarkPlugins={[remarkGfm]}
-                                            rehypePlugins={[rehypeRaw]}
-                                            components={{
-                                              a: ({ node, ...props }) => {
-                                                const href = props.href || '';
-                                                if (href.startsWith('/')) {
-                                                  return <Link to={href} {...props} className="font-medium underline" />;
-                                                }
-                                                return <a {...props} target="_blank" rel="noopener noreferrer" className="font-medium underline" />;
-                                              },
-                                              p: ({ node, ...props }) => {
-                                                const processedChildren = React.Children.map(props.children, child => {
-                                                  if (typeof child === 'string') {
-                                                    const emojiRegex = /(\p{Emoji_Presentation}|\p{Emoji_Modifier_Base}|\p{Emoji_Component}|\p{Extended_Pictographic}|[\u200D\uFE0F]+)/u;
-                                                    const parts = child.split(emojiRegex);
-                                                    return parts.map((part, i) => {
-                                                      const isPurelyNumeric = /^\d+$/.test(part);
-                                                      return part.match(emojiRegex) && !isPurelyNumeric
-                                                        ? <span key={i} className="text-lg inline-block align-middle">{part}</span> 
-                                                        : part;
-                                                    });
-                                                  }
-                                                  return child;
-                                                });
-                                                return <p {...props}>{processedChildren}</p>;
-                                              }
-                                            }}
-                                          >
-                                            {formatMentionsForDisplay(message.text || '')}
-                                          </ReactMarkdown>
+                                          <InteractiveText text={message.text || ''} members={members} />
                                         </div>
                                       )
                                     )}

@@ -2,7 +2,7 @@ import { useRef, useState, forwardRef, useImperativeHandle, useEffect } from 're
 import { useDropzone } from 'react-dropzone';
 import { Button } from "./ui/button";
 import { Paperclip, Send, X, Loader2, UploadCloud, Smile, Camera, Mic, Check, Pencil } from "lucide-react";
-import { cn, formatMentionsForDisplay } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { Message } from "@/types";
 import VoiceMessageRecorder from "./VoiceMessageRecorder";
 import MentionInput, { UserSuggestion, ProjectSuggestion, TaskSuggestion, BillSuggestion } from "./MentionInput";
@@ -11,6 +11,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import Picker from '@emoji-mart/react';
 import data from '@emoji-mart/data';
 import { useTheme } from "@/contexts/ThemeProvider";
+import InteractiveText from './InteractiveText';
 
 interface ChatInputProps {
   onSendMessage: (text: string, attachment: File | null, replyToMessageId?: string | null) => void;
@@ -138,7 +139,9 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
             <Pencil className="h-4 w-4 text-primary mt-1 flex-shrink-0" />
             <div className="flex-1 text-sm overflow-hidden">
               <p className="font-semibold text-primary">Editing Message</p>
-              <p className="text-xs text-muted-foreground truncate" dangerouslySetInnerHTML={{ __html: formatMentionsForDisplay(editingMessage.text || '') }} />
+              <p className="text-xs text-muted-foreground truncate">
+                <InteractiveText text={editingMessage.text || ''} members={selectedConversation?.members || []} />
+              </p>
             </div>
           </div>
           <Button variant="ghost" size="icon" onClick={onCancelEdit} className="h-7 w-7 flex-shrink-0">
@@ -156,7 +159,9 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
                 {replyTo.attachment?.type.startsWith('image/') && <Camera className="h-3 w-3 flex-shrink-0" />}
                 {replyTo.attachment?.type.startsWith('audio/') && <Mic className="h-3 w-3 flex-shrink-0" />}
                 {replyTo.text ? (
-                  <p className="truncate" dangerouslySetInnerHTML={{ __html: formatMentionsForDisplay(replyTo.text) }} />
+                  <p className="truncate">
+                    <InteractiveText text={replyTo.text} members={selectedConversation?.members || []} />
+                  </p>
                 ) : (
                   replyTo.attachment?.type.startsWith('image/') ? 'Photo' : replyTo.attachment?.type.startsWith('audio/') ? 'Voice message' : 'Attachment'
                 )}

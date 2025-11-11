@@ -3,20 +3,17 @@ import { Comment as CommentType, User } from '@/types';
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-import { getAvatarUrl, generatePastelColor, getInitials, formatMentionsForDisplay } from '@/lib/utils';
+import { getAvatarUrl, generatePastelColor, getInitials } from '@/lib/utils';
 import { Button } from './ui/button';
 import { MoreHorizontal, Edit, Trash2, Ticket, CornerUpLeft, Paperclip, X, FileText } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import rehypeRaw from 'rehype-raw';
-import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Textarea } from './ui/textarea';
 import { Badge } from './ui/badge';
 import CommentReactions from './CommentReactions';
 import CommentAttachmentItem from './CommentAttachmentItem';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
+import InteractiveText from './InteractiveText';
 
 interface CommentProps {
   comment: CommentType;
@@ -35,6 +32,7 @@ interface CommentProps {
   handleEditFileChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
   editFileInputRef?: React.RefObject<HTMLInputElement>;
   onGoToReply?: (messageId: string) => void;
+  allUsers: User[];
 }
 
 const Comment: React.FC<CommentProps> = ({
@@ -54,12 +52,12 @@ const Comment: React.FC<CommentProps> = ({
   handleEditFileChange,
   editFileInputRef,
   onGoToReply,
+  allUsers,
 }) => {
   const { user } = useAuth();
   
   const author = comment.author as User;
   const authorName = [author.first_name, author.last_name].filter(Boolean).join(' ') || author.email;
-  const formattedText = formatMentionsForDisplay(comment.text || '');
   const attachmentsData = comment.attachments_jsonb;
   const attachments: any[] = Array.isArray(attachmentsData) ? attachmentsData : attachmentsData ? [attachmentsData] : [];
 
@@ -154,15 +152,13 @@ const Comment: React.FC<CommentProps> = ({
                 <div className="flex-1 overflow-hidden">
                   <p className="font-semibold text-primary">Replying to {comment.repliedMessage.senderName}</p>
                   <div className="italic line-clamp-1 prose prose-sm dark:prose-invert max-w-none text-muted-foreground">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
-                      {formatMentionsForDisplay(comment.repliedMessage.content || '')}
-                    </ReactMarkdown>
+                    <InteractiveText text={comment.repliedMessage.content || ''} members={allUsers} />
                   </div>
                 </div>
               </button>
             )}
             <div className="prose prose-sm dark:prose-invert max-w-none break-all">
-              <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{formattedText}</ReactMarkdown>
+              <InteractiveText text={comment.text || ''} members={allUsers} />
             </div>
             {attachments.length > 0 && (
               <div className="mt-2 space-y-2">

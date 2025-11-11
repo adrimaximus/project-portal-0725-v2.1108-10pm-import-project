@@ -29,6 +29,8 @@ interface ProjectCommentsProps {
   onMentionConsumed: () => void;
   allUsers: User[];
   onGoToReply: (messageId: string) => void;
+  highlightedCommentId?: string | null;
+  onHighlightComplete?: () => void;
 }
 
 const ProjectComments = forwardRef<CommentInputHandle, ProjectCommentsProps>(({
@@ -56,6 +58,8 @@ const ProjectComments = forwardRef<CommentInputHandle, ProjectCommentsProps>(({
   onMentionConsumed,
   allUsers,
   onGoToReply,
+  highlightedCommentId,
+  onHighlightComplete,
 }, ref) => {
   const [commentToDelete, setCommentToDelete] = useState<CommentType | null>(null);
   const lastProcessedMentionId = useRef<string | null>(null);
@@ -69,6 +73,23 @@ const ProjectComments = forwardRef<CommentInputHandle, ProjectCommentsProps>(({
       onMentionConsumed();
     }
   }, [initialMention, onMentionConsumed, ref]);
+
+  useEffect(() => {
+    if (highlightedCommentId) {
+      const element = document.getElementById(`message-${highlightedCommentId}`);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        element.classList.add('bg-primary/10', 'rounded-md');
+        const timer = setTimeout(() => {
+          element.classList.remove('bg-primary/10', 'rounded-md');
+          if (onHighlightComplete) {
+            onHighlightComplete();
+          }
+        }, 2500);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [highlightedCommentId, onHighlightComplete]);
 
   const handleDeleteConfirm = () => {
     if (commentToDelete) {
@@ -111,6 +132,7 @@ const ProjectComments = forwardRef<CommentInputHandle, ProjectCommentsProps>(({
               handleEditFileChange={handleEditFileChange}
               editFileInputRef={editFileInputRef}
               onGoToReply={onGoToReply}
+              allUsers={allUsers}
             />
           ))
         ) : (

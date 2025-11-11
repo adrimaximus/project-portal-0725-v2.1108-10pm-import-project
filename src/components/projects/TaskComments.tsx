@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { useCommentManager } from '@/hooks/useCommentManager';
 import { Comment as CommentType, User, Task } from '@/types';
-import CommentInput from '../CommentInput';
+import CommentInput, { CommentInputHandle } from '../CommentInput';
 import TaskCommentsList from './TaskCommentsList';
 import { useProfiles } from '@/hooks/useProfiles';
 import { toast } from 'sonner';
@@ -150,6 +150,7 @@ const TaskComments: React.FC<TaskCommentsProps> = ({ taskId, projectId }) => {
         editFileInputRef={editFileInputRef}
         onReply={handleReply}
         onCreateTicketFromComment={handleCreateTicketFromComment}
+        allUsers={allUsers}
       />
       <div className="pt-4 border-t">
         <CommentInput
