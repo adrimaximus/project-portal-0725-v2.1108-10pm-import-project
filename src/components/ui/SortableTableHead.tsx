@@ -1,26 +1,26 @@
-import { TableHead } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { TableHead } from "@/components/ui/table";
 import { ArrowUp, ArrowDown, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-interface SortableTableHeadProps<T> {
+interface SortableTableHeadProps {
+  columnKey: string;
+  onSort: (key: string) => void;
+  sortConfig: { key: string | null; direction: 'ascending' | 'descending' };
   children: React.ReactNode;
-  columnKey: keyof T;
-  sortConfig: { key: keyof T | null; direction: 'asc' | 'desc' };
-  onSort: (key: keyof T) => void;
   className?: string;
 }
 
-export function SortableTableHead<T>({ children, columnKey, sortConfig, onSort, className }: SortableTableHeadProps<T>) {
+export const SortableTableHead = ({ columnKey, onSort, sortConfig, children, className }: SortableTableHeadProps) => {
   const isActive = sortConfig.key === columnKey;
-  const Icon = isActive ? (sortConfig.direction === 'asc' ? ArrowUp : ArrowDown) : ChevronsUpDown;
+  const Icon = isActive ? (sortConfig.direction === 'ascending' ? ArrowUp : ArrowDown) : ChevronsUpDown;
 
   return (
     <TableHead className={cn("p-2", className)}>
-      <Button variant="ghost" onClick={() => onSort(columnKey)} className="px-2 py-1 h-auto -mx-2">
+      <Button variant="ghost" onClick={() => onSort(columnKey)} className="w-full justify-start px-2 group h-auto py-1">
         <span className="mr-2">{children}</span>
         <Icon className={cn("h-4 w-4", !isActive && "text-muted-foreground/50")} />
       </Button>
     </TableHead>
   );
-}
+};
