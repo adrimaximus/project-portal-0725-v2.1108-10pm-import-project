@@ -1,17 +1,16 @@
-import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { DatePickerWithRange } from "@/components/ui/date-picker-with-range";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { List, LayoutGrid, KanbanSquare, ListChecks, CheckSquare, PlusCircle, Download, RefreshCw, ListPlus } from "lucide-react";
+import { Search, Table as TableIcon, Kanban, List, LayoutGrid, KanbanSquare, ListChecks, CheckSquare, PlusCircle, Download, RefreshCw, ListPlus } from "lucide-react";
+import { DateRange } from "react-day-picker";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import ProjectAdvancedFilters, { AdvancedFiltersState } from './ProjectAdvancedFilters';
-import { Separator } from "@/components/ui/separator";
+import { Separator } from "../ui/separator";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
-import { DateRange } from "react-day-picker";
-import { DateRangePicker } from "../DateRangePicker";
-import { CreateProjectSheet } from "@/components/CreateProjectSheet";
+import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
 
 type ViewMode = 'table' | 'list' | 'kanban' | 'tasks' | 'tasks-kanban';
 
@@ -147,19 +146,19 @@ const ProjectsToolbar = ({
             <span className="sr-only">New Task</span>
           </Button>
         ) : (
-          <CreateProjectSheet>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button size="icon" variant="outline">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button size="icon" variant="outline" asChild>
+                  <Link to="/request">
                     <PlusCircle className="h-4 w-4" />
                     <span className="sr-only">New Project</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent><p>New Project</p></TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </CreateProjectSheet>
+                  </Link>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent><p>New Project</p></TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         )}
         {isGCalConnected ? (
           <Button variant="outline" size="icon" onClick={onImportClick}>
@@ -182,12 +181,12 @@ const ProjectsToolbar = ({
             <span className="sr-only">New Task</span>
           </Button>
         ) : (
-          <CreateProjectSheet>
-            <Button size="icon" variant="outline">
+          <Button size="icon" variant="outline" asChild>
+            <Link to="/request">
               <PlusCircle className="h-4 w-4" />
               <span className="sr-only">New Project</span>
-            </Button>
-          </CreateProjectSheet>
+            </Link>
+          </Button>
         )}
         {isGCalConnected ? (
           <Button variant="outline" size="icon" onClick={onImportClick}>
