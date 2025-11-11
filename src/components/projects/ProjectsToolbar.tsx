@@ -135,7 +135,7 @@ const ProjectsToolbar = ({
             className="pl-9"
           />
         </div>
-        <DateRangePicker date={dateRange} onDateChange={onDateRangeChange} />
+        <DatePickerWithRange date={dateRange} onDateChange={onDateRangeChange} />
       </div>
 
       {/* Desktop Action Buttons */}
