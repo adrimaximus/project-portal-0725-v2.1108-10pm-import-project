@@ -55,15 +55,11 @@ export function getInitials(name?: string | null, email?: string | null): string
   return 'NN';
 }
 
-export function formatMentionsForDisplay(text: string): string {
-  if (!text) return '';
-  return text.replace(/@\[([^\]]+)\]\s*\(([^)]+)\)/g, '<span class="bg-primary/10 text-primary rounded px-1 py-0.5 font-medium">@$1</span>');
-}
-
 export function parseMentions(text: string): string[] {
-  const mentionRegex = /@\[([^\]]+)\]\s*\(([^)]+)\)/g;
+  const mentionRegex = /@\[[^\]]+\]\s*\(([^)]+)\)/g;
   const matches = text.matchAll(mentionRegex);
-  return Array.from(matches, match => match[2]);
+  const userIds = Array.from(matches, match => match[1]);
+  return [...new Set(userIds)];
 }
 
 export function truncateText(text: string, maxLength: number): string {
@@ -214,19 +210,11 @@ export const formatActivityDescription = (text: string | null | undefined, type?
     }
   }
 
-  const urlRegex = /(https?:\/\/[^\s]+|www\.[^\s]+)/g;
-  const mentionRegex = /@\[([^\]]+)\]\s*\(([^)]+)\)/g;
-
   // General improvement for other activities: remove quotes and bold the value.
   let formattedText = text.replace(/ to "(.*?)"$/, ' to <strong class="font-semibold text-foreground">$1</strong>');
 
   return formattedText
-    .replace(/\\"/g, '"') // Unescape quotes
+    .replace(/\\"/g, '"')
     .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-foreground">$1</strong>')
-    .replace(/`(.*?)`/g, '<code class="bg-muted text-muted-foreground font-mono text-xs px-1 py-0.5 rounded">$1</code>')
-    .replace(urlRegex, (url) => {
-      const href = url.startsWith('www.') ? `https://${url}` : url;
-      return `<a href="${href}" target="_blank" rel="noopener noreferrer" class="text-primary underline hover:text-primary/80">${url}</a>`;
-    })
-    .replace(mentionRegex, '<span class="text-primary font-semibold">@$1</span>');
+    .replace(/`(.*?)`/g, '<code class="bg-muted text-muted-foreground font-mono text-xs px-1 py-0.5 rounded">$1</code>');
 };

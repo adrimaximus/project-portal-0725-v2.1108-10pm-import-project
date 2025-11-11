@@ -16,8 +16,10 @@ import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
+import InteractiveText from '../InteractiveText';
+import { useProfiles } from '@/hooks/useProfiles';
 
-const TaskItem = ({ task, onToggle, isToggling }: { task: Task, onToggle: (task: Task, completed: boolean) => void, isToggling: boolean }) => {
+const TaskItem = ({ task, onToggle, isToggling, allUsers }: { task: Task, onToggle: (task: Task, completed: boolean) => void, isToggling: boolean, allUsers: User[] }) => {
   const { onOpen: onOpenTaskDrawer } = useTaskDrawer();
 
   const handleTaskClick = async () => {
@@ -62,7 +64,9 @@ const TaskItem = ({ task, onToggle, isToggling }: { task: Task, onToggle: (task:
         disabled={isToggling}
       />
       <div className="flex-1 min-w-0 cursor-pointer" onClick={handleTaskClick}>
-        <p className={cn("font-medium text-sm", task.completed && "line-through text-muted-foreground")}>{task.title}</p>
+        <div className={cn("font-medium text-sm", task.completed && "line-through text-muted-foreground")}>
+          <InteractiveText text={task.title} members={allUsers} />
+        </div>
         <p className="text-xs text-muted-foreground truncate">{task.project_name}</p>
       </div>
       <div className="flex items-center gap-2 flex-shrink-0">
@@ -93,6 +97,7 @@ const MyTasksWidget = () => {
   const { user } = useAuth();
   const { data: allTasks, isLoading, refetch } = useTasks({ sortConfig: { key: 'due_date', direction: 'asc' } });
   const { toggleTaskCompletion, isToggling } = useTaskMutations(refetch);
+  const { data: allUsers = [] } = useProfiles();
 
   const myTasks = useMemo(() => {
     if (!user || !allTasks) return [];
@@ -223,7 +228,7 @@ const MyTasksWidget = () => {
             <div>
               <h4 className="text-xs font-semibold text-muted-foreground mb-2 px-2">Overdue</h4>
               <div className="space-y-1">
-                {overdueTasks.map(task => <TaskItem key={task.id} task={task} onToggle={toggleTaskCompletion} isToggling={isToggling} />)}
+                {overdueTasks.map(task => <TaskItem key={task.id} task={task} onToggle={toggleTaskCompletion} isToggling={isToggling} allUsers={allUsers} />)}
               </div>
             </div>
           )}
@@ -231,7 +236,7 @@ const MyTasksWidget = () => {
             <div>
               <h4 className="text-xs font-semibold text-muted-foreground mb-2 px-2">Upcoming</h4>
               <div className="space-y-1">
-                {upcomingTasks.map(task => <TaskItem key={task.id} task={task} onToggle={toggleTaskCompletion} isToggling={isToggling} />)}
+                {upcomingTasks.map(task => <TaskItem key={task.id} task={task} onToggle={toggleTaskCompletion} isToggling={isToggling} allUsers={allUsers} />)}
               </div>
             </div>
           )}
@@ -239,7 +244,7 @@ const MyTasksWidget = () => {
             <div>
               <h4 className="text-xs font-semibold text-muted-foreground mb-2 px-2">No Due Date</h4>
               <div className="space-y-1">
-                {noDueDateTasks.map(task => <TaskItem key={task.id} task={task} onToggle={toggleTaskCompletion} isToggling={isToggling} />)}
+                {noDueDateTasks.map(task => <TaskItem key={task.id} task={task} onToggle={toggleTaskCompletion} isToggling={isToggling} allUsers={allUsers} />)}
               </div>
             </div>
           )}
