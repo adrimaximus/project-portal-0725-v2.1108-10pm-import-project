@@ -43,6 +43,14 @@ const ProjectDetailPage = () => {
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
+  const highlightedCommentId = searchParams.get('comment');
+
+  const onCommentHighlightComplete = useCallback(() => {
+    const newParams = new URLSearchParams(searchParams);
+    newParams.delete('comment');
+    setSearchParams(newParams, { replace: true });
+  }, [searchParams, setSearchParams]);
+
   const { data: project, isLoading, error } = useQuery<Project | null>({
     queryKey: ['project', slug],
     queryFn: () => getProjectBySlug(slug!),
@@ -202,6 +210,8 @@ const ProjectDetailPage = () => {
                   newParams.delete('task');
                   setSearchParams(newParams, { replace: true });
                 }}
+                highlightedCommentId={highlightedCommentId}
+                onCommentHighlightComplete={onCommentHighlightComplete}
                 onSetIsEditing={() => enterEditMode()}
                 isUploading={addFiles.isPending}
                 onSaveChanges={handleSaveChanges}

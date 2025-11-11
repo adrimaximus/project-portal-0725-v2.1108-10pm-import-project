@@ -29,6 +29,8 @@ interface ProjectMainContentProps {
   onToggleTaskCompletion: (task: Task, completed: boolean) => void;
   highlightedTaskId: string | null;
   onHighlightComplete: () => void;
+  highlightedCommentId?: string | null;
+  onCommentHighlightComplete?: () => void;
   onSetIsEditing: (isEditing: boolean) => void;
   isUploading: boolean;
   onSaveChanges: () => void;
@@ -47,6 +49,8 @@ const ProjectMainContent = ({
   onToggleTaskCompletion,
   highlightedTaskId,
   onHighlightComplete,
+  highlightedCommentId,
+  onCommentHighlightComplete,
   onSetIsEditing,
   isUploading,
   onSaveChanges,
@@ -275,6 +279,8 @@ const ProjectMainContent = ({
             onMentionConsumed={handleMentionConsumed}
             allUsers={allUsers}
             onGoToReply={handleScrollToMessage}
+            highlightedCommentId={highlightedCommentId}
+            onHighlightComplete={onCommentHighlightComplete}
           />
         </TabsContent>
         <TabsContent value="activity" className="mt-4 h-[350px] overflow-y-auto pr-4">

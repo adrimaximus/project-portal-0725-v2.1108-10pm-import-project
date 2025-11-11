@@ -1,6 +1,6 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, forwardRef } from 'react';
 import { Project, Comment as CommentType, User } from "@/types";
-import CommentInput from "./CommentInput";
+import CommentInput, { CommentInputHandle } from "./CommentInput";
 import Comment from './Comment';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
@@ -8,7 +8,7 @@ interface ProjectCommentsProps {
   project: Project;
   comments: CommentType[];
   isLoadingComments: boolean;
-  onAddCommentOrTicket: (text: string, isTicket: boolean, attachments: File[] | null, mentionedUserIds: string[]) => void;
+  onAddCommentOrTicket: (text: string, isTicket: boolean, attachments: File[] | null, mentionedUserIds: string[], replyToId?: string | null) => void;
   onDeleteComment: (comment: CommentType) => void;
   onToggleCommentReaction: (commentId: string, emoji: string) => void;
   editingCommentId: string | null;
@@ -28,9 +28,12 @@ interface ProjectCommentsProps {
   initialMention?: { id: string; name: string } | null;
   onMentionConsumed: () => void;
   allUsers: User[];
+  onGoToReply: (messageId: string) => void;
+  highlightedCommentId?: string | null;
+  onHighlightComplete?: () => void;
 }
 
-const ProjectComments: React.FC<ProjectCommentsProps> = ({
+const ProjectComments = forwardRef<CommentInputHandle, ProjectCommentsProps>(({
   project,
   comments,
   isLoadingComments,
@@ -54,20 +57,39 @@ const ProjectComments: React.FC<ProjectCommentsProps> = ({
   initialMention,
   onMentionConsumed,
   allUsers,
-}) => {
+  onGoToReply,
+  highlightedCommentId,
+  onHighlightComplete,
+}, ref) => {
   const [commentToDelete, setCommentToDelete] = useState<CommentType | null>(null);
-  const commentInputRef = useRef<{ setText: (text: string, append?: boolean) => void, focus: () => void }>(null);
   const lastProcessedMentionId = useRef<string | null>(null);
 
   useEffect(() => {
-    if (initialMention && commentInputRef.current && initialMention.id !== lastProcessedMentionId.current) {
+    if (initialMention && ref && 'current' in ref && ref.current) {
       lastProcessedMentionId.current = initialMention.id;
       const mentionText = `@[${initialMention.name}](${initialMention.id}) `;
-      commentInputRef.current.setText(mentionText, true);
-      commentInputRef.current.focus();
+      ref.current.setText(mentionText, true);
+      ref.current.focus();
       onMentionConsumed();
     }
-  }, [initialMention, onMentionConsumed]);
+  }, [initialMention, onMentionConsumed, ref]);
+
+  useEffect(() => {
+    if (highlightedCommentId) {
+      const element = document.getElementById(`message-${highlightedCommentId}`);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        element.classList.add('bg-primary/10', 'rounded-md');
+        const timer = setTimeout(() => {
+          element.classList.remove('bg-primary/10', 'rounded-md');
+          if (onHighlightComplete) {
+            onHighlightComplete();
+          }
+        }, 2500);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [highlightedCommentId, onHighlightComplete]);
 
   const handleDeleteConfirm = () => {
     if (commentToDelete) {
@@ -80,7 +102,7 @@ const ProjectComments: React.FC<ProjectCommentsProps> = ({
     <div className="flex flex-col h-full min-h-[400px] sm:min-h-[500px]">
       <div className="flex-shrink-0 pb-4 border-b mb-4">
         <CommentInput
-          ref={commentInputRef}
+          ref={ref}
           onAddCommentOrTicket={onAddCommentOrTicket}
           allUsers={allUsers}
           replyTo={replyTo}
@@ -101,7 +123,7 @@ const ProjectComments: React.FC<ProjectCommentsProps> = ({
               handleSaveEdit={handleSaveEdit}
               handleCancelEdit={handleCancelEdit}
               onEdit={onEdit}
-              onDelete={onDeleteComment}
+              onDelete={setCommentToDelete}
               onToggleReaction={onToggleCommentReaction}
               onReply={onReply}
               onCreateTicketFromComment={onCreateTicketFromComment}
@@ -109,6 +131,7 @@ const ProjectComments: React.FC<ProjectCommentsProps> = ({
               removeNewAttachment={removeNewAttachment}
               handleEditFileChange={handleEditFileChange}
               editFileInputRef={editFileInputRef}
+              onGoToReply={onGoToReply}
             />
           ))
         ) : (
@@ -131,6 +154,6 @@ const ProjectComments: React.FC<ProjectCommentsProps> = ({
       </AlertDialog>
     </div>
   );
-};
+});
 
 export default ProjectComments;
