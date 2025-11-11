@@ -14,6 +14,55 @@ const supabaseAdmin = createClient(
 
 const getFullName = (profile: any) => `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email;
 
+const createEmailTemplate = ({ title, bodyHtml, buttonText, buttonUrl }: { title: string, bodyHtml: string, buttonText: string, buttonUrl: string }) => {
+  const APP_NAME = "7i Portal";
+  const LOGO_URL = "https://quuecudndfztjlxbrvyb.supabase.co/storage/v1/object/public/General/logo.png";
+
+  return `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'; margin: 0; padding: 0; background-color: #f2f4f6; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .card { background-color: #ffffff; border-radius: 8px; padding: 32px; }
+        .header { text-align: center; margin-bottom: 32px; }
+        .header img { height: 40px; }
+        .content h1 { font-size: 24px; color: #111827; margin-top: 0; }
+        .content p { color: #374151; line-height: 1.5; }
+        .button-container { margin: 32px 0; }
+        .button { display: inline-block; padding: 12px 24px; font-size: 16px; color: #ffffff; background-color: #2563eb; text-decoration: none; border-radius: 6px; }
+        .footer { text-align: center; color: #6b7280; font-size: 12px; margin-top: 32px; }
+        blockquote { border-left: 2px solid #e5e7eb; padding-left: 1em; margin: 1em 0; color: #6b7280; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="card">
+          <div class="header">
+            <img src="${LOGO_URL}" alt="${APP_NAME} Logo">
+          </div>
+          <div class="content">
+            <h1>${title}</h1>
+            ${bodyHtml}
+            <div class="button-container">
+              <a href="${buttonUrl}" class="button">${buttonText}</a>
+            </div>
+            <p>If you're having trouble with the button, copy and paste this URL into your browser:</p>
+            <p><a href="${buttonUrl}" style="color: #2563eb; word-break: break-all;">${buttonUrl}</a></p>
+          </div>
+        </div>
+        <div class="footer">
+          <p>&copy; ${new Date().getFullYear()} ${APP_NAME}. All rights reserved.</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+};
+
 const sendEmail = async (to: string, subject: string, html: string, text: string) => {
     const { data: config, error: configError } = await supabaseAdmin
       .from('app_config')
@@ -88,19 +137,23 @@ serve(async (req) => {
     const siteUrl = Deno.env.get("SITE_URL") || Deno.env.get("VITE_APP_URL");
     const url = task_id
       ? `${siteUrl}/projects/${projectData.slug}?tab=tasks&task=${task_id}`
-      : `${siteUrl}/projects/${projectData.slug}`;
+      : `${siteUrl}/projects/${projectData.slug}?tab=discussion`;
     
     const subject = `You were mentioned in the project: ${projectData.name}`;
-    const html = `
+    const bodyHtml = `
         <p>Hi ${recipientName},</p>
         <p><strong>${getFullName(mentionerData)}</strong> mentioned you in a comment on the project <strong>${projectData.name}</strong>.</p>
-        <blockquote style="border-left: 4px solid #ccc; padding-left: 1em; margin: 1em 0; color: #666;">
-            ${commentData.text.replace(/@\[([^\]]+)\]\(([^)]+)\)/g, '@$1')}
+        <blockquote>
+            ${commentData.text.replace(/@\[([^\]]+)\]\(([^)]+)\)/g, '<strong>@$1</strong>')}
         </blockquote>
-        <p>You can view the comment by clicking the button below:</p>
-        <a href="${url}" style="display: inline-block; padding: 12px 24px; font-size: 16px; color: #ffffff; background-color: #008A9E; text-decoration: none; border-radius: 8px;">View Comment</a>
     `;
     const text = `Hi, ${getFullName(mentionerData)} mentioned you in a comment on the project ${projectData.name}. View it here: ${url}`;
+    const html = createEmailTemplate({
+        title: `You were mentioned in "${projectData.name}"`,
+        bodyHtml,
+        buttonText: "View Comment",
+        buttonUrl: url,
+    });
 
     await sendEmail(recipient.email, subject, html, text);
 
