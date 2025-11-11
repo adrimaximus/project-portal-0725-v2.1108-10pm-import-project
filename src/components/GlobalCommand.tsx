@@ -12,19 +12,39 @@ import {
   CommandSeparator,
 } from "@/components/ui/command";
 import { supabase } from "../integrations/supabase/client";
-import { FileText, ListChecks, Loader2, Users } from "lucide-react";
+import { FileText, ListChecks, Loader2, Users, Trophy } from "lucide-react";
 
+interface Project {
+  id: string;
+  name: string;
+  slug: string;
+}
+interface User {
+  id: string;
+  name: string;
+}
+interface Goal {
+  id: string;
+  title: string;
+  slug: string;
+}
 interface Task {
   id: string;
   title: string;
   project_slug: string;
   project_name: string;
 }
+interface SearchResults {
+  projects: Project[];
+  users: User[];
+  goals: Goal[];
+  tasks: Task[];
+}
 
 export function GlobalCommand() {
   const [open, setOpen] = React.useState(false);
   const [search, setSearch] = React.useState("");
-  const [results, setResults] = React.useState<Task[]>([]);
+  const [results, setResults] = React.useState<SearchResults>({ projects: [], users: [], goals: [], tasks: [] });
   const [loading, setLoading] = React.useState(false);
   const navigate = useNavigate();
 
@@ -42,7 +62,7 @@ export function GlobalCommand() {
   React.useEffect(() => {
     if (!open) {
       setSearch("");
-      setResults([]);
+      setResults({ projects: [], users: [], goals: [], tasks: [] });
       return;
     }
   }, [open]);
@@ -54,25 +74,35 @@ export function GlobalCommand() {
       setLoading(true);
       
       if (search.trim() === "") {
-        const { data, error } = await supabase
+        const { data: recentTasks, error: tasksError } = await supabase
           .rpc('get_project_tasks', { p_limit: 5, p_completed: false, p_order_by: 'created_at', p_order_direction: 'desc' });
         
-        if (error) {
-          console.error("Error fetching recent tasks:", error);
-          setResults([]);
-        } else if (data) {
-          setResults(data as Task[]);
-        }
-      } else {
-        const { data, error } = await supabase
-          .rpc('search_tasks', { p_search_term: search, p_limit: 10 });
+        if (tasksError) console.error("Error fetching recent tasks:", tasksError);
 
-        if (error) {
-          console.error("Error searching tasks:", error);
-          setResults([]);
-        } else if (data) {
-          setResults(data as Task[]);
-        }
+        setResults({
+          projects: [],
+          users: [],
+          goals: [],
+          tasks: recentTasks || [],
+        });
+
+      } else {
+        const [projectsRes, usersRes, goalsRes, tasksRes] = await Promise.all([
+          supabase.rpc('search_projects', { p_search_term: search, p_limit: 5 }),
+          supabase.from('profiles').select('id, first_name, last_name, email').or(`first_name.ilike.%${search}%,last_name.ilike.%${search}%,email.ilike.%${search}%`).limit(5),
+          supabase.from('goals').select('id, title, slug').ilike('title', `%${search}%`).limit(5),
+          supabase.rpc('search_tasks', { p_search_term: search, p_limit: 5 })
+        ]);
+
+        const projects = projectsRes.data || [];
+        const users = (usersRes.data || []).map(p => ({
+          id: p.id,
+          name: `${p.first_name || ''} ${p.last_name || ''}`.trim() || p.email,
+        }));
+        const goals = goalsRes.data || [];
+        const tasks = tasksRes.data || [];
+
+        setResults({ projects, users, goals, tasks });
       }
       setLoading(false);
     };
@@ -86,10 +116,12 @@ export function GlobalCommand() {
     command();
   }, []);
 
+  const hasResults = results.projects.length > 0 || results.users.length > 0 || results.goals.length > 0 || results.tasks.length > 0;
+
   return (
     <CommandDialog open={open} onOpenChange={setOpen}>
       <CommandInput 
-        placeholder="Type a command or search for tasks..." 
+        placeholder="Type a command or search..." 
         value={search}
         onValueChange={setSearch}
       />
@@ -113,32 +145,72 @@ export function GlobalCommand() {
           </CommandGroup>
         )}
         
-        {(results.length > 0 || loading) && (
+        {(hasResults || loading) && (
           <>
-            <CommandSeparator />
-            <CommandGroup heading={search ? "Tasks" : "Recent Tasks"}>
-              {loading && results.length === 0 && (
-                <div className="p-2 flex items-center justify-center text-sm text-muted-foreground">
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  <span>Loading...</span>
-                </div>
-              )}
-              {results.map((task) => (
-                <CommandItem
-                  key={task.id}
-                  onSelect={() => runCommand(() => navigate(`/projects/${task.project_slug}?task=${task.id}`))}
-                  value={`task-${task.id}-${task.title}`}
-                >
-                  <div className="flex items-center justify-between w-full">
-                    <div className="flex items-center min-w-0">
-                      <ListChecks className="mr-2 h-4 w-4 flex-shrink-0" />
-                      <span className="truncate">{task.title}</span>
+            {results.tasks.length > 0 && (
+              <CommandGroup heading={search ? "Tasks" : "Recent Tasks"}>
+                {results.tasks.map((task) => (
+                  <CommandItem
+                    key={task.id}
+                    onSelect={() => runCommand(() => navigate(`/projects?view=tasks&highlight=${task.id}`))}
+                    value={`task-${task.id}-${task.title}`}
+                  >
+                    <div className="flex items-center justify-between w-full">
+                      <div className="flex items-center min-w-0">
+                        <ListChecks className="mr-2 h-4 w-4 flex-shrink-0" />
+                        <span className="truncate">{task.title}</span>
+                      </div>
+                      {task.project_name && <span className="text-xs text-muted-foreground ml-2 flex-shrink-0">{task.project_name}</span>}
                     </div>
-                    {task.project_name && <span className="text-xs text-muted-foreground ml-2 flex-shrink-0">{task.project_name}</span>}
-                  </div>
-                </CommandItem>
-              ))}
-            </CommandGroup>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            )}
+
+            {results.projects.length > 0 && (
+              <CommandGroup heading="Projects">
+                {results.projects.map((project) => (
+                  <CommandItem
+                    key={project.id}
+                    onSelect={() => runCommand(() => navigate(`/projects/${project.slug}`))}
+                    value={`project-${project.name}`}
+                  >
+                    <FileText className="mr-2 h-4 w-4" />
+                    <span>{project.name}</span>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            )}
+
+            {results.users.length > 0 && (
+              <CommandGroup heading="Users">
+                {results.users.map((user) => (
+                  <CommandItem
+                    key={user.id}
+                    onSelect={() => runCommand(() => navigate(`/users/${user.id}`))}
+                    value={`user-${user.name}`}
+                  >
+                    <Users className="mr-2 h-4 w-4" />
+                    <span>{user.name}</span>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            )}
+
+            {results.goals.length > 0 && (
+              <CommandGroup heading="Goals">
+                {results.goals.map((goal) => (
+                  <CommandItem
+                    key={goal.id}
+                    onSelect={() => runCommand(() => navigate(`/goals/${goal.slug}`))}
+                    value={`goal-${goal.title}`}
+                  >
+                    <Trophy className="mr-2 h-4 w-4" />
+                    <span>{goal.title}</span>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            )}
           </>
         )}
       </CommandList>
