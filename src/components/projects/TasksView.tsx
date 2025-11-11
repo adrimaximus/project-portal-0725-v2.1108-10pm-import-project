@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Link } from "react-router-dom";
 import { format, isPast } from "date-fns";
-import { generatePastelColor, getPriorityStyles, getTaskStatusStyles, isOverdue, cn, getAvatarUrl, getInitials, formatTaskText, truncateText, formatActivityDescription } from "@/lib/utils";
+import { generatePastelColor, getPriorityStyles, getTaskStatusStyles, isOverdue, cn, getAvatarUrl, getInitials } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "../ui/button";
@@ -23,6 +23,8 @@ import { SortableTableHead } from '../ui/SortableTableHead';
 import TaskReactions from './TaskReactions';
 import { useTaskMutations } from '@/hooks/useTaskMutations';
 import { useQueryClient } from '@tanstack/react-query';
+import InteractiveText from '../InteractiveText';
+import { useProfiles } from '@/hooks/useProfiles';
 
 interface TasksViewProps {
   tasks: ProjectTask[];
@@ -40,7 +42,7 @@ interface TasksViewProps {
   unreadTaskIds: string[];
 }
 
-const TaskListItem = ({ task, onToggleTaskCompletion, onTaskClick, isUnread }: { task: ProjectTask, onToggleTaskCompletion: (task: ProjectTask, completed: boolean) => void, onTaskClick: (task: ProjectTask) => void, isUnread: boolean }) => {
+const TaskListItem = ({ task, onToggleTaskCompletion, onTaskClick, isUnread, allUsers }: { task: ProjectTask, onToggleTaskCompletion: (task: ProjectTask, completed: boolean) => void, onTaskClick: (task: ProjectTask) => void, isUnread: boolean, allUsers: User[] }) => {
   const dueDate = task.due_date ? new Date(task.due_date) : null;
   let dueDateText = '';
   let dueDateColor = 'text-muted-foreground';
@@ -62,11 +64,14 @@ const TaskListItem = ({ task, onToggleTaskCompletion, onTaskClick, isUnread }: {
         onCheckedChange={(checked) => onToggleTaskCompletion(task, !!checked)}
         className="mt-1"
         onClick={(e) => e.stopPropagation()}
+        disabled={isToggling}
       />
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           {isUnread && <div className="h-2 w-2 rounded-full bg-red-500 flex-shrink-0" />}
-          <p className={cn("font-medium", task.completed && "line-through text-muted-foreground")}>{task.title}</p>
+          <div className={cn("font-medium", task.completed && "line-through text-muted-foreground")}>
+            <InteractiveText text={task.title} members={allUsers} />
+          </div>
         </div>
         <p className="text-sm text-muted-foreground">{task.project_name}</p>
         <div className="flex items-center gap-4 mt-2">
@@ -90,6 +95,7 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
   const { onOpen: onOpenTaskDrawer } = useTaskDrawer();
   const queryClient = useQueryClient();
   const { toggleTaskReaction } = useTaskMutations(() => queryClient.invalidateQueries({ queryKey: ['tasks'] }));
+  const { data: allUsers = [] } = useProfiles();
 
   const handleTaskClick = async (task: ProjectTask) => {
     try {
@@ -135,6 +141,7 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
             onToggleTaskCompletion={onToggleTaskCompletion}
             onTaskClick={handleTaskClick}
             isUnread={unreadTaskIds.includes(task.id)}
+            allUsers={allUsers}
           />
         ))}
       </div>
@@ -174,7 +181,9 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
               <TableCell className="font-medium">
                 <div className="flex items-center gap-2">
                   {unreadTaskIds.includes(task.id) && <div className="h-2 w-2 rounded-full bg-red-500 flex-shrink-0" />}
-                  <span className={cn(task.completed && "line-through text-muted-foreground")}>{task.title}</span>
+                  <div className={cn(task.completed && "line-through text-muted-foreground")}>
+                    <InteractiveText text={task.title} members={allUsers} />
+                  </div>
                 </div>
               </TableCell>
               <TableCell>

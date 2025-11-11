@@ -2,13 +2,15 @@ import { Activity } from "@/types";
 import { formatDistanceToNow } from "date-fns";
 import { History } from "lucide-react";
 import ActivityIcon from "./ActivityIcon";
-import { formatActivityDescription } from "@/lib/utils";
+import InteractiveText from '../InteractiveText';
+import { useProfiles } from '@/hooks/useProfiles';
 
 interface ProjectActivityFeedProps {
   activities: Activity[];
 }
 
 const ProjectActivityFeed = ({ activities }: ProjectActivityFeedProps) => {
+  const { data: allUsers = [] } = useProfiles();
   // Regex yang lebih kuat untuk menghapus blok lampiran, dari '**Attachments:**' hingga akhir teks.
   const attachmentsRegex = /\s*\*\*Attachments:\*\*.*$/s;
 
@@ -55,7 +57,7 @@ const ProjectActivityFeed = ({ activities }: ProjectActivityFeedProps) => {
       <ul className="-mb-8">
         {filteredActivities.map((activity, activityIdx) => {
           const userName = activity.user?.name || "System";
-          const descriptionHtml = { __html: formatActivityDescription(activity.details.description, activity.type) };
+          const description = activity.details.description;
 
           return (
             <li key={activity.id}>
@@ -73,7 +75,7 @@ const ProjectActivityFeed = ({ activities }: ProjectActivityFeedProps) => {
                     <div>
                       <p className="text-sm text-muted-foreground break-all">
                         <span className="font-semibold text-card-foreground">{userName}</span>{' '}
-                        <span dangerouslySetInnerHTML={descriptionHtml} />
+                        <InteractiveText text={description} members={allUsers} />
                       </p>
                     </div>
                     <div className="whitespace-nowrap text-right text-sm text-muted-foreground">

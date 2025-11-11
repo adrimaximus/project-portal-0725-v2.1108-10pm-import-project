@@ -4,10 +4,12 @@ import { Loader2 } from 'lucide-react';
 import { formatDistanceToNow, subDays } from 'date-fns';
 import { Link } from 'react-router-dom';
 import ActivityIcon from './ActivityIcon';
-import { formatActivityDescription } from '@/lib/utils';
+import InteractiveText from '../InteractiveText';
+import { useProfiles } from '@/hooks/useProfiles';
 
 const RecentActivityWidget = () => {
   const { data: activities, isLoading } = useActivities();
+  const { data: allUsers = [] } = useProfiles();
 
   const recentActivities = useMemo(() => {
     if (!activities) return [];
@@ -42,7 +44,7 @@ const RecentActivityWidget = () => {
             <p className="text-foreground">
               <span className="font-semibold">{activity.user_name}</span>
               {' '}
-              <span dangerouslySetInnerHTML={{ __html: formatActivityDescription(activity.details.description, activity.type) }} />
+              <InteractiveText text={activity.details.description} members={allUsers} />
             </p>
             <p className="text-xs text-muted-foreground mt-0.5">
               <Link to={`/projects/${activity.project_slug}`} className="hover:underline text-primary font-medium">{activity.project_name}</Link>

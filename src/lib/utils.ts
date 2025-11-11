@@ -152,15 +152,6 @@ export const formatBytes = (bytes: number | null | undefined, decimals = 2) => {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
 };
 
-export const formatTaskText = (text: string, maxLength?: number): string => {
-  if (!text) return '';
-  let processedText = text.replace(/@\[([^\]]+)\]\s*\(([^)]+)\)/g, '@$1');
-  if (maxLength && processedText.length > maxLength) {
-    processedText = `${processedText.substring(0, maxLength)}...`;
-  }
-  return processedText;
-};
-
 export const isOverdue = (dueDateStr: string | null | undefined): boolean => {
   if (!dueDateStr) return false;
   return isPast(new Date(dueDateStr));
@@ -196,25 +187,4 @@ export const getTaskStatusStyles = (status: string | null | undefined) => {
     default:
       return { tw: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300' };
   }
-};
-
-export const formatActivityDescription = (text: string | null | undefined, type?: string | null): string => {
-  if (!text) return "";
-
-  // Specific override for VENUE_UPDATED
-  if (type === 'VENUE_UPDATED') {
-    const venueMatch = text.match(/updated the venue to "(.*)"/s);
-    if (venueMatch && venueMatch[1]) {
-      const venueText = venueMatch[1].replace(/\n/g, ', ');
-      return `updated venue: <strong class="font-semibold text-foreground">${venueText}</strong>`;
-    }
-  }
-
-  // General improvement for other activities: remove quotes and bold the value.
-  let formattedText = text.replace(/ to "(.*?)"$/, ' to <strong class="font-semibold text-foreground">$1</strong>');
-
-  return formattedText
-    .replace(/\\"/g, '"')
-    .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-foreground">$1</strong>')
-    .replace(/`(.*?)`/g, '<code class="bg-muted text-muted-foreground font-mono text-xs px-1 py-0.5 rounded">$1</code>');
 };
