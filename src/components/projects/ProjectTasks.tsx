@@ -23,6 +23,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { Textarea } from "../ui/textarea";
 import TaskSuggestionDialog from './TaskSuggestionDialog';
+import { useTaskDrawer } from "@/contexts/TaskDrawerContext";
+import { useUnreadTasks } from "@/hooks/useUnreadTasks";
 
 interface ProjectTasksProps {
   project: Project;
@@ -36,7 +38,7 @@ interface ProjectTasksProps {
   onHighlightComplete?: () => void;
 }
 
-const TaskRow = ({ task, onToggleTaskCompletion, onEditTask, onDeleteTask, handleToggleReaction, setRef, currentUserId }: {
+const TaskRow = ({ task, onToggleTaskCompletion, onEditTask, onDeleteTask, handleToggleReaction, setRef, currentUserId, isUnread, onClick }: {
   task: Task;
   onToggleTaskCompletion: (task: Task, completed: boolean) => void;
   onEditTask: (task: Task) => void;
@@ -44,6 +46,8 @@ const TaskRow = ({ task, onToggleTaskCompletion, onEditTask, onDeleteTask, handl
   handleToggleReaction: (taskId: string, emoji: string) => void;
   setRef: (el: HTMLDivElement | null) => void;
   currentUserId?: string;
+  isUnread: boolean;
+  onClick: () => void;
 }) => {
   const navigate = useNavigate();
 
@@ -79,6 +83,7 @@ const TaskRow = ({ task, onToggleTaskCompletion, onEditTask, onDeleteTask, handl
         "flex items-start space-x-3 p-2 rounded-md hover:bg-muted group transition-colors duration-500",
         isUrgent ? "bg-red-500/10" : isAssignedToCurrentUser ? "bg-primary/10" : ""
       )}
+      onClick={onClick}
     >
       <Checkbox
         id={`task-${task.id}`}
@@ -89,15 +94,16 @@ const TaskRow = ({ task, onToggleTaskCompletion, onEditTask, onDeleteTask, handl
       <div
         className={`flex-1 min-w-0 text-sm flex items-center gap-2 ${task.completed ? 'text-muted-foreground' : 'text-card-foreground'}`}
       >
-        <span
-          className={cn(
+        <div className="flex items-center gap-2">
+          {isUnread && <div className="h-2 w-2 rounded-full bg-red-500 flex-shrink-0" />}
+          <div className={cn(
             "break-words cursor-pointer hover:underline",
             task.completed && "line-through"
           )}
           title={task.title}
-          onClick={handleTitleClick}
           dangerouslySetInnerHTML={{ __html: formatActivityDescription(task.title) }}
         />
+        </div>
       </div>
 
       <div className="flex items-center gap-2 ml-auto">
@@ -202,6 +208,12 @@ const ProjectTasks = ({ project, tasks, projectId, projectSlug, onEditTask, onDe
   const [isSuggesting, setIsSuggesting] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [isSuggestionDialogOpen, setIsSuggestionDialogOpen] = useState(false);
+  const { onOpen: onOpenTaskDrawer } = useTaskDrawer();
+  const { unreadTaskIds } = useUnreadTasks();
+
+  const handleTaskClick = (task: Task) => {
+    onOpenTaskDrawer(task, project);
+  };
 
   const handleSuggestTasks = async () => {
     setIsSuggesting(true);
@@ -350,6 +362,8 @@ const ProjectTasks = ({ project, tasks, projectId, projectSlug, onEditTask, onDe
               if (el) taskRefs.current.set(task.id, el);
               else taskRefs.current.delete(task.id);
             }}
+            isUnread={unreadTaskIds.includes(task.id)}
+            onClick={() => handleTaskClick(task)}
           />
         ))}
       </TooltipProvider>
@@ -409,6 +423,8 @@ const ProjectTasks = ({ project, tasks, projectId, projectSlug, onEditTask, onDe
                       if (el) taskRefs.current.set(task.id, el);
                       else taskRefs.current.delete(task.id);
                     }}
+                    isUnread={unreadTaskIds.includes(task.id)}
+                    onClick={() => handleTaskClick(task)}
                   />
                 ))}
               </TooltipProvider>
