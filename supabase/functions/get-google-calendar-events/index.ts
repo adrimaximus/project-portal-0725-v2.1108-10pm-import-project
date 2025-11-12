@@ -1,17 +1,14 @@
-import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.54.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
-
-const GOOGLE_CLIENT_ID = Deno.env.get('VITE_GOOGLE_CLIENT_ID')
-const GOOGLE_CLIENT_SECRET = Deno.env.get('GOOGLE_CLIENT_SECRET')
+};
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    return new Response('ok', { headers: corsHeaders });
   }
 
   try {
@@ -19,72 +16,65 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
       { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
-    )
+    );
 
-    const { data: { user } } = await supabaseClient.auth.getUser()
-    if (!user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 401,
-      })
-    }
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) throw new Error("Unauthorized");
 
-    const serviceClient = createClient(
+    const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { data: tokenData, error: tokenError } = await serviceClient
+    const { data: tokenData, error: tokenError } = await supabaseAdmin
       .from('google_calendar_tokens')
       .select('access_token, refresh_token, expiry_date')
       .eq('user_id', user.id)
-      .single()
+      .single();
 
     if (tokenError || !tokenData) {
-      console.error('No Google Calendar tokens found for user:', user.id, tokenError);
-      return new Response(JSON.stringify({ error: 'Google Calendar not connected. Please connect it in your settings.' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 404,
-      })
+      throw new Error("Google Calendar not connected or token not found.");
     }
 
     let { access_token, refresh_token, expiry_date } = tokenData;
 
+    // Check if token is expired and refresh if necessary
     if (new Date(expiry_date) < new Date()) {
       console.log('Access token expired, refreshing...');
+      const clientId = Deno.env.get("VITE_GOOGLE_CLIENT_ID");
+      const clientSecret = Deno.env.get("GOOGLE_CLIENT_SECRET");
+
       const response = await fetch('https://oauth2.googleapis.com/token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          client_id: GOOGLE_CLIENT_ID,
-          client_secret: GOOGLE_CLIENT_SECRET,
+          client_id: clientId,
+          client_secret: clientSecret,
           refresh_token: refresh_token,
           grant_type: 'refresh_token',
         }),
-      })
+      });
 
-      const newTokens = await response.json()
+      const newTokens = await response.json();
       if (newTokens.error) {
         console.error('Error refreshing token:', newTokens.error_description);
-        await serviceClient.from('google_calendar_tokens').delete().eq('user_id', user.id);
-        return new Response(JSON.stringify({ error: 'Failed to refresh token. Please reconnect your Google Calendar.' }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 401,
-        })
+        await supabaseAdmin.from('google_calendar_tokens').delete().eq('user_id', user.id);
+        throw new Error('Failed to refresh token. Please reconnect your Google Calendar.');
       }
 
       access_token = newTokens.access_token;
       const newExpiryDate = new Date(new Date().getTime() + newTokens.expires_in * 1000);
 
-      await serviceClient
+      await supabaseAdmin
         .from('google_calendar_tokens')
         .update({
           access_token: access_token,
           expiry_date: newExpiryDate.toISOString(),
         })
-        .eq('user_id', user.id)
+        .eq('user_id', user.id);
     }
 
+    // Fetch calendar list to get calendar IDs
     const calendarsResponse = await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList', {
       headers: { Authorization: `Bearer ${access_token}` },
     });
@@ -142,12 +132,13 @@ serve(async (req) => {
     return new Response(JSON.stringify(allEvents), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
-    })
+    });
+
   } catch (error) {
     console.error(error);
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,
-    })
+    });
   }
-})
+});
