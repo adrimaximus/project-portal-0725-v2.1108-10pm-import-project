@@ -3,7 +3,7 @@ import { Task, TaskAttachment, Reaction, User, Comment as CommentType, TaskStatu
 import { DrawerContent } from '@/components/ui/drawer';
 import { Button } from '../ui/button';
 import { format, isPast, formatDistanceToNow } from 'date-fns';
-import { cn, isOverdue, formatTaskText, getPriorityStyles, getTaskStatusStyles, getDueDateClassName, getAvatarUrl, generatePastelColor, getInitials, formatMentionsForDisplay } from '@/lib/utils';
+import { cn, isOverdue, getPriorityStyles, getTaskStatusStyles, getDueDateClassName, getAvatarUrl, generatePastelColor, getInitials } from '@/lib/utils';
 import {
   Edit,
   Trash2,
@@ -22,9 +22,6 @@ import {
   User as UserIcon,
   ChevronDown,
 } from 'lucide-react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import rehypeRaw from 'rehype-raw';
 import TaskAttachmentList from '../projects/TaskAttachmentList';
 import { useTaskMutations } from '@/hooks/useTaskMutations';
 import { useQueryClient, useMutation, useQuery } from '@tanstack/react-query';
@@ -52,6 +49,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../ui/collapsible';
 import { useTaskModal } from '@/contexts/TaskModalContext';
 import { Input } from '../ui/input';
+import InteractiveText from '../InteractiveText';
 
 interface TaskDetailCardProps {
   task: Task;
@@ -223,7 +221,6 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
   const description = task.description || '';
   const isLongDescription = description.length > 500;
   const displayedDescription = isLongDescription && !showFullDescription ? `${description.substring(0, 500)}...` : description;
-  const formattedDescription = formatMentionsForDisplay(displayedDescription);
 
   const handleToggleReaction = (emoji: string) => {
     toggleTaskReaction({ taskId: task.id, emoji });
@@ -489,21 +486,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
             <div className="pt-4 border-t">
               <h4 className="font-semibold mb-2">Description</h4>
               <div className="prose prose-sm dark:prose-invert max-w-none break-all">
-                <ReactMarkdown 
-                  remarkPlugins={[remarkGfm]} 
-                  rehypePlugins={[rehypeRaw]}
-                  components={{
-                    a: ({ node, ...props }) => {
-                      const href = props.href || '';
-                      if (href.startsWith('/')) {
-                        return <Link to={href} {...props} className="font-medium underline" />;
-                      }
-                      return <a {...props} target="_blank" rel="noopener noreferrer" className="font-medium underline" />;
-                    },
-                  }}
-                >
-                  {formattedDescription}
-                </ReactMarkdown>
+                <InteractiveText text={displayedDescription} members={allUsers} />
               </div>
               {isLongDescription && (
                 <Button variant="link" size="sm" onClick={() => setShowFullDescription(!showFullDescription)} className="px-0 h-auto">
@@ -539,6 +522,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
               onReply={handleReply}
               onCreateTicketFromComment={handleCreateTicketFromComment}
               onGoToReply={handleScrollToMessage}
+              allUsers={allUsers}
             />
           </div>
         </div>
