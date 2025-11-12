@@ -19,14 +19,14 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/
 
 const CollaboratorsTab = () => {
   const { data: collaborators, isLoading } = useCollaboratorStats();
-  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'project_count', direction: 'desc' });
+  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'ascending' | 'descending' }>({ key: 'project_count', direction: 'descending' });
   const { user: currentUser } = useAuth();
   const isDesktop = useMediaQuery("(min-width: 768px)");
 
   const handleSort = (key: string) => {
-    let direction: 'asc' | 'desc' = 'desc';
-    if (sortConfig.key === key && sortConfig.direction === 'desc') {
-      direction = 'asc';
+    let direction: 'ascending' | 'descending' = 'descending';
+    if (sortConfig.key === key && sortConfig.direction === 'descending') {
+      direction = 'ascending';
     }
     setSortConfig({ key, direction });
   };
@@ -88,7 +88,7 @@ const CollaboratorsTab = () => {
 
   const SortableTableHead = ({ children, columnKey }: { children: React.ReactNode, columnKey: string }) => {
     const isActive = sortConfig.key === columnKey;
-    const Icon = isActive ? (sortConfig.direction === 'asc' ? ArrowUp : ArrowDown) : ChevronsUpDown;
+    const Icon = isActive ? (sortConfig.direction === 'ascending' ? ArrowUp : ArrowDown) : ChevronsUpDown;
     return (
       <TableHead className="text-right">
         <Button variant="ghost" onClick={() => handleSort(columnKey)} className="px-2 py-1 h-auto -mx-2">

@@ -523,5 +523,5 @@ export interface Invoice {
   assignedMembers: Member[];
   invoiceAttachments: InvoiceAttachment[];
   payment_terms: any[];
-  last_billing_reminder_sent_at?: string | null;
+  last_billing_reminder_sent_at: string | null;
 }

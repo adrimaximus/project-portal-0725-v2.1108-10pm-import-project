@@ -27,7 +27,7 @@ const Billing = () => {
   const projects = useMemo(() => projectsData?.pages.flatMap(page => page.projects) ?? [], [projectsData]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
-  const { sortConfig, requestSort: handleSort } = useSortConfig<keyof Invoice>({ key: 'dueDate', direction: 'desc' });
+  const { sortConfig, requestSort: handleSort } = useSortConfig<keyof Invoice>({ key: 'dueDate', direction: 'descending' });
   const [searchTerm, setSearchTerm] = useState("");
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [viewMode, setViewMode] = useState<'table' | 'kanban'>('table');
@@ -106,7 +106,7 @@ const Billing = () => {
         assignedMembers: (project.assignedTo as Member[]) || [],
         invoiceAttachments: project.invoice_attachments || [],
         payment_terms: project.payment_terms || [],
-        last_billing_reminder_sent_at: project.last_billing_reminder_sent_at,
+        last_billing_reminder_sent_at: project.last_billing_reminder_sent_at || null,
       };
     })
     .filter((invoice): invoice is Invoice => invoice !== null), [projects]);

@@ -22,7 +22,7 @@ import { SortableTableHead } from '@/components/ui/SortableTableHead';
 
 type SortableTagColumns = 'name' | 'type' | 'color';
 type SortableGroupColumns = 'name' | 'count';
-type SortDirection = 'asc' | 'desc';
+type SortDirection = 'ascending' | 'descending';
 
 const TagsSettingsPage = () => {
   const { user } = useAuth();
@@ -37,8 +37,8 @@ const TagsSettingsPage = () => {
   const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
   const [groupToRename, setGroupToRename] = useState<string | null>(null);
   const [groupToDelete, setGroupToDelete] = useState<string | null>(null);
-  const [tagSort, setTagSort] = useState<{ column: SortableTagColumns | null; direction: SortDirection }>({ column: 'name', direction: 'asc' });
-  const [groupSort, setGroupSort] = useState<{ column: SortableGroupColumns | null; direction: SortDirection }>({ column: 'name', direction: 'asc' });
+  const [tagSort, setTagSort] = useState<{ column: SortableTagColumns | null; direction: SortDirection }>({ column: 'name', direction: 'ascending' });
+  const [groupSort, setGroupSort] = useState<{ column: SortableGroupColumns | null; direction: SortDirection }>({ column: 'name', direction: 'ascending' });
 
   const isAdmin = user?.role === 'admin' || user?.role === 'master admin';
 
@@ -85,14 +85,14 @@ const TagsSettingsPage = () => {
   const handleTagSort = (column: SortableTagColumns) => {
     setTagSort(prev => ({
       column,
-      direction: prev.column === column && prev.direction === 'asc' ? 'desc' : 'asc'
+      direction: prev.column === column && prev.direction === 'ascending' ? 'descending' : 'ascending'
     }));
   };
 
   const handleGroupSort = (column: SortableGroupColumns) => {
     setGroupSort(prev => ({
       column,
-      direction: prev.column === column && prev.direction === 'asc' ? 'desc' : 'asc'
+      direction: prev.column === column && prev.direction === 'ascending' ? 'descending' : 'ascending'
     }));
   };
 
@@ -112,7 +112,7 @@ const TagsSettingsPage = () => {
         
         const compareResult = String(aVal).localeCompare(String(bVal), undefined, { numeric: true, sensitivity: 'base' });
 
-        return tagSort.direction === 'asc' ? compareResult : -compareResult;
+        return tagSort.direction === 'ascending' ? compareResult : -compareResult;
       });
   }, [personalTags, globalTags, activeTagTab, searchQuery, tagSort]);
 
@@ -128,7 +128,7 @@ const TagsSettingsPage = () => {
         compareResult = String(aVal).localeCompare(String(bVal), undefined, { numeric: true, sensitivity: 'base' });
     }
 
-    return groupSort.direction === 'asc' ? compareResult : -compareResult;
+    return groupSort.direction === 'ascending' ? compareResult : -compareResult;
   });
 
   const handleAddNew = () => {

@@ -27,6 +27,7 @@ import { Loader2 } from 'lucide-react';
 import { useTaskModal } from '@/contexts/TaskModalContext';
 import { getProjectBySlug } from '@/lib/projectsApi';
 import { useUnreadTasks } from '@/hooks/useUnreadTasks';
+import { useSortConfig } from '@/hooks/useSortConfig';
 
 type ViewMode = 'table' | 'list' | 'kanban' | 'tasks' | 'tasks-kanban';
 
@@ -104,14 +105,7 @@ const ProjectsPage = () => {
     }
   });
 
-  const [taskSortConfig, setTaskSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'updated_at', direction: 'desc' });
-
-  const requestTaskSort = useCallback((key: string) => {
-    setTaskSortConfig(prevConfig => ({
-      key,
-      direction: prevConfig.key === key && prevConfig.direction === 'asc' ? 'desc' : 'asc',
-    }));
-  }, []);
+  const { sortConfig: taskSortConfig, requestSort: requestTaskSort } = useSortConfig({ key: 'updated_at', direction: 'descending' });
 
   const isTaskView = view === 'tasks' || view === 'tasks-kanban';
 
@@ -128,7 +122,7 @@ const ProjectsPage = () => {
   
   }, [isTaskView, projectsData, advancedFilters.excludedStatus, isLoadingProjects]);
 
-  const finalTaskSortConfig = view === 'tasks-kanban' ? { key: 'kanban_order', direction: 'asc' as const } : taskSortConfig;
+  const finalTaskSortConfig = view === 'tasks-kanban' ? { key: 'kanban_order', direction: 'asc' as const } : { key: taskSortConfig.key, direction: taskSortConfig.direction };
 
   const { data: tasksData = [], isLoading: isLoadingTasks, refetch: refetchTasks } = useTasks({
     projectIds: projectIdsForTaskView,
