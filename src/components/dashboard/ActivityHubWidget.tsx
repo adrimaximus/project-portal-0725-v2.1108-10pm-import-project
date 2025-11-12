@@ -14,7 +14,6 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import TaskReactions from '@/components/projects/TaskReactions';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Progress } from '@/components/ui/progress';
-import { useTaskDrawer } from '@/contexts/TaskDrawerContext';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import RecentActivityWidget from './RecentActivityWidget';
 import CollaboratorsTab from './CollaboratorsTab';
