@@ -5,7 +5,6 @@ import { AppNotification } from '@/types';
 import { toast } from 'sonner';
 import { useEffect, useRef, useMemo } from 'react';
 import { useChatContext } from '@/contexts/ChatContext';
-import NotificationToast from '@/components/NotificationToast';
 
 const NOTIFICATIONS_PER_PAGE = 20;
 const TONE_BASE_URL = `https://quuecudndfztjlxbrvyb.supabase.co/storage/v1/object/public/General/Notification/`;
@@ -93,7 +92,7 @@ export const useNotifications = () => {
           const userPreferences = profileData.notification_preferences || {};
 
           const newNotificationId = payload.new.notification_id;
-          const { data: notificationData } = await supabase.from('notifications').select('title, body, type, resource_id, data, created_at, actor_id').eq('id', newNotificationId).single();
+          const { data: notificationData } = await supabase.from('notifications').select('title, body, type, resource_id').eq('id', newNotificationId).single();
           
           if (notificationData) {
             const isChatNotification = notificationData.type === 'comment';
@@ -106,19 +105,9 @@ export const useNotifications = () => {
             const toastsEnabled = userPreferences.toast_enabled !== false;
             
             if (toastsEnabled && !isChatActiveAndVisible) {
-              const newNotification: AppNotification = {
-                id: newNotificationId,
-                type: notificationData.type,
-                title: notificationData.title,
+              toast.info(notificationData.title, {
                 description: notificationData.body,
-                timestamp: notificationData.created_at,
-                read: false,
-                link: notificationData.data?.link || '#',
-                actor: { id: notificationData.actor_id, name: '', avatar_url: '' }
-              };
-              toast.custom((t) => (
-                <NotificationToast notification={newNotification} toastId={t} />
-              ));
+              });
             }
 
             if (Notification.permission === 'granted' && document.hidden) {
