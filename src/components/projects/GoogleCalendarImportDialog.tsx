@@ -29,7 +29,7 @@ export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImp
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke('get-google-calendar-events');
       if (error) throw error;
-      return data;
+      return data || [];
     },
     enabled: open,
     staleTime: 5 * 60 * 1000,
@@ -38,7 +38,7 @@ export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImp
   const { data: projects = [] } = useQuery<Project[]>({
     queryKey: ['projectsForGCalImport'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('projects').select('name');
+      const { data, error } = await supabase.from('projects').select('*');
       if (error) throw error;
       return data;
     },
