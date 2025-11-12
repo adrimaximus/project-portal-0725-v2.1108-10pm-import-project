@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { google } from "https://esm.sh/googleapis";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -52,18 +51,43 @@ serve(async (req) => {
         continue;
       }
 
-      const oauth2Client = new google.auth.OAuth2(
-        Deno.env.get("VITE_GOOGLE_CLIENT_ID"),
-        Deno.env.get("GOOGLE_CLIENT_SECRET"),
-        `${Deno.env.get('SUPABASE_URL')}/functions/v1/google-calendar-callback`
-      );
-      oauth2Client.setCredentials({
-        access_token: token.access_token,
-        refresh_token: token.refresh_token,
-        expiry_date: token.expiry_date ? new Date(token.expiry_date).getTime() : null,
-      });
+      let { access_token, refresh_token, expiry_date } = token;
 
-      const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+      if (new Date(expiry_date) < new Date()) {
+        console.log(`Access token for ${user.email} expired, refreshing...`);
+        const clientId = Deno.env.get("VITE_GOOGLE_CLIENT_ID");
+        const clientSecret = Deno.env.get("GOOGLE_CLIENT_SECRET");
+
+        const response = await fetch('https://oauth2.googleapis.com/token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            client_id: clientId,
+            client_secret: clientSecret,
+            refresh_token: refresh_token,
+            grant_type: 'refresh_token',
+          }),
+        });
+
+        const newTokens = await response.json();
+        if (newTokens.error) {
+          console.error(`Error refreshing token for ${user.email}:`, newTokens.error_description);
+          await supabaseAdmin.from('google_calendar_tokens').delete().eq('user_id', user.id);
+          continue; // Skip this user
+        }
+
+        access_token = newTokens.access_token;
+        const newExpiryDate = new Date(new Date().getTime() + newTokens.expires_in * 1000);
+
+        await supabaseAdmin
+          .from('google_calendar_tokens')
+          .update({
+            access_token: access_token,
+            expiry_date: newExpiryDate.toISOString(),
+          })
+          .eq('user_id', user.id);
+      }
+
       const timeMin = new Date().toISOString();
       const timeMax = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(); // Next 7 days
 
@@ -71,17 +95,12 @@ serve(async (req) => {
 
       for (const calendarId of user.google_calendar_settings.selected_calendars) {
         try {
-          const res = await calendar.events.list({
-            calendarId,
-            timeMin,
-            timeMax,
-            maxResults: 50,
-            singleEvents: true,
-            orderBy: 'startTime',
-          });
+          const res = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?timeMin=${timeMin}&timeMax=${timeMax}&singleEvents=true&orderBy=startTime&maxResults=50`, {
+            headers: { Authorization: `Bearer ${access_token}` },
+          }).then(res => res.json());
 
-          if (res.data.items) {
-            const newEvents = res.data.items.filter(event =>
+          if (res.items) {
+            const newEvents = res.items.filter((event: any) =>
               event.id && !existingEventIds.has(event.id) && event.status !== 'cancelled'
             );
             eventsToImport.push(...newEvents);
@@ -99,7 +118,7 @@ serve(async (req) => {
           due_date: event.end?.dateTime || event.end?.date,
           origin_event_id: event.id,
           venue: event.location,
-          created_by: user.id, // The user who owns the calendar connection
+          created_by: user.id,
           status: 'On Track',
           payment_status: 'Unpaid',
           category: 'Event',
