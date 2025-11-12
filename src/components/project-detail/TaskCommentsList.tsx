@@ -1,5 +1,5 @@
 import React from 'react';
-import { Comment as CommentType } from '@/types';
+import { Comment as CommentType, User } from '@/types';
 import Comment from '../Comment';
 
 interface TaskCommentsListProps {
@@ -20,10 +20,11 @@ interface TaskCommentsListProps {
   onReply: (comment: CommentType) => void;
   onCreateTicketFromComment: (comment: CommentType) => void;
   onGoToReply: (messageId: string) => void;
+  allUsers: User[];
 }
 
 const TaskCommentsList: React.FC<TaskCommentsListProps> = (props) => {
-  const { comments, isLoading, onGoToReply, ...rest } = props;
+  const { comments, isLoading, onGoToReply, allUsers, ...rest } = props;
 
   if (isLoading) {
     return <div>Loading comments...</div>;
@@ -37,6 +38,7 @@ const TaskCommentsList: React.FC<TaskCommentsListProps> = (props) => {
           comment={comment}
           isEditing={props.editingCommentId === comment.id}
           onGoToReply={onGoToReply}
+          allUsers={allUsers}
           {...rest}
         />
       ))}

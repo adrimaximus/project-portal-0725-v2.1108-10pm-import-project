@@ -12,7 +12,7 @@ import TaskReactions from '../projects/TaskReactions';
 import { useTaskMutations } from '@/hooks/useTaskMutations';
 import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
-import TaskAttachmentList from './TaskAttachmentList';
+import TaskAttachmentList from '../projects/TaskAttachmentList';
 import { cn, getErrorMessage, formatBytes } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { Separator } from "@/components/ui/separator";
@@ -22,7 +22,7 @@ import { User as AuthUser } from '@supabase/supabase-js';
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { Textarea } from "../ui/textarea";
-import TaskSuggestionDialog from './TaskSuggestionDialog';
+import TaskSuggestionDialog from '../projects/TaskSuggestionDialog';
 
 interface ProjectTasksProps {
   project: Project;

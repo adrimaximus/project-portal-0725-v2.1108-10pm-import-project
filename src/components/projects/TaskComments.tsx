@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { useCommentManager } from '@/hooks/useCommentManager';
 import { Comment as CommentType, User, Task } from '@/types';
 import CommentInput, { CommentInputHandle } from '../CommentInput';
-import TaskCommentsList from './TaskCommentsList';
+import TaskCommentsList from '../project-detail/TaskCommentsList';
 import { useProfiles } from '@/hooks/useProfiles';
 import { toast } from 'sonner';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -31,7 +31,7 @@ const TaskComments: React.FC<TaskCommentsProps> = ({ taskId, projectId }) => {
   const editFileInputRef = useRef<HTMLInputElement>(null);
   const [replyTo, setReplyTo] = useState<CommentType | null>(null);
   const { data: allUsers = [] } = useProfiles();
-  const commentInputRef = useRef<{ setText: (text: string, append?: boolean) => void, focus: () => void }>(null);
+  const commentInputRef = useRef<CommentInputHandle>(null);
   const { onOpen: onOpenTaskModal } = useTaskModal();
 
   const pollForTask = (commentId: string) => {
@@ -64,7 +64,7 @@ const TaskComments: React.FC<TaskCommentsProps> = ({ taskId, projectId }) => {
   };
 
   const handleAddComment = (text: string, isTicket: boolean, attachments: File[] | null, mentionedUserIds: string[]) => {
-    addComment.mutate({ text, isTicket, attachments, replyToId: replyTo?.id }, {
+    addComment.mutate({ text, isTicket, attachments, mentionedUserIds, replyToId: replyTo?.id }, {
       onSuccess: (result) => {
         if (result.isTicket) {
           toast.info("Ticket created. Finding associated task...");
@@ -107,8 +107,13 @@ const TaskComments: React.FC<TaskCommentsProps> = ({ taskId, projectId }) => {
       const author = comment.author as User;
       const authorName = [author.first_name, author.last_name].filter(Boolean).join(' ') || author.email;
       const mentionText = `@[${authorName}](${author.id}) `;
-      commentInputRef.current.setText(mentionText, true);
-      commentInputRef.current.focus();
+      commentInputRef.current.scrollIntoView();
+      setTimeout(() => {
+        if (commentInputRef.current) {
+          commentInputRef.current.setText(mentionText, true);
+          commentInputRef.current.focus();
+        }
+      }, 300);
     }
   };
 
@@ -131,6 +136,17 @@ const TaskComments: React.FC<TaskCommentsProps> = ({ taskId, projectId }) => {
     setNewAttachments(prev => prev.filter((_, i) => i !== index));
   };
 
+  const handleGoToReply = (messageId: string) => {
+    const element = document.getElementById(`message-${messageId}`);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      element.classList.add('bg-primary/10', 'rounded-md');
+      setTimeout(() => {
+        element.classList.remove('bg-primary/10', 'rounded-md');
+      }, 1500);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <TaskCommentsList
@@ -150,6 +166,7 @@ const TaskComments: React.FC<TaskCommentsProps> = ({ taskId, projectId }) => {
         editFileInputRef={editFileInputRef}
         onReply={handleReply}
         onCreateTicketFromComment={handleCreateTicketFromComment}
+        onGoToReply={handleGoToReply}
         allUsers={allUsers}
       />
       <div className="pt-4 border-t">

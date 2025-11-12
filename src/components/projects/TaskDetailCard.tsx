@@ -3,7 +3,7 @@ import { Task, TaskAttachment, Reaction, User, Comment as CommentType, TaskStatu
 import { DrawerContent } from '@/components/ui/drawer';
 import { Button } from '../ui/button';
 import { format, isPast, formatDistanceToNow } from 'date-fns';
-import { cn, isOverdue, getPriorityStyles, getTaskStatusStyles, getDueDateClassName, getAvatarUrl, generatePastelColor, getInitials, formatActivityDescription } from '@/lib/utils';
+import { cn, isOverdue, getPriorityStyles, getTaskStatusStyles, getDueDateClassName, getAvatarUrl, generatePastelColor, getInitials } from '@/lib/utils';
 import {
   Edit,
   Trash2,
@@ -32,7 +32,7 @@ import {
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu';
 import { Link } from 'react-router-dom';
-import TaskCommentsList from './TaskCommentsList';
+import TaskCommentsList from '../project-detail/TaskCommentsList';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 import { toast } from 'sonner';
@@ -139,7 +139,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
   };
 
   const handleAddComment = (text: string, isTicket: boolean, attachments: File[] | null, mentionedUserIds: string[]) => {
-    addComment.mutate({ text, isTicket, attachments, replyToId: replyTo?.id }, {
+    addComment.mutate({ text, isTicket, attachments, mentionedUserIds, replyToId: replyTo?.id }, {
       onSuccess: (result) => {
         setReplyTo(null);
       }
