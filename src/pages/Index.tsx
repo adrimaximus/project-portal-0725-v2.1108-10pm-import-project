@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import MonthlyProgressChart from "@/components/dashboard/MonthlyProgressChart";
 import UnsplashImage from "@/components/dashboard/UnsplashImage";
 import ActivityHubWidget from "@/components/dashboard/ActivityHubWidget";
+import GoalsSummaryWidget from "@/components/dashboard/GoalsSummaryWidget";
 
 const Index = () => {
   const [date, setDate] = useState<DateRange | undefined>({
@@ -100,7 +101,10 @@ const Index = () => {
               <MonthlyProgressChart projects={filteredProjects} />
               <UnsplashImage />
             </div>
-            <ActivityHubWidget projects={filteredProjects} />
+            <div className="grid gap-6 md:grid-cols-2">
+              <ActivityHubWidget />
+              <GoalsSummaryWidget />
+            </div>
             <DashboardStatsGrid projects={filteredProjects} />
         </div>
       </div>
