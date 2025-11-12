@@ -2,12 +2,14 @@ import PortalLayout from "@/components/PortalLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { notificationIcons } from "@/data/notifications";
-import { cn, formatTaskText } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from 'date-fns';
 import { Link } from "react-router-dom";
 import { Bell, CheckCheck, Loader2, AlertTriangle } from "lucide-react";
 import { useNotifications } from "@/hooks/useNotifications";
 import { Skeleton } from "@/components/ui/skeleton";
+import InteractiveText from "@/components/InteractiveText";
+import { useProfiles } from "@/hooks/useProfiles";
 
 const NotificationSkeleton = () => (
   <div className="flex items-start gap-4 p-4">
@@ -33,6 +35,7 @@ const NotificationsPage = () => {
     hasNextPage,
     isFetchingNextPage,
   } = useNotifications();
+  const { data: allUsers = [] } = useProfiles();
 
   if (error) {
     return (
@@ -95,9 +98,9 @@ const NotificationsPage = () => {
                       </div>
                       <div className="flex-1">
                         <Link to={notification.link || "#"} className="hover:underline">
-                          <p className="font-semibold">{formatTaskText(notification.title)}</p>
+                          <p className="font-semibold"><InteractiveText text={notification.title} members={allUsers} /></p>
                         </Link>
-                        <p className="text-sm text-muted-foreground">{formatTaskText(notification.description)}</p>
+                        <p className="text-sm text-muted-foreground"><InteractiveText text={notification.description} members={allUsers} /></p>
                         <p className="text-xs text-muted-foreground mt-1">
                           {notification.timestamp ? formatDistanceToNow(new Date(notification.timestamp), { addSuffix: true }) : ''}
                         </p>
