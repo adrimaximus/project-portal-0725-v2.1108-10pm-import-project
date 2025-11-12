@@ -587,34 +587,12 @@ const executeAction = async (actionData: any, context: any) => {
     }
 }
 
-async function sendEmail(to: string, subject: string, html: string, text?: string) {
-  const emailFrom = Deno.env.get('EMAIL_FROM') || "Betterworks <no-reply@mail.betterworks.id>";
-  const emailitApiKey = Deno.env.get('EMAILIT_API_KEY');
-
-  if (!emailitApiKey) {
-    console.error("Emailit API key is not configured on the server.");
-    return; // Don't throw, just log the error, as this is a secondary action.
-  }
-
-  const payload = { from: emailFrom, to, subject, html, text };
-
-  try {
-    const response = await fetch("https://api.emailit.com/v1/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${emailitApiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
-    });
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      console.error(`Failed to send email via Emailit: HTTP ${response.status}`, errorData);
-    } else {
-      console.log(`Email sent successfully to ${to}`);
-    }
-  } catch (e) {
-    console.error(`Error sending email: ${e.message}`);
+async function sendEmail(userSupabase: any, to: string, subject: string, html: string) {
+  const { error } = await userSupabase.functions.invoke('send-email', {
+    body: { to, subject, html },
+  });
+  if (error) {
+    console.error(`Failed to send email notification to ${to}:`, error);
   }
 }
 

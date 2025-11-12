@@ -38,7 +38,6 @@ serve(async (req) => {
 
     let { access_token, refresh_token, expiry_date } = tokenData;
 
-    // Check if token is expired and refresh if necessary
     if (new Date(expiry_date) < new Date()) {
       console.log('Access token expired, refreshing...');
       const clientId = Deno.env.get("VITE_GOOGLE_CLIENT_ID");
@@ -74,7 +73,23 @@ serve(async (req) => {
         .eq('user_id', user.id);
     }
 
-    // Fetch calendar list to get calendar IDs
+    const { data: profileData, error: profileError } = await supabaseAdmin
+      .from('profiles')
+      .select('google_calendar_settings')
+      .eq('id', user.id)
+      .single();
+
+    if (profileError) throw new Error(`Could not fetch user profile: ${profileError.message}`);
+
+    const selectedCalendarIds = profileData?.google_calendar_settings?.selected_calendars;
+
+    if (!selectedCalendarIds || selectedCalendarIds.length === 0) {
+      return new Response(JSON.stringify([]), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200,
+      });
+    }
+
     const calendarsResponse = await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList', {
       headers: { Authorization: `Bearer ${access_token}` },
     });
@@ -82,12 +97,12 @@ serve(async (req) => {
         throw new Error(`Failed to fetch calendar list: ${await calendarsResponse.text()}`);
     }
     const calendarsData = await calendarsResponse.json();
-    const calendarIds = calendarsData.items.map((cal: any) => cal.id);
+    const calendarInfoMap = new Map(calendarsData.items.map((cal: any) => [cal.id, cal]));
 
     const timeMin = new Date().toISOString();
     const timeMax = new Date(new Date().getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
-    const eventPromises = calendarIds.map((calendarId: string) =>
+    const eventPromises = selectedCalendarIds.map((calendarId: string) =>
       fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?timeMin=${timeMin}&timeMax=${timeMax}&singleEvents=true&orderBy=startTime`, {
         headers: { Authorization: `Bearer ${access_token}` },
       }).then(res => res.json())
@@ -107,7 +122,8 @@ serve(async (req) => {
 
     let allEvents = [];
     for (let i = 0; i < eventResults.length; i++) {
-        const calendar = calendarsData.items[i];
+        const calendarId = selectedCalendarIds[i];
+        const calendar = calendarInfoMap.get(calendarId);
         if (eventResults[i].items) {
             const eventsWithCalendarInfo = eventResults[i].items
               .filter((event: any) => !existingEventIds.has(event.id))
