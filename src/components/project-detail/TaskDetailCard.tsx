@@ -139,7 +139,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
   };
 
   const handleAddComment = (text: string, isTicket: boolean, attachments: File[] | null, mentionedUserIds: string[]) => {
-    addComment.mutate({ text, isTicket, attachments, replyToId: replyTo?.id }, {
+    addComment.mutate({ text, isTicket, attachments, mentionedUserIds, replyToId: replyTo?.id }, {
       onSuccess: (result) => {
         setReplyTo(null);
       }

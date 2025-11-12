@@ -152,6 +152,10 @@ const MyTasksWidget = () => {
     };
   }, [myTasks]);
 
+  const handleToggleTaskCompletion = (task: Task, completed: boolean) => {
+    toggleTaskCompletion({ task, completed });
+  };
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-48">
@@ -228,7 +232,7 @@ const MyTasksWidget = () => {
             <div>
               <h4 className="text-xs font-semibold text-muted-foreground mb-2 px-2">Overdue</h4>
               <div className="space-y-1">
-                {overdueTasks.map(task => <TaskItem key={task.id} task={task} onToggle={toggleTaskCompletion} isToggling={isToggling} allUsers={allUsers} />)}
+                {overdueTasks.map(task => <TaskItem key={task.id} task={task} onToggle={handleToggleTaskCompletion} isToggling={isToggling} allUsers={allUsers} />)}
               </div>
             </div>
           )}
@@ -236,7 +240,7 @@ const MyTasksWidget = () => {
             <div>
               <h4 className="text-xs font-semibold text-muted-foreground mb-2 px-2">Upcoming</h4>
               <div className="space-y-1">
-                {upcomingTasks.map(task => <TaskItem key={task.id} task={task} onToggle={toggleTaskCompletion} isToggling={isToggling} allUsers={allUsers} />)}
+                {upcomingTasks.map(task => <TaskItem key={task.id} task={task} onToggle={handleToggleTaskCompletion} isToggling={isToggling} allUsers={allUsers} />)}
               </div>
             </div>
           )}
@@ -244,7 +248,7 @@ const MyTasksWidget = () => {
             <div>
               <h4 className="text-xs font-semibold text-muted-foreground mb-2 px-2">No Due Date</h4>
               <div className="space-y-1">
-                {noDueDateTasks.map(task => <TaskItem key={task.id} task={task} onToggle={toggleTaskCompletion} isToggling={isToggling} allUsers={allUsers} />)}
+                {noDueDateTasks.map(task => <TaskItem key={task.id} task={task} onToggle={handleToggleTaskCompletion} isToggling={isToggling} allUsers={allUsers} />)}
               </div>
             </div>
           )}
