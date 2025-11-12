@@ -3,6 +3,7 @@ import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Person, Tag } from '@/types';
 import debounce from 'lodash.debounce';
+import { useSortConfig } from './useSortConfig';
 
 const PAGE_SIZE = 30;
 
@@ -35,7 +36,8 @@ const fetchTags = async (): Promise<Tag[]> => {
 export const usePeopleData = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
-  const [sortConfig, setSortConfig] = useState<{ key: keyof Person | null; direction: 'ascending' | 'descending' }>({ key: 'updated_at', direction: 'descending' });
+  
+  const { sortConfig, requestSort } = useSortConfig<keyof Person>({ key: 'updated_at', direction: 'descending' }, ['ascending', 'descending']);
 
   const debouncedSetSearch = useCallback(
     debounce((term) => {
@@ -68,16 +70,6 @@ export const usePeopleData = () => {
   });
 
   const people = useMemo(() => data ? data.pages.flatMap(page => page.people) : [], [data]);
-
-  const requestSort = useCallback((key: keyof Person) => {
-    setSortConfig(prevConfig => {
-      let direction: 'ascending' | 'descending' = 'ascending';
-      if (prevConfig.key === key && prevConfig.direction === 'ascending') {
-        direction = 'descending';
-      }
-      return { key, direction };
-    });
-  }, []);
 
   const sortedPeople = useMemo(() => {
     let sortableItems = [...people];

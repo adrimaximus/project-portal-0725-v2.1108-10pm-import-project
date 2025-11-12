@@ -20,13 +20,14 @@ import {
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useSortConfig } from "@/hooks/useSortConfig";
 
 const Billing = () => {
   const { data: projectsData, isLoading } = useProjects({ fetchAll: true });
   const projects = useMemo(() => projectsData?.pages.flatMap(page => page.projects) ?? [], [projectsData]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
-  const [sortConfig, setSortConfig] = useState<{ key: keyof Invoice | null; direction: 'asc' | 'desc' }>({ key: 'dueDate', direction: 'desc' });
+  const { sortConfig, requestSort: handleSort } = useSortConfig<keyof Invoice>({ key: 'dueDate', direction: 'desc' });
   const [searchTerm, setSearchTerm] = useState("");
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [viewMode, setViewMode] = useState<'table' | 'kanban'>('table');
@@ -136,13 +137,6 @@ const Billing = () => {
       return matchesSearch && matchesDate;
     });
   }, [invoices, searchTerm, dateRange]);
-
-  const handleSort = (column: keyof Invoice) => {
-    setSortConfig(prevConfig => ({
-      key: column,
-      direction: prevConfig.key === column && prevConfig.direction === 'asc' ? 'desc' : 'asc'
-    }));
-  };
 
   const { activeInvoices, archivedInvoices } = useMemo(() => {
     const active: Invoice[] = [];
