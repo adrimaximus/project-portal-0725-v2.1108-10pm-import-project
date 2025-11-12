@@ -11,6 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Paperclip, X, Loader2, Plus, Wand2 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
+import { formatDistanceToNow } from 'date-fns';
 
 type Invoice = {
   id: string;
@@ -223,31 +224,27 @@ export const EditInvoiceDialog = ({ isOpen, onClose, invoice, project }: EditInv
 
       if (newAttachments.length > 0) {
         toast.info(`Uploading ${newAttachments.length} attachment(s)...`);
-        const uploadPromises = newAttachments.map(file => {
+        const uploadPromises = newAttachments.map(async (file) => {
           const sanitizedFileName = file.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
           const filePath = `invoice-attachments/${project.id}/${Date.now()}-${sanitizedFileName}`;
-          return supabase.storage.from('project-files').upload(filePath, file).then(result => {
-            if (result.error) throw result.error;
-            return { ...result, filePath, originalFile: file };
-          });
-        });
-
-        const uploadResults = await Promise.all(uploadPromises);
-
-        const newAttachmentRecords = uploadResults.map(result => {
-          const { data: urlData } = supabase.storage.from('project-files').getPublicUrl(result.filePath);
+          const { error: uploadError } = await supabase.storage.from('project-files').upload(filePath, file);
+          if (uploadError) throw new Error(`Failed to upload ${file.name}: ${uploadError.message}`);
+          
+          const { data: urlData } = supabase.storage.from('project-files').getPublicUrl(filePath);
+          
           return {
             project_id: project.id,
-            file_name: result.originalFile.name,
+            file_name: file.name,
             file_url: urlData.publicUrl,
-            storage_path: result.data.path,
-            file_type: result.originalFile.type,
-            file_size: result.originalFile.size,
+            storage_path: filePath,
+            file_type: file.type,
+            file_size: file.size,
           };
         });
 
+        const newAttachmentRecords = await Promise.all(uploadPromises);
         const { error: insertError } = await supabase.from('invoice_attachments').insert(newAttachmentRecords);
-        if (insertError) throw insertError;
+        if (insertError) throw new Error(`Failed to save attachment records: ${insertError.message}`);
       }
 
       toast.success('Invoice updated successfully!');
@@ -406,6 +403,18 @@ export const EditInvoiceDialog = ({ isOpen, onClose, invoice, project }: EditInv
               </SelectContent>
             </Select>
           </div>
+          {project.last_billing_reminder_sent_at && (
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label className="text-right">
+                Last Reminder
+              </Label>
+              <div className="col-span-3">
+                <p className="text-sm text-muted-foreground pt-2">
+                  {formatDistanceToNow(new Date(project.last_billing_reminder_sent_at), { addSuffix: true })}
+                </p>
+              </div>
+            </div>
+          )}
           <div className="grid grid-cols-4 items-start gap-4 pt-2">
             <Label htmlFor="attachment" className="text-right pt-2">
               Attachments

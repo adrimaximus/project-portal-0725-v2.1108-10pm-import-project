@@ -290,6 +290,7 @@ export interface Project {
   channel?: string | null;
   invoice_attachments?: InvoiceAttachment[];
   payment_terms?: any[];
+  last_billing_reminder_sent_at?: string | null;
 }
 
 export type ProjectStatus = 'On Track' | 'At Risk' | 'Off Track' | 'On Hold' | 'Completed' | 'Archived' | 'Cancelled' | 'Bid Lost' | 'Billing Process' | 'In Progress' | 'Pending' | 'Requested' | 'Planning' | 'Reschedule';
@@ -522,4 +523,5 @@ export interface Invoice {
   assignedMembers: Member[];
   invoiceAttachments: InvoiceAttachment[];
   payment_terms: any[];
+  last_billing_reminder_sent_at?: string | null;
 }

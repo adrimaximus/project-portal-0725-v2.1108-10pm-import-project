@@ -106,6 +106,7 @@ const Billing = () => {
         assignedMembers: (project.assignedTo as Member[]) || [],
         invoiceAttachments: project.invoice_attachments || [],
         payment_terms: project.payment_terms || [],
+        last_billing_reminder_sent_at: project.last_billing_reminder_sent_at,
       };
     })
     .filter((invoice): invoice is Invoice => invoice !== null), [projects]);
