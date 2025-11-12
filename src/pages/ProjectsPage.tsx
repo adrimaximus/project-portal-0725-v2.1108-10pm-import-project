@@ -122,7 +122,15 @@ const ProjectsPage = () => {
   
   }, [isTaskView, projectsData, advancedFilters.excludedStatus, isLoadingProjects]);
 
-  const finalTaskSortConfig = view === 'tasks-kanban' ? { key: 'kanban_order', direction: 'asc' as const } : taskSortConfig;
+  const finalTaskSortConfig = useMemo(() => {
+    if (view === 'tasks-kanban') {
+      return { key: 'kanban_order', direction: 'asc' as const };
+    }
+    return {
+      key: taskSortConfig.key || 'updated_at',
+      direction: taskSortConfig.direction,
+    };
+  }, [view, taskSortConfig]);
 
   const { data: tasksData = [], isLoading: isLoadingTasks, refetch: refetchTasks } = useTasks({
     projectIds: projectIdsForTaskView,

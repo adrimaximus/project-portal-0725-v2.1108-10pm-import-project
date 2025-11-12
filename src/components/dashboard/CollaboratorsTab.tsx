@@ -19,16 +19,18 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/
 
 const CollaboratorsTab = () => {
   const { data: collaborators, isLoading } = useCollaboratorStats();
-  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'ascending' | 'descending' }>({ key: 'project_count', direction: 'descending' });
+  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'project_count', direction: 'desc' });
   const { user: currentUser } = useAuth();
   const isDesktop = useMediaQuery("(min-width: 768px)");
 
   const handleSort = (key: string) => {
-    let direction: 'ascending' | 'descending' = 'descending';
-    if (sortConfig.key === key && sortConfig.direction === 'descending') {
-      direction = 'ascending';
-    }
-    setSortConfig({ key, direction });
+    setSortConfig(prev => {
+      let direction: 'asc' | 'desc' = 'asc';
+      if (prev.key === key && prev.direction === 'asc') {
+        direction = 'desc';
+      }
+      return { key, direction };
+    });
   };
 
   const collaboratorsWithMetrics = useMemo(() => {
