@@ -253,161 +253,166 @@ serve(async (req) => {
           continue;
         }
 
-        let userPrompt = '';
-        let subject = '', html = '', text = '';
         const context = notification.context_data;
         const recipientName = recipient.first_name || recipient.email.split('@')[0];
 
-        switch (notification.notification_type) {
-          // --- Email Cases ---
-          case 'discussion_mention_email': {
-            const { project_name: contextName, project_slug: contextSlug, mentioner_name: mentionerName, comment_text: commentText, task_id: taskId } = context;
-            const isChatMention = contextSlug === 'chat';
-            const url = isChatMention ? `${APP_URL}/chat` : (taskId ? `${APP_URL}/projects/${contextSlug}?tab=tasks&task=${taskId}` : `${APP_URL}/projects/${contextSlug}?tab=discussion`);
-            subject = `You were mentioned in: ${contextName}`;
-            const bodyHtml = `<p><strong>${mentionerName}</strong> mentioned you in a comment.</p><blockquote style="border-left:4px solid #0c8e9f;padding-left:1em;margin:1.2em 0;color:#3b4754;background:#f8fafc;border-radius:6px 0 0 6px;">${commentText.replace(/@\[([^\]]+)\]\(([^)]+)\)/g, '<strong>@$1</strong>')}</blockquote>`;
-            text = `Hi, ${mentionerName} mentioned you in a comment in ${contextName}. View it here: ${url}`;
-            html = createEmailTemplate({ title: `You were mentioned in:`, mainSubject: contextName, recipientName, bodyHtml, buttonText: "View Comment", buttonUrl: url });
-            break;
-          }
-          case 'task_assignment_email': {
-            const { assigner_name, task_title, project_name, project_slug, task_id } = context;
-            const url = `${APP_URL}/projects/${project_slug}?tab=tasks&task=${task_id}`;
-            subject = `New task assigned to you: ${task_title}`;
-            const bodyHtml = `<p><strong>${assigner_name}</strong> has assigned you a new task in the project <strong>${project_name}</strong>.</p>`;
-            text = `You have been assigned a new task: "${task_title}". View it here: ${url}`;
-            html = createEmailTemplate({ title: `New Task Assigned:`, mainSubject: task_title, recipientName, bodyHtml, buttonText: "View Task", buttonUrl: url });
-            break;
-          }
-          case 'project_status_updated_email': {
-            const { updater_name, project_name, new_status, project_slug } = context;
-            const url = `${APP_URL}/projects/${project_slug}`;
-            subject = `Project Status Updated: ${project_name} is now ${new_status}`;
-            const bodyHtml = `<p>The status for the project <strong>${project_name}</strong> has been updated to <strong>${new_status}</strong> by <strong>${updater_name}</strong>.</p>`;
-            text = `The status for project ${project_name} has been updated to ${new_status}. View project: ${url}`;
-            html = createEmailTemplate({ title: `Project Status Updated`, mainSubject: project_name, recipientName, bodyHtml, buttonText: "View Project", buttonUrl: url });
-            break;
-          }
-          case 'project_invite_email': {
-            const { inviter_name, project_name, project_slug } = context;
-            const url = `${APP_URL}/projects/${project_slug}`;
-            subject = `You've been invited to the project: ${project_name}`;
-            const bodyHtml = `<p><strong>${inviter_name}</strong> has invited you to collaborate on the project <strong>${project_name}</strong>.</p>`;
-            text = `You've been invited to collaborate on the project: ${project_name}. View it here: ${url}`;
-            html = createEmailTemplate({ title: `Invitation to Collaborate`, mainSubject: project_name, recipientName, bodyHtml, buttonText: "View Project", buttonUrl: url });
-            break;
-          }
-          case 'task_overdue_email': {
-            const { task_title, project_name, project_slug, task_id, days_overdue } = context;
-            const url = `${APP_URL}/projects/${project_slug}?tab=tasks&task=${task_id}`;
-            subject = `REMINDER: Task "${task_title}" is overdue`;
-            const bodyHtml = `<p>This is a reminder that the task in the project <strong>${project_name}</strong> is now <strong>${days_overdue} day(s)</strong> overdue.</p><p>Please take action as soon as possible.</p>`;
-            text = `REMINDER: The task "${task_title}" is overdue by ${days_overdue} day(s). View it here: ${url}`;
-            html = createEmailTemplate({ title: `Task Overdue:`, mainSubject: task_title, recipientName, bodyHtml, buttonText: "View Task", buttonUrl: url });
-            break;
-          }
-          case 'billing_reminder_email': {
-            const { project_name, project_slug, days_overdue } = context;
-            const url = `${APP_URL}/projects/${project_slug}`;
-            subject = `REMINDER: Payment for project "${project_name}" is overdue`;
-            const bodyHtml = `<p>This is a reminder that the payment for the project <strong>${project_name}</strong> is now <strong>${days_overdue} day(s)</strong> overdue.</p><p>Please process the payment as soon as possible.</p>`;
-            text = `REMINDER: Payment for project "${project_name}" is overdue by ${days_overdue} day(s). View project: ${url}`;
-            html = createEmailTemplate({ title: `Payment Overdue:`, mainSubject: project_name, recipientName, bodyHtml, buttonText: "View Project", buttonUrl: url });
-            break;
-          }
-          case 'goal_invite_email': {
-            const { inviter_name, goal_title, goal_slug } = context;
-            const url = `${APP_URL}/goals/${goal_slug}`;
-            subject = `You've been invited to the goal: ${goal_title}`;
-            const bodyHtml = `<p><strong>${inviter_name}</strong> has invited you to collaborate on the goal <strong>${goal_title}</strong>.</p>`;
-            text = `You've been invited to collaborate on the goal: ${goal_title}. View it here: ${url}`;
-            html = createEmailTemplate({ title: `Invitation to Collaborate`, mainSubject: goal_title, recipientName, bodyHtml, buttonText: "View Goal", buttonUrl: url });
-            break;
-          }
-          case 'kb_invite_email': {
-            const { inviter_name, folder_name, folder_slug } = context;
-            const url = `${APP_URL}/knowledge-base/folders/${folder_slug}`;
-            subject = `You've been invited to the folder: ${folder_name}`;
-            const bodyHtml = `<p><strong>${inviter_name}</strong> has invited you to collaborate on the knowledge base folder <strong>${folder_name}</strong>.</p>`;
-            text = `You've been invited to collaborate on the folder: ${folder_name}. View it here: ${url}`;
-            html = createEmailTemplate({ title: `Invitation to Collaborate`, mainSubject: folder_name, recipientName, bodyHtml, buttonText: "View Folder", buttonUrl: url });
-            break;
-          }
-          case 'goal_progress_update_email': {
-            const { updater_name, goal_title, goal_slug, value_logged } = context;
-            const url = `${APP_URL}/goals/${goal_slug}`;
-            subject = `Progress update on goal: ${goal_title}`;
-            const bodyHtml = `<p><strong>${updater_name}</strong> logged new progress on your shared goal <strong>${goal_title}</strong>.</p><p><strong>Value Logged:</strong> ${value_logged}</p>`;
-            text = `${updater_name} logged new progress on your shared goal "${goal_title}". Value: ${value_logged}. View goal: ${url}`;
-            html = createEmailTemplate({ title: `Progress on Goal:`, mainSubject: goal_title, recipientName, bodyHtml, buttonText: "View Goal", buttonUrl: url });
-            break;
-          }
-          // --- WhatsApp Cases ---
-          case 'discussion_mention': {
-            const { project_name: contextName, project_slug: contextSlug, mentioner_name: mentionerName, task_id: taskId } = context;
-            const isChatMention = contextSlug === 'chat';
-            const url = isChatMention ? `${APP_URL}/chat` : (taskId ? `${APP_URL}/projects/${contextSlug}?tab=tasks&task=${taskId}` : `${APP_URL}/projects/${contextSlug}?tab=discussion`);
-            const contextDescription = isChatMention ? `di chat "${contextName}"` : `dalam proyek "${contextName}"`;
-            userPrompt = `Buat notifikasi mention. Penerima: ${recipientName}. Pengirim: ${mentionerName}. Konteks: ${contextDescription}. URL: ${url}`;
-            break;
-          }
-          case 'task_assignment': {
-            const { assigner_name, task_title, project_name, project_slug, task_id } = context;
-            const url = `${APP_URL}/projects/${project_slug}?tab=tasks&task=${task_id}`;
-            userPrompt = `Buat notifikasi penugasan tugas. Penerima: ${recipientName}. Pemberi tugas: ${assigner_name}. Judul tugas: ${task_title}. Proyek: ${project_name}. URL: ${url}`;
-            break;
-          }
-          case 'project_invite': {
-            const { inviter_name, project_name, project_slug } = context;
-            const url = `${APP_URL}/projects/${project_slug}`;
-            userPrompt = `Buat notifikasi undangan proyek. Penerima: ${recipientName}. Pengundang: ${inviter_name}. Proyek: ${project_name}. URL: ${url}`;
-            break;
-          }
-          case 'kb_invite': {
-            const { inviter_name, folder_name, folder_slug } = context;
-            const url = `${APP_URL}/knowledge-base/folders/${folder_slug}`;
-            userPrompt = `Buat notifikasi undangan folder knowledge base. Penerima: ${recipientName}. Pengundang: ${inviter_name}. Folder: ${folder_name}. URL: ${url}`;
-            break;
-          }
-          case 'goal_invite': {
-            const { inviter_name, goal_title, goal_slug } = context;
-            const url = `${APP_URL}/goals/${goal_slug}`;
-            userPrompt = `Buat notifikasi undangan goal. Penerima: ${recipientName}. Pengundang: ${inviter_name}. Goal: ${goal_title}. URL: ${url}`;
-            break;
-          }
-          case 'goal_progress_update': {
-            const { updater_name, goal_title, goal_slug, value_logged } = context;
-            const url = `${APP_URL}/goals/${goal_slug}`;
-            userPrompt = `Buat notifikasi progres goal. Penerima: ${recipientName}. Pengupdate: ${updater_name}. Goal: ${goal_title}. Nilai yang dicatat: ${value_logged}. URL: ${url}`;
-            break;
-          }
-          case 'payment_status_updated': {
-            const { updater_name, project_name, new_status, project_slug } = context;
-            const url = `${APP_URL}/projects/${project_slug}`;
-            userPrompt = `Buat notifikasi pembaruan status pembayaran. Penerima: ${recipientName}. Pengupdate: ${updater_name}. Proyek: ${project_name}. Status baru: ${new_status}. URL: ${url}`;
-            break;
-          }
-          case 'project_status_updated': {
-            const { updater_name, project_name, new_status, project_slug } = context;
-            const url = `${APP_URL}/projects/${project_slug}`;
-            userPrompt = `Buat notifikasi pembaruan status proyek. Penerima: ${recipientName}. Pengupdate: ${updater_name}. Proyek: ${project_name}. Status baru: ${new_status}. URL: ${url}`;
-            break;
-          }
-          case 'task_overdue': {
-            const { task_title, project_name, project_slug, task_id, days_overdue } = context;
-            const url = `${APP_URL}/projects/${project_slug}?tab=tasks&task=${task_id}`;
-            userPrompt = `Buat notifikasi tugas jatuh tempo. Penerima: ${recipientName}. Judul tugas: ${task_title}. Proyek: ${project_name}. Keterlambatan: ${days_overdue} hari. URL: ${url}`;
-            break;
-          }
-          case 'billing_reminder': {
-            const { project_name, days_overdue } = context;
-            let urgency = 'sedikit mendesak';
-            if (days_overdue > 30) {
-              urgency = 'sangat mendesak dan perlu segera ditindaklanjuti';
-            } else if (days_overdue > 7) {
-              urgency = 'cukup mendesak';
+        if (notification.notification_type.includes('email')) {
+            let subject = '', html = '', text = '';
+            switch (notification.notification_type) {
+                case 'discussion_mention_email': {
+                    const { project_name: contextName, project_slug: contextSlug, mentioner_name: mentionerName, comment_text: commentText, task_id: taskId } = context;
+                    const isChatMention = contextSlug === 'chat';
+                    const url = isChatMention ? `${APP_URL}/chat` : (taskId ? `${APP_URL}/projects/${contextSlug}?tab=tasks&task=${taskId}` : `${APP_URL}/projects/${contextSlug}?tab=discussion`);
+                    subject = `You were mentioned in: ${contextName}`;
+                    const bodyHtml = `<p><strong>${mentionerName}</strong> mentioned you in a comment.</p><blockquote style="border-left:4px solid #0c8e9f;padding-left:1em;margin:1.2em 0;color:#3b4754;background:#f8fafc;border-radius:6px 0 0 6px;">${commentText.replace(/@\[([^\]]+)\]\(([^)]+)\)/g, '<strong>@$1</strong>')}</blockquote>`;
+                    text = `Hi, ${mentionerName} mentioned you in a comment in ${contextName}. View it here: ${url}`;
+                    html = createEmailTemplate({ title: `You were mentioned in:`, mainSubject: contextName, recipientName, bodyHtml, buttonText: "View Comment", buttonUrl: url });
+                    break;
+                }
+                case 'task_assignment_email': {
+                    const { assigner_name, task_title, project_name, project_slug, task_id } = context;
+                    const url = `${APP_URL}/projects/${project_slug}?tab=tasks&task=${task_id}`;
+                    subject = `New task assigned to you: ${task_title}`;
+                    const bodyHtml = `<p><strong>${assigner_name}</strong> has assigned you a new task in the project <strong>${project_name}</strong>.</p>`;
+                    text = `You have been assigned a new task: "${task_title}". View it here: ${url}`;
+                    html = createEmailTemplate({ title: `New Task Assigned:`, mainSubject: task_title, recipientName, bodyHtml, buttonText: "View Task", buttonUrl: url });
+                    break;
+                }
+                case 'project_status_updated_email': {
+                    const { updater_name, project_name, new_status, project_slug } = context;
+                    const url = `${APP_URL}/projects/${project_slug}`;
+                    subject = `Project Status Updated: ${project_name} is now ${new_status}`;
+                    const bodyHtml = `<p>The status for the project <strong>${project_name}</strong> has been updated to <strong>${new_status}</strong> by <strong>${updater_name}</strong>.</p>`;
+                    text = `The status for project ${project_name} has been updated to ${new_status}. View project: ${url}`;
+                    html = createEmailTemplate({ title: `Project Status Updated`, mainSubject: project_name, recipientName, bodyHtml, buttonText: "View Project", buttonUrl: url });
+                    break;
+                }
+                case 'project_invite_email': {
+                    const { inviter_name, project_name, project_slug } = context;
+                    const url = `${APP_URL}/projects/${project_slug}`;
+                    subject = `You've been invited to the project: ${project_name}`;
+                    const bodyHtml = `<p><strong>${inviter_name}</strong> has invited you to collaborate on the project <strong>${project_name}</strong>.</p>`;
+                    text = `You've been invited to collaborate on the project: ${project_name}. View it here: ${url}`;
+                    html = createEmailTemplate({ title: `Invitation to Collaborate`, mainSubject: project_name, recipientName, bodyHtml, buttonText: "View Project", buttonUrl: url });
+                    break;
+                }
+                case 'task_overdue_email': {
+                    const { task_title, project_name, project_slug, task_id, days_overdue } = context;
+                    const url = `${APP_URL}/projects/${project_slug}?tab=tasks&task=${task_id}`;
+                    subject = `REMINDER: Task "${task_title}" is overdue`;
+                    const bodyHtml = `<p>This is a reminder that the task in the project <strong>${project_name}</strong> is now <strong>${days_overdue} day(s)</strong> overdue.</p><p>Please take action as soon as possible.</p>`;
+                    text = `REMINDER: The task "${task_title}" is overdue by ${days_overdue} day(s). View it here: ${url}`;
+                    html = createEmailTemplate({ title: `Task Overdue:`, mainSubject: task_title, recipientName, bodyHtml, buttonText: "View Task", buttonUrl: url });
+                    break;
+                }
+                case 'billing_reminder_email': {
+                    const { project_name, project_slug, days_overdue } = context;
+                    const url = `${APP_URL}/projects/${project_slug}`;
+                    subject = `REMINDER: Payment for project "${project_name}" is overdue`;
+                    const bodyHtml = `<p>This is a reminder that the payment for the project <strong>${project_name}</strong> is now <strong>${days_overdue} day(s)</strong> overdue.</p><p>Please process the payment as soon as possible.</p>`;
+                    text = `REMINDER: Payment for project "${project_name}" is overdue by ${days_overdue} day(s). View project: ${url}`;
+                    html = createEmailTemplate({ title: `Payment Overdue:`, mainSubject: project_name, recipientName, bodyHtml, buttonText: "View Project", buttonUrl: url });
+                    break;
+                }
+                case 'goal_invite_email': {
+                    const { inviter_name, goal_title, goal_slug } = context;
+                    const url = `${APP_URL}/goals/${goal_slug}`;
+                    subject = `You've been invited to the goal: ${goal_title}`;
+                    const bodyHtml = `<p><strong>${inviter_name}</strong> has invited you to collaborate on the goal <strong>${goal_title}</strong>.</p>`;
+                    text = `You've been invited to collaborate on the goal: ${goal_title}. View it here: ${url}`;
+                    html = createEmailTemplate({ title: `Invitation to Collaborate`, mainSubject: goal_title, recipientName, bodyHtml, buttonText: "View Goal", buttonUrl: url });
+                    break;
+                }
+                case 'kb_invite_email': {
+                    const { inviter_name, folder_name, folder_slug } = context;
+                    const url = `${APP_URL}/knowledge-base/folders/${folder_slug}`;
+                    subject = `You've been invited to the folder: ${folder_name}`;
+                    const bodyHtml = `<p><strong>${inviter_name}</strong> has invited you to collaborate on the knowledge base folder <strong>${folder_name}</strong>.</p>`;
+                    text = `You've been invited to collaborate on the folder: ${folder_name}. View it here: ${url}`;
+                    html = createEmailTemplate({ title: `Invitation to Collaborate`, mainSubject: folder_name, recipientName, bodyHtml, buttonText: "View Folder", buttonUrl: url });
+                    break;
+                }
+                case 'goal_progress_update_email': {
+                    const { updater_name, goal_title, goal_slug, value_logged } = context;
+                    const url = `${APP_URL}/goals/${goal_slug}`;
+                    subject = `Progress update on goal: ${goal_title}`;
+                    const bodyHtml = `<p><strong>${updater_name}</strong> logged new progress on your shared goal <strong>${goal_title}</strong>.</p><p><strong>Value Logged:</strong> ${value_logged}</p>`;
+                    text = `${updater_name} logged new progress on your shared goal "${goal_title}". Value: ${value_logged}. View goal: ${url}`;
+                    html = createEmailTemplate({ title: `Progress on Goal:`, mainSubject: goal_title, recipientName, bodyHtml, buttonText: "View Goal", buttonUrl: url });
+                    break;
+                }
+                default:
+                    throw new Error(`Unsupported email notification type: ${notification.notification_type}`);
             }
-            userPrompt = `**Konteks:**
+            await sendEmail(recipient.email, subject, html, text);
+        } else {
+            let userPrompt = '';
+            switch (notification.notification_type) {
+                case 'discussion_mention': {
+                    const { project_name: contextName, project_slug: contextSlug, mentioner_name: mentionerName, task_id: taskId } = context;
+                    const isChatMention = contextSlug === 'chat';
+                    const url = isChatMention ? `${APP_URL}/chat` : (taskId ? `${APP_URL}/projects/${contextSlug}?tab=tasks&task=${taskId}` : `${APP_URL}/projects/${contextSlug}?tab=discussion`);
+                    const contextDescription = isChatMention ? `di chat "${contextName}"` : `dalam proyek "${contextName}"`;
+                    userPrompt = `Buat notifikasi mention. Penerima: ${recipientName}. Pengirim: ${mentionerName}. Konteks: ${contextDescription}. URL: ${url}`;
+                    break;
+                }
+                case 'task_assignment': {
+                    const { assigner_name, task_title, project_name, project_slug, task_id } = context;
+                    const url = `${APP_URL}/projects/${project_slug}?tab=tasks&task=${task_id}`;
+                    userPrompt = `Buat notifikasi penugasan tugas. Penerima: ${recipientName}. Pemberi tugas: ${assigner_name}. Judul tugas: ${task_title}. Proyek: ${project_name}. URL: ${url}`;
+                    break;
+                }
+                case 'project_invite': {
+                    const { inviter_name, project_name, project_slug } = context;
+                    const url = `${APP_URL}/projects/${project_slug}`;
+                    userPrompt = `Buat notifikasi undangan proyek. Penerima: ${recipientName}. Pengundang: ${inviter_name}. Proyek: ${project_name}. URL: ${url}`;
+                    break;
+                }
+                case 'kb_invite': {
+                    const { inviter_name, folder_name, folder_slug } = context;
+                    const url = `${APP_URL}/knowledge-base/folders/${folder_slug}`;
+                    userPrompt = `Buat notifikasi undangan folder knowledge base. Penerima: ${recipientName}. Pengundang: ${inviter_name}. Folder: ${folder_name}. URL: ${url}`;
+                    break;
+                }
+                case 'goal_invite': {
+                    const { inviter_name, goal_title, goal_slug } = context;
+                    const url = `${APP_URL}/goals/${goal_slug}`;
+                    userPrompt = `Buat notifikasi undangan goal. Penerima: ${recipientName}. Pengundang: ${inviter_name}. Goal: ${goal_title}. URL: ${url}`;
+                    break;
+                }
+                case 'goal_progress_update': {
+                    const { updater_name, goal_title, goal_slug, value_logged } = context;
+                    const url = `${APP_URL}/goals/${goal_slug}`;
+                    userPrompt = `Buat notifikasi progres goal. Penerima: ${recipientName}. Pengupdate: ${updater_name}. Goal: ${goal_title}. Nilai yang dicatat: ${value_logged}. URL: ${url}`;
+                    break;
+                }
+                case 'payment_status_updated': {
+                    const { updater_name, project_name, new_status, project_slug } = context;
+                    const url = `${APP_URL}/projects/${project_slug}`;
+                    userPrompt = `Buat notifikasi pembaruan status pembayaran. Penerima: ${recipientName}. Pengupdate: ${updater_name}. Proyek: ${project_name}. Status baru: ${new_status}. URL: ${url}`;
+                    break;
+                }
+                case 'project_status_updated': {
+                    const { updater_name, project_name, new_status, project_slug } = context;
+                    const url = `${APP_URL}/projects/${project_slug}`;
+                    userPrompt = `Buat notifikasi pembaruan status proyek. Penerima: ${recipientName}. Pengupdate: ${updater_name}. Proyek: ${project_name}. Status baru: ${new_status}. URL: ${url}`;
+                    break;
+                }
+                case 'task_overdue': {
+                    const { task_title, project_name, project_slug, task_id, days_overdue } = context;
+                    const url = `${APP_URL}/projects/${project_slug}?tab=tasks&task=${task_id}`;
+                    userPrompt = `Buat notifikasi tugas jatuh tempo. Penerima: ${recipientName}. Judul tugas: ${task_title}. Proyek: ${project_name}. Keterlambatan: ${days_overdue} hari. URL: ${url}`;
+                    break;
+                }
+                case 'billing_reminder': {
+                    const { project_name, days_overdue } = context;
+                    let urgency = 'sedikit mendesak';
+                    if (days_overdue > 30) {
+                        urgency = 'sangat mendesak dan perlu segera ditindaklanjuti';
+                    } else if (days_overdue > 7) {
+                        urgency = 'cukup mendesak';
+                    }
+                    userPrompt = `**Konteks:**
 - **Jenis:** Pengingat Invoice Jatuh Tempo
 - **Penerima:** ${recipientName}
 - **Proyek:** ${project_name}
@@ -416,24 +421,16 @@ serve(async (req) => {
 - **URL:** ${APP_URL}/billing
 
 Buat pesan pengingat yang sopan dan profesional sesuai dengan tingkat urgensi yang diberikan.`;
-            break;
-          }
-          default: {
-            throw new Error(`Unsupported notification type: ${notification.notification_type}`);
-          }
-        }
-
-        if (notification.notification_type.includes('email')) {
-          if (!html) {
-            throw new Error(`bodyHtml is not defined for email type: ${notification.notification_type}`);
-          }
-          await sendEmail(recipient.email, subject, html, text);
-        } else if (userPrompt) {
-          const aiMessage = await generateAiMessage(userPrompt);
-          const finalMessage = aiMessage.trim();
-          if (finalMessage) {
-            await sendWhatsappMessage(recipient.phone, finalMessage);
-          }
+                    break;
+                }
+                default:
+                    throw new Error(`Unsupported WhatsApp notification type: ${notification.notification_type}`);
+            }
+            const aiMessage = await generateAiMessage(userPrompt);
+            const finalMessage = aiMessage.trim();
+            if (finalMessage) {
+                await sendWhatsappMessage(recipient.phone, finalMessage);
+            }
         }
 
         if (notification.notification_type === 'billing_reminder' || notification.notification_type === 'billing_reminder_email') {
