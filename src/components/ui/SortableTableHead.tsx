@@ -1,17 +1,16 @@
-import { Button } from "@/components/ui/button";
-import { TableHead } from "@/components/ui/table";
-import { ArrowUp, ArrowDown, ChevronsUpDown } from "lucide-react";
-import { cn } from "@/lib/utils";
+import React from 'react';
+import { TableHead } from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
+import { ArrowUp, ArrowDown, ChevronsUpDown } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
-interface SortableTableHeadProps {
+interface SortableTableHeadProps extends React.HTMLAttributes<HTMLTableCellElement> {
   columnKey: string;
   onSort: (key: string) => void;
   sortConfig: { key: string | null; direction: 'ascending' | 'descending' };
-  children: React.ReactNode;
-  className?: string;
 }
 
-export const SortableTableHead = ({ columnKey, onSort, sortConfig, children, className }: SortableTableHeadProps) => {
+export const SortableTableHead: React.FC<SortableTableHeadProps> = ({ children, className, columnKey, onSort, sortConfig }) => {
   const isActive = sortConfig.key === columnKey;
   const Icon = isActive ? (sortConfig.direction === 'ascending' ? ArrowUp : ArrowDown) : ChevronsUpDown;
 

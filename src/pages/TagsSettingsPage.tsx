@@ -4,11 +4,11 @@ import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbP
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Edit, MoreHorizontal, Trash2, Search, ArrowUp, ArrowDown } from "lucide-react";
+import { PlusCircle, Edit, MoreHorizontal, Trash2, Search } from "lucide-react";
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Table, TableBody, TableCell, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Tag, CustomProperty } from '@/types';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -18,6 +18,7 @@ import TagFormDialog from '@/components/settings/TagFormDialog';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import RenameGroupDialog from '@/components/settings/RenameGroupDialog';
+import { SortableTableHead } from '@/components/ui/SortableTableHead';
 
 type SortableTagColumns = 'name' | 'type' | 'color';
 type SortableGroupColumns = 'name' | 'count';
@@ -36,8 +37,8 @@ const TagsSettingsPage = () => {
   const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
   const [groupToRename, setGroupToRename] = useState<string | null>(null);
   const [groupToDelete, setGroupToDelete] = useState<string | null>(null);
-  const [tagSort, setTagSort] = useState<{ column: SortableTagColumns; direction: SortDirection }>({ column: 'name', direction: 'asc' });
-  const [groupSort, setGroupSort] = useState<{ column: SortableGroupColumns; direction: SortDirection }>({ column: 'name', direction: 'asc' });
+  const [tagSort, setTagSort] = useState<{ column: SortableTagColumns | null; direction: SortDirection }>({ column: 'name', direction: 'asc' });
+  const [groupSort, setGroupSort] = useState<{ column: SortableGroupColumns | null; direction: SortDirection }>({ column: 'name', direction: 'asc' });
 
   const isAdmin = user?.role === 'admin' || user?.role === 'master admin';
 
@@ -105,6 +106,7 @@ const TagsSettingsPage = () => {
         return nameMatch || groupMatch;
       })
       .sort((a, b) => {
+        if (!tagSort.column) return 0;
         const aVal = a[tagSort.column] || (tagSort.column === 'type' ? 'general' : '');
         const bVal = b[tagSort.column] || (tagSort.column === 'type' ? 'general' : '');
         if (aVal < bVal) return tagSort.direction === 'asc' ? -1 : 1;
@@ -114,6 +116,7 @@ const TagsSettingsPage = () => {
   }, [personalTags, globalTags, activeTagTab, searchQuery, tagSort]);
 
   const sortedTagGroups = [...tagGroups].sort((a, b) => {
+    if (!groupSort.column) return 0;
     const aVal = groupSort.column === 'name' ? a : groupCounts[a] || 0;
     const bVal = groupSort.column === 'name' ? b : groupCounts[b] || 0;
     if (aVal < bVal) return groupSort.direction === 'asc' ? -1 : 1;
@@ -202,24 +205,13 @@ const TagsSettingsPage = () => {
     setGroupToDelete(null);
   };
 
-  const SortableHeader = ({ column, label, onSort, sortConfig }: { column: any, label: string, onSort: (col: any) => void, sortConfig: { column: any, direction: SortDirection } }) => (
-    <TableHead onClick={() => onSort(column)} className="cursor-pointer p-2">
-      <div className="flex items-center">
-        {label}
-        {sortConfig.column === column && (
-          sortConfig.direction === 'asc' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />
-        )}
-      </div>
-    </TableHead>
-  );
-
   const renderTagsTable = (tagsToRender: Tag[], isEditable: boolean) => (
     <Table>
       <TableHeader>
         <TableRow>
-          <SortableHeader column="name" label="Name" onSort={handleTagSort} sortConfig={tagSort} />
-          <SortableHeader column="type" label="Group" onSort={handleTagSort} sortConfig={tagSort} />
-          <SortableHeader column="color" label="Color" onSort={handleTagSort} sortConfig={tagSort} />
+          <SortableTableHead columnKey="name" onSort={handleTagSort as any} sortConfig={tagSort as any}>Name</SortableTableHead>
+          <SortableTableHead columnKey="type" onSort={handleTagSort as any} sortConfig={tagSort as any}>Group</SortableTableHead>
+          <SortableTableHead columnKey="color" onSort={handleTagSort as any} sortConfig={tagSort as any}>Color</SortableTableHead>
           {properties.map(prop => (
             <TableHead key={prop.id}>{prop.label}</TableHead>
           ))}
@@ -342,8 +334,8 @@ const TagsSettingsPage = () => {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <SortableHeader column="name" label="Group Name" onSort={handleGroupSort} sortConfig={groupSort} />
-                      <SortableHeader column="count" label="Tags" onSort={handleGroupSort} sortConfig={groupSort} />
+                      <SortableTableHead columnKey="name" onSort={handleGroupSort as any} sortConfig={groupSort as any}>Group Name</SortableTableHead>
+                      <SortableTableHead columnKey="count" onSort={handleGroupSort as any} sortConfig={groupSort as any}>Tags</SortableTableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>

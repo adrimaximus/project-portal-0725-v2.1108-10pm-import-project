@@ -1,7 +1,7 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { MoreVertical, Edit, Download, ArrowUp, ArrowDown, Paperclip } from "lucide-react";
+import { MoreVertical, Edit, Download, Paperclip } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -10,12 +10,12 @@ import { format } from "date-fns";
 import { Invoice, PaymentStatus } from "@/types";
 import { useMemo } from "react";
 import PaymentStatusBadge from "./PaymentStatusBadge";
+import { SortableTableHead } from "../ui/SortableTableHead";
 
 interface BillingTableProps {
   invoices: Invoice[];
   onEdit: (invoice: Invoice) => void;
-  sortColumn: keyof Invoice;
-  sortDirection: 'asc' | 'desc';
+  sortConfig: { key: keyof Invoice | null; direction: 'asc' | 'desc' };
   handleSort: (column: keyof Invoice) => void;
   onStatusChange: (invoiceId: string, newStatus: PaymentStatus) => void;
 }
@@ -29,93 +29,51 @@ const getInitials = (name?: string | null) => {
   return names[0]?.charAt(0).toUpperCase() || '';
 };
 
-const BillingTable = ({ invoices, onEdit, sortColumn, sortDirection, handleSort, onStatusChange }: BillingTableProps) => {
-  const renderSortIcon = (column: keyof Invoice) => {
-    if (sortColumn !== column) return null;
-    return sortDirection === 'asc' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />;
-  };
-
+const BillingTable = ({ invoices, onEdit, sortConfig, handleSort, onStatusChange }: BillingTableProps) => {
   const sortedInvoices = useMemo(() => {
-    if (!sortColumn) return invoices;
+    if (!sortConfig.key) return invoices;
     return [...invoices].sort((a, b) => {
-      let aValue: any = a[sortColumn];
-      let bValue: any = b[sortColumn];
-      if (sortColumn === 'projectOwner') {
+      let aValue: any = a[sortConfig.key!];
+      let bValue: any = b[sortConfig.key!];
+      if (sortConfig.key === 'projectOwner') {
         aValue = a.projectOwner?.name;
         bValue = b.projectOwner?.name;
-      } else if (sortColumn === 'assignedMembers') {
+      } else if (sortConfig.key === 'assignedMembers') {
         aValue = a.assignedMembers?.find(m => m.role === 'admin')?.name;
         bValue = b.assignedMembers?.find(m => m.role === 'admin')?.name;
       }
-
       if (aValue instanceof Date && bValue instanceof Date) {
-        return sortDirection === 'asc' ? aValue.getTime() - bValue.getTime() : bValue.getTime() - aValue.getTime();
+        return sortConfig.direction === 'asc' ? aValue.getTime() - bValue.getTime() : bValue.getTime() - aValue.getTime();
       }
 
       if (aValue === null || aValue === undefined) return 1;
       if (bValue === null || bValue === undefined) return -1;
 
       if (typeof aValue === 'string' && typeof bValue === 'string') {
-        return sortDirection === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+        return sortConfig.direction === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
       }
       
       if (typeof aValue === 'number' && typeof bValue === 'number') {
-        return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
+        return sortConfig.direction === 'asc' ? aValue - bValue : bValue - aValue;
       }
 
       return 0;
     });
-  }, [invoices, sortColumn, sortDirection]);
+  }, [invoices, sortConfig]);
 
   return (
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>
-            <Button variant="ghost" onClick={() => handleSort('id')} className="px-2">
-              Invoice # {renderSortIcon('id')}
-            </Button>
-          </TableHead>
-          <TableHead>
-            <Button variant="ghost" onClick={() => handleSort('projectName')} className="px-2">
-              Project {renderSortIcon('projectName')}
-            </Button>
-          </TableHead>
-          <TableHead>
-            <Button variant="ghost" onClick={() => handleSort('clientName')} className="px-2">
-              Client {renderSortIcon('clientName')}
-            </Button>
-          </TableHead>
-          <TableHead>
-            <Button variant="ghost" onClick={() => handleSort('projectOwner')} className="px-2">
-              Owner {renderSortIcon('projectOwner')}
-            </Button>
-          </TableHead>
-          <TableHead>
-            <Button variant="ghost" onClick={() => handleSort('assignedMembers')} className="px-2">
-              Project Admin {renderSortIcon('assignedMembers')}
-            </Button>
-          </TableHead>
-          <TableHead>
-            <Button variant="ghost" onClick={() => handleSort('status')} className="px-2">
-              Status {renderSortIcon('status')}
-            </Button>
-          </TableHead>
-          <TableHead>
-            <Button variant="ghost" onClick={() => handleSort('poNumber')} className="px-2">
-              PO # {renderSortIcon('poNumber')}
-            </Button>
-          </TableHead>
-          <TableHead>
-            <Button variant="ghost" onClick={() => handleSort('amount')} className="px-2">
-              Amount {renderSortIcon('amount')}
-            </Button>
-          </TableHead>
-          <TableHead>
-            <Button variant="ghost" onClick={() => handleSort('dueDate')} className="px-2">
-              Due Date {renderSortIcon('dueDate')}
-            </Button>
-          </TableHead>
+          <SortableTableHead columnKey="id" onSort={handleSort} sortConfig={sortConfig}>Invoice #</SortableTableHead>
+          <SortableTableHead columnKey="projectName" onSort={handleSort} sortConfig={sortConfig}>Project</SortableTableHead>
+          <SortableTableHead columnKey="clientName" onSort={handleSort} sortConfig={sortConfig}>Client</SortableTableHead>
+          <SortableTableHead columnKey="projectOwner" onSort={handleSort} sortConfig={sortConfig}>Owner</SortableTableHead>
+          <SortableTableHead columnKey="assignedMembers" onSort={handleSort} sortConfig={sortConfig}>Project Admin</SortableTableHead>
+          <SortableTableHead columnKey="status" onSort={handleSort} sortConfig={sortConfig}>Status</SortableTableHead>
+          <SortableTableHead columnKey="poNumber" onSort={handleSort} sortConfig={sortConfig}>PO #</SortableTableHead>
+          <SortableTableHead columnKey="amount" onSort={handleSort} sortConfig={sortConfig}>Amount</SortableTableHead>
+          <SortableTableHead columnKey="dueDate" onSort={handleSort} sortConfig={sortConfig}>Due Date</SortableTableHead>
           <TableHead>Attachment</TableHead>
           <TableHead className="text-right">Actions</TableHead>
         </TableRow>

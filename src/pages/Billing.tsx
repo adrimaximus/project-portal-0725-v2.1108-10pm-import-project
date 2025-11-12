@@ -26,8 +26,7 @@ const Billing = () => {
   const projects = useMemo(() => projectsData?.pages.flatMap(page => page.projects) ?? [], [projectsData]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
-  const [sortColumn, setSortColumn] = useState<keyof Invoice>('dueDate');
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [sortConfig, setSortConfig] = useState<{ key: keyof Invoice | null; direction: 'asc' | 'desc' }>({ key: 'dueDate', direction: 'desc' });
   const [searchTerm, setSearchTerm] = useState("");
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [viewMode, setViewMode] = useState<'table' | 'kanban'>('table');
@@ -139,41 +138,18 @@ const Billing = () => {
   }, [invoices, searchTerm, dateRange]);
 
   const handleSort = (column: keyof Invoice) => {
-    if (sortColumn === column) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortColumn(column);
-      setSortDirection('asc');
-    }
+    setSortConfig(prevConfig => ({
+      key: column,
+      direction: prevConfig.key === column && prevConfig.direction === 'asc' ? 'desc' : 'asc'
+    }));
   };
-
-  const sortedInvoices = useMemo(() => {
-    if (!sortColumn) return filteredInvoices;
-    return [...filteredInvoices].sort((a, b) => {
-      let aValue: any = a[sortColumn];
-      let bValue: any = b[sortColumn];
-      if (sortColumn === 'projectOwner') {
-        aValue = a.projectOwner?.name;
-        bValue = b.projectOwner?.name;
-      } else if (sortColumn === 'assignedMembers') {
-        aValue = a.assignedMembers?.find(m => m.role === 'admin')?.name;
-        bValue = b.assignedMembers?.find(m => m.role === 'admin')?.name;
-      }
-      if (aValue === null || aValue === undefined) return 1;
-      if (bValue === null || bValue === undefined) return -1;
-      if (typeof aValue === 'string' && typeof bValue === 'string') {
-        return sortDirection === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
-      }
-      return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
-    });
-  }, [filteredInvoices, sortColumn, sortDirection]);
 
   const { activeInvoices, archivedInvoices } = useMemo(() => {
     const active: Invoice[] = [];
     const archived: Invoice[] = [];
     const archivedStatuses: PaymentStatus[] = ['Paid', 'Cancelled', 'Bid Lost'];
 
-    sortedInvoices.forEach(invoice => {
+    filteredInvoices.forEach(invoice => {
       if (archivedStatuses.includes(invoice.status)) {
         archived.push(invoice);
       } else {
@@ -182,7 +158,7 @@ const Billing = () => {
     });
 
     return { activeInvoices: active, archivedInvoices: archived };
-  }, [sortedInvoices]);
+  }, [filteredInvoices]);
 
   const handleEdit = (invoice: Invoice) => {
     setSelectedInvoice(invoice);
@@ -229,8 +205,7 @@ const Billing = () => {
               <BillingTable
                 invoices={activeInvoices}
                 onEdit={handleEdit}
-                sortColumn={sortColumn}
-                sortDirection={sortDirection}
+                sortConfig={sortConfig}
                 handleSort={handleSort}
                 onStatusChange={handleStatusChange}
               />
@@ -252,8 +227,7 @@ const Billing = () => {
                     <BillingTable
                       invoices={archivedInvoices}
                       onEdit={handleEdit}
-                      sortColumn={sortColumn}
-                      sortDirection={sortDirection}
+                      sortConfig={sortConfig}
                       handleSort={handleSort}
                       onStatusChange={handleStatusChange}
                     />
