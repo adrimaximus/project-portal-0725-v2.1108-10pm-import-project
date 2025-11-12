@@ -1,12 +1,12 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { MoreVertical, Edit, Download, Paperclip } from "lucide-react";
+import { MoreVertical, Edit, Download, Paperclip, BellRing } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { format } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
 import { Invoice, PaymentStatus } from "@/types";
 import { useMemo } from "react";
 import PaymentStatusBadge from "./PaymentStatusBadge";
@@ -72,6 +72,7 @@ const BillingTable = ({ invoices, onEdit, sortConfig, handleSort, onStatusChange
           <SortableTableHead columnKey="poNumber" onSort={handleSort} sortConfig={sortConfig}>PO #</SortableTableHead>
           <SortableTableHead columnKey="amount" onSort={handleSort} sortConfig={sortConfig}>Amount</SortableTableHead>
           <SortableTableHead columnKey="dueDate" onSort={handleSort} sortConfig={sortConfig}>Due Date</SortableTableHead>
+          <SortableTableHead columnKey="last_billing_reminder_sent_at" onSort={handleSort} sortConfig={sortConfig}>Last Reminder</SortableTableHead>
           <TableHead>Attachment</TableHead>
           <TableHead className="text-right">Actions</TableHead>
         </TableRow>
@@ -79,7 +80,7 @@ const BillingTable = ({ invoices, onEdit, sortConfig, handleSort, onStatusChange
       <TableBody>
         {sortedInvoices.length === 0 ? (
           <TableRow>
-            <TableCell colSpan={11} className="h-24 text-center">
+            <TableCell colSpan={12} className="h-24 text-center">
               No invoices found.
             </TableCell>
           </TableRow>
@@ -152,6 +153,24 @@ const BillingTable = ({ invoices, onEdit, sortConfig, handleSort, onStatusChange
               <TableCell>{'Rp ' + invoice.amount.toLocaleString('id-ID')}</TableCell>
               <TableCell className={cn(invoice.status === 'Overdue' && 'text-destructive font-semibold')}>
                 {format(new Date(invoice.dueDate), 'MMM dd, yyyy')}
+              </TableCell>
+              <TableCell>
+                {invoice.last_billing_reminder_sent_at ? (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <span className="text-xs text-muted-foreground">
+                          {formatDistanceToNow(new Date(invoice.last_billing_reminder_sent_at), { addSuffix: true })}
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{format(new Date(invoice.last_billing_reminder_sent_at), 'PPP p')}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                ) : (
+                  <span className="text-xs text-muted-foreground">-</span>
+                )}
               </TableCell>
               <TableCell>
                 {invoice.invoiceAttachments && invoice.invoiceAttachments.length > 0 ? (

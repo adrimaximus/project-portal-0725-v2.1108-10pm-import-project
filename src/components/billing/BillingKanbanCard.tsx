@@ -1,13 +1,14 @@
 import { Invoice } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { MoreVertical, Edit } from 'lucide-react';
+import { MoreVertical, Edit, BellRing } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { format } from 'date-fns';
+import { format, formatDistanceToNow } from 'date-fns';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { cn } from '@/lib/utils';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface BillingKanbanCardProps {
     invoice: Invoice;
@@ -65,9 +66,23 @@ const BillingKanbanCard = ({ invoice, onEdit }: BillingKanbanCardProps) => {
                             <p className="text-xs text-muted-foreground">Amount</p>
                             <p className="font-semibold">{'Rp ' + invoice.amount.toLocaleString('id-ID')}</p>
                         </div>
-                        <div className="text-right text-sm">
+                        <div className="text-right text-sm flex items-center gap-2">
+                          {invoice.last_billing_reminder_sent_at && (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger>
+                                  <BellRing className="h-3.5 w-3.5 text-muted-foreground" />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Last reminder sent {formatDistanceToNow(new Date(invoice.last_billing_reminder_sent_at), { addSuffix: true })}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
+                          <div>
                             <p className="text-xs text-muted-foreground">Due</p>
                             <p className="font-semibold">{format(invoice.dueDate, 'MMM dd, yyyy')}</p>
+                          </div>
                         </div>
                     </div>
                 </CardContent>
