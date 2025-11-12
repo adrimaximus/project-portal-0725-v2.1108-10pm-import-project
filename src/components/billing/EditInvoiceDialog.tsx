@@ -9,7 +9,7 @@ import { CurrencyInput } from '../ui/currency-input';
 import { Input } from '../ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Paperclip, X, Loader2, Plus, Wand2 } from 'lucide-react';
+import { Paperclip, X, Loader2, Plus, Wand2, BellRing } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -69,6 +69,7 @@ export const EditInvoiceDialog = ({ isOpen, onClose, invoice, project }: EditInv
   const [attachmentsToRemove, setAttachmentsToRemove] = useState<string[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isSendingReminder, setIsSendingReminder] = useState(false);
 
   useEffect(() => {
     if (invoice && project) {
@@ -254,6 +255,24 @@ export const EditInvoiceDialog = ({ isOpen, onClose, invoice, project }: EditInv
       toast.error('An error occurred', { description: error.message });
     } finally {
       setIsProcessing(false);
+    }
+  };
+
+  const handleSendReminder = async () => {
+    if (!project) return;
+    setIsSendingReminder(true);
+    try {
+        const { error } = await supabase.rpc('manually_trigger_billing_reminder', {
+            p_project_id: project.id
+        });
+        if (error) throw error;
+        toast.success("Reminder has been queued for delivery.");
+        queryClient.invalidateQueries({ queryKey: ['projects'] });
+        onClose();
+    } catch (error: any) {
+        toast.error("Failed to send reminder.", { description: error.message });
+    } finally {
+        setIsSendingReminder(false);
     }
   };
 
@@ -448,11 +467,22 @@ export const EditInvoiceDialog = ({ isOpen, onClose, invoice, project }: EditInv
             </div>
           </div>
         </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={isProcessing}>Cancel</Button>
-          <Button onClick={handleSave} disabled={isProcessing}>
-            {isProcessing ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : 'Save Changes'}
+        <DialogFooter className="flex justify-between w-full">
+          <Button 
+            type="button" 
+            variant="secondary" 
+            onClick={handleSendReminder} 
+            disabled={isProcessing || isSendingReminder || status === 'Paid'}
+          >
+            {isSendingReminder ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <BellRing className="mr-2 h-4 w-4" />}
+            Send Reminder
           </Button>
+          <div className="flex gap-2">
+            <Button type="button" variant="outline" onClick={onClose} disabled={isProcessing}>Cancel</Button>
+            <Button onClick={handleSave} disabled={isProcessing}>
+              {isProcessing ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : 'Save Changes'}
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
