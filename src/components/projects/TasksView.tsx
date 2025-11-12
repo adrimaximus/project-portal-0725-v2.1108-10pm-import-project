@@ -42,7 +42,7 @@ interface TasksViewProps {
   unreadTaskIds: string[];
 }
 
-const TaskListItem = ({ task, onToggleTaskCompletion, onTaskClick, isUnread, allUsers }: { task: ProjectTask, onToggleTaskCompletion: (task: ProjectTask, completed: boolean) => void, onTaskClick: (task: ProjectTask) => void, isUnread: boolean, allUsers: User[] }) => {
+const TaskListItem = ({ task, onToggleTaskCompletion, onTaskClick, isUnread, allUsers, isToggling }: { task: ProjectTask, onToggleTaskCompletion: (task: ProjectTask, completed: boolean) => void, onTaskClick: (task: ProjectTask) => void, isUnread: boolean, allUsers: User[], isToggling: boolean }) => {
   const dueDate = task.due_date ? new Date(task.due_date) : null;
   let dueDateText = '';
   let dueDateColor = 'text-muted-foreground';
@@ -109,6 +109,11 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
     }
   };
 
+  const mappedSortConfig = {
+    key: sortConfig.key,
+    direction: sortConfig.direction === 'asc' ? 'ascending' : 'descending',
+  } as { key: string; direction: 'ascending' | 'descending' };
+
   if (isLoading) {
     return (
       <div className="p-4 md:p-6">
@@ -142,6 +147,7 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
             onTaskClick={handleTaskClick}
             isUnread={unreadTaskIds.includes(task.id)}
             allUsers={allUsers}
+            isToggling={isToggling}
           />
         ))}
       </div>
@@ -154,11 +160,11 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
         <TableHeader>
           <TableRow>
             <TableHead className="w-px p-2"></TableHead>
-            <SortableTableHead columnKey="title" onSort={requestSort} sortConfig={sortConfig} className="w-[40%]">Task</SortableTableHead>
-            <SortableTableHead columnKey="project_name" onSort={requestSort} sortConfig={sortConfig}>Project</SortableTableHead>
-            <SortableTableHead columnKey="status" onSort={requestSort} sortConfig={sortConfig}>Status</SortableTableHead>
-            <SortableTableHead columnKey="priority" onSort={requestSort} sortConfig={sortConfig}>Priority</SortableTableHead>
-            <SortableTableHead columnKey="due_date" onSort={requestSort} sortConfig={sortConfig}>Due Date</SortableTableHead>
+            <SortableTableHead columnKey="title" onSort={requestSort} sortConfig={mappedSortConfig} className="w-[40%]">Task</SortableTableHead>
+            <SortableTableHead columnKey="project_name" onSort={requestSort} sortConfig={mappedSortConfig}>Project</SortableTableHead>
+            <SortableTableHead columnKey="status" onSort={requestSort} sortConfig={mappedSortConfig}>Status</SortableTableHead>
+            <SortableTableHead columnKey="priority" onSort={requestSort} sortConfig={mappedSortConfig}>Priority</SortableTableHead>
+            <SortableTableHead columnKey="due_date" onSort={requestSort} sortConfig={mappedSortConfig}>Due Date</SortableTableHead>
             <TableHead>Assignees</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
