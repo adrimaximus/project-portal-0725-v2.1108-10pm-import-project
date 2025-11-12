@@ -6,7 +6,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Check, ChevronsUpDown, X } from "lucide-react";
+import { Loader2, Check, ChevronsUpDown } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
