@@ -46,7 +46,7 @@ export const useProjectFilters = (projects: Project[]) => {
 
   const sortConfig = useMemo(() => ({
     key: searchParams.get('sortKey') as keyof Project | null,
-    direction: (searchParams.get('sortDir') as 'ascending' | 'descending') || 'ascending',
+    direction: (searchParams.get('sortDir') as 'asc' | 'desc') || 'asc',
   }), [searchParams]);
 
   // --- Setter functions that update URL and localStorage ---
@@ -96,7 +96,7 @@ export const useProjectFilters = (projects: Project[]) => {
     });
   };
   const requestSort = (key: keyof Project) => {
-    const newDirection = sortConfig.key === key && sortConfig.direction === 'ascending' ? 'descending' : 'ascending';
+    const newDirection = sortConfig.key === key && sortConfig.direction === 'asc' ? 'desc' : 'asc';
     updateSearchParams({
       sortKey: key,
       sortDir: newDirection,
@@ -153,7 +153,7 @@ export const useProjectFilters = (projects: Project[]) => {
         }
 
         if (compareResult !== 0) {
-          return sortConfig.direction === 'ascending' ? compareResult : -compareResult;
+          return sortConfig.direction === 'asc' ? compareResult : -compareResult;
         }
 
         return tieBreaker(a, b);

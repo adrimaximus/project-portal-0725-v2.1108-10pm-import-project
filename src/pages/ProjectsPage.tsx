@@ -105,7 +105,7 @@ const ProjectsPage = () => {
     }
   });
 
-  const { sortConfig: taskSortConfig, requestSort: requestTaskSort } = useSortConfig({ key: 'updated_at', direction: 'desc' as 'desc' | 'asc' });
+  const { sortConfig: taskSortConfig, requestSort: requestTaskSort } = useSortConfig({ key: 'updated_at', direction: 'desc' });
 
   const isTaskView = view === 'tasks' || view === 'tasks-kanban';
 
