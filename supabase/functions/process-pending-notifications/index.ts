@@ -20,52 +20,31 @@ const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
 // --- Helper Functions ---
 
-const createEmailTemplate = ({ title, bodyHtml, buttonText, buttonUrl }: { title: string, bodyHtml: string, buttonText: string, buttonUrl: string }) => {
+const createEmailTemplate = ({ title, mainSubject, recipientName, bodyHtml, buttonText, buttonUrl }: { title: string, mainSubject?: string, recipientName: string, bodyHtml: string, buttonText: string, buttonUrl: string }) => {
   const APP_NAME = "7i Portal";
   const LOGO_URL = "https://quuecudndfztjlxbrvyb.supabase.co/storage/v1/object/public/General/logo.png";
 
   return `
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-      <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'; margin: 0; padding: 0; background-color: #f2f4f6; }
-        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-        .card { background-color: #ffffff; border-radius: 8px; padding: 32px; }
-        .header { text-align: center; margin-bottom: 32px; }
-        .header img { height: 40px; }
-        .content h1 { font-size: 24px; color: #111827; margin-top: 0; }
-        .content p { color: #374151; line-height: 1.5; }
-        .button-container { margin: 32px 0; }
-        .button { display: inline-block; padding: 12px 24px; font-size: 16px; color: #ffffff; background-color: #2563eb; text-decoration: none; border-radius: 6px; }
-        .footer { text-align: center; color: #6b7280; font-size: 12px; margin-top: 32px; }
-        blockquote { border-left: 2px solid #e5e7eb; padding-left: 1em; margin: 1em 0; color: #6b7280; }
-      </style>
-    </head>
-    <body>
-      <div class="container">
-        <div class="card">
-          <div class="header">
-            <img src="${LOGO_URL}" alt="${APP_NAME} Logo">
-          </div>
-          <div class="content">
-            <h1>${title}</h1>
-            ${bodyHtml}
-            <div class="button-container">
-              <a href="${buttonUrl}" class="button">${buttonText}</a>
-            </div>
-            <p>If you're having trouble with the button, copy and paste this URL into your browser:</p>
-            <p><a href="${buttonUrl}" style="color: #2563eb; word-break: break-all;">${buttonUrl}</a></p>
-          </div>
-        </div>
-        <div class="footer">
-          <p>&copy; ${new Date().getFullYear()} ${APP_NAME}. All rights reserved.</p>
-        </div>
+  <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;line-height:1.6;color:#0b1a28;padding:24px;background:#f7f9fb;">
+    <div style="max-width:640px;margin:0 auto;background:#ffffff;border-radius:12px;box-shadow:0 2px 14px rgba(0,0,0,0.06);padding:32px;">
+      <div style="text-align:center;margin-bottom:32px;">
+        <img src="${LOGO_URL}" alt="${APP_NAME} Logo" style="height:40px;">
       </div>
-    </body>
-    </html>
+      <h2 style="margin:0 0 12px 0;font-size:22px;color:#5b6b7b;">${title}</h2>
+      ${mainSubject ? `<h1 style="margin:0 0 20px 0;font-size:26px;color:#0b1a28;">${mainSubject}</h1>` : ''}
+      <p style="margin:0 0 16px 0;">Hi ${recipientName},</p>
+      ${bodyHtml}
+      <div style="text-align:left;margin:32px 0;">
+        <a href="${buttonUrl}" style="display:inline-block;padding:14px 28px;font-size:16px;color:#ffffff;background-color:#0c8e9f;text-decoration:none;border-radius:10px;font-weight:600;">
+          ${buttonText}
+        </a>
+      </div>
+      <p style="margin-top:28px;color:#5b6b7b;">
+        Thanks,<br>
+        <strong>The ${APP_NAME} Team</strong>
+      </p>
+    </div>
+  </div>
   `;
 };
 
@@ -289,16 +268,17 @@ serve(async (req) => {
                 : (taskId ? `${APP_URL}/projects/${contextSlug}?tab=tasks&task=${taskId}` : `${APP_URL}/projects/${contextSlug}?tab=discussion`);
             
             subject = `You were mentioned in: ${contextName}`;
-            bodyHtml = `
-                <p>Hi ${recipientName},</p>
-                <p><strong>${mentionerName}</strong> mentioned you in a comment in <strong>${contextName}</strong>.</p>
-                <blockquote>
+            const bodyHtml = `
+                <p><strong>${mentionerName}</strong> mentioned you in a comment.</p>
+                <blockquote style="border-left:4px solid #0c8e9f;padding-left:1em;margin:1.2em 0;color:#3b4754;background:#f8fafc;border-radius:6px 0 0 6px;">
                     ${commentText.replace(/@\[([^\]]+)\]\(([^)]+)\)/g, '<strong>@$1</strong>')}
                 </blockquote>
             `;
             text = `Hi, ${mentionerName} mentioned you in a comment in ${contextName}. View it here: ${url}`;
             html = createEmailTemplate({
-                title: `You were mentioned in "${contextName}"`,
+                title: `You were mentioned in:`,
+                mainSubject: contextName,
+                recipientName,
                 bodyHtml,
                 buttonText: "View Comment",
                 buttonUrl: url,
@@ -309,10 +289,12 @@ serve(async (req) => {
             const { assigner_name, task_title, project_name, project_slug, task_id } = context;
             const url = `${APP_URL}/projects/${project_slug}?tab=tasks&task=${task_id}`;
             subject = `New task assigned to you: ${task_title}`;
-            bodyHtml = `<p>Hi ${recipientName},</p><p><strong>${assigner_name}</strong> has assigned you a new task, <em>"${task_title}"</em>, in the project <strong>${project_name}</strong>.</p>`;
+            const bodyHtml = `<p><strong>${assigner_name}</strong> has assigned you a new task in the project <strong>${project_name}</strong>.</p>`;
             text = `You have been assigned a new task: "${task_title}". View it here: ${url}`;
             html = createEmailTemplate({
-                title: `New Task Assigned in "${project_name}"`,
+                title: `New Task Assigned:`,
+                mainSubject: task_title,
+                recipientName,
                 bodyHtml,
                 buttonText: "View Task",
                 buttonUrl: url,
@@ -323,10 +305,12 @@ serve(async (req) => {
             const { updater_name, project_name, new_status, project_slug } = context;
             const url = `${APP_URL}/projects/${project_slug}`;
             subject = `Project Status Updated: ${project_name} is now ${new_status}`;
-            bodyHtml = `<p>Hi ${recipientName},</p><p>The status for the project <strong>${project_name}</strong> has been updated to <strong>${new_status}</strong> by <strong>${updater_name}</strong>.</p>`;
+            const bodyHtml = `<p>The status for the project <strong>${project_name}</strong> has been updated to <strong>${new_status}</strong> by <strong>${updater_name}</strong>.</p>`;
             text = `The status for project ${project_name} has been updated to ${new_status}. View project: ${url}`;
             html = createEmailTemplate({
-                title: `Project Status: ${new_status}`,
+                title: `Project Status Updated`,
+                mainSubject: project_name,
+                recipientName,
                 bodyHtml,
                 buttonText: "View Project",
                 buttonUrl: url,
@@ -337,10 +321,12 @@ serve(async (req) => {
             const { inviter_name, project_name, project_slug } = context;
             const url = `${APP_URL}/projects/${project_slug}`;
             subject = `You've been invited to the project: ${project_name}`;
-            bodyHtml = `<p>Hi ${recipientName},</p><p><strong>${inviter_name}</strong> has invited you to collaborate on the project <strong>${project_name}</strong>.</p>`;
+            const bodyHtml = `<p><strong>${inviter_name}</strong> has invited you to collaborate on the project <strong>${project_name}</strong>.</p>`;
             text = `You've been invited to collaborate on the project: ${project_name}. View it here: ${url}`;
             html = createEmailTemplate({
                 title: `Invitation to Collaborate`,
+                mainSubject: project_name,
+                recipientName,
                 bodyHtml,
                 buttonText: "View Project",
                 buttonUrl: url,
@@ -351,10 +337,12 @@ serve(async (req) => {
             const { task_title, project_name, project_slug, task_id, days_overdue } = context;
             const url = `${APP_URL}/projects/${project_slug}?tab=tasks&task=${task_id}`;
             subject = `REMINDER: Task "${task_title}" is overdue`;
-            bodyHtml = `<p>Hi ${recipientName},</p><p>This is a reminder that the task <em>"${task_title}"</em> in the project <strong>${project_name}</strong> is now <strong>${days_overdue} day(s)</strong> overdue.</p><p>Please take action as soon as possible.</p>`;
+            const bodyHtml = `<p>This is a reminder that the task in the project <strong>${project_name}</strong> is now <strong>${days_overdue} day(s)</strong> overdue.</p><p>Please take action as soon as possible.</p>`;
             text = `REMINDER: The task "${task_title}" is overdue by ${days_overdue} day(s). View it here: ${url}`;
             html = createEmailTemplate({
-                title: `Task Overdue: ${task_title}`,
+                title: `Task Overdue:`,
+                mainSubject: task_title,
+                recipientName,
                 bodyHtml,
                 buttonText: "View Task",
                 buttonUrl: url,
@@ -365,10 +353,12 @@ serve(async (req) => {
             const { project_name, project_slug, days_overdue } = context;
             const url = `${APP_URL}/projects/${project_slug}`;
             subject = `REMINDER: Payment for project "${project_name}" is overdue`;
-            bodyHtml = `<p>Hi ${recipientName},</p><p>This is a reminder that the payment for the project <strong>${project_name}</strong> is now <strong>${days_overdue} day(s)</strong> overdue.</p><p>Please process the payment as soon as possible.</p>`;
+            const bodyHtml = `<p>This is a reminder that the payment for the project <strong>${project_name}</strong> is now <strong>${days_overdue} day(s)</strong> overdue.</p><p>Please process the payment as soon as possible.</p>`;
             text = `REMINDER: Payment for project "${project_name}" is overdue by ${days_overdue} day(s). View project: ${url}`;
             html = createEmailTemplate({
-                title: `Payment Overdue: ${project_name}`,
+                title: `Payment Overdue:`,
+                mainSubject: project_name,
+                recipientName,
                 bodyHtml,
                 buttonText: "View Project",
                 buttonUrl: url,
