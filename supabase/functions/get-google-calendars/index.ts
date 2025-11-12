@@ -30,7 +30,7 @@ serve(async (req) => {
       .from('google_calendar_tokens')
       .select('access_token, refresh_token, expiry_date')
       .eq('user_id', user.id)
-      .single();
+      .maybeSingle();
 
     if (tokenError || !tokenData) {
       throw new Error("Google Calendar not connected or token not found.");

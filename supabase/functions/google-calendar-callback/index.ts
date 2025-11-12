@@ -70,7 +70,7 @@ serve(async (req) => {
       .from('google_calendar_tokens')
       .select('refresh_token')
       .eq('user_id', userId)
-      .single();
+      .maybeSingle();
 
     const expiry_date = tokens.expires_in ? new Date(Date.now() + tokens.expires_in * 1000).toISOString() : null;
 
