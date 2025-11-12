@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.54.0';
-import { google } from "https://esm.sh/googleapis";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -41,21 +40,47 @@ serve(async (req) => {
       throw new Error("Missing Google credentials in Supabase secrets.");
     }
 
-    const oauth2Client = new google.auth.OAuth2(clientId, clientSecret, redirectUri);
-    const { tokens } = await oauth2Client.getToken(code);
+    // Exchange authorization code for tokens using a direct fetch call
+    const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({
+        code,
+        client_id: clientId,
+        client_secret: clientSecret,
+        redirect_uri: redirectUri,
+        grant_type: 'authorization_code',
+      }),
+    });
+
+    const tokens = await tokenResponse.json();
+    if (!tokenResponse.ok || tokens.error) {
+      throw new Error(tokens.error_description || 'Failed to exchange authorization code for tokens.');
+    }
 
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
+    // Preserve existing refresh token if a new one isn't provided
+    const { data: existingToken } = await supabaseAdmin
+      .from('google_calendar_tokens')
+      .select('refresh_token')
+      .eq('user_id', userId)
+      .single();
+
+    const expiry_date = tokens.expires_in ? new Date(Date.now() + tokens.expires_in * 1000).toISOString() : null;
+
     const { error } = await supabaseAdmin.from('google_calendar_tokens').upsert({
       user_id: userId,
       access_token: tokens.access_token,
-      refresh_token: tokens.refresh_token,
-      expiry_date: tokens.expiry_date ? new Date(tokens.expiry_date).toISOString() : null,
+      refresh_token: tokens.refresh_token || existingToken?.refresh_token || null,
+      expiry_date: expiry_date,
       scope: tokens.scope,
-    });
+    }, { onConflict: 'user_id' });
 
     if (error) throw error;
 
