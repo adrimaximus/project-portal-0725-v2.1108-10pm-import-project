@@ -428,6 +428,19 @@ Buat pesan pengingat yang sopan dan profesional sesuai dengan tingkat urgensi ya
           await sendWhatsappMessage(recipient.phone, aiMessage);
         }
 
+        if (notification.notification_type === 'billing_reminder' || notification.notification_type === 'billing_reminder_email') {
+            const projectId = notification.context_data.project_id;
+            if (projectId) {
+                const { error: updateError } = await supabaseAdmin
+                    .from('projects')
+                    .update({ last_billing_reminder_sent_at: new Date().toISOString() })
+                    .eq('id', projectId);
+                if (updateError) {
+                    console.warn(`Failed to update last_billing_reminder_sent_at for project ${projectId}:`, updateError.message);
+                }
+            }
+        }
+
         await supabaseAdmin.from('pending_notifications').update({ status: 'processed', processed_at: new Date().toISOString() }).eq('id', notification.id);
         successCount++;
 
