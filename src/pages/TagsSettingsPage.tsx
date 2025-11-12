@@ -109,9 +109,10 @@ const TagsSettingsPage = () => {
         if (!tagSort.column) return 0;
         const aVal = a[tagSort.column] || (tagSort.column === 'type' ? 'general' : '');
         const bVal = b[tagSort.column] || (tagSort.column === 'type' ? 'general' : '');
-        if (aVal < bVal) return tagSort.direction === 'asc' ? -1 : 1;
-        if (aVal > bVal) return tagSort.direction === 'asc' ? 1 : -1;
-        return 0;
+        
+        const compareResult = String(aVal).localeCompare(String(bVal), undefined, { numeric: true, sensitivity: 'base' });
+
+        return tagSort.direction === 'asc' ? compareResult : -compareResult;
       });
   }, [personalTags, globalTags, activeTagTab, searchQuery, tagSort]);
 
@@ -119,9 +120,15 @@ const TagsSettingsPage = () => {
     if (!groupSort.column) return 0;
     const aVal = groupSort.column === 'name' ? a : groupCounts[a] || 0;
     const bVal = groupSort.column === 'name' ? b : groupCounts[b] || 0;
-    if (aVal < bVal) return groupSort.direction === 'asc' ? -1 : 1;
-    if (aVal > bVal) return groupSort.direction === 'asc' ? 1 : -1;
-    return 0;
+    
+    let compareResult = 0;
+    if (typeof aVal === 'number' && typeof bVal === 'number') {
+        compareResult = aVal - bVal;
+    } else {
+        compareResult = String(aVal).localeCompare(String(bVal), undefined, { numeric: true, sensitivity: 'base' });
+    }
+
+    return groupSort.direction === 'asc' ? compareResult : -compareResult;
   });
 
   const handleAddNew = () => {

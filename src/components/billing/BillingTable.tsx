@@ -42,22 +42,20 @@ const BillingTable = ({ invoices, onEdit, sortConfig, handleSort, onStatusChange
         aValue = a.assignedMembers?.find(m => m.role === 'admin')?.name;
         bValue = b.assignedMembers?.find(m => m.role === 'admin')?.name;
       }
-      if (aValue instanceof Date && bValue instanceof Date) {
-        return sortConfig.direction === 'asc' ? aValue.getTime() - bValue.getTime() : bValue.getTime() - aValue.getTime();
-      }
 
       if (aValue === null || aValue === undefined) return 1;
       if (bValue === null || bValue === undefined) return -1;
 
-      if (typeof aValue === 'string' && typeof bValue === 'string') {
-        return sortConfig.direction === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
-      }
-      
-      if (typeof aValue === 'number' && typeof bValue === 'number') {
-        return sortConfig.direction === 'asc' ? aValue - bValue : bValue - aValue;
+      let compareResult = 0;
+      if (aValue instanceof Date && bValue instanceof Date) {
+        compareResult = aValue.getTime() - bValue.getTime();
+      } else if (typeof aValue === 'number' && typeof bValue === 'number') {
+        compareResult = aValue - bValue;
+      } else {
+        compareResult = String(aValue).localeCompare(String(bValue), undefined, { numeric: true, sensitivity: 'base' });
       }
 
-      return 0;
+      return sortConfig.direction === 'asc' ? compareResult : -compareResult;
     });
   }, [invoices, sortConfig]);
 

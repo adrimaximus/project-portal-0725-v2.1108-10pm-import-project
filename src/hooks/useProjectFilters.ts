@@ -149,7 +149,7 @@ export const useProjectFilters = (projects: Project[]) => {
         } else if (aValue instanceof Date && bValue instanceof Date) {
           compareResult = aValue.getTime() - bValue.getTime();
         } else {
-          compareResult = String(aValue).localeCompare(String(bValue));
+          compareResult = String(aValue).localeCompare(String(bValue), undefined, { numeric: true, sensitivity: 'base' });
         }
 
         if (compareResult !== 0) {

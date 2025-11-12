@@ -89,13 +89,9 @@ export const usePeopleData = () => {
         if (aValue === null || aValue === undefined) return 1;
         if (bValue === null || bValue === undefined) return -1;
         
-        if (String(aValue).toLowerCase() < String(bValue).toLowerCase()) {
-          return sortConfig.direction === 'ascending' ? -1 : 1;
-        }
-        if (String(aValue).toLowerCase() > String(bValue).toLowerCase()) {
-          return sortConfig.direction === 'ascending' ? 1 : -1;
-        }
-        return 0;
+        const compareResult = String(aValue).localeCompare(String(bValue), undefined, { numeric: true, sensitivity: 'base' });
+
+        return sortConfig.direction === 'ascending' ? compareResult : -compareResult;
       });
     }
     return sortableItems;
