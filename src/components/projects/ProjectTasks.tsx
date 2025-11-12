@@ -13,7 +13,7 @@ import { useTaskMutations } from '@/hooks/useTaskMutations';
 import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import TaskAttachmentList from './TaskAttachmentList';
-import { cn, getErrorMessage, formatBytes, formatActivityDescription } from "@/lib/utils";
+import { cn, getErrorMessage, formatBytes } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { Separator } from "@/components/ui/separator";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -24,6 +24,7 @@ import { toast } from "sonner";
 import { Textarea } from "../ui/textarea";
 import TaskSuggestionDialog from './TaskSuggestionDialog';
 import { useTaskDrawer } from "@/contexts/TaskDrawerContext";
+import InteractiveText from "../InteractiveText";
 
 interface ProjectTasksProps {
   project: Project;
@@ -38,7 +39,7 @@ interface ProjectTasksProps {
   unreadTaskIds: string[];
 }
 
-const TaskRow = ({ task, onToggleTaskCompletion, onEditTask, onDeleteTask, handleToggleReaction, setRef, currentUserId, isUnread, onClick }: {
+const TaskRow = ({ task, onToggleTaskCompletion, onEditTask, onDeleteTask, handleToggleReaction, setRef, currentUserId, isUnread, onClick, allUsers }: {
   task: Task;
   onToggleTaskCompletion: (task: Task, completed: boolean) => void;
   onEditTask: (task: Task) => void;
@@ -48,6 +49,7 @@ const TaskRow = ({ task, onToggleTaskCompletion, onEditTask, onDeleteTask, handl
   currentUserId?: string;
   isUnread: boolean;
   onClick: () => void;
+  allUsers: User[];
 }) => {
   const navigate = useNavigate();
 
@@ -96,13 +98,15 @@ const TaskRow = ({ task, onToggleTaskCompletion, onEditTask, onDeleteTask, handl
       >
         <div className="flex items-center gap-2">
           {isUnread && <div className="h-2 w-2 rounded-full bg-red-500 flex-shrink-0" />}
-          <div className={cn(
-            "break-words cursor-pointer hover:underline",
-            task.completed && "line-through"
-          )}
-          title={task.title}
-          dangerouslySetInnerHTML={{ __html: formatActivityDescription(task.title) }}
-        />
+          <div
+            className={cn(
+              "break-words cursor-pointer hover:underline",
+              task.completed && "line-through"
+            )}
+            title={task.title}
+          >
+            <InteractiveText text={task.title} members={allUsers} />
+          </div>
         </div>
       </div>
 
@@ -363,6 +367,7 @@ const ProjectTasks = ({ project, tasks, projectId, projectSlug, onEditTask, onDe
             }}
             isUnread={unreadTaskIds.includes(task.id)}
             onClick={() => handleTaskClick(task)}
+            allUsers={project.assignedTo}
           />
         ))}
       </TooltipProvider>
@@ -424,6 +429,7 @@ const ProjectTasks = ({ project, tasks, projectId, projectSlug, onEditTask, onDe
                     }}
                     isUnread={unreadTaskIds.includes(task.id)}
                     onClick={() => handleTaskClick(task)}
+                    allUsers={project.assignedTo}
                   />
                 ))}
               </TooltipProvider>
