@@ -365,6 +365,54 @@ serve(async (req) => {
             });
             break;
           }
+          case 'goal_invite_email': {
+            const { inviter_name, goal_title, goal_slug } = context;
+            const url = `${APP_URL}/goals/${goal_slug}`;
+            subject = `You've been invited to the goal: ${goal_title}`;
+            const bodyHtml = `<p><strong>${inviter_name}</strong> has invited you to collaborate on the goal <strong>${goal_title}</strong>.</p>`;
+            text = `You've been invited to collaborate on the goal: ${goal_title}. View it here: ${url}`;
+            html = createEmailTemplate({
+                title: `Invitation to Collaborate`,
+                mainSubject: goal_title,
+                recipientName,
+                bodyHtml,
+                buttonText: "View Goal",
+                buttonUrl: url,
+            });
+            break;
+          }
+          case 'kb_invite_email': {
+            const { inviter_name, folder_name, folder_slug } = context;
+            const url = `${APP_URL}/knowledge-base/folders/${folder_slug}`;
+            subject = `You've been invited to the folder: ${folder_name}`;
+            const bodyHtml = `<p><strong>${inviter_name}</strong> has invited you to collaborate on the knowledge base folder <strong>${folder_name}</strong>.</p>`;
+            text = `You've been invited to collaborate on the folder: ${folder_name}. View it here: ${url}`;
+            html = createEmailTemplate({
+                title: `Invitation to Collaborate`,
+                mainSubject: folder_name,
+                recipientName,
+                bodyHtml,
+                buttonText: "View Folder",
+                buttonUrl: url,
+            });
+            break;
+          }
+          case 'goal_progress_update_email': {
+            const { updater_name, goal_title, goal_slug, value_logged } = context;
+            const url = `${APP_URL}/goals/${goal_slug}`;
+            subject = `Progress update on goal: ${goal_title}`;
+            const bodyHtml = `<p><strong>${updater_name}</strong> logged new progress on your shared goal <strong>${goal_title}</strong>.</p><p><strong>Value Logged:</strong> ${value_logged}</p>`;
+            text = `${updater_name} logged new progress on your shared goal "${goal_title}". Value: ${value_logged}. View goal: ${url}`;
+            html = createEmailTemplate({
+                title: `Progress on Goal:`,
+                mainSubject: goal_title,
+                recipientName,
+                bodyHtml,
+                buttonText: "View Goal",
+                buttonUrl: url,
+            });
+            break;
+          }
           // --- WhatsApp Cases ---
           case 'billing_reminder': {
             const { project_name, days_overdue } = context;
@@ -412,6 +460,9 @@ Buat pesan pengingat yang sopan dan profesional sesuai dengan tingkat urgensi ya
         }
 
         if (notification.notification_type.includes('email')) {
+          if (!html) {
+            throw new Error(`bodyHtml is not defined for email type: ${notification.notification_type}`);
+          }
           await sendEmail(recipient.email, subject, html, text);
         } else if (userPrompt) {
           const aiMessage = await generateAiMessage(userPrompt);
