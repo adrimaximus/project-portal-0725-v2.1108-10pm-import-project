@@ -132,6 +132,7 @@ const ProjectComments = forwardRef<CommentInputHandle, ProjectCommentsProps>(({
               handleEditFileChange={handleEditFileChange}
               editFileInputRef={editFileInputRef}
               onGoToReply={onGoToReply}
+              allUsers={allUsers}
             />
           ))
         ) : (
