@@ -275,6 +275,7 @@ serve(async (req) => {
         }
 
         let userPrompt = '';
+        let subject = '', html = '', text = '';
         const context = notification.context_data;
         const recipientName = recipient.first_name || recipient.email.split('@')[0];
 
@@ -287,87 +288,118 @@ serve(async (req) => {
                 ? `${APP_URL}/chat`
                 : (taskId ? `${APP_URL}/projects/${contextSlug}?tab=tasks&task=${taskId}` : `${APP_URL}/projects/${contextSlug}?tab=discussion`);
             
-            const subject = `You were mentioned in: ${contextName}`;
-            const bodyHtml = `
+            subject = `You were mentioned in: ${contextName}`;
+            bodyHtml = `
                 <p>Hi ${recipientName},</p>
                 <p><strong>${mentionerName}</strong> mentioned you in a comment in <strong>${contextName}</strong>.</p>
                 <blockquote>
                     ${commentText.replace(/@\[([^\]]+)\]\(([^)]+)\)/g, '<strong>@$1</strong>')}
                 </blockquote>
             `;
-            const text = `Hi, ${mentionerName} mentioned you in a comment in ${contextName}. View it here: ${url}`;
-            const html = createEmailTemplate({
+            text = `Hi, ${mentionerName} mentioned you in a comment in ${contextName}. View it here: ${url}`;
+            html = createEmailTemplate({
                 title: `You were mentioned in "${contextName}"`,
                 bodyHtml,
                 buttonText: "View Comment",
                 buttonUrl: url,
             });
-            await sendEmail(recipient.email, subject, html, text);
             break;
           }
           case 'task_assignment_email': {
             const { assigner_name, task_title, project_name, project_slug, task_id } = context;
             const url = `${APP_URL}/projects/${project_slug}?tab=tasks&task=${task_id}`;
-            const subject = `New task assigned to you: ${task_title}`;
-            const bodyHtml = `<p>Hi ${recipientName},</p><p><strong>${assigner_name}</strong> has assigned you a new task, <em>"${task_title}"</em>, in the project <strong>${project_name}</strong>.</p>`;
-            const text = `You have been assigned a new task: "${task_title}". View it here: ${url}`;
-            const html = createEmailTemplate({
+            subject = `New task assigned to you: ${task_title}`;
+            bodyHtml = `<p>Hi ${recipientName},</p><p><strong>${assigner_name}</strong> has assigned you a new task, <em>"${task_title}"</em>, in the project <strong>${project_name}</strong>.</p>`;
+            text = `You have been assigned a new task: "${task_title}". View it here: ${url}`;
+            html = createEmailTemplate({
                 title: `New Task Assigned in "${project_name}"`,
                 bodyHtml,
                 buttonText: "View Task",
                 buttonUrl: url,
             });
-            await sendEmail(recipient.email, subject, html, text);
             break;
           }
           case 'project_status_updated_email': {
             const { updater_name, project_name, new_status, project_slug } = context;
             const url = `${APP_URL}/projects/${project_slug}`;
-            const subject = `Project Status Updated: ${project_name} is now ${new_status}`;
-            const bodyHtml = `<p>Hi ${recipientName},</p><p>The status for the project <strong>${project_name}</strong> has been updated to <strong>${new_status}</strong> by <strong>${updater_name}</strong>.</p>`;
-            const text = `The status for project ${project_name} has been updated to ${new_status}. View project: ${url}`;
-            const html = createEmailTemplate({
+            subject = `Project Status Updated: ${project_name} is now ${new_status}`;
+            bodyHtml = `<p>Hi ${recipientName},</p><p>The status for the project <strong>${project_name}</strong> has been updated to <strong>${new_status}</strong> by <strong>${updater_name}</strong>.</p>`;
+            text = `The status for project ${project_name} has been updated to ${new_status}. View project: ${url}`;
+            html = createEmailTemplate({
                 title: `Project Status: ${new_status}`,
                 bodyHtml,
                 buttonText: "View Project",
                 buttonUrl: url,
             });
-            await sendEmail(recipient.email, subject, html, text);
             break;
           }
           case 'project_invite_email': {
             const { inviter_name, project_name, project_slug } = context;
             const url = `${APP_URL}/projects/${project_slug}`;
-            const subject = `You've been invited to the project: ${project_name}`;
-            const bodyHtml = `<p>Hi ${recipientName},</p><p><strong>${inviter_name}</strong> has invited you to collaborate on the project <strong>${project_name}</strong>.</p>`;
-            const text = `You've been invited to collaborate on the project: ${project_name}. View it here: ${url}`;
-            const html = createEmailTemplate({
+            subject = `You've been invited to the project: ${project_name}`;
+            bodyHtml = `<p>Hi ${recipientName},</p><p><strong>${inviter_name}</strong> has invited you to collaborate on the project <strong>${project_name}</strong>.</p>`;
+            text = `You've been invited to collaborate on the project: ${project_name}. View it here: ${url}`;
+            html = createEmailTemplate({
                 title: `Invitation to Collaborate`,
                 bodyHtml,
                 buttonText: "View Project",
                 buttonUrl: url,
             });
-            await sendEmail(recipient.email, subject, html, text);
             break;
           }
           case 'task_overdue_email': {
             const { task_title, project_name, project_slug, task_id, days_overdue } = context;
             const url = `${APP_URL}/projects/${project_slug}?tab=tasks&task=${task_id}`;
-            const subject = `REMINDER: Task "${task_title}" is overdue`;
-            const bodyHtml = `<p>Hi ${recipientName},</p><p>This is a reminder that the task <em>"${task_title}"</em> in the project <strong>${project_name}</strong> is now <strong>${days_overdue} day(s)</strong> overdue.</p><p>Please take action as soon as possible.</p>`;
-            const text = `REMINDER: The task "${task_title}" is overdue by ${days_overdue} day(s). View it here: ${url}`;
-            const html = createEmailTemplate({
+            subject = `REMINDER: Task "${task_title}" is overdue`;
+            bodyHtml = `<p>Hi ${recipientName},</p><p>This is a reminder that the task <em>"${task_title}"</em> in the project <strong>${project_name}</strong> is now <strong>${days_overdue} day(s)</strong> overdue.</p><p>Please take action as soon as possible.</p>`;
+            text = `REMINDER: The task "${task_title}" is overdue by ${days_overdue} day(s). View it here: ${url}`;
+            html = createEmailTemplate({
                 title: `Task Overdue: ${task_title}`,
                 bodyHtml,
                 buttonText: "View Task",
                 buttonUrl: url,
             });
-            await sendEmail(recipient.email, subject, html, text);
+            break;
+          }
+          case 'billing_reminder_email': {
+            const { project_name, project_slug, days_overdue } = context;
+            const url = `${APP_URL}/projects/${project_slug}`;
+            subject = `REMINDER: Payment for project "${project_name}" is overdue`;
+            bodyHtml = `<p>Hi ${recipientName},</p><p>This is a reminder that the payment for the project <strong>${project_name}</strong> is now <strong>${days_overdue} day(s)</strong> overdue.</p><p>Please process the payment as soon as possible.</p>`;
+            text = `REMINDER: Payment for project "${project_name}" is overdue by ${days_overdue} day(s). View project: ${url}`;
+            html = createEmailTemplate({
+                title: `Payment Overdue: ${project_name}`,
+                bodyHtml,
+                buttonText: "View Project",
+                buttonUrl: url,
+            });
             break;
           }
           // --- WhatsApp Cases ---
+          case 'billing_reminder': {
+            const { project_name, days_overdue } = context;
+            let urgency = 'sedikit mendesak';
+            if (days_overdue > 30) {
+              urgency = 'sangat mendesak dan perlu segera ditindaklanjuti';
+            } else if (days_overdue > 7) {
+              urgency = 'cukup mendesak';
+            }
+            userPrompt = `**Konteks:**
+- **Jenis:** Pengingat Invoice Jatuh Tempo
+- **Penerima:** ${recipientName}
+- **Proyek:** ${project_name}
+- **Jumlah Hari Terlambat:** ${days_overdue} hari
+- **Tingkat Urgensi:** ${urgency}
+- **URL:** ${APP_URL}/billing
+
+Buat pesan pengingat yang sopan dan profesional sesuai dengan tingkat urgensi yang diberikan.`;
+            break;
+          }
           default: {
-            // This will handle all non-email notifications (WhatsApp)
+            if (notification.notification_type.includes('email')) {
+              throw new Error(`Unsupported email notification type: ${notification.notification_type}`);
+            }
+            
             let finalMessage = '';
             if (notification.notification_type === 'discussion_mention') {
                 const { project_name: contextName, project_slug: contextSlug, mentioner_name: mentionerName, task_id: taskId } = context;
@@ -379,7 +411,6 @@ serve(async (req) => {
                 finalMessage = aiMessage.trim();
                 if (!finalMessage.includes(url)) { finalMessage += `\n\n${url}`; }
             }
-            // ... add other WhatsApp cases here if needed, following the same pattern ...
             else {
                 throw new Error(`Unsupported notification type: ${notification.notification_type}`);
             }
@@ -388,6 +419,13 @@ serve(async (req) => {
                 await sendWhatsappMessage(recipient.phone, finalMessage);
             }
           }
+        }
+
+        if (notification.notification_type.includes('email')) {
+          await sendEmail(recipient.email, subject, html, text);
+        } else if (userPrompt) {
+          const aiMessage = await generateAiMessage(userPrompt);
+          await sendWhatsappMessage(recipient.phone, aiMessage);
         }
 
         await supabaseAdmin.from('pending_notifications').update({ status: 'processed', processed_at: new Date().toISOString() }).eq('id', notification.id);
