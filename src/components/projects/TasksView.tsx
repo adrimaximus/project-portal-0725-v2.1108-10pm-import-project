@@ -34,7 +34,7 @@ interface TasksViewProps {
   onToggleTaskCompletion: (task: ProjectTask, completed: boolean) => void;
   onStatusChange: (task: ProjectTask, newStatus: TaskStatus) => void;
   isToggling: boolean;
-  sortConfig: { key: string; direction: 'asc' | 'desc' };
+  sortConfig: { key: string | null; direction: 'asc' | 'desc' };
   requestSort: (key: string) => void;
   rowRefs: React.MutableRefObject<Map<string, HTMLTableRowElement>>;
   highlightedTaskId: string | null;
@@ -109,33 +109,6 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
     }
   };
 
-  const mappedSortConfig = {
-    key: sortConfig.key,
-    direction: sortConfig.direction === 'asc' ? 'ascending' : 'descending',
-  } as { key: string; direction: 'ascending' | 'descending' };
-
-  if (isLoading) {
-    return (
-      <div className="p-4 md:p-6">
-        <div className="space-y-4">
-          {[...Array(8)].map((_, i) => (
-            <div key={i} className="flex items-center space-x-4">
-              <Skeleton className="h-12 w-12" />
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-[250px]" />
-                <Skeleton className="h-4 w-[200px]" />
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  if (tasks.length === 0) {
-    return <div className="text-center text-muted-foreground p-8">No tasks found.</div>;
-  }
-
   if (isMobile) {
     return (
       <div>
@@ -160,95 +133,101 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
         <TableHeader>
           <TableRow>
             <TableHead className="w-px p-2"></TableHead>
-            <SortableTableHead columnKey="title" onSort={requestSort} sortConfig={mappedSortConfig} className="w-[40%]">Task</SortableTableHead>
-            <SortableTableHead columnKey="project_name" onSort={requestSort} sortConfig={mappedSortConfig}>Project</SortableTableHead>
-            <SortableTableHead columnKey="status" onSort={requestSort} sortConfig={mappedSortConfig}>Status</SortableTableHead>
-            <SortableTableHead columnKey="priority" onSort={requestSort} sortConfig={mappedSortConfig}>Priority</SortableTableHead>
-            <SortableTableHead columnKey="due_date" onSort={requestSort} sortConfig={mappedSortConfig}>Due Date</SortableTableHead>
+            <SortableTableHead columnKey="title" onSort={requestSort} sortConfig={sortConfig} className="w-[40%]">Task</SortableTableHead>
+            <SortableTableHead columnKey="project_name" onSort={requestSort} sortConfig={sortConfig}>Project</SortableTableHead>
+            <SortableTableHead columnKey="status" onSort={requestSort} sortConfig={sortConfig}>Status</SortableTableHead>
+            <SortableTableHead columnKey="priority" onSort={requestSort} sortConfig={sortConfig}>Priority</SortableTableHead>
+            <SortableTableHead columnKey="due_date" onSort={requestSort} sortConfig={sortConfig}>Due Date</SortableTableHead>
             <TableHead>Assignees</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {tasks.map(task => (
-            <TableRow 
-              key={task.id} 
-              ref={el => { if (el) rowRefs.current.set(task.id, el); else rowRefs.current.delete(task.id); }}
-              onClick={() => handleTaskClick(task)}
-              className="cursor-pointer"
-            >
-              <TableCell className="p-2" onClick={(e) => e.stopPropagation()}>
-                <Checkbox
-                  checked={task.completed}
-                  onCheckedChange={(checked) => onToggleTaskCompletion(task, !!checked)}
-                  disabled={isToggling}
-                />
-              </TableCell>
-              <TableCell className="font-medium">
-                <div className="flex items-center gap-2">
-                  {unreadTaskIds.includes(task.id) && <div className="h-2 w-2 rounded-full bg-red-500 flex-shrink-0" />}
-                  <div className={cn(task.completed && "line-through text-muted-foreground")}>
-                    <InteractiveText text={task.title} members={allUsers} />
+          {isLoading ? (
+            <TableRow><TableCell colSpan={8} className="text-center h-24">Loading...</TableCell></TableRow>
+          ) : tasks.length === 0 ? (
+            <TableRow><TableCell colSpan={8} className="text-center h-24">No tasks found.</TableCell></TableRow>
+          ) : (
+            tasks.map(task => (
+              <TableRow 
+                key={task.id} 
+                ref={el => { if (el) rowRefs.current.set(task.id, el); else rowRefs.current.delete(task.id); }}
+                onClick={() => handleTaskClick(task)}
+                className="cursor-pointer"
+              >
+                <TableCell className="p-2" onClick={(e) => e.stopPropagation()}>
+                  <Checkbox
+                    checked={task.completed}
+                    onCheckedChange={(checked) => onToggleTaskCompletion(task, !!checked)}
+                    disabled={isToggling}
+                  />
+                </TableCell>
+                <TableCell className="font-medium">
+                  <div className="flex items-center gap-2">
+                    {unreadTaskIds.includes(task.id) && <div className="h-2 w-2 rounded-full bg-red-500 flex-shrink-0" />}
+                    <div className={cn(task.completed && "line-through text-muted-foreground")}>
+                      <InteractiveText text={task.title} members={allUsers} />
+                    </div>
                   </div>
-                </div>
-              </TableCell>
-              <TableCell>
-                <Link to={`/projects/${task.project_slug}`} onClick={(e) => e.stopPropagation()} className="hover:underline text-primary text-xs block max-w-[15ch] truncate">
-                  {task.project_name}
-                </Link>
-              </TableCell>
-              <TableCell onClick={(e) => e.stopPropagation()}>
-                <Select value={task.status} onValueChange={(newStatus: TaskStatus) => onStatusChange(task, newStatus)}>
-                  <SelectTrigger className="h-auto p-0 border-0 focus:ring-0 focus:ring-offset-0 w-auto bg-transparent shadow-none">
-                    <SelectValue>
-                      <Badge variant="outline" className={cn(getTaskStatusStyles(task.status).tw, 'border-transparent font-normal')}>
-                        {task.status}
-                      </Badge>
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {TASK_STATUS_OPTIONS.map(option => (
-                      <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                </TableCell>
+                <TableCell>
+                  <Link to={`/projects/${task.project_slug}`} onClick={(e) => e.stopPropagation()} className="hover:underline text-primary text-xs block max-w-[15ch] truncate">
+                    {task.project_name}
+                  </Link>
+                </TableCell>
+                <TableCell onClick={(e) => e.stopPropagation()}>
+                  <Select value={task.status} onValueChange={(newStatus: TaskStatus) => onStatusChange(task, newStatus)}>
+                    <SelectTrigger className="h-auto p-0 border-0 focus:ring-0 focus:ring-offset-0 w-auto bg-transparent shadow-none">
+                      <SelectValue>
+                        <Badge variant="outline" className={cn(getTaskStatusStyles(task.status).tw, 'border-transparent font-normal')}>
+                          {task.status}
+                        </Badge>
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {TASK_STATUS_OPTIONS.map(option => (
+                        <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </TableCell>
+                <TableCell>
+                  <Badge className={getPriorityStyles(task.priority).tw}>{task.priority}</Badge>
+                </TableCell>
+                <TableCell className={cn("text-xs", isOverdue(task.due_date) && !task.completed && "text-destructive font-semibold")}>
+                  {task.due_date ? format(new Date(task.due_date), "MMM d, yyyy") : '-'}
+                </TableCell>
+                <TableCell>
+                  <div className="flex -space-x-2">
+                    {task.assignedTo?.map(user => (
+                      <TooltipProvider key={user.id}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Avatar className="h-6 w-6 border-2 border-background">
+                              <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
+                              <AvatarFallback style={generatePastelColor(user.id)}>{getInitials([user.first_name, user.last_name].filter(Boolean).join(' '), user.email || undefined)}</AvatarFallback>
+                            </Avatar>
+                          </TooltipTrigger>
+                          <TooltipContent><p>{user.name}</p></TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     ))}
-                  </SelectContent>
-                </Select>
-              </TableCell>
-              <TableCell>
-                <Badge className={getPriorityStyles(task.priority).tw}>{task.priority}</Badge>
-              </TableCell>
-              <TableCell className={cn("text-xs", isOverdue(task.due_date) && !task.completed && "text-destructive font-semibold")}>
-                {task.due_date ? format(new Date(task.due_date), "MMM d, yyyy") : '-'}
-              </TableCell>
-              <TableCell>
-                <div className="flex -space-x-2">
-                  {task.assignedTo?.map(user => (
-                    <TooltipProvider key={user.id}>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Avatar className="h-6 w-6 border-2 border-background">
-                            <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
-                            <AvatarFallback style={generatePastelColor(user.id)}>{getInitials([user.first_name, user.last_name].filter(Boolean).join(' '), user.email || undefined)}</AvatarFallback>
-                          </Avatar>
-                        </TooltipTrigger>
-                        <TooltipContent><p>{user.name}</p></TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  ))}
-                </div>
-              </TableCell>
-              <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onSelect={() => onEdit(task)}><Edit className="mr-2 h-4 w-4" /> Edit</DropdownMenuItem>
-                    <DropdownMenuItem onSelect={() => onDelete(task.id)} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Delete</DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </TableCell>
-            </TableRow>
-          ))}
+                  </div>
+                </TableCell>
+                <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onSelect={() => onEdit(task)}><Edit className="mr-2 h-4 w-4" /> Edit</DropdownMenuItem>
+                      <DropdownMenuItem onSelect={() => onDelete(task.id)} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Delete</DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TableCell>
+              </TableRow>
+            ))
+          )}
         </TableBody>
       </Table>
     </div>
