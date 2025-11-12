@@ -37,7 +37,7 @@ export const usePeopleData = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   
-  const { sortConfig, requestSort } = useSortConfig<keyof Person>({ key: 'updated_at', direction: 'descending' });
+  const { sortConfig, requestSort } = useSortConfig<keyof Person>({ key: 'updated_at', direction: 'desc' });
 
   const debouncedSetSearch = useCallback(
     debounce((term) => {
@@ -83,7 +83,7 @@ export const usePeopleData = () => {
         
         const compareResult = String(aValue).localeCompare(String(bValue));
 
-        return sortConfig.direction === 'ascending' ? compareResult : -compareResult;
+        return sortConfig.direction === 'asc' ? compareResult : -compareResult;
       });
     }
     return sortableItems;

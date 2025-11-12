@@ -1,25 +1,24 @@
-import { ArrowUp, ArrowDown, ChevronsUpDown } from "lucide-react";
-import { Button } from "./button";
-import { TableHead } from "./table";
+import { TableHead } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { ChevronsUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-type SortDirection = 'asc' | 'desc' | 'ascending' | 'descending';
-
-interface SortableTableHeadProps extends React.HTMLAttributes<HTMLTableCellElement> {
-  columnKey: string;
-  onSort: (key: string) => void;
-  sortConfig: { key: string | null; direction: SortDirection };
+interface SortableTableHeadProps<T> extends React.HTMLAttributes<HTMLTableCellElement> {
+  columnKey: keyof T;
+  onSort: (key: keyof T) => void;
+  sortConfig: { key: keyof T | null; direction: 'asc' | 'desc' };
 }
 
-export const SortableTableHead = ({ children, columnKey, onSort, sortConfig, className, ...props }: SortableTableHeadProps) => {
+export const SortableTableHead = <T,>({ children, columnKey, onSort, sortConfig, className, ...props }: SortableTableHeadProps<T>) => {
   const isActive = sortConfig.key === columnKey;
-  const Icon = isActive ? (sortConfig.direction.startsWith('asc') ? ArrowUp : ArrowDown) : ChevronsUpDown;
+  const isAscending = sortConfig.direction === 'asc';
+  const Icon = isActive ? (isAscending ? ArrowUp : ArrowDown) : ChevronsUpDown;
 
   return (
-    <TableHead className={className} {...props}>
-      <Button variant="ghost" onClick={() => onSort(columnKey)} className="px-2 py-1 h-auto -mx-2">
-        <span className="mr-2">{children}</span>
-        <Icon className={cn("h-4 w-4", !isActive && "text-muted-foreground/50")} />
+    <TableHead {...props} className={cn("p-2", className)}>
+      <Button variant="ghost" onClick={() => onSort(columnKey)} className="w-full justify-start px-2 group h-auto py-1">
+        {children}
+        <Icon className={cn("ml-2 h-4 w-4", !isActive && "text-muted-foreground/50 group-hover:text-muted-foreground")} />
       </Button>
     </TableHead>
   );

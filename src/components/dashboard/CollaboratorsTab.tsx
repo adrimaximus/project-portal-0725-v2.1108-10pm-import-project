@@ -90,7 +90,7 @@ const CollaboratorsTab = () => {
 
   const SortableTableHead = ({ children, columnKey }: { children: React.ReactNode, columnKey: string }) => {
     const isActive = sortConfig.key === columnKey;
-    const Icon = isActive ? (sortConfig.direction === 'ascending' ? ArrowUp : ArrowDown) : ChevronsUpDown;
+    const Icon = isActive ? (sortConfig.direction === 'asc' ? ArrowUp : ArrowDown) : ChevronsUpDown;
     return (
       <TableHead className="text-right">
         <Button variant="ghost" onClick={() => handleSort(columnKey)} className="px-2 py-1 h-auto -mx-2">
