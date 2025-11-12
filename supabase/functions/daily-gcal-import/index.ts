@@ -55,7 +55,7 @@ serve(async (req) => {
       const oauth2Client = new google.auth.OAuth2(
         Deno.env.get("VITE_GOOGLE_CLIENT_ID"),
         Deno.env.get("GOOGLE_CLIENT_SECRET"),
-        `https://quuecudndfztjlxbrvyb.supabase.co/functions/v1/google-calendar-auth` // FIX: Added redirectUri
+        `${Deno.env.get('SUPABASE_URL')}/functions/v1/google-calendar-callback`
       );
       oauth2Client.setCredentials({
         access_token: token.access_token,
