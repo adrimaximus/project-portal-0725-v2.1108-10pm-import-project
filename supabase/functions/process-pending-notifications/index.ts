@@ -287,6 +287,15 @@ serve(async (req) => {
                     html = createEmailTemplate({ title: `Project Status Updated`, mainSubject: project_name, recipientName, bodyHtml, buttonText: "View Project", buttonUrl: url });
                     break;
                 }
+                case 'payment_status_updated_email': {
+                    const { updater_name, project_name, new_status, project_slug } = context;
+                    const url = `${APP_URL}/projects/${project_slug}`;
+                    subject = `Payment Status Updated: ${project_name} is now ${new_status}`;
+                    const bodyHtml = `<p>The payment status for the project <strong>${project_name}</strong> has been updated to <strong>${new_status}</strong> by <strong>${updater_name}</strong>.</p>`;
+                    text = `The payment status for project ${project_name} has been updated to ${new_status}. View project: ${url}`;
+                    html = createEmailTemplate({ title: `Payment Status Updated`, mainSubject: project_name, recipientName, bodyHtml, buttonText: "View Project", buttonUrl: url });
+                    break;
+                }
                 case 'project_invite_email': {
                     const { inviter_name, project_name, project_slug } = context;
                     const url = `${APP_URL}/projects/${project_slug}`;
