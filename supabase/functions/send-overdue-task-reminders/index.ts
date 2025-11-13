@@ -34,7 +34,6 @@ serve(async (req) => {
 
     const today = new Date().toISOString();
 
-    // Fetch the 50 most overdue tasks with their project and assignees
     const { data: overdueTasks, error: tasksError } = await supabaseAdmin
       .from('tasks')
       .select(`
@@ -42,7 +41,7 @@ serve(async (req) => {
         title,
         due_date,
         project:projects (id, name, slug),
-        assignees:task_assignees ( user:profiles (id, notification_preferences) )
+        assignees:task_assignees ( user_id )
       `)
       .lt('due_date', today)
       .eq('completed', false)
@@ -58,6 +57,20 @@ serve(async (req) => {
 
     console.log(`[send-overdue-task-reminders] Found ${overdueTasks.length} overdue tasks.`);
 
+    const allAssigneeIds = [...new Set(overdueTasks.flatMap(t => t.assignees.map((a: any) => a.user_id)))];
+    if (allAssigneeIds.length === 0) {
+        console.log("[send-overdue-task-reminders] No assignees found for overdue tasks.");
+        return new Response(JSON.stringify({ message: "No assignees to notify." }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    const { data: profiles, error: profilesError } = await supabaseAdmin
+        .from('profiles')
+        .select('id, notification_preferences')
+        .in('id', allAssigneeIds);
+    
+    if (profilesError) throw profilesError;
+    const profileMap = new Map(profiles.map(p => [p.id, p]));
+
     const notificationsToInsert = [];
     let skippedCount = 0;
 
@@ -66,7 +79,7 @@ serve(async (req) => {
       const daysOverdue = Math.floor((new Date().getTime() - dueDate.getTime()) / (1000 * 3600 * 24));
 
       for (const assignee of task.assignees) {
-        const userProfile = assignee.user;
+        const userProfile = profileMap.get(assignee.user_id);
         if (!userProfile) continue;
 
         const prefs = userProfile.notification_preferences || {};
