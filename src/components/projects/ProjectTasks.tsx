@@ -22,7 +22,7 @@ import { User as AuthUser } from '@supabase/supabase-js';
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { Textarea } from "../ui/textarea";
-import TaskSuggestionDialog from '../projects/TaskSuggestionDialog';
+import TaskSuggestionDialog, { TaskSuggestion } from '../projects/TaskSuggestionDialog';
 import { useTaskDrawer } from "@/contexts/TaskDrawerContext";
 import InteractiveText from "../InteractiveText";
 import { formatMentions } from "@/lib/mentionUtils";
@@ -207,13 +207,13 @@ const TaskRow = ({ task, onToggleTaskCompletion, onEditTask, onDeleteTask, handl
 
 const ProjectTasks = ({ project, tasks, projectId, projectSlug, onEditTask, onDeleteTask, onToggleTaskCompletion, highlightedTaskId, onHighlightComplete, unreadTaskIds, onOpenTaskModal }: ProjectTasksProps) => {
   const queryClient = useQueryClient();
-  const { createTasks, isCreatingTasks } = useTaskMutations(() => queryClient.invalidateQueries({ queryKey: ['project', projectSlug] }));
+  const { createTasks, isCreatingTasks, toggleTaskReaction } = useTaskMutations(() => queryClient.invalidateQueries({ queryKey: ['project', projectSlug] }));
   const taskRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const [isCompletedOpen, setIsCompletedOpen] = useState(false);
   const [user, setUser] = useState<AuthUser | null>(null);
   const { user: authUser } = useAuth();
   const [isSuggesting, setIsSuggesting] = useState(false);
-  const [suggestions, setSuggestions] = useState<{ title: string, priority: Task['priority'] }[]>([]);
+  const [suggestions, setSuggestions] = useState<TaskSuggestion[]>([]);
   const [isSuggestionDialogOpen, setIsSuggestionDialogOpen] = useState(false);
   const { onOpen: onOpenTaskDrawer } = useTaskDrawer();
   const [showNewTaskForm, setShowNewTaskForm] = useState(false);
@@ -246,7 +246,7 @@ const ProjectTasks = ({ project, tasks, projectId, projectSlug, onEditTask, onDe
     }
   };
 
-  const handleAddSuggestedTasks = (selectedItems: { title: string, priority: Task['priority'] }[]) => {
+  const handleAddSuggestedTasks = (selectedItems: TaskSuggestion[]) => {
     if (selectedItems.length === 0) {
       setIsSuggestionDialogOpen(false);
       return;

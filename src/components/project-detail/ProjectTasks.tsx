@@ -12,7 +12,7 @@ import TaskReactions from '../projects/TaskReactions';
 import { useTaskMutations } from '@/hooks/useTaskMutations';
 import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
-import TaskAttachmentList from './TaskAttachmentList';
+import TaskAttachmentList from '../projects/TaskAttachmentList';
 import { cn, getErrorMessage, formatBytes } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { Separator } from "@/components/ui/separator";
@@ -207,7 +207,7 @@ const TaskRow = ({ task, onToggleTaskCompletion, onEditTask, onDeleteTask, handl
 
 const ProjectTasks = ({ project, tasks, projectId, projectSlug, onEditTask, onDeleteTask, onToggleTaskCompletion, highlightedTaskId, onHighlightComplete, unreadTaskIds, onOpenTaskModal }: ProjectTasksProps) => {
   const queryClient = useQueryClient();
-  const { createTasks, isCreatingTasks } = useTaskMutations(() => queryClient.invalidateQueries({ queryKey: ['project', projectSlug] }));
+  const { createTasks, isCreatingTasks, toggleTaskReaction } = useTaskMutations(() => queryClient.invalidateQueries({ queryKey: ['project', projectSlug] }));
   const taskRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const [isCompletedOpen, setIsCompletedOpen] = useState(false);
   const [user, setUser] = useState<AuthUser | null>(null);
