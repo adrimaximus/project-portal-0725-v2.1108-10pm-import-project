@@ -209,7 +209,7 @@ const ProjectTasks = ({ project, tasks, projectId, projectSlug, onEditTask, onDe
   const queryClient = useQueryClient();
   const { createTasks, isCreatingTasks } = useTaskMutations(() => queryClient.invalidateQueries({ queryKey: ['project', projectSlug] }));
   const taskRefs = useRef<Map<string, HTMLDivElement>>(new Map());
-  const [isCompletedOpen, setIsCompletedOpen] = useState(true);
+  const [isCompletedOpen, setIsCompletedOpen] = useState(false);
   const [user, setUser] = useState<AuthUser | null>(null);
   const { user: authUser } = useAuth();
   const [isSuggesting, setIsSuggesting] = useState(false);
