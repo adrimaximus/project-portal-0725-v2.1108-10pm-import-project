@@ -216,6 +216,8 @@ const ProjectTasks = ({ project, tasks, projectId, projectSlug, onEditTask, onDe
   const [suggestions, setSuggestions] = useState<{ title: string, priority: Task['priority'] }[]>([]);
   const [isSuggestionDialogOpen, setIsSuggestionDialogOpen] = useState(false);
   const { onOpen: onOpenTaskDrawer } = useTaskDrawer();
+  const [showNewTaskForm, setShowNewTaskForm] = useState(false);
+  const [newTaskTitle, setNewTaskTitle] = useState("");
 
   const handleTaskClick = (task: Task) => {
     onOpenTaskDrawer(task, project);
@@ -260,6 +262,17 @@ const ProjectTasks = ({ project, tasks, projectId, projectSlug, onEditTask, onDe
         setIsSuggestionDialogOpen(false);
       }
     });
+  };
+
+  const handleAddNewTask = () => {
+    if (newTaskTitle.trim()) {
+        createTasks([{ title: newTaskTitle.trim(), project_id: projectId, created_by: authUser!.id }], {
+          onSuccess: () => {
+            setShowNewTaskForm(false);
+            setNewTaskTitle("");
+          }
+        });
+    }
   };
 
   useEffect(() => {
@@ -312,47 +325,43 @@ const ProjectTasks = ({ project, tasks, projectId, projectSlug, onEditTask, onDe
 
   const hasNoTasks = !tasks || tasks.length === 0;
 
+  const addTaskForm = (
+    <div className="p-2">
+      <Textarea
+        placeholder="What needs to be done?"
+        value={newTaskTitle}
+        onChange={(e) => setNewTaskTitle(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            handleAddNewTask();
+          }
+          if (e.key === 'Escape') {
+            e.preventDefault();
+            setShowNewTaskForm(false);
+            setNewTaskTitle("");
+          }
+        }}
+        autoFocus
+        className="mb-2"
+      />
+      <div className="flex items-center gap-2">
+        <Button onClick={handleAddNewTask} disabled={isCreatingTasks}>
+          {isCreatingTasks ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+          Add Task
+        </Button>
+        <Button variant="ghost" onClick={() => { setShowNewTaskForm(false); setNewTaskTitle(""); }}>Cancel</Button>
+      </div>
+    </div>
+  );
+
   return (
     <div className="space-y-1">
-      <TooltipProvider>
-        {undoneTasks.map((task) => (
-          <TaskRow
-            key={task.id}
-            task={task}
-            onToggleTaskCompletion={onToggleTaskCompletion}
-            onEditTask={onEditTask}
-            onDeleteTask={onDeleteTask}
-            handleToggleReaction={handleToggleReaction}
-            currentUserId={user?.id}
-            setRef={(el) => {
-              if (el) taskRefs.current.set(task.id, el);
-              else taskRefs.current.delete(task.id);
-            }}
-            isUnread={unreadTaskIds.includes(task.id)}
-            onClick={() => handleTaskClick(task)}
-            allUsers={project.assignedTo}
-          />
-        ))}
-      </TooltipProvider>
-
-      {hasNoTasks ? (
-        <div className="text-center text-muted-foreground py-4">
-          <ListChecks className="mx-auto h-8 w-8" />
-          <p className="mt-2 text-sm">No tasks for this project yet.</p>
-          <div className="flex justify-center gap-2 mt-3">
-            <Button onClick={() => onOpenTaskModal(null, { project_id: projectId }, project)} className="text-sm h-8 px-3">
-              <Plus className="mr-1 h-4 w-4" />
-              Add First Task
-            </Button>
-            <Button variant="outline" onClick={handleSuggestTasks} disabled={isSuggesting} className="text-sm h-8 px-3">
-              {isSuggesting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-              Suggest Tasks
-            </Button>
-          </div>
-        </div>
+      {showNewTaskForm ? (
+        addTaskForm
       ) : (
-        <div className="flex items-center gap-2 mt-2">
-          <Button variant="ghost" onClick={() => onOpenTaskModal(null, { project_id: projectId }, project)} className="w-full justify-start text-muted-foreground hover:text-foreground">
+        <div className="flex items-center gap-2 mb-2">
+          <Button variant="ghost" onClick={() => setShowNewTaskForm(true)} className="w-full justify-start text-muted-foreground hover:text-foreground">
             <Plus className="mr-2 h-4 w-4" />
             Add task
           </Button>
@@ -361,6 +370,34 @@ const ProjectTasks = ({ project, tasks, projectId, projectSlug, onEditTask, onDe
             Suggest
           </Button>
         </div>
+      )}
+
+      {hasNoTasks && !showNewTaskForm ? (
+        <div className="text-center text-muted-foreground py-4">
+          <ListChecks className="mx-auto h-8 w-8" />
+          <p className="mt-2 text-sm">No tasks for this project yet.</p>
+        </div>
+      ) : (
+        <TooltipProvider>
+          {undoneTasks.map((task) => (
+            <TaskRow
+              key={task.id}
+              task={task}
+              onToggleTaskCompletion={onToggleTaskCompletion}
+              onEditTask={onEditTask}
+              onDeleteTask={onDeleteTask}
+              handleToggleReaction={handleToggleReaction}
+              currentUserId={user?.id}
+              setRef={(el) => {
+                if (el) taskRefs.current.set(task.id, el);
+                else taskRefs.current.delete(task.id);
+              }}
+              isUnread={unreadTaskIds.includes(task.id)}
+              onClick={() => handleTaskClick(task)}
+              allUsers={project.assignedTo}
+            />
+          ))}
+        </TooltipProvider>
       )}
 
       {doneTasks.length > 0 && (
