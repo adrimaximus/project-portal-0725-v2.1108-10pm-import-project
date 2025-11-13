@@ -1,17 +1,19 @@
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useMemo, useState, useCallback, useEffect } from 'react';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Person, Tag } from '@/types';
-import debounce from 'lodash.debounce';
 import { useSortConfig } from './useSortConfig';
+import debounce from 'lodash.debounce';
 
 const PAGE_SIZE = 30;
 
-const fetchPeople = async ({ pageParam = 0, searchTerm = '' }): Promise<{ people: Person[], nextPage: number | null }> => {
+const fetchPeople = async ({ pageParam = 0, searchTerm = '', tagIds, companyIds }: { pageParam: number, searchTerm: string, tagIds: string[], companyIds: string[] }): Promise<{ people: Person[], nextPage: number | null }> => {
   const { data, error } = await supabase.rpc('get_people_with_details', {
     p_limit: PAGE_SIZE,
     p_offset: pageParam * PAGE_SIZE,
-    p_search_term: searchTerm,
+    p_search_term: searchTerm || null,
+    p_tag_ids: tagIds.length > 0 ? tagIds : null,
+    p_company_ids: companyIds.length > 0 ? companyIds : null,
   });
 
   if (error) throw error;
@@ -33,22 +35,8 @@ const fetchTags = async (): Promise<Tag[]> => {
   return data as Tag[];
 };
 
-export const usePeopleData = () => {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
-  
+export const usePeopleData = ({ searchTerm, tagIds, companyIds }: { searchTerm: string, tagIds: string[], companyIds: string[] }) => {
   const { sortConfig, requestSort } = useSortConfig<keyof Person>({ key: 'updated_at', direction: 'desc' });
-
-  const debouncedSetSearch = useCallback(
-    debounce((term) => {
-      setDebouncedSearchTerm(term);
-    }, 300),
-    []
-  );
-
-  useEffect(() => {
-    debouncedSetSearch(searchTerm);
-  }, [searchTerm, debouncedSetSearch]);
 
   const { 
     data, 
@@ -58,8 +46,8 @@ export const usePeopleData = () => {
     isFetchingNextPage, 
     isLoading: isLoadingPeople 
   } = useInfiniteQuery({
-    queryKey: ['people', 'with-slug', debouncedSearchTerm],
-    queryFn: ({ pageParam }) => fetchPeople({ pageParam, searchTerm: debouncedSearchTerm }),
+    queryKey: ['people', 'with-slug', searchTerm, tagIds, companyIds],
+    queryFn: ({ pageParam }) => fetchPeople({ pageParam, searchTerm, tagIds, companyIds }),
     initialPageParam: 0,
     getNextPageParam: (lastPage) => lastPage.nextPage,
   });
@@ -93,8 +81,6 @@ export const usePeopleData = () => {
     people: sortedPeople,
     tags,
     isLoading: isLoadingPeople || isLoadingTags,
-    searchTerm,
-    setSearchTerm,
     sortConfig,
     requestSort,
     fetchNextPage,

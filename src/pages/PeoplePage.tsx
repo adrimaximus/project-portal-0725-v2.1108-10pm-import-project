@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import PortalLayout from "@/components/PortalLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MoreHorizontal, PlusCircle, Search, Trash2, Edit, GitMerge, Loader2, Kanban, LayoutGrid, Table as TableIcon, Building } from "lucide-react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { getErrorMessage } from "@/lib/utils";
@@ -21,8 +21,10 @@ import CompaniesView from "@/components/people/CompaniesView";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import PeopleTableView from "@/components/people/PeopleTableView";
 import { usePeopleData } from "@/hooks/usePeopleData";
-import { Person } from "@/types";
+import { Person, Company } from "@/types";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import PeopleAdvancedFilters, { PeopleAdvancedFiltersState } from "@/components/people/PeopleAdvancedFilters";
+import debounce from 'lodash.debounce';
 
 type KanbanViewHandle = {
   openSettings: () => void;
@@ -47,18 +49,44 @@ const PeoplePage = () => {
   const [selectedMergePair, setSelectedMergePair] = useState<DuplicatePair | null>(null);
   const kanbanViewRef = useRef<KanbanViewHandle>(null);
 
+  const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+  const [advancedFilters, setAdvancedFilters] = useState<PeopleAdvancedFiltersState>({ tagIds: [], companyIds: [] });
+
+  const debouncedSetSearch = useCallback(
+    debounce((term) => {
+      setDebouncedSearchTerm(term);
+    }, 300),
+    []
+  );
+
+  useEffect(() => {
+    debouncedSetSearch(searchTerm);
+  }, [searchTerm, debouncedSetSearch]);
+
   const {
     tags,
     isLoading,
-    searchTerm,
-    setSearchTerm,
     sortConfig,
     requestSort,
     people,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
-  } = usePeopleData();
+  } = usePeopleData({ 
+    searchTerm: debouncedSearchTerm, 
+    tagIds: advancedFilters.tagIds, 
+    companyIds: advancedFilters.companyIds 
+  });
+
+  const { data: allCompanies = [] } = useQuery<Company[]>({
+    queryKey: ['allCompaniesForFilters'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('companies').select('*').order('name');
+      if (error) throw error;
+      return data;
+    }
+  });
 
   useEffect(() => {
     if (activeTab === 'people') {
@@ -172,6 +200,12 @@ const PeoplePage = () => {
                 />
               </div>
               <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                <PeopleAdvancedFilters
+                  filters={advancedFilters}
+                  onFiltersChange={setAdvancedFilters}
+                  allTags={tags}
+                  allCompanies={allCompanies}
+                />
                 <Button variant="outline" size="icon" onClick={findAndAnalyzeDuplicates} disabled={isFindingDuplicates}>
                   {isFindingDuplicates ? <Loader2 className="h-4 w-4 animate-spin" /> : <GitMerge className="h-4 w-4" />}
                 </Button>
