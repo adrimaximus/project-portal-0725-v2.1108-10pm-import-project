@@ -41,9 +41,9 @@ serve(async (req) => {
 
       ${existingTasksList}
 
-      Based on the information above, generate a JSON array of 5 new, highly specific, concise, and actionable task titles in English.
+      Based on the information above, generate a JSON array of 5 new, highly specific, concise, and actionable task objects. Each object must have two keys: "title" (a string) and "priority" (a string, which must be one of: "Low", "Normal", "High", "Urgent").
 
-      Return ONLY a valid JSON array of 5 unique strings. For example: ["Prepare promotional materials", "Coordinate with sound system vendor", "Create event schedule", "Design booth layout", "Conduct a dress rehearsal"]. Do not include any other text, markdown, or explanation.`;
+      Return ONLY a valid JSON array of objects. For example: [{"title": "Prepare promotional materials", "priority": "High"}, {"title": "Coordinate with sound system vendor", "priority": "Normal"}]. Do not include any other text, markdown, or explanation.`;
 
     const msg = await anthropic.messages.create({
       model: "claude-3-haiku-20240307",

@@ -5,17 +5,25 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Loader2 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { getPriorityStyles } from '@/lib/utils';
+import { TaskPriority } from '@/types';
+
+interface TaskSuggestion {
+  title: string;
+  priority: TaskPriority;
+}
 
 interface TaskSuggestionDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  suggestions: string[];
-  onAddTasks: (selectedTasks: string[]) => void;
+  suggestions: TaskSuggestion[];
+  onAddTasks: (selectedTasks: TaskSuggestion[]) => void;
   isLoading: boolean;
 }
 
 const TaskSuggestionDialog = ({ isOpen, onClose, suggestions, onAddTasks, isLoading }: TaskSuggestionDialogProps) => {
-  const [selectedTasks, setSelectedTasks] = useState<string[]>([]);
+  const [selectedTasks, setSelectedTasks] = useState<TaskSuggestion[]>([]);
 
   useEffect(() => {
     if (isOpen) {
@@ -23,11 +31,11 @@ const TaskSuggestionDialog = ({ isOpen, onClose, suggestions, onAddTasks, isLoad
     }
   }, [isOpen, suggestions]);
 
-  const handleToggle = (taskTitle: string) => {
+  const handleToggle = (task: TaskSuggestion) => {
     setSelectedTasks(prev => 
-      prev.includes(taskTitle) 
-        ? prev.filter(t => t !== taskTitle) 
-        : [...prev, taskTitle]
+      prev.some(t => t.title === task.title) 
+        ? prev.filter(t => t.title !== task.title) 
+        : [...prev, task]
     );
   };
 
@@ -44,12 +52,13 @@ const TaskSuggestionDialog = ({ isOpen, onClose, suggestions, onAddTasks, isLoad
               <div key={index} className="flex items-center space-x-3 p-2 rounded-md hover:bg-muted">
                 <Checkbox
                   id={`suggestion-${index}`}
-                  checked={selectedTasks.includes(suggestion)}
+                  checked={selectedTasks.some(t => t.title === suggestion.title)}
                   onCheckedChange={() => handleToggle(suggestion)}
                 />
-                <Label htmlFor={`suggestion-${index}`} className="text-sm font-normal cursor-pointer">
-                  {suggestion}
+                <Label htmlFor={`suggestion-${index}`} className="text-sm font-normal cursor-pointer flex-1">
+                  {suggestion.title}
                 </Label>
+                <Badge className={getPriorityStyles(suggestion.priority).tw}>{suggestion.priority}</Badge>
               </div>
             ))}
           </div>

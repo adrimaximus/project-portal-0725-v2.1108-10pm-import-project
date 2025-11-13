@@ -209,7 +209,7 @@ const ProjectTasks = ({ project, tasks, projectId, projectSlug, onEditTask, onDe
   const [user, setUser] = useState<AuthUser | null>(null);
   const { user: authUser } = useAuth();
   const [isSuggesting, setIsSuggesting] = useState(false);
-  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [suggestions, setSuggestions] = useState<{ title: string, priority: Task['priority'] }[]>([]);
   const [isSuggestionDialogOpen, setIsSuggestionDialogOpen] = useState(false);
   const { onOpen: onOpenTaskDrawer } = useTaskDrawer();
 
@@ -240,15 +240,16 @@ const ProjectTasks = ({ project, tasks, projectId, projectSlug, onEditTask, onDe
     }
   };
 
-  const handleAddSuggestedTasks = (selectedTitles: string[]) => {
-    if (selectedTitles.length === 0) {
+  const handleAddSuggestedTasks = (selectedItems: { title: string, priority: Task['priority'] }[]) => {
+    if (selectedItems.length === 0) {
       setIsSuggestionDialogOpen(false);
       return;
     }
-    const tasksToCreate = selectedTitles.map(title => ({
-      title,
+    const tasksToCreate = selectedItems.map(item => ({
+      title: item.title,
       project_id: project.id,
       created_by: user!.id,
+      priority: item.priority,
     }));
     createTasks(tasksToCreate, {
       onSuccess: () => {
