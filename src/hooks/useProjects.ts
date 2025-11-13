@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import SafeLocalStorage from '@/lib/localStorage';
 import { Project } from '@/types';
 
-const PAGE_SIZE = 1000;
+const PAGE_SIZE = 30;
 
 type ProjectsPage = {
   projects: Project[];
