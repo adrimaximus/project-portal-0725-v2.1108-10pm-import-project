@@ -32,7 +32,30 @@ const InteractiveText = ({ text, members }: InteractiveTextProps) => {
 
         // Check for URL
         if (part.match(/^(https?:\/\/[^\s]+|www\.[^\s]+)$/)) {
-          const href = part.startsWith('www.') ? `https://${part}` : part;
+          let processedPart = part;
+  
+          // Heuristically remove trailing punctuation
+          // This loop will remove multiple trailing punctuation characters e.g. "url)."
+          while (/[.,!?)\]};:'"]$/.test(processedPart)) {
+            const lastChar = processedPart.slice(-1);
+            const rest = processedPart.slice(0, -1);
+            
+            // Don't remove closing parenthesis if there's an unbalanced opening one
+            if (lastChar === ')' && (rest.match(/\(/g) || []).length > (rest.match(/\)/g) || []).length) {
+              break;
+            }
+            // Similar logic for other brackets
+            if (lastChar === ']' && (rest.match(/\[/g) || []).length > (rest.match(/\]/g) || []).length) {
+              break;
+            }
+            if (lastChar === '}' && (rest.match(/{/g) || []).length > (rest.match(/}/g) || []).length) {
+              break;
+            }
+            
+            processedPart = rest;
+          }
+
+          const href = processedPart.startsWith('www.') ? `https://${processedPart}` : processedPart;
           return (
             <a
               key={index}
@@ -41,7 +64,7 @@ const InteractiveText = ({ text, members }: InteractiveTextProps) => {
               rel="noopener noreferrer"
               className="text-primary underline hover:text-primary/80"
             >
-              {part}
+              {processedPart}
             </a>
           );
         }
