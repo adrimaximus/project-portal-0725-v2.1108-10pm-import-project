@@ -1,4 +1,4 @@
-import { Task, User, TaskAttachment, Reaction, Project } from "@/types";
+import { Task, User, TaskAttachment, Reaction, Project, UpsertTaskPayload } from "@/types";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ListChecks, Plus, MoreHorizontal, Edit, Trash2, Ticket, Paperclip, Eye, Download, File as FileIconLucide, ChevronDown, Loader2, Sparkles } from "lucide-react";
 import { Button } from "../ui/button";
@@ -12,7 +12,7 @@ import TaskReactions from '../projects/TaskReactions';
 import { useTaskMutations } from '@/hooks/useTaskMutations';
 import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
-import TaskAttachmentList from '../projects/TaskAttachmentList';
+import TaskAttachmentList from './TaskAttachmentList';
 import { cn, getErrorMessage, formatBytes } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { Separator } from "@/components/ui/separator";
@@ -22,7 +22,10 @@ import { User as AuthUser } from '@supabase/supabase-js';
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { Textarea } from "../ui/textarea";
-import TaskSuggestionDialog from '../projects/TaskSuggestionDialog';
+import TaskSuggestionDialog, { TaskSuggestion } from '../projects/TaskSuggestionDialog';
+import { useTaskDrawer } from "@/contexts/TaskDrawerContext";
+import InteractiveText from "../InteractiveText";
+import { formatMentions } from "@/lib/mentionUtils";
 
 interface ProjectTasksProps {
   project: Project;
@@ -34,9 +37,11 @@ interface ProjectTasksProps {
   onToggleTaskCompletion: (task: Task, completed: boolean) => void;
   highlightedTaskId?: string | null;
   onHighlightComplete?: () => void;
+  unreadTaskIds: string[];
+  onOpenTaskModal: (task?: Task | null, initialData?: Partial<UpsertTaskPayload>, project?: Project | null) => void;
 }
 
-const TaskRow = ({ task, onToggleTaskCompletion, onEditTask, onDeleteTask, handleToggleReaction, setRef, currentUserId }: {
+const TaskRow = ({ task, onToggleTaskCompletion, onEditTask, onDeleteTask, handleToggleReaction, setRef, currentUserId, isUnread, onClick, allUsers }: {
   task: Task;
   onToggleTaskCompletion: (task: Task, completed: boolean) => void;
   onEditTask: (task: Task) => void;
@@ -44,6 +49,9 @@ const TaskRow = ({ task, onToggleTaskCompletion, onEditTask, onDeleteTask, handl
   handleToggleReaction: (taskId: string, emoji: string) => void;
   setRef: (el: HTMLDivElement | null) => void;
   currentUserId?: string;
+  isUnread: boolean;
+  onClick: () => void;
+  allUsers: User[];
 }) => {
   const navigate = useNavigate();
 
@@ -71,6 +79,8 @@ const TaskRow = ({ task, onToggleTaskCompletion, onEditTask, onDeleteTask, handl
   }, [task.assignedTo, currentUserId]);
 
   const isUrgent = task.priority?.toLowerCase() === 'urgent';
+  
+  const formattedTitle = useMemo(() => formatMentions(task.title), [task.title]);
 
   return (
     <div
@@ -79,6 +89,7 @@ const TaskRow = ({ task, onToggleTaskCompletion, onEditTask, onDeleteTask, handl
         "flex items-start space-x-3 p-2 rounded-md hover:bg-muted group transition-colors duration-500",
         isUrgent ? "bg-red-500/10" : isAssignedToCurrentUser ? "bg-primary/10" : ""
       )}
+      onClick={onClick}
     >
       <Checkbox
         id={`task-${task.id}`}
@@ -87,18 +98,21 @@ const TaskRow = ({ task, onToggleTaskCompletion, onEditTask, onDeleteTask, handl
         className="mt-1"
       />
       <div
-        className={`flex-1 min-w-0 text-sm flex items-center gap-2 ${task.completed ? 'text-muted-foreground' : 'text-card-foreground'}`}
+        className={`flex-1 min-w-0 text-sm ${task.completed ? 'text-muted-foreground' : 'text-card-foreground'}`}
       >
-        <span
-          className={cn(
-            "break-words cursor-pointer hover:underline",
-            task.completed && "line-through"
-          )}
-          title={task.title}
-          onClick={handleTitleClick}
-        >
-          {task.title}
-        </span>
+        <div className="flex items-center gap-2">
+          {isUnread && <div className="h-2 w-2 rounded-full bg-red-500 flex-shrink-0" />}
+          <div
+            className={cn(
+              "break-words cursor-pointer hover:underline",
+              task.completed && "line-through"
+            )}
+            title={formattedTitle}
+            onClick={handleTitleClick}
+          >
+            <InteractiveText text={formattedTitle} members={allUsers} />
+          </div>
+        </div>
       </div>
 
       <div className="flex items-center gap-2 ml-auto">
@@ -191,18 +205,23 @@ const TaskRow = ({ task, onToggleTaskCompletion, onEditTask, onDeleteTask, handl
   );
 };
 
-const ProjectTasks = ({ project, tasks, projectId, projectSlug, onEditTask, onDeleteTask, onToggleTaskCompletion, highlightedTaskId, onHighlightComplete }: ProjectTasksProps) => {
+const ProjectTasks = ({ project, tasks, projectId, projectSlug, onEditTask, onDeleteTask, onToggleTaskCompletion, highlightedTaskId, onHighlightComplete, unreadTaskIds, onOpenTaskModal }: ProjectTasksProps) => {
   const queryClient = useQueryClient();
-  const { toggleTaskReaction, createTasks, isCreatingTasks } = useTaskMutations(() => queryClient.invalidateQueries({ queryKey: ['project', projectSlug] }));
+  const { createTasks, isCreatingTasks } = useTaskMutations(() => queryClient.invalidateQueries({ queryKey: ['project', projectSlug] }));
   const taskRefs = useRef<Map<string, HTMLDivElement>>(new Map());
-  const [isCompletedOpen, setIsCompletedOpen] = useState(true);
+  const [isCompletedOpen, setIsCompletedOpen] = useState(false);
   const [user, setUser] = useState<AuthUser | null>(null);
-  const [showNewTaskForm, setShowNewTaskForm] = useState(false);
-  const [newTaskTitle, setNewTaskTitle] = useState("");
   const { user: authUser } = useAuth();
   const [isSuggesting, setIsSuggesting] = useState(false);
-  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [suggestions, setSuggestions] = useState<TaskSuggestion[]>([]);
   const [isSuggestionDialogOpen, setIsSuggestionDialogOpen] = useState(false);
+  const { onOpen: onOpenTaskDrawer } = useTaskDrawer();
+  const [showNewTaskForm, setShowNewTaskForm] = useState(false);
+  const [newTaskTitle, setNewTaskTitle] = useState("");
+
+  const handleTaskClick = (task: Task) => {
+    onOpenTaskDrawer(task, project);
+  };
 
   const handleSuggestTasks = async () => {
     setIsSuggesting(true);
@@ -227,15 +246,16 @@ const ProjectTasks = ({ project, tasks, projectId, projectSlug, onEditTask, onDe
     }
   };
 
-  const handleAddSuggestedTasks = (selectedTitles: string[]) => {
-    if (selectedTitles.length === 0) {
+  const handleAddSuggestedTasks = (selectedItems: TaskSuggestion[]) => {
+    if (selectedItems.length === 0) {
       setIsSuggestionDialogOpen(false);
       return;
     }
-    const tasksToCreate = selectedTitles.map(title => ({
-      title,
+    const tasksToCreate = selectedItems.map(item => ({
+      title: item.title,
       project_id: project.id,
       created_by: user!.id,
+      priority: item.priority,
     }));
     createTasks(tasksToCreate, {
       onSuccess: () => {
@@ -337,43 +357,10 @@ const ProjectTasks = ({ project, tasks, projectId, projectSlug, onEditTask, onDe
 
   return (
     <div className="space-y-1">
-      <TooltipProvider>
-        {undoneTasks.map((task) => (
-          <TaskRow
-            key={task.id}
-            task={task}
-            onToggleTaskCompletion={onToggleTaskCompletion}
-            onEditTask={onEditTask}
-            onDeleteTask={onDeleteTask}
-            handleToggleReaction={handleToggleReaction}
-            currentUserId={user?.id}
-            setRef={(el) => {
-              if (el) taskRefs.current.set(task.id, el);
-              else taskRefs.current.delete(task.id);
-            }}
-          />
-        ))}
-      </TooltipProvider>
-
       {showNewTaskForm ? (
         addTaskForm
-      ) : hasNoTasks ? (
-        <div className="text-center text-muted-foreground py-4">
-          <ListChecks className="mx-auto h-8 w-8" />
-          <p className="mt-2 text-sm">No tasks for this project yet.</p>
-          <div className="flex justify-center gap-2 mt-3">
-            <Button onClick={() => setShowNewTaskForm(true)} className="text-sm h-8 px-3">
-              <Plus className="mr-1 h-4 w-4" />
-              Add First Task
-            </Button>
-            <Button variant="outline" onClick={handleSuggestTasks} disabled={isSuggesting} className="text-sm h-8 px-3">
-              {isSuggesting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-              Suggest Tasks
-            </Button>
-          </div>
-        </div>
       ) : (
-        <div className="flex items-center gap-2 mt-2">
+        <div className="flex items-center gap-2 mb-2">
           <Button variant="ghost" onClick={() => setShowNewTaskForm(true)} className="w-full justify-start text-muted-foreground hover:text-foreground">
             <Plus className="mr-2 h-4 w-4" />
             Add task
@@ -383,6 +370,34 @@ const ProjectTasks = ({ project, tasks, projectId, projectSlug, onEditTask, onDe
             Suggest
           </Button>
         </div>
+      )}
+
+      {hasNoTasks && !showNewTaskForm ? (
+        <div className="text-center text-muted-foreground py-4">
+          <ListChecks className="mx-auto h-8 w-8" />
+          <p className="mt-2 text-sm">No tasks for this project yet.</p>
+        </div>
+      ) : (
+        <TooltipProvider>
+          {undoneTasks.map((task) => (
+            <TaskRow
+              key={task.id}
+              task={task}
+              onToggleTaskCompletion={onToggleTaskCompletion}
+              onEditTask={onEditTask}
+              onDeleteTask={onDeleteTask}
+              handleToggleReaction={handleToggleReaction}
+              currentUserId={user?.id}
+              setRef={(el) => {
+                if (el) taskRefs.current.set(task.id, el);
+                else taskRefs.current.delete(task.id);
+              }}
+              isUnread={unreadTaskIds.includes(task.id)}
+              onClick={() => handleTaskClick(task)}
+              allUsers={project.assignedTo}
+            />
+          ))}
+        </TooltipProvider>
       )}
 
       {doneTasks.length > 0 && (
@@ -410,6 +425,9 @@ const ProjectTasks = ({ project, tasks, projectId, projectSlug, onEditTask, onDe
                       if (el) taskRefs.current.set(task.id, el);
                       else taskRefs.current.delete(task.id);
                     }}
+                    isUnread={unreadTaskIds.includes(task.id)}
+                    onClick={() => handleTaskClick(task)}
+                    allUsers={project.assignedTo}
                   />
                 ))}
               </TooltipProvider>

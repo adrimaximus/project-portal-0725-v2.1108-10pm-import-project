@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { getPriorityStyles } from '@/lib/utils';
 import { TaskPriority } from '@/types';
 
-interface TaskSuggestion {
+export interface TaskSuggestion {
   title: string;
   priority: TaskPriority;
 }
