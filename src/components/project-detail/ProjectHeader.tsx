@@ -1,7 +1,7 @@
 import { Project, ProjectStatus } from "@/types";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Pencil, Loader2, MoreVertical, Trash2, CheckCircle, Link as LinkIcon } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import StatusBadge from "../StatusBadge";
 import { getProjectStatusStyles, cn } from "@/lib/utils";
 import { Input } from "../ui/input";
@@ -46,6 +46,7 @@ const ProjectHeader = ({
   hasChanges,
 }: ProjectHeaderProps) => {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const statusStyles = getProjectStatusStyles(project.status);
   const isCompleted = project.status === 'Completed';
@@ -58,9 +59,17 @@ const ProjectHeader = ({
     toast.success("Project title and link copied to clipboard!");
   };
 
+  const handleBack = () => {
+    if (location.key !== 'default') {
+      navigate(-1);
+    } else {
+      navigate('/projects');
+    }
+  };
+
   return (
     <div className="space-y-4">
-      <Button variant="ghost" onClick={() => navigate(-1)} className="text-muted-foreground px-0 hover:bg-transparent">
+      <Button variant="ghost" onClick={handleBack} className="text-muted-foreground px-0 hover:bg-transparent">
         <ArrowLeft className="mr-2 h-4 w-4" />
         Back to Projects
       </Button>
