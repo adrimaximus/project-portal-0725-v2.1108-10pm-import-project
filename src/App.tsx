@@ -58,6 +58,7 @@ import GlobalTaskModal from "./components/GlobalTaskModal";
 import NotificationSettingsPage from "./pages/NotificationSettingsPage";
 import { TaskDrawerProvider } from "./contexts/TaskDrawerContext";
 import GlobalTaskDrawer from "./components/GlobalTaskDrawer";
+import TaskRedirectPage from "./pages/TaskRedirectPage";
 
 function App() {
   return (
@@ -78,7 +79,7 @@ function App() {
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/projects" element={<Projects />} />
               <Route path="/projects/:slug" element={<ProjectDetail />} />
-              <Route path="/tasks/:taskId" element={<Projects />} />
+              <Route path="/tasks/:taskId" element={<TaskRedirectPage />} />
               <Route path="/request" element={<Request />} />
               <Route path="/chat" element={<Chat />} />
               <Route path="/mood-tracker" element={<MoodTracker />} />

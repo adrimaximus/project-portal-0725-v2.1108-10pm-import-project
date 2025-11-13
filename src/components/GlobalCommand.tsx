@@ -152,8 +152,9 @@ export function GlobalCommand() {
                 {results.tasks.map((task) => (
                   <CommandItem
                     key={task.id}
-                    onSelect={() => runCommand(() => navigate(`/projects?view=tasks&highlight=${task.id}`))}
+                    onSelect={() => runCommand(() => navigate(`/projects/${task.project_slug}?tab=tasks&task=${task.id}`))}
                     value={`task-${task.id}-${task.title}`}
+                    className="cursor-pointer"
                   >
                     <div className="flex items-center justify-between w-full">
                       <div className="flex items-center min-w-0">
@@ -174,6 +175,7 @@ export function GlobalCommand() {
                     key={project.id}
                     onSelect={() => runCommand(() => navigate(`/projects/${project.slug}`))}
                     value={`project-${project.name}`}
+                    className="cursor-pointer"
                   >
                     <FileText className="mr-2 h-4 w-4" />
                     <span>{project.name}</span>
@@ -189,6 +191,7 @@ export function GlobalCommand() {
                     key={user.id}
                     onSelect={() => runCommand(() => navigate(`/users/${user.id}`))}
                     value={`user-${user.name}`}
+                    className="cursor-pointer"
                   >
                     <Users className="mr-2 h-4 w-4" />
                     <span>{user.name}</span>
@@ -204,6 +207,7 @@ export function GlobalCommand() {
                     key={goal.id}
                     onSelect={() => runCommand(() => navigate(`/goals/${goal.slug}`))}
                     value={`goal-${goal.title}`}
+                    className="cursor-pointer"
                   >
                     <Trophy className="mr-2 h-4 w-4" />
                     <span>{goal.title}</span>
