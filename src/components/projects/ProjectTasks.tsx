@@ -25,6 +25,7 @@ import { Textarea } from "../ui/textarea";
 import TaskSuggestionDialog from '../projects/TaskSuggestionDialog';
 import { useTaskDrawer } from "@/contexts/TaskDrawerContext";
 import InteractiveText from "../InteractiveText";
+import { formatMentions } from "@/lib/mentionUtils";
 
 interface ProjectTasksProps {
   project: Project;
@@ -78,6 +79,8 @@ const TaskRow = ({ task, onToggleTaskCompletion, onEditTask, onDeleteTask, handl
   }, [task.assignedTo, currentUserId]);
 
   const isUrgent = task.priority?.toLowerCase() === 'urgent';
+  
+  const formattedTitle = useMemo(() => formatMentions(task.title), [task.title]);
 
   return (
     <div
@@ -104,10 +107,10 @@ const TaskRow = ({ task, onToggleTaskCompletion, onEditTask, onDeleteTask, handl
               "break-words cursor-pointer hover:underline",
               task.completed && "line-through"
             )}
-            title={task.title}
+            title={formattedTitle}
             onClick={handleTitleClick}
           >
-            <InteractiveText text={task.title} members={allUsers} />
+            <InteractiveText text={formattedTitle} members={allUsers} />
           </div>
         </div>
       </div>
