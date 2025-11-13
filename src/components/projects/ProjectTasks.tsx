@@ -1,4 +1,4 @@
-import { Task, User, TaskAttachment, Reaction, Project } from "@/types";
+import { Task, User, TaskAttachment, Reaction, Project, UpsertTaskPayload } from "@/types";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ListChecks, Plus, MoreHorizontal, Edit, Trash2, Ticket, Paperclip, Eye, Download, File as FileIconLucide, ChevronDown, Loader2, Sparkles } from "lucide-react";
 import { Button } from "../ui/button";
@@ -22,7 +22,7 @@ import { User as AuthUser } from '@supabase/supabase-js';
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { Textarea } from "../ui/textarea";
-import TaskSuggestionDialog from './TaskSuggestionDialog';
+import TaskSuggestionDialog from '../projects/TaskSuggestionDialog';
 import { useTaskDrawer } from "@/contexts/TaskDrawerContext";
 import InteractiveText from "../InteractiveText";
 
@@ -37,6 +37,7 @@ interface ProjectTasksProps {
   highlightedTaskId?: string | null;
   onHighlightComplete?: () => void;
   unreadTaskIds: string[];
+  onOpenTaskModal: (task?: Task | null, initialData?: Partial<UpsertTaskPayload>, project?: Project | null) => void;
 }
 
 const TaskRow = ({ task, onToggleTaskCompletion, onEditTask, onDeleteTask, handleToggleReaction, setRef, currentUserId, isUnread, onClick, allUsers }: {
@@ -200,14 +201,12 @@ const TaskRow = ({ task, onToggleTaskCompletion, onEditTask, onDeleteTask, handl
   );
 };
 
-const ProjectTasks = ({ project, tasks, projectId, projectSlug, onEditTask, onDeleteTask, onToggleTaskCompletion, highlightedTaskId, onHighlightComplete, unreadTaskIds }: ProjectTasksProps) => {
+const ProjectTasks = ({ project, tasks, projectId, projectSlug, onEditTask, onDeleteTask, onToggleTaskCompletion, highlightedTaskId, onHighlightComplete, unreadTaskIds, onOpenTaskModal }: ProjectTasksProps) => {
   const queryClient = useQueryClient();
-  const { toggleTaskReaction, createTasks, isCreatingTasks } = useTaskMutations(() => queryClient.invalidateQueries({ queryKey: ['project', projectSlug] }));
+  const { createTasks, isCreatingTasks } = useTaskMutations(() => queryClient.invalidateQueries({ queryKey: ['project', projectSlug] }));
   const taskRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const [isCompletedOpen, setIsCompletedOpen] = useState(true);
   const [user, setUser] = useState<AuthUser | null>(null);
-  const [showNewTaskForm, setShowNewTaskForm] = useState(false);
-  const [newTaskTitle, setNewTaskTitle] = useState("");
   const { user: authUser } = useAuth();
   const [isSuggesting, setIsSuggesting] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
@@ -256,17 +255,6 @@ const ProjectTasks = ({ project, tasks, projectId, projectSlug, onEditTask, onDe
         setIsSuggestionDialogOpen(false);
       }
     });
-  };
-
-  const handleAddNewTask = () => {
-    if (newTaskTitle.trim()) {
-        createTasks([{ title: newTaskTitle.trim(), project_id: projectId, created_by: authUser!.id }], {
-          onSuccess: () => {
-            setShowNewTaskForm(false);
-            setNewTaskTitle("");
-          }
-        });
-    }
   };
 
   useEffect(() => {
@@ -319,36 +307,6 @@ const ProjectTasks = ({ project, tasks, projectId, projectSlug, onEditTask, onDe
 
   const hasNoTasks = !tasks || tasks.length === 0;
 
-  const addTaskForm = (
-    <div className="p-2">
-      <Textarea
-        placeholder="What needs to be done?"
-        value={newTaskTitle}
-        onChange={(e) => setNewTaskTitle(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            handleAddNewTask();
-          }
-          if (e.key === 'Escape') {
-            e.preventDefault();
-            setShowNewTaskForm(false);
-            setNewTaskTitle("");
-          }
-        }}
-        autoFocus
-        className="mb-2"
-      />
-      <div className="flex items-center gap-2">
-        <Button onClick={handleAddNewTask} disabled={isCreatingTasks}>
-          {isCreatingTasks ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-          Add Task
-        </Button>
-        <Button variant="ghost" onClick={() => { setShowNewTaskForm(false); setNewTaskTitle(""); }}>Cancel</Button>
-      </div>
-    </div>
-  );
-
   return (
     <div className="space-y-1">
       <TooltipProvider>
@@ -372,14 +330,12 @@ const ProjectTasks = ({ project, tasks, projectId, projectSlug, onEditTask, onDe
         ))}
       </TooltipProvider>
 
-      {showNewTaskForm ? (
-        addTaskForm
-      ) : hasNoTasks ? (
+      {hasNoTasks ? (
         <div className="text-center text-muted-foreground py-4">
           <ListChecks className="mx-auto h-8 w-8" />
           <p className="mt-2 text-sm">No tasks for this project yet.</p>
           <div className="flex justify-center gap-2 mt-3">
-            <Button onClick={() => setShowNewTaskForm(true)} className="text-sm h-8 px-3">
+            <Button onClick={() => onOpenTaskModal(null, { project_id: projectId }, project)} className="text-sm h-8 px-3">
               <Plus className="mr-1 h-4 w-4" />
               Add First Task
             </Button>
@@ -391,7 +347,7 @@ const ProjectTasks = ({ project, tasks, projectId, projectSlug, onEditTask, onDe
         </div>
       ) : (
         <div className="flex items-center gap-2 mt-2">
-          <Button variant="ghost" onClick={() => setShowNewTaskForm(true)} className="w-full justify-start text-muted-foreground hover:text-foreground">
+          <Button variant="ghost" onClick={() => onOpenTaskModal(null, { project_id: projectId }, project)} className="w-full justify-start text-muted-foreground hover:text-foreground">
             <Plus className="mr-2 h-4 w-4" />
             Add task
           </Button>
