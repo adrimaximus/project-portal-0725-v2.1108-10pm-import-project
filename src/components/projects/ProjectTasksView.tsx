@@ -13,15 +13,19 @@ import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { getAvatarUrl, generatePastelColor, getInitials } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
+import { useProfiles } from '@/hooks/useProfiles';
+import InteractiveText from '../InteractiveText';
 
-const TaskListItem = ({ task, onClick }: { task: Task; onClick: (task: Task) => void }) => {
+const TaskListItem = ({ task, onClick, allUsers }: { task: Task; onClick: (task: Task); allUsers: User[] }) => {
   return (
     <button 
       className="flex w-full items-start gap-4 px-4 py-3 text-left transition-colors hover:bg-muted/50"
       onClick={() => onClick(task)}
     >
       <div className="flex-1 space-y-1">
-        <p className={cn("text-sm font-medium leading-none", task.completed && "line-through text-muted-foreground")}>{task.title}</p>
+        <p className={cn("text-sm font-medium leading-none", task.completed && "line-through text-muted-foreground")}>
+          <InteractiveText text={task.title} members={allUsers} />
+        </p>
         <p className="text-sm text-muted-foreground">{task.project_name}</p>
       </div>
       <div className="flex items-center gap-4">
@@ -60,6 +64,7 @@ const TaskListItem = ({ task, onClick }: { task: Task; onClick: (task: Task) => 
 
 const ProjectTasksView = () => {
   const { data: tasks = [], isLoading, refetch } = useTasks({ sortConfig: { key: 'created_at', direction: 'desc' } });
+  const { data: allUsers = [] } = useProfiles();
 
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [isTaskFormOpen, setIsTaskFormOpen] = useState(false);
@@ -116,7 +121,7 @@ const ProjectTasksView = () => {
       <div className="border rounded-lg">
         <div className="divide-y divide-border">
           {tasks.map(task => (
-            <TaskListItem key={task.id} task={task} onClick={handleTaskClick} />
+            <TaskListItem key={task.id} task={task} onClick={handleTaskClick} allUsers={allUsers} />
           ))}
         </div>
       </div>

@@ -11,6 +11,8 @@ import { format } from 'date-fns';
 import { MoreHorizontal, Edit, Trash2 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
+import { useProfiles } from '@/hooks/useProfiles';
+import InteractiveText from '../InteractiveText';
 
 interface TasksKanbanCardProps {
   task: Task;
@@ -33,6 +35,7 @@ const TasksKanbanCard: React.FC<TasksKanbanCardProps> = ({ task, onEdit, onDelet
       task,
     }
   });
+  const { data: allUsers = [] } = useProfiles();
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -55,10 +58,12 @@ const TasksKanbanCard: React.FC<TasksKanbanCardProps> = ({ task, onEdit, onDelet
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <h4 className="font-semibold text-sm mb-2 break-words">{truncateText(task.title, 60)}</h4>
+                  <h4 className="font-semibold text-sm mb-2 break-words">
+                    <InteractiveText text={truncateText(task.title, 60)} members={allUsers} />
+                  </h4>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>{task.title}</p>
+                  <p><InteractiveText text={task.title} members={allUsers} /></p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>

@@ -272,15 +272,15 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
                     disabled={isUpdatingTask}
                   />
                 ) : (
-                  <span
+                  <div
                     className={cn(
                       "min-w-0 break-words whitespace-normal cursor-pointer",
                       task.completed && "line-through text-muted-foreground"
                     )}
                     onClick={() => !task.completed && setIsEditingTitle(true)}
                   >
-                    {task.title}
-                  </span>
+                    <InteractiveText text={task.title} members={allUsers} />
+                  </div>
                 )}
               </div>
               <p className="text-xs text-muted-foreground mt-1">

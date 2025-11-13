@@ -95,7 +95,7 @@ const TaskRow = ({ task, onToggleTaskCompletion, onEditTask, onDeleteTask, handl
         className="mt-1"
       />
       <div
-        className={`flex-1 min-w-0 text-sm flex items-center gap-2 ${task.completed ? 'text-muted-foreground' : 'text-card-foreground'}`}
+        className={`flex-1 min-w-0 text-sm ${task.completed ? 'text-muted-foreground' : 'text-card-foreground'}`}
       >
         <div className="flex items-center gap-2">
           {isUnread && <div className="h-2 w-2 rounded-full bg-red-500 flex-shrink-0" />}
@@ -105,6 +105,7 @@ const TaskRow = ({ task, onToggleTaskCompletion, onEditTask, onDeleteTask, handl
               task.completed && "line-through"
             )}
             title={task.title}
+            onClick={handleTitleClick}
           >
             <InteractiveText text={task.title} members={allUsers} />
           </div>
