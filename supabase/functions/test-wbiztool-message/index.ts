@@ -1,5 +1,4 @@
 // @ts-nocheck
-import { serve } from 'https://deno.land/std@0.190.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.54.0'
 
 const corsHeaders = {
@@ -7,7 +6,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
@@ -62,7 +61,7 @@ serve(async (req) => {
         const errorJson = JSON.parse(errorText);
         errorMessage = errorJson.message || JSON.stringify(errorJson);
       } catch (e) {
-        errorMessage = errorText.replace(/<[^>]*>?/gm, '').trim() || `Received an empty error response (Status: ${status}).`;
+        errorMessage = errorText.replace(/<[^>]*>?/gm, ' ').trim() || `Received an empty error response (Status: ${status}).`;
       }
       throw new Error(`WBIZTOOL API Error: ${errorMessage}`)
     }

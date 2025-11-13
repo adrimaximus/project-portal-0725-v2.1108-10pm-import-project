@@ -1,5 +1,4 @@
 // @ts-nocheck
-import { serve } from 'https://deno.land/std@0.190.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.54.0';
 import OpenAI from 'https://esm.sh/openai@4.29.2';
 import Anthropic from 'https://esm.sh/@anthropic-ai/sdk@0.22.0';
@@ -24,7 +23,7 @@ const getOpenAIClient = async (supabaseAdmin: any) => {
   return new OpenAI({ apiKey: config.value });
 };
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }

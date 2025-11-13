@@ -1,5 +1,4 @@
 // @ts-nocheck
-import { serve } from 'https://deno.land/std@0.190.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.54.0';
 import Anthropic from 'https://esm.sh/@anthropic-ai/sdk@0.22.0';
 
@@ -25,7 +24,7 @@ const getSystemPrompt = () => `Anda adalah asisten keuangan yang profesional, so
 
 const getFullName = (profile: any) => `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email;
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }

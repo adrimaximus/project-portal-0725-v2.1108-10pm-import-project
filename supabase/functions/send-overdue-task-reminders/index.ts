@@ -1,5 +1,4 @@
 // @ts-nocheck
-import { serve } from 'https://deno.land/std@0.190.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.54.0';
 
 const corsHeaders = {
@@ -9,7 +8,7 @@ const corsHeaders = {
 
 const CRON_SECRET = Deno.env.get('CRON_SECRET');
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
