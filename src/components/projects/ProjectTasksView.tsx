@@ -15,49 +15,53 @@ import { getAvatarUrl, generatePastelColor, getInitials } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 import { useProfiles } from '@/hooks/useProfiles';
 import InteractiveText from '../InteractiveText';
+import { Checkbox } from '../ui/checkbox';
 
-const TaskListItem = ({ task, onClick, allUsers }: { task: Task; onClick: (task: Task); allUsers: User[] }) => {
+const TaskListItem = ({ task, onToggleTaskCompletion, onTaskClick, isUnread, allUsers, isToggling }: { task: Task, onToggleTaskCompletion: (task: Task, completed: boolean) => void, onTaskClick: (task: Task) => void, isUnread: boolean, allUsers: User[], isToggling: boolean }) => {
+  const dueDate = task.due_date ? new Date(task.due_date) : null;
+  let dueDateText = '';
+  let dueDateColor = 'text-muted-foreground';
+
+  if (dueDate) {
+    if (isPast(dueDate) && !task.completed) {
+      dueDateText = format(dueDate, 'MMM d, p');
+      dueDateColor = 'text-destructive';
+    } else {
+      dueDateText = format(dueDate, 'MMM d, p');
+    }
+  }
+
   return (
-    <button 
-      className="flex w-full items-start gap-4 px-4 py-3 text-left transition-colors hover:bg-muted/50"
-      onClick={() => onClick(task)}
-    >
-      <div className="flex-1 space-y-1">
-        <p className={cn("text-sm font-medium leading-none", task.completed && "line-through text-muted-foreground")}>
-          <InteractiveText text={task.title} members={allUsers} />
-        </p>
-        <p className="text-sm text-muted-foreground">{task.project_name}</p>
-      </div>
-      <div className="flex items-center gap-4">
-        <div className="flex items-center -space-x-2">
-          {task.assignedTo?.slice(0, 3).map((user: User) => (
-            <TooltipProvider key={user.id}>
-              <Tooltip>
-                <TooltipTrigger>
-                  <Avatar className="h-6 w-6 border-2 border-background">
-                    <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
-                    <AvatarFallback style={generatePastelColor(user.id)}>
-                      {getInitials([user.first_name, user.last_name].filter(Boolean).join(' '), user.email || undefined)}
-                    </AvatarFallback>
-                  </Avatar>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{[user.first_name, user.last_name].filter(Boolean).join(' ')}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          ))}
-        </div>
-        {task.due_date && (
-          <div className={cn(
-            "text-sm font-medium whitespace-nowrap",
-            isPast(new Date(task.due_date)) && !task.completed ? "text-destructive" : "text-muted-foreground"
-          )}>
-            {format(new Date(task.due_date), 'MMM d')}
+    <div className="flex items-start gap-3 p-3 border-b" onClick={() => onTaskClick(task)}>
+      <Checkbox
+        id={`task-mobile-${task.id}`}
+        checked={task.completed}
+        onCheckedChange={(checked) => onToggleTaskCompletion(task, !!checked)}
+        className="mt-1"
+        onClick={(e) => e.stopPropagation()}
+        disabled={isToggling}
+      />
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          {isUnread && <div className="h-2 w-2 rounded-full bg-red-500 flex-shrink-0" />}
+          <div className={cn("font-medium", task.completed && "line-through text-muted-foreground")}>
+            <InteractiveText text={task.title} members={allUsers} />
           </div>
-        )}
+        </div>
+        <p className="text-sm text-muted-foreground">{task.project_name}</p>
+        <div className="flex items-center gap-4 mt-2">
+          {dueDateText && <span className={`text-xs font-medium ${dueDateColor}`}>{dueDateText}</span>}
+          <div className="flex -space-x-2">
+            {task.assignedTo?.slice(0, 3).map(user => (
+              <Avatar key={user.id} className="h-6 w-6 border-2 border-background">
+                <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
+                <AvatarFallback style={generatePastelColor(user.id)}>{getInitials([user.first_name, user.last_name].filter(Boolean).join(' '), user.email || undefined)}</AvatarFallback>
+              </Avatar>
+            ))}
+          </div>
+        </div>
       </div>
-    </button>
+    </div>
   );
 };
 
@@ -71,7 +75,7 @@ const ProjectTasksView = () => {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
 
-  const { upsertTask, isUpserting, deleteTask } = useTaskMutations(refetch);
+  const { upsertTask, isUpserting, deleteTask, toggleTaskCompletion, isToggling } = useTaskMutations(refetch);
 
   const handleTaskClick = (task: Task) => {
     setSelectedTask(task);
@@ -108,6 +112,10 @@ const ProjectTasksView = () => {
     });
   };
 
+  const handleToggleTaskCompletion = (task: Task, completed: boolean) => {
+    toggleTaskCompletion({ task, completed });
+  };
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -121,7 +129,7 @@ const ProjectTasksView = () => {
       <div className="border rounded-lg">
         <div className="divide-y divide-border">
           {tasks.map(task => (
-            <TaskListItem key={task.id} task={task} onClick={handleTaskClick} allUsers={allUsers} />
+            <TaskListItem key={task.id} task={task} onToggleTaskCompletion={handleToggleTaskCompletion} onTaskClick={handleTaskClick} isUnread={false} allUsers={allUsers} isToggling={isToggling} />
           ))}
         </div>
       </div>
