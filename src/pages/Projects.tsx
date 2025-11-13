@@ -64,7 +64,7 @@ const ProjectsPage = () => {
     hasNextPage, 
     isFetchingNextPage,
     refetch: refetchProjects 
-  } = useProjects({ fetchAll: true });
+  } = useProjects({ fetchAll: false });
 
   const projectsData = useMemo(() => data?.pages.flatMap(page => page.projects) ?? [], [data]);
   
