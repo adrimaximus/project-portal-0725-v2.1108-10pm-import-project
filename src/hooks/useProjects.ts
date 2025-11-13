@@ -25,15 +25,15 @@ const fetchProjects = async ({ pageParam = 0, searchTerm, excludeOtherPersonal, 
   };
 };
 
-export const useProjects = ({ searchTerm, excludeOtherPersonal = false, year }: { searchTerm?: string, fetchAll?: boolean, excludeOtherPersonal?: boolean, year?: number | null } = {}) => {
-  const queryKey = ['projects', { searchTerm, excludeOtherPersonal, year }];
-  const cacheKey = `projects-cache-${JSON.stringify({ searchTerm, excludeOtherPersonal, year })}`;
+export const useProjects = ({ searchTerm, fetchAll = true, excludeOtherPersonal = false, year }: { searchTerm?: string, fetchAll?: boolean, excludeOtherPersonal?: boolean, year?: number | null } = {}) => {
+  const queryKey = ['projects', { searchTerm, excludeOtherPersonal, year, fetchAll }];
+  const cacheKey = `projects-cache-${JSON.stringify({ searchTerm, excludeOtherPersonal, year, fetchAll })}`;
 
   const query = useInfiniteQuery<
     ProjectsPage,
     Error,
     InfiniteData<ProjectsPage, number>,
-    (string | { searchTerm?: string; excludeOtherPersonal: boolean; year: number | null; })[],
+    (string | { searchTerm?: string; fetchAll: boolean; excludeOtherPersonal: boolean; year: number | null; })[],
     number
   >({
     queryKey,
@@ -50,11 +50,19 @@ export const useProjects = ({ searchTerm, excludeOtherPersonal = false, year }: 
     staleTime: 1000 * 60, // Consider data fresh for 1 minute
   });
 
+  const { fetchNextPage, hasNextPage, isFetchingNextPage, data } = query;
+
   useEffect(() => {
-    if (query.data && !query.isPlaceholderData) {
-      SafeLocalStorage.setItem(cacheKey, query.data, 5 * 60 * 1000); // 5 minute cache
+    if (fetchAll && hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
     }
-  }, [query.data, query.isPlaceholderData, cacheKey]);
+  }, [fetchAll, hasNextPage, isFetchingNextPage, fetchNextPage, data]);
+
+  useEffect(() => {
+    if (data && !query.isPlaceholderData) {
+      SafeLocalStorage.setItem(cacheKey, data, 5 * 60 * 1000); // 5 minute cache
+    }
+  }, [data, query.isPlaceholderData, cacheKey]);
 
   return query;
 };
