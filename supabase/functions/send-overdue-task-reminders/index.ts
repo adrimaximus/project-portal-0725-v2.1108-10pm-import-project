@@ -30,78 +30,46 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    console.log("[send-overdue-task-reminders] Job started. Fetching overdue tasks.");
+    console.log("[send-overdue-task-reminders] Job started. Fetching overdue tasks via RPC.");
 
-    const today = new Date().toISOString();
+    const { data: overdueTasks, error: rpcError } = await supabaseAdmin
+      .rpc('get_overdue_tasks_for_reminders');
 
-    const { data: overdueTasks, error: tasksError } = await supabaseAdmin
-      .from('tasks')
-      .select(`
-        id,
-        title,
-        due_date,
-        project:projects (id, name, slug),
-        assignees:task_assignees ( user_id )
-      `)
-      .lt('due_date', today)
-      .eq('completed', false)
-      .order('due_date', { ascending: true })
-      .limit(50);
-
-    if (tasksError) throw tasksError;
+    if (rpcError) throw rpcError;
 
     if (!overdueTasks || overdueTasks.length === 0) {
       console.log("[send-overdue-task-reminders] No overdue tasks found.");
       return new Response(JSON.stringify({ message: "No overdue tasks to process." }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    console.log(`[send-overdue-task-reminders] Found ${overdueTasks.length} overdue tasks.`);
-
-    const allAssigneeIds = [...new Set(overdueTasks.flatMap(t => t.assignees.map((a: any) => a.user_id)))];
-    if (allAssigneeIds.length === 0) {
-        console.log("[send-overdue-task-reminders] No assignees found for overdue tasks.");
-        return new Response(JSON.stringify({ message: "No assignees to notify." }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-    }
-
-    const { data: profiles, error: profilesError } = await supabaseAdmin
-        .from('profiles')
-        .select('id, notification_preferences')
-        .in('id', allAssigneeIds);
-    
-    if (profilesError) throw profilesError;
-    const profileMap = new Map(profiles.map(p => [p.id, p]));
+    console.log(`[send-overdue-task-reminders] Found ${overdueTasks.length} overdue task assignments.`);
 
     const notificationsToInsert = [];
     let skippedCount = 0;
 
     for (const task of overdueTasks) {
-      const dueDate = new Date(task.due_date);
-      const daysOverdue = Math.floor((new Date().getTime() - dueDate.getTime()) / (1000 * 3600 * 24));
+      const prefs = task.assignee_prefs || {};
+      const isEnabled = prefs.task_overdue !== false;
 
-      for (const assignee of task.assignees) {
-        const userProfile = profileMap.get(assignee.user_id);
-        if (!userProfile) continue;
+      if (isEnabled) {
+        const dueDate = new Date(task.due_date);
+        const daysOverdue = Math.floor((new Date().getTime() - dueDate.getTime()) / (1000 * 3600 * 24));
 
-        const prefs = userProfile.notification_preferences || {};
-        const isEnabled = prefs.task_overdue !== false;
-
-        if (isEnabled) {
-          notificationsToInsert.push({
-            recipient_id: userProfile.id,
-            send_at: new Date(),
-            notification_type: 'task_overdue',
-            context_data: {
-              task_id: task.id,
-              task_title: task.title,
-              project_id: task.project.id,
-              project_name: task.project.name,
-              project_slug: task.project.slug,
-              days_overdue: daysOverdue,
-            }
-          });
-        } else {
-          skippedCount++;
-        }
+        notificationsToInsert.push({
+          recipient_id: task.assignee_id,
+          send_at: new Date(),
+          notification_type: 'task_overdue',
+          context_data: {
+            task_id: task.task_id,
+            task_title: task.task_title,
+            project_id: task.project_id,
+            project_name: task.project_name,
+            project_slug: task.project_slug,
+            days_overdue: daysOverdue,
+          }
+        });
+      } else {
+        skippedCount++;
       }
     }
 
