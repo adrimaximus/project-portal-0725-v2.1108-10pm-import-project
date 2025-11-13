@@ -7,7 +7,7 @@ import { useProjects } from "@/hooks/useProjects";
 import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import MonthlyProgressChart from "@/components/dashboard/MonthlyProgressChart";
-import UpcomingDeadlinesWidget from "@/components/dashboard/UpcomingDeadlinesWidget";
+import UnsplashImage from "@/components/dashboard/UnsplashImage";
 import ActivityHubWidget from "@/components/dashboard/ActivityHubWidget";
 
 const Index = () => {
@@ -98,7 +98,7 @@ const Index = () => {
             </div>
             <div className="grid gap-6 md:grid-cols-2">
               <MonthlyProgressChart projects={filteredProjects} />
-              <UpcomingDeadlinesWidget projects={filteredProjects} />
+              <UnsplashImage />
             </div>
             <ActivityHubWidget />
             <DashboardStatsGrid projects={filteredProjects} />
