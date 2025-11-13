@@ -3,41 +3,18 @@ import { Project } from '@/types';
 import { useNavigate } from 'react-router-dom';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Clock, Trash2, MapPin, CheckCircle, XCircle } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { MoreHorizontal, Trash2 } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { getProjectStatusStyles, cn, formatInJakarta, generatePastelColor, getAvatarUrl } from '@/lib/utils';
-import { format, isSameDay, subDays, isBefore, startOfToday } from 'date-fns';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { isSameDay, subDays, isBefore, startOfToday } from 'date-fns';
+import { Progress } from "../ui/progress";
+import StatusBadge from "../StatusBadge";
 
-const DayEntry = ({ dateStr, projectsOnDay, showMonthHeader, onDeleteProject, navigate, isPast }: { dateStr: string, projectsOnDay: Project[], showMonthHeader: boolean, onDeleteProject: (id: string) => void, navigate: (path: string) => void, isPast?: boolean }) => {
+const DayEntry = ({ dateStr, projectsOnDay, showMonthHeader, onDeleteProject, navigate }: { dateStr: string, projectsOnDay: Project[], showMonthHeader: boolean, onDeleteProject: (id: string) => void, navigate: (path: string) => void }) => {
   const date = new Date(`${dateStr}T00:00:00`);
   const currentMonth = formatInJakarta(date, 'MMMM yyyy');
   const dayOfWeek = formatInJakarta(date, 'EEE');
   const dayOfMonth = formatInJakarta(date, 'dd');
-
-  const formatVenue = (venue: string | null): string => {
-    if (!venue) return "";
-    try {
-      const venueObj = JSON.parse(venue);
-      const name = venueObj.name || '';
-      const address = venueObj.address || '';
-      const parts = [name, address].filter(Boolean);
-      return parts.join(', ');
-    } catch (e) {
-      return venue;
-    }
-  };
 
   return (
     <div key={dateStr}>
@@ -51,65 +28,46 @@ const DayEntry = ({ dateStr, projectsOnDay, showMonthHeader, onDeleteProject, na
         </div>
         <div className="flex-1 space-y-3 pt-1 min-w-0">
           {projectsOnDay.map((project: Project) => {
-            const startDate = project.start_date ? new Date(project.start_date) : null;
-            const dueDate = project.due_date ? new Date(project.due_date) : startDate;
-            let displayDueDate = dueDate;
-            let isMultiDay = false;
-
-            if (startDate && dueDate) {
-              const isExclusiveEndDate =
-                project.due_date &&
-                dueDate.getUTCHours() === 0 &&
-                dueDate.getUTCMinutes() === 0 &&
-                dueDate.getUTCSeconds() === 0 &&
-                dueDate.getUTCMilliseconds() === 0 &&
-                !isSameDay(startDate, dueDate);
-
-              const adjustedDueDate = isExclusiveEndDate ? subDays(dueDate, 1) : dueDate;
-              
-              isMultiDay = !isSameDay(startDate, adjustedDueDate);
-              displayDueDate = adjustedDueDate;
-            }
-            
-            const formattedVenue = formatVenue(project.venue);
-
             return (
               <div 
                 key={project.id} 
-                className="bg-card border border-l-4 rounded-lg p-2 sm:p-3 flex items-center justify-between hover:shadow-md transition-shadow group"
+                className="bg-card border border-l-4 rounded-lg p-3 flex flex-col sm:flex-row items-start sm:items-center justify-between hover:shadow-md transition-shadow group"
                 style={{ borderLeftColor: getProjectStatusStyles(project.status).hex }}
               >
                 <div 
                   className="flex-1 flex items-center space-x-3 cursor-pointer min-w-0"
                   onClick={() => navigate(`/projects/${project.slug}`)}
                 >
-                  <div className="w-32 text-sm text-muted-foreground hidden md:block">
-                    <div className="flex items-center gap-2">
-                      <Clock size={14} />
-                      <span>Seharian</span>
-                    </div>
-                    {isMultiDay && displayDueDate && (
-                      <Badge variant="outline" className="mt-1.5 font-normal text-xs">
-                        Hingga {formatInJakarta(displayDueDate, 'd MMM')}
-                      </Badge>
-                    )}
-                  </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium truncate flex items-center gap-2" title={project.name}>
-                      {project.status === 'Completed' && <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />}
-                      {(project.status === 'Cancelled' || project.status === 'Bid Lost') && <XCircle className="h-4 w-4 text-red-600 flex-shrink-0" />}
-                      {project.name}
-                    </p>
-                    {project.venue && (
-                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-1">
-                        <MapPin size={12} />
-                        <span className="truncate" title={formattedVenue}>{formattedVenue}</span>
+                    <div className="flex items-center justify-between">
+                      <p className="font-medium truncate flex items-center gap-2" title={project.name}>
+                        {project.name}
+                      </p>
+                      <div className="sm:hidden">
+                        <StatusBadge status={project.status as any} />
                       </div>
-                    )}
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+                      {project.client_company_name || project.client_name}
+                    </div>
+                    <div className="mt-2">
+                      <Progress value={project.progress} className="h-1" />
+                    </div>
                   </div>
                 </div>
                 
-                <div className="flex items-center space-x-1 sm:space-x-2 flex-shrink-0 pl-2">
+                <div className="flex items-center space-x-2 sm:space-x-4 flex-shrink-0 pl-2 mt-2 sm:mt-0 w-full sm:w-auto justify-between">
+                  <div className="hidden sm:block">
+                    <StatusBadge status={project.status as any} />
+                  </div>
+                  <div className="flex items-center -space-x-2">
+                    {project.assignedTo.slice(0, 3).map((user) => (
+                      <Avatar key={user.id} className="h-6 w-6 border-2 border-card">
+                        <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
+                        <AvatarFallback style={generatePastelColor(user.id)}>{user.initials}</AvatarFallback>
+                      </Avatar>
+                    ))}
+                  </div>
                   <div onClick={(e) => e.stopPropagation()}>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -124,14 +82,6 @@ const DayEntry = ({ dateStr, projectsOnDay, showMonthHeader, onDeleteProject, na
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
-                  </div>
-                  <div className="flex flex-shrink-0 -space-x-2">
-                    {project.assignedTo.slice(0, 3).map((user) => (
-                      <Avatar key={user.id} className="h-6 w-6 sm:h-8 sm:w-8 border-2 border-card">
-                        <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} alt={user.name} />
-                        <AvatarFallback style={generatePastelColor(user.id)}>{user.initials}</AvatarFallback>
-                      </Avatar>
-                    ))}
                   </div>
                 </div>
               </div>

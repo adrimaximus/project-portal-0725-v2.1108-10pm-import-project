@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { getProjectStatusStyles, generatePastelColor, getAvatarUrl } from '@/lib/utils';
 import { Link } from 'react-router-dom';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 
 const ProjectCard = ({ project }: { project: Project }) => {
   const statusStyles = getProjectStatusStyles(project.status);
@@ -12,8 +13,26 @@ const ProjectCard = ({ project }: { project: Project }) => {
     <Link to={`/projects/${project.slug}`}>
       <Card className="hover:shadow-md transition-shadow h-full flex flex-col">
         <CardHeader>
-          <CardTitle className="truncate">{project.name}</CardTitle>
-          <Badge variant="outline" className={statusStyles.tw}>{project.status}</Badge>
+          <div className="flex justify-between items-start gap-4">
+            <div className="flex-1 min-w-0">
+              <CardTitle className="truncate">{project.name}</CardTitle>
+              <Badge variant="outline" className={statusStyles.tw}>{project.status}</Badge>
+            </div>
+            {project.client_company_logo_url && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="flex-shrink-0">
+                      <img src={project.client_company_logo_url} alt={project.client_company_name || 'Client Logo'} className="h-10 w-10 object-contain" />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{project.client_company_name || 'Client'}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+          </div>
         </CardHeader>
         <CardContent className="flex-grow">
           <p className="text-sm text-muted-foreground h-10 line-clamp-2">{project.description}</p>
