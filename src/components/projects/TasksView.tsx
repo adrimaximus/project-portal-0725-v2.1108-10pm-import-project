@@ -74,9 +74,10 @@ const TaskListItem = ({ task, onToggleTaskCompletion, onTaskClick, isUnread, all
           </div>
         </div>
         <p className="text-sm text-muted-foreground">{task.project_name}</p>
-        <div className="flex items-center gap-4 mt-2">
+        <div className="flex items-center gap-2 mt-2 flex-wrap">
           {dueDateText && <span className={`text-xs font-medium ${dueDateColor}`}>{dueDateText}</span>}
-          <div className="flex -space-x-2">
+          {task.priority && <Badge variant="outline" className={cn('text-xs border-transparent px-1.5 py-0.5 font-normal', getPriorityStyles(task.priority).tw)}>{task.priority}</Badge>}
+          <div className="flex -space-x-2 ml-auto">
             {task.assignedTo?.slice(0, 3).map(user => (
               <Avatar key={user.id} className="h-6 w-6 border-2 border-background">
                 <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
