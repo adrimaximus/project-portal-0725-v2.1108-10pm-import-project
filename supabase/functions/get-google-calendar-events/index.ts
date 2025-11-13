@@ -1,4 +1,4 @@
-import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.54.0';
 
 const corsHeaders = {
@@ -30,7 +30,7 @@ serve(async (req) => {
       .from('google_calendar_tokens')
       .select('access_token, refresh_token, expiry_date')
       .eq('user_id', user.id)
-      .single();
+      .maybeSingle();
 
     if (tokenError || !tokenData) {
       throw new Error("Google Calendar not connected or token not found.");
@@ -38,6 +38,7 @@ serve(async (req) => {
 
     let { access_token, refresh_token, expiry_date } = tokenData;
 
+    // Check if token is expired and refresh if necessary
     if (new Date(expiry_date) < new Date()) {
       console.log('Access token expired, refreshing...');
       const clientId = Deno.env.get("VITE_GOOGLE_CLIENT_ID");
@@ -73,88 +74,27 @@ serve(async (req) => {
         .eq('user_id', user.id);
     }
 
-    const { data: profileData, error: profileError } = await supabaseAdmin
-      .from('profiles')
-      .select('google_calendar_settings')
-      .eq('id', user.id)
-      .single();
-
-    if (profileError) throw new Error(`Could not fetch user profile: ${profileError.message}`);
-
-    const selectedCalendarIds = profileData?.google_calendar_settings?.selected_calendars;
-
-    if (!selectedCalendarIds || selectedCalendarIds.length === 0) {
-      return new Response(JSON.stringify([]), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
-      });
-    }
-
+    // Fetch calendar list using the (potentially refreshed) access token
     const calendarsResponse = await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList', {
       headers: { Authorization: `Bearer ${access_token}` },
     });
+
     if (!calendarsResponse.ok) {
-        throw new Error(`Failed to fetch calendar list: ${await calendarsResponse.text()}`);
+      const errorData = await calendarsResponse.json();
+      throw new Error(`Failed to fetch calendar list: ${errorData.error.message}`);
     }
+    
     const calendarsData = await calendarsResponse.json();
-    const calendarInfoMap = new Map(calendarsData.items.map((cal: any) => [cal.id, cal]));
 
-    const timeMin = new Date().toISOString();
-    const timeMax = new Date(new Date().getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
-
-    const eventPromises = selectedCalendarIds.map((calendarId: string) =>
-      fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?timeMin=${timeMin}&timeMax=${timeMax}&singleEvents=true&orderBy=startTime`, {
-        headers: { Authorization: `Bearer ${access_token}` },
-      }).then(res => res.json())
-    );
-
-    const eventResults = await Promise.all(eventPromises);
-
-    const { data: existingProjects, error: projectsError } = await supabaseClient
-      .from('projects')
-      .select('origin_event_id')
-      .not('origin_event_id', 'is', null);
-
-    if (projectsError) {
-      console.error("Error fetching existing projects:", projectsError);
-    }
-    const existingEventIds = new Set(existingProjects?.map(p => p.origin_event_id) || []);
-
-    let allEvents = [];
-    for (let i = 0; i < eventResults.length; i++) {
-        const calendarId = selectedCalendarIds[i];
-        const calendar = calendarInfoMap.get(calendarId);
-        if (eventResults[i].items) {
-            const eventsWithCalendarInfo = eventResults[i].items
-              .filter((event: any) => !existingEventIds.has(event.id))
-              .map((event: any) => ({
-                ...event,
-                calendar: {
-                    id: calendar.id,
-                    summary: calendar.summary,
-                    backgroundColor: calendar.backgroundColor,
-                },
-            }));
-            allEvents.push(...eventsWithCalendarInfo);
-        }
-    }
-
-    allEvents.sort((a, b) => {
-      const aTime = new Date(a.start.dateTime || a.start.date).getTime();
-      const bTime = new Date(b.start.dateTime || b.start.date).getTime();
-      return aTime - bTime;
+    return new Response(JSON.stringify(calendarsData.items), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
 
-    return new Response(JSON.stringify(allEvents), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 200,
-    });
-
-  } catch (error) {
-    console.error(error);
-    return new Response(JSON.stringify({ error: error.message }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 500,
+  } catch (err) {
+    console.error("Function error:", err.message);
+    return new Response(JSON.stringify({ error: err.message }), { 
+        status: 500, 
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
     });
   }
 });
