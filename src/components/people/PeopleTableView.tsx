@@ -39,14 +39,21 @@ const PeopleTableView: React.FC<PeopleTableViewProps> = ({ people, isLoading, on
   const isMobile = useIsMobile();
 
   const groupedPeople = useMemo(() => {
-    return people.reduce((acc, person) => {
-      const company = person.company || 'No Company';
+    const groups = people.reduce((acc, person) => {
+      const company = person.company || 'Uncategorized';
       if (!acc[company]) {
         acc[company] = [];
       }
       acc[company].push(person);
       return acc;
     }, {} as Record<string, Person[]>);
+
+    // Sort groups by company name, with 'Uncategorized' last
+    return Object.entries(groups).sort(([companyA], [companyB]) => {
+      if (companyA === 'Uncategorized') return 1;
+      if (companyB === 'Uncategorized') return -1;
+      return companyA.localeCompare(companyB);
+    });
   }, [people]);
 
   const handleCopyEmail = (e: React.MouseEvent, email: string) => {
@@ -60,7 +67,7 @@ const PeopleTableView: React.FC<PeopleTableViewProps> = ({ people, isLoading, on
   if (isMobile) {
     return (
       <div className="overflow-y-auto h-full space-y-4">
-        {Object.entries(groupedPeople).map(([company, peopleInGroup]) => (
+        {groupedPeople.map(([company, peopleInGroup]) => (
           <div key={company}>
             <h3 className="font-semibold px-2 mb-2">{company}</h3>
             <div className="space-y-2">
@@ -82,7 +89,7 @@ const PeopleTableView: React.FC<PeopleTableViewProps> = ({ people, isLoading, on
 
   return (
     <div className="border rounded-lg overflow-auto h-full">
-      <Table>
+      <Table className="min-w-[1200px]">
         <TableHeader>
           <TableRow>
             <SortableTableHead columnKey="full_name" onSort={requestSort} sortConfig={sortConfig} className="w-[250px] sticky left-0 bg-card z-10">
@@ -108,7 +115,7 @@ const PeopleTableView: React.FC<PeopleTableViewProps> = ({ people, isLoading, on
           ) : Object.keys(groupedPeople).length === 0 ? (
             <TableRow><TableCell colSpan={7} className="text-center h-24">No people found.</TableCell></TableRow>
           ) : (
-            Object.entries(groupedPeople).map(([company, peopleInGroup]) => (
+            groupedPeople.map(([company, peopleInGroup]) => (
               <React.Fragment key={company}>
                 <TableRow className="hover:bg-transparent">
                   <TableCell className="font-semibold bg-muted/50 sticky left-0 z-10">
