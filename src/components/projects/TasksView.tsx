@@ -49,10 +49,10 @@ const TaskListItem = ({ task, onToggleTaskCompletion, onTaskClick, isUnread, all
 
   if (dueDate) {
     if (isPast(dueDate) && !task.completed) {
-      dueDateText = format(dueDate, 'MMM d');
+      dueDateText = format(dueDate, 'MMM d, p');
       dueDateColor = 'text-destructive';
     } else {
-      dueDateText = format(dueDate, 'MMM d');
+      dueDateText = format(dueDate, 'MMM d, p');
     }
   }
 
@@ -195,7 +195,7 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
                   <Badge className={getPriorityStyles(task.priority).tw}>{task.priority}</Badge>
                 </TableCell>
                 <TableCell className={cn("text-xs", isOverdue(task.due_date) && !task.completed && "text-destructive font-semibold")}>
-                  {task.due_date ? format(new Date(task.due_date), "MMM d, yyyy") : '-'}
+                  {task.due_date ? format(new Date(task.due_date), "MMM d, yyyy, p") : '-'}
                 </TableCell>
                 <TableCell>
                   <div className="flex -space-x-2">
