@@ -34,7 +34,7 @@ interface TableViewProps {
   projects: Project[];
   isLoading: boolean;
   onDeleteProject: (projectId: string) => void;
-  sortConfig: { key: keyof Project | null; direction: 'ascending' | 'descending' };
+  sortConfig: { key: keyof Project | null; direction: 'asc' | 'desc' };
   requestSort: (key: keyof Project) => void;
   rowRefs: React.MutableRefObject<Map<string, HTMLTableRowElement>>;
   onStatusChange: (projectId: string, newStatus: ProjectStatus) => void;
@@ -92,10 +92,10 @@ const formatVenue = (venue: string | null): { name: string; full: string } => {
 
   // Try to parse as JSON to get a clean full string representation
   try {
-    const venueObj = JSON.parse(venue);
-    const name = venueObj.name || '';
-    const address = venueObj.address || '';
-    fullVenueString = [name, address].filter(Boolean).join(' - ');
+    const parsed = JSON.parse(venue);
+    if (parsed.name && parsed.address) {
+      fullVenueString = `${parsed.name} - ${parsed.address}`;
+    }
   } catch (e) {
     // It's already a string, do nothing
   }
@@ -212,8 +212,8 @@ const TableView = ({ projects, isLoading, onDeleteProject, sortConfig, requestSo
       const sorted = [...projects].sort((a, b) => {
         const nameA = formatVenue(a.venue).name.toLowerCase();
         const nameB = formatVenue(b.venue).name.toLowerCase();
-        if (nameA < nameB) return sortConfig.direction === 'ascending' ? -1 : 1;
-        if (nameA > nameB) return sortConfig.direction === 'ascending' ? 1 : -1;
+        if (nameA < nameB) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (nameA > nameB) return sortConfig.direction === 'asc' ? 1 : -1;
         return 0;
       });
       return sorted;
