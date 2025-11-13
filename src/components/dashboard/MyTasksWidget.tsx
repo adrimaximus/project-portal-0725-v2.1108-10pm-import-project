@@ -1,9 +1,8 @@
 import { useMemo } from 'react';
 import { useTasks } from '@/hooks/useTasks';
 import { useAuth } from '@/contexts/AuthContext';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Link } from 'react-router-dom';
-import { Loader2, Clock, CheckCircle2, AlertTriangle, ListChecks, PlusSquare, ArrowUp, ArrowDown } from 'lucide-react';
+import { Loader2, Clock, CheckCircle2, AlertTriangle, ListChecks } from 'lucide-react';
 import { Task, User } from '@/types';
 import { format, isPast, isToday, isTomorrow, differenceInDays } from 'date-fns';
 import { cn, getInitials, getAvatarUrl, generatePastelColor } from '@/lib/utils';
@@ -11,10 +10,6 @@ import { Button } from '@/components/ui/button';
 import { useTaskMutations } from '@/hooks/useTaskMutations';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Progress } from '@/components/ui/progress';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import RecentActivityWidget from './RecentActivityWidget';
-import CollaboratorsTab from './CollaboratorsTab';
 import { useTaskDrawer } from '@/contexts/TaskDrawerContext';
 import { getProjectBySlug } from '@/lib/projectsApi';
 import { toast } from 'sonner';
@@ -22,6 +17,7 @@ import { ScrollArea } from '../ui/scroll-area';
 import { Checkbox } from '../ui/checkbox';
 import InteractiveText from '../InteractiveText';
 import { useProfiles } from '@/hooks/useProfiles';
+import TaskStatusChart from './TaskStatusChart';
 
 const TaskItem = ({ task, onToggle, isToggling, allUsers }: { task: Task, onToggle: (task: Task, completed: boolean) => void, isToggling: boolean, allUsers: User[] }) => {
   const { onOpen: onOpenTaskDrawer } = useTaskDrawer();
@@ -58,7 +54,7 @@ const TaskItem = ({ task, onToggle, isToggling, allUsers }: { task: Task, onTogg
   }
 
   return (
-    <div className="flex items-center gap-3 p-2 rounded-md hover:bg-muted/50">
+    <div className="flex items-center gap-3 p-2 rounded-md hover:bg-muted/50 cursor-pointer" onClick={handleTaskClick}>
       <Checkbox
         id={`task-dash-${task.id}`}
         checked={task.completed}
@@ -67,7 +63,7 @@ const TaskItem = ({ task, onToggle, isToggling, allUsers }: { task: Task, onTogg
         onClick={(e) => e.stopPropagation()}
         disabled={isToggling}
       />
-      <div className="flex-1 min-w-0 cursor-pointer" onClick={handleTaskClick}>
+      <div className="flex-1 min-w-0">
         <div className={cn("font-medium text-sm", task.completed && "line-through text-muted-foreground")}>
           <InteractiveText text={task.title} members={allUsers} />
         </div>
@@ -76,15 +72,13 @@ const TaskItem = ({ task, onToggle, isToggling, allUsers }: { task: Task, onTogg
       <div className="flex items-center gap-2 flex-shrink-0">
         {dueDateText && <span className={`text-xs font-medium ${dueDateColor}`}>{dueDateText}</span>}
         <div className="flex -space-x-2">
-          {task.assignedTo?.slice(0, 2).map(user => (
+          {task.assignedTo?.slice(0, 3).map(user => (
             <TooltipProvider key={user.id}>
               <Tooltip>
                 <TooltipTrigger>
                   <Avatar className="h-6 w-6 border-2 border-background">
                     <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
-                    <AvatarFallback style={generatePastelColor(user.id)}>
-                      {getInitials([user.first_name, user.last_name].filter(Boolean).join(' '), user.email || undefined)}
-                    </AvatarFallback>
+                    <AvatarFallback style={generatePastelColor(user.id)}>{getInitials([user.first_name, user.last_name].filter(Boolean).join(' '), user.email || undefined)}</AvatarFallback>
                   </Avatar>
                 </TooltipTrigger>
                 <TooltipContent><p>{user.name}</p></TooltipContent>
@@ -109,51 +103,15 @@ const MyTasksWidget = () => {
   }, [allTasks, user]);
 
   const {
-    activeTasks,
-    completedToday,
     upcomingTasks,
     overdueTasks,
     noDueDateTasks,
-    completionPercentage,
-    totalCompleted,
-    totalTasks,
-    onTimeCompletionPercentage,
-    onTimeCompletedCount,
   } = useMemo(() => {
     const active = myTasks.filter(t => !t.completed);
-    const completed = myTasks.filter(t => t.completed);
-    const today = new Date();
-    const completedToday = completed.filter(t => t.updated_at && isToday(new Date(t.updated_at))).length;
-    
     const upcoming = active.filter(t => t.due_date && !isPast(new Date(t.due_date)));
     const overdue = active.filter(t => t.due_date && isPast(new Date(t.due_date)));
     const noDueDate = active.filter(t => !t.due_date);
-
-    const totalTasks = myTasks.length;
-    const totalCompleted = completed.length;
-    const completionPercentage = totalTasks > 0 ? (totalCompleted / totalTasks) * 100 : 0;
-
-    const onTimeCompleted = completed.filter(task => {
-      if (!task.due_date) return true; // No due date, considered on-time
-      if (!task.updated_at) return false; // Should not happen for completed tasks, but for safety
-      // Task is on time if completion date is on or before the due date
-      return new Date(task.updated_at) <= new Date(task.due_date);
-    });
-    const onTimeCompletedCount = onTimeCompleted.length;
-    const onTimeCompletionPercentage = totalCompleted > 0 ? (onTimeCompletedCount / totalCompleted) * 100 : 0;
-
-    return { 
-      activeTasks: active, 
-      completedToday, 
-      upcomingTasks: upcoming, 
-      overdueTasks: overdue, 
-      noDueDateTasks: noDueDate,
-      completionPercentage,
-      totalCompleted,
-      totalTasks,
-      onTimeCompletionPercentage,
-      onTimeCompletedCount,
-    };
+    return { upcomingTasks: upcoming, overdueTasks: overdue, noDueDateTasks: noDueDate };
   }, [myTasks]);
 
   const handleToggleTaskCompletion = (task: Task, completed: boolean) => {
@@ -177,93 +135,39 @@ const MyTasksWidget = () => {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-4 text-center">
-          <div>
-            <p className="text-xs text-muted-foreground">Completed Today</p>
-            <p className="text-lg font-bold flex items-center justify-center gap-1"><CheckCircle2 className="h-4 w-4 text-green-500" />{completedToday}</p>
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">Upcoming</p>
-            <p className="text-lg font-bold flex items-center justify-center gap-1"><Clock className="h-4 w-4 text-blue-500" />{upcomingTasks.length}</p>
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">Overdue</p>
-            <p className="text-lg font-bold flex items-center justify-center gap-1"><AlertTriangle className="h-4 w-4 text-red-500" />{overdueTasks.length}</p>
-          </div>
-        </div>
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="flex items-center gap-4 w-1/3 cursor-help">
-                <Progress value={completionPercentage} className="flex-1" />
-                <span className="text-sm font-semibold">{completionPercentage.toFixed(0)}%</span>
-              </div>
-            </TooltipTrigger>
-            <TooltipContent className="p-4 bg-background border shadow-lg rounded-lg">
-              <div className="space-y-3">
-                <h4 className="font-semibold text-sm">Task Productivity</h4>
-                <div className="flex items-center gap-3">
-                  <ListChecks className="h-5 w-5 text-blue-500" />
-                  <div>
-                    <p className="font-bold">{completionPercentage.toFixed(0)}% Overall Completion</p>
-                    <p className="text-xs text-muted-foreground">{totalCompleted} of {totalTasks} assigned</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <CheckCircle2 className="h-5 w-5 text-green-500" />
-                  <div>
-                    <p className="font-bold">{onTimeCompletionPercentage.toFixed(0)}% On-Time Completion</p>
-                    <p className="text-xs text-muted-foreground">{onTimeCompletedCount} of {totalCompleted} completed</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <AlertTriangle className="h-5 w-5 text-red-500" />
-                  <div>
-                    <p className="font-bold">{overdueTasks.length} Overdue Task(s)</p>
-                    <p className="text-xs text-muted-foreground">{overdueTasks.length} tasks past due</p>
-                  </div>
-                </div>
-              </div>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="md:col-span-1">
+        <TaskStatusChart tasks={myTasks} />
       </div>
-      <ScrollArea className="h-48 pr-2">
-        <div className="space-y-4">
-          {overdueTasks.length > 0 && (
-            <div>
-              <h4 className="text-xs font-semibold text-muted-foreground mb-2 px-2">Overdue</h4>
-              <div className="space-y-1">
-                {overdueTasks.map(task => <TaskItem key={task.id} task={task} onToggle={handleToggleTaskCompletion} isToggling={isToggling} allUsers={allUsers} />)}
+      <div className="md:col-span-1">
+        <ScrollArea className="h-48 pr-2">
+          <div className="space-y-4">
+            {overdueTasks.length > 0 && (
+              <div>
+                <h4 className="text-xs font-semibold text-muted-foreground mb-2 px-2">Overdue</h4>
+                <div className="space-y-1">
+                  {overdueTasks.map(task => <TaskItem key={task.id} task={task} onToggle={handleToggleTaskCompletion} isToggling={isToggling} allUsers={allUsers} />)}
+                </div>
               </div>
-            </div>
-          )}
-          {upcomingTasks.length > 0 && (
-            <div>
-              <h4 className="text-xs font-semibold text-muted-foreground mb-2 px-2">Upcoming</h4>
-              <div className="space-y-1">
-                {upcomingTasks.map(task => <TaskItem key={task.id} task={task} onToggle={handleToggleTaskCompletion} isToggling={isToggling} allUsers={allUsers} />)}
+            )}
+            {upcomingTasks.length > 0 && (
+              <div>
+                <h4 className="text-xs font-semibold text-muted-foreground mb-2 px-2">Upcoming</h4>
+                <div className="space-y-1">
+                  {upcomingTasks.map(task => <TaskItem key={task.id} task={task} onToggle={handleToggleTaskCompletion} isToggling={isToggling} allUsers={allUsers} />)}
+                </div>
               </div>
-            </div>
-          )}
-          {noDueDateTasks.length > 0 && (
-            <div>
-              <h4 className="text-xs font-semibold text-muted-foreground mb-2 px-2">No Due Date</h4>
-              <div className="space-y-1">
-                {noDueDateTasks.map(task => <TaskItem key={task.id} task={task} onToggle={handleToggleTaskCompletion} isToggling={isToggling} allUsers={allUsers} />)}
+            )}
+            {noDueDateTasks.length > 0 && (
+              <div>
+                <h4 className="text-xs font-semibold text-muted-foreground mb-2 px-2">No Due Date</h4>
+                <div className="space-y-1">
+                  {noDueDateTasks.map(task => <TaskItem key={task.id} task={task} onToggle={handleToggleTaskCompletion} isToggling={isToggling} allUsers={allUsers} />)}
+                </div>
               </div>
-            </div>
-          )}
-        </div>
-      </ScrollArea>
-      <div className="pt-2 text-center">
-        <Button variant="link" asChild>
-          <Link to={`/projects?view=tasks&member=${user?.id}`}>
-            View all my tasks
-          </Link>
-        </Button>
+            )}
+          </div>
+        </ScrollArea>
       </div>
     </div>
   );
