@@ -250,6 +250,7 @@ const ProjectMainContent = ({
               setSearchParams(newParams, { replace: true });
             }}
             unreadTaskIds={unreadTaskIds}
+            onOpenTaskModal={onOpenTaskModal}
           />
         </TabsContent>
         <TabsContent value="discussion" className="mt-4">
