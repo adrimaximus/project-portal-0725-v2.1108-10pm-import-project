@@ -9,7 +9,7 @@ import { generatePastelColor, getAvatarUrl, getInitials, formatPhoneNumberForApi
 import { Badge } from '../ui/badge';
 import WhatsappIcon from '../icons/WhatsappIcon';
 import { toast } from 'sonner';
-import { useIsMobile } from '@/hooks/use-mobile';
+import { useIsMobile } from '@/hooks/use-is-mobile';
 import PersonListCard from './PersonListCard';
 import { formatDistanceToNow } from 'date-fns';
 import { SortableTableHead } from '../ui/SortableTableHead';
@@ -20,7 +20,7 @@ interface PeopleTableViewProps {
   onEdit: (person: Person) => void;
   onDelete: (person: Person) => void;
   onViewProfile: (person: Person) => void;
-  sortConfig: { key: keyof Person | null; direction: 'ascending' | 'descending' };
+  sortConfig: { key: keyof Person | null; direction: 'asc' | 'desc' };
   requestSort: (key: keyof Person) => void;
 }
 

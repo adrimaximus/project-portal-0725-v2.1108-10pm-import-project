@@ -13,7 +13,7 @@ interface ProjectViewContainerProps {
   isLoading: boolean;
   isTasksLoading: boolean;
   onDeleteProject: (projectId: string) => void;
-  sortConfig: { key: keyof Project | null; direction: 'ascending' | 'descending' };
+  sortConfig: { key: keyof Project | null; direction: 'asc' | 'desc' };
   requestSort: (key: keyof Project) => void;
   rowRefs: React.MutableRefObject<Map<string, HTMLTableRowElement>>;
   kanbanGroupBy: 'status' | 'payment_status';

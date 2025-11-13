@@ -24,10 +24,10 @@ import { useSortConfig } from "@/hooks/useSortConfig";
 
 const Billing = () => {
   const { data: projectsData, isLoading } = useProjects({ fetchAll: true });
-  const projects = useMemo(() => projectsData?.pages.flatMap(page => page.projects) ?? [], [projectsData]);
+  const projects = useMemo(() => projectsData?.pages.flatMap(page => page.projects) ?? [], [data]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
-  const { sortConfig, requestSort: handleSort } = useSortConfig<keyof Invoice>({ key: 'dueDate', direction: 'descending' });
+  const { sortConfig, requestSort: handleSort } = useSortConfig<keyof Invoice>({ key: 'dueDate', direction: 'desc' });
   const [searchTerm, setSearchTerm] = useState("");
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [viewMode, setViewMode] = useState<'table' | 'kanban'>('table');
