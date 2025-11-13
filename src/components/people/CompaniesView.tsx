@@ -22,7 +22,7 @@ const CompaniesView = () => {
     const [companyToEdit, setCompanyToEdit] = useState<Company | null>(null);
     const [companyToDelete, setCompanyToDelete] = useState<Company | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
-    const [sortConfig, setSortConfig] = useState<{ key: keyof Company; direction: 'ascending' | 'descending' }>({ key: 'name', direction: 'ascending' });
+    const [sortConfig, setSortConfig] = useState<{ key: keyof Company | null; direction: 'asc' | 'desc' }>({ key: 'name', direction: 'asc' });
     const queryClient = useQueryClient();
     const navigate = useNavigate();
     const isMobile = useIsMobile();
@@ -48,9 +48,9 @@ const CompaniesView = () => {
     const isLoading = isLoadingCompanies || isLoadingProperties;
 
     const handleSort = (key: keyof Company) => {
-        let direction: 'ascending' | 'descending' = 'ascending';
-        if (sortConfig.key === key && sortConfig.direction === 'ascending') {
-            direction = 'descending';
+        let direction: 'asc' | 'desc' = 'asc';
+        if (sortConfig.key === key && sortConfig.direction === 'asc') {
+            direction = 'desc';
         }
         setSortConfig({ key, direction });
     };
@@ -68,8 +68,8 @@ const CompaniesView = () => {
                 const bValue = b[sortConfig.key!];
                 if (aValue === null || aValue === undefined) return 1;
                 if (bValue === null || bValue === undefined) return -1;
-                if (aValue < bValue) return sortConfig.direction === 'ascending' ? -1 : 1;
-                if (aValue > bValue) return sortConfig.direction === 'ascending' ? 1 : -1;
+                if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+                if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
                 return 0;
             });
         }

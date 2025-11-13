@@ -9,7 +9,7 @@ import { generatePastelColor, getAvatarUrl, getInitials, formatPhoneNumberForApi
 import { Badge } from '../ui/badge';
 import WhatsappIcon from '../icons/WhatsappIcon';
 import { toast } from 'sonner';
-import { useIsMobile } from '@/hooks/use-is-mobile';
+import { useIsMobile } from '@/hooks/use-mobile';
 import PersonListCard from './PersonListCard';
 import { formatDistanceToNow } from 'date-fns';
 import { SortableTableHead } from '../ui/SortableTableHead';

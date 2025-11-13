@@ -105,7 +105,7 @@ const ProjectsPage = () => {
     }
   });
 
-  const { sortConfig: taskSortConfig, requestSort: requestTaskSort } = useSortConfig({ key: 'updated_at', direction: 'descending' });
+  const { sortConfig: taskSortConfig, requestSort: requestTaskSort } = useSortConfig({ key: 'updated_at', direction: 'desc' });
 
   const isTaskView = view === 'tasks' || view === 'tasks-kanban';
 
@@ -122,7 +122,15 @@ const ProjectsPage = () => {
   
   }, [isTaskView, projectsData, advancedFilters.excludedStatus, isLoadingProjects]);
 
-  const finalTaskSortConfig = view === 'tasks-kanban' ? { key: 'kanban_order', direction: 'asc' as const } : { key: taskSortConfig.key, direction: taskSortConfig.direction };
+  const finalTaskSortConfig = useMemo(() => {
+    if (view === 'tasks-kanban') {
+      return { key: 'kanban_order', direction: 'asc' as const };
+    }
+    return {
+      key: taskSortConfig.key || 'updated_at',
+      direction: taskSortConfig.direction,
+    };
+  }, [view, taskSortConfig]);
 
   const { data: tasksData = [], isLoading: isLoadingTasks, refetch: refetchTasks } = useTasks({
     projectIds: projectIdsForTaskView,

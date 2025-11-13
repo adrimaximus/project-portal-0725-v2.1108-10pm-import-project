@@ -24,7 +24,7 @@ import { useSortConfig } from "@/hooks/useSortConfig";
 
 const Billing = () => {
   const { data: projectsData, isLoading } = useProjects({ fetchAll: true });
-  const projects = useMemo(() => projectsData?.pages.flatMap(page => page.projects) ?? [], [data]);
+  const projects = useMemo(() => projectsData?.pages.flatMap(page => page.projects) ?? [], [projectsData]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const { sortConfig, requestSort: handleSort } = useSortConfig<keyof Invoice>({ key: 'dueDate', direction: 'desc' });
