@@ -11,7 +11,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Button } from "../ui/button";
 import { MoreHorizontal, Edit, Trash2, Ticket, Paperclip, Eye, Download, File as FileIconLucide, ChevronDown, Loader2, SmilePlus } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Checkbox } from "../ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -75,6 +75,9 @@ const TaskListItem = ({ task, onToggleTaskCompletion, onTaskClick, isUnread, all
         </div>
         <p className="text-sm text-muted-foreground">{task.project_name}</p>
         <div className="flex items-center gap-4 mt-2">
+          {task.priority && (
+            <Badge className={cn(getPriorityStyles(task.priority).tw, 'text-xs')}>{task.priority}</Badge>
+          )}
           {dueDateText && <span className={`text-xs font-medium ${dueDateColor}`}>{dueDateText}</span>}
           <div className="flex -space-x-2">
             {task.assignedTo?.slice(0, 3).map(user => (
@@ -89,6 +92,7 @@ const TaskListItem = ({ task, onToggleTaskCompletion, onTaskClick, isUnread, all
     </div>
   );
 };
+
 
 const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion, onStatusChange, isToggling, sortConfig, requestSort, rowRefs, highlightedTaskId, onHighlightComplete, unreadTaskIds }: TasksViewProps) => {
   const isMobile = useIsMobile();
