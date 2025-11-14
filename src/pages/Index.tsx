@@ -9,12 +9,23 @@ import { Skeleton } from "@/components/ui/skeleton";
 import MonthlyProgressChart from "@/components/dashboard/MonthlyProgressChart";
 import UnsplashImage from "@/components/dashboard/UnsplashImage";
 import ActivityHubWidget from "@/components/dashboard/ActivityHubWidget";
+import TeamPerformanceWidget from "@/components/dashboard/TeamPerformanceWidget";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 const Index = () => {
   const [date, setDate] = useState<DateRange | undefined>({
     from: new Date(new Date().getFullYear(), 0, 1),
     to: new Date(new Date().getFullYear(), 11, 31),
   });
+  const { user, hasPermission } = useAuth();
+  const canViewValue = hasPermission('projects:view_value');
+  const [viewMode, setViewMode] = useState<'quantity' | 'value'>('quantity');
+
+  useEffect(() => {
+    if (!canViewValue) {
+      setViewMode('quantity');
+    }
+  }, [canViewValue]);
 
   const yearFilter = useMemo(() => {
     if (date?.from && date?.to) {
@@ -22,10 +33,8 @@ const Index = () => {
             return date.from.getFullYear();
         }
     } else if (date?.from) {
-        // If only 'from' is selected, use that year.
         return date.from.getFullYear();
     }
-    // If range spans multiple years or is not set, fetch all.
     return null;
   }, [date]);
 
@@ -34,7 +43,6 @@ const Index = () => {
   });
   
   const projects = useMemo(() => data?.pages.flatMap(page => page.projects) ?? [], [data]);
-  const { user } = useAuth();
 
   const filteredProjects = projects.filter(project => {
     if (date?.from && project.start_date) {
@@ -48,8 +56,6 @@ const Index = () => {
         }
         return projectStart >= pickerFrom && projectStart <= pickerTo;
     }
-    // If no date range is selected, we still might have a year filter from the hook
-    // but for client-side filtering, if there's no date range, we show all fetched projects.
     return true;
   });
 
@@ -94,14 +100,34 @@ const Index = () => {
                 <div className="flex items-center gap-4">
                     <h2 className="text-2xl font-bold">Insights</h2>
                 </div>
-                <DateRangePicker date={date} onDateChange={setDate} />
+                <div className="flex items-center gap-2">
+                  {canViewValue && (
+                    <ToggleGroup 
+                      type="single" 
+                      value={viewMode} 
+                      onValueChange={(value) => { if (value) setViewMode(value as 'quantity' | 'value')}}
+                      className="h-10"
+                    >
+                      <ToggleGroupItem value="quantity" className="text-xs px-3">By Quantity</ToggleGroupItem>
+                      <ToggleGroupItem value="value" className="text-xs px-3">By Value</ToggleGroupItem>
+                    </ToggleGroup>
+                  )}
+                  <DateRangePicker date={date} onDateChange={setDate} />
+                </div>
             </div>
+            <DashboardStatsGrid projects={filteredProjects} viewMode={viewMode} canViewValue={canViewValue} />
             <div className="grid gap-6 md:grid-cols-2">
               <MonthlyProgressChart projects={filteredProjects} />
               <UnsplashImage />
             </div>
-            <ActivityHubWidget />
-            <DashboardStatsGrid projects={filteredProjects} />
+            <div className="grid gap-6 md:grid-cols-3">
+              <div className="md:col-span-2">
+                <ActivityHubWidget />
+              </div>
+              <div className="md:col-span-1">
+                <TeamPerformanceWidget projects={filteredProjects} metricType={viewMode} canViewValue={canViewValue} />
+              </div>
+            </div>
         </div>
       </div>
     </PortalLayout>
