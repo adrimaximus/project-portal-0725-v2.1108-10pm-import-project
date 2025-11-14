@@ -237,7 +237,7 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                                       <div className="min-w-0 flex-grow">
                                         <div className={cn(
                                           "text-sm whitespace-pre-wrap break-all prose prose-sm max-w-none [&_p]:my-0",
-                                          isCurrentUser ? "prose-invert prose-p:text-primary-foreground prose-a:text-primary-foreground" : "dark:prose-invert dark:[--tw-prose-body:hsl(var(--muted-foreground))]"
+                                          isCurrentUser ? "prose-invert prose-p:text-primary-foreground prose-a:text-primary-foreground" : "dark:prose-invert dark:text-muted-foreground"
                                         )}>
                                           <InteractiveText text={message.text || ''} members={members} />
                                         </div>
@@ -275,7 +275,7 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                                       ) : (
                                         <div className={cn(
                                           "text-sm whitespace-pre-wrap break-all prose prose-sm max-w-none [&_p]:my-0",
-                                          isCurrentUser ? "prose-invert prose-p:text-primary-foreground prose-a:text-primary-foreground" : "dark:prose-invert dark:[--tw-prose-body:hsl(var(--muted-foreground))]"
+                                          isCurrentUser ? "prose-invert prose-p:text-primary-foreground prose-a:text-primary-foreground" : "dark:prose-invert dark:text-muted-foreground"
                                         )}>
                                           <InteractiveText text={message.text || ''} members={members} />
                                         </div>
