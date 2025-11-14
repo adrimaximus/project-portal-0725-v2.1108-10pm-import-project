@@ -190,8 +190,8 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                                       <div className={cn(
                                           "text-xs line-clamp-2 opacity-80 prose prose-sm max-w-none",
                                           isCurrentUser 
-                                              ? "prose-invert prose-p:text-primary-foreground [&_a]:text-primary-foreground" 
-                                              : "dark:prose-invert dark:[&_a]:text-slate-300"
+                                              ? "prose-invert prose-p:text-primary-foreground prose-a:text-primary-foreground" 
+                                              : "dark:prose-invert"
                                       )}>
                                         {message.repliedMessage.isDeleted ? (
                                           <p className="italic">This message was deleted.</p>
@@ -237,9 +237,7 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                                       <div className="min-w-0 flex-grow">
                                         <div className={cn(
                                           "text-sm whitespace-pre-wrap break-all prose prose-sm max-w-none [&_p]:my-0",
-                                          isCurrentUser 
-                                            ? "prose-invert prose-p:text-primary-foreground [&_a]:text-primary-foreground" 
-                                            : "dark:prose-invert dark:[&_a]:text-slate-300"
+                                          isCurrentUser ? "prose-invert prose-p:text-primary-foreground prose-a:text-primary-foreground" : "dark:prose-invert"
                                         )}>
                                           <InteractiveText text={message.text || ''} members={members} />
                                         </div>
@@ -277,9 +275,7 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                                       ) : (
                                         <div className={cn(
                                           "text-sm whitespace-pre-wrap break-all prose prose-sm max-w-none [&_p]:my-0",
-                                          isCurrentUser 
-                                            ? "prose-invert prose-p:text-primary-foreground [&_a]:text-primary-foreground" 
-                                            : "dark:prose-invert dark:[&_a]:text-slate-300"
+                                          isCurrentUser ? "prose-invert prose-p:text-primary-foreground prose-a:text-primary-foreground" : "dark:prose-invert"
                                         )}>
                                           <InteractiveText text={message.text || ''} members={members} />
                                         </div>
