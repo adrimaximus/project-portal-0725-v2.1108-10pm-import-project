@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { DatePickerWithRange } from "@/components/ui/date-picker-with-range";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { Search, Table as TableIcon, Kanban, List, LayoutGrid, KanbanSquare, ListChecks, CheckSquare, PlusCircle, Download, RefreshCw, ListPlus } from "lucide-react";
+import { Search, Table as TableIcon, Kanban, List, LayoutGrid, KanbanSquare, ListChecks, CheckSquare, PlusCircle, Download, RefreshCw, ListPlus, View } from "lucide-react";
 import { DateRange } from "react-day-picker";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
@@ -64,13 +64,15 @@ const ProjectsToolbar = ({
   onDateRangeChange,
 }: ProjectsToolbarProps) => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isViewSwitcherOpen, setIsViewSwitcherOpen] = useState(false);
 
   return (
     <div className="p-4 border-t flex flex-col sm:flex-row items-center justify-between gap-4">
       {/* Left Section: View Controls */}
       <div className="flex items-center gap-4 flex-wrap">
+        {/* Desktop View Switcher */}
         <TooltipProvider>
-          <ToggleGroup type="single" value={view} onValueChange={onViewChange} aria-label="Project view">
+          <ToggleGroup type="single" value={view} onValueChange={onViewChange} aria-label="Project view" className="hidden sm:flex">
             <Tooltip>
               <TooltipTrigger asChild>
                 <ToggleGroupItem value="list" aria-label="List view"><List className="h-4 w-4" /></ToggleGroupItem>
@@ -103,6 +105,37 @@ const ProjectsToolbar = ({
             </Tooltip>
           </ToggleGroup>
         </TooltipProvider>
+
+        {/* Mobile View Switcher */}
+        <div className="sm:hidden flex items-center gap-2">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="outline" size="icon" onClick={() => setIsViewSwitcherOpen(!isViewSwitcherOpen)}>
+                  <View className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent><p>Change view</p></TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          {isViewSwitcherOpen && (
+            <ToggleGroup
+              type="single"
+              value={view}
+              onValueChange={(value: ViewMode | null) => {
+                if (value) onViewChange(value);
+                setIsViewSwitcherOpen(false);
+              }}
+              aria-label="Project view"
+            >
+              <ToggleGroupItem value="list" aria-label="List view"><List className="h-4 w-4" /></ToggleGroupItem>
+              <ToggleGroupItem value="table" aria-label="Grid view"><LayoutGrid className="h-4 w-4" /></ToggleGroupItem>
+              <ToggleGroupItem value="kanban" aria-label="Kanban view"><KanbanSquare className="h-4 w-4" /></ToggleGroupItem>
+              <ToggleGroupItem value="tasks" aria-label="Tasks list view"><ListChecks className="h-4 w-4" /></ToggleGroupItem>
+              <ToggleGroupItem value="tasks-kanban" aria-label="Tasks kanban view"><CheckSquare className="h-4 w-4" /></ToggleGroupItem>
+            </ToggleGroup>
+          )}
+        </div>
 
         {view === 'kanban' && (
           <Select value={kanbanGroupBy} onValueChange={onKanbanGroupByChange}>
