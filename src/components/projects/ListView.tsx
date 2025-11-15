@@ -43,9 +43,6 @@ const DayEntry = ({ dateStr, projectsOnDay, showMonthHeader, onDeleteProject, na
                       <p className="font-medium break-words" title={project.name}>
                         {project.name}
                       </p>
-                      <div className="sm:hidden flex-shrink-0">
-                        <StatusBadge status={project.status as any} />
-                      </div>
                     </div>
                     <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1 break-words">
                       {project.client_company_name || project.client_name}
@@ -57,16 +54,16 @@ const DayEntry = ({ dateStr, projectsOnDay, showMonthHeader, onDeleteProject, na
                 </div>
                 
                 <div className="flex items-center space-x-2 sm:space-x-4 flex-shrink-0 pl-0 sm:pl-2 mt-2 sm:mt-0 w-full sm:w-auto justify-between">
-                  <div className="hidden sm:block">
+                  <div className="flex items-center space-x-2">
                     <StatusBadge status={project.status as any} />
-                  </div>
-                  <div className="flex items-center -space-x-2">
-                    {project.assignedTo.slice(0, 3).map((user) => (
-                      <Avatar key={user.id} className="h-6 w-6 border-2 border-card">
-                        <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
-                        <AvatarFallback style={generatePastelColor(user.id)}>{user.initials}</AvatarFallback>
-                      </Avatar>
-                    ))}
+                    <div className="flex items-center -space-x-2">
+                      {project.assignedTo.slice(0, 3).map((user) => (
+                        <Avatar key={user.id} className="h-6 w-6 border-2 border-card">
+                          <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
+                          <AvatarFallback style={generatePastelColor(user.id)}>{user.initials}</AvatarFallback>
+                        </Avatar>
+                      ))}
+                    </div>
                   </div>
                   <div onClick={(e) => e.stopPropagation()}>
                     <DropdownMenu>
