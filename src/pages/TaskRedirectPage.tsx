@@ -14,11 +14,13 @@ const fetchTaskProjectSlug = async (taskId: string) => {
 
   if (error) throw error;
   
-  const project = data?.projects as { slug: string } | null;
-  if (!project || !project.slug) {
+  const project = (data?.projects as { slug: string }[] | { slug: string } | null);
+  const projectObject = Array.isArray(project) ? project[0] : project;
+
+  if (!projectObject || !projectObject.slug) {
     throw new Error('Project for this task could not be found.');
   }
-  return project.slug;
+  return projectObject.slug;
 };
 
 const TaskRedirectPage = () => {
