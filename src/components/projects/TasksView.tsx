@@ -74,7 +74,7 @@ const TaskListItem = ({ task, onToggleTaskCompletion, onTaskClick, isUnread, all
           </div>
         </div>
         <p className="text-sm text-muted-foreground truncate">{task.project_name}</p>
-        <div className="flex items-center gap-4 mt-2">
+        <div className="flex items-center gap-4 mt-2 border-t pt-2">
           {task.priority && (
             <Badge className={cn(getPriorityStyles(task.priority).tw, 'text-xs')}>{task.priority}</Badge>
           )}
