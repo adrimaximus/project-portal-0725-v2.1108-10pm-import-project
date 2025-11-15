@@ -196,7 +196,7 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                                         {message.repliedMessage.isDeleted ? (
                                           <p className="italic">This message was deleted.</p>
                                         ) : message.repliedMessage.attachment ? (
-                                          <div className="flex items-center gap-1.5">
+                                          <div className="flex items-center gap-1.5 dark:text-[#4e4f4f]">
                                             {message.repliedMessage.attachment.type?.startsWith('image/') && <Camera className="h-3 w-3 flex-shrink-0" />}
                                             {message.repliedMessage.attachment.type?.startsWith('audio/') && <Mic className="h-3 w-3 flex-shrink-0" />}
                                             {!message.repliedMessage.attachment.type?.startsWith('image/') && !message.repliedMessage.attachment.type?.startsWith('audio/') && <FileIcon fileType={message.repliedMessage.attachment.type || ''} className="h-3 w-3 flex-shrink-0" />}
