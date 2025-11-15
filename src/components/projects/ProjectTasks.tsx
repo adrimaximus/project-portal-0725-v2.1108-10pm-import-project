@@ -39,6 +39,7 @@ interface ProjectTasksProps {
   onHighlightComplete?: () => void;
   unreadTaskIds: string[];
   onOpenTaskModal: (task?: Task | null, initialData?: Partial<UpsertTaskPayload>, project?: Project | null) => void;
+  highlightedCommentId?: string | null;
 }
 
 const TaskRow = ({ task, onToggleTaskCompletion, onEditTask, onDeleteTask, handleToggleReaction, setRef, currentUserId, isUnread, onClick, allUsers }: {
@@ -205,7 +206,7 @@ const TaskRow = ({ task, onToggleTaskCompletion, onEditTask, onDeleteTask, handl
   );
 };
 
-const ProjectTasks = ({ project, tasks, projectId, projectSlug, onEditTask, onDeleteTask, onToggleTaskCompletion, highlightedTaskId, onHighlightComplete, unreadTaskIds, onOpenTaskModal }: ProjectTasksProps) => {
+const ProjectTasks = ({ project, tasks, projectId, projectSlug, onEditTask, onDeleteTask, onToggleTaskCompletion, highlightedTaskId, onHighlightComplete, unreadTaskIds, onOpenTaskModal, highlightedCommentId }: ProjectTasksProps) => {
   const queryClient = useQueryClient();
   const { createTasks, isCreatingTasks, toggleTaskReaction } = useTaskMutations(() => queryClient.invalidateQueries({ queryKey: ['project', projectSlug] }));
   const taskRefs = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -218,6 +219,7 @@ const ProjectTasks = ({ project, tasks, projectId, projectSlug, onEditTask, onDe
   const { onOpen: onOpenTaskDrawer } = useTaskDrawer();
   const [showNewTaskForm, setShowNewTaskForm] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState("");
+  const [hasAutoOpened, setHasAutoOpened] = useState(false);
 
   const handleTaskClick = (task: Task) => {
     onOpenTaskDrawer(task, project);
@@ -284,7 +286,12 @@ const ProjectTasks = ({ project, tasks, projectId, projectSlug, onEditTask, onDe
   }, []);
 
   useEffect(() => {
-    if (highlightedTaskId) {
+    if (highlightedTaskId && tasks.length > 0 && !hasAutoOpened) {
+      const taskToOpen = tasks.find(t => t.id === highlightedTaskId);
+      if (taskToOpen) {
+        onOpenTaskDrawer(taskToOpen, project, highlightedCommentId);
+        setHasAutoOpened(true);
+      }
       const element = taskRefs.current.get(highlightedTaskId);
       if (element) {
         element.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -297,7 +304,7 @@ const ProjectTasks = ({ project, tasks, projectId, projectSlug, onEditTask, onDe
         }, 2000);
       }
     }
-  }, [highlightedTaskId, onHighlightComplete]);
+  }, [highlightedTaskId, tasks, hasAutoOpened, onOpenTaskDrawer, project, highlightedCommentId, onHighlightComplete]);
 
   const handleToggleReaction = (taskId: string, emoji: string) => {
     toggleTaskReaction({ taskId, emoji }, {

@@ -11,7 +11,7 @@ import { useTasks } from '@/hooks/useTasks';
 import { useUnreadTasks } from '@/hooks/useUnreadTasks';
 
 const GlobalTaskDrawer = () => {
-  const { isOpen, onClose, task: initialTask, project } = useTaskDrawer();
+  const { isOpen, onClose, task: initialTask, project, highlightedCommentId } = useTaskDrawer();
   const { onOpen: onOpenTaskModal } = useTaskModal();
   const { deleteTask, markTaskAsRead } = useTaskMutations();
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
@@ -66,6 +66,7 @@ const GlobalTaskDrawer = () => {
           onClose={onClose}
           onEdit={handleEdit}
           onDelete={handleDelete}
+          highlightedCommentId={highlightedCommentId}
         />
       </Drawer>
       <AlertDialog open={!!taskToDelete} onOpenChange={() => setTaskToDelete(null)}>

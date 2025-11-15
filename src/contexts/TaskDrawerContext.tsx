@@ -5,7 +5,8 @@ interface TaskDrawerContextType {
   isOpen: boolean;
   task: Task | null;
   project: Project | null;
-  onOpen: (task: Task, project: Project) => void;
+  highlightedCommentId: string | null;
+  onOpen: (task: Task, project: Project, highlightedCommentId?: string | null) => void;
   onClose: () => void;
 }
 
@@ -23,10 +24,12 @@ export const TaskDrawerProvider = ({ children }: { children: ReactNode }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [task, setTask] = useState<Task | null>(null);
   const [project, setProject] = useState<Project | null>(null);
+  const [highlightedCommentId, setHighlightedCommentId] = useState<string | null>(null);
 
-  const onOpen = useCallback((taskToView: Task, projectContext: Project) => {
+  const onOpen = useCallback((taskToView: Task, projectContext: Project, commentId?: string | null) => {
     setTask(taskToView);
     setProject(projectContext);
+    setHighlightedCommentId(commentId || null);
     setIsOpen(true);
   }, []);
 
@@ -36,10 +39,11 @@ export const TaskDrawerProvider = ({ children }: { children: ReactNode }) => {
     setTimeout(() => {
       setTask(null);
       setProject(null);
+      setHighlightedCommentId(null);
     }, 300);
   }, []);
 
-  const value = { isOpen, task, project, onOpen, onClose };
+  const value = { isOpen, task, project, highlightedCommentId, onOpen, onClose };
 
   return (
     <TaskDrawerContext.Provider value={value}>

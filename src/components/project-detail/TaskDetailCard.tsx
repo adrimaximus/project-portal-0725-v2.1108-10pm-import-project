@@ -56,6 +56,7 @@ interface TaskDetailCardProps {
   onClose: () => void;
   onEdit: (task: Task) => void;
   onDelete: (task: Task) => void;
+  highlightedCommentId?: string | null;
 }
 
 const aggregateAttachments = (task: Task): TaskAttachment[] => {
@@ -87,7 +88,7 @@ const aggregateAttachments = (task: Task): TaskAttachment[] => {
   return attachments;
 };
 
-const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, onDelete }) => {
+const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, onDelete, highlightedCommentId }) => {
   const { user } = useAuth();
   const { toggleTaskReaction, sendReminder, isSendingReminder, updateTaskStatusAndOrder, toggleTaskCompletion, updateTask, isUpdatingTask } = useTaskMutations();
   const { 
@@ -111,6 +112,22 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
   const [replyTo, setReplyTo] = useState<CommentType | null>(null);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editedTitle, setEditedTitle] = useState(task.title);
+
+  useEffect(() => {
+    if (highlightedCommentId) {
+      const element = document.getElementById(`message-${highlightedCommentId}`);
+      if (element) {
+        setTimeout(() => {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          element.classList.add('bg-primary/10', 'rounded-md');
+          const timer = setTimeout(() => {
+            element.classList.remove('bg-primary/10', 'rounded-md');
+          }, 2500);
+          return () => clearTimeout(timer);
+        }, 500);
+      }
+    }
+  }, [highlightedCommentId]);
 
   useEffect(() => {
     setEditedTitle(task.title);
@@ -272,15 +289,15 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
                     disabled={isUpdatingTask}
                   />
                 ) : (
-                  <span
+                  <div
                     className={cn(
                       "min-w-0 break-words whitespace-normal cursor-pointer",
                       task.completed && "line-through text-muted-foreground"
                     )}
                     onClick={() => !task.completed && setIsEditingTitle(true)}
                   >
-                    {task.title}
-                  </span>
+                    <InteractiveText text={task.title} members={allUsers} />
+                  </div>
                 )}
               </div>
               <p className="text-xs text-muted-foreground mt-1">
