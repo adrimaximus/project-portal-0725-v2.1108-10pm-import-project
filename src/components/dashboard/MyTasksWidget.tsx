@@ -6,7 +6,7 @@ import { Link } from 'react-router-dom';
 import { Loader2, Clock, CheckCircle2, AlertTriangle, ListChecks, PlusSquare, ArrowUp, ArrowDown } from 'lucide-react';
 import { Task, User } from '@/types';
 import { format, isPast, isToday, isTomorrow, differenceInDays } from 'date-fns';
-import { cn, getInitials, getAvatarUrl, generatePastelColor } from '@/lib/utils';
+import { cn, getInitials, getAvatarUrl, generatePastelColor, getPriorityStyles } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useTaskMutations } from '@/hooks/useTaskMutations';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -57,20 +57,7 @@ const TaskItem = ({ task, onToggle, isToggling, allUsers }: { task: Task, onTogg
     }
   }
 
-  const priorityBorderColor = useMemo(() => {
-    switch (task.priority?.toLowerCase()) {
-      case 'urgent':
-        return 'border-red-700';
-      case 'high':
-        return 'border-red-500';
-      case 'normal':
-        return 'border-yellow-500';
-      case 'low':
-        return 'border-gray-400';
-      default:
-        return 'border-transparent';
-    }
-  }, [task.priority]);
+  const priorityBorderColor = getPriorityStyles(task.priority).borderColor;
 
   return (
     <div className={cn("flex items-start gap-3 p-2 rounded-r-md hover:bg-muted/50 border-l-2", priorityBorderColor)}>
@@ -98,9 +85,7 @@ const TaskItem = ({ task, onToggle, isToggling, allUsers }: { task: Task, onTogg
                   <TooltipTrigger>
                     <Avatar className="h-6 w-6 border-2 border-background">
                       <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
-                      <AvatarFallback style={generatePastelColor(user.id)}>
-                        {getInitials([user.first_name, user.last_name].filter(Boolean).join(' '), user.email || undefined)}
-                      </AvatarFallback>
+                      <AvatarFallback style={generatePastelColor(user.id)}>{getInitials([user.first_name, user.last_name].filter(Boolean).join(' '), user.email || undefined)}</AvatarFallback>
                     </Avatar>
                   </TooltipTrigger>
                   <TooltipContent><p>{user.name}</p></TooltipContent>

@@ -4,7 +4,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { Task, User } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { cn, generatePastelColor, getAvatarUrl, getInitials, truncateText } from '@/lib/utils';
+import { cn, generatePastelColor, getAvatarUrl, getInitials, truncateText, getPriorityStyles } from '@/lib/utils';
 import { Badge } from '../ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 import { format } from 'date-fns';
@@ -19,13 +19,6 @@ interface TasksKanbanCardProps {
   onEdit?: (task: Task) => void;
   onDelete?: (taskId: string) => void;
 }
-
-const priorityColors: { [key: string]: string } = {
-  'Urgent': 'bg-red-500',
-  'High': 'bg-orange-500',
-  'Normal': 'bg-yellow-500',
-  'Low': 'bg-green-500',
-};
 
 const TasksKanbanCard: React.FC<TasksKanbanCardProps> = ({ task, onEdit, onDelete }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ 
@@ -132,7 +125,7 @@ const TasksKanbanCard: React.FC<TasksKanbanCardProps> = ({ task, onEdit, onDelet
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger>
-                      <div className={`w-3 h-3 rounded-full ${priorityColors[task.priority] || 'bg-gray-400'}`}></div>
+                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: getPriorityStyles(task.priority).hex }}></div>
                     </TooltipTrigger>
                     <TooltipContent>
                       <p>{task.priority} Priority</p>
