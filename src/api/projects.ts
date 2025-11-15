@@ -12,13 +12,31 @@ const safeParse = (value: any) => {
   return value;
 };
 
-export const getDashboardProjects = async ({ limit, offset, searchTerm, excludeOtherPersonal, year }: { limit: number, offset: number, searchTerm: string | null, excludeOtherPersonal: boolean, year: number | null }): Promise<Project[]> => {
+export const getDashboardProjects = async ({ 
+  limit, 
+  offset, 
+  searchTerm, 
+  excludeOtherPersonal, 
+  year,
+  timeframe,
+  sortDirection
+}: { 
+  limit: number, 
+  offset: number, 
+  searchTerm: string | null, 
+  excludeOtherPersonal: boolean, 
+  year: number | null,
+  timeframe?: 'upcoming' | 'past' | null,
+  sortDirection?: 'asc' | 'desc'
+}): Promise<Project[]> => {
   const { data, error } = await supabase.rpc('get_dashboard_projects', {
     p_limit: limit,
     p_offset: offset,
     p_search_term: searchTerm || null,
     p_exclude_other_personal: excludeOtherPersonal,
     p_year: year,
+    p_timeframe: timeframe || null,
+    p_sort_direction: sortDirection || 'desc'
   });
   if (error) throw error;
   return data as Project[];
