@@ -39,15 +39,15 @@ const DayEntry = ({ dateStr, projectsOnDay, showMonthHeader, onDeleteProject, na
                   onClick={() => navigate(`/projects/${project.slug}`)}
                 >
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="font-medium truncate" title={project.name}>
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="font-medium break-words" title={project.name}>
                         {project.name}
                       </p>
-                      <div className="sm:hidden">
+                      <div className="sm:hidden flex-shrink-0">
                         <StatusBadge status={project.status as any} />
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1 truncate">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1 break-words">
                       {project.client_company_name || project.client_name}
                     </div>
                     <div className="mt-2">
@@ -56,7 +56,7 @@ const DayEntry = ({ dateStr, projectsOnDay, showMonthHeader, onDeleteProject, na
                   </div>
                 </div>
                 
-                <div className="flex items-center space-x-2 sm:space-x-4 flex-shrink-0 pl-2 mt-2 sm:mt-0 w-full sm:w-auto justify-between">
+                <div className="flex items-center space-x-2 sm:space-x-4 flex-shrink-0 pl-0 sm:pl-2 mt-2 sm:mt-0 w-full sm:w-auto justify-between">
                   <div className="hidden sm:block">
                     <StatusBadge status={project.status as any} />
                   </div>
