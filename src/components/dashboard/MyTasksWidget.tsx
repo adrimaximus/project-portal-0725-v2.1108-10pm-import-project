@@ -63,7 +63,7 @@ const TaskItem = ({ task, onToggle, isToggling, allUsers }: { task: Task, onTogg
         id={`task-dash-${task.id}`}
         checked={task.completed}
         onCheckedChange={(checked) => onToggle(task, !!checked)}
-        className="mt-1"
+        className="mt-1 hidden"
         onClick={(e) => e.stopPropagation()}
         disabled={isToggling}
       />
