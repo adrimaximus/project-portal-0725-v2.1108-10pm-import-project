@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { MoreHorizontal, Trash2 } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { getProjectStatusStyles, cn, formatInJakarta, generatePastelColor, getAvatarUrl } from '@/lib/utils';
-import { isSameDay, isBefore, startOfToday, differenceInDays } from 'date-fns';
+import { isSameDay, isBefore, startOfToday, differenceInDays, subDays } from 'date-fns';
 import { Progress } from "../ui/progress";
 import StatusBadge from "../StatusBadge";
 
@@ -31,8 +31,22 @@ const DayEntry = ({ dateStr, projectsOnDay, showMonthHeader, onDeleteProject, na
             const startDate = new Date(project.start_date!);
             const dueDate = project.due_date ? new Date(project.due_date) : null;
             
-            // Check if the project spans more than one day
             const isMultiDay = dueDate && differenceInDays(dueDate, startDate) > 0;
+
+            let displayDueDate = dueDate;
+            if (dueDate) {
+              const isExclusiveEndDate = 
+                project.due_date &&
+                dueDate.getUTCHours() === 0 &&
+                dueDate.getUTCMinutes() === 0 &&
+                dueDate.getUTCSeconds() === 0 &&
+                dueDate.getUTCMilliseconds() === 0 &&
+                !isSameDay(startDate, dueDate);
+              
+              if (isExclusiveEndDate) {
+                displayDueDate = subDays(dueDate, 1);
+              }
+            }
 
             return (
               <div 
@@ -49,9 +63,9 @@ const DayEntry = ({ dateStr, projectsOnDay, showMonthHeader, onDeleteProject, na
                       <p className="text-sm sm:text-base font-medium break-words" title={project.name}>
                         {project.name}
                       </p>
-                      {isMultiDay && dueDate && (
+                      {isMultiDay && displayDueDate && (
                         <span className="text-xs text-muted-foreground flex-shrink-0">
-                          Ends: {formatInJakarta(dueDate, 'dd MMM')}
+                          Ends: {formatInJakarta(displayDueDate, 'dd MMM')}
                         </span>
                       )}
                     </div>
