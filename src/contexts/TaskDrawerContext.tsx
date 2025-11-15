@@ -8,6 +8,7 @@ interface TaskDrawerContextType {
   highlightedCommentId: string | null;
   onOpen: (task: Task, project: Project, highlightedCommentId?: string | null) => void;
   onClose: () => void;
+  onHighlightComplete: () => void;
 }
 
 const TaskDrawerContext = createContext<TaskDrawerContextType | undefined>(undefined);
@@ -43,7 +44,11 @@ export const TaskDrawerProvider = ({ children }: { children: ReactNode }) => {
     }, 300);
   }, []);
 
-  const value = { isOpen, task, project, highlightedCommentId, onOpen, onClose };
+  const onHighlightComplete = useCallback(() => {
+    setHighlightedCommentId(null);
+  }, []);
+
+  const value = { isOpen, task, project, highlightedCommentId, onOpen, onClose, onHighlightComplete };
 
   return (
     <TaskDrawerContext.Provider value={value}>

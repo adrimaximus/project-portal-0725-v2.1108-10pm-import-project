@@ -12,6 +12,14 @@ import { Project } from "@/types";
 import { formatInJakarta } from "@/lib/utils";
 import { Separator } from "../ui/separator";
 
+interface CalendarEvent {
+  id: string;
+  summary: string;
+  start?: { dateTime?: string; date?: string };
+  end?: { dateTime?: string; date?: string };
+  calendar?: { id: string; summary: string };
+}
+
 interface GoogleCalendarImportDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -22,7 +30,7 @@ interface GoogleCalendarImportDialogProps {
 export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImporting }: GoogleCalendarImportDialogProps) => {
   const [selectedEvents, setSelectedEvents] = useState<string[]>([]);
 
-  const { data: events = [], isLoading: isLoadingEvents, error } = useQuery<any[]>({
+  const { data: events = [], isLoading: isLoadingEvents, error } = useQuery<CalendarEvent[]>({
     queryKey: ['googleCalendarEvents'],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke('get-google-calendar-events');
@@ -60,13 +68,12 @@ export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImp
   const groupedEvents = useMemo(() => {
     if (!filteredEvents || filteredEvents.length === 0) return [];
     
-    const groups = filteredEvents.reduce((acc, event) => {
+    const groups = filteredEvents.reduce((acc: Record<string, CalendarEvent[]>, event) => {
       const dateVal = event.start?.date || event.start?.dateTime;
       if (!dateVal) {
         console.warn("Skipping event with no start date:", event);
         return acc;
       }
-      // Directly take the YYYY-MM-DD part of the string, which is safer across timezones for grouping.
       const dateStr = dateVal.substring(0, 10);
       
       if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
@@ -79,7 +86,7 @@ export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImp
       }
 
       return acc;
-    }, {} as Record<string, any[]>);
+    }, {});
 
     return Object.entries(groups).sort(([dateA], [dateB]) => {
         return dateA.localeCompare(dateB);

@@ -57,6 +57,7 @@ interface TaskDetailCardProps {
   onEdit: (task: Task) => void;
   onDelete: (task: Task) => void;
   highlightedCommentId?: string | null;
+  onHighlightComplete?: () => void;
 }
 
 const aggregateAttachments = (task: Task): TaskAttachment[] => {
@@ -88,7 +89,7 @@ const aggregateAttachments = (task: Task): TaskAttachment[] => {
   return attachments;
 };
 
-const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, onDelete, highlightedCommentId }) => {
+const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, onDelete, highlightedCommentId, onHighlightComplete }) => {
   const { user } = useAuth();
   const { toggleTaskReaction, sendReminder, isSendingReminder, updateTaskStatusAndOrder, toggleTaskCompletion, updateTask, isUpdatingTask } = useTaskMutations();
   const { 
@@ -525,6 +526,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
               onGoToReply={handleScrollToMessage}
               allUsers={allUsers}
               highlightedCommentId={highlightedCommentId}
+              onHighlightComplete={onHighlightComplete}
             />
           </div>
         </div>

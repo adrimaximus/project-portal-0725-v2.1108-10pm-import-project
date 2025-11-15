@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Comment as CommentType, User } from '@/types';
 import Comment from '../Comment';
 
@@ -21,10 +21,29 @@ interface TaskCommentsListProps {
   onCreateTicketFromComment: (comment: CommentType) => void;
   onGoToReply: (messageId: string) => void;
   allUsers: User[];
+  highlightedCommentId?: string | null;
+  onHighlightComplete?: () => void;
 }
 
 const TaskCommentsList: React.FC<TaskCommentsListProps> = (props) => {
-  const { comments, isLoading, onGoToReply, allUsers, ...rest } = props;
+  const { comments, isLoading, onGoToReply, allUsers, highlightedCommentId, onHighlightComplete, ...rest } = props;
+
+  useEffect(() => {
+    if (highlightedCommentId) {
+      const element = document.getElementById(`message-${highlightedCommentId}`);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        element.classList.add('bg-primary/10', 'rounded-md');
+        const timer = setTimeout(() => {
+          element.classList.remove('bg-primary/10', 'rounded-md');
+          if (onHighlightComplete) {
+            onHighlightComplete();
+          }
+        }, 2500);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [highlightedCommentId, onHighlightComplete]);
 
   if (isLoading) {
     return <div>Loading comments...</div>;
