@@ -21,7 +21,7 @@ const DayEntry = ({ dateStr, projectsOnDay, showMonthHeader, onDeleteProject, na
       {showMonthHeader && (
         <h2 className="text-lg font-semibold my-4 pl-2">{currentMonth}</h2>
       )}
-      <div className="flex items-start space-x-2 sm:space-x-4">
+      <div className="flex items-start space-x-4">
         <div className="flex flex-col items-center w-10 sm:w-12 text-center flex-shrink-0">
           <span className="text-xs sm:text-sm text-muted-foreground">{dayOfWeek}</span>
           <span className="text-lg sm:text-xl font-bold text-primary">{dayOfMonth}</span>
@@ -39,15 +39,15 @@ const DayEntry = ({ dateStr, projectsOnDay, showMonthHeader, onDeleteProject, na
                   onClick={() => navigate(`/projects/${project.slug}`)}
                 >
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <p className="font-medium truncate flex items-center gap-2" title={project.name}>
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="font-medium truncate" title={project.name}>
                         {project.name}
                       </p>
                       <div className="sm:hidden">
                         <StatusBadge status={project.status as any} />
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1 truncate">
                       {project.client_company_name || project.client_name}
                     </div>
                     <div className="mt-2">
