@@ -62,7 +62,7 @@ const InteractiveText = ({ text, members }: InteractiveTextProps) => {
               href={href}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-primary underline hover:text-primary/80"
+              className="text-primary underline hover:text-primary/80 break-all"
             >
               {processedPart}
             </a>
