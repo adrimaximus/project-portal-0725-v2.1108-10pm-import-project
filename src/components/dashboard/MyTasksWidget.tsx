@@ -10,7 +10,7 @@ import { cn, getInitials, getAvatarUrl, generatePastelColor, getPriorityStyles }
 import { Button } from '@/components/ui/button';
 import { useTaskMutations } from '@/hooks/useTaskMutations';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import RecentActivityWidget from './RecentActivityWidget';
@@ -22,6 +22,7 @@ import { ScrollArea } from '../ui/scroll-area';
 import { Checkbox } from '../ui/checkbox';
 import InteractiveText from '../InteractiveText';
 import { useProfiles } from '@/hooks/useProfiles';
+import { Badge } from '@/components/ui/badge';
 
 const TaskItem = ({ task, onToggle, isToggling, allUsers }: { task: Task, onToggle: (task: Task, completed: boolean) => void, isToggling: boolean, allUsers: User[] }) => {
   const { onOpen: onOpenTaskDrawer } = useTaskDrawer();
@@ -77,6 +78,9 @@ const TaskItem = ({ task, onToggle, isToggling, allUsers }: { task: Task, onTogg
           <p className="text-xs text-muted-foreground truncate">{task.project_name}</p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
+          {task.priority && (
+            <Badge className={cn(getPriorityStyles(task.priority).tw, 'text-xs')}>{task.priority}</Badge>
+          )}
           {dueDateText && <span className={`text-xs font-medium ${dueDateColor}`}>{dueDateText}</span>}
           <div className="flex -space-x-2">
             {task.assignedTo?.slice(0, 2).map(user => (
