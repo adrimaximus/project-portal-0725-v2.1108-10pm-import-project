@@ -51,8 +51,8 @@ export function getPriorityStyles(priority?: TaskPriority | null) {
       };
     case 'Normal':
       return {
-        tw: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600',
-        hex: '#6b7280', // gray-500
+        tw: 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300 border-blue-200 dark:border-blue-700/50',
+        hex: '#3b82f6', // blue-500
       };
     case 'Low':
       return {
