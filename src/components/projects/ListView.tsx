@@ -54,58 +54,58 @@ const DayEntry = ({ dateStr, projectsOnDay, showMonthHeader, onDeleteProject, na
                 className="bg-card border border-l-4 rounded-lg p-2 sm:p-3 flex flex-col hover:shadow-md transition-shadow group relative"
                 style={{ borderLeftColor: getProjectStatusStyles(project.status).hex }}
               >
-                <div className="flex items-start justify-between w-full">
+                <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between w-full">
                   <div 
-                    className="flex-1 cursor-pointer min-w-0"
+                    className="flex-1 flex items-center space-x-2 sm:space-x-3 cursor-pointer min-w-0"
                     onClick={() => navigate(`/projects/${project.slug}`)}
                   >
-                    <p className="text-sm sm:text-base font-medium break-words pr-8" title={project.name}>
-                      {project.name}
-                    </p>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start gap-2">
+                        <p className="text-sm sm:text-base font-medium break-words" title={project.name}>
+                          {project.name}
+                        </p>
+                      </div>
+                      <div className="flex items-center flex-wrap gap-x-2 text-xs text-muted-foreground mt-1 break-words">
+                        <span>{project.client_company_name || project.client_name}</span>
+                        {isMultiDay && displayDueDate && (
+                          <>
+                            <span className="text-muted-foreground/50">•</span>
+                            <span>Ends: {formatInJakarta(displayDueDate, 'dd MMM')}</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                  <div onClick={(e) => e.stopPropagation()} className="absolute top-1 right-1">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity h-7 w-7 sm:h-8 sm:w-8 p-0">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem className="text-destructive" onSelect={() => onDeleteProject(project.id)}>
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          <span>Delete</span>
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </div>
-
-                <div 
-                  className="flex flex-wrap justify-between items-center gap-x-4 gap-y-2 mt-1 cursor-pointer"
-                  onClick={() => navigate(`/projects/${project.slug}`)}
-                >
-                  <div className="flex items-center flex-wrap gap-x-2 text-xs text-muted-foreground break-words">
-                    <span>{project.client_company_name || project.client_name}</span>
-                    {isMultiDay && displayDueDate && (
-                      <>
-                        <span className="text-muted-foreground/50">•</span>
-                        <span>Ends: {formatInJakarta(displayDueDate, 'dd MMM')}</span>
-                      </>
-                    )}
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <StatusBadge status={project.status as any} />
-                    <div className="flex items-center -space-x-2">
-                      {project.assignedTo.slice(0, 3).map((user) => (
-                        <Avatar key={user.id} className="h-5 w-5 sm:h-6 sm:w-6 border-2 border-card">
-                          <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
-                          <AvatarFallback style={generatePastelColor(user.id)}>{user.initials}</AvatarFallback>
-                        </Avatar>
-                      ))}
+                  
+                  <div className="flex items-center space-x-2 sm:space-x-4 flex-shrink-0 pl-0 sm:pl-2 mt-2 sm:mt-0 w-full sm:w-auto justify-end">
+                    <div className="flex items-center space-x-2">
+                      <StatusBadge status={project.status as any} />
+                      <div className="flex items-center -space-x-2">
+                        {project.assignedTo.slice(0, 3).map((user) => (
+                          <Avatar key={user.id} className="h-5 w-5 sm:h-6 sm:w-6 border-2 border-card">
+                            <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
+                            <AvatarFallback style={generatePastelColor(user.id)}>{user.initials}</AvatarFallback>
+                          </Avatar>
+                        ))}
+                      </div>
+                    </div>
+                    <div onClick={(e) => e.stopPropagation()} className="absolute top-1 right-1 sm:relative sm:top-auto sm:right-auto">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity h-7 w-7 sm:h-8 sm:w-8 p-0">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem className="text-destructive" onSelect={() => onDeleteProject(project.id)}>
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            <span>Delete</span>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </div>
                 </div>
-
                 <div className="mt-2 w-full">
                   <Progress value={project.progress} className="h-1" />
                 </div>
