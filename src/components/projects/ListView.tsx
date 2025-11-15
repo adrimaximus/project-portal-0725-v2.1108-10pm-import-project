@@ -51,7 +51,7 @@ const DayEntry = ({ dateStr, projectsOnDay, showMonthHeader, onDeleteProject, na
             return (
               <div 
                 key={project.id} 
-                className="bg-card border border-l-4 rounded-lg p-2 sm:p-3 flex flex-col hover:shadow-md transition-shadow group"
+                className="bg-card border border-l-4 rounded-lg p-2 sm:p-3 flex flex-col hover:shadow-md transition-shadow group relative"
                 style={{ borderLeftColor: getProjectStatusStyles(project.status).hex }}
               >
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between w-full">
@@ -89,10 +89,10 @@ const DayEntry = ({ dateStr, projectsOnDay, showMonthHeader, onDeleteProject, na
                         ))}
                       </div>
                     </div>
-                    <div onClick={(e) => e.stopPropagation()}>
+                    <div onClick={(e) => e.stopPropagation()} className="absolute top-1 right-1 sm:relative sm:top-auto sm:right-auto">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 transition-opacity h-7 w-7 sm:h-8 sm:w-8 p-0">
+                          <Button variant="ghost" size="icon" className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity h-7 w-7 sm:h-8 sm:w-8 p-0">
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
