@@ -69,7 +69,7 @@ const TaskListItem = ({ task, onToggleTaskCompletion, onTaskClick, isUnread, all
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           {isUnread && <div className="h-2 w-2 rounded-full bg-red-500 flex-shrink-0" />}
-          <div className={cn("font-medium truncate", task.completed && "line-through text-muted-foreground")}>
+          <div className={cn("font-medium", task.completed && "line-through text-muted-foreground")}>
             <InteractiveText text={task.title} members={allUsers} />
           </div>
         </div>
@@ -169,7 +169,7 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
                 <TableCell className="font-medium max-w-[250px]">
                   <div className="flex items-center gap-2">
                     {unreadTaskIds.includes(task.id) && <div className="h-2 w-2 rounded-full bg-red-500 flex-shrink-0" />}
-                    <div className={cn("truncate", task.completed && "line-through text-muted-foreground")}>
+                    <div className={cn(task.completed && "line-through text-muted-foreground")}>
                       <InteractiveText text={task.title} members={allUsers} />
                     </div>
                   </div>
