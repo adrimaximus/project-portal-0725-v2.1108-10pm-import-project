@@ -69,7 +69,7 @@ const ProjectsToolbar = ({
   return (
     <div className="p-4 border-t flex flex-nowrap items-center justify-between gap-4 overflow-x-auto">
       {/* Left Section: View Controls */}
-      <div className="flex items-center gap-4 flex-wrap">
+      <div className="flex items-center gap-4 flex-nowrap">
         {/* Desktop View Switcher */}
         <TooltipProvider>
           <ToggleGroup type="single" value={view} onValueChange={onViewChange} aria-label="Project view" className="hidden sm:flex">
@@ -166,7 +166,7 @@ const ProjectsToolbar = ({
       </div>
 
       {/* Right Section: Filters, Search, Date Range, and Action Buttons */}
-      <div className="flex-shrink-0 flex items-center gap-2 flex-wrap justify-end">
+      <div className="flex-shrink-0 flex items-center gap-2 flex-nowrap justify-end">
         
         {/* Filters, Search, Date Range */}
         <div className="flex items-center gap-2">
