@@ -237,7 +237,7 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                                       <div className="min-w-0 flex-grow">
                                         <div className={cn(
                                           "text-sm whitespace-pre-wrap break-all prose prose-sm max-w-none [&_p]:my-0",
-                                          isCurrentUser ? "prose-p:text-[#b6c1bf] dark:prose-p:text-[#374151] prose-a:text-[#b6c1bf] dark:prose-a:text-[#374151] prose-strong:text-[#b6c1bf] dark:prose-strong:text-[#374151]" : "dark:prose-invert [&_p]:dark:text-muted-foreground"
+                                          isCurrentUser ? "[--tw-prose-body:#b6c1bf] [--tw-prose-links:#b6c1bf] [--tw-prose-bold:#b6c1bf] dark:[--tw-prose-body:#374151] dark:[--tw-prose-links:#374151] dark:[--tw-prose-bold:#374151]" : "dark:prose-invert [&_p]:dark:text-muted-foreground"
                                         )}>
                                           <InteractiveText text={message.text || ''} members={members} />
                                         </div>
@@ -275,7 +275,7 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                                       ) : (
                                         <div className={cn(
                                           "text-sm whitespace-pre-wrap break-all prose prose-sm max-w-none [&_p]:my-0",
-                                          isCurrentUser ? "prose-p:text-[#b6c1bf] dark:prose-p:text-[#374151] prose-a:text-[#b6c1bf] dark:prose-a:text-[#374151] prose-strong:text-[#b6c1bf] dark:prose-strong:text-[#374151]" : "dark:prose-invert [&_p]:dark:text-muted-foreground"
+                                          isCurrentUser ? "[--tw-prose-body:#b6c1bf] [--tw-prose-links:#b6c1bf] [--tw-prose-bold:#b6c1bf] dark:[--tw-prose-body:#374151] dark:[--tw-prose-links:#374151] dark:[--tw-prose-bold:#374151]" : "dark:prose-invert [&_p]:dark:text-muted-foreground"
                                         )}>
                                           <InteractiveText text={message.text || ''} members={members} />
                                         </div>
