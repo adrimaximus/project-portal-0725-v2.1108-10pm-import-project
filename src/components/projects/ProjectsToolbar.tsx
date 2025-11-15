@@ -147,10 +147,21 @@ const ProjectsToolbar = ({
           </Select>
         )}
         {isTaskView && (
-          <div className="flex items-center space-x-2">
-            <Switch id="hide-completed" checked={hideCompletedTasks} onCheckedChange={onToggleHideCompleted} />
-            <Label htmlFor="hide-completed" className="text-sm">Hide Done</Label>
-          </div>
+          <TooltipProvider>
+            <div className="flex items-center space-x-2">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <label htmlFor="hide-completed" className="flex items-center space-x-2 cursor-pointer">
+                    <Switch id="hide-completed" checked={hideCompletedTasks} onCheckedChange={onToggleHideCompleted} />
+                    <span className="text-sm hidden sm:inline">Hide Done</span>
+                  </label>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Hide Done</p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
+          </TooltipProvider>
         )}
       </div>
 
