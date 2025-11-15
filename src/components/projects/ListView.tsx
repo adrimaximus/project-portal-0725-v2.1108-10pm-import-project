@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { MoreHorizontal, Trash2 } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { getProjectStatusStyles, cn, formatInJakarta, generatePastelColor, getAvatarUrl } from '@/lib/utils';
-import { isSameDay, subDays, isBefore, startOfToday } from 'date-fns';
+import { isSameDay, isBefore, startOfToday, differenceInDays } from 'date-fns';
 import { Progress } from "../ui/progress";
 import StatusBadge from "../StatusBadge";
 
@@ -28,6 +28,12 @@ const DayEntry = ({ dateStr, projectsOnDay, showMonthHeader, onDeleteProject, na
         </div>
         <div className="flex-1 space-y-3 pt-1 min-w-0">
           {projectsOnDay.map((project: Project) => {
+            const startDate = new Date(project.start_date!);
+            const dueDate = project.due_date ? new Date(project.due_date) : null;
+            
+            // Check if the project spans more than one day
+            const isMultiDay = dueDate && differenceInDays(dueDate, startDate) > 0;
+
             return (
               <div 
                 key={project.id} 
@@ -43,6 +49,11 @@ const DayEntry = ({ dateStr, projectsOnDay, showMonthHeader, onDeleteProject, na
                       <p className="text-sm sm:text-base font-medium break-words" title={project.name}>
                         {project.name}
                       </p>
+                      {isMultiDay && dueDate && (
+                        <span className="text-xs text-muted-foreground flex-shrink-0">
+                          Ends: {formatInJakarta(dueDate, 'dd MMM')}
+                        </span>
+                      )}
                     </div>
                     <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1 break-words">
                       {project.client_company_name || project.client_name}
