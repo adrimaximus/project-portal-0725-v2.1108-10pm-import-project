@@ -32,7 +32,7 @@ import {
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu';
 import { Link } from 'react-router-dom';
-import TaskCommentsList from '../project-detail/TaskCommentsList';
+import TaskCommentsList from './TaskCommentsList';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 import { toast } from 'sonner';
@@ -56,6 +56,7 @@ interface TaskDetailCardProps {
   onClose: () => void;
   onEdit: (task: Task) => void;
   onDelete: (task: Task) => void;
+  highlightedCommentId?: string | null;
 }
 
 const aggregateAttachments = (task: Task): TaskAttachment[] => {
@@ -87,7 +88,7 @@ const aggregateAttachments = (task: Task): TaskAttachment[] => {
   return attachments;
 };
 
-const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, onDelete }) => {
+const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, onDelete, highlightedCommentId }) => {
   const { user } = useAuth();
   const { toggleTaskReaction, sendReminder, isSendingReminder, updateTaskStatusAndOrder, toggleTaskCompletion, updateTask, isUpdatingTask } = useTaskMutations();
   const { 
@@ -231,7 +232,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
   };
 
   const handleCopyLink = () => {
-    const url = `${window.location.origin}/projects/${task.project_slug}?tab=tasks&task=${task.id}`;
+    const url = `${window.location.origin}/tasks/${task.id}`;
     navigator.clipboard.writeText(`${task.project_name || 'Project'} | ${task.title}\n${url}`);
     toast.success('Link copied!');
   };
@@ -523,6 +524,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
               onCreateTicketFromComment={handleCreateTicketFromComment}
               onGoToReply={handleScrollToMessage}
               allUsers={allUsers}
+              highlightedCommentId={highlightedCommentId}
             />
           </div>
         </div>
