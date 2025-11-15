@@ -58,14 +58,14 @@ const TaskItem = ({ task, onToggle, isToggling, allUsers }: { task: Task, onTogg
   }
 
   const priorityBorderColor = useMemo(() => {
-    switch (task.priority) {
-      case 'Urgent':
+    switch (task.priority?.toLowerCase()) {
+      case 'urgent':
         return 'border-red-500';
-      case 'High':
+      case 'high':
         return 'border-orange-500';
-      case 'Normal':
-        return 'border-blue-500';
-      case 'Low':
+      case 'normal':
+        return 'border-yellow-500';
+      case 'low':
         return 'border-gray-400';
       default:
         return 'border-transparent';
