@@ -38,23 +38,24 @@ export const generatePastelColor = (seed: string) => {
 };
 
 export function getPriorityStyles(priority?: TaskPriority | null) {
-  switch (priority) {
-    case 'Urgent':
+  const priorityLower = priority?.toLowerCase();
+  switch (priorityLower) {
+    case 'urgent':
       return {
         tw: 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300 border-red-200 dark:border-red-700/50',
         hex: '#ef4444', // red-500
       };
-    case 'High':
+    case 'high':
       return {
         tw: 'bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-300 border-orange-200 dark:border-orange-700/50',
         hex: '#f97316', // orange-500
       };
-    case 'Normal':
+    case 'normal':
       return {
         tw: 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300 border-blue-200 dark:border-blue-700/50',
         hex: '#3b82f6', // blue-500
       };
-    case 'Low':
+    case 'low':
       return {
         tw: 'bg-sky-100 text-sky-800 dark:bg-sky-900/50 dark:text-sky-300 border-sky-200 dark:border-sky-700/50',
         hex: '#0ea5e9', // sky-500
