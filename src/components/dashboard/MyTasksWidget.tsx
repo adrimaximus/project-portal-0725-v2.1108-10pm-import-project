@@ -237,7 +237,7 @@ const MyTasksWidget = () => {
           {overdueTasks.length > 0 && (
             <div>
               <h4 className="text-xs font-semibold text-muted-foreground mb-2 px-2">Overdue</h4>
-              <div className="space-y-1">
+              <div className="divide-y divide-border">
                 {overdueTasks.map(task => <TaskItem key={task.id} task={task} onToggle={handleToggleTaskCompletion} isToggling={isToggling} allUsers={allUsers} />)}
               </div>
             </div>
@@ -245,7 +245,7 @@ const MyTasksWidget = () => {
           {upcomingTasks.length > 0 && (
             <div>
               <h4 className="text-xs font-semibold text-muted-foreground mb-2 px-2">Upcoming</h4>
-              <div className="space-y-1">
+              <div className="divide-y divide-border">
                 {upcomingTasks.map(task => <TaskItem key={task.id} task={task} onToggle={handleToggleTaskCompletion} isToggling={isToggling} allUsers={allUsers} />)}
               </div>
             </div>
@@ -253,7 +253,7 @@ const MyTasksWidget = () => {
           {noDueDateTasks.length > 0 && (
             <div>
               <h4 className="text-xs font-semibold text-muted-foreground mb-2 px-2">No Due Date</h4>
-              <div className="space-y-1">
+              <div className="divide-y divide-border">
                 {noDueDateTasks.map(task => <TaskItem key={task.id} task={task} onToggle={handleToggleTaskCompletion} isToggling={isToggling} allUsers={allUsers} />)}
               </div>
             </div>
