@@ -92,8 +92,8 @@ export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImp
     const groups = filteredEvents.reduce((acc, event) => {
       const dateStr = event.start?.date || event.start?.dateTime?.split('T')[0];
       
-      if (!dateStr || isNaN(new Date(dateStr + 'T00:00:00').getTime())) {
-        console.warn("Skipping event with invalid start date string:", dateStr, event);
+      if (!dateStr || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+        console.warn("Skipping event with invalid date string format:", dateStr, event);
         return acc;
       }
 
@@ -104,7 +104,11 @@ export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImp
       return acc;
     }, {} as Record<string, any[]>);
 
-    return Object.entries(groups).sort(([dateA], [dateB]) => new Date(dateA + 'T00:00:00').getTime() - new Date(dateB + 'T00:00:00').getTime());
+    return Object.entries(groups).sort(([dateA], [dateB]) => {
+        const [yearA, monthA, dayA] = dateA.split('-').map(Number);
+        const [yearB, monthB, dayB] = dateB.split('-').map(Number);
+        return new Date(yearA, monthA - 1, dayA).getTime() - new Date(yearB, monthB - 1, dayB).getTime();
+    });
   }, [filteredEvents]);
 
   const handleSelectEvent = (eventId: string) => {
@@ -199,37 +203,40 @@ export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImp
               </div>
               <ScrollArea className="flex-grow">
                 <div className="p-4 space-y-4">
-                  {groupedEvents.map(([dateStr, eventsOnDay], index) => (
-                    <div key={dateStr}>
-                      {index > 0 && <Separator className="my-4" />}
-                      <h3 className="font-semibold text-sm mb-2 px-2 text-muted-foreground">
-                        {format(new Date(dateStr + 'T00:00:00'), 'EEEE, MMMM d')}
-                      </h3>
-                      <div className="space-y-1">
-                        {eventsOnDay.map(event => (
-                          <div key={event.id} className="flex items-center space-x-3 p-2 rounded-md hover:bg-muted">
-                            <Checkbox
-                              id={event.id}
-                              checked={selectedEvents.includes(event.id)}
-                              onCheckedChange={() => handleSelectEvent(event.id)}
-                            />
-                            <label htmlFor={event.id} className="flex-grow cursor-pointer">
-                              <p className="font-medium">{event.summary || "No Title"}</p>
-                              <div className="flex items-center text-sm text-muted-foreground">
-                                <span>{formatEventTime(event)}</span>
-                                {event.calendar?.summary && (
-                                  <>
-                                    <span className="mx-2">|</span>
-                                    <span className="truncate">{event.calendar.summary}</span>
-                                  </>
-                                )}
-                              </div>
-                            </label>
-                          </div>
-                        ))}
+                  {groupedEvents.map(([dateStr, eventsOnDay], index) => {
+                    const [year, month, day] = dateStr.split('-').map(Number);
+                    return (
+                      <div key={dateStr}>
+                        {index > 0 && <Separator className="my-4" />}
+                        <h3 className="font-semibold text-sm mb-2 px-2 text-muted-foreground">
+                          {format(new Date(year, month - 1, day), 'EEEE, MMMM d')}
+                        </h3>
+                        <div className="space-y-1">
+                          {eventsOnDay.map(event => (
+                            <div key={event.id} className="flex items-center space-x-3 p-2 rounded-md hover:bg-muted">
+                              <Checkbox
+                                id={event.id}
+                                checked={selectedEvents.includes(event.id)}
+                                onCheckedChange={() => handleSelectEvent(event.id)}
+                              />
+                              <label htmlFor={event.id} className="flex-grow cursor-pointer">
+                                <p className="font-medium">{event.summary || "No Title"}</p>
+                                <div className="flex items-center text-sm text-muted-foreground">
+                                  <span>{formatEventTime(event)}</span>
+                                  {event.calendar?.summary && (
+                                    <>
+                                      <span className="mx-2">|</span>
+                                      <span className="truncate">{event.calendar.summary}</span>
+                                    </>
+                                  )}
+                                </div>
+                              </label>
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </ScrollArea>
             </div>
