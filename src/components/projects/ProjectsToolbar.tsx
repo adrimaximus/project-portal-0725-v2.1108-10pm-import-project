@@ -174,7 +174,8 @@ const ProjectsToolbar = ({
                 </Button>
               </TooltipTrigger>
               <TooltipContent><p>New Task</p></TooltipContent>
-            </TooltipProvider>
+            </Tooltip>
+          </TooltipProvider>
         ) : (
           <TooltipProvider>
             <Tooltip>
