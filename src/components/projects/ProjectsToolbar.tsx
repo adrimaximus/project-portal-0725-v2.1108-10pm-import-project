@@ -146,9 +146,18 @@ const ProjectsToolbar = ({
             />
           </div>
         ) : (
-          <Button variant="outline" size="icon" onClick={() => setIsSearchOpen(true)}>
-            <Search className="h-4 w-4" />
-          </Button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="outline" size="icon" onClick={() => setIsSearchOpen(true)}>
+                  <Search className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Search</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         )}
         <DatePickerWithRange date={dateRange} onDateChange={onDateRangeChange} />
       </div>
