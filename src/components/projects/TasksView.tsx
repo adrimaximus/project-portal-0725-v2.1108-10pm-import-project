@@ -166,7 +166,7 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
                     disabled={isToggling}
                   />
                 </TableCell>
-                <TableCell className="font-medium">
+                <TableCell className="font-medium max-w-[250px]">
                   <div className="flex items-center gap-2">
                     {unreadTaskIds.includes(task.id) && <div className="h-2 w-2 rounded-full bg-red-500 flex-shrink-0" />}
                     <div className={cn("truncate", task.completed && "line-through text-muted-foreground")}>
