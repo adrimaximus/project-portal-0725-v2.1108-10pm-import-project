@@ -67,7 +67,7 @@ const ProjectsToolbar = ({
   const [isViewSwitcherOpen, setIsViewSwitcherOpen] = useState(false);
 
   return (
-    <div className="p-4 border-t flex flex-wrap items-center justify-between gap-4">
+    <div className="p-4 border-t flex flex-nowrap items-center justify-between gap-4 overflow-x-auto">
       {/* Left Section: View Controls */}
       <div className="flex items-center gap-4 flex-wrap">
         {/* Desktop View Switcher */}
