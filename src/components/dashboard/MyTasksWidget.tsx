@@ -58,7 +58,7 @@ const TaskItem = ({ task, onToggle, isToggling, allUsers }: { task: Task, onTogg
   }
 
   return (
-    <div className="flex items-center gap-3 p-2 rounded-md hover:bg-muted/50">
+    <div className="flex items-start gap-3 p-2 rounded-md hover:bg-muted/50">
       <Checkbox
         id={`task-dash-${task.id}`}
         checked={task.completed}
@@ -67,30 +67,32 @@ const TaskItem = ({ task, onToggle, isToggling, allUsers }: { task: Task, onTogg
         onClick={(e) => e.stopPropagation()}
         disabled={isToggling}
       />
-      <div className="flex-1 min-w-0 cursor-pointer" onClick={handleTaskClick}>
-        <div className={cn("font-medium text-sm", task.completed && "line-through text-muted-foreground")}>
-          <InteractiveText text={task.title} members={allUsers} />
+      <div className="flex flex-wrap justify-between items-center flex-1 gap-2">
+        <div className="flex-1 min-w-0 cursor-pointer" onClick={handleTaskClick}>
+          <div className={cn("font-medium text-sm", task.completed && "line-through text-muted-foreground")}>
+            <InteractiveText text={task.title} members={allUsers} />
+          </div>
+          <p className="text-xs text-muted-foreground truncate">{task.project_name}</p>
         </div>
-        <p className="text-xs text-muted-foreground truncate">{task.project_name}</p>
-      </div>
-      <div className="flex items-center gap-2 flex-shrink-0">
-        {dueDateText && <span className={`text-xs font-medium ${dueDateColor}`}>{dueDateText}</span>}
-        <div className="flex -space-x-2">
-          {task.assignedTo?.slice(0, 2).map(user => (
-            <TooltipProvider key={user.id}>
-              <Tooltip>
-                <TooltipTrigger>
-                  <Avatar className="h-6 w-6 border-2 border-background">
-                    <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
-                    <AvatarFallback style={generatePastelColor(user.id)}>
-                      {getInitials([user.first_name, user.last_name].filter(Boolean).join(' '), user.email || undefined)}
-                    </AvatarFallback>
-                  </Avatar>
-                </TooltipTrigger>
-                <TooltipContent><p>{user.name}</p></TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          ))}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {dueDateText && <span className={`text-xs font-medium ${dueDateColor}`}>{dueDateText}</span>}
+          <div className="flex -space-x-2">
+            {task.assignedTo?.slice(0, 2).map(user => (
+              <TooltipProvider key={user.id}>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <Avatar className="h-6 w-6 border-2 border-background">
+                      <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
+                      <AvatarFallback style={generatePastelColor(user.id)}>
+                        {getInitials([user.first_name, user.last_name].filter(Boolean).join(' '), user.email || undefined)}
+                      </AvatarFallback>
+                    </Avatar>
+                  </TooltipTrigger>
+                  <TooltipContent><p>{user.name}</p></TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            ))}
+          </div>
         </div>
       </div>
     </div>
