@@ -37,15 +37,23 @@ export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImp
   const { data: projects = [] } = useQuery<Project[]>({
     queryKey: ['projectsForGCalImport'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('projects').select('*');
+      const { data, error } = await supabase.from('projects').select('origin_event_id');
       if (error) throw error;
       return data;
     },
     enabled: open,
   });
 
+  const filteredEvents = useMemo(() => {
+    if (events.length === 0) {
+      return [];
+    }
+    const existingEventIds = new Set(projects.map(p => p.origin_event_id).filter(Boolean));
+    return events.filter(event => event.id && !existingEventIds.has(event.id));
+  }, [events, projects]);
+
   useEffect(() => {
-    if (open && events.length > 0 && projects.length > 0) {
+    if (open && filteredEvents.length > 0 && projects.length > 0) {
       const analyzeWithAI = async () => {
         setIsAiLoading(true);
         try {
@@ -53,7 +61,7 @@ export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImp
             body: {
               feature: 'ai-select-calendar-events',
               payload: {
-                events: events,
+                events: filteredEvents,
                 existingProjects: projects.map(p => p.name),
               }
             }
@@ -70,7 +78,7 @@ export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImp
       };
       analyzeWithAI();
     }
-  }, [open, events, projects]);
+  }, [open, filteredEvents, projects]);
 
   useEffect(() => {
     if (!open) {
@@ -79,9 +87,9 @@ export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImp
   }, [open]);
 
   const groupedEvents = useMemo(() => {
-    if (!events) return [];
+    if (!filteredEvents) return [];
     
-    const groups = events.reduce((acc, event) => {
+    const groups = filteredEvents.reduce((acc, event) => {
       const dateStr = event.start?.date || event.start?.dateTime?.split('T')[0];
       
       if (!dateStr) {
@@ -97,7 +105,7 @@ export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImp
     }, {} as Record<string, any[]>);
 
     return Object.entries(groups).sort(([dateA], [dateB]) => new Date(dateA).getTime() - new Date(dateB).getTime());
-  }, [events]);
+  }, [filteredEvents]);
 
   const handleSelectEvent = (eventId: string) => {
     setSelectedEvents(prev =>
@@ -109,14 +117,14 @@ export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImp
 
   const handleSelectAll = (checked: boolean | 'indeterminate') => {
     if (checked === true) {
-      setSelectedEvents(events.map(e => e.id));
+      setSelectedEvents(filteredEvents.map(e => e.id));
     } else {
       setSelectedEvents([]);
     }
   };
 
   const handleImport = () => {
-    const eventsToImport = events.filter(e => selectedEvents.includes(e.id));
+    const eventsToImport = filteredEvents.filter(e => selectedEvents.includes(e.id));
     onImport(eventsToImport);
   };
 
@@ -135,7 +143,7 @@ export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImp
     return "All-day"; // It's an all-day event
   };
 
-  const allSelected = events.length > 0 && selectedEvents.length === events.length;
+  const allSelected = filteredEvents.length > 0 && selectedEvents.length === filteredEvents.length;
   const someSelected = selectedEvents.length > 0 && !allSelected;
 
   return (
@@ -155,10 +163,10 @@ export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImp
           {error && (
             <div className="text-destructive text-center p-4">{error.message}</div>
           )}
-          {!isLoading && !error && events.length === 0 && (
+          {!isLoading && !error && filteredEvents.length === 0 && (
             <div className="text-center p-4 text-muted-foreground">No upcoming events found to import.</div>
           )}
-          {!isLoading && !error && events.length > 0 && (
+          {!isLoading && !error && filteredEvents.length > 0 && (
             <div className="h-full flex flex-col border rounded-md">
               <div className="flex items-center justify-between p-3 border-b bg-muted/50 flex-shrink-0">
                 <div className="flex items-center space-x-3">
@@ -168,7 +176,7 @@ export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImp
                     onCheckedChange={handleSelectAll}
                   />
                   <label htmlFor="select-all" className="text-sm font-medium leading-none cursor-pointer">
-                    Select All ({selectedEvents.length} / {events.length})
+                    Select All ({selectedEvents.length} / {filteredEvents.length})
                   </label>
                 </div>
                 <div className="flex items-center gap-1 text-xs text-muted-foreground">
