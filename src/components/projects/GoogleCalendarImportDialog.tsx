@@ -129,19 +129,27 @@ export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImp
   };
 
   const formatEventTime = (event: any) => {
-    const start = event.start?.dateTime;
-    const end = event.end?.dateTime;
-
     try {
-      if (start) { // It's a timed event
-          const startTime = formatInJakarta(start, 'HH:mm');
-          if (end) {
-              const endTime = formatInJakarta(end, 'HH:mm');
+      const start = event.start;
+      const end = event.end;
+
+      if (start?.dateTime) { // It's a timed event
+          const startTime = formatInJakarta(start.dateTime, 'HH:mm');
+          if (end?.dateTime) {
+              const endTime = formatInJakarta(end.dateTime, 'HH:mm');
+              if (startTime === endTime) {
+                return startTime;
+              }
               return `${startTime} - ${endTime}`;
           }
           return startTime;
       }
-      return "All-day"; // It's an all-day event
+      
+      if (start?.date) { // It's an all-day event
+        return "All-day";
+      }
+
+      return "Time not specified"; // Fallback
     } catch (e) {
       console.error("Error formatting event time:", e, event);
       return "Invalid time";
