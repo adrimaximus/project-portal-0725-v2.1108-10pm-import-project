@@ -107,7 +107,7 @@ const ProjectsToolbar = ({
         </TooltipProvider>
 
         {/* Mobile View Switcher */}
-        <div className="sm:hidden flex items-center gap-2">
+        <div className="sm:hidden relative flex items-center gap-2">
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -119,21 +119,23 @@ const ProjectsToolbar = ({
             </Tooltip>
           </TooltipProvider>
           {isViewSwitcherOpen && (
-            <ToggleGroup
-              type="single"
-              value={view}
-              onValueChange={(value: ViewMode | null) => {
-                if (value) onViewChange(value);
-                setIsViewSwitcherOpen(false);
-              }}
-              aria-label="Project view"
-            >
-              <ToggleGroupItem value="list" aria-label="List view"><List className="h-4 w-4" /></ToggleGroupItem>
-              <ToggleGroupItem value="table" aria-label="Grid view"><LayoutGrid className="h-4 w-4" /></ToggleGroupItem>
-              <ToggleGroupItem value="kanban" aria-label="Kanban view"><KanbanSquare className="h-4 w-4" /></ToggleGroupItem>
-              <ToggleGroupItem value="tasks" aria-label="Tasks list view"><ListChecks className="h-4 w-4" /></ToggleGroupItem>
-              <ToggleGroupItem value="tasks-kanban" aria-label="Tasks kanban view"><CheckSquare className="h-4 w-4" /></ToggleGroupItem>
-            </ToggleGroup>
+            <div className="absolute top-full left-0 mt-2 z-10 bg-background border rounded-md shadow-lg">
+              <ToggleGroup
+                type="single"
+                value={view}
+                onValueChange={(value: ViewMode | null) => {
+                  if (value) onViewChange(value);
+                  setIsViewSwitcherOpen(false);
+                }}
+                aria-label="Project view"
+              >
+                <ToggleGroupItem value="list" aria-label="List view"><List className="h-4 w-4" /></ToggleGroupItem>
+                <ToggleGroupItem value="table" aria-label="Grid view"><LayoutGrid className="h-4 w-4" /></ToggleGroupItem>
+                <ToggleGroupItem value="kanban" aria-label="Kanban view"><KanbanSquare className="h-4 w-4" /></ToggleGroupItem>
+                <ToggleGroupItem value="tasks" aria-label="Tasks list view"><ListChecks className="h-4 w-4" /></ToggleGroupItem>
+                <ToggleGroupItem value="tasks-kanban" aria-label="Tasks kanban view"><CheckSquare className="h-4 w-4" /></ToggleGroupItem>
+              </ToggleGroup>
+            </div>
           )}
         </div>
 
