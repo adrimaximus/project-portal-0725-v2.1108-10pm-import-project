@@ -71,6 +71,7 @@ const ProjectsPage = () => {
     searchTerm,
     year: dateRange?.from && dateRange.to && dateRange.from.getFullYear() === date.to.getFullYear() ? date.from.getFullYear() : null,
     fetchAll: true,
+    personId: advancedFilters.personId,
   });
   
   const projectsData = useMemo(() => data?.pages.flatMap(page => page.projects) ?? [], [data]);
@@ -202,7 +203,7 @@ const ProjectsPage = () => {
 
   const filteredTasks = useMemo(() => {
     let tasksToFilter = tasksData || [];
-    const selectedPeopleIds = [...(advancedFilters.ownerIds || []), ...(advancedFilters.memberIds || [])];
+    const selectedPeopleIds = [advancedFilters.personId].filter(Boolean);
     if (selectedPeopleIds.length > 0) {
         const uniqueSelectedPeopleIds = [...new Set(selectedPeopleIds)];
         tasksToFilter = tasksToFilter.filter(task => 
@@ -216,7 +217,7 @@ const ProjectsPage = () => {
       (task.description && task.description.toLowerCase().includes(lowercasedFilter)) ||
       (task.project_name && task.project_name.toLowerCase().includes(lowercasedFilter))
     );
-  }, [tasksData, searchTerm, advancedFilters.ownerIds, advancedFilters.memberIds]);
+  }, [tasksData, searchTerm, advancedFilters.personId]);
 
   const deleteProjectMutation = useMutation({
     mutationFn: async (projectId: string) => {
