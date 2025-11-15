@@ -92,7 +92,7 @@ export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImp
     const groups = filteredEvents.reduce((acc, event) => {
       const dateStr = event.start?.date || event.start?.dateTime?.split('T')[0];
       
-      if (!dateStr || isNaN(new Date(dateStr).getTime())) {
+      if (!dateStr || isNaN(new Date(dateStr + 'T00:00:00').getTime())) {
         console.warn("Skipping event with invalid start date string:", dateStr, event);
         return acc;
       }
@@ -104,7 +104,7 @@ export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImp
       return acc;
     }, {} as Record<string, any[]>);
 
-    return Object.entries(groups).sort(([dateA], [dateB]) => new Date(dateA).getTime() - new Date(dateB).getTime());
+    return Object.entries(groups).sort(([dateA], [dateB]) => new Date(dateA + 'T00:00:00').getTime() - new Date(dateB + 'T00:00:00').getTime());
   }, [filteredEvents]);
 
   const handleSelectEvent = (eventId: string) => {
