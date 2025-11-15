@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { FilterX, UserCog, Users, ListX, List, LayoutGrid, KanbanSquare, ListChecks, CheckSquare } from "lucide-react";
+import { FilterX, UserCog, Users, ListX } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { PROJECT_STATUS_OPTIONS } from "@/types";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -19,16 +19,11 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Check } from "lucide-react";
 import { Separator } from "../ui/separator";
-import { ToggleGroup, ToggleGroupItem } from "../ui/toggle-group";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
-import { Switch } from "../ui/switch";
 
 interface Person {
   id: string;
   name: string;
 }
-
-type ViewMode = 'table' | 'list' | 'kanban' | 'tasks' | 'tasks-kanban';
 
 export interface AdvancedFiltersState {
   ownerIds: string[];
@@ -41,30 +36,9 @@ interface ProjectAdvancedFiltersProps {
   onFiltersChange: (filters: AdvancedFiltersState) => void;
   allPeople: Person[];
   allOwners: Person[];
-  
-  // New props for view controls
-  view: ViewMode;
-  onViewChange: (view: ViewMode | null) => void;
-  kanbanGroupBy: 'status' | 'payment_status';
-  onKanbanGroupByChange: (value: 'status' | 'payment_status') => void;
-  hideCompletedTasks: boolean;
-  onToggleHideCompleted: () => void;
-  isTaskView: boolean;
 }
 
-const ProjectAdvancedFilters = ({ 
-  filters, 
-  onFiltersChange, 
-  allPeople, 
-  allOwners,
-  view,
-  onViewChange,
-  kanbanGroupBy,
-  onKanbanGroupByChange,
-  hideCompletedTasks,
-  onToggleHideCompleted,
-  isTaskView,
-}: ProjectAdvancedFiltersProps) => {
+const ProjectAdvancedFilters = ({ filters, onFiltersChange, allPeople, allOwners }: ProjectAdvancedFiltersProps) => {
   const [open, setOpen] = useState(false);
 
   const handleOwnerToggle = (personId: string) => {
@@ -192,74 +166,11 @@ const ProjectAdvancedFilters = ({
     </div>
   );
 
-  const viewControls = (
-    <div className="flex items-center gap-4">
-      <TooltipProvider>
-        <ToggleGroup type="single" value={view} onValueChange={onViewChange} aria-label="Project view">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <ToggleGroupItem value="list" aria-label="List view"><List className="h-4 w-4" /></ToggleGroupItem>
-            </TooltipTrigger>
-            <TooltipContent><p>List view</p></TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <ToggleGroupItem value="table" aria-label="Grid view"><LayoutGrid className="h-4 w-4" /></ToggleGroupItem>
-            </TooltipTrigger>
-            <TooltipContent><p>Grid view</p></TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <ToggleGroupItem value="kanban" aria-label="Kanban view"><KanbanSquare className="h-4 w-4" /></ToggleGroupItem>
-            </TooltipTrigger>
-            <TooltipContent><p>Kanban view</p></TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <ToggleGroupItem value="tasks" aria-label="Tasks list view"><ListChecks className="h-4 w-4" /></ToggleGroupItem>
-            </TooltipTrigger>
-            <TooltipContent><p>Tasks list view</p></TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <ToggleGroupItem value="tasks-kanban" aria-label="Tasks kanban view"><CheckSquare className="h-4 w-4" /></ToggleGroupItem>
-            </TooltipTrigger>
-            <TooltipContent><p>Tasks kanban view</p></TooltipContent>
-          </Tooltip>
-        </ToggleGroup>
-      </TooltipProvider>
-
-      {view === 'kanban' && (
-        <Select value={kanbanGroupBy} onValueChange={onKanbanGroupByChange}>
-          <SelectTrigger className="w-[80px]"><SelectValue placeholder="Group by..." /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="status">Status</SelectItem>
-            <SelectItem value="payment_status">Payment Status</SelectItem>
-          </SelectContent>
-        </Select>
-      )}
-      {isTaskView && (
-        <div className="flex items-center space-x-2">
-          <Switch id="hide-completed" checked={hideCompletedTasks} onCheckedChange={onToggleHideCompleted} />
-          <Label htmlFor="hide-completed" className="text-sm">Hide Done</Label>
-        </div>
-      )}
-    </div>
-  );
-
   return (
     <>
       {/* Desktop View */}
       <div className="hidden sm:flex items-center gap-1">
         <TooltipProvider>
-          
-          {/* 1. View Controls */}
-          {viewControls}
-          
-          {/* Separator */}
-          <Separator orientation="vertical" className="h-6 mx-1" />
-
-          {/* 2. Filters */}
           <Popover>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -340,11 +251,7 @@ const ProjectAdvancedFilters = ({
               <DrawerTitle>Advanced Filters</DrawerTitle>
               <DrawerDescription>Refine the project list by owner, member, or status.</DrawerDescription>
             </DrawerHeader>
-            <div className="p-4 space-y-4">
-              <div className="flex flex-wrap items-center gap-4">{viewControls}</div>
-              <Separator />
-              {filterContent}
-            </div>
+            <div className="p-4">{filterContent}</div>
             <DrawerFooter className="pt-2">
               <DrawerClose asChild><Button>Apply</Button></DrawerClose>
               {activeFilterCount > 0 && <Button variant="outline" onClick={clearFilters}>Clear Filters</Button>}
