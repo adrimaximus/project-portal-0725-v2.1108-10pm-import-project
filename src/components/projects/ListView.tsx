@@ -77,7 +77,7 @@ const DayEntry = ({ dateStr, projectsOnDay, showMonthHeader, onDeleteProject, na
                     </div>
                   </div>
                   
-                  <div className="flex items-center space-x-2 sm:space-x-4 flex-shrink-0 pl-0 sm:pl-2 mt-2 sm:mt-0 w-full sm:w-auto justify-end">
+                  <div className="flex items-center space-x-2 sm:space-x-4 flex-shrink-0 pl-0 sm:pl-2 mt-2 sm:mt-0 w-full sm:w-auto justify-end border-t pt-2 sm:border-t-0 sm:pt-0">
                     <div className="flex items-center space-x-2">
                       <StatusBadge status={project.status as any} />
                       <div className="flex items-center -space-x-2">
