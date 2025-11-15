@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Sparkles } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -21,7 +21,6 @@ interface GoogleCalendarImportDialogProps {
 
 export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImporting }: GoogleCalendarImportDialogProps) => {
   const [selectedEvents, setSelectedEvents] = useState<string[]>([]);
-  const [isAiLoading, setIsAiLoading] = useState(false);
 
   const { data: events = [], isLoading, error } = useQuery<any[]>({
     queryKey: ['googleCalendarEvents'],
@@ -51,34 +50,6 @@ export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImp
     const existingEventIds = new Set(projects.map(p => p.origin_event_id).filter(Boolean));
     return events.filter(event => event.id && !existingEventIds.has(event.id));
   }, [events, projects]);
-
-  useEffect(() => {
-    if (open && filteredEvents.length > 0 && projects.length > 0) {
-      const analyzeWithAI = async () => {
-        setIsAiLoading(true);
-        try {
-          const { data, error } = await supabase.functions.invoke('ai-handler', {
-            body: {
-              feature: 'ai-select-calendar-events',
-              payload: {
-                events: filteredEvents,
-                existingProjects: projects.map(p => p.name),
-              }
-            }
-          });
-          if (error) throw error;
-          setSelectedEvents(data.result.event_ids_to_import);
-        } catch (err) {
-          console.error("AI selection failed:", err);
-          toast.error("AI analysis failed, falling back to manual selection.");
-          setSelectedEvents([]);
-        } finally {
-          setIsAiLoading(false);
-        }
-      };
-      analyzeWithAI();
-    }
-  }, [open, filteredEvents, projects]);
 
   useEffect(() => {
     if (!open) {
@@ -171,10 +142,10 @@ export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImp
           <DialogDescription>Select the events you want to import as new projects. Events already imported will not be shown.</DialogDescription>
         </DialogHeader>
         <div className="relative h-96">
-          {(isLoading || isAiLoading) && (
+          {isLoading && (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/50 z-10">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <p className="mt-2 text-sm text-muted-foreground">{isAiLoading ? "AI is analyzing your events..." : "Loading events..."}</p>
+              <p className="mt-2 text-sm text-muted-foreground">Loading events...</p>
             </div>
           )}
           {error && (
@@ -195,10 +166,6 @@ export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImp
                   <label htmlFor="select-all" className="text-sm font-medium leading-none cursor-pointer">
                     Select All ({selectedEvents.length} / {filteredEvents.length})
                   </label>
-                </div>
-                <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                  <Sparkles className="h-3 w-3 text-primary" />
-                  <span>AI Suggested</span>
                 </div>
               </div>
               <ScrollArea className="flex-grow">
