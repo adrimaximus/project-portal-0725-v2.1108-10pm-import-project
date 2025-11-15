@@ -31,8 +31,6 @@ const DayEntry = ({ dateStr, projectsOnDay, showMonthHeader, onDeleteProject, na
             const startDate = new Date(project.start_date!);
             const dueDate = project.due_date ? new Date(project.due_date) : null;
             
-            const isMultiDay = dueDate && differenceInDays(dueDate, startDate) > 0;
-
             let displayDueDate = dueDate;
             if (dueDate) {
               const isExclusiveEndDate = 
@@ -47,6 +45,8 @@ const DayEntry = ({ dateStr, projectsOnDay, showMonthHeader, onDeleteProject, na
                 displayDueDate = subDays(dueDate, 1);
               }
             }
+
+            const isMultiDay = displayDueDate && !isSameDay(startDate, displayDueDate);
 
             return (
               <div 
