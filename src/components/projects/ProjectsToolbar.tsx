@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { DatePickerWithRange } from "@/components/ui/date-picker-with-range";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -62,6 +63,8 @@ const ProjectsToolbar = ({
   dateRange,
   onDateRangeChange,
 }: ProjectsToolbarProps) => {
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+
   return (
     <div className="p-4 border-t flex flex-col sm:flex-row items-center justify-between gap-4">
       <div className="w-full sm:w-auto flex-shrink-0 flex items-center gap-4">
@@ -126,15 +129,27 @@ const ProjectsToolbar = ({
           allPeople={allPeople}
           allOwners={allOwners}
         />
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search..."
-            value={searchTerm}
-            onChange={(e) => onSearchChange(e.target.value)}
-            className="pl-9"
-          />
-        </div>
+        {isSearchOpen ? (
+          <div className="relative flex-1 sm:flex-initial">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search..."
+              value={searchTerm}
+              onChange={(e) => onSearchChange(e.target.value)}
+              onBlur={() => {
+                if (!searchTerm) {
+                  setIsSearchOpen(false);
+                }
+              }}
+              autoFocus
+              className="pl-9 w-full sm:w-48"
+            />
+          </div>
+        ) : (
+          <Button variant="outline" size="icon" onClick={() => setIsSearchOpen(true)}>
+            <Search className="h-4 w-4" />
+          </Button>
+        )}
         <DatePickerWithRange date={dateRange} onDateChange={onDateRangeChange} />
       </div>
 
