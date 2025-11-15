@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Sparkles } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -18,8 +18,6 @@ interface GoogleCalendarImportDialogProps {
   onImport: (events: any[]) => void;
   isImporting: boolean;
 }
-
-const SUGGESTION_KEYWORDS = ['meeting', 'kickoff', 'sync', 'review', 'planning', 'session', 'workshop', 'call', 'briefing'];
 
 export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImporting }: GoogleCalendarImportDialogProps) => {
   const [selectedEvents, setSelectedEvents] = useState<string[]>([]);
@@ -45,34 +43,23 @@ export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImp
     enabled: open,
   });
 
-  const { filteredEvents, suggestedEvents } = useMemo(() => {
-    if (events.length === 0) {
-      return { filteredEvents: [], suggestedEvents: [] };
-    }
+  const filteredEvents = useMemo(() => {
+    if (events.length === 0) return [];
     const existingEventIds = new Set(projects.map(p => p.origin_event_id).filter(Boolean));
-    const filtered = events.filter(event => event.id && !existingEventIds.has(event.id));
-    
-    const suggested = filtered.filter(event => 
-      SUGGESTION_KEYWORDS.some(keyword => event.summary?.toLowerCase().includes(keyword))
-    );
-
-    return { filteredEvents: filtered, suggestedEvents: suggested };
+    return events.filter(event => event.id && !existingEventIds.has(event.id));
   }, [events, projects]);
 
   useEffect(() => {
     if (open) {
-      // Auto-select suggested events when the dialog opens
-      setSelectedEvents(suggestedEvents.map(e => e.id));
-    } else {
       setSelectedEvents([]);
     }
-  }, [open, suggestedEvents]);
+  }, [open]);
 
   const groupedEvents = useMemo(() => {
     if (!filteredEvents) return [];
     
     const groups = filteredEvents.reduce((acc, event) => {
-      const dateStr = event.start?.date || event.start?.dateTime?.split('T')[0];
+      const dateStr = (event.start?.date || event.start?.dateTime)?.split('T')[0];
       
       if (dateStr && /^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
         if (!acc[dateStr]) {
@@ -188,33 +175,27 @@ export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImp
                           {format(displayDate, 'EEEE, MMMM d')}
                         </h3>
                         <div className="space-y-1">
-                          {eventsOnDay.map(event => {
-                            const isSuggested = suggestedEvents.some(se => se.id === event.id);
-                            return (
-                              <div key={event.id} className="flex items-center space-x-3 p-2 rounded-md hover:bg-muted">
-                                <Checkbox
-                                  id={event.id}
-                                  checked={selectedEvents.includes(event.id)}
-                                  onCheckedChange={() => handleSelectEvent(event.id)}
-                                />
-                                <label htmlFor={event.id} className="flex-grow cursor-pointer">
-                                  <p className="font-medium flex items-center gap-2">
-                                    {event.summary || "No Title"}
-                                    {isSuggested && <Sparkles className="h-3 w-3 text-yellow-500" />}
-                                  </p>
-                                  <div className="flex items-center text-sm text-muted-foreground">
-                                    <span>{formatEventTime(event)}</span>
-                                    {event.calendar?.summary && (
-                                      <>
-                                        <span className="mx-2">|</span>
-                                        <span className="truncate">{event.calendar.summary}</span>
-                                      </>
-                                    )}
-                                  </div>
-                                </label>
-                              </div>
-                            );
-                          })}
+                          {eventsOnDay.map(event => (
+                            <div key={event.id} className="flex items-center space-x-3 p-2 rounded-md hover:bg-muted">
+                              <Checkbox
+                                id={event.id}
+                                checked={selectedEvents.includes(event.id)}
+                                onCheckedChange={() => handleSelectEvent(event.id)}
+                              />
+                              <label htmlFor={event.id} className="flex-grow cursor-pointer">
+                                <p className="font-medium">{event.summary || "No Title"}</p>
+                                <div className="flex items-center text-sm text-muted-foreground">
+                                  <span>{formatEventTime(event)}</span>
+                                  {event.calendar?.summary && (
+                                    <>
+                                      <span className="mx-2">|</span>
+                                      <span className="truncate">{event.calendar.summary}</span>
+                                    </>
+                                  )}
+                                </div>
+                              </label>
+                            </div>
+                          ))}
                         </div>
                       </div>
                     );
