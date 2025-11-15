@@ -57,8 +57,23 @@ const TaskItem = ({ task, onToggle, isToggling, allUsers }: { task: Task, onTogg
     }
   }
 
+  const priorityBorderColor = useMemo(() => {
+    switch (task.priority) {
+      case 'Urgent':
+        return 'border-red-500';
+      case 'High':
+        return 'border-orange-500';
+      case 'Normal':
+        return 'border-blue-500';
+      case 'Low':
+        return 'border-gray-400';
+      default:
+        return 'border-transparent';
+    }
+  }, [task.priority]);
+
   return (
-    <div className="flex items-start gap-3 p-2 rounded-md hover:bg-muted/50">
+    <div className={cn("flex items-start gap-3 p-2 rounded-md hover:bg-muted/50 border-l-2", priorityBorderColor)}>
       <Checkbox
         id={`task-dash-${task.id}`}
         checked={task.completed}
