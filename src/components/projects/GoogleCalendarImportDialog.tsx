@@ -22,7 +22,7 @@ interface GoogleCalendarImportDialogProps {
 export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImporting }: GoogleCalendarImportDialogProps) => {
   const [selectedEvents, setSelectedEvents] = useState<string[]>([]);
 
-  const { data: events = [], isLoading, error } = useQuery<any[]>({
+  const { data: events = [], isLoading: isLoadingEvents, error } = useQuery<any[]>({
     queryKey: ['googleCalendarEvents'],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke('get-google-calendar-events');
@@ -33,7 +33,7 @@ export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImp
     staleTime: 5 * 60 * 1000,
   });
 
-  const { data: projects = [] } = useQuery<{ origin_event_id: string | null }[]>({
+  const { data: projects = [], isLoading: isLoadingProjects } = useQuery<{ origin_event_id: string | null }[]>({
     queryKey: ['projectsForGCalImport'],
     queryFn: async () => {
       const { data, error } = await supabase.from('projects').select('origin_event_id');
@@ -43,11 +43,13 @@ export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImp
     enabled: open,
   });
 
+  const isOverallLoading = isLoadingEvents || isLoadingProjects;
+
   const filteredEvents = useMemo(() => {
-    if (events.length === 0) return [];
+    if (isOverallLoading || events.length === 0) return [];
     const existingEventIds = new Set(projects.map(p => p.origin_event_id).filter(Boolean));
     return events.filter(event => event.id && !existingEventIds.has(event.id));
-  }, [events, projects]);
+  }, [events, projects, isOverallLoading]);
 
   useEffect(() => {
     if (open) {
@@ -138,7 +140,7 @@ export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImp
           <DialogDescription>Select the events you want to import as new projects. Events already imported will not be shown.</DialogDescription>
         </DialogHeader>
         <div className="relative h-96">
-          {isLoading && (
+          {isOverallLoading && (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/50 z-10">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
               <p className="mt-2 text-sm text-muted-foreground">Loading events...</p>
@@ -147,10 +149,10 @@ export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImp
           {error && (
             <div className="text-destructive text-center p-4">{error.message}</div>
           )}
-          {!isLoading && !error && filteredEvents.length === 0 && (
+          {!isOverallLoading && !error && filteredEvents.length === 0 && (
             <div className="text-center p-4 text-muted-foreground">No upcoming events found to import.</div>
           )}
-          {!isLoading && !error && filteredEvents.length > 0 && (
+          {!isOverallLoading && !error && filteredEvents.length > 0 && (
             <div className="h-full flex flex-col border rounded-md">
               <div className="flex items-center justify-between p-3 border-b bg-muted/50 flex-shrink-0">
                 <div className="flex items-center space-x-3">
