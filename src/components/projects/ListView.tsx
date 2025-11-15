@@ -137,7 +137,7 @@ const ListView = ({ projects, onDeleteProject }: { projects: Project[], onDelete
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 pr-[10px]">
       {upcomingDayEntries.slice(0, visibleUpcomingCount).map(([dateStr, projectsOnDay]) => {
         const currentMonth = formatInJakarta(new Date(`${dateStr}T00:00:00`), 'MMMM yyyy');
         const showMonthHeader = currentMonth !== lastUpcomingMonth;
