@@ -21,7 +21,7 @@ const DayEntry = ({ dateStr, projectsOnDay, showMonthHeader, onDeleteProject, na
       {showMonthHeader && (
         <h2 className="text-lg font-semibold my-4 pl-2">{currentMonth}</h2>
       )}
-      <div className="flex items-start space-x-2 sm:space-x-4">
+      <div className="flex items-start space-x-4">
         <div className="flex flex-col items-center w-10 sm:w-12 text-center flex-shrink-0">
           <span className="text-xs sm:text-sm text-muted-foreground">{dayOfWeek}</span>
           <span className="text-lg sm:text-xl font-bold text-primary">{dayOfMonth}</span>
