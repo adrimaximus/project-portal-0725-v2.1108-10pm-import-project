@@ -67,66 +67,63 @@ const ProjectsToolbar = ({
 
   return (
     <div className="p-4 border-t flex flex-col sm:flex-row items-center justify-between gap-4">
-      {/* Left/Center Section: View, Filters, Search, Date Range */}
-      <div className="w-full sm:w-auto flex flex-wrap items-center gap-4">
-        
-        {/* View Controls */}
-        <div className="flex items-center gap-4">
-          <TooltipProvider>
-            <ToggleGroup type="single" value={view} onValueChange={onViewChange} aria-label="Project view">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <ToggleGroupItem value="list" aria-label="List view"><List className="h-4 w-4" /></ToggleGroupItem>
-                </TooltipTrigger>
-                <TooltipContent><p>List view</p></TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <ToggleGroupItem value="table" aria-label="Grid view"><LayoutGrid className="h-4 w-4" /></ToggleGroupItem>
-                </TooltipTrigger>
-                <TooltipContent><p>Grid view</p></TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <ToggleGroupItem value="kanban" aria-label="Kanban view"><KanbanSquare className="h-4 w-4" /></ToggleGroupItem>
-                </TooltipTrigger>
-                <TooltipContent><p>Kanban view</p></TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <ToggleGroupItem value="tasks" aria-label="Tasks list view"><ListChecks className="h-4 w-4" /></ToggleGroupItem>
-                </TooltipTrigger>
-                <TooltipContent><p>Tasks list view</p></TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <ToggleGroupItem value="tasks-kanban" aria-label="Tasks kanban view"><CheckSquare className="h-4 w-4" /></ToggleGroupItem>
-                </TooltipTrigger>
-                <TooltipContent><p>Tasks kanban view</p></TooltipContent>
-              </Tooltip>
-            </ToggleGroup>
-          </TooltipProvider>
+      {/* Left Section: View Controls */}
+      <div className="flex items-center gap-4 flex-wrap">
+        <TooltipProvider>
+          <ToggleGroup type="single" value={view} onValueChange={onViewChange} aria-label="Project view">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <ToggleGroupItem value="list" aria-label="List view"><List className="h-4 w-4" /></ToggleGroupItem>
+              </TooltipTrigger>
+              <TooltipContent><p>List view</p></TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <ToggleGroupItem value="table" aria-label="Grid view"><LayoutGrid className="h-4 w-4" /></ToggleGroupItem>
+              </TooltipTrigger>
+              <TooltipContent><p>Grid view</p></TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <ToggleGroupItem value="kanban" aria-label="Kanban view"><KanbanSquare className="h-4 w-4" /></ToggleGroupItem>
+              </TooltipTrigger>
+              <TooltipContent><p>Kanban view</p></TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <ToggleGroupItem value="tasks" aria-label="Tasks list view"><ListChecks className="h-4 w-4" /></ToggleGroupItem>
+              </TooltipTrigger>
+              <TooltipContent><p>Tasks list view</p></TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <ToggleGroupItem value="tasks-kanban" aria-label="Tasks kanban view"><CheckSquare className="h-4 w-4" /></ToggleGroupItem>
+              </TooltipTrigger>
+              <TooltipContent><p>Tasks kanban view</p></TooltipContent>
+            </Tooltip>
+          </ToggleGroup>
+        </TooltipProvider>
 
-          {view === 'kanban' && (
-            <Select value={kanbanGroupBy} onValueChange={onKanbanGroupByChange}>
-              <SelectTrigger className="w-[80px]"><SelectValue placeholder="Group by..." /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="status">Status</SelectItem>
-                <SelectItem value="payment_status">Payment Status</SelectItem>
-              </SelectContent>
-            </Select>
-          )}
-          {isTaskView && (
-            <div className="flex items-center space-x-2">
-              <Switch id="hide-completed" checked={hideCompletedTasks} onCheckedChange={onToggleHideCompleted} />
-              <Label htmlFor="hide-completed" className="text-sm">Hide Done</Label>
-            </div>
-          )}
-        </div>
-        
-        {/* Separator for desktop view */}
-        <Separator orientation="vertical" className="hidden sm:block h-8" />
+        {view === 'kanban' && (
+          <Select value={kanbanGroupBy} onValueChange={onKanbanGroupByChange}>
+            <SelectTrigger className="w-[80px]"><SelectValue placeholder="Group by..." /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="status">Status</SelectItem>
+              <SelectItem value="payment_status">Payment Status</SelectItem>
+            </SelectContent>
+          </Select>
+        )}
+        {isTaskView && (
+          <div className="flex items-center space-x-2">
+            <Switch id="hide-completed" checked={hideCompletedTasks} onCheckedChange={onToggleHideCompleted} />
+            <Label htmlFor="hide-completed" className="text-sm">Hide Done</Label>
+          </div>
+        )}
+      </div>
 
+      {/* Right Section: Filters, Search, Date Range, and Action Buttons */}
+      <div className="flex-shrink-0 flex items-center gap-2 flex-wrap justify-end">
+        
         {/* Filters, Search, Date Range */}
         <div className="flex items-center gap-2">
           <ProjectAdvancedFilters
@@ -167,12 +164,12 @@ const ProjectsToolbar = ({
           )}
           <DatePickerWithRange date={dateRange} onDateChange={onDateRangeChange} />
         </div>
-      </div>
 
-      {/* Right Section: Action Buttons */}
-      <div className="flex-shrink-0 flex items-center gap-2">
-        {/* Desktop Action Buttons */}
-        <div className="hidden sm:flex items-center gap-2">
+        {/* Separator for desktop view */}
+        <Separator orientation="vertical" className="hidden sm:block h-8" />
+
+        {/* Action Buttons (New Project/Task, Import/Refresh) */}
+        <div className="flex items-center gap-2">
           {isTaskView ? (
             <TooltipProvider>
               <Tooltip>
@@ -224,34 +221,6 @@ const ProjectsToolbar = ({
                 <TooltipContent><p>Refresh data</p></TooltipContent>
               </Tooltip>
             </TooltipProvider>
-          )}
-        </div>
-
-        {/* Mobile Action Buttons (moved here for consistency) */}
-        <div className="sm:hidden flex items-center gap-2">
-          {isTaskView ? (
-            <Button size="icon" variant="outline" onClick={onNewTaskClick}>
-              <ListPlus className="h-4 w-4" />
-              <span className="sr-only">New Task</span>
-            </Button>
-          ) : (
-            <Button size="icon" variant="outline" asChild>
-              <Link to="/request">
-                <PlusCircle className="h-4 w-4" />
-                <span className="sr-only">New Project</span>
-              </Link>
-            </Button>
-          )}
-          {isGCalConnected ? (
-            <Button variant="outline" size="icon" onClick={onImportClick}>
-              <Download className="h-4 w-4" />
-              <span className="sr-only">Import from Calendar</span>
-            </Button>
-          ) : (
-            <Button variant="outline" size="icon" onClick={onRefreshClick}>
-              <RefreshCw className="h-4 w-4" />
-              <span className="sr-only">Refresh data</span>
-            </Button>
           )}
         </div>
       </div>
