@@ -63,43 +63,20 @@ export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImp
     const groups = filteredEvents.reduce((acc, event) => {
       const dateStr = event.start?.date || event.start?.dateTime?.split('T')[0];
       
-      if (!dateStr) {
-        console.warn("Skipping event with invalid date:", event);
-        return acc;
-      }
-      
-      try {
-        // More robust date parsing to avoid timezone issues with `new Date('YYYY-MM-DD')`
-        const parts = dateStr.split('-');
-        if (parts.length === 3) {
-          const year = parseInt(parts[0], 10);
-          const month = parseInt(parts[1], 10) - 1; // JS months are 0-indexed
-          const day = parseInt(parts[2], 10);
-          const dateObj = new Date(year, month, day);
-
-          if (isNaN(dateObj.getTime())) {
-            throw new Error('Invalid date created from parts');
-          }
-
-          const dateKey = format(dateObj, 'yyyy-MM-dd');
-          if (!acc[dateKey]) {
-            acc[dateKey] = [];
-          }
-          acc[dateKey].push(event);
-        } else {
-          console.warn("Skipping event due to unexpected date format:", dateStr, event);
+      if (dateStr && /^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+        if (!acc[dateStr]) {
+          acc[dateStr] = [];
         }
-      } catch (e) {
-        console.warn("Skipping event due to date parsing error:", dateStr, event, e);
+        acc[dateStr].push(event);
+      } else {
+        console.warn("Skipping event with invalid date string:", dateStr, event);
       }
 
       return acc;
     }, {} as Record<string, any[]>);
 
     return Object.entries(groups).sort(([dateA], [dateB]) => {
-        const dateAObj = new Date(dateA.split('-')[0], parseInt(dateA.split('-')[1]) - 1, dateA.split('-')[2]);
-        const dateBObj = new Date(dateB.split('-')[0], parseInt(dateB.split('-')[1]) - 1, dateB.split('-')[2]);
-        return dateAObj.getTime() - dateBObj.getTime();
+        return dateA.localeCompare(dateB);
     });
   }, [filteredEvents]);
 
@@ -193,7 +170,7 @@ export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImp
                 <div className="p-4 space-y-4">
                   {groupedEvents.map(([dateStr, eventsOnDay], index) => {
                     const [year, month, day] = dateStr.split('-').map(Number);
-                    const displayDate = new Date(year, month - 1, day);
+                    const displayDate = new Date(Date.UTC(year, month - 1, day));
                     return (
                       <div key={dateStr}>
                         {index > 0 && <Separator className="my-4" />}
