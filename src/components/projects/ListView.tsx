@@ -51,7 +51,7 @@ const DayEntry = ({ dateStr, projectsOnDay, showMonthHeader, onDeleteProject, na
             return (
               <div 
                 key={project.id} 
-                className="bg-card border border-l-4 rounded-lg p-2 sm:p-3 flex flex-col sm:flex-row items-start sm:items-center justify-between hover:shadow-md transition-shadow group"
+                className="bg-card border border-l-4 rounded-lg p-2 sm:p-3 flex flex-col sm:flex-row items-start sm:items-center justify-between hover:shadow-md transition-shadow group relative"
                 style={{ borderLeftColor: getProjectStatusStyles(project.status).hex }}
               >
                 <div 
@@ -64,7 +64,7 @@ const DayEntry = ({ dateStr, projectsOnDay, showMonthHeader, onDeleteProject, na
                         {project.name}
                       </p>
                       {isMultiDay && displayDueDate && (
-                        <span className="text-xs text-muted-foreground flex-shrink-0">
+                        <span className="hidden sm:inline text-xs text-muted-foreground flex-shrink-0">
                           Ends: {formatInJakarta(displayDueDate, 'dd MMM')}
                         </span>
                       )}
@@ -106,6 +106,11 @@ const DayEntry = ({ dateStr, projectsOnDay, showMonthHeader, onDeleteProject, na
                     </DropdownMenu>
                   </div>
                 </div>
+                {isMultiDay && displayDueDate && (
+                  <span className="sm:hidden absolute bottom-2 right-2 text-xs text-muted-foreground">
+                    Ends: {formatInJakarta(displayDueDate, 'dd MMM')}
+                  </span>
+                )}
               </div>
             );
           })}
