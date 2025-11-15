@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Filter, FilterX } from "lucide-react";
+import { Filter, FilterX, ChevronsUpDown } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { PROJECT_STATUS_OPTIONS } from "@/types";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -19,6 +19,7 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Check } from "lucide-react";
 import { Separator } from "../ui/separator";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 interface Person {
   id: string;
@@ -75,14 +76,15 @@ const ProjectAdvancedFilters = ({ filters, onFiltersChange, allPeople, allOwners
     <div className="grid gap-4">
       <div className="space-y-2">
         <Label>Filter by Project Owner</Label>
-        <Popover>
-          <PopoverTrigger asChild>
+        <Collapsible>
+          <CollapsibleTrigger asChild>
             <Button variant="outline" role="combobox" className="w-full justify-between font-normal">
               {filters.ownerIds?.length > 0 ? `${filters.ownerIds.length} owner(s) selected` : "Select owners..."}
+              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
             </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-            <Command>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="pt-2">
+            <Command className="border rounded-lg">
               <CommandInput placeholder="Search person..." />
               <CommandList>
                 <CommandEmpty>No person found.</CommandEmpty>
@@ -96,19 +98,20 @@ const ProjectAdvancedFilters = ({ filters, onFiltersChange, allPeople, allOwners
                 </CommandGroup>
               </CommandList>
             </Command>
-          </PopoverContent>
-        </Popover>
+          </CollapsibleContent>
+        </Collapsible>
       </div>
       <div className="space-y-2">
         <Label>Filter by Project Member</Label>
-        <Popover>
-          <PopoverTrigger asChild>
+        <Collapsible>
+          <CollapsibleTrigger asChild>
             <Button variant="outline" role="combobox" className="w-full justify-between font-normal">
               {filters.memberIds?.length > 0 ? `${filters.memberIds.length} member(s) selected` : "Select members..."}
+              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
             </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-            <Command>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="pt-2">
+            <Command className="border rounded-lg">
               <CommandInput placeholder="Search person..." />
               <CommandList>
                 <CommandEmpty>No person found.</CommandEmpty>
@@ -122,19 +125,20 @@ const ProjectAdvancedFilters = ({ filters, onFiltersChange, allPeople, allOwners
                 </CommandGroup>
               </CommandList>
             </Command>
-          </PopoverContent>
-        </Popover>
+          </CollapsibleContent>
+        </Collapsible>
       </div>
       <div className="space-y-2">
         <Label>Exclude Project Statuses</Label>
-        <Popover>
-          <PopoverTrigger asChild>
+        <Collapsible>
+          <CollapsibleTrigger asChild>
             <Button variant="outline" role="combobox" className="w-full justify-between font-normal">
               {filters.excludedStatus?.length > 0 ? `${filters.excludedStatus.length} status(es) excluded` : "Select statuses to exclude..."}
+              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
             </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-            <Command>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="pt-2">
+            <Command className="border rounded-lg">
               <CommandInput placeholder="Search status..." />
               <CommandList>
                 <CommandEmpty>No status found.</CommandEmpty>
@@ -148,8 +152,8 @@ const ProjectAdvancedFilters = ({ filters, onFiltersChange, allPeople, allOwners
                 </CommandGroup>
               </CommandList>
             </Command>
-          </PopoverContent>
-        </Popover>
+          </CollapsibleContent>
+        </Collapsible>
       </div>
     </div>
   );
@@ -206,13 +210,15 @@ const ProjectAdvancedFilters = ({ filters, onFiltersChange, allPeople, allOwners
               )}
             </Button>
           </DrawerTrigger>
-          <DrawerContent>
+          <DrawerContent className="max-h-[80vh]">
             <DrawerHeader className="text-left">
               <DrawerTitle>Advanced Filters</DrawerTitle>
               <DrawerDescription>Refine the project list by owner, member, or status.</DrawerDescription>
             </DrawerHeader>
-            <div className="p-4">{filterContent}</div>
-            <DrawerFooter className="pt-2">
+            <div className="p-4 overflow-y-auto">
+              {filterContent}
+            </div>
+            <DrawerFooter className="pt-2 mt-auto">
               <DrawerClose asChild><Button>Apply</Button></DrawerClose>
               {activeFilterCount > 0 && <Button variant="outline" onClick={clearFilters}>Clear Filters</Button>}
             </DrawerFooter>
