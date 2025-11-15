@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
@@ -27,7 +28,7 @@ Deno.serve(async (req) => {
     // 1. Get all users with Google Calendar tokens
     const { data: tokens, error: tokenError } = await supabaseAdmin
       .from('google_calendar_tokens')
-      .select('*, user:profiles(id, email, google_calendar_settings)');
+      .select('*, user:profiles!user_id(id, email, google_calendar_settings)');
 
     if (tokenError) throw tokenError;
     if (!tokens || tokens.length === 0) {
