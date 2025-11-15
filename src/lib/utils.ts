@@ -11,9 +11,9 @@ export function cn(...inputs: ClassValue[]) {
 export function getPriorityStyles(priority: string | null | undefined) {
   switch (priority) {
     case 'Urgent':
-      return { tw: 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/50 dark:text-red-200 dark:border-red-800', hex: '#ef4444' };
+      return { tw: 'bg-red-200 text-red-900 border-red-300 dark:bg-red-900/60 dark:text-red-100 dark:border-red-700', hex: '#b91c1c' }; // Darker red (red-700)
     case 'High':
-      return { tw: 'bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900/50 dark:text-orange-200 dark:border-orange-800', hex: '#f97316' };
+      return { tw: 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/50 dark:text-red-200 dark:border-red-800', hex: '#ef4444' }; // Red (red-500)
     case 'Normal':
       return { tw: 'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/50 dark:text-yellow-200 dark:border-yellow-800', hex: '#f59e0b' };
     case 'Low':
