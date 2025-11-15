@@ -1,17 +1,16 @@
 import { useState, useEffect, useMemo } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Sparkles } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { subDays, isEqual } from "date-fns";
-import * as dateFnsTz from 'date-fns-tz';
-import { Badge } from "@/components/ui/badge";
-import { formatInJakarta } from "@/lib/utils";
-import { Project } from "@/types";
+import { format } from "date-fns";
 import { toast } from "sonner";
+import { Project } from "@/types";
+import { formatInJakarta } from "@/lib/utils";
+import { Separator } from "../ui/separator";
 
 interface GoogleCalendarImportDialogProps {
   open: boolean;
@@ -46,7 +45,7 @@ export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImp
   });
 
   useEffect(() => {
-    if (events.length > 0 && projects.length > 0) {
+    if (open && events.length > 0 && projects.length > 0) {
       const analyzeWithAI = async () => {
         setIsAiLoading(true);
         try {
@@ -71,13 +70,28 @@ export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImp
       };
       analyzeWithAI();
     }
-  }, [events, projects]);
+  }, [open, events, projects]);
 
   useEffect(() => {
     if (!open) {
       setSelectedEvents([]);
     }
   }, [open]);
+
+  const groupedEvents = useMemo(() => {
+    if (!events) return [];
+    
+    const groups = events.reduce((acc, event) => {
+      const dateStr = event.start?.date || event.start?.dateTime.split('T')[0];
+      if (!acc[dateStr]) {
+        acc[dateStr] = [];
+      }
+      acc[dateStr].push(event);
+      return acc;
+    }, {} as Record<string, any[]>);
+
+    return Object.entries(groups).sort(([dateA], [dateB]) => new Date(dateA).getTime() - new Date(dateB).getTime());
+  }, [events]);
 
   const handleSelectEvent = (eventId: string) => {
     setSelectedEvents(prev =>
@@ -100,24 +114,19 @@ export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImp
     onImport(eventsToImport);
   };
 
-  const formatEventDate = (event: any) => {
-    const start = event.start?.dateTime || event.start?.date;
-    const end = event.end?.dateTime || event.end?.date;
-    if (!start) return "Date not specified";
-    
-    if (event.start?.date) {
-      const startDate = new Date(start);
-      const inclusiveEndDate = subDays(new Date(end), 1);
-      const formatInUTC = (date: Date, formatStr: string) => dateFnsTz.format(dateFnsTz.toZonedTime(date, 'UTC'), formatStr, { timeZone: 'UTC' });
-      if (isEqual(startDate, inclusiveEndDate)) return formatInUTC(startDate, "d MMM yyyy");
-      return `${formatInUTC(startDate, "d MMM")} - ${formatInUTC(inclusiveEndDate, "d MMM yyyy")}`;
-    }
+  const formatEventTime = (event: any) => {
+    const start = event.start?.dateTime;
+    const end = event.end?.dateTime;
 
-    if (formatInJakarta(start, 'yyyy-MM-dd') === formatInJakarta(end, 'yyyy-MM-dd')) {
-        return `${formatInJakarta(start, "d MMM yyyy, HH:mm")} - ${formatInJakarta(end, "HH:mm")}`;
+    if (start) { // It's a timed event
+        const startTime = formatInJakarta(start, 'HH:mm');
+        if (end) {
+            const endTime = formatInJakarta(end, 'HH:mm');
+            return `${startTime} - ${endTime}`;
+        }
+        return startTime;
     }
-    
-    return `${formatInJakarta(start, "d MMM, HH:mm")} - ${formatInJakarta(end, "d MMM, HH:mm")}`;
+    return "All-day"; // It's an all-day event
   };
 
   const allSelected = events.length > 0 && selectedEvents.length === events.length;
@@ -162,26 +171,36 @@ export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImp
                 </div>
               </div>
               <ScrollArea className="flex-grow">
-                <div className="p-4 space-y-2">
-                  {events.map(event => (
-                    <div key={event.id} className="flex items-center space-x-3 p-2 rounded-md hover:bg-muted">
-                      <Checkbox
-                        id={event.id}
-                        checked={selectedEvents.includes(event.id)}
-                        onCheckedChange={() => handleSelectEvent(event.id)}
-                      />
-                      <label htmlFor={event.id} className="flex-grow cursor-pointer">
-                        <p className="font-medium">{event.summary || "No Title"}</p>
-                        <div className="flex items-center text-sm text-muted-foreground">
-                          <span>{formatEventDate(event)}</span>
-                          {event.calendar?.summary && (
-                            <>
-                              <span className="mx-2">|</span>
-                              <span className="truncate">{event.calendar.summary}</span>
-                            </>
-                          )}
-                        </div>
-                      </label>
+                <div className="p-4 space-y-4">
+                  {groupedEvents.map(([dateStr, eventsOnDay], index) => (
+                    <div key={dateStr}>
+                      {index > 0 && <Separator className="my-4" />}
+                      <h3 className="font-semibold text-sm mb-2 px-2 text-muted-foreground">
+                        {format(new Date(dateStr + 'T00:00:00'), 'EEEE, MMMM d')}
+                      </h3>
+                      <div className="space-y-1">
+                        {eventsOnDay.map(event => (
+                          <div key={event.id} className="flex items-center space-x-3 p-2 rounded-md hover:bg-muted">
+                            <Checkbox
+                              id={event.id}
+                              checked={selectedEvents.includes(event.id)}
+                              onCheckedChange={() => handleSelectEvent(event.id)}
+                            />
+                            <label htmlFor={event.id} className="flex-grow cursor-pointer">
+                              <p className="font-medium">{event.summary || "No Title"}</p>
+                              <div className="flex items-center text-sm text-muted-foreground">
+                                <span>{formatEventTime(event)}</span>
+                                {event.calendar?.summary && (
+                                  <>
+                                    <span className="mx-2">|</span>
+                                    <span className="truncate">{event.calendar.summary}</span>
+                                  </>
+                                )}
+                              </div>
+                            </label>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   ))}
                 </div>
