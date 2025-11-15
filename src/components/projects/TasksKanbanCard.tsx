@@ -36,6 +36,7 @@ const TasksKanbanCard: React.FC<TasksKanbanCardProps> = ({ task, onEdit, onDelet
   };
 
   const assignedTo = task.assignedTo || [];
+  const priorityStyles = getPriorityStyles(task.priority);
 
   return (
     <div
@@ -45,7 +46,10 @@ const TasksKanbanCard: React.FC<TasksKanbanCardProps> = ({ task, onEdit, onDelet
       {...listeners}
       className={cn("mb-3 cursor-grab active:cursor-grabbing", isDragging && "opacity-30")}
     >
-      <Card className="hover:shadow-md transition-shadow">
+      <Card 
+        className="hover:shadow-md transition-shadow border-l-4"
+        style={{ borderLeftColor: priorityStyles.hex }}
+      >
         <CardContent className="p-3">
           <div className="flex justify-between items-start">
             <TooltipProvider>
@@ -125,7 +129,7 @@ const TasksKanbanCard: React.FC<TasksKanbanCardProps> = ({ task, onEdit, onDelet
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger>
-                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: getPriorityStyles(task.priority).hex }}></div>
+                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: priorityStyles.hex }}></div>
                     </TooltipTrigger>
                     <TooltipContent>
                       <p>{task.priority} Priority</p>

@@ -58,10 +58,13 @@ const TaskItem = ({ task, onToggle, isToggling, allUsers }: { task: Task, onTogg
     }
   }
 
-  const priorityBorderColor = getPriorityStyles(task.priority).borderColor;
+  const priorityStyles = getPriorityStyles(task.priority);
 
   return (
-    <div className={cn("flex items-start gap-3 p-2 rounded-r-md hover:bg-muted/50 border-l-2", priorityBorderColor)}>
+    <div 
+      className={cn("flex items-start gap-3 p-2 rounded-r-md hover:bg-muted/50 border-l-4")}
+      style={{ borderLeftColor: priorityStyles.hex }}
+    >
       <Checkbox
         id={`task-dash-${task.id}`}
         checked={task.completed}
