@@ -33,7 +33,7 @@ export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImp
     staleTime: 5 * 60 * 1000,
   });
 
-  const { data: projects = [] } = useQuery<Project[]>({
+  const { data: projects = [] } = useQuery<{ origin_event_id: string | null }[]>({
     queryKey: ['projectsForGCalImport'],
     queryFn: async () => {
       const { data, error } = await supabase.from('projects').select('origin_event_id');
@@ -169,8 +169,7 @@ export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImp
               <ScrollArea className="flex-grow">
                 <div className="p-4 space-y-4">
                   {groupedEvents.map(([dateStr, eventsOnDay], index) => {
-                    const [year, month, day] = dateStr.split('-').map(Number);
-                    const displayDate = new Date(Date.UTC(year, month - 1, day));
+                    const displayDate = new Date(`${dateStr}T00:00:00`);
                     return (
                       <div key={dateStr}>
                         {index > 0 && <Separator className="my-4" />}

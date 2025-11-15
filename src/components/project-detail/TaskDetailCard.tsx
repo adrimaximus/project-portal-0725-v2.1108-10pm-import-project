@@ -114,22 +114,6 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
   const [editedTitle, setEditedTitle] = useState(task.title);
 
   useEffect(() => {
-    if (highlightedCommentId) {
-      const element = document.getElementById(`message-${highlightedCommentId}`);
-      if (element) {
-        setTimeout(() => {
-          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          element.classList.add('bg-primary/10', 'rounded-md');
-          const timer = setTimeout(() => {
-            element.classList.remove('bg-primary/10', 'rounded-md');
-          }, 2500);
-          return () => clearTimeout(timer);
-        }, 500);
-      }
-    }
-  }, [highlightedCommentId]);
-
-  useEffect(() => {
     setEditedTitle(task.title);
   }, [task.title]);
 
@@ -540,6 +524,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
               onCreateTicketFromComment={handleCreateTicketFromComment}
               onGoToReply={handleScrollToMessage}
               allUsers={allUsers}
+              highlightedCommentId={highlightedCommentId}
             />
           </div>
         </div>
