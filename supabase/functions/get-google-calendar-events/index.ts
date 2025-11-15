@@ -1,8 +1,10 @@
+import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.54.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
 };
 
 serve(async (req) => {
@@ -25,7 +27,6 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Get user's tokens and selected calendars
     const { data: tokenData, error: tokenError } = await supabaseAdmin
       .from('google_calendar_tokens')
       .select('access_token, refresh_token, expiry_date')
@@ -34,23 +35,6 @@ serve(async (req) => {
 
     if (tokenError || !tokenData) {
       throw new Error("Google Calendar not connected or token not found.");
-    }
-
-    const { data: profileData, error: profileError } = await supabaseAdmin
-      .from('profiles')
-      .select('google_calendar_settings')
-      .eq('id', user.id)
-      .single();
-
-    if (profileError || !profileData) {
-      throw new Error("Could not retrieve user settings for Google Calendar.");
-    }
-
-    const selectedCalendarIds = profileData.google_calendar_settings?.selected_calendars;
-    if (!selectedCalendarIds || selectedCalendarIds.length === 0) {
-      return new Response(JSON.stringify([]), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
     }
 
     let { access_token, refresh_token, expiry_date } = tokenData;
@@ -91,31 +75,19 @@ serve(async (req) => {
         .eq('user_id', user.id);
     }
 
-    // Fetch events from each selected calendar
-    const timeMin = new Date().toISOString();
-    const timeMax = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(); // Next 30 days
-
-    const eventPromises = selectedCalendarIds.map(async (calendarId: string) => {
-      const eventsResponse = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?timeMin=${timeMin}&timeMax=${timeMax}&singleEvents=true&orderBy=startTime`, {
-        headers: { Authorization: `Bearer ${access_token}` },
-      });
-      if (!eventsResponse.ok) {
-        console.error(`Failed to fetch events for calendar ${calendarId}: ${eventsResponse.statusText}`);
-        return []; // Return empty array for this calendar on error
-      }
-      const eventsData = await eventsResponse.json();
-      // Add calendar info to each event
-      return eventsData.items.map((event: any) => ({ ...event, calendar: { id: calendarId, summary: event.organizer?.displayName || calendarId } }));
+    // Fetch calendar list using the (potentially refreshed) access token
+    const calendarsResponse = await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList', {
+      headers: { Authorization: `Bearer ${access_token}` },
     });
 
-    const eventsByCalendar = await Promise.all(eventPromises);
-    const allEvents = eventsByCalendar.flat().sort((a, b) => {
-      const dateA = new Date(a.start.dateTime || a.start.date);
-      const dateB = new Date(b.start.dateTime || b.start.date);
-      return dateA.getTime() - dateB.getTime();
-    });
+    if (!calendarsResponse.ok) {
+      const errorData = await calendarsResponse.json();
+      throw new Error(`Failed to fetch calendar list: ${errorData.error.message}`);
+    }
+    
+    const calendarsData = await calendarsResponse.json();
 
-    return new Response(JSON.stringify(allEvents), {
+    return new Response(JSON.stringify(calendarsData.items), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
 
