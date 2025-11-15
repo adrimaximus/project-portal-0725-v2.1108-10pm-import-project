@@ -63,22 +63,27 @@ export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImp
     const groups = filteredEvents.reduce((acc, event) => {
       const dateStr = event.start?.date || event.start?.dateTime?.split('T')[0];
       
-      if (!dateStr || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
-        console.warn("Skipping event with invalid date string format:", dateStr, event);
+      // More robust date parsing
+      if (!dateStr) {
+        console.warn("Skipping event with invalid date:", event);
         return acc;
       }
-
-      if (!acc[dateStr]) {
-        acc[dateStr] = [];
+      
+      try {
+        const dateKey = format(new Date(dateStr), 'yyyy-MM-dd');
+        if (!acc[dateKey]) {
+          acc[dateKey] = [];
+        }
+        acc[dateKey].push(event);
+      } catch (e) {
+        console.warn("Skipping event due to date parsing error:", dateStr, event);
       }
-      acc[dateStr].push(event);
+
       return acc;
     }, {} as Record<string, any[]>);
 
     return Object.entries(groups).sort(([dateA], [dateB]) => {
-        const [yearA, monthA, dayA] = dateA.split('-').map(Number);
-        const [yearB, monthB, dayB] = dateB.split('-').map(Number);
-        return new Date(yearA, monthA - 1, dayA).getTime() - new Date(yearB, monthB - 1, dayB).getTime();
+        return new Date(dateA).getTime() - new Date(dateB).getTime();
     });
   }, [filteredEvents]);
 
@@ -171,12 +176,11 @@ export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImp
               <ScrollArea className="flex-grow">
                 <div className="p-4 space-y-4">
                   {groupedEvents.map(([dateStr, eventsOnDay], index) => {
-                    const [year, month, day] = dateStr.split('-').map(Number);
                     return (
                       <div key={dateStr}>
                         {index > 0 && <Separator className="my-4" />}
                         <h3 className="font-semibold text-sm mb-2 px-2 text-muted-foreground">
-                          {format(new Date(year, month - 1, day), 'EEEE, MMMM d')}
+                          {format(new Date(dateStr), 'EEEE, MMMM d')}
                         </h3>
                         <div className="space-y-1">
                           {eventsOnDay.map(event => (
