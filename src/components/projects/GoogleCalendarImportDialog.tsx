@@ -58,12 +58,18 @@ export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImp
   }, [open]);
 
   const groupedEvents = useMemo(() => {
-    if (!filteredEvents) return [];
+    if (!filteredEvents || filteredEvents.length === 0) return [];
     
     const groups = filteredEvents.reduce((acc, event) => {
-      const dateStr = (event.start?.date || event.start?.dateTime)?.split('T')[0];
+      const dateVal = event.start?.date || event.start?.dateTime;
+      if (!dateVal) {
+        console.warn("Skipping event with no start date:", event);
+        return acc;
+      }
+      // Directly take the YYYY-MM-DD part of the string, which is safer across timezones for grouping.
+      const dateStr = dateVal.substring(0, 10);
       
-      if (dateStr && /^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+      if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
         if (!acc[dateStr]) {
           acc[dateStr] = [];
         }
