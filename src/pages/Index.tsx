@@ -31,6 +31,7 @@ const Index = () => {
 
   const { data, isLoading, hasNextPage, isFetchingNextPage } = useProjects({ 
     year: yearFilter,
+    fetchAll: true, // Fetch all data in the background
   });
   
   const projects = useMemo(() => data?.pages.flatMap(page => page.projects) ?? [], [data]);
