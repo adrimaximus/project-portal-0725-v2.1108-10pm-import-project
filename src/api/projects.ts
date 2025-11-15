@@ -19,8 +19,7 @@ export const getDashboardProjects = async ({
   excludeOtherPersonal, 
   year,
   timeframe,
-  sortDirection,
-  personId
+  sortDirection
 }: { 
   limit: number, 
   offset: number, 
@@ -28,8 +27,7 @@ export const getDashboardProjects = async ({
   excludeOtherPersonal: boolean, 
   year: number | null,
   timeframe?: 'upcoming' | 'past' | null,
-  sortDirection?: 'asc' | 'desc',
-  personId?: string | null
+  sortDirection?: 'asc' | 'desc'
 }): Promise<Project[]> => {
   const { data, error } = await supabase.rpc('get_dashboard_projects', {
     p_limit: limit,
@@ -38,8 +36,7 @@ export const getDashboardProjects = async ({
     p_exclude_other_personal: excludeOtherPersonal,
     p_year: year,
     p_timeframe: timeframe || null,
-    p_sort_direction: sortDirection || 'desc',
-    p_person_id: personId || null,
+    p_sort_direction: sortDirection || 'desc'
   });
   if (error) throw error;
   return data as Project[];

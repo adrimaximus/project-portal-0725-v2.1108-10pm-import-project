@@ -10,8 +10,8 @@ type ProjectsPage = {
   nextPage: number | null;
 };
 
-export const useProjects = ({ searchTerm, fetchAll = false, excludeOtherPersonal = false, year, personId }: { searchTerm?: string, fetchAll?: boolean, excludeOtherPersonal?: boolean, year?: number | null, personId?: string | null } = {}) => {
-  const queryKeyPrefix = ['projects', { searchTerm, excludeOtherPersonal, year, personId }];
+export const useProjects = ({ searchTerm, fetchAll = false, excludeOtherPersonal = false, year }: { searchTerm?: string, fetchAll?: boolean, excludeOtherPersonal?: boolean, year?: number | null } = {}) => {
+  const queryKeyPrefix = ['projects', { searchTerm, excludeOtherPersonal, year }];
 
   // 1. Fetch all upcoming projects
   const upcomingQuery = useQuery<Project[], Error>({
@@ -25,7 +25,6 @@ export const useProjects = ({ searchTerm, fetchAll = false, excludeOtherPersonal
         year: year === undefined ? null : year,
         timeframe: 'upcoming',
         sortDirection: 'asc',
-        personId: personId || null,
       });
     },
   });
@@ -48,7 +47,6 @@ export const useProjects = ({ searchTerm, fetchAll = false, excludeOtherPersonal
         year: year === undefined ? null : year,
         timeframe: 'past',
         sortDirection: 'desc',
-        personId: personId || null,
       });
       return {
         projects,

@@ -23,13 +23,14 @@ export const useProjectFilters = (projects: Project[]) => {
   
   const advancedFilters: AdvancedFiltersState = useMemo(() => {
     const fromUrl = {
-      personId: searchParams.get('person'),
+      ownerIds: searchParams.getAll('owner'),
+      memberIds: searchParams.getAll('member'),
       excludedStatus: searchParams.getAll('excludeStatus'),
     };
-    if (fromUrl.personId || fromUrl.excludedStatus.length > 0) {
+    if (fromUrl.ownerIds.length > 0 || fromUrl.memberIds.length > 0 || fromUrl.excludedStatus.length > 0) {
       return fromUrl;
     }
-    return SafeLocalStorage.getItem(PROJECTS_ADVANCED_FILTERS_KEY, { personId: null, excludedStatus: [] });
+    return SafeLocalStorage.getItem(PROJECTS_ADVANCED_FILTERS_KEY, { ownerIds: [], memberIds: [], excludedStatus: [] });
   }, [searchParams]);
 
   const dateRange = useMemo(() => {
@@ -82,7 +83,8 @@ export const useProjectFilters = (projects: Project[]) => {
   };
   const handleAdvancedFiltersChange = (filters: AdvancedFiltersState) => {
     updateSearchParams({
-      person: filters.personId,
+      owner: filters.ownerIds,
+      member: filters.memberIds,
       excludeStatus: filters.excludedStatus,
     });
     SafeLocalStorage.setItem(PROJECTS_ADVANCED_FILTERS_KEY, filters);
@@ -116,14 +118,29 @@ export const useProjectFilters = (projects: Project[]) => {
         return projectStart <= filterEnd && effectiveProjectEnd >= filterStart;
       })();
 
-      const matchesPerson = !advancedFilters.personId ||
-        (project.created_by && project.created_by.id === advancedFilters.personId) ||
-        (project.assignedTo && project.assignedTo.some(person => person.id === advancedFilters.personId));
+      const matchesOwner = (advancedFilters.ownerIds?.length || 0) === 0 ||
+        (project.created_by && advancedFilters.ownerIds.includes(project.created_by.id));
+
+      const matchesMember = (advancedFilters.memberIds?.length || 0) === 0 ||
+        (project.assignedTo && project.assignedTo.some(person => 
+          advancedFilters.memberIds.includes(person.id)
+        ));
 
       const matchesStatus = (advancedFilters.excludedStatus?.length || 0) === 0 ||
         !advancedFilters.excludedStatus.includes(project.status);
       
-      return matchesDate && matchesPerson && matchesStatus;
+      const matchesSearch = (() => {
+        if (!searchTerm) return true;
+        const lowercasedFilter = searchTerm.toLowerCase();
+        return (
+            (project.name && project.name.toLowerCase().includes(lowercasedFilter)) ||
+            (project.description && project.description.toLowerCase().includes(lowercasedFilter)) ||
+            (project.client_name && project.client_name.toLowerCase().includes(lowercasedFilter)) ||
+            (project.client_company_name && project.client_company_name.toLowerCase().includes(lowercasedFilter))
+        );
+      })();
+
+      return matchesDate && matchesOwner && matchesMember && matchesStatus && matchesSearch;
     });
 
     const tieBreaker = (a: Project, b: Project) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
@@ -140,7 +157,7 @@ export const useProjectFilters = (projects: Project[]) => {
         let compareResult = 0;
         if (typeof aValue === 'number' && typeof bValue === 'number') {
           compareResult = aValue - bValue;
-        } else if (aValue instanceof Date && typeof bValue instanceof Date) {
+        } else if (aValue instanceof Date && bValue instanceof Date) {
           compareResult = aValue.getTime() - bValue.getTime();
         } else {
           compareResult = String(aValue).localeCompare(String(bValue), undefined, { numeric: true, sensitivity: 'base' });
@@ -169,7 +186,7 @@ export const useProjectFilters = (projects: Project[]) => {
       sortableItems = [...upcomingProjects, ...pastProjects, ...projectsWithoutDates];
     }
     return sortableItems;
-  }, [projects, dateRange, advancedFilters, sortConfig]);
+  }, [projects, dateRange, advancedFilters, sortConfig, searchTerm]);
 
   return {
     view, handleViewChange,

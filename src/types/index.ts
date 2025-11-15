@@ -397,7 +397,8 @@ export interface Company {
 }
 
 export interface AdvancedFiltersState {
-  personId: string | null;
+  ownerIds: string[];
+  memberIds: string[];
   excludedStatus: string[];
 }
 
