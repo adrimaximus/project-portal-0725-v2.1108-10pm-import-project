@@ -54,7 +54,7 @@ const DayEntry = ({ dateStr, projectsOnDay, showMonthHeader, onDeleteProject, na
                 className="bg-card border border-l-4 rounded-lg p-2 sm:p-3 flex flex-col hover:shadow-md transition-shadow group relative"
                 style={{ borderLeftColor: getProjectStatusStyles(project.status).hex }}
               >
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between w-full">
+                <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between w-full">
                   <div 
                     className="flex-1 flex items-center space-x-2 sm:space-x-3 cursor-pointer min-w-0"
                     onClick={() => navigate(`/projects/${project.slug}`)}
