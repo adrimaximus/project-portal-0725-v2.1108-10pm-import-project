@@ -97,7 +97,9 @@ export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImp
     }, {} as Record<string, any[]>);
 
     return Object.entries(groups).sort(([dateA], [dateB]) => {
-        return new Date(dateA).getTime() - new Date(dateB).getTime();
+        const dateAObj = new Date(dateA.split('-')[0], parseInt(dateA.split('-')[1]) - 1, dateA.split('-')[2]);
+        const dateBObj = new Date(dateB.split('-')[0], parseInt(dateB.split('-')[1]) - 1, dateB.split('-')[2]);
+        return dateAObj.getTime() - dateBObj.getTime();
     });
   }, [filteredEvents]);
 
@@ -190,11 +192,13 @@ export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImp
               <ScrollArea className="flex-grow">
                 <div className="p-4 space-y-4">
                   {groupedEvents.map(([dateStr, eventsOnDay], index) => {
+                    const [year, month, day] = dateStr.split('-').map(Number);
+                    const displayDate = new Date(year, month - 1, day);
                     return (
                       <div key={dateStr}>
                         {index > 0 && <Separator className="my-4" />}
                         <h3 className="font-semibold text-sm mb-2 px-2 text-muted-foreground">
-                          {format(new Date(dateStr), 'EEEE, MMMM d')}
+                          {format(displayDate, 'EEEE, MMMM d')}
                         </h3>
                         <div className="space-y-1">
                           {eventsOnDay.map(event => (
