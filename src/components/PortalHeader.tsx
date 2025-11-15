@@ -1,6 +1,6 @@
 import { useState, ReactNode } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { Menu, Sun, Moon, Laptop, Bell, Plus, Briefcase, ListChecks } from "lucide-react";
+import { Menu, Sun, Moon, Laptop, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -26,8 +26,6 @@ import { id } from 'date-fns/locale';
 import { SupportDialog } from "./SupportDialog";
 import InteractiveText from "./InteractiveText";
 import { useProfiles } from "@/hooks/useProfiles";
-import { CreateProjectSheet } from "./CreateProjectSheet";
-import { useTaskModal } from "@/contexts/TaskModalContext";
 
 interface PortalHeaderProps {
     summary?: ReactNode;
@@ -41,7 +39,6 @@ const PortalHeader = ({ summary }: PortalHeaderProps) => {
   const { isFeatureEnabled } = useFeatures();
   const [isSupportDialogOpen, setIsSupportDialogOpen] = useState(false);
   const { data: allUsers = [] } = useProfiles();
-  const { onOpen: onOpenTaskModal } = useTaskModal();
 
   const recentNotifications = notifications.slice(0, 5);
 
@@ -96,30 +93,6 @@ const PortalHeader = ({ summary }: PortalHeaderProps) => {
         <div className="w-full flex-1">
           {summary}
         </div>
-
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="icon" className="h-9 w-9">
-              <Plus className="h-4 w-4" />
-              <span className="sr-only">Quick Add</span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Quick Add</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <CreateProjectSheet>
-              <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                <Briefcase className="mr-2 h-4 w-4" />
-                <span>New Project</span>
-              </DropdownMenuItem>
-            </CreateProjectSheet>
-            <DropdownMenuItem onSelect={() => onOpenTaskModal()}>
-              <ListChecks className="mr-2 h-4 w-4" />
-              <span>New Task</span>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-
         {isFeatureEnabled('search') && <GlobalSearch />}
         {isFeatureEnabled('notifications') && (
           <DropdownMenu>
