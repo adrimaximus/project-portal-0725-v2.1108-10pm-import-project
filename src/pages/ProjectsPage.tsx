@@ -57,17 +57,6 @@ const ProjectsPage = () => {
     setTaskToHighlight(null);
   }, [searchParams, setSearchParams, taskIdFromParams, navigate]);
 
-  const { 
-    data, 
-    isLoading: isLoadingProjects, 
-    fetchNextPage, 
-    hasNextPage, 
-    isFetchingNextPage,
-    refetch: refetchProjects 
-  } = useProjects({ fetchAll: true });
-
-  const projectsData = useMemo(() => data?.pages.flatMap(page => page.projects) ?? [], [data]);
-  
   const {
     view, handleViewChange,
     kanbanGroupBy, setKanbanGroupBy,
@@ -76,8 +65,17 @@ const ProjectsPage = () => {
     advancedFilters, handleAdvancedFiltersChange,
     dateRange, setDateRange,
     sortConfig: projectSortConfig, requestSort: requestProjectSort,
-    sortedProjects
-  } = useProjectFilters(projectsData);
+  } = useProjectFilters([]);
+
+  const { data, isLoading: isLoadingProjects, fetchNextPage, hasNextPage, isFetchingNextPage, refetch: refetchProjects } = useProjects({ 
+    searchTerm,
+    year: dateRange?.from && dateRange.to && dateRange.from.getFullYear() === date.to.getFullYear() ? date.from.getFullYear() : null,
+    fetchAll: true,
+  });
+  
+  const projectsData = useMemo(() => data?.pages.flatMap(page => page.projects) ?? [], [data]);
+  
+  const { sortedProjects } = useProjectFilters(projectsData);
 
   const { data: allMembers = [] } = useQuery({
     queryKey: ['project_members_distinct'],
@@ -111,7 +109,6 @@ const ProjectsPage = () => {
 
   const projectIdsForTaskView = useMemo(() => {
     if (!isTaskView) return undefined;
-    // When projects are loading, we don't have the IDs yet. Return undefined to keep useTasks disabled.
     if (isLoadingProjects) return undefined;
   
     const visibleProjects = projectsData.filter(project => 
@@ -361,7 +358,12 @@ const ProjectsPage = () => {
             onDateRangeChange={setDateRange}
           />
         </div>
-        <div ref={scrollContainerRef} className="flex-grow min-h-0 overflow-y-auto">
+        <div ref={scrollContainerRef} className="flex-grow min-h-0 overflow-y-auto relative">
+          {(isLoadingProjects || (isTaskView && isLoadingTasks)) && (
+            <div className="absolute inset-0 bg-background/50 flex items-center justify-center z-10">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          )}
           <div className="p-0 data-[view=kanban]:px-4 data-[view=kanban]:pb-4 data-[view=kanban]:md:px-6 data-[view=kanban]:md:pb-6 data-[view=tasks-kanban]:p-0" data-view={view}>
             <ProjectViewContainer
               view={view}

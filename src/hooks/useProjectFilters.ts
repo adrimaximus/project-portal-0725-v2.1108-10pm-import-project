@@ -129,18 +129,7 @@ export const useProjectFilters = (projects: Project[]) => {
       const matchesStatus = (advancedFilters.excludedStatus?.length || 0) === 0 ||
         !advancedFilters.excludedStatus.includes(project.status);
       
-      const matchesSearch = (() => {
-        if (!searchTerm) return true;
-        const lowercasedFilter = searchTerm.toLowerCase();
-        return (
-            (project.name && project.name.toLowerCase().includes(lowercasedFilter)) ||
-            (project.description && project.description.toLowerCase().includes(lowercasedFilter)) ||
-            (project.client_name && project.client_name.toLowerCase().includes(lowercasedFilter)) ||
-            (project.client_company_name && project.client_company_name.toLowerCase().includes(lowercasedFilter))
-        );
-      })();
-
-      return matchesDate && matchesOwner && matchesMember && matchesStatus && matchesSearch;
+      return matchesDate && matchesOwner && matchesMember && matchesStatus;
     });
 
     const tieBreaker = (a: Project, b: Project) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
@@ -186,7 +175,7 @@ export const useProjectFilters = (projects: Project[]) => {
       sortableItems = [...upcomingProjects, ...pastProjects, ...projectsWithoutDates];
     }
     return sortableItems;
-  }, [projects, dateRange, advancedFilters, sortConfig, searchTerm]);
+  }, [projects, dateRange, advancedFilters, sortConfig]);
 
   return {
     view, handleViewChange,
