@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.54.0';
 import Anthropic from 'https://esm.sh/@anthropic-ai/sdk@0.22.0';
+import OpenAI from 'https://esm.sh/openai@4.29.2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -40,7 +41,8 @@ Deno.serve(async (req) => {
 
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      { global: { headers: { 'Accept': 'application/json' } } }
     );
 
     console.log("[send-overdue-reminders] Job started. Fetching projects.");
