@@ -175,7 +175,7 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
                   </div>
                 </TableCell>
                 <TableCell>
-                  <Link to={`/projects/${task.project_slug}`} onClick={(e) => e.stopPropagation()} className="hover:underline text-primary text-xs block max-w-[15ch] truncate">
+                  <Link to={`/projects/${task.project_slug}`} onClick={(e) => e.stopPropagation()} className="hover:underline text-primary text-xs block whitespace-normal break-words">
                     {task.project_name}
                   </Link>
                 </TableCell>
