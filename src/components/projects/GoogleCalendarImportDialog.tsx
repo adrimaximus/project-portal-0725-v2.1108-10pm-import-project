@@ -92,8 +92,8 @@ export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImp
     const groups = filteredEvents.reduce((acc, event) => {
       const dateStr = event.start?.date || event.start?.dateTime?.split('T')[0];
       
-      if (!dateStr) {
-        console.warn("Skipping event with invalid start time:", event);
+      if (!dateStr || isNaN(new Date(dateStr).getTime())) {
+        console.warn("Skipping event with invalid start date string:", dateStr, event);
         return acc;
       }
 
@@ -132,15 +132,20 @@ export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImp
     const start = event.start?.dateTime;
     const end = event.end?.dateTime;
 
-    if (start) { // It's a timed event
-        const startTime = formatInJakarta(start, 'HH:mm');
-        if (end) {
-            const endTime = formatInJakarta(end, 'HH:mm');
-            return `${startTime} - ${endTime}`;
-        }
-        return startTime;
+    try {
+      if (start) { // It's a timed event
+          const startTime = formatInJakarta(start, 'HH:mm');
+          if (end) {
+              const endTime = formatInJakarta(end, 'HH:mm');
+              return `${startTime} - ${endTime}`;
+          }
+          return startTime;
+      }
+      return "All-day"; // It's an all-day event
+    } catch (e) {
+      console.error("Error formatting event time:", e, event);
+      return "Invalid time";
     }
-    return "All-day"; // It's an all-day event
   };
 
   const allSelected = filteredEvents.length > 0 && selectedEvents.length === filteredEvents.length;
