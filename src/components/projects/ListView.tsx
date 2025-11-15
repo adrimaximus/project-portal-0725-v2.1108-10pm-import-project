@@ -21,26 +21,26 @@ const DayEntry = ({ dateStr, projectsOnDay, showMonthHeader, onDeleteProject, na
       {showMonthHeader && (
         <h2 className="text-lg font-semibold my-4 pl-2">{currentMonth}</h2>
       )}
-      <div className="flex items-start space-x-4">
-        <div className="flex flex-col items-center w-10 sm:w-12 text-center flex-shrink-0">
+      <div className="flex items-start space-x-2 sm:space-x-4">
+        <div className="flex flex-col items-center w-8 sm:w-12 text-center flex-shrink-0">
           <span className="text-xs sm:text-sm text-muted-foreground">{dayOfWeek}</span>
-          <span className="text-lg sm:text-xl font-bold text-primary">{dayOfMonth}</span>
+          <span className="text-base sm:text-xl font-bold text-primary">{dayOfMonth}</span>
         </div>
         <div className="flex-1 space-y-3 pt-1 min-w-0">
           {projectsOnDay.map((project: Project) => {
             return (
               <div 
                 key={project.id} 
-                className="bg-card border border-l-4 rounded-lg p-3 flex flex-col sm:flex-row items-start sm:items-center justify-between hover:shadow-md transition-shadow group"
+                className="bg-card border border-l-4 rounded-lg p-2 sm:p-3 flex flex-col sm:flex-row items-start sm:items-center justify-between hover:shadow-md transition-shadow group"
                 style={{ borderLeftColor: getProjectStatusStyles(project.status).hex }}
               >
                 <div 
-                  className="flex-1 flex items-center space-x-3 cursor-pointer min-w-0"
+                  className="flex-1 flex items-center space-x-2 sm:space-x-3 cursor-pointer min-w-0"
                   onClick={() => navigate(`/projects/${project.slug}`)}
                 >
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
-                      <p className="font-medium break-words" title={project.name}>
+                      <p className="text-sm sm:text-base font-medium break-words" title={project.name}>
                         {project.name}
                       </p>
                     </div>
@@ -58,7 +58,7 @@ const DayEntry = ({ dateStr, projectsOnDay, showMonthHeader, onDeleteProject, na
                     <StatusBadge status={project.status as any} />
                     <div className="flex items-center -space-x-2">
                       {project.assignedTo.slice(0, 3).map((user) => (
-                        <Avatar key={user.id} className="h-6 w-6 border-2 border-card">
+                        <Avatar key={user.id} className="h-5 w-5 sm:h-6 sm:w-6 border-2 border-card">
                           <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
                           <AvatarFallback style={generatePastelColor(user.id)}>{user.initials}</AvatarFallback>
                         </Avatar>
@@ -68,7 +68,7 @@ const DayEntry = ({ dateStr, projectsOnDay, showMonthHeader, onDeleteProject, na
                   <div onClick={(e) => e.stopPropagation()}>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8 p-0">
+                        <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 transition-opacity h-7 w-7 sm:h-8 sm:w-8 p-0">
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
