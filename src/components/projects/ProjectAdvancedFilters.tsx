@@ -210,7 +210,7 @@ const ProjectAdvancedFilters = ({ filters, onFiltersChange, allPeople, allOwners
               )}
             </Button>
           </DrawerTrigger>
-          <DrawerContent className="max-h-[80vh]">
+          <DrawerContent className="max-h-[600px]">
             <DrawerHeader className="text-left">
               <DrawerTitle>Advanced Filters</DrawerTitle>
               <DrawerDescription>Refine the project list by owner, member, or status.</DrawerDescription>
