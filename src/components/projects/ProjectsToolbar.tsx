@@ -7,7 +7,6 @@ import ProjectAdvancedFilters, { AdvancedFiltersState } from './ProjectAdvancedF
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 
 type ViewMode = 'table' | 'list' | 'kanban' | 'tasks' | 'tasks-kanban';
 
@@ -63,8 +62,8 @@ const ProjectsToolbar = ({
 
   return (
     <div className="p-4 border-t flex flex-col sm:flex-row items-center justify-between gap-4">
-      {/* Left Section: View Controls */}
-      <div className="flex items-center gap-4 flex-wrap">
+      {/* Left Section: Filters, Search, Date Range (now combined with View Controls inside ProjectAdvancedFilters) */}
+      <div className="w-full sm:w-auto flex flex-wrap items-center gap-2">
         <ProjectAdvancedFilters
           filters={advancedFilters}
           onFiltersChange={onAdvancedFiltersChange}
@@ -78,44 +77,37 @@ const ProjectsToolbar = ({
           onToggleHideCompleted={onToggleHideCompleted}
           isTaskView={isTaskView}
         />
-        
-        {/* Separator for desktop view */}
-        <Separator orientation="vertical" className="hidden sm:block h-8" />
-
-        {/* Filters, Search, Date Range */}
-        <div className="flex items-center gap-2">
-          {isSearchOpen ? (
-            <div className="relative flex-1 sm:flex-initial">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search..."
-                value={searchTerm}
-                onChange={(e) => onSearchChange(e.target.value)}
-                onBlur={() => {
-                  if (!searchTerm) {
-                    setIsSearchOpen(false);
-                  }
-                }}
-                autoFocus
-                className="pl-9 w-full sm:w-48"
-              />
-            </div>
-          ) : (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="outline" size="icon" onClick={() => setIsSearchOpen(true)}>
-                    <Search className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Search</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )}
-          <DatePickerWithRange date={dateRange} onDateChange={onDateRangeChange} />
-        </div>
+        {isSearchOpen ? (
+          <div className="relative flex-1 sm:flex-initial">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search..."
+              value={searchTerm}
+              onChange={(e) => onSearchChange(e.target.value)}
+              onBlur={() => {
+                if (!searchTerm) {
+                  setIsSearchOpen(false);
+                }
+              }}
+              autoFocus
+              className="pl-9 w-full sm:w-48"
+            />
+          </div>
+        ) : (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="outline" size="icon" onClick={() => setIsSearchOpen(true)}>
+                  <Search className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Search</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
+        <DatePickerWithRange date={dateRange} onDateChange={onDateRangeChange} />
       </div>
 
       {/* Right Section: Action Buttons */}
