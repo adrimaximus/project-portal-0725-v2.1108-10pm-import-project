@@ -47,7 +47,7 @@ const TasksKanbanCard: React.FC<TasksKanbanCardProps> = ({ task, onEdit, onDelet
       className={cn("mb-3 cursor-grab active:cursor-grabbing", isDragging && "opacity-30")}
     >
       <Card 
-        className="hover:shadow-md transition-shadow border-l-4"
+        className="hover:shadow-md transition-shadow border-l-2"
         style={{ borderLeftColor: priorityStyles.hex }}
       >
         <CardContent className="p-3">

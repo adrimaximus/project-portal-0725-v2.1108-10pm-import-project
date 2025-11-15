@@ -62,7 +62,7 @@ const TaskItem = ({ task, onToggle, isToggling, allUsers }: { task: Task, onTogg
 
   return (
     <div 
-      className={cn("flex items-start gap-3 p-2 rounded-r-md hover:bg-muted/50 border-l-4")}
+      className={cn("flex items-start gap-3 p-2 rounded-r-md hover:bg-muted/50 border-l-2")}
       style={{ borderLeftColor: priorityStyles.hex }}
     >
       <Checkbox
