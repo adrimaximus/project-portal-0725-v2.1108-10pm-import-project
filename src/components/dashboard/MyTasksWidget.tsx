@@ -42,6 +42,7 @@ const TaskItem = ({ task, onToggle, isToggling, allUsers }: { task: Task, onTogg
   const dueDate = task.due_date ? new Date(task.due_date) : null;
   let dueDateText = '';
   let dueDateColor = 'text-muted-foreground';
+  const isOverdue = dueDate && isPast(dueDate) && !task.completed;
 
   if (dueDate) {
     if (isToday(dueDate)) {
@@ -49,7 +50,7 @@ const TaskItem = ({ task, onToggle, isToggling, allUsers }: { task: Task, onTogg
       dueDateColor = 'text-primary';
     } else if (isTomorrow(dueDate)) {
       dueDateText = 'Tomorrow';
-    } else if (isPast(dueDate) && !task.completed) {
+    } else if (isOverdue) {
       const daysOverdue = differenceInDays(new Date(), dueDate);
       dueDateText = `${daysOverdue}d ago`;
       dueDateColor = 'text-destructive';
@@ -58,7 +59,8 @@ const TaskItem = ({ task, onToggle, isToggling, allUsers }: { task: Task, onTogg
     }
   }
 
-  const priorityStyles = getPriorityStyles(task.priority);
+  const displayPriority = isOverdue ? 'High' : task.priority;
+  const priorityStyles = getPriorityStyles(displayPriority);
 
   return (
     <div 
@@ -81,8 +83,8 @@ const TaskItem = ({ task, onToggle, isToggling, allUsers }: { task: Task, onTogg
           <p className="text-xs text-muted-foreground truncate">{task.project_name}</p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
-          {task.priority && (
-            <Badge className={cn(getPriorityStyles(task.priority).tw, 'text-xs')}>{task.priority}</Badge>
+          {displayPriority && (
+            <Badge className={cn(getPriorityStyles(displayPriority).tw, 'text-xs')}>{displayPriority}</Badge>
           )}
           {dueDateText && <span className={`text-xs font-medium ${dueDateColor}`}>{dueDateText}</span>}
           <div className="flex -space-x-2">
