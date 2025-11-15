@@ -78,7 +78,7 @@ const TaskItem = ({ task, onToggle, isToggling, allUsers }: { task: Task, onTogg
         id={`task-dash-${task.id}`}
         checked={task.completed}
         onCheckedChange={(checked) => onToggle(task, !!checked)}
-        className="mt-1"
+        className="mt-1 hidden"
         onClick={(e) => e.stopPropagation()}
         disabled={isToggling}
       />
@@ -98,7 +98,9 @@ const TaskItem = ({ task, onToggle, isToggling, allUsers }: { task: Task, onTogg
                   <TooltipTrigger>
                     <Avatar className="h-6 w-6 border-2 border-background">
                       <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
-                      <AvatarFallback style={generatePastelColor(user.id)}>{getInitials([user.first_name, user.last_name].filter(Boolean).join(' '), user.email || undefined)}</AvatarFallback>
+                      <AvatarFallback style={generatePastelColor(user.id)}>
+                        {getInitials([user.first_name, user.last_name].filter(Boolean).join(' '), user.email || undefined)}
+                      </AvatarFallback>
                     </Avatar>
                   </TooltipTrigger>
                   <TooltipContent><p>{user.name}</p></TooltipContent>
