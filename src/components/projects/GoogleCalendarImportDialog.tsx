@@ -82,7 +82,13 @@ export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImp
     if (!events) return [];
     
     const groups = events.reduce((acc, event) => {
-      const dateStr = event.start?.date || event.start?.dateTime.split('T')[0];
+      const dateStr = event.start?.date || event.start?.dateTime?.split('T')[0];
+      
+      if (!dateStr) {
+        console.warn("Skipping event with invalid start time:", event);
+        return acc;
+      }
+
       if (!acc[dateStr]) {
         acc[dateStr] = [];
       }
