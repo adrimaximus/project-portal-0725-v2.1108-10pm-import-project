@@ -165,10 +165,16 @@ const ProjectsToolbar = ({
       {/* Desktop Action Buttons */}
       <div className="hidden sm:flex items-center gap-2">
         {isTaskView ? (
-          <Button size="icon" variant="outline" onClick={onNewTaskClick}>
-            <ListPlus className="h-4 w-4" />
-            <span className="sr-only">New Task</span>
-          </Button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button size="icon" variant="outline" onClick={onNewTaskClick}>
+                  <ListPlus className="h-4 w-4" />
+                  <span className="sr-only">New Task</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent><p>New Task</p></TooltipContent>
+            </TooltipProvider>
         ) : (
           <TooltipProvider>
             <Tooltip>
@@ -185,15 +191,29 @@ const ProjectsToolbar = ({
           </TooltipProvider>
         )}
         {isGCalConnected ? (
-          <Button variant="outline" size="icon" onClick={onImportClick}>
-            <Download className="h-4 w-4" />
-            <span className="sr-only">Import from Calendar</span>
-          </Button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="outline" size="icon" onClick={onImportClick}>
+                  <Download className="h-4 w-4" />
+                  <span className="sr-only">Import from Calendar</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent><p>Import from Calendar</p></TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         ) : (
-          <Button variant="outline" size="icon" onClick={onRefreshClick}>
-            <RefreshCw className="h-4 w-4" />
-            <span className="sr-only">Refresh data</span>
-          </Button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="outline" size="icon" onClick={onRefreshClick}>
+                  <RefreshCw className="h-4 w-4" />
+                  <span className="sr-only">Refresh data</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent><p>Refresh data</p></TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         )}
       </div>
 
