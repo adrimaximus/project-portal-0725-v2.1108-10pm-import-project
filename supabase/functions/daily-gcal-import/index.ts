@@ -8,7 +8,8 @@ const corsHeaders = {
 
 const supabaseAdmin = createClient(
   Deno.env.get('SUPABASE_URL') ?? '',
-  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+  { global: { headers: { 'Accept': 'application/json' } } }
 );
 
 Deno.serve(async (req) => {
@@ -124,15 +125,74 @@ Deno.serve(async (req) => {
           category: 'Event',
         }));
 
-        const { error: insertError } = await supabaseAdmin
+        const { data: createdProjects, error: projectInsertError } = await supabaseAdmin
           .from('projects')
-          .insert(newProjectsPayload);
-
-        if (insertError) {
-          console.error(`Failed to import projects for user ${user.id}:`, insertError.message);
-        } else {
-          totalImported += newProjectsPayload.length;
+          .insert(newProjectsPayload)
+          .select('id, created_by, origin_event_id');
+        
+        if (projectInsertError) {
+          console.error(`Failed to import projects for user ${user.id}:`, projectInsertError.message);
+          continue;
         }
+
+        const allAttendeeEmails = [...new Set(eventsToImport.flatMap(event => event.attendees?.map((att: any) => att.email) || []).filter(Boolean))];
+        const emailToIdMap = new Map<string, string>();
+
+        if (allAttendeeEmails.length > 0) {
+          const { data: attendeeProfiles, error: profileError } = await supabaseAdmin
+            .from('profiles')
+            .select('id, email')
+            .in('email', allAttendeeEmails);
+          if (profileError) {
+            console.warn(`Could not fetch attendee profiles:`, profileError.message);
+          } else if (attendeeProfiles) {
+            attendeeProfiles.forEach(p => {
+              if (p.email) emailToIdMap.set(p.email, p.id);
+            });
+          }
+        }
+
+        const projectMemberships: { project_id: string; user_id: string; role: string }[] = [];
+        if (createdProjects) {
+          createdProjects.forEach(project => {
+            if (project.created_by !== user.id) {
+              projectMemberships.push({
+                project_id: project.id,
+                user_id: user.id,
+                role: 'admin'
+              });
+            }
+
+            const originalEvent = eventsToImport.find(e => e.id === project.origin_event_id);
+            if (originalEvent && originalEvent.attendees) {
+              originalEvent.attendees.forEach((attendee: any) => {
+                if (attendee.email && emailToIdMap.has(attendee.email)) {
+                  const attendeeUserId = emailToIdMap.get(attendee.email)!;
+                  if (attendeeUserId !== project.created_by && attendeeUserId !== user.id) {
+                    if (!projectMemberships.some(m => m.project_id === project.id && m.user_id === attendeeUserId)) {
+                      projectMemberships.push({
+                        project_id: project.id,
+                        user_id: attendeeUserId,
+                        role: 'member'
+                      });
+                    }
+                  }
+                }
+              });
+            }
+          });
+        }
+
+        if (projectMemberships.length > 0) {
+          const { error: memberInsertError } = await supabaseAdmin
+            .from('project_members')
+            .insert(projectMemberships);
+          if (memberInsertError) {
+            console.warn("Failed to add some members to projects:", memberInsertError.message);
+          }
+        }
+
+        totalImported += newProjectsPayload.length;
       }
     }
 

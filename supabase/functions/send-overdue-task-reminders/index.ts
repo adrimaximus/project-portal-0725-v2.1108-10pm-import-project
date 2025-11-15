@@ -26,7 +26,8 @@ Deno.serve(async (req) => {
 
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      { global: { headers: { 'Accept': 'application/json' } } }
     );
 
     console.log("[send-overdue-task-reminders] Job started. Fetching overdue tasks via RPC.");
