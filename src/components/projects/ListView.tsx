@@ -51,7 +51,7 @@ const DayEntry = ({ dateStr, projectsOnDay, showMonthHeader, onDeleteProject, na
             return (
               <div 
                 key={project.id} 
-                className="bg-card border border-l-4 rounded-lg p-2 sm:p-3 flex flex-col sm:flex-row items-start sm:items-center justify-between hover:shadow-md transition-shadow group relative"
+                className="bg-card border border-l-4 rounded-lg p-2 sm:p-3 flex flex-col sm:flex-row items-start sm:items-center justify-between hover:shadow-md transition-shadow group"
                 style={{ borderLeftColor: getProjectStatusStyles(project.status).hex }}
               >
                 <div 
@@ -59,18 +59,19 @@ const DayEntry = ({ dateStr, projectsOnDay, showMonthHeader, onDeleteProject, na
                   onClick={() => navigate(`/projects/${project.slug}`)}
                 >
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-start gap-2">
                       <p className="text-sm sm:text-base font-medium break-words" title={project.name}>
                         {project.name}
                       </p>
-                      {isMultiDay && displayDueDate && (
-                        <span className="hidden sm:inline text-xs text-muted-foreground flex-shrink-0">
-                          Ends: {formatInJakarta(displayDueDate, 'dd MMM')}
-                        </span>
-                      )}
                     </div>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1 break-words">
-                      {project.client_company_name || project.client_name}
+                    <div className="flex items-center flex-wrap gap-x-2 text-xs text-muted-foreground mt-1 break-words">
+                      <span>{project.client_company_name || project.client_name}</span>
+                      {isMultiDay && displayDueDate && (
+                        <>
+                          <span className="text-muted-foreground/50">•</span>
+                          <span>Ends: {formatInJakarta(displayDueDate, 'dd MMM')}</span>
+                        </>
+                      )}
                     </div>
                     <div className="mt-2">
                       <Progress value={project.progress} className="h-1" />
@@ -78,7 +79,7 @@ const DayEntry = ({ dateStr, projectsOnDay, showMonthHeader, onDeleteProject, na
                   </div>
                 </div>
                 
-                <div className="flex items-center space-x-2 sm:space-x-4 flex-shrink-0 pl-0 sm:pl-2 mt-2 sm:mt-0 w-full sm:w-auto justify-between">
+                <div className="flex items-center space-x-2 sm:space-x-4 flex-shrink-0 pl-0 sm:pl-2 mt-2 sm:mt-0 w-full sm:w-auto justify-end">
                   <div className="flex items-center space-x-2">
                     <StatusBadge status={project.status as any} />
                     <div className="flex items-center -space-x-2">
@@ -106,11 +107,6 @@ const DayEntry = ({ dateStr, projectsOnDay, showMonthHeader, onDeleteProject, na
                     </DropdownMenu>
                   </div>
                 </div>
-                {isMultiDay && displayDueDate && (
-                  <span className="sm:hidden absolute bottom-2 right-2 text-xs text-muted-foreground">
-                    Ends: {formatInJakarta(displayDueDate, 'dd MMM')}
-                  </span>
-                )}
               </div>
             );
           })}
