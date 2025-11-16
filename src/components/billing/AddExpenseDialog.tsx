@@ -38,7 +38,6 @@ const expenseSchema = z.object({
     release_date: z.date().optional().nullable(),
     status: z.string().optional(),
   })).optional(),
-  due_date: z.date().optional().nullable(),
   account_name: z.string().optional(),
   account_bank: z.string().optional(),
   account_number: z.string().optional(),
@@ -92,7 +91,6 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
       beneficiary: '',
       tf_amount: 0,
       payment_terms: [{ amount: null, request_type: 'Requested', request_date: undefined, release_date: undefined, status: 'Pending' }],
-      due_date: null,
       account_name: '',
       account_bank: '',
       account_number: '',
@@ -133,7 +131,6 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
             release_date: term.release_date ? term.release_date.toISOString() : null,
             status: term.status || 'Pending',
         })).filter(term => term.amount > 0 || term.request_date || term.release_date),
-        due_date: values.due_date ? values.due_date.toISOString() : null,
         account_bank: {
           name: values.account_name,
           bank: values.account_bank,
@@ -435,24 +432,6 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
               <Input value={balance.toLocaleString('id-ID')} className="col-span-3 bg-muted" readOnly />
             </div>
 
-            <FormField control={form.control} name="due_date" render={({ field }) => (
-              <FormItem className="flex flex-col"><FormLabel>Due Date</FormLabel>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <FormControl>
-                      <Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
-                        {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                      </Button>
-                    </FormControl>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar mode="single" selected={field.value || undefined} onSelect={field.onChange} initialFocus />
-                  </PopoverContent>
-                </Popover>
-                <FormMessage />
-              </FormItem>
-            )} />
             <div>
               <FormLabel>Bank Account</FormLabel>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-2">
