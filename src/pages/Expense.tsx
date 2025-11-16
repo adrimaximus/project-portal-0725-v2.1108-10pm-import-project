@@ -193,6 +193,9 @@ const ExpensePage = () => {
                             <div className="flex flex-col gap-2">
                               {(expense as any).payment_terms.map((term: any, index: number) => (
                                 <div key={index} className="text-xs">
+                                  {(expense as any).payment_terms.length > 1 && (
+                                    <p className="font-medium mb-1">Term {index + 1}</p>
+                                  )}
                                   <div className="flex items-center justify-between gap-2">
                                     <span>{formatCurrency(term.amount || 0)}</span>
                                     <Badge variant="outline" className={cn("border-transparent text-xs whitespace-nowrap", getStatusBadgeStyle(term.status || 'Pending'))}>
