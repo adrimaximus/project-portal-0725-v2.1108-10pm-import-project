@@ -202,7 +202,7 @@ const ExpensePage = () => {
                               ))}
                             </div>
                           ) : (
-                            expense.terms || '-'
+                            '-'
                           )}
                         </TableCell>
                         <TableCell>
