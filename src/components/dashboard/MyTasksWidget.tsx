@@ -76,7 +76,7 @@ const TaskItem = ({ task, onToggle, isToggling, allUsers }: { task: Task, onTogg
         disabled={isToggling}
       />
       <div className="flex-1 min-w-0 cursor-pointer relative pb-4 sm:pb-0 overflow-hidden" onClick={handleTaskClick}>
-        <div className={cn("font-medium text-sm break-words", task.completed && "line-through text-muted-foreground")}>
+        <div className={cn("font-medium text-sm break-all", task.completed && "line-through text-muted-foreground")}>
           <InteractiveText text={task.title} members={allUsers} />
         </div>
         <p className="text-xs text-muted-foreground truncate">{task.project_name}</p>
