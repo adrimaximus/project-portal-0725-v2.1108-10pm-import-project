@@ -40,6 +40,12 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import ExpenseKanbanView from "@/components/billing/ExpenseKanbanView";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const ExpensePage = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -245,51 +251,44 @@ const ExpensePage = () => {
                                 {paymentTerms.map((term: any, index: number) => {
                                   const isMultiTerm = paymentTerms.length > 1;
                                   return (
-                                    <div key={index} className={cn("text-xs", index > 0 && "border-t pt-2 mt-2")}>
-                                      {isMultiTerm ? (
-                                        <>
-                                          <div className="flex items-center gap-2 font-medium">
-                                            <span>Term {index + 1}</span>
-                                            <span className="text-muted-foreground">|</span>
-                                            <span>{formatCurrency(term.amount || 0)}</span>
+                                    <TooltipProvider key={index} delayDuration={100}>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <div className={cn("text-xs w-full", index > 0 && "border-t pt-2 mt-2")}>
+                                            <div className="flex items-center justify-between gap-2">
+                                              <div className="flex items-center gap-2 font-medium">
+                                                {isMultiTerm && (
+                                                  <>
+                                                    <span>Term {index + 1}</span>
+                                                    <span className="text-muted-foreground">|</span>
+                                                  </>
+                                                )}
+                                                <span>{formatCurrency(term.amount || 0)}</span>
+                                              </div>
+                                              <Badge variant="outline" className={cn("border-transparent text-xs whitespace-nowrap", getStatusBadgeStyle(term.status || 'Pending'))}>
+                                                {term.status || 'Pending'}
+                                              </Badge>
+                                            </div>
                                           </div>
-                                          {term.request_date && (
-                                            <p className="text-muted-foreground text-xs mt-0.5">
-                                              {term.request_type || 'Due'}: {format(new Date(term.request_date), "dd MMM yyyy")}
-                                            </p>
-                                          )}
-                                          {term.release_date && (
-                                            <p className="text-muted-foreground text-xs">
-                                              scheduled: {format(new Date(term.release_date), "dd MMM yyyy")}
-                                            </p>
-                                          )}
-                                          <div className="mt-1">
-                                            <Badge variant="outline" className={cn("border-transparent text-xs whitespace-nowrap", getStatusBadgeStyle(term.status || 'Pending'))}>
-                                              {term.status || 'Pending'}
-                                            </Badge>
-                                          </div>
-                                        </>
-                                      ) : (
-                                        <>
-                                          <div className="flex items-center justify-between gap-2">
-                                            <span>{formatCurrency(term.amount || 0)}</span>
-                                            <Badge variant="outline" className={cn("border-transparent text-xs whitespace-nowrap", getStatusBadgeStyle(term.status || 'Pending'))}>
-                                              {term.status || 'Pending'}
-                                            </Badge>
-                                          </div>
-                                          {term.request_date && (
-                                            <p className="text-muted-foreground text-xs mt-0.5">
-                                              {term.request_type || 'Due'}: {format(new Date(term.request_date), "dd MMM yyyy")}
-                                            </p>
-                                          )}
-                                          {term.release_date && (
-                                            <p className="text-muted-foreground text-xs">
-                                              scheduled: {format(new Date(term.release_date), "dd MMM yyyy")}
-                                            </p>
-                                          )}
-                                        </>
-                                      )}
-                                    </div>
+                                        </TooltipTrigger>
+                                        {(term.request_date || term.release_date) && (
+                                          <TooltipContent>
+                                            <div className="flex flex-col gap-1 text-xs">
+                                              {term.request_date && (
+                                                <p>
+                                                  {term.request_type || 'Due'}: {format(new Date(term.request_date), "dd MMM yyyy")}
+                                                </p>
+                                              )}
+                                              {term.release_date && (
+                                                <p>
+                                                  Scheduled: {format(new Date(term.release_date), "dd MMM yyyy")}
+                                                </p>
+                                              )}
+                                            </div>
+                                          </TooltipContent>
+                                        )}
+                                      </Tooltip>
+                                    </TooltipProvider>
                                   );
                                 })}
                               </div>
