@@ -17,11 +17,14 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Project } from '@/types';
+import { Project, Person, Company } from '@/types';
 import { CurrencyInput } from '../ui/currency-input';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Label } from '../ui/label';
 import BankAccountFormDialog from './BankAccountFormDialog';
+import BeneficiaryTypeDialog from './BeneficiaryTypeDialog';
+import PersonFormDialog from '../people/PersonFormDialog';
+import CompanyFormDialog from '../people/CompanyFormDialog';
 
 interface BankAccount {
   id: string;
@@ -63,6 +66,12 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
   const [isLoadingBankAccounts, setIsLoadingBankAccounts] = useState(false);
   const [isBankAccountFormOpen, setIsBankAccountFormOpen] = useState(false);
+  const [beneficiarySearch, setBeneficiarySearch] = useState('');
+
+  const [isBeneficiaryTypeDialogOpen, setIsBeneficiaryTypeDialogOpen] = useState(false);
+  const [isPersonFormOpen, setIsPersonFormOpen] = useState(false);
+  const [isCompanyFormOpen, setIsCompanyFormOpen] = useState(false);
+  const [newBeneficiaryName, setNewBeneficiaryName] = useState('');
 
   const { data: projects = [], isLoading: isLoadingProjects } = useQuery<Project[]>({
     queryKey: ['projectsForExpenseForm'],
@@ -150,6 +159,31 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
     };
     fetchBankAccounts();
   }, [beneficiary, setValue]);
+
+  const handleCreateNewBeneficiary = (name: string) => {
+    setNewBeneficiaryName(name);
+    setBeneficiaryPopoverOpen(false);
+    setIsBeneficiaryTypeDialogOpen(true);
+  };
+
+  const handleSelectBeneficiaryType = (type: 'person' | 'company') => {
+    setIsBeneficiaryTypeDialogOpen(false);
+    if (type === 'person') {
+      setIsPersonFormOpen(true);
+    } else {
+      setIsCompanyFormOpen(true);
+    }
+  };
+
+  const handleBeneficiaryCreated = (newItem: Person | Company, type: 'person' | 'company') => {
+    queryClient.invalidateQueries({ queryKey: ['beneficiaries'] });
+    
+    const beneficiaryData = { id: newItem.id, name: type === 'person' ? (newItem as Person).full_name : (newItem as Company).name, type };
+    setBeneficiary(beneficiaryData);
+    form.setValue('beneficiary', beneficiaryData.name);
+
+    setIsBankAccountFormOpen(true);
+  };
 
   const onSubmit = async (values: ExpenseFormValues) => {
     if (!user) {
@@ -260,9 +294,14 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                       </PopoverTrigger>
                       <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
                         <Command>
-                          <CommandInput placeholder="Search beneficiary..." />
+                          <CommandInput placeholder="Search beneficiary..." value={beneficiarySearch} onValueChange={setBeneficiarySearch} />
                           <CommandList>
-                            <CommandEmpty>No beneficiary found.</CommandEmpty>
+                            <CommandEmpty>
+                              <Button variant="ghost" className="w-full justify-start" onClick={() => handleCreateNewBeneficiary(beneficiarySearch)}>
+                                <Plus className="mr-2 h-4 w-4" />
+                                Create "{beneficiarySearch}"
+                              </Button>
+                            </CommandEmpty>
                             <CommandGroup>
                               {beneficiaries.map((item) => (
                                 <CommandItem value={item.name} key={item.id} onSelect={() => { form.setValue("beneficiary", item.name); setBeneficiary(item); setBeneficiaryPopoverOpen(false); }}>
@@ -433,6 +472,25 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
           }}
         />
       )}
+      <BeneficiaryTypeDialog
+        open={isBeneficiaryTypeDialogOpen}
+        onOpenChange={setIsBeneficiaryTypeDialogOpen}
+        onSelect={handleSelectBeneficiaryType}
+      />
+      <PersonFormDialog
+        open={isPersonFormOpen}
+        onOpenChange={setIsPersonFormOpen}
+        person={null}
+        initialValues={{ full_name: newBeneficiaryName }}
+        onSuccess={(newPerson) => handleBeneficiaryCreated(newPerson, 'person')}
+      />
+      <CompanyFormDialog
+        open={isCompanyFormOpen}
+        onOpenChange={setIsCompanyFormOpen}
+        company={null}
+        initialValues={{ name: newBeneficiaryName }}
+        onSuccess={(newCompany) => handleBeneficiaryCreated(newCompany, 'company')}
+      />
     </>
   );
 };
