@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { CalendarIcon, Loader2, Check, ChevronsUpDown, User, Building, Plus, X } from 'lucide-react';
+import { CalendarIcon, Loader2, Check, ChevronsUpDown, User, Building, Plus, X, Copy } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
@@ -305,18 +305,38 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                               key={account.id}
                               onClick={() => field.onChange(account.id)}
                               className={cn(
-                                "border rounded-lg p-3 cursor-pointer transition-all relative",
+                                "border rounded-lg p-3 cursor-pointer transition-all",
                                 field.value === account.id
                                   ? "border-primary ring-2 ring-primary ring-offset-2"
                                   : "hover:border-primary/50"
                               )}
                             >
-                              {field.value === account.id && (
-                                <Check className="h-4 w-4 text-primary absolute top-2 right-2" />
-                              )}
-                              <p className="font-semibold">{account.bank_name}</p>
-                              <p className="text-muted-foreground">{account.account_number}</p>
-                              <p className="text-sm text-muted-foreground">{account.account_name}</p>
+                              <div className="flex justify-between items-start gap-2">
+                                <div className="flex-grow">
+                                  <p className="font-semibold">{account.bank_name}</p>
+                                  <p className="text-muted-foreground">{account.account_number}</p>
+                                  <p className="text-sm text-muted-foreground">{account.account_name}</p>
+                                </div>
+                                <div className="flex items-center shrink-0">
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      const textToCopy = `Bank: ${account.bank_name}\nNo. Rekening: ${account.account_number}\nAtas Nama: ${account.account_name}`;
+                                      navigator.clipboard.writeText(textToCopy);
+                                      toast.success("Detail bank telah disalin!");
+                                    }}
+                                  >
+                                    <Copy className="h-4 w-4" />
+                                  </Button>
+                                  {field.value === account.id && (
+                                    <Check className="h-4 w-4 text-primary ml-1" />
+                                  )}
+                                </div>
+                              </div>
                             </div>
                           ))
                         ) : (
