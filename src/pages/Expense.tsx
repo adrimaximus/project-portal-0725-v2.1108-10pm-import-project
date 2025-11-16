@@ -168,98 +168,115 @@ const ExpensePage = () => {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filteredExpenses.map((expense) => (
-                      <TableRow key={expense.id}>
-                        <TableCell>
-                          <Link to={`/projects/${expense.project_slug}`} className="font-medium text-primary hover:underline">
-                            {expense.project_name}
-                          </Link>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Avatar className="h-8 w-8">
-                              <AvatarImage src={getAvatarUrl(expense.project_owner.avatar_url, expense.project_owner.id)} />
-                              <AvatarFallback style={generatePastelColor(expense.project_owner.id)}>
-                                {expense.project_owner.initials}
-                              </AvatarFallback>
-                            </Avatar>
-                            <span className="font-medium">{expense.project_owner.name}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>{expense.beneficiary}</TableCell>
-                        <TableCell>{formatCurrency(expense.tf_amount)}</TableCell>
-                        <TableCell className="whitespace-nowrap">
-                          {(expense as any).payment_terms && (expense as any).payment_terms.length > 0 ? (
-                            <div className="flex flex-col">
-                              {(expense as any).payment_terms.map((term: any, index: number) => {
-                                const isMultiTerm = (expense as any).payment_terms.length > 1;
-                                return (
-                                  <div key={index} className={cn("text-xs", index > 0 && "border-t pt-2 mt-2")}>
-                                    {isMultiTerm ? (
-                                      <>
-                                        <div className="flex items-center gap-2 font-medium">
-                                          <span>Term {index + 1}</span>
-                                          <span className="text-muted-foreground">|</span>
-                                          <span>{formatCurrency(term.amount || 0)}</span>
-                                        </div>
-                                        {term.request_date && (
-                                          <p className="text-muted-foreground text-xs mt-0.5">
-                                            {term.request_type || 'Due'}: {format(new Date(term.request_date), "dd MMM yyyy")}
-                                          </p>
-                                        )}
-                                        <div className="mt-1">
-                                          <Badge variant="outline" className={cn("border-transparent text-xs whitespace-nowrap", getStatusBadgeStyle(term.status || 'Pending'))}>
-                                            {term.status || 'Pending'}
-                                          </Badge>
-                                        </div>
-                                      </>
-                                    ) : (
-                                      <>
-                                        <div className="flex items-center justify-between gap-2">
-                                          <span>{formatCurrency(term.amount || 0)}</span>
-                                          <Badge variant="outline" className={cn("border-transparent text-xs whitespace-nowrap", getStatusBadgeStyle(term.status || 'Pending'))}>
-                                            {term.status || 'Pending'}
-                                          </Badge>
-                                        </div>
-                                        {term.request_date && (
-                                          <p className="text-muted-foreground text-xs mt-0.5">
-                                            {term.request_type || 'Due'}: {format(new Date(term.request_date), "dd MMM yyyy")}
-                                          </p>
-                                        )}
-                                      </>
-                                    )}
-                                  </div>
-                                );
-                              })}
+                    filteredExpenses.map((expense) => {
+                      const paymentTerms = (expense as any).payment_terms || [];
+                      const paidAmount = paymentTerms
+                        .filter((term: any) => term.status === 'Paid')
+                        .reduce((sum: number, term: any) => sum + (term.amount || 0), 0);
+                      const outstandingAmount = expense.tf_amount - paidAmount;
+
+                      return (
+                        <TableRow key={expense.id}>
+                          <TableCell>
+                            <Link to={`/projects/${expense.project_slug}`} className="font-medium text-primary hover:underline">
+                              {expense.project_name}
+                            </Link>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Avatar className="h-8 w-8">
+                                <AvatarImage src={getAvatarUrl(expense.project_owner.avatar_url, expense.project_owner.id)} />
+                                <AvatarFallback style={generatePastelColor(expense.project_owner.id)}>
+                                  {expense.project_owner.initials}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span className="font-medium">{expense.project_owner.name}</span>
                             </div>
-                          ) : (
-                            '-'
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {expense.account_bank ? (
+                          </TableCell>
+                          <TableCell>{expense.beneficiary}</TableCell>
+                          <TableCell>
                             <div>
-                              <p className="font-medium">{expense.account_bank.name}</p>
-                              <p className="text-sm text-muted-foreground">{expense.account_bank.bank} - {expense.account_bank.account}</p>
+                              <p>{formatCurrency(expense.tf_amount)}</p>
+                              {outstandingAmount > 0 && (
+                                <p className="text-xs text-muted-foreground">
+                                  Outstanding: {formatCurrency(outstandingAmount)}
+                                </p>
+                              )}
                             </div>
-                          ) : '-'}
-                        </TableCell>
-                        <TableCell>{expense.remarks}</TableCell>
-                        <TableCell className="text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onSelect={() => setEditingExpense(expense)}>Edit</DropdownMenuItem>
-                              <DropdownMenuItem className="text-red-500">Delete</DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                    ))
+                          </TableCell>
+                          <TableCell className="whitespace-nowrap">
+                            {paymentTerms.length > 0 ? (
+                              <div className="flex flex-col">
+                                {paymentTerms.map((term: any, index: number) => {
+                                  const isMultiTerm = paymentTerms.length > 1;
+                                  return (
+                                    <div key={index} className={cn("text-xs", index > 0 && "border-t pt-2 mt-2")}>
+                                      {isMultiTerm ? (
+                                        <>
+                                          <div className="flex items-center gap-2 font-medium">
+                                            <span>Term {index + 1}</span>
+                                            <span className="text-muted-foreground">|</span>
+                                            <span>{formatCurrency(term.amount || 0)}</span>
+                                          </div>
+                                          {term.request_date && (
+                                            <p className="text-muted-foreground text-xs mt-0.5">
+                                              {term.request_type || 'Due'}: {format(new Date(term.request_date), "dd MMM yyyy")}
+                                            </p>
+                                          )}
+                                          <div className="mt-1">
+                                            <Badge variant="outline" className={cn("border-transparent text-xs whitespace-nowrap", getStatusBadgeStyle(term.status || 'Pending'))}>
+                                              {term.status || 'Pending'}
+                                            </Badge>
+                                          </div>
+                                        </>
+                                      ) : (
+                                        <>
+                                          <div className="flex items-center justify-between gap-2">
+                                            <span>{formatCurrency(term.amount || 0)}</span>
+                                            <Badge variant="outline" className={cn("border-transparent text-xs whitespace-nowrap", getStatusBadgeStyle(term.status || 'Pending'))}>
+                                              {term.status || 'Pending'}
+                                            </Badge>
+                                          </div>
+                                          {term.request_date && (
+                                            <p className="text-muted-foreground text-xs mt-0.5">
+                                              {term.request_type || 'Due'}: {format(new Date(term.request_date), "dd MMM yyyy")}
+                                            </p>
+                                          )}
+                                        </>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            ) : (
+                              '-'
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {expense.account_bank ? (
+                              <div>
+                                <p className="font-medium">{expense.account_bank.name}</p>
+                                <p className="text-sm text-muted-foreground">{expense.account_bank.bank} - {expense.account_bank.account}</p>
+                              </div>
+                            ) : '-'}
+                          </TableCell>
+                          <TableCell>{expense.remarks}</TableCell>
+                          <TableCell className="text-right">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onSelect={() => setEditingExpense(expense)}>Edit</DropdownMenuItem>
+                                <DropdownMenuItem className="text-red-500">Delete</DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })
                   )}
                 </TableBody>
               </Table>
