@@ -290,71 +290,79 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
             
             <div>
               <FormLabel>Payment Terms</FormLabel>
-              <div className="space-y-2 mt-2">
+              <div className="space-y-3 mt-2">
                 {fields.map((item, index) => (
-                  <div key={item.id} className="flex items-center gap-2">
-                    <FormField
-                      control={form.control}
-                      name={`payment_terms.${index}.amount`}
-                      render={({ field }) => (
-                        <FormItem className="flex-1">
-                          <FormControl>
-                            <CurrencyInput
-                              value={field.value}
-                              onChange={field.onChange}
-                              placeholder={`Term ${index + 1} Amount`}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name={`payment_terms.${index}.date`}
-                      render={({ field }) => (
-                        <FormItem>
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <FormControl>
-                                <Button variant={"outline"} className={cn("w-[150px] pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
-                                  {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                </Button>
-                              </FormControl>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                              <Calendar mode="single" selected={field.value || undefined} onSelect={field.onChange} initialFocus />
-                            </PopoverContent>
-                          </Popover>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name={`payment_terms.${index}.status`}
-                      render={({ field }) => (
-                        <FormItem>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <div key={item.id} className="border rounded-lg p-3 space-y-3 bg-muted/50">
+                    <div className="flex justify-between items-center">
+                      <p className="font-medium text-sm">Term {index + 1}</p>
+                      <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1} className="h-7 w-7">
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      <FormField
+                        control={form.control}
+                        name={`payment_terms.${index}.amount`}
+                        render={({ field }) => (
+                          <FormItem className="sm:col-span-3">
+                            <FormLabel className="text-xs">Amount</FormLabel>
                             <FormControl>
-                              <SelectTrigger className="w-[120px]">
-                                <SelectValue placeholder="Status" />
-                              </SelectTrigger>
+                              <CurrencyInput
+                                value={field.value}
+                                onChange={field.onChange}
+                                placeholder="Amount"
+                              />
                             </FormControl>
-                            <SelectContent>
-                              <SelectItem value="Pending">Pending</SelectItem>
-                              <SelectItem value="Paid">Paid</SelectItem>
-                              <SelectItem value="Rejected">Rejected</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1}>
-                      <X className="h-4 w-4" />
-                    </Button>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name={`payment_terms.${index}.date`}
+                        render={({ field }) => (
+                          <FormItem className="sm:col-span-2">
+                            <FormLabel className="text-xs">Date</FormLabel>
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <FormControl>
+                                  <Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal bg-background", !field.value && "text-muted-foreground")}>
+                                    {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                  </Button>
+                                </FormControl>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar mode="single" selected={field.value || undefined} onSelect={field.onChange} initialFocus />
+                              </PopoverContent>
+                            </Popover>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name={`payment_terms.${index}.status`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-xs">Status</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <FormControl>
+                                <SelectTrigger className="bg-background">
+                                  <SelectValue placeholder="Status" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="Pending">Pending</SelectItem>
+                                <SelectItem value="Paid">Paid</SelectItem>
+                                <SelectItem value="Rejected">Rejected</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
                   </div>
                 ))}
                 <Button type="button" variant="outline" size="sm" onClick={() => append({ amount: null, date: undefined, status: 'Pending' })}>
