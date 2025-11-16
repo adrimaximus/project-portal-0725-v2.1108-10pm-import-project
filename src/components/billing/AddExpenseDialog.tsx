@@ -28,6 +28,7 @@ interface BankAccount {
   account_name: string;
   account_number: string;
   bank_name: string;
+  is_legacy: boolean;
 }
 
 interface AddExpenseDialogProps {
@@ -125,16 +126,17 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
       if (beneficiary) {
         setIsLoadingBankAccounts(true);
         const { data, error } = await supabase
-          .from('bank_accounts')
-          .select('id, account_name, account_number, bank_name')
-          .eq('owner_id', beneficiary.id)
-          .ilike('owner_type', beneficiary.type);
+          .rpc('get_beneficiary_bank_accounts', {
+            p_owner_id: beneficiary.id,
+            p_owner_type: beneficiary.type,
+          });
         
         if (error) {
           toast.error("Failed to fetch bank accounts.");
+          setBankAccounts([]);
         } else {
-          setBankAccounts(data);
-          if (data.length === 1) {
+          setBankAccounts(data || []);
+          if (data && data.length === 1) {
             setValue('bank_account_id', data[0].id);
           } else {
             setValue('bank_account_id', null);
@@ -156,6 +158,13 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
     }
     setIsSubmitting(true);
     try {
+      const selectedAccount = bankAccounts.find(acc => acc.id === values.bank_account_id);
+      const bankDetails = selectedAccount ? {
+        name: selectedAccount.account_name,
+        account: selectedAccount.account_number,
+        bank: selectedAccount.bank_name,
+      } : null;
+
       const { error } = await supabase.from('expenses').insert({
         project_id: values.project_id,
         created_by: user.id,
@@ -168,7 +177,8 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
             release_date: term.release_date ? term.release_date.toISOString() : null,
             status: term.status || 'Pending',
         })).filter(term => term.amount > 0 || term.request_date || term.release_date),
-        bank_account_id: values.bank_account_id,
+        bank_account_id: (selectedAccount && !selectedAccount.is_legacy) ? selectedAccount.id : null,
+        account_bank: bankDetails,
         remarks: values.remarks,
       });
 
