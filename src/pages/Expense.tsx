@@ -27,11 +27,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import EditExpenseDialog from "@/components/billing/EditExpenseDialog";
 
 const ExpensePage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [view, setView] = useState<'table' | 'kanban'>('table');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
 
   const { data: expenses = [], isLoading } = useQuery<Expense[]>({
     queryKey: ['expenses'],
@@ -223,7 +225,7 @@ const ExpensePage = () => {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem>Edit</DropdownMenuItem>
+                              <DropdownMenuItem onSelect={() => setEditingExpense(expense)}>Edit</DropdownMenuItem>
                               <DropdownMenuItem className="text-red-500">Delete</DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
@@ -267,7 +269,7 @@ const ExpensePage = () => {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
-                                <DropdownMenuItem>Edit</DropdownMenuItem>
+                                <DropdownMenuItem onSelect={() => setEditingExpense(expense)}>Edit</DropdownMenuItem>
                                 <DropdownMenuItem className="text-red-500">Delete</DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
@@ -312,6 +314,15 @@ const ExpensePage = () => {
         )}
       </div>
       <AddExpenseDialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen} />
+      <EditExpenseDialog
+        open={!!editingExpense}
+        onOpenChange={(isOpen) => {
+          if (!isOpen) {
+            setEditingExpense(null);
+          }
+        }}
+        expense={editingExpense}
+      />
     </PortalLayout>
   );
 };
