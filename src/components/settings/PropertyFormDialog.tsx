@@ -36,12 +36,13 @@ const createPropertySchema = (properties: CustomProperty[], property: CustomProp
 });
 
 export type PropertyFormValues = z.infer<ReturnType<typeof createPropertySchema>>;
+export type SavedPropertyFormValues = Omit<PropertyFormValues, 'options'> & { options?: string[] | null };
 
 interface PropertyFormDialogProps {
   open: boolean;
   onOpenChange: (isOpen: boolean) => void;
   property: CustomProperty | null;
-  onSave: (data: Omit<PropertyFormValues, 'options'> & { options?: string[] | null }) => void;
+  onSave: (data: SavedPropertyFormValues) => void;
   isSaving: boolean;
   properties: CustomProperty[];
 }

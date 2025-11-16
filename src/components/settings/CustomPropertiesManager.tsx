@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, PlusCircle } from "lucide-react";
-import PropertyFormDialog, { PropertyFormValues } from './PropertyFormDialog';
+import PropertyFormDialog, { SavedPropertyFormValues } from './PropertyFormDialog';
 import { toast } from 'sonner';
 import { CustomProperty } from '@/types';
 
@@ -62,7 +62,7 @@ const CustomPropertiesManager = ({ category, title, description }: CustomPropert
     setIsDialogOpen(true);
   };
 
-  const handleSave = async (propertyData: Omit<PropertyFormValues, 'options'> & { options?: string[] | null }) => {
+  const handleSave = async (propertyData: SavedPropertyFormValues) => {
     setIsSaving(true);
     const name = propertyData.label.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
     const { id, is_default, ...dataToSave } = editingProperty || {};

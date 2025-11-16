@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -18,7 +18,7 @@ interface TagFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSave: (tag: Omit<Tag, 'id' | 'user_id'>) => void;
-  tag: Tag | null;
+  tag: Partial<Tag> | null;
   isSaving: boolean;
   groups: string[];
 }
@@ -33,7 +33,7 @@ const tagSchema = z.object({
 type TagFormValues = z.infer<typeof tagSchema>;
 
 const TagFormDialog = ({ open, onOpenChange, onSave, tag, isSaving, groups }: TagFormDialogProps) => {
-  const isEditMode = !!tag;
+  const isEditMode = !!tag?.id;
 
   const { data: properties = [], isLoading: isLoadingProperties } = useQuery<CustomProperty[]>({
     queryKey: ['custom_properties', 'tag'],
@@ -51,7 +51,7 @@ const TagFormDialog = ({ open, onOpenChange, onSave, tag, isSaving, groups }: Ta
   useEffect(() => {
     if (open) {
       if (tag) {
-        form.reset({ name: tag.name, color: tag.color, type: tag.type || 'general', custom_properties: tag.custom_properties || {} });
+        form.reset({ name: tag.name || '', color: tag.color || '#6b7280', type: tag.type || 'general', custom_properties: tag.custom_properties || {} });
       } else {
         form.reset({ name: '', color: '#6b7280', type: 'general', custom_properties: {} });
       }

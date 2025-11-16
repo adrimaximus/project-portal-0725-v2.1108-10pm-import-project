@@ -13,7 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { CustomProperty } from '@/types';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import PropertyFormDialog, { PropertyFormValues } from '@/components/settings/PropertyFormDialog';
+import PropertyFormDialog, { SavedPropertyFormValues } from '@/components/settings/PropertyFormDialog';
 
 const TagsPropertiesPage = () => {
   const queryClient = useQueryClient();
@@ -43,7 +43,7 @@ const TagsPropertiesPage = () => {
     setIsFormOpen(true);
   };
 
-  const handleSave = async (propertyData: Omit<PropertyFormValues, 'options'> & { options?: string[] | null }) => {
+  const handleSave = async (propertyData: SavedPropertyFormValues) => {
     setIsSaving(true);
     const name = propertyData.label.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
     const { id, is_default, ...dataToSave } = propertyToEdit || {};

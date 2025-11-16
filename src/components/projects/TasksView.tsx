@@ -93,7 +93,7 @@ const TaskListItem = ({ task, onToggleTaskCompletion, onTaskClick, isUnread, all
   );
 };
 
-const TaskRow = ({ task, onToggleTaskCompletion, onEdit, onDelete, handleToggleReaction, setRef, currentUserId, isUnread, onClick, allUsers }: {
+const TaskRow = ({ task, onToggleTaskCompletion, onEdit, onDelete, handleToggleReaction, setRef, currentUserId, isUnread, onClick, allUsers, onStatusChange }: {
   task: ProjectTask;
   onToggleTaskCompletion: (task: ProjectTask, completed: boolean) => void;
   onEdit: (task: ProjectTask) => void;
@@ -104,6 +104,7 @@ const TaskRow = ({ task, onToggleTaskCompletion, onEdit, onDelete, handleToggleR
   isUnread: boolean;
   onClick: () => void;
   allUsers: User[];
+  onStatusChange: (task: ProjectTask, newStatus: TaskStatus) => void;
 }) => {
   return (
     <TableRow 
@@ -140,9 +141,7 @@ const TaskRow = ({ task, onToggleTaskCompletion, onEdit, onDelete, handleToggleR
             </SelectValue>
           </SelectTrigger>
           <SelectContent>
-            {TASK_STATUS_OPTIONS.map(option => (
-              <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-            ))}
+            {TASK_STATUS_OPTIONS.map(option => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}
           </SelectContent>
         </Select>
       </TableCell>
@@ -254,6 +253,7 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
                 isUnread={unreadTaskIds.includes(task.id)}
                 onClick={() => handleTaskClick(task)}
                 allUsers={allUsers}
+                onStatusChange={onStatusChange}
               />
             ))
           )}
