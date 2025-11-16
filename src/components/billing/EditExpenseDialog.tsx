@@ -69,10 +69,10 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
   const [isCompanyFormOpen, setIsCompanyFormOpen] = useState(false);
   const [newBeneficiaryName, setNewBeneficiaryName] = useState('');
 
-  const { data: projects = [], isLoading: isLoadingProjects } = useQuery<Project[]>({
+  const { data: projects = [], isLoading: isLoadingProjects } = useQuery<{id: string, name: string}[]>({
     queryKey: ['projectsForExpenses'],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_dashboard_projects');
+      const { data, error } = await supabase.from('projects').select('id, name');
       if (error) throw error;
       return data;
     },
