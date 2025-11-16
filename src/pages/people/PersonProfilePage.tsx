@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Briefcase, Cake, Edit, Instagram, Linkedin, Mail, MapPin, MoreVertical, Phone, Twitter, User as UserIcon, Users, Trash2, Loader2, MessageSquare } from 'lucide-react';
+import { ArrowLeft, Briefcase, Cake, Edit, Instagram, Linkedin, Mail, MapPin, MoreVertical, Phone, Twitter, User as UserIcon, Users, Trash2, Loader2, MessageSquare, Landmark } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { formatInJakarta, generatePastelColor, getInitials, getAvatarUrl, formatPhoneNumberForApi } from '@/lib/utils';
 import PeopleFormDialog from '@/components/people/PersonFormDialog';
@@ -211,6 +211,41 @@ const PersonProfilePage = () => {
     }
   };
 
+  const { bankProperties, otherCustomProperties } = useMemo(() => {
+    const bankPropertyLabels = [
+      'bank account number',
+      'bank beneficiary name',
+      'bank account',
+    ];
+    const bankProps: CustomProperty[] = [];
+    const otherProps: CustomProperty[] = [];
+
+    customProperties.forEach(prop => {
+        const hasValue = person?.custom_properties && typeof person.custom_properties[prop.name] !== 'undefined' && person.custom_properties[prop.name] !== null && person.custom_properties[prop.name] !== '';
+        if (!hasValue) return;
+
+        const labelLower = prop.label.toLowerCase().trim();
+        if (bankPropertyLabels.includes(labelLower)) {
+            bankProps.push(prop);
+        } else {
+            const isPersonalEmail = labelLower === 'email pribadi' || labelLower === 'personal email';
+            const isPhone2 = labelLower === 'phone 2' || labelLower === 'phone-2' || labelLower === 'phone -2';
+            if (!isPersonalEmail && !isPhone2) {
+                otherProps.push(prop);
+            }
+        }
+    });
+
+    const order = ['bank beneficiary name', 'bank account', 'bank account number'];
+    bankProps.sort((a, b) => {
+        const aIndex = order.indexOf(a.label.toLowerCase().trim());
+        const bIndex = order.indexOf(b.label.toLowerCase().trim());
+        return aIndex - bIndex;
+    });
+
+    return { bankProperties: bankProps, otherCustomProperties: otherProps };
+  }, [customProperties, person?.custom_properties]);
+
   if (isLoading || isLoadingCustomProperties) return <PersonProfileSkeleton />;
 
   if (error || !person) {
@@ -221,17 +256,6 @@ const PersonProfilePage = () => {
 
   const firstPhone = person.contact?.phones?.[0] || person.phone;
   const whatsappLink = firstPhone ? `https://wa.me/${formatPhoneNumberForApi(firstPhone)}` : null;
-
-  const customPropertiesWithValue = customProperties.filter(prop => {
-    const hasValue = person.custom_properties && typeof person.custom_properties[prop.name] !== 'undefined' && person.custom_properties[prop.name] !== null && person.custom_properties[prop.name] !== '';
-    if (!hasValue) return false;
-
-    const labelLower = prop.label.toLowerCase().trim();
-    const isPersonalEmail = labelLower === 'email pribadi' || labelLower === 'personal email';
-    const isPhone2 = labelLower === 'phone 2' || labelLower === 'phone-2' || labelLower === 'phone -2';
-
-    return !isPersonalEmail && !isPhone2;
-  });
 
   const collaboratorForChat: Collaborator | undefined = person.user_id ? {
     id: person.user_id,
@@ -378,11 +402,27 @@ const PersonProfilePage = () => {
               </CardContent>
             </Card>
 
-            {customPropertiesWithValue.length > 0 && (
+            {bankProperties.length > 0 && (
+              <Card>
+                <CardHeader><CardTitle className="flex items-center gap-2"><Landmark className="h-5 w-5 text-muted-foreground" /> Bank Information</CardTitle></CardHeader>
+                <CardContent className="space-y-4 text-sm">
+                  {bankProperties.map(prop => (
+                    <div key={prop.id} className="flex items-start gap-3">
+                      <span className="font-semibold w-32 flex-shrink-0">{prop.label}:</span>
+                      <div className="flex-1 min-w-0">
+                        {renderCustomPropertyValue(prop, person.custom_properties?.[prop.name])}
+                      </div>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
+
+            {otherCustomProperties.length > 0 && (
               <Card>
                 <CardHeader><CardTitle>Additional Information</CardTitle></CardHeader>
                 <CardContent className="space-y-4 text-sm">
-                  {customPropertiesWithValue.map(prop => (
+                  {otherCustomProperties.map(prop => (
                     <div key={prop.id} className="flex items-start gap-3">
                       <span className="font-semibold w-24 flex-shrink-0">{prop.label}:</span>
                       <div className="flex-1 min-w-0">

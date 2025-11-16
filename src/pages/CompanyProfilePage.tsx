@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -8,9 +8,9 @@ import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Building, Edit, Trash2, User, Briefcase } from 'lucide-react';
+import { ArrowLeft, Building, Edit, Trash2, User, Briefcase, Landmark } from 'lucide-react';
 import { Company, Person, Project, CustomProperty } from '@/types';
-import { getInitials, generatePastelColor, getAvatarUrl } from '@/lib/utils';
+import { getInitials, generatePastelColor, getAvatarUrl, formatInJakarta } from '@/lib/utils';
 import CompanyFormDialog from '@/components/people/CompanyFormDialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import StatusBadge from '@/components/StatusBadge';
@@ -53,6 +53,73 @@ const CompanyProfilePage = () => {
     enabled: !!slug,
   });
 
+  const { data: customProperties = [], isLoading: isLoadingCustomProperties } = useQuery<CustomProperty[]>({
+    queryKey: ['custom_properties', 'company'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('custom_properties').select('*').eq('category', 'company');
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  const renderCustomPropertyValue = (prop: CustomProperty, value: any) => {
+    if (value === null || typeof value === 'undefined' || value === '') {
+      return <span className="text-muted-foreground">-</span>;
+    }
+  
+    switch (prop.type) {
+      case 'url':
+        return <a href={value} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline truncate block">{value}</a>;
+      case 'email':
+        return <a href={`mailto:${value}`} className="text-primary hover:underline truncate block">{value}</a>;
+      case 'phone':
+        return <a href={`tel:${value}`} className="text-primary hover:underline truncate block">{value}</a>;
+      case 'image':
+        return <img src={value} alt={prop.label} className="h-16 w-16 object-contain rounded-md mt-1" />;
+      case 'date':
+        try {
+          return <span className="text-muted-foreground">{formatInJakarta(value, 'PPP')}</span>;
+        } catch {
+          return <span className="text-muted-foreground">{value}</span>;
+        }
+      case 'checkbox':
+        return value ? <span className="text-green-600 font-semibold">Yes</span> : <span className="text-muted-foreground">No</span>;
+      default:
+        return <span className="text-muted-foreground whitespace-pre-wrap">{String(value)}</span>;
+    }
+  };
+
+  const { bankProperties, otherCustomProperties } = useMemo(() => {
+    const bankPropertyLabels = [
+      'bank account number',
+      'bank beneficiary name',
+      'bank account',
+    ];
+    const bankProps: CustomProperty[] = [];
+    const otherProps: CustomProperty[] = [];
+
+    customProperties.forEach(prop => {
+        const hasValue = company?.custom_properties && typeof company.custom_properties[prop.name] !== 'undefined' && company.custom_properties[prop.name] !== null && company.custom_properties[prop.name] !== '';
+        if (!hasValue) return;
+
+        const labelLower = prop.label.toLowerCase().trim();
+        if (bankPropertyLabels.includes(labelLower)) {
+            bankProps.push(prop);
+        } else {
+            otherProps.push(prop);
+        }
+    });
+
+    const order = ['bank beneficiary name', 'bank account', 'bank account number'];
+    bankProps.sort((a, b) => {
+        const aIndex = order.indexOf(a.label.toLowerCase().trim());
+        const bIndex = order.indexOf(b.label.toLowerCase().trim());
+        return aIndex - bIndex;
+    });
+
+    return { bankProperties: bankProps, otherCustomProperties: otherProps };
+  }, [customProperties, company?.custom_properties]);
+
   const handleDelete = async () => {
     if (!company) return;
     const { error } = await supabase.from('companies').delete().eq('id', company.id);
@@ -66,7 +133,7 @@ const CompanyProfilePage = () => {
     setIsDeleteDialogOpen(false);
   };
 
-  if (isLoading) return <CompanyProfileSkeleton />;
+  if (isLoading || isLoadingCustomProperties) return <CompanyProfileSkeleton />;
   if (error || !company) {
     toast.error("Could not load company profile.");
     navigate('/people?tab=companies');
@@ -125,6 +192,38 @@ const CompanyProfilePage = () => {
           </div>
 
           <div className="lg:col-span-2 space-y-6">
+            {bankProperties.length > 0 && (
+              <Card>
+                <CardHeader><CardTitle className="flex items-center gap-2"><Landmark className="h-5 w-5 text-muted-foreground" /> Bank Information</CardTitle></CardHeader>
+                <CardContent className="space-y-4 text-sm">
+                  {bankProperties.map(prop => (
+                    <div key={prop.id} className="flex items-start gap-3">
+                      <span className="font-semibold w-32 flex-shrink-0">{prop.label}:</span>
+                      <div className="flex-1 min-w-0">
+                        {renderCustomPropertyValue(prop, company.custom_properties?.[prop.name])}
+                      </div>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
+
+            {otherCustomProperties.length > 0 && (
+              <Card>
+                <CardHeader><CardTitle>Additional Information</CardTitle></CardHeader>
+                <CardContent className="space-y-4 text-sm">
+                  {otherCustomProperties.map(prop => (
+                    <div key={prop.id} className="flex items-start gap-3">
+                      <span className="font-semibold w-24 flex-shrink-0">{prop.label}:</span>
+                      <div className="flex-1 min-w-0">
+                        {renderCustomPropertyValue(prop, company.custom_properties?.[prop.name])}
+                      </div>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
+
             <Card>
               <CardHeader><CardTitle>Projects ({company.projects.length})</CardTitle></CardHeader>
               <CardContent className="space-y-2">
