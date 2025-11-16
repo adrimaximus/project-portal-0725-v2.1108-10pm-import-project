@@ -394,6 +394,30 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
                 <Label className="text-right">Unallocated (Rp)</Label>
                 <Input value={unallocatedBalance.toLocaleString('id-ID')} className={cn("col-span-3 bg-muted", unallocatedBalance !== 0 && "text-red-500 font-semibold")} readOnly />
               </div>
+              <FormField
+                control={form.control}
+                name="status_expense"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Status</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a status" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="Proposed">Proposed</SelectItem>
+                        <SelectItem value="Reviewed">Reviewed</SelectItem>
+                        <SelectItem value="Approved">Approved</SelectItem>
+                        <SelectItem value="Paid">Paid</SelectItem>
+                        <SelectItem value="Rejected">Rejected</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <FormField control={form.control} name="remarks" render={({ field }) => (
                 <FormItem><FormLabel>Remarks</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
               )} />
