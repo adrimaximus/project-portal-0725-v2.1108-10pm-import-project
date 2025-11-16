@@ -321,103 +321,109 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                           </FormItem>
                         )}
                       />
-                      <div className="grid grid-cols-2 gap-2">
-                        <FormField
-                          control={form.control}
-                          name={`payment_terms.${index}.request_date`}
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="text-xs">Requested/Due Date</FormLabel>
-                              <div className="flex gap-1">
-                                <FormField
-                                  control={form.control}
-                                  name={`payment_terms.${index}.request_type`}
-                                  render={({ field: typeField }) => (
-                                    <FormItem>
-                                      <Select onValueChange={typeField.onChange} defaultValue={typeField.value}>
-                                        <FormControl>
-                                          <SelectTrigger className="w-[110px] bg-background">
-                                            <SelectValue placeholder="Type" />
-                                          </SelectTrigger>
-                                        </FormControl>
-                                        <SelectContent>
-                                          <SelectItem value="Requested">Requested</SelectItem>
-                                          <SelectItem value="Due">Due</SelectItem>
-                                        </SelectContent>
-                                      </Select>
-                                    </FormItem>
-                                  )}
-                                />
-                                <div className="flex items-center border rounded-md flex-1 bg-background h-10">
-                                  <span className="text-sm pl-3 w-full">{field.value ? format(field.value, "PPP") : null}</span>
-                                </div>
-                                <Popover>
-                                  <PopoverTrigger asChild>
-                                    <FormControl>
-                                      <Button variant="outline" size="icon" className="h-10 w-10 shrink-0">
-                                        <CalendarIcon className="h-4 w-4" />
-                                      </Button>
-                                    </FormControl>
-                                  </PopoverTrigger>
-                                  <PopoverContent className="w-auto p-0" align="start">
-                                    <Calendar mode="single" selected={field.value || undefined} onSelect={field.onChange} initialFocus />
-                                  </PopoverContent>
-                                </Popover>
-                              </div>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
+                      <FormField
+                        control={form.control}
+                        name={`payment_terms.${index}.request_date`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-xs">Requested/Due Date</FormLabel>
+                            <div className="flex gap-1">
+                              <FormField
+                                control={form.control}
+                                name={`payment_terms.${index}.request_type`}
+                                render={({ field: typeField }) => (
+                                  <FormItem>
+                                    <Select onValueChange={typeField.onChange} defaultValue={typeField.value}>
+                                      <FormControl>
+                                        <SelectTrigger className="w-[110px] bg-background">
+                                          <SelectValue placeholder="Type" />
+                                        </SelectTrigger>
+                                      </FormControl>
+                                      <SelectContent>
+                                        <SelectItem value="Requested">Requested</SelectItem>
+                                        <SelectItem value="Due">Due</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </FormItem>
+                                )}
+                              />
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <FormControl>
+                                    <Button
+                                      variant={"outline"}
+                                      className={cn(
+                                        "flex-1 w-full pl-3 text-left font-normal bg-background",
+                                        !field.value && "text-muted-foreground"
+                                      )}
+                                    >
+                                      {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                                      <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                    </Button>
+                                  </FormControl>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" align="start">
+                                  <Calendar mode="single" selected={field.value || undefined} onSelect={field.onChange} initialFocus />
+                                </PopoverContent>
+                              </Popover>
+                            </div>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <div className="grid grid-cols-2 gap-4">
                         <FormField
                           control={form.control}
                           name={`payment_terms.${index}.release_date`}
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel className="text-xs">Release Date</FormLabel>
-                              <div className="flex gap-1">
-                                <div className="flex items-center border rounded-md flex-1 bg-background h-10">
-                                  <span className="text-sm pl-3 w-full">{field.value ? format(field.value, "PPP") : null}</span>
-                                </div>
-                                <Popover>
-                                  <PopoverTrigger asChild>
-                                    <FormControl>
-                                      <Button variant="outline" size="icon" className="h-10 w-10 shrink-0">
-                                        <CalendarIcon className="h-4 w-4" />
-                                      </Button>
-                                    </FormControl>
-                                  </PopoverTrigger>
-                                  <PopoverContent className="w-auto p-0" align="start">
-                                    <Calendar mode="single" selected={field.value || undefined} onSelect={field.onChange} initialFocus />
-                                  </PopoverContent>
-                                </Popover>
-                              </div>
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <FormControl>
+                                    <Button
+                                      variant={"outline"}
+                                      className={cn(
+                                        "w-full pl-3 text-left font-normal bg-background",
+                                        !field.value && "text-muted-foreground"
+                                      )}
+                                    >
+                                      {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                                      <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                    </Button>
+                                  </FormControl>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" align="start">
+                                  <Calendar mode="single" selected={field.value || undefined} onSelect={field.onChange} initialFocus />
+                                </PopoverContent>
+                              </Popover>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name={`payment_terms.${index}.status`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-xs">Status</FormLabel>
+                              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                  <SelectTrigger className="bg-background">
+                                    <SelectValue placeholder="Status" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="Pending">Pending</SelectItem>
+                                  <SelectItem value="Paid">Paid</SelectItem>
+                                  <SelectItem value="Rejected">Rejected</SelectItem>
+                                </SelectContent>
+                              </Select>
                               <FormMessage />
                             </FormItem>
                           )}
                         />
                       </div>
-                      <FormField
-                        control={form.control}
-                        name={`payment_terms.${index}.status`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-xs">Status</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                              <FormControl>
-                                <SelectTrigger className="bg-background">
-                                  <SelectValue placeholder="Status" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="Pending">Pending</SelectItem>
-                                <SelectItem value="Paid">Paid</SelectItem>
-                                <SelectItem value="Rejected">Rejected</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
                     </div>
                   </div>
                 ))}
