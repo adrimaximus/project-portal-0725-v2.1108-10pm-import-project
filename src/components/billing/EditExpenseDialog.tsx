@@ -175,7 +175,13 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
     setIsSubmitting(true);
     try {
       const selectedAccount = bankAccounts.find(acc => acc.id === values.bank_account_id);
-      const bankDetails = selectedAccount ? { name: selectedAccount.account_name, account: selectedAccount.account_number, bank: selectedAccount.bank_name } : null;
+      let bankDetails = null;
+      if (selectedAccount) {
+        bankDetails = { name: selectedAccount.account_name, account: selectedAccount.account_number, bank: selectedAccount.bank_name };
+      } else if (values.bank_account_id && expense?.account_bank) {
+        // Preserve existing bank details if the selection hasn't changed but the list isn't loaded yet
+        bankDetails = expense.account_bank;
+      }
 
       const { error } = await supabase.from('expenses').update({
         project_id: values.project_id,
@@ -185,7 +191,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
             ...term,
             request_date: term.request_date ? term.request_date.toISOString() : null,
             release_date: term.release_date ? term.release_date.toISOString() : null,
-        })).filter(term => term.amount || term.request_date || term.release_date),
+        })),
         bank_account_id: (selectedAccount && !selectedAccount.is_legacy) ? selectedAccount.id : null,
         account_bank: bankDetails,
         remarks: values.remarks,

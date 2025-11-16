@@ -213,7 +213,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
             request_date: term.request_date ? term.request_date.toISOString() : null,
             release_date: term.release_date ? term.release_date.toISOString() : null,
             status: term.status || 'Pending',
-        })).filter(term => term.amount > 0 || term.request_date || term.release_date),
+        })),
         bank_account_id: (selectedAccount && !selectedAccount.is_legacy) ? selectedAccount.id : null,
         account_bank: bankDetails,
         remarks: values.remarks,
