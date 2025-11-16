@@ -80,7 +80,7 @@ const TaskItem = ({ task, onToggle, isToggling, allUsers }: { task: Task, onTogg
           <InteractiveText text={task.title} members={allUsers} />
         </div>
         <p className="text-xs text-muted-foreground truncate">{task.project_name}</p>
-        <div className="flex items-center gap-2 flex-shrink-0 mt-2">
+        <div className="flex items-center flex-wrap gap-2 mt-2">
           {displayPriority && (
             <Badge className={cn(getPriorityStyles(displayPriority).tw, 'text-xs')}>{displayPriority}</Badge>
           )}
