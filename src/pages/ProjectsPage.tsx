@@ -221,6 +221,23 @@ const ProjectsPage = () => {
     );
   }, [tasksData, searchTerm, advancedFilters.ownerIds, advancedFilters.memberIds]);
 
+  const finalSortedTasks = useMemo(() => {
+    const sortParam = searchParams.get('sort');
+    if (sortParam === 'unread' && unreadTaskIds.length > 0) {
+      const unread: ProjectTask[] = [];
+      const read: ProjectTask[] = [];
+      for (const task of filteredTasks) {
+        if (unreadTaskIds.includes(task.id)) {
+          unread.push(task);
+        } else {
+          read.push(task);
+        }
+      }
+      return [...unread, ...read];
+    }
+    return filteredTasks;
+  }, [filteredTasks, searchParams, unreadTaskIds]);
+
   const deleteProjectMutation = useMutation({
     mutationFn: async (projectId: string) => {
       const { error } = await supabase.from('projects').delete().eq('id', projectId);
@@ -361,12 +378,17 @@ const ProjectsPage = () => {
             onDateRangeChange={setDateRange}
           />
         </div>
-        <div ref={scrollContainerRef} className="flex-grow min-h-0 overflow-y-auto">
+        <div ref={scrollContainerRef} className="flex-grow min-h-0 overflow-y-auto relative">
+          {(isLoadingProjects || (isTaskView && isLoadingTasks)) && (
+            <div className="absolute inset-0 bg-background/50 flex items-center justify-center z-10">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          )}
           <div className="p-0 data-[view=kanban]:px-4 data-[view=kanban]:pb-4 data-[view=kanban]:md:px-6 data-[view=kanban]:md:pb-6 data-[view=tasks-kanban]:p-0" data-view={view}>
             <ProjectViewContainer
               view={view}
               projects={sortedProjects}
-              tasks={filteredTasks}
+              tasks={finalSortedTasks}
               isLoading={isLoadingProjects && !projectsData.length}
               isTasksLoading={isLoadingTasks}
               onDeleteProject={handleDeleteProject}

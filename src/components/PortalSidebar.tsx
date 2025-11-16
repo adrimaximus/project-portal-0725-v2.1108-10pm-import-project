@@ -150,7 +150,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
     const mapping: { [key: string]: string } = {
         'dashboard': 'module:dashboard',
         'projects': 'module:projects',
-        'tasks': 'module:projects',
+        'tasks': 'module:tasks',
         'requests': 'module:request',
         'chat': 'module:chat',
         'mood trackers': 'module:mood-tracker',
