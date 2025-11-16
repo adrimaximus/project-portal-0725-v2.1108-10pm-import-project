@@ -57,6 +57,11 @@ const expenseSchema = z.object({
 
 type ExpenseFormValues = z.infer<typeof expenseSchema>;
 
+interface ProjectOption {
+  id: string;
+  name: string;
+}
+
 const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -76,7 +81,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
   const [newBeneficiaryName, setNewBeneficiaryName] = useState('');
   const [isCreateProjectDialogOpen, setIsCreateProjectDialogOpen] = useState(false);
 
-  const { data: projects = [], isLoading: isLoadingProjects } = useQuery<Project[]>({
+  const { data: projects = [], isLoading: isLoadingProjects } = useQuery<ProjectOption[]>({
     queryKey: ['projectsForExpenseForm'],
     queryFn: async () => {
       const { data, error } = await supabase.from('projects').select('id, name').order('name');
@@ -324,77 +329,45 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                     </Popover>
                     <FormMessage />
                   </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="bank_account_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <div className="flex justify-between items-center">
-                      <FormLabel>Bank Account</FormLabel>
-                      <Button type="button" variant="outline" size="sm" onClick={() => setIsBankAccountFormOpen(true)} disabled={!beneficiary}>
-                        <Plus className="mr-2 h-4 w-4" /> Add New
-                      </Button>
-                    </div>
-                    <FormControl>
-                      <div className="space-y-2">
-                        {isLoadingBankAccounts ? (
-                          <div className="flex items-center gap-2 text-muted-foreground text-sm">
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                            <span>Loading accounts...</span>
-                          </div>
-                        ) : bankAccounts.length > 0 ? (
-                          bankAccounts.map(account => (
-                            <div
-                              key={account.id}
-                              onClick={() => field.onChange(account.id)}
-                              className={cn(
-                                "border rounded-lg p-3 cursor-pointer transition-all",
-                                field.value === account.id
-                                  ? "border-primary ring-2 ring-primary ring-offset-2"
-                                  : "hover:border-primary/50"
-                              )}
-                            >
-                              <div className="flex justify-between items-start gap-2">
-                                <div className="flex-grow">
-                                  <p className="font-semibold">{account.bank_name}</p>
-                                  <p className="text-muted-foreground">{account.account_number}</p>
-                                  <p className="text-sm text-muted-foreground">{account.account_name}</p>
-                                </div>
-                                <div className="flex items-center shrink-0">
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      const textToCopy = `${account.bank_name}\n${account.account_number}\n${account.account_name}`;
-                                      navigator.clipboard.writeText(textToCopy);
-                                      toast.success("Bank details copied!");
-                                    }}
-                                  >
-                                    <Copy className="h-4 w-4" />
-                                  </Button>
-                                  {field.value === account.id && (
-                                    <Check className="h-4 w-4 text-primary ml-1" />
-                                  )}
-                                </div>
+                )} />
+              <FormField control={form.control} name="bank_account_id" render={({ field }) => (
+                <FormItem>
+                  <div className="flex justify-between items-center">
+                    <FormLabel>Bank Account</FormLabel>
+                    <Button type="button" variant="outline" size="sm" onClick={() => setIsBankAccountFormOpen(true)} disabled={!beneficiary}>
+                      <Plus className="mr-2 h-4 w-4" /> Add New
+                    </Button>
+                  </div>
+                  <FormControl>
+                    <div className="space-y-2">
+                      {isLoadingBankAccounts ? (
+                        <div className="flex items-center gap-2 text-muted-foreground text-sm"><Loader2 className="h-4 w-4 animate-spin" /><span>Loading accounts...</span></div>
+                      ) : bankAccounts.length > 0 ? (
+                        bankAccounts.map(account => (
+                          <div key={account.id} onClick={() => field.onChange(account.id)} className={cn("border rounded-lg p-3 cursor-pointer transition-all", field.value === account.id ? "border-primary ring-2 ring-primary ring-offset-2" : "hover:border-primary/50")}>
+                            <div className="flex justify-between items-start gap-2">
+                              <div className="flex-grow">
+                                <p className="font-semibold">{account.bank_name}</p>
+                                <p className="text-muted-foreground">{account.account_number}</p>
+                                <p className="text-sm text-muted-foreground">{account.account_name}</p>
+                              </div>
+                              <div className="flex items-center shrink-0">
+                                <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(`${account.bank_name}\n${account.account_number}\n${account.account_name}`); toast.success("Bank details copied!"); }}><Copy className="h-4 w-4" /></Button>
+                                {field.value === account.id && <Check className="h-4 w-4 text-primary ml-1" />}
                               </div>
                             </div>
-                          ))
-                        ) : (
-                          <div className="text-center text-sm text-muted-foreground py-4 border-2 border-dashed rounded-lg">
-                            No bank accounts found for this beneficiary.
                           </div>
-                        )}
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                        ))
+                      ) : (
+                        <div className="text-center text-sm text-muted-foreground py-4 border-2 border-dashed rounded-lg">
+                          No bank accounts found for this beneficiary.
+                        </div>
+                      )}
+                    </div>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
               <FormField control={form.control} name="tf_amount" render={({ field }) => (
                 <FormItem><FormLabel>Total Amount</FormLabel><FormControl><CurrencyInput value={field.value} onChange={field.onChange} /></FormControl><FormMessage /></FormItem>
               )} />
@@ -405,9 +378,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                     <div key={item.id} className="border rounded-lg p-3 space-y-3 bg-muted/50">
                       <div className="flex justify-between items-center">
                         <p className="font-medium text-sm">Term {index + 1}</p>
-                        <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1} className="h-7 w-7">
-                          <X className="h-4 w-4" />
-                        </Button>
+                        <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1} className="h-7 w-7"><X className="h-4 w-4" /></Button>
                       </div>
                       <div className="grid grid-cols-1 gap-4">
                         <FormField control={form.control} name={`payment_terms.${index}.amount`} render={({ field }) => (
@@ -477,25 +448,9 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
           }}
         />
       )}
-      <BeneficiaryTypeDialog
-        open={isBeneficiaryTypeDialogOpen}
-        onOpenChange={setIsBeneficiaryTypeDialogOpen}
-        onSelect={handleSelectBeneficiaryType}
-      />
-      <PersonFormDialog
-        open={isPersonFormOpen}
-        onOpenChange={setIsPersonFormOpen}
-        person={null}
-        initialValues={{ full_name: newBeneficiaryName }}
-        onSuccess={(newPerson) => handleBeneficiaryCreated(newPerson, 'person')}
-      />
-      <CompanyFormDialog
-        open={isCompanyFormOpen}
-        onOpenChange={setIsCompanyFormOpen}
-        company={null}
-        initialValues={{ name: newBeneficiaryName }}
-        onSuccess={(newCompany) => handleBeneficiaryCreated(newCompany, 'company')}
-      />
+      <BeneficiaryTypeDialog open={isBeneficiaryTypeDialogOpen} onOpenChange={setIsBeneficiaryTypeDialogOpen} onSelect={handleSelectBeneficiaryType} />
+      <PersonFormDialog open={isPersonFormOpen} onOpenChange={setIsPersonFormOpen} person={null} initialValues={{ full_name: newBeneficiaryName }} onSuccess={(newPerson) => handleBeneficiaryCreated(newPerson, 'person')} />
+      <CompanyFormDialog open={isCompanyFormOpen} onOpenChange={setIsCompanyFormOpen} company={null} initialValues={{ name: newBeneficiaryName }} onSuccess={(newCompany) => handleBeneficiaryCreated(newCompany, 'company')} />
       <CreateProjectDialog
         open={isCreateProjectDialogOpen}
         onOpenChange={setIsCreateProjectDialogOpen}

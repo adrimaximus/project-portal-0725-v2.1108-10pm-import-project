@@ -52,6 +52,11 @@ const expenseSchema = z.object({
 
 type ExpenseFormValues = z.infer<typeof expenseSchema>;
 
+interface ProjectOption {
+  id: string;
+  name: string;
+}
+
 const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onOpenChange: (open: boolean) => void, expense: Expense | null }) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -69,7 +74,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
   const [isCompanyFormOpen, setIsCompanyFormOpen] = useState(false);
   const [newBeneficiaryName, setNewBeneficiaryName] = useState('');
 
-  const { data: projects = [], isLoading: isLoadingProjects } = useQuery<{id: string, name: string}[]>({
+  const { data: projects = [], isLoading: isLoadingProjects } = useQuery<ProjectOption[]>({
     queryKey: ['projectsForExpenses'],
     queryFn: async () => {
       const { data, error } = await supabase.from('projects').select('id, name');
