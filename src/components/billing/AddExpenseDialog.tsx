@@ -34,6 +34,7 @@ const expenseSchema = z.object({
   payment_terms: z.array(z.object({
     amount: z.number().nullable(),
     date: z.date().optional().nullable(),
+    status: z.string().optional(),
   })).optional(),
   status_expense: z.string().min(1, "Status is required."),
   due_date: z.date().optional().nullable(),
@@ -89,7 +90,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
       project_id: '',
       beneficiary: '',
       tf_amount: 0,
-      payment_terms: [{ amount: null, date: undefined }],
+      payment_terms: [{ amount: null, date: undefined, status: 'Pending' }],
       status_expense: 'Pending',
       due_date: null,
       account_name: '',
@@ -128,6 +129,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
         payment_terms: values.payment_terms?.map(term => ({
             amount: term.amount || 0,
             date: term.date ? term.date.toISOString() : null,
+            status: term.status || 'Pending',
         })).filter(term => term.amount > 0 || term.date),
         status_expense: values.status_expense,
         due_date: values.due_date ? values.due_date.toISOString() : null,
@@ -329,12 +331,33 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                         </FormItem>
                       )}
                     />
+                    <FormField
+                      control={form.control}
+                      name={`payment_terms.${index}.status`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger className="w-[120px]">
+                                <SelectValue placeholder="Status" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="Pending">Pending</SelectItem>
+                              <SelectItem value="Paid">Paid</SelectItem>
+                              <SelectItem value="Rejected">Rejected</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                     <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1}>
                       <X className="h-4 w-4" />
                     </Button>
                   </div>
                 ))}
-                <Button type="button" variant="outline" size="sm" onClick={() => append({ amount: null, date: undefined })}>
+                <Button type="button" variant="outline" size="sm" onClick={() => append({ amount: null, date: undefined, status: 'Pending' })}>
                   <Plus className="mr-2 h-4 w-4" /> Add Term
                 </Button>
               </div>
