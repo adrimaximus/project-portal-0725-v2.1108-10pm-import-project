@@ -24,13 +24,20 @@ type SortableTagColumns = 'name' | 'type' | 'color';
 type SortableGroupColumns = 'name' | 'count';
 type SortDirection = 'asc' | 'desc';
 
+const pleasantColors = [
+  '#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16', '#22c55e', '#10b981',
+  '#14b8a6', '#06b6d4', '#0ea5e9', '#3b82f6', '#6366f1', '#8b5cf6', '#a855f7',
+  '#d946ef', '#ec4899', '#f43f5e'
+];
+const getRandomPleasantColor = () => pleasantColors[Math.floor(Math.random() * pleasantColors.length)];
+
 const TagsSettingsPage = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [mainTab, setMainTab] = useState('tags');
   const [activeTagTab, setActiveTagTab] = useState('personal');
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [tagToEdit, setTagToEdit] = useState<Tag | null>(null);
+  const [tagToEdit, setTagToEdit] = useState<Partial<Tag> | null>(null);
   const [tagToDelete, setTagToDelete] = useState<Tag | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -132,7 +139,7 @@ const TagsSettingsPage = () => {
   });
 
   const handleAddNew = () => {
-    setTagToEdit(null);
+    setTagToEdit({ color: getRandomPleasantColor() });
     setIsFormOpen(true);
   };
 
@@ -144,7 +151,13 @@ const TagsSettingsPage = () => {
   const handleSave = async (tagData: Omit<Tag, 'id' | 'user_id'>) => {
     if (!user) return;
     setIsSaving(true);
-    const userIdForTag = tagToEdit ? tagToEdit.user_id : (activeTagTab === 'global' && isAdmin ? null : user.id);
+    
+    const isEdit = tagToEdit && tagToEdit.id;
+    
+    const userIdForTag = isEdit 
+      ? tagToEdit.user_id 
+      : (activeTagTab === 'global' && isAdmin ? null : user.id);
+
     const upsertData = { ...tagData, user_id: userIdForTag, id: tagToEdit?.id, type: tagData.type || 'general' };
 
     const { error } = await supabase.from('tags').upsert(upsertData);
