@@ -76,7 +76,7 @@ const TaskItem = ({ task, onToggle, isToggling, allUsers }: { task: Task, onTogg
         disabled={isToggling}
       />
       <div className="flex-1 min-w-0 cursor-pointer" onClick={handleTaskClick}>
-        <div className={cn("font-medium text-sm break-all", task.completed && "line-through text-muted-foreground")}>
+        <div className={cn("font-medium text-sm break-words", task.completed && "line-through text-muted-foreground")}>
           <InteractiveText text={task.title} members={allUsers} />
         </div>
         <p className="text-xs text-muted-foreground truncate">{task.project_name}</p>
@@ -187,7 +187,7 @@ const MyTasksWidget = () => {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-4 text-center">
           <div>
             <p className="text-xs text-muted-foreground">Completed Today</p>
@@ -205,7 +205,7 @@ const MyTasksWidget = () => {
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-              <div className="flex items-center gap-4 w-1/3 cursor-help">
+              <div className="flex items-center gap-4 w-full sm:w-1/3 cursor-help">
                 <Progress value={completionPercentage} className="flex-1" />
                 <span className="text-sm font-semibold">{completionPercentage.toFixed(0)}%</span>
               </div>
