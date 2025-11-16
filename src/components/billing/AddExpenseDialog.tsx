@@ -25,6 +25,7 @@ import BankAccountFormDialog from './BankAccountFormDialog';
 import BeneficiaryTypeDialog from './BeneficiaryTypeDialog';
 import PersonFormDialog from '../people/PersonFormDialog';
 import CompanyFormDialog from '../people/CompanyFormDialog';
+import CreateProjectDialog from '../projects/CreateProjectDialog';
 
 interface BankAccount {
   id: string;
@@ -67,11 +68,13 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
   const [isLoadingBankAccounts, setIsLoadingBankAccounts] = useState(false);
   const [isBankAccountFormOpen, setIsBankAccountFormOpen] = useState(false);
   const [beneficiarySearch, setBeneficiarySearch] = useState('');
+  const [projectSearch, setProjectSearch] = useState('');
 
   const [isBeneficiaryTypeDialogOpen, setIsBeneficiaryTypeDialogOpen] = useState(false);
   const [isPersonFormOpen, setIsPersonFormOpen] = useState(false);
   const [isCompanyFormOpen, setIsCompanyFormOpen] = useState(false);
   const [newBeneficiaryName, setNewBeneficiaryName] = useState('');
+  const [isCreateProjectDialogOpen, setIsCreateProjectDialogOpen] = useState(false);
 
   const { data: projects = [], isLoading: isLoadingProjects } = useQuery<Project[]>({
     queryKey: ['projectsForExpenseForm'],
@@ -240,7 +243,6 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
           </DialogHeader>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 max-h-[70vh] overflow-y-auto p-4">
-              {/* Project and Beneficiary selectors */}
               <FormField
                 control={form.control}
                 name="project_id"
@@ -258,12 +260,17 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                       </PopoverTrigger>
                       <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
                         <Command>
-                          <CommandInput placeholder="Search project..." />
+                          <CommandInput placeholder="Search project..." value={projectSearch} onValueChange={setProjectSearch} />
                           <CommandList>
-                            <CommandEmpty>No project found.</CommandEmpty>
+                            <CommandEmpty>
+                              <Button variant="ghost" className="w-full justify-start" onClick={() => { setIsCreateProjectDialogOpen(true); setProjectPopoverOpen(false); }}>
+                                <Plus className="mr-2 h-4 w-4" />
+                                Create "{projectSearch}"
+                              </Button>
+                            </CommandEmpty>
                             <CommandGroup>
                               {projects.map((project) => (
-                                <CommandItem value={project.name} key={project.id} onSelect={() => { form.setValue("project_id", project.id); setProjectPopoverOpen(false); }}>
+                                <CommandItem value={project.name} key={project.id} onSelect={() => { form.setValue("project_id", project.id); setProjectPopoverOpen(false); setProjectSearch(''); }}>
                                   <Check className={cn("mr-2 h-4 w-4", project.id === field.value ? "opacity-100" : "opacity-0")} />
                                   {project.name}
                                 </CommandItem>
@@ -319,7 +326,6 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                   </FormItem>
                 )}
               />
-              {/* Bank Account Selection */}
               <FormField
                 control={form.control}
                 name="bank_account_id"
@@ -389,7 +395,6 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                   </FormItem>
                 )}
               />
-              {/* Rest of the form */}
               <FormField control={form.control} name="tf_amount" render={({ field }) => (
                 <FormItem><FormLabel>Total Amount</FormLabel><FormControl><CurrencyInput value={field.value} onChange={field.onChange} /></FormControl><FormMessage /></FormItem>
               )} />
@@ -490,6 +495,15 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
         company={null}
         initialValues={{ name: newBeneficiaryName }}
         onSuccess={(newCompany) => handleBeneficiaryCreated(newCompany, 'company')}
+      />
+      <CreateProjectDialog
+        open={isCreateProjectDialogOpen}
+        onOpenChange={setIsCreateProjectDialogOpen}
+        initialName={projectSearch}
+        onSuccess={(newProject) => {
+          queryClient.invalidateQueries({ queryKey: ['projectsForExpenseForm'] });
+          form.setValue('project_id', newProject.id);
+        }}
       />
     </>
   );
