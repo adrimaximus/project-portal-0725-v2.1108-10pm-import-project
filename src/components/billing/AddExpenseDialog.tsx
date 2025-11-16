@@ -348,21 +348,21 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                                     </FormItem>
                                   )}
                                 />
-                                <div className="flex items-center border rounded-md w-full bg-background h-10">
-                                  <span className="text-sm pl-3 flex-1">{field.value ? format(field.value, "PPP") : null}</span>
-                                  <Popover>
-                                    <PopoverTrigger asChild>
-                                      <FormControl>
-                                        <Button variant="ghost" size="icon" className="h-8 w-8 mr-1">
-                                          <CalendarIcon className="h-4 w-4" />
-                                        </Button>
-                                      </FormControl>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0" align="start">
-                                      <Calendar mode="single" selected={field.value || undefined} onSelect={field.onChange} initialFocus />
-                                    </PopoverContent>
-                                  </Popover>
+                                <div className="flex items-center border rounded-md flex-1 bg-background h-10">
+                                  <span className="text-sm pl-3 w-full">{field.value ? format(field.value, "PPP") : null}</span>
                                 </div>
+                                <Popover>
+                                  <PopoverTrigger asChild>
+                                    <FormControl>
+                                      <Button variant="outline" size="icon" className="h-10 w-10 shrink-0">
+                                        <CalendarIcon className="h-4 w-4" />
+                                      </Button>
+                                    </FormControl>
+                                  </PopoverTrigger>
+                                  <PopoverContent className="w-auto p-0" align="start">
+                                    <Calendar mode="single" selected={field.value || undefined} onSelect={field.onChange} initialFocus />
+                                  </PopoverContent>
+                                </Popover>
                               </div>
                               <FormMessage />
                             </FormItem>
@@ -374,12 +374,14 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel className="text-xs">Release Date</FormLabel>
-                              <div className="flex items-center border rounded-md w-full bg-background h-10">
-                                <span className="text-sm pl-3 flex-1">{field.value ? format(field.value, "PPP") : null}</span>
+                              <div className="flex gap-1">
+                                <div className="flex items-center border rounded-md flex-1 bg-background h-10">
+                                  <span className="text-sm pl-3 w-full">{field.value ? format(field.value, "PPP") : null}</span>
+                                </div>
                                 <Popover>
                                   <PopoverTrigger asChild>
                                     <FormControl>
-                                      <Button variant="ghost" size="icon" className="h-8 w-8 mr-1">
+                                      <Button variant="outline" size="icon" className="h-10 w-10 shrink-0">
                                         <CalendarIcon className="h-4 w-4" />
                                       </Button>
                                     </FormControl>
