@@ -20,10 +20,12 @@ import { Badge } from "@/components/ui/badge";
 import { Expense } from "@/types";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import AddExpenseDialog from "@/components/billing/AddExpenseDialog";
 
 const ExpensePage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [view, setView] = useState<'table' | 'kanban'>('table');
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
 
   const { data: expenses = [], isLoading } = useQuery<Expense[]>({
     queryKey: ['expenses'],
@@ -123,7 +125,7 @@ const ExpensePage = () => {
             >
               <KanbanSquare className="h-4 w-4" />
             </Button>
-            <Button>
+            <Button onClick={() => setIsAddDialogOpen(true)}>
               <Plus className="mr-2 h-4 w-4" />
               Add New Expense
             </Button>
@@ -256,6 +258,7 @@ const ExpensePage = () => {
           </div>
         )}
       </div>
+      <AddExpenseDialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen} />
     </PortalLayout>
   );
 };
