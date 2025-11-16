@@ -3,7 +3,7 @@ import PortalLayout from "@/components/PortalLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Search, LayoutList, KanbanSquare, Plus } from "lucide-react";
+import { Loader2, Search, LayoutList, KanbanSquare, Plus, MoreHorizontal } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -21,6 +21,12 @@ import { Expense } from "@/types";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import AddExpenseDialog from "@/components/billing/AddExpenseDialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const ExpensePage = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -150,12 +156,13 @@ const ExpensePage = () => {
                     <TableHead>Status</TableHead>
                     <TableHead>Bank Account</TableHead>
                     <TableHead>Remarks</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredExpenses.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="h-24 text-center">
+                      <TableCell colSpan={9} className="h-24 text-center">
                         No expenses found.
                       </TableCell>
                     </TableRow>
@@ -208,6 +215,19 @@ const ExpensePage = () => {
                           ) : '-'}
                         </TableCell>
                         <TableCell>{expense.remarks}</TableCell>
+                        <TableCell className="text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem>Edit</DropdownMenuItem>
+                              <DropdownMenuItem className="text-red-500">Delete</DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
                       </TableRow>
                     ))
                   )}
@@ -238,7 +258,20 @@ const ExpensePage = () => {
                               </Link>
                             </CardDescription>
                           </div>
-                          <Badge variant="outline" className={cn("border-transparent text-xs", getStatusBadgeStyle(expense.status_expense))}>{expense.status_expense}</Badge>
+                          <div className="flex items-center gap-1">
+                            <Badge variant="outline" className={cn("border-transparent text-xs", getStatusBadgeStyle(expense.status_expense))}>{expense.status_expense}</Badge>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-6 w-6">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem>Edit</DropdownMenuItem>
+                                <DropdownMenuItem className="text-red-500">Delete</DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
                         </div>
                       </CardHeader>
                       <CardContent className="space-y-3">
