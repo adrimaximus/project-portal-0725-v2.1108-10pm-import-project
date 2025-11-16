@@ -255,8 +255,8 @@ const ExpensePage = () => {
                           <TableCell>
                             {expense.account_bank ? (
                               <div>
-                                <p className="font-medium">{expense.account_bank.account_name}</p>
-                                <p className="text-sm text-muted-foreground">{expense.account_bank.bank_name} - {expense.account_bank.account_number}</p>
+                                <p className="font-medium">{expense.account_bank.name}</p>
+                                <p className="text-sm text-muted-foreground">{expense.account_bank.bank} - {expense.account_bank.account}</p>
                               </div>
                             ) : '-'}
                           </TableCell>
