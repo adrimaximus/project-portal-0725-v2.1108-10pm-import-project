@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { CalendarIcon, Loader2, Check, ChevronsUpDown } from 'lucide-react';
+import { CalendarIcon, Loader2, Check, ChevronsUpDown, User, Building } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
@@ -46,6 +46,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
   const queryClient = useQueryClient();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [projectPopoverOpen, setProjectPopoverOpen] = useState(false);
+  const [beneficiaryPopoverOpen, setBeneficiaryPopoverOpen] = useState(false);
 
   const { data: projects = [], isLoading: isLoadingProjects } = useQuery<Project[]>({
     queryKey: ['projectsForExpenseForm'],
@@ -53,6 +54,27 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
       const { data, error } = await supabase.from('projects').select('id, name').order('name');
       if (error) throw error;
       return data;
+    },
+    enabled: open,
+  });
+
+  const { data: beneficiaries = [], isLoading: isLoadingBeneficiaries } = useQuery({
+    queryKey: ['beneficiaries'],
+    queryFn: async () => {
+      const { data: people, error: peopleError } = await supabase
+        .from('people')
+        .select('id, full_name');
+      if (peopleError) throw peopleError;
+
+      const { data: companies, error: companiesError } = await supabase
+        .from('companies')
+        .select('id, name');
+      if (companiesError) throw companiesError;
+
+      const formattedPeople = people.map(p => ({ id: `person-${p.id}`, name: p.full_name, type: 'Person' as const }));
+      const formattedCompanies = companies.map(c => ({ id: `company-${c.id}`, name: c.name, type: 'Company' as const }));
+
+      return [...formattedPeople, ...formattedCompanies].sort((a, b) => a.name.localeCompare(b.name));
     },
     enabled: open,
   });
@@ -180,9 +202,65 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                 </FormItem>
               )}
             />
-            <FormField control={form.control} name="beneficiary" render={({ field }) => (
-              <FormItem><FormLabel>Beneficiary</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-            )} />
+            <FormField
+              control={form.control}
+              name="beneficiary"
+              render={({ field }) => (
+                <FormItem className="flex flex-col">
+                  <FormLabel>Beneficiary</FormLabel>
+                  <Popover open={beneficiaryPopoverOpen} onOpenChange={setBeneficiaryPopoverOpen}>
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          className={cn(
+                            "w-full justify-between",
+                            !field.value && "text-muted-foreground"
+                          )}
+                          disabled={isLoadingBeneficiaries}
+                        >
+                          {field.value || "Select a beneficiary"}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                      <Command>
+                        <CommandInput placeholder="Search beneficiary..." />
+                        <CommandList>
+                          <CommandEmpty>No beneficiary found.</CommandEmpty>
+                          <CommandGroup>
+                            {beneficiaries.map((item) => (
+                              <CommandItem
+                                value={item.name}
+                                key={item.id}
+                                onSelect={() => {
+                                  form.setValue("beneficiary", item.name);
+                                  setBeneficiaryPopoverOpen(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    item.name === field.value
+                                      ? "opacity-100"
+                                      : "opacity-0"
+                                  )}
+                                />
+                                {item.type === 'Person' ? <User className="mr-2 h-4 w-4 text-muted-foreground" /> : <Building className="mr-2 h-4 w-4 text-muted-foreground" />}
+                                <span className="flex-grow">{item.name}</span>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <FormField control={form.control} name="tf_amount" render={({ field }) => (
               <FormItem><FormLabel>Amount</FormLabel><FormControl><CurrencyInput value={field.value} onChange={field.onChange} /></FormControl><FormMessage /></FormItem>
             )} />
