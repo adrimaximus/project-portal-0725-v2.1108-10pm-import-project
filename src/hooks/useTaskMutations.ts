@@ -315,10 +315,8 @@ export const useTaskMutations = (refetch?: () => void) => {
       const { error } = await supabase.rpc('mark_task_as_read', { p_task_id: taskId });
       if (error) throw error;
     },
-    onSuccess: (_, taskId) => {
-      queryClient.setQueryData(['unreadTaskIds', user?.id], (old: string[] | undefined) => {
-        return old ? old.filter(id => id !== taskId) : [];
-      });
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['unreadTaskIds', user?.id] });
     },
     onError: (error: any) => {
       console.error("Failed to mark task as read:", error);
