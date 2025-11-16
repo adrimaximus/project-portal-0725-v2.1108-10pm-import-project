@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useState, useMemo } from 'react';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { CalendarIcon, Loader2, Check, ChevronsUpDown, User, Building } from 'lucide-react';
+import { CalendarIcon, Loader2, Check, ChevronsUpDown, User, Building, Plus, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
@@ -20,6 +20,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Project } from '@/types';
 import { CurrencyInput } from '../ui/currency-input';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { Label } from '../ui/label';
 
 interface AddExpenseDialogProps {
   open: boolean;
@@ -30,7 +31,10 @@ const expenseSchema = z.object({
   project_id: z.string().uuid("Please select a project."),
   beneficiary: z.string().min(1, "Beneficiary is required."),
   tf_amount: z.number().min(1, "Amount must be greater than 0."),
-  terms: z.string().optional(),
+  payment_terms: z.array(z.object({
+    amount: z.number().nullable(),
+    date: z.date().optional().nullable(),
+  })).optional(),
   status_expense: z.string().min(1, "Status is required."),
   due_date: z.date().optional().nullable(),
   account_name: z.string().optional(),
@@ -85,7 +89,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
       project_id: '',
       beneficiary: '',
       tf_amount: 0,
-      terms: '',
+      payment_terms: [{ amount: null, date: undefined }],
       status_expense: 'Pending',
       due_date: null,
       account_name: '',
@@ -94,6 +98,20 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
       remarks: '',
     },
   });
+
+  const { control, handleSubmit, watch } = form;
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: "payment_terms",
+  });
+
+  const paymentTerms = watch("payment_terms");
+  const totalAmount = watch("tf_amount");
+
+  const balance = useMemo(() => {
+    const totalPaid = (paymentTerms || []).reduce((sum, term) => sum + (Number(term.amount) || 0), 0);
+    return (totalAmount || 0) - totalPaid;
+  }, [totalAmount, paymentTerms]);
 
   const onSubmit = async (values: ExpenseFormValues) => {
     if (!user) {
@@ -107,7 +125,10 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
         created_by: user.id,
         beneficiary: values.beneficiary,
         tf_amount: values.tf_amount,
-        terms: values.terms,
+        payment_terms: values.payment_terms?.map(term => ({
+            amount: term.amount || 0,
+            date: term.date ? term.date.toISOString() : null,
+        })).filter(term => term.amount > 0 || term.date),
         status_expense: values.status_expense,
         due_date: values.due_date ? values.due_date.toISOString() : null,
         account_bank: {
@@ -262,11 +283,68 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
               )}
             />
             <FormField control={form.control} name="tf_amount" render={({ field }) => (
-              <FormItem><FormLabel>Amount</FormLabel><FormControl><CurrencyInput value={field.value} onChange={field.onChange} /></FormControl><FormMessage /></FormItem>
+              <FormItem><FormLabel>Total Amount</FormLabel><FormControl><CurrencyInput value={field.value} onChange={field.onChange} /></FormControl><FormMessage /></FormItem>
             )} />
-            <FormField control={form.control} name="terms" render={({ field }) => (
-              <FormItem><FormLabel>Terms</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-            )} />
+            
+            <div>
+              <FormLabel>Payment Terms</FormLabel>
+              <div className="space-y-2 mt-2">
+                {fields.map((item, index) => (
+                  <div key={item.id} className="flex items-center gap-2">
+                    <FormField
+                      control={form.control}
+                      name={`payment_terms.${index}.amount`}
+                      render={({ field }) => (
+                        <FormItem className="flex-1">
+                          <FormControl>
+                            <CurrencyInput
+                              value={field.value}
+                              onChange={field.onChange}
+                              placeholder={`Term ${index + 1} Amount`}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name={`payment_terms.${index}.date`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <FormControl>
+                                <Button variant={"outline"} className={cn("w-[150px] pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                                  {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                </Button>
+                              </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar mode="single" selected={field.value || undefined} onSelect={field.onChange} initialFocus />
+                            </PopoverContent>
+                          </Popover>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1}>
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+                <Button type="button" variant="outline" size="sm" onClick={() => append({ amount: null, date: undefined })}>
+                  <Plus className="mr-2 h-4 w-4" /> Add Term
+                </Button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label className="text-right">Balance (Rp)</Label>
+              <Input value={balance.toLocaleString('id-ID')} className="col-span-3 bg-muted" readOnly />
+            </div>
+
             <FormField control={form.control} name="status_expense" render={({ field }) => (
               <FormItem><FormLabel>Status</FormLabel>
                 <Select onValueChange={field.onChange} defaultValue={field.value}>
