@@ -3,7 +3,7 @@ import PortalLayout from "@/components/PortalLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2 } from "lucide-react";
+import { Loader2, Search, LayoutList, KanbanSquare } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -14,12 +14,17 @@ import {
 } from "@/components/ui/table";
 import { format } from "date-fns";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { getAvatarUrl, generatePastelColor, getInitials, cn } from "@/lib/utils";
+import { getAvatarUrl, generatePastelColor, cn } from "@/lib/utils";
 import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Expense } from "@/types";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 const ExpensePage = () => {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [view, setView] = useState<'table' | 'kanban'>('table');
+
   const { data: expenses = [], isLoading } = useQuery<Expense[]>({
     queryKey: ['expenses'],
     queryFn: async () => {
@@ -28,6 +33,34 @@ const ExpensePage = () => {
       return data;
     },
   });
+
+  const filteredExpenses = useMemo(() => {
+    if (!searchTerm) return expenses;
+    return expenses.filter(expense =>
+      expense.project_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      expense.beneficiary.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      expense.status_expense.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (expense.remarks && expense.remarks.toLowerCase().includes(searchTerm.toLowerCase()))
+    );
+  }, [expenses, searchTerm]);
+
+  const { expensesByStatus, orderedStatuses } = useMemo(() => {
+    const statusOrder = ['Pending', 'Paid', 'Rejected'];
+    const grouped = filteredExpenses.reduce((acc, expense) => {
+      const status = expense.status_expense || 'Uncategorized';
+      if (!acc[status]) {
+        acc[status] = [];
+      }
+      acc[status].push(expense);
+      return acc;
+    }, {} as Record<string, Expense[]>);
+
+    const existingStatuses = Object.keys(grouped);
+    const ordered = statusOrder.filter(s => existingStatuses.includes(s));
+    const otherStatuses = existingStatuses.filter(s => !statusOrder.includes(s));
+    
+    return { expensesByStatus: grouped, orderedStatuses: [...ordered, ...otherStatuses] };
+  }, [filteredExpenses]);
 
   const formatCurrency = (amount: number) => new Intl.NumberFormat("id-ID", {
     style: "currency",
@@ -64,75 +97,160 @@ const ExpensePage = () => {
           </p>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>All Expenses</CardTitle>
-            <CardDescription>A list of all recorded expenses across your projects.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Project</TableHead>
-                  <TableHead>Owner</TableHead>
-                  <TableHead>Beneficiary</TableHead>
-                  <TableHead>Amount</TableHead>
-                  <TableHead>Terms</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Due Date</TableHead>
-                  <TableHead>Bank Account</TableHead>
-                  <TableHead>Remarks</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {expenses.length === 0 ? (
+        <div className="flex items-center justify-between gap-2">
+          <div className="relative w-full max-w-sm">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Search by project, beneficiary, etc..."
+              className="pl-8"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant={view === 'table' ? 'secondary' : 'ghost'}
+              size="icon"
+              onClick={() => setView('table')}
+            >
+              <LayoutList className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={view === 'kanban' ? 'secondary' : 'ghost'}
+              size="icon"
+              onClick={() => setView('kanban')}
+            >
+              <KanbanSquare className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+
+        {view === 'table' ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>All Expenses</CardTitle>
+              <CardDescription>A list of all recorded expenses across your projects.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={9} className="h-24 text-center">
-                      No expenses found.
-                    </TableCell>
+                    <TableHead>Project</TableHead>
+                    <TableHead>Owner</TableHead>
+                    <TableHead>Beneficiary</TableHead>
+                    <TableHead>Amount</TableHead>
+                    <TableHead>Terms</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Due Date</TableHead>
+                    <TableHead>Bank Account</TableHead>
+                    <TableHead>Remarks</TableHead>
                   </TableRow>
-                ) : (
-                  expenses.map((expense) => (
-                    <TableRow key={expense.id}>
-                      <TableCell>
-                        <Link to={`/projects/${expense.project_slug}`} className="font-medium text-primary hover:underline">
-                          {expense.project_name}
-                        </Link>
+                </TableHeader>
+                <TableBody>
+                  {filteredExpenses.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={9} className="h-24 text-center">
+                        No expenses found.
                       </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Avatar className="h-8 w-8">
+                    </TableRow>
+                  ) : (
+                    filteredExpenses.map((expense) => (
+                      <TableRow key={expense.id}>
+                        <TableCell>
+                          <Link to={`/projects/${expense.project_slug}`} className="font-medium text-primary hover:underline">
+                            {expense.project_name}
+                          </Link>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Avatar className="h-8 w-8">
+                              <AvatarImage src={getAvatarUrl(expense.project_owner.avatar_url, expense.project_owner.id)} />
+                              <AvatarFallback style={generatePastelColor(expense.project_owner.id)}>
+                                {expense.project_owner.initials}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="font-medium">{expense.project_owner.name}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>{expense.beneficiary}</TableCell>
+                        <TableCell>{formatCurrency(expense.tf_amount)}</TableCell>
+                        <TableCell>{expense.terms}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className={cn("border-transparent", getStatusBadgeStyle(expense.status_expense))}>{expense.status_expense}</Badge>
+                        </TableCell>
+                        <TableCell>{expense.due_date ? format(new Date(expense.due_date), 'MMM dd, yyyy') : '-'}</TableCell>
+                        <TableCell>
+                          {expense.account_bank ? (
+                            <div>
+                              <p className="font-medium">{expense.account_bank.name}</p>
+                              <p className="text-sm text-muted-foreground">{expense.account_bank.bank} - {expense.account_bank.account}</p>
+                            </div>
+                          ) : '-'}
+                        </TableCell>
+                        <TableCell>{expense.remarks}</TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
+            {orderedStatuses.map(status => (
+              <div key={status} className="flex flex-col gap-4">
+                <div className="flex items-center gap-2 px-1">
+                  <h2 className="font-semibold text-lg capitalize">{status}</h2>
+                  <Badge variant="secondary" className="rounded-full">
+                    {expensesByStatus[status]?.length || 0}
+                  </Badge>
+                </div>
+                <div className="flex flex-col gap-4 rounded-lg">
+                  {(expensesByStatus[status] || []).map(expense => (
+                    <Card key={expense.id}>
+                      <CardHeader className="pb-4">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <CardTitle className="text-base font-semibold">{expense.beneficiary}</CardTitle>
+                            <CardDescription>
+                              <Link to={`/projects/${expense.project_slug}`} className="hover:underline text-primary text-sm">
+                                {expense.project_name}
+                              </Link>
+                            </CardDescription>
+                          </div>
+                          <Badge variant="outline" className={cn("border-transparent text-xs", getStatusBadgeStyle(expense.status_expense))}>{expense.status_expense}</Badge>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        <p className="font-bold text-xl">{formatCurrency(expense.tf_amount)}</p>
+                        {expense.due_date && (
+                          <p className="text-sm text-muted-foreground">
+                            Due: {format(new Date(expense.due_date), 'MMM dd, yyyy')}
+                          </p>
+                        )}
+                        <div className="flex items-center gap-2 pt-2">
+                          <Avatar className="h-6 w-6">
                             <AvatarImage src={getAvatarUrl(expense.project_owner.avatar_url, expense.project_owner.id)} />
-                            <AvatarFallback style={generatePastelColor(expense.project_owner.id)}>
+                            <AvatarFallback style={generatePastelColor(expense.project_owner.id)} className="text-xs">
                               {expense.project_owner.initials}
                             </AvatarFallback>
                           </Avatar>
-                          <span className="font-medium">{expense.project_owner.name}</span>
+                          <span className="text-sm font-medium">{expense.project_owner.name}</span>
                         </div>
-                      </TableCell>
-                      <TableCell>{expense.beneficiary}</TableCell>
-                      <TableCell>{formatCurrency(expense.tf_amount)}</TableCell>
-                      <TableCell>{expense.terms}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className={cn("border-transparent", getStatusBadgeStyle(expense.status_expense))}>{expense.status_expense}</Badge>
-                      </TableCell>
-                      <TableCell>{expense.due_date ? format(new Date(expense.due_date), 'MMM dd, yyyy') : '-'}</TableCell>
-                      <TableCell>
-                        {expense.account_bank ? (
-                          <div>
-                            <p className="font-medium">{expense.account_bank.name}</p>
-                            <p className="text-sm text-muted-foreground">{expense.account_bank.bank} - {expense.account_bank.account}</p>
-                          </div>
-                        ) : '-'}
-                      </TableCell>
-                      <TableCell>{expense.remarks}</TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+                      </CardContent>
+                    </Card>
+                  ))}
+                  {(!expensesByStatus[status] || expensesByStatus[status].length === 0) && (
+                    <div className="text-center text-muted-foreground py-8 px-4 border-2 border-dashed rounded-lg">
+                      No expenses in this category.
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </PortalLayout>
   );
