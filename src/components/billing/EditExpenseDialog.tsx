@@ -221,6 +221,10 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
     }
   };
 
+  const nameParts = newBeneficiaryName.split(' ');
+  const firstName = nameParts[0] || '';
+  const lastName = nameParts.slice(1).join(' ') || '';
+
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -412,7 +416,10 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
           ownerType={beneficiary.type}
           onSuccess={(newAccountId) => {
             const fetchNewAccounts = async () => {
-              const { data, error } = await supabase.from('bank_accounts').select('id, account_name, account_number, bank_name').eq('owner_id', beneficiary.id).eq('owner_type', beneficiary.type);
+              const { data, error } = await supabase.rpc('get_beneficiary_bank_accounts', {
+                p_owner_id: beneficiary!.id,
+                p_owner_type: beneficiary!.type,
+              });
               if (data) {
                 setBankAccounts(data);
                 setValue('bank_account_id', newAccountId);
@@ -423,7 +430,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
         />
       )}
       <BeneficiaryTypeDialog open={isBeneficiaryTypeDialogOpen} onOpenChange={setIsBeneficiaryTypeDialogOpen} onSelect={handleSelectBeneficiaryType} />
-      <PersonFormDialog open={isPersonFormOpen} onOpenChange={setIsPersonFormOpen} person={null} initialValues={{ full_name: newBeneficiaryName }} onSuccess={(newPerson) => handleBeneficiaryCreated(newPerson, 'person')} />
+      <PersonFormDialog open={isPersonFormOpen} onOpenChange={setIsPersonFormOpen} person={null} initialValues={{ first_name: firstName, last_name: lastName }} onSuccess={(newPerson) => handleBeneficiaryCreated(newPerson, 'person')} />
       <CompanyFormDialog open={isCompanyFormOpen} onOpenChange={setIsCompanyFormOpen} company={null} initialValues={{ name: newBeneficiaryName }} onSuccess={(newCompany) => handleBeneficiaryCreated(newCompany, 'company')} />
     </>
   );
