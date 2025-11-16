@@ -75,11 +75,11 @@ const TaskItem = ({ task, onToggle, isToggling, allUsers }: { task: Task, onTogg
         onClick={(e) => e.stopPropagation()}
         disabled={isToggling}
       />
-      <div className="flex-1 min-w-0 cursor-pointer relative pb-4 sm:pb-0 overflow-hidden" onClick={handleTaskClick}>
+      <div className="flex-grow w-0 min-w-0 cursor-pointer relative pb-4 sm:pb-0 overflow-hidden" onClick={handleTaskClick}>
         <div className={cn("font-medium text-sm break-all", task.completed && "line-through text-muted-foreground")}>
           <InteractiveText text={task.title} members={allUsers} />
         </div>
-        <p className="text-xs text-muted-foreground truncate">{task.project_name}</p>
+        <p className="text-sm text-muted-foreground truncate">{task.project_name}</p>
         <div className="flex items-center flex-wrap gap-2 mt-2">
           {displayPriority && (
             <Badge className={cn(getPriorityStyles(displayPriority).tw, 'text-xs')}>{displayPriority}</Badge>
