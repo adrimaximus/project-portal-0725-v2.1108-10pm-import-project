@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
@@ -7,12 +7,14 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Loader2 } from 'lucide-react';
+import { Loader2, X, PlusCircle } from 'lucide-react';
 import { CustomProperty, CUSTOM_PROPERTY_TYPES } from '@/types';
+import { Label } from '@/components/ui/label';
 
 const createPropertySchema = (properties: CustomProperty[], property: CustomProperty | null) => z.object({
   label: z.string().min(1, 'Label is required'),
   type: z.enum(CUSTOM_PROPERTY_TYPES),
+  options: z.array(z.object({ value: z.string() })).optional(),
 }).superRefine((data, ctx) => {
   const machineName = data.label.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
   if (properties.some(p => p.name === machineName && p.id !== property?.id)) {
@@ -22,6 +24,15 @@ const createPropertySchema = (properties: CustomProperty[], property: CustomProp
       path: ['label'],
     });
   }
+  if (data.type === 'select') {
+    if (!data.options || data.options.length === 0 || data.options.every(opt => opt.value.trim() === '')) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'For "Select" type, at least one option with a value is required.',
+        path: ['options'],
+      });
+    }
+  }
 });
 
 export type PropertyFormValues = z.infer<ReturnType<typeof createPropertySchema>>;
@@ -30,7 +41,7 @@ interface PropertyFormDialogProps {
   open: boolean;
   onOpenChange: (isOpen: boolean) => void;
   property: CustomProperty | null;
-  onSave: (data: PropertyFormValues) => void;
+  onSave: (data: Omit<PropertyFormValues, 'options'> & { options?: string[] | null }) => void;
   isSaving: boolean;
   properties: CustomProperty[];
 }
@@ -43,8 +54,13 @@ const PropertyFormDialog = ({ open, onOpenChange, property, onSave, isSaving, pr
     defaultValues: {
       label: '',
       type: 'text',
+      options: [{ value: '' }],
     },
   });
+
+  const { register, handleSubmit, control, watch, formState: { errors } } = form;
+  const { fields, append, remove } = useFieldArray({ control, name: 'options' });
+  const propertyType = watch('type');
 
   useEffect(() => {
     if (open) {
@@ -52,12 +68,20 @@ const PropertyFormDialog = ({ open, onOpenChange, property, onSave, isSaving, pr
         form.reset({
           label: property.label,
           type: property.type,
+          options: property.options?.map(o => ({ value: o })) || [{ value: '' }],
         });
       } else {
-        form.reset({ label: '', type: 'text' });
+        form.reset({ label: '', type: 'text', options: [{ value: '' }] });
       }
     }
   }, [property, open, form]);
+
+  const onSubmit = (values: PropertyFormValues) => {
+    onSave({
+      ...values,
+      options: values.options?.map(o => o.value).filter(Boolean) || null,
+    });
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -69,7 +93,7 @@ const PropertyFormDialog = ({ open, onOpenChange, property, onSave, isSaving, pr
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSave)} className="space-y-4 py-4">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-4">
             <FormField
               control={form.control}
               name="label"
@@ -101,6 +125,31 @@ const PropertyFormDialog = ({ open, onOpenChange, property, onSave, isSaving, pr
                 </FormItem>
               )}
             />
+
+            {propertyType === 'select' && (
+              <div>
+                <Label>Options</Label>
+                {fields.map((field, index) => (
+                  <div key={field.id} className="mb-2">
+                    <div className="flex items-center gap-2">
+                      <Input {...register(`options.${index}.value`)} />
+                      <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1}>
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    {errors.options?.[index]?.value && (
+                      <p className="text-sm text-destructive mt-1">{(errors.options[index] as any).value.message}</p>
+                    )}
+                  </div>
+                ))}
+                <Button type="button" variant="outline" size="sm" onClick={() => append({ value: '' })}>
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Add Option
+                </Button>
+                {errors.options && !Array.isArray(errors.options) && <p className="text-sm text-destructive mt-1">{errors.options.message}</p>}
+              </div>
+            )}
+
             <DialogFooter>
               <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
               <Button type="submit" disabled={isSaving}>
