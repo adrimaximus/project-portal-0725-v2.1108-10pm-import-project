@@ -71,9 +71,9 @@ export function getPriorityStyles(priority?: TaskPriority | null) {
 export function getTaskStatusStyles(status?: TaskStatus | null) {
   switch (status) {
     case 'To do':
-      return { tw: 'bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-200', hex: '#9ca3af' };
+      return { tw: 'bg-sky-100 text-sky-800 dark:bg-sky-900/50 dark:text-sky-300', hex: '#0ea5e9' };
     case 'In progress':
-      return { tw: 'bg-blue-200 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300', hex: '#3b82f6' };
+      return { tw: 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300', hex: '#3b82f6' };
     case 'In review':
       return { tw: 'bg-purple-200 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300', hex: '#8b5cf6' };
     case 'Done':
