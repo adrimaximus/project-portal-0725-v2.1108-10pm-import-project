@@ -3,7 +3,7 @@ import PortalLayout from "@/components/PortalLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Search, LayoutList, KanbanSquare } from "lucide-react";
+import { Loader2, Search, LayoutList, KanbanSquare, Plus } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -122,6 +122,10 @@ const ExpensePage = () => {
               onClick={() => setView('kanban')}
             >
               <KanbanSquare className="h-4 w-4" />
+            </Button>
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              Add New Expense
             </Button>
           </div>
         </div>
