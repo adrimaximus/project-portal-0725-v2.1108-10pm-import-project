@@ -525,3 +525,24 @@ export interface Invoice {
   payment_terms: any[];
   last_billing_reminder_sent_at: string | null;
 }
+
+export interface Expense {
+  id: string;
+  project_id: string;
+  project_name: string;
+  project_slug: string;
+  project_owner: {
+    id: string;
+    name: string;
+    avatar_url: string;
+    initials: string;
+  };
+  beneficiary: string;
+  tf_amount: number;
+  terms: string;
+  status_expense: string;
+  due_date: string;
+  account_bank: { name: string; account: string; bank: string };
+  remarks: string;
+  created_at: string;
+}

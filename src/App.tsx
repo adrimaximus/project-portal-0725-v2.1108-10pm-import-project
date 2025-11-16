@@ -10,6 +10,7 @@ import MoodTracker from "./pages/MoodTracker";
 import Goals from "./pages/Goals";
 import GoalDetail from "./pages/GoalDetailPage";
 import Billing from "./pages/Billing";
+import ExpensePage from "./pages/Expense";
 import People from "./pages/PeoplePage";
 import PersonProfile from "./pages/people/PersonProfilePage";
 import CompanyProfilePage from "./pages/CompanyProfilePage";
@@ -86,6 +87,7 @@ function App() {
               <Route path="/goals" element={<Goals />} />
               <Route path="/goals/:slug" element={<GoalDetail />} />
               <Route path="/billing" element={<Billing />} />
+              <Route path="/expense" element={<ExpensePage />} />
               <Route path="/people" element={<People />} />
               <Route path="/people/:slug" element={<PersonProfile />} />
               <Route path="/companies/:slug" element={<CompanyProfilePage />} />
