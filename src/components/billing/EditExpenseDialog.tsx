@@ -10,13 +10,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { CalendarIcon, Loader2, Check, ChevronsUpDown, User, Building, Plus, X, Copy } from 'lucide-react';
+import { CalendarIcon, Loader2, Check, ChevronsUpDown, User, Building, Plus, X, Copy, Briefcase } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Project, Person, Company, Expense } from '@/types';
 import { CurrencyInput } from '../ui/currency-input';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
@@ -35,6 +35,7 @@ interface BankAccount {
 }
 
 const expenseSchema = z.object({
+  project_id: z.string().uuid("Project is required."),
   beneficiary: z.string().min(1, "Beneficiary is required."),
   tf_amount: z.number().min(1, "Amount must be greater than 0."),
   payment_terms: z.array(z.object({
@@ -55,6 +56,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [projectPopoverOpen, setProjectPopoverOpen] = useState(false);
   const [beneficiaryPopoverOpen, setBeneficiaryPopoverOpen] = useState(false);
   const [beneficiary, setBeneficiary] = useState<{ id: string, name: string, type: 'person' | 'company' } | null>(null);
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
@@ -66,6 +68,16 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
   const [isPersonFormOpen, setIsPersonFormOpen] = useState(false);
   const [isCompanyFormOpen, setIsCompanyFormOpen] = useState(false);
   const [newBeneficiaryName, setNewBeneficiaryName] = useState('');
+
+  const { data: projects = [], isLoading: isLoadingProjects } = useQuery<Project[]>({
+    queryKey: ['projectsForExpenses'],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('get_dashboard_projects');
+      if (error) throw error;
+      return data;
+    },
+    enabled: open,
+  });
 
   const { data: beneficiaries = [], isLoading: isLoadingBeneficiaries } = useQuery({
     queryKey: ['beneficiaries'],
@@ -97,12 +109,13 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
   }, [totalAmount, paymentTerms]);
 
   useEffect(() => {
-    if (expense && beneficiaries.length > 0) {
+    if (expense && beneficiaries.length > 0 && projects.length > 0) {
       const foundBeneficiary = beneficiaries.find(b => b.name === expense.beneficiary);
       if (foundBeneficiary) {
         setBeneficiary(foundBeneficiary);
       }
       reset({
+        project_id: expense.project_id,
         beneficiary: expense.beneficiary,
         tf_amount: expense.tf_amount,
         status_expense: expense.status_expense,
@@ -115,7 +128,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
         bank_account_id: (expense as any).bank_account_id || null,
       });
     }
-  }, [expense, beneficiaries, reset, open]);
+  }, [expense, beneficiaries, projects, reset, open]);
 
   useEffect(() => {
     const fetchBankAccounts = async () => {
@@ -165,6 +178,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
       const bankDetails = selectedAccount ? { name: selectedAccount.account_name, account: selectedAccount.account_number, bank: selectedAccount.bank_name } : null;
 
       const { error } = await supabase.from('expenses').update({
+        project_id: values.project_id,
         beneficiary: values.beneficiary,
         tf_amount: values.tf_amount,
         payment_terms: values.payment_terms?.map(term => ({
@@ -198,7 +212,44 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
             <DialogDescription>Update the details for this expense record.</DialogDescription>
           </DialogHeader>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 max-h-[70vh] overflow-y-auto p-4">
+            <form id="expense-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 max-h-[70vh] overflow-y-auto p-4">
+              <FormField
+                control={form.control}
+                name="project_id"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Project</FormLabel>
+                    <Popover open={projectPopoverOpen} onOpenChange={setProjectPopoverOpen}>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button variant="outline" role="combobox" className={cn("w-full justify-between", !field.value && "text-muted-foreground")} disabled={isLoadingProjects}>
+                            {field.value ? projects.find((project) => project.id === field.value)?.name : "Select a project"}
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                        <Command>
+                          <CommandInput placeholder="Search project..." />
+                          <CommandList>
+                            <CommandEmpty>No project found.</CommandEmpty>
+                            <CommandGroup>
+                              {projects.map((project) => (
+                                <CommandItem value={project.name} key={project.id} onSelect={() => { form.setValue("project_id", project.id); setProjectPopoverOpen(false); }}>
+                                  <Check className={cn("mr-2 h-4 w-4", project.id === field.value ? "opacity-100" : "opacity-0")} />
+                                  <Briefcase className="mr-2 h-4 w-4 text-muted-foreground" />
+                                  {project.name}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <FormField control={form.control} name="beneficiary" render={({ field }) => (
                 <FormItem className="flex flex-col">
                   <FormLabel>Beneficiary</FormLabel>
@@ -320,15 +371,15 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
               <FormField control={form.control} name="remarks" render={({ field }) => (
                 <FormItem><FormLabel>Remarks</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
               )} />
-              <DialogFooter className="pt-4">
-                <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button>
-                <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Save Changes
-                </Button>
-              </DialogFooter>
             </form>
           </Form>
+          <DialogFooter className="pt-4">
+            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button>
+            <Button type="submit" form="expense-form" disabled={isSubmitting}>
+              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Save Changes
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
       {beneficiary && (
