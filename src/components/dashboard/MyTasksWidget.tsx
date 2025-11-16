@@ -75,7 +75,7 @@ const TaskItem = ({ task, onToggle, isToggling, allUsers }: { task: Task, onTogg
         onClick={(e) => e.stopPropagation()}
         disabled={isToggling}
       />
-      <div className="flex-grow w-0 min-w-0 cursor-pointer relative pb-4 sm:pb-0 overflow-hidden" onClick={handleTaskClick}>
+      <div className="flex-grow w-0 min-w-0 cursor-pointer overflow-hidden" onClick={handleTaskClick}>
         <div className={cn("font-medium text-sm break-word", task.completed && "line-through text-muted-foreground")}>
           <InteractiveText text={task.title} members={allUsers} />
         </div>
@@ -84,7 +84,7 @@ const TaskItem = ({ task, onToggle, isToggling, allUsers }: { task: Task, onTogg
           {displayPriority && (
             <Badge className={cn(getPriorityStyles(displayPriority).tw, 'text-xs')}>{displayPriority}</Badge>
           )}
-          {dueDateText && <span className={`hidden sm:inline text-xs font-medium ${dueDateColor}`}>{dueDateText}</span>}
+          {dueDateText && <span className={`text-xs font-medium ${dueDateColor}`}>{dueDateText}</span>}
           <div className="flex -space-x-2">
             {task.assignedTo?.slice(0, 2).map(user => (
               <TooltipProvider key={user.id}>
@@ -101,7 +101,6 @@ const TaskItem = ({ task, onToggle, isToggling, allUsers }: { task: Task, onTogg
             ))}
           </div>
         </div>
-        {dueDateText && <span className={`sm:hidden absolute bottom-0 right-0 text-xs font-medium ${dueDateColor}`}>{dueDateText}</span>}
       </div>
     </div>
   );
