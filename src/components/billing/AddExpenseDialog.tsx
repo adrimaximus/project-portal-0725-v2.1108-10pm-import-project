@@ -325,9 +325,9 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                                     className="h-8 w-8"
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      const textToCopy = `Bank: ${account.bank_name}\nNo. Rekening: ${account.account_number}\nAtas Nama: ${account.account_name}`;
+                                      const textToCopy = `Bank: ${account.bank_name}\nAccount Number: ${account.account_number}\nAccount Name: ${account.account_name}`;
                                       navigator.clipboard.writeText(textToCopy);
-                                      toast.success("Detail bank telah disalin!");
+                                      toast.success("Bank details copied!");
                                     }}
                                   >
                                     <Copy className="h-4 w-4" />
