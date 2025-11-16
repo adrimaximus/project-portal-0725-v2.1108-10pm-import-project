@@ -39,6 +39,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
+import ExpenseKanbanView from "@/components/billing/ExpenseKanbanView";
 
 const ExpensePage = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -89,7 +90,7 @@ const ExpensePage = () => {
   }, [expenses, searchTerm]);
 
   const { expensesByStatus, orderedStatuses } = useMemo(() => {
-    const statusOrder = ['Pending', 'Paid', 'Rejected'];
+    const statusOrder = ['Proposed', 'Reviewed', 'Approved', 'Paid', 'Rejected'];
     const grouped = filteredExpenses.reduce((acc, expense) => {
       const status = expense.status_expense || 'Uncategorized';
       if (!acc[status]) {
@@ -321,83 +322,12 @@ const ExpensePage = () => {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
-            {orderedStatuses.map(status => (
-              <div key={status} className="flex flex-col gap-4">
-                <div className="flex items-center gap-2 px-1">
-                  <h2 className="font-semibold text-lg capitalize">{status}</h2>
-                  <Badge variant="secondary" className="rounded-full">
-                    {expensesByStatus[status]?.length || 0}
-                  </Badge>
-                </div>
-                <div className="flex flex-col gap-4 rounded-lg">
-                  {(expensesByStatus[status] || []).map(expense => (
-                    <Card key={expense.id}>
-                      <CardHeader className="pb-4">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <CardTitle className="text-base font-semibold">{expense.beneficiary}</CardTitle>
-                            <CardDescription>
-                              <Link to={`/projects/${expense.project_slug}`} className="hover:underline text-primary text-sm">
-                                {expense.project_name}
-                              </Link>
-                            </CardDescription>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Badge variant="outline" className={cn("border-transparent text-xs", getStatusBadgeStyle(expense.status_expense))}>{expense.status_expense}</Badge>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-6 w-6">
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem onSelect={() => setEditingExpense(expense)}>
-                                  <Edit className="mr-2 h-4 w-4" /> Edit
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onSelect={() => setExpenseToDelete(expense)} className="text-destructive">
-                                  <Trash2 className="mr-2 h-4 w-4" /> Delete
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="space-y-3">
-                        <p className="font-bold text-xl">{formatCurrency(expense.tf_amount)}</p>
-                        {(expense as any).payment_terms && (expense as any).payment_terms.length > 1 && (
-                          <div className="text-xs text-muted-foreground space-y-1 border-t pt-2">
-                            {(expense as any).payment_terms.map((term: any, index: number) => (
-                              <div key={index} className="flex items-center justify-between">
-                                <span>Term {index + 1}: {formatCurrency(term.amount || 0)}</span>
-                                <span className={cn("font-semibold", getStatusBadgeStyle(term.status || 'Pending').replace(/bg-\S+\s?/g, '').replace(/border-\S+\s?/g, ''))}>
-                                  {term.status || 'Pending'}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                        <div className="flex items-center gap-2 pt-2">
-                          <Avatar className="h-6 w-6">
-                            <AvatarImage src={getAvatarUrl(expense.project_owner.avatar_url, expense.project_owner.id)} />
-                            <AvatarFallback style={generatePastelColor(expense.project_owner.id)} className="text-xs">
-                              {expense.project_owner.initials}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span className="text-sm font-medium">{expense.project_owner.name}</span>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                  {(!expensesByStatus[status] || expensesByStatus[status].length === 0) && (
-                    <div className="text-center text-muted-foreground py-8 px-4 border-2 border-dashed rounded-lg">
-                      No expenses in this category.
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
+          <ExpenseKanbanView
+            expenses={filteredExpenses}
+            statuses={orderedStatuses}
+            onEditExpense={setEditingExpense}
+            onDeleteExpense={setExpenseToDelete}
+          />
         )}
       </div>
       <AddExpenseDialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen} />
