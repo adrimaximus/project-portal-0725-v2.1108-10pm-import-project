@@ -190,25 +190,47 @@ const ExpensePage = () => {
                         <TableCell>{formatCurrency(expense.tf_amount)}</TableCell>
                         <TableCell>
                           {(expense as any).payment_terms && (expense as any).payment_terms.length > 0 ? (
-                            <div className="flex flex-col gap-2">
-                              {(expense as any).payment_terms.map((term: any, index: number) => (
-                                <div key={index} className="text-xs">
-                                  {(expense as any).payment_terms.length > 1 && (
-                                    <p className="font-medium mb-1">Term {index + 1}</p>
-                                  )}
-                                  <div className="flex items-center justify-between gap-2">
-                                    <span>{formatCurrency(term.amount || 0)}</span>
-                                    <Badge variant="outline" className={cn("border-transparent text-xs whitespace-nowrap", getStatusBadgeStyle(term.status || 'Pending'))}>
-                                      {term.status || 'Pending'}
-                                    </Badge>
+                            <div className="flex flex-col">
+                              {(expense as any).payment_terms.map((term: any, index: number) => {
+                                const isMultiTerm = (expense as any).payment_terms.length > 1;
+                                return (
+                                  <div key={index} className={cn("text-xs", index > 0 && "border-t pt-2 mt-2")}>
+                                    {isMultiTerm ? (
+                                      <>
+                                        <div className="flex items-center gap-2 font-medium">
+                                          <span>Term {index + 1}</span>
+                                          <span className="text-muted-foreground">|</span>
+                                          <span>{formatCurrency(term.amount || 0)}</span>
+                                        </div>
+                                        {term.request_date && (
+                                          <p className="text-muted-foreground text-xs mt-0.5">
+                                            {term.request_type || 'Due'}: {format(new Date(term.request_date), "dd MMM yyyy")}
+                                          </p>
+                                        )}
+                                        <div className="mt-1">
+                                          <Badge variant="outline" className={cn("border-transparent text-xs whitespace-nowrap", getStatusBadgeStyle(term.status || 'Pending'))}>
+                                            {term.status || 'Pending'}
+                                          </Badge>
+                                        </div>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <div className="flex items-center justify-between gap-2">
+                                          <span>{formatCurrency(term.amount || 0)}</span>
+                                          <Badge variant="outline" className={cn("border-transparent text-xs whitespace-nowrap", getStatusBadgeStyle(term.status || 'Pending'))}>
+                                            {term.status || 'Pending'}
+                                          </Badge>
+                                        </div>
+                                        {term.request_date && (
+                                          <p className="text-muted-foreground text-xs mt-0.5">
+                                            {term.request_type || 'Due'}: {format(new Date(term.request_date), "dd MMM yyyy")}
+                                          </p>
+                                        )}
+                                      </>
+                                    )}
                                   </div>
-                                  {term.request_date && (
-                                    <p className="text-muted-foreground text-xs mt-0.5">
-                                      {term.request_type || 'Due'}: {format(new Date(term.request_date), "dd MMM yyyy")}
-                                    </p>
-                                  )}
-                                </div>
-                              ))}
+                                );
+                              })}
                             </div>
                           ) : (
                             '-'
