@@ -193,7 +193,11 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
         let href: string;
         let badge;
 
-        if (item.type === 'multi_embed') {
+        const itemNameLower = item.name.toLowerCase();
+
+        if (itemNameLower === 'tasks') {
+          href = unreadTaskIds.length > 0 ? '/projects?view=tasks&sort=unread' : '/projects?view=tasks';
+        } else if (item.type === 'multi_embed') {
           href = `/multipage/${item.slug}`;
         } else if (item.url.startsWith('/')) {
           href = item.url;
@@ -207,12 +211,8 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
           href = '/dashboard';
         }
 
-        const itemNameLower = item.name.toLowerCase();
         if (itemNameLower === 'projects') {
             href = '/projects?view=list';
-        }
-        if (itemNameLower === 'tasks') {
-            href = '/projects?view=tasks';
         }
         if (itemNameLower === 'knowledge base' && href !== '/knowledge-base') {
             href = '/knowledge-base';

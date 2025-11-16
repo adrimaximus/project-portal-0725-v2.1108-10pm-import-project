@@ -64,7 +64,7 @@ const ProjectsPage = () => {
     hasNextPage, 
     isFetchingNextPage,
     refetch: refetchProjects 
-  } = useProjects({ fetchAll: false });
+  } = useProjects({ fetchAll: true });
 
   const projectsData = useMemo(() => data?.pages.flatMap(page => page.projects) ?? [], [data]);
   
@@ -221,6 +221,23 @@ const ProjectsPage = () => {
     );
   }, [tasksData, searchTerm, advancedFilters.ownerIds, advancedFilters.memberIds]);
 
+  const finalSortedTasks = useMemo(() => {
+    const sortParam = searchParams.get('sort');
+    if (sortParam === 'unread' && unreadTaskIds.length > 0) {
+      const unread: ProjectTask[] = [];
+      const read: ProjectTask[] = [];
+      for (const task of filteredTasks) {
+        if (unreadTaskIds.includes(task.id)) {
+          unread.push(task);
+        } else {
+          read.push(task);
+        }
+      }
+      return [...unread, ...read];
+    }
+    return filteredTasks;
+  }, [filteredTasks, searchParams, unreadTaskIds]);
+
   const deleteProjectMutation = useMutation({
     mutationFn: async (projectId: string) => {
       const { error } = await supabase.from('projects').delete().eq('id', projectId);
@@ -371,7 +388,7 @@ const ProjectsPage = () => {
             <ProjectViewContainer
               view={view}
               projects={sortedProjects}
-              tasks={filteredTasks}
+              tasks={finalSortedTasks}
               isLoading={isLoadingProjects && !projectsData.length}
               isTasksLoading={isLoadingTasks}
               onDeleteProject={handleDeleteProject}
