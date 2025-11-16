@@ -75,14 +75,12 @@ const TaskItem = ({ task, onToggle, isToggling, allUsers }: { task: Task, onTogg
         onClick={(e) => e.stopPropagation()}
         disabled={isToggling}
       />
-      <div className="flex flex-wrap justify-between items-center flex-1 gap-2">
-        <div className="flex-1 min-w-0 cursor-pointer" onClick={handleTaskClick}>
-          <div className={cn("font-medium text-sm", task.completed && "line-through text-muted-foreground")}>
-            <InteractiveText text={task.title} members={allUsers} />
-          </div>
-          <p className="text-xs text-muted-foreground truncate">{task.project_name}</p>
+      <div className="flex-1 min-w-0 cursor-pointer" onClick={handleTaskClick}>
+        <div className={cn("font-medium text-sm", task.completed && "line-through text-muted-foreground")}>
+          <InteractiveText text={task.title} members={allUsers} />
         </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
+        <p className="text-xs text-muted-foreground truncate">{task.project_name}</p>
+        <div className="flex items-center gap-2 flex-shrink-0 mt-2">
           {displayPriority && (
             <Badge className={cn(getPriorityStyles(displayPriority).tw, 'text-xs')}>{displayPriority}</Badge>
           )}
