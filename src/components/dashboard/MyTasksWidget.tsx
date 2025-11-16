@@ -80,26 +80,28 @@ const TaskItem = ({ task, onToggle, isToggling, allUsers }: { task: Task, onTogg
           <InteractiveText text={task.title} members={allUsers} />
         </div>
         <p className="text-sm text-muted-foreground truncate">{task.project_name}</p>
-        <div className="flex items-center flex-wrap gap-2 mt-2">
-          {displayPriority && (
-            <Badge className={cn(getPriorityStyles(displayPriority).tw, 'text-xs')}>{displayPriority}</Badge>
-          )}
-          {dueDateText && <span className={`text-xs font-medium ${dueDateColor}`}>{dueDateText}</span>}
-          <div className="flex -space-x-2">
-            {task.assignedTo?.slice(0, 2).map(user => (
-              <TooltipProvider key={user.id}>
-                <Tooltip>
-                  <TooltipTrigger>
-                    <Avatar className="h-6 w-6 border-2 border-background">
-                      <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
-                      <AvatarFallback style={generatePastelColor(user.id)}>{getInitials([user.first_name, user.last_name].filter(Boolean).join(' '), user.email || undefined)}</AvatarFallback>
-                    </Avatar>
-                  </TooltipTrigger>
-                  <TooltipContent><p>{user.name}</p></TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            ))}
+        <div className="flex items-center justify-between mt-2">
+          <div className="flex items-center gap-2">
+            {displayPriority && (
+              <Badge className={cn(getPriorityStyles(displayPriority).tw, 'text-xs')}>{displayPriority}</Badge>
+            )}
+            <div className="flex -space-x-2">
+              {task.assignedTo?.slice(0, 2).map(user => (
+                <TooltipProvider key={user.id}>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <Avatar className="h-6 w-6 border-2 border-background">
+                        <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
+                        <AvatarFallback style={generatePastelColor(user.id)}>{getInitials([user.first_name, user.last_name].filter(Boolean).join(' '), user.email || undefined)}</AvatarFallback>
+                      </Avatar>
+                    </TooltipTrigger>
+                    <TooltipContent><p>{user.name}</p></TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              ))}
+            </div>
           </div>
+          {dueDateText && <span className={`text-xs font-medium ${dueDateColor}`}>{dueDateText}</span>}
         </div>
       </div>
     </div>
