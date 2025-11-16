@@ -38,7 +38,6 @@ const expenseSchema = z.object({
     release_date: z.date().optional().nullable(),
     status: z.string().optional(),
   })).optional(),
-  status_expense: z.string().min(1, "Status is required."),
   due_date: z.date().optional().nullable(),
   account_name: z.string().optional(),
   account_bank: z.string().optional(),
@@ -93,7 +92,6 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
       beneficiary: '',
       tf_amount: 0,
       payment_terms: [{ amount: null, request_type: 'Requested', request_date: undefined, release_date: undefined, status: 'Pending' }],
-      status_expense: 'Pending',
       due_date: null,
       account_name: '',
       account_bank: '',
@@ -135,7 +133,6 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
             release_date: term.release_date ? term.release_date.toISOString() : null,
             status: term.status || 'Pending',
         })).filter(term => term.amount > 0 || term.request_date || term.release_date),
-        status_expense: values.status_expense,
         due_date: values.due_date ? values.due_date.toISOString() : null,
         account_bank: {
           name: values.account_name,
@@ -438,19 +435,6 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
               <Input value={balance.toLocaleString('id-ID')} className="col-span-3 bg-muted" readOnly />
             </div>
 
-            <FormField control={form.control} name="status_expense" render={({ field }) => (
-              <FormItem><FormLabel>Status</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                  <SelectContent>
-                    <SelectItem value="Pending">Pending</SelectItem>
-                    <SelectItem value="Paid">Paid</SelectItem>
-                    <SelectItem value="Rejected">Rejected</SelectItem>
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )} />
             <FormField control={form.control} name="due_date" render={({ field }) => (
               <FormItem className="flex flex-col"><FormLabel>Due Date</FormLabel>
                 <Popover>
