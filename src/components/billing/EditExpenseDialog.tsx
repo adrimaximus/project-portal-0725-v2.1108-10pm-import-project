@@ -199,7 +199,6 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
           </DialogHeader>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 max-h-[70vh] overflow-y-auto p-4">
-              {/* Form fields are identical to AddExpenseDialog, but pre-filled */}
               <FormField control={form.control} name="beneficiary" render={({ field }) => (
                 <FormItem className="flex flex-col">
                   <FormLabel>Beneficiary</FormLabel>
@@ -321,17 +320,17 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
               <FormField control={form.control} name="remarks" render={({ field }) => (
                 <FormItem><FormLabel>Remarks</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
               )} />
+              <DialogFooter className="pt-4">
+                <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Save Changes
+                </Button>
+              </DialogFooter>
             </form>
           </Form>
         </DialogContent>
-        <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button type="submit" form="expense-form" disabled={isSubmitting}>
-            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Save Changes
-          </Button>
-        </DialogFooter>
-      </DialogContent>
+      </Dialog>
       {beneficiary && (
         <BankAccountFormDialog
           open={isBankAccountFormOpen}
@@ -353,7 +352,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
       <BeneficiaryTypeDialog open={isBeneficiaryTypeDialogOpen} onOpenChange={setIsBeneficiaryTypeDialogOpen} onSelect={handleSelectBeneficiaryType} />
       <PersonFormDialog open={isPersonFormOpen} onOpenChange={setIsPersonFormOpen} person={null} initialValues={{ full_name: newBeneficiaryName }} onSuccess={(newPerson) => handleBeneficiaryCreated(newPerson, 'person')} />
       <CompanyFormDialog open={isCompanyFormOpen} onOpenChange={setIsCompanyFormOpen} company={null} initialValues={{ name: newBeneficiaryName }} onSuccess={(newCompany) => handleBeneficiaryCreated(newCompany, 'company')} />
-    </Dialog>
+    </>
   );
 };
 
