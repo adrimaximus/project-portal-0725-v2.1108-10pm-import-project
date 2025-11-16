@@ -191,13 +191,20 @@ const ExpensePage = () => {
                         <TableCell>{formatCurrency(expense.tf_amount)}</TableCell>
                         <TableCell>
                           {(expense as any).payment_terms && (expense as any).payment_terms.length > 0 ? (
-                            <div className="flex flex-col gap-1">
+                            <div className="flex flex-col gap-2">
                               {(expense as any).payment_terms.map((term: any, index: number) => (
-                                <div key={index} className="flex items-center justify-between text-xs gap-2">
-                                  <span>{formatCurrency(term.amount || 0)}</span>
-                                  <Badge variant="outline" className={cn("border-transparent text-xs whitespace-nowrap", getStatusBadgeStyle(term.status || 'Pending'))}>
-                                    {term.status || 'Pending'}
-                                  </Badge>
+                                <div key={index} className="text-xs">
+                                  <div className="flex items-center justify-between gap-2">
+                                    <span>{formatCurrency(term.amount || 0)}</span>
+                                    <Badge variant="outline" className={cn("border-transparent text-xs whitespace-nowrap", getStatusBadgeStyle(term.status || 'Pending'))}>
+                                      {term.status || 'Pending'}
+                                    </Badge>
+                                  </div>
+                                  {term.request_date && (
+                                    <p className="text-muted-foreground text-xs mt-0.5">
+                                      {term.request_type || 'Due'}: {format(new Date(term.request_date), "dd MMM yyyy")}
+                                    </p>
+                                  )}
                                 </div>
                               ))}
                             </div>
