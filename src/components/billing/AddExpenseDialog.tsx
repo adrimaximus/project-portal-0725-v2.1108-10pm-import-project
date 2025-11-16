@@ -349,7 +349,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                                   )}
                                 />
                                 <div className="flex items-center border rounded-md w-full bg-background h-10">
-                                  <span className="text-sm pl-3 flex-1">{field.value ? format(field.value, "PPP") : <span className="text-muted-foreground">Pick a date</span>}</span>
+                                  <span className="text-sm pl-3 flex-1">{field.value ? format(field.value, "PPP") : null}</span>
                                   <Popover>
                                     <PopoverTrigger asChild>
                                       <FormControl>
@@ -375,7 +375,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                             <FormItem>
                               <FormLabel className="text-xs">Release Date</FormLabel>
                               <div className="flex items-center border rounded-md w-full bg-background h-10">
-                                <span className="text-sm pl-3 flex-1">{field.value ? format(field.value, "PPP") : <span className="text-muted-foreground">Pick a date</span>}</span>
+                                <span className="text-sm pl-3 flex-1">{field.value ? format(field.value, "PPP") : null}</span>
                                 <Popover>
                                   <PopoverTrigger asChild>
                                     <FormControl>
