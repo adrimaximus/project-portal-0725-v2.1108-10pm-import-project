@@ -10,12 +10,25 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2 } from 'lucide-react';
 
+export interface BankAccount {
+  id: string;
+  account_name: string;
+  account_number: string;
+  bank_name: string;
+  swift_code?: string | null;
+  country?: string | null;
+  city?: string | null;
+  owner_id: string;
+  owner_type: 'person' | 'company';
+}
+
 interface BankAccountFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  ownerId: string;
-  ownerType: 'person' | 'company';
-  onSuccess: (newAccountId: string) => void;
+  onSuccess: () => void;
+  account?: Partial<BankAccount> | null; // For editing
+  ownerId?: string; // For creating
+  ownerType?: 'person' | 'company'; // For creating
 }
 
 const bankAccountSchema = z.object({
@@ -29,7 +42,7 @@ const bankAccountSchema = z.object({
 
 type BankAccountFormValues = z.infer<typeof bankAccountSchema>;
 
-const BankAccountFormDialog = ({ open, onOpenChange, ownerId, ownerType, onSuccess }: BankAccountFormDialogProps) => {
+const BankAccountFormDialog = ({ open, onOpenChange, onSuccess, account, ownerId, ownerType }: BankAccountFormDialogProps) => {
   const [isSaving, setIsSaving] = useState(false);
 
   const form = useForm<BankAccountFormValues>({
@@ -44,27 +57,45 @@ const BankAccountFormDialog = ({ open, onOpenChange, ownerId, ownerType, onSucce
     },
   });
 
+  useEffect(() => {
+    if (open) {
+      if (account) {
+        form.reset({
+          account_name: account.account_name || '',
+          account_number: account.account_number || '',
+          bank_name: account.bank_name || '',
+          swift_code: account.swift_code || '',
+          country: account.country || '',
+          city: account.city || '',
+        });
+      } else {
+        form.reset();
+      }
+    }
+  }, [account, open, form]);
+
   const onSubmit = async (values: BankAccountFormValues) => {
     setIsSaving(true);
     try {
-      const { data, error } = await supabase
-        .from('bank_accounts')
-        .insert({
-          ...values,
-          owner_id: ownerId,
-          owner_type: ownerType,
-        })
-        .select('id')
-        .single();
+      const payload = {
+        ...values,
+        owner_id: account ? account.owner_id : ownerId,
+        owner_type: account ? account.owner_type : ownerType,
+      };
+
+      const promise = account?.id
+        ? supabase.from('bank_accounts').update(payload).eq('id', account.id)
+        : supabase.from('bank_accounts').insert(payload).select('id').single();
+
+      const { error } = await promise;
 
       if (error) throw error;
 
-      toast.success("Bank account added successfully.");
-      onSuccess(data.id);
+      toast.success(`Bank account ${account ? 'updated' : 'added'} successfully.`);
+      onSuccess();
       onOpenChange(false);
-      form.reset();
     } catch (error: any) {
-      toast.error("Failed to add bank account.", { description: error.message });
+      toast.error(`Failed to save bank account.`, { description: error.message });
     } finally {
       setIsSaving(false);
     }
@@ -74,9 +105,9 @@ const BankAccountFormDialog = ({ open, onOpenChange, ownerId, ownerType, onSucce
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Add New Bank Account</DialogTitle>
+          <DialogTitle>{account ? 'Edit' : 'Add New'} Bank Account</DialogTitle>
           <DialogDescription>
-            Enter the details for the new bank account.
+            Enter the details for the bank account.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>

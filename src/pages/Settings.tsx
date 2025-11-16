@@ -12,6 +12,7 @@ import ThemeCard from "@/components/settings/ThemeCard";
 import ServicesCard from "@/components/settings/ServicesCard";
 import NotificationsCard from "@/components/settings/NotificationsCard";
 import PropertiesCard from "@/components/settings/PropertiesCard";
+import BankAccountsCard from "@/components/settings/BankAccountsCard";
 
 const WorkspaceSettingsCard = () => {
   const navigate = useNavigate();
@@ -61,6 +62,7 @@ const Settings = () => {
               <TeamCard />
               <ServicesCard />
               <PropertiesCard />
+              <BankAccountsCard />
             </>
           )}
           {isMasterAdmin && <WorkspaceSettingsCard />}

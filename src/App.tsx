@@ -60,6 +60,7 @@ import NotificationSettingsPage from "./pages/NotificationSettingsPage";
 import { TaskDrawerProvider } from "./contexts/TaskDrawerContext";
 import GlobalTaskDrawer from "./components/GlobalTaskDrawer";
 import TaskRedirectPage from "./pages/TaskRedirectPage";
+import BankAccountsPage from "./pages/BankAccountsPage";
 
 function App() {
   return (
@@ -120,6 +121,7 @@ function App() {
               <Route path="/settings/project-statuses" element={<ProjectStatusesPage />} />
               <Route path="/settings/payment-statuses" element={<PaymentStatusesPage />} />
               <Route path="/settings/notifications" element={<NotificationSettingsPage />} />
+              <Route path="/settings/bank-accounts" element={<BankAccountsPage />} />
               <Route path="/custom/:slug" element={<CustomPage />} />
               <Route path="/multipage/:slug" element={<MultiEmbedPage />} />
               <Route path="/multipage/:slug/:itemSlug" element={<MultiEmbedItemPage />} />
