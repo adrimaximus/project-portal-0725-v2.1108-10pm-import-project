@@ -23,11 +23,12 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import PortalLayout from '@/components/PortalLayout';
 import { getErrorMessage, formatInJakarta } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Loader2 } from 'lucide-react';
+import { Loader2, AlertTriangle } from 'lucide-react';
 import { useTaskModal } from '@/contexts/TaskModalContext';
 import { getProjectBySlug } from '@/lib/projectsApi';
 import { useUnreadTasks } from '@/hooks/useUnreadTasks';
 import { useSortConfig } from '@/hooks/useSortConfig';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 type ViewMode = 'table' | 'list' | 'kanban' | 'tasks' | 'tasks-kanban';
 
@@ -333,6 +334,15 @@ const ProjectsPage = () => {
     sortConfig: finalTaskSortConfig 
   }];
 
+  const sortParam = searchParams.get('sort');
+  const isUnreadSortActive = isTaskView && sortParam === 'unread' && unreadTaskIds.length > 0;
+
+  const handleClearUnreadSort = () => {
+    const newSearchParams = new URLSearchParams(searchParams);
+    newSearchParams.delete('sort');
+    setSearchParams(newSearchParams, { replace: true });
+  };
+
   return (
     <PortalLayout disableMainScroll noPadding>
       <AlertDialog open={!!projectToDelete} onOpenChange={(open) => !open && setProjectToDelete(null)}>
@@ -385,6 +395,18 @@ const ProjectsPage = () => {
             </div>
           )}
           <div className="p-0 data-[view=kanban]:px-4 data-[view=kanban]:pb-4 data-[view=kanban]:md:px-6 data-[view=kanban]:md:pb-6 data-[view=tasks-kanban]:p-0" data-view={view}>
+            {isUnreadSortActive && (
+              <div className="p-4 md:p-6 pt-0">
+                <Alert className="border-blue-500/50 bg-blue-50 dark:bg-blue-900/20 text-blue-900 dark:text-blue-200">
+                  <AlertTriangle className="h-4 w-4 !text-blue-500" />
+                  <AlertTitle className="font-semibold">Showing Unread First</AlertTitle>
+                  <AlertDescription className="flex items-center justify-between">
+                    Unread tasks are prioritized at the top of the list.
+                    <Button variant="link" className="p-0 h-auto text-blue-600 dark:text-blue-300" onClick={handleClearUnreadSort}>Clear Filter</Button>
+                  </AlertDescription>
+                </Alert>
+              </div>
+            )}
             <ProjectViewContainer
               view={view}
               projects={sortedProjects}
