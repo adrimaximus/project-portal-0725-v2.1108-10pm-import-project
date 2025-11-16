@@ -154,7 +154,7 @@ const ExpensePage = () => {
                     <TableHead>Owner</TableHead>
                     <TableHead>Beneficiary</TableHead>
                     <TableHead>Amount</TableHead>
-                    <TableHead>Payment Plan</TableHead>
+                    <TableHead className="whitespace-nowrap">Payment Plan</TableHead>
                     <TableHead>Bank Account</TableHead>
                     <TableHead>Remarks</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
@@ -188,7 +188,7 @@ const ExpensePage = () => {
                         </TableCell>
                         <TableCell>{expense.beneficiary}</TableCell>
                         <TableCell>{formatCurrency(expense.tf_amount)}</TableCell>
-                        <TableCell>
+                        <TableCell className="whitespace-nowrap">
                           {(expense as any).payment_terms && (expense as any).payment_terms.length > 0 ? (
                             <div className="flex flex-col">
                               {(expense as any).payment_terms.map((term: any, index: number) => {
