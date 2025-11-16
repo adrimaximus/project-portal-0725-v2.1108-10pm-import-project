@@ -134,7 +134,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
           toast.error("Failed to fetch bank accounts.");
         } else {
           setBankAccounts(data);
-          if (data.length > 0) {
+          if (data.length === 1) {
             setValue('bank_account_id', data[0].id);
           } else {
             setValue('bank_account_id', null);
@@ -276,26 +276,46 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                 name="bank_account_id"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Bank Account</FormLabel>
-                    <div className="flex items-center gap-2">
-                      <Select onValueChange={field.onChange} value={field.value || ''} disabled={!beneficiary || isLoadingBankAccounts}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder={isLoadingBankAccounts ? "Loading accounts..." : "Select a bank account"} />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {bankAccounts.map(account => (
-                            <SelectItem key={account.id} value={account.id}>
-                              {account.bank_name} - {account.account_number} ({account.account_name})
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <Button type="button" variant="outline" size="icon" onClick={() => setIsBankAccountFormOpen(true)} disabled={!beneficiary}>
-                        <Plus className="h-4 w-4" />
+                    <div className="flex justify-between items-center">
+                      <FormLabel>Bank Account</FormLabel>
+                      <Button type="button" variant="outline" size="sm" onClick={() => setIsBankAccountFormOpen(true)} disabled={!beneficiary}>
+                        <Plus className="mr-2 h-4 w-4" /> Add New
                       </Button>
                     </div>
+                    <FormControl>
+                      <div className="space-y-2">
+                        {isLoadingBankAccounts ? (
+                          <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            <span>Loading accounts...</span>
+                          </div>
+                        ) : bankAccounts.length > 0 ? (
+                          bankAccounts.map(account => (
+                            <div
+                              key={account.id}
+                              onClick={() => field.onChange(account.id)}
+                              className={cn(
+                                "border rounded-lg p-3 cursor-pointer transition-all relative",
+                                field.value === account.id
+                                  ? "border-primary ring-2 ring-primary ring-offset-2"
+                                  : "hover:border-primary/50"
+                              )}
+                            >
+                              {field.value === account.id && (
+                                <Check className="h-4 w-4 text-primary absolute top-2 right-2" />
+                              )}
+                              <p className="font-semibold">{account.bank_name}</p>
+                              <p className="text-muted-foreground">{account.account_number}</p>
+                              <p className="text-sm text-muted-foreground">{account.account_name}</p>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="text-center text-sm text-muted-foreground py-4 border-2 border-dashed rounded-lg">
+                            No bank accounts found for this beneficiary.
+                          </div>
+                        )}
+                      </div>
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
