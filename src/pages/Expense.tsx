@@ -258,6 +258,11 @@ const ExpensePage = () => {
                                               {term.request_type || 'Due'}: {format(new Date(term.request_date), "dd MMM yyyy")}
                                             </p>
                                           )}
+                                          {term.release_date && (
+                                            <p className="text-muted-foreground text-xs">
+                                              scheduled: {format(new Date(term.release_date), "dd MMM yyyy")}
+                                            </p>
+                                          )}
                                           <div className="mt-1">
                                             <Badge variant="outline" className={cn("border-transparent text-xs whitespace-nowrap", getStatusBadgeStyle(term.status || 'Pending'))}>
                                               {term.status || 'Pending'}
@@ -275,6 +280,11 @@ const ExpensePage = () => {
                                           {term.request_date && (
                                             <p className="text-muted-foreground text-xs mt-0.5">
                                               {term.request_type || 'Due'}: {format(new Date(term.request_date), "dd MMM yyyy")}
+                                            </p>
+                                          )}
+                                          {term.release_date && (
+                                            <p className="text-muted-foreground text-xs">
+                                              scheduled: {format(new Date(term.release_date), "dd MMM yyyy")}
                                             </p>
                                           )}
                                         </>
