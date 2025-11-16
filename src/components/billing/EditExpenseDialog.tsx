@@ -103,8 +103,15 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
   const paymentTerms = watch("payment_terms");
   const totalAmount = watch("tf_amount");
 
-  const balance = useMemo(() => {
-    const totalPaid = (paymentTerms || []).reduce((sum, term) => sum + (Number(term.amount) || 0), 0);
+  const unallocatedBalance = useMemo(() => {
+    const totalAllocated = (paymentTerms || []).reduce((sum, term) => sum + (Number(term.amount) || 0), 0);
+    return (totalAmount || 0) - totalAllocated;
+  }, [totalAmount, paymentTerms]);
+
+  const outstandingBalance = useMemo(() => {
+    const totalPaid = (paymentTerms || [])
+      .filter(term => term.status === 'Paid')
+      .reduce((sum, term) => sum + (Number(term.amount) || 0), 0);
     return (totalAmount || 0) - totalPaid;
   }, [totalAmount, paymentTerms]);
 
@@ -371,8 +378,12 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
                 </div>
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label className="text-right">Balance (Rp)</Label>
-                <Input value={balance.toLocaleString('id-ID')} className="col-span-3 bg-muted" readOnly />
+                <Label className="text-right">Outstanding (Rp)</Label>
+                <Input value={outstandingBalance.toLocaleString('id-ID')} className="col-span-3 bg-muted" readOnly />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label className="text-right">Unallocated (Rp)</Label>
+                <Input value={unallocatedBalance.toLocaleString('id-ID')} className={cn("col-span-3 bg-muted", unallocatedBalance !== 0 && "text-red-500 font-semibold")} readOnly />
               </div>
               <FormField control={form.control} name="remarks" render={({ field }) => (
                 <FormItem><FormLabel>Remarks</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
