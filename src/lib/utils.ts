@@ -1,6 +1,6 @@
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
-import { TaskPriority, TaskStatus, ProjectStatus, PaymentStatus } from "./types";
+import { TaskPriority, TaskStatus, ProjectStatus, PaymentStatus } from "@/types";
 import { isPast } from 'date-fns';
 import { formatInTimeZone } from 'date-fns-tz';
 
