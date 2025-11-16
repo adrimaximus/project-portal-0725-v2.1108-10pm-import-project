@@ -335,7 +335,7 @@ const ProjectsPage = () => {
   }];
 
   const sortParam = searchParams.get('sort');
-  const isUnreadSortActive = isTaskView && sortParam === 'unread' && unreadTaskIds.length > 0;
+  const isUnreadSortActive = isTaskView && sortParam === 'unread';
 
   const handleClearUnreadSort = () => {
     const newSearchParams = new URLSearchParams(searchParams);
@@ -401,7 +401,9 @@ const ProjectsPage = () => {
                   <AlertTriangle className="h-4 w-4 !text-blue-500" />
                   <AlertTitle className="font-semibold">Showing Unread First</AlertTitle>
                   <AlertDescription className="flex items-center justify-between">
-                    Unread tasks are prioritized at the top of the list.
+                    {unreadTaskIds.length > 0 
+                      ? "Unread tasks are prioritized at the top of the list."
+                      : "No unread tasks found. Displaying all tasks."}
                     <Button variant="link" className="p-0 h-auto text-blue-600 dark:text-blue-300" onClick={handleClearUnreadSort}>Clear Filter</Button>
                   </AlertDescription>
                 </Alert>

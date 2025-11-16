@@ -93,6 +93,96 @@ const TaskListItem = ({ task, onToggleTaskCompletion, onTaskClick, isUnread, all
   );
 };
 
+const TaskRow = ({ task, onToggleTaskCompletion, onEdit, onDelete, handleToggleReaction, setRef, currentUserId, isUnread, onClick, allUsers }: {
+  task: ProjectTask;
+  onToggleTaskCompletion: (task: ProjectTask, completed: boolean) => void;
+  onEdit: (task: ProjectTask) => void;
+  onDelete: (taskId: string) => void;
+  handleToggleReaction: (taskId: string, emoji: string) => void;
+  setRef: (el: HTMLTableRowElement | null) => void;
+  currentUserId?: string;
+  isUnread: boolean;
+  onClick: () => void;
+  allUsers: User[];
+}) => {
+  return (
+    <TableRow 
+      ref={setRef}
+      onClick={onClick}
+      className="cursor-pointer"
+    >
+      <TableCell className="p-2" onClick={(e) => e.stopPropagation()}>
+        <Checkbox
+          checked={task.completed}
+          onCheckedChange={(checked) => onToggleTaskCompletion(task, !!checked)}
+        />
+      </TableCell>
+      <TableCell className="font-medium max-w-[250px]">
+        <div className="flex items-center gap-2">
+          {isUnread && <div className="h-2 w-2 rounded-full bg-red-500 flex-shrink-0" />}
+          <div className={cn("whitespace-normal break-words", task.completed && "line-through text-muted-foreground")}>
+            <InteractiveText text={task.title} members={allUsers} />
+          </div>
+        </div>
+      </TableCell>
+      <TableCell>
+        <Link to={`/projects/${task.project_slug}`} onClick={(e) => e.stopPropagation()} className="hover:underline text-primary text-xs block whitespace-normal break-words">
+          {task.project_name}
+        </Link>
+      </TableCell>
+      <TableCell onClick={(e) => e.stopPropagation()}>
+        <Select value={task.status} onValueChange={(newStatus: TaskStatus) => onStatusChange(task, newStatus)}>
+          <SelectTrigger className="h-auto p-0 border-0 focus:ring-0 focus:ring-offset-0 w-auto bg-transparent shadow-none">
+            <SelectValue>
+              <Badge variant="outline" className={cn(getTaskStatusStyles(task.status).tw, 'border-transparent font-normal')}>
+                {task.status}
+              </Badge>
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            {TASK_STATUS_OPTIONS.map(option => (
+              <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </TableCell>
+      <TableCell>
+        <Badge className={getPriorityStyles(task.priority).tw}>{task.priority}</Badge>
+      </TableCell>
+      <TableCell className={cn("text-xs", isOverdue(task.due_date) && !task.completed && "text-destructive font-semibold")}>
+        {task.due_date ? format(new Date(task.due_date), "MMM d, yyyy, p") : '-'}
+      </TableCell>
+      <TableCell>
+        <div className="flex -space-x-2">
+          {task.assignedTo?.map(user => (
+            <TooltipProvider key={user.id}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Avatar className="h-6 w-6 border-2 border-background">
+                    <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
+                    <AvatarFallback style={generatePastelColor(user.id)}>{getInitials([user.first_name, user.last_name].filter(Boolean).join(' '), user.email || undefined)}</AvatarFallback>
+                  </Avatar>
+                </TooltipTrigger>
+                <TooltipContent><p>{user.name}</p></TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          ))}
+        </div>
+      </TableCell>
+      <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onSelect={() => onEdit(task)}><Edit className="mr-2 h-4 w-4" /> Edit</DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => onDelete(task.id)} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Delete</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </TableCell>
+    </TableRow>
+  );
+};
 
 const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion, onStatusChange, isToggling, sortConfig, requestSort, rowRefs, highlightedTaskId, onHighlightComplete, unreadTaskIds }: TasksViewProps) => {
   const isMobile = useIsMobile();
@@ -153,83 +243,18 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
             <TableRow><TableCell colSpan={8} className="text-center h-24">No tasks found.</TableCell></TableRow>
           ) : (
             tasks.map(task => (
-              <TableRow 
-                key={task.id} 
-                ref={el => { if (el) rowRefs.current.set(task.id, el); else rowRefs.current.delete(task.id); }}
+              <TaskRow
+                key={task.id}
+                task={task}
+                onToggleTaskCompletion={onToggleTaskCompletion}
+                onEdit={onEdit}
+                onDelete={onDelete}
+                handleToggleReaction={(taskId, emoji) => toggleTaskReaction({ taskId, emoji })}
+                setRef={(el) => { if (el) rowRefs.current.set(task.id, el); else rowRefs.current.delete(task.id); }}
+                isUnread={unreadTaskIds.includes(task.id)}
                 onClick={() => handleTaskClick(task)}
-                className="cursor-pointer"
-              >
-                <TableCell className="p-2" onClick={(e) => e.stopPropagation()}>
-                  <Checkbox
-                    checked={task.completed}
-                    onCheckedChange={(checked) => onToggleTaskCompletion(task, !!checked)}
-                    disabled={isToggling}
-                  />
-                </TableCell>
-                <TableCell className="font-medium max-w-[250px]">
-                  <div className="flex items-center gap-2">
-                    {unreadTaskIds.includes(task.id) && <div className="h-2 w-2 rounded-full bg-red-500 flex-shrink-0" />}
-                    <div className={cn("whitespace-normal break-words", task.completed && "line-through text-muted-foreground")}>
-                      <InteractiveText text={task.title} members={allUsers} />
-                    </div>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <Link to={`/projects/${task.project_slug}`} onClick={(e) => e.stopPropagation()} className="hover:underline text-primary text-xs block whitespace-normal break-words">
-                    {task.project_name}
-                  </Link>
-                </TableCell>
-                <TableCell onClick={(e) => e.stopPropagation()}>
-                  <Select value={task.status} onValueChange={(newStatus: TaskStatus) => onStatusChange(task, newStatus)}>
-                    <SelectTrigger className="h-auto p-0 border-0 focus:ring-0 focus:ring-offset-0 w-auto bg-transparent shadow-none">
-                      <SelectValue>
-                        <Badge variant="outline" className={cn(getTaskStatusStyles(task.status).tw, 'border-transparent font-normal')}>
-                          {task.status}
-                        </Badge>
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {TASK_STATUS_OPTIONS.map(option => (
-                        <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </TableCell>
-                <TableCell>
-                  <Badge className={getPriorityStyles(task.priority).tw}>{task.priority}</Badge>
-                </TableCell>
-                <TableCell className={cn("text-xs", isOverdue(task.due_date) && !task.completed && "text-destructive font-semibold")}>
-                  {task.due_date ? format(new Date(task.due_date), "MMM d, yyyy, p") : '-'}
-                </TableCell>
-                <TableCell>
-                  <div className="flex -space-x-2">
-                    {task.assignedTo?.map(user => (
-                      <TooltipProvider key={user.id}>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Avatar className="h-6 w-6 border-2 border-background">
-                              <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
-                              <AvatarFallback style={generatePastelColor(user.id)}>{getInitials([user.first_name, user.last_name].filter(Boolean).join(' '), user.email || undefined)}</AvatarFallback>
-                            </Avatar>
-                          </TooltipTrigger>
-                          <TooltipContent><p>{user.name}</p></TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    ))}
-                  </div>
-                </TableCell>
-                <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onSelect={() => onEdit(task)}><Edit className="mr-2 h-4 w-4" /> Edit</DropdownMenuItem>
-                      <DropdownMenuItem onSelect={() => onDelete(task.id)} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Delete</DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
-              </TableRow>
+                allUsers={allUsers}
+              />
             ))
           )}
         </TableBody>
