@@ -155,7 +155,6 @@ const ExpensePage = () => {
                     <TableHead>Beneficiary</TableHead>
                     <TableHead>Amount</TableHead>
                     <TableHead>Payment Plan</TableHead>
-                    <TableHead>Status</TableHead>
                     <TableHead>Bank Account</TableHead>
                     <TableHead>Remarks</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
@@ -164,7 +163,7 @@ const ExpensePage = () => {
                 <TableBody>
                   {filteredExpenses.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={9} className="h-24 text-center">
+                      <TableCell colSpan={8} className="h-24 text-center">
                         No expenses found.
                       </TableCell>
                     </TableRow>
@@ -211,9 +210,6 @@ const ExpensePage = () => {
                           ) : (
                             '-'
                           )}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className={cn("border-transparent", getStatusBadgeStyle(expense.status_expense))}>{expense.status_expense}</Badge>
                         </TableCell>
                         <TableCell>
                           {expense.account_bank ? (
