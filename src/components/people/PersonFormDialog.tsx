@@ -31,14 +31,6 @@ interface Profile {
   avatar_url: string | null;
 }
 
-interface PeopleFormDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  person: Person | null;
-  onSuccess?: (person: Person) => void;
-  initialValues?: Partial<PropertyFormValues>;
-}
-
 const baseSchema = z.object({
     first_name: z.string().min(1, 'First name is required'),
     last_name: z.string().optional().nullable(),
@@ -54,6 +46,14 @@ const baseSchema = z.object({
 });
 
 type PropertyFormValues = z.infer<typeof baseSchema>;
+
+interface PeopleFormDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  person: Person | null;
+  onSuccess?: (person: Person) => void;
+  initialValues?: Partial<PropertyFormValues & { full_name?: string }>;
+}
 
 const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess, initialValues }: PeopleFormDialogProps) => {
   const queryClient = useQueryClient();
