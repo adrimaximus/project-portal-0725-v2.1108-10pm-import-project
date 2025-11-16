@@ -148,7 +148,6 @@ const ExpensePage = () => {
                     <TableHead>Amount</TableHead>
                     <TableHead>Terms</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Due Date</TableHead>
                     <TableHead>Bank Account</TableHead>
                     <TableHead>Remarks</TableHead>
                   </TableRow>
@@ -156,7 +155,7 @@ const ExpensePage = () => {
                 <TableBody>
                   {filteredExpenses.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={9} className="h-24 text-center">
+                      <TableCell colSpan={8} className="h-24 text-center">
                         No expenses found.
                       </TableCell>
                     </TableRow>
@@ -185,7 +184,6 @@ const ExpensePage = () => {
                         <TableCell>
                           <Badge variant="outline" className={cn("border-transparent", getStatusBadgeStyle(expense.status_expense))}>{expense.status_expense}</Badge>
                         </TableCell>
-                        <TableCell>{expense.due_date ? format(new Date(expense.due_date), 'MMM dd, yyyy') : '-'}</TableCell>
                         <TableCell>
                           {expense.account_bank ? (
                             <div>
@@ -230,11 +228,6 @@ const ExpensePage = () => {
                       </CardHeader>
                       <CardContent className="space-y-3">
                         <p className="font-bold text-xl">{formatCurrency(expense.tf_amount)}</p>
-                        {expense.due_date && (
-                          <p className="text-sm text-muted-foreground">
-                            Due: {format(new Date(expense.due_date), 'MMM dd, yyyy')}
-                          </p>
-                        )}
                         <div className="flex items-center gap-2 pt-2">
                           <Avatar className="h-6 w-6">
                             <AvatarImage src={getAvatarUrl(expense.project_owner.avatar_url, expense.project_owner.id)} />
