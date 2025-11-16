@@ -71,7 +71,7 @@ const ExpensePage = () => {
   }).format(amount);
 
   const getStatusBadgeStyle = (status: string) => {
-    switch (status.toLowerCase()) {
+    switch (status?.toLowerCase()) {
       case 'paid': return 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300 border-green-200 dark:border-green-700/50';
       case 'pending': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300 border-yellow-200 dark:border-yellow-700/50';
       case 'rejected': return 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300 border-red-200 dark:border-red-700/50';
@@ -146,7 +146,7 @@ const ExpensePage = () => {
                     <TableHead>Owner</TableHead>
                     <TableHead>Beneficiary</TableHead>
                     <TableHead>Amount</TableHead>
-                    <TableHead>Terms</TableHead>
+                    <TableHead>Payment Plan</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Bank Account</TableHead>
                     <TableHead>Remarks</TableHead>
@@ -180,7 +180,22 @@ const ExpensePage = () => {
                         </TableCell>
                         <TableCell>{expense.beneficiary}</TableCell>
                         <TableCell>{formatCurrency(expense.tf_amount)}</TableCell>
-                        <TableCell>{expense.terms}</TableCell>
+                        <TableCell>
+                          {(expense as any).payment_terms && (expense as any).payment_terms.length > 0 ? (
+                            <div className="flex flex-col gap-1">
+                              {(expense as any).payment_terms.map((term: any, index: number) => (
+                                <div key={index} className="flex items-center justify-between text-xs gap-2">
+                                  <span>{formatCurrency(term.amount || 0)}</span>
+                                  <Badge variant="outline" className={cn("border-transparent text-xs whitespace-nowrap", getStatusBadgeStyle(term.status || 'Pending'))}>
+                                    {term.status || 'Pending'}
+                                  </Badge>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            expense.terms || '-'
+                          )}
+                        </TableCell>
                         <TableCell>
                           <Badge variant="outline" className={cn("border-transparent", getStatusBadgeStyle(expense.status_expense))}>{expense.status_expense}</Badge>
                         </TableCell>
@@ -228,6 +243,18 @@ const ExpensePage = () => {
                       </CardHeader>
                       <CardContent className="space-y-3">
                         <p className="font-bold text-xl">{formatCurrency(expense.tf_amount)}</p>
+                        {(expense as any).payment_terms && (expense as any).payment_terms.length > 1 && (
+                          <div className="text-xs text-muted-foreground space-y-1 border-t pt-2">
+                            {(expense as any).payment_terms.map((term: any, index: number) => (
+                              <div key={index} className="flex items-center justify-between">
+                                <span>Term {index + 1}: {formatCurrency(term.amount || 0)}</span>
+                                <span className={cn("font-semibold", getStatusBadgeStyle(term.status || 'Pending').replace(/bg-\S+\s?/g, '').replace(/border-\S+\s?/g, ''))}>
+                                  {term.status || 'Pending'}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                         <div className="flex items-center gap-2 pt-2">
                           <Avatar className="h-6 w-6">
                             <AvatarImage src={getAvatarUrl(expense.project_owner.avatar_url, expense.project_owner.id)} />
