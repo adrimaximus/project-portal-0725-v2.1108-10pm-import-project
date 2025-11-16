@@ -1,9 +1,9 @@
 import { useMemo, useState } from "react";
 import PortalLayout from "@/components/PortalLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Search, LayoutList, KanbanSquare, Plus, MoreHorizontal } from "lucide-react";
+import { Loader2, Search, LayoutList, KanbanSquare, Plus, MoreHorizontal, Edit, Trash2 } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -28,12 +28,25 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import EditExpenseDialog from "@/components/billing/EditExpenseDialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
 
 const ExpensePage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [view, setView] = useState<'table' | 'kanban'>('table');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+  const [expenseToDelete, setExpenseToDelete] = useState<Expense | null>(null);
+  const queryClient = useQueryClient();
 
   const { data: expenses = [], isLoading } = useQuery<Expense[]>({
     queryKey: ['expenses'],
@@ -43,6 +56,27 @@ const ExpensePage = () => {
       return data;
     },
   });
+
+  const deleteExpenseMutation = useMutation({
+    mutationFn: async (expenseId: string) => {
+      const { error } = await supabase.from('expenses').delete().eq('id', expenseId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Expense deleted successfully.");
+      queryClient.invalidateQueries({ queryKey: ['expenses'] });
+    },
+    onError: (error: any) => {
+      toast.error("Failed to delete expense.", { description: error.message });
+    }
+  });
+
+  const handleDeleteExpense = () => {
+    if (expenseToDelete) {
+      deleteExpenseMutation.mutate(expenseToDelete.id);
+      setExpenseToDelete(null);
+    }
+  };
 
   const filteredExpenses = useMemo(() => {
     if (!searchTerm) return expenses;
@@ -269,8 +303,12 @@ const ExpensePage = () => {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
-                                <DropdownMenuItem onSelect={() => setEditingExpense(expense)}>Edit</DropdownMenuItem>
-                                <DropdownMenuItem className="text-red-500">Delete</DropdownMenuItem>
+                                <DropdownMenuItem onSelect={() => setEditingExpense(expense)}>
+                                  <Edit className="mr-2 h-4 w-4" /> Edit
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onSelect={() => setExpenseToDelete(expense)} className="text-destructive">
+                                  <Trash2 className="mr-2 h-4 w-4" /> Delete
+                                </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </TableCell>
@@ -314,8 +352,12 @@ const ExpensePage = () => {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
-                                <DropdownMenuItem onSelect={() => setEditingExpense(expense)}>Edit</DropdownMenuItem>
-                                <DropdownMenuItem className="text-red-500">Delete</DropdownMenuItem>
+                                <DropdownMenuItem onSelect={() => setEditingExpense(expense)}>
+                                  <Edit className="mr-2 h-4 w-4" /> Edit
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onSelect={() => setExpenseToDelete(expense)} className="text-destructive">
+                                  <Trash2 className="mr-2 h-4 w-4" /> Delete
+                                </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </div>
@@ -368,6 +410,20 @@ const ExpensePage = () => {
         }}
         expense={editingExpense}
       />
+      <AlertDialog open={!!expenseToDelete} onOpenChange={(open) => !open && setExpenseToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the expense record for {expenseToDelete?.beneficiary}. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteExpense}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </PortalLayout>
   );
 };
