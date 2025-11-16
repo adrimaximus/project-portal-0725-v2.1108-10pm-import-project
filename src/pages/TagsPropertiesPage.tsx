@@ -43,7 +43,7 @@ const TagsPropertiesPage = () => {
     setIsFormOpen(true);
   };
 
-  const handleSave = async (propertyData: PropertyFormValues) => {
+  const handleSave = async (propertyData: Omit<PropertyFormValues, 'options'> & { options?: string[] | null }) => {
     setIsSaving(true);
     const name = propertyData.label.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
     const { id, is_default, ...dataToSave } = propertyToEdit || {};
