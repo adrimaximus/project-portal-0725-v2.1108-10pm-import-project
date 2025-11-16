@@ -23,7 +23,7 @@ const ActivityHubWidget = () => {
   return (
     <Card>
       <Tabs defaultValue="my-tasks" className="w-full">
-        <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 pb-4">
+        <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center gap-2 pb-4">
           <TabsList className="grid w-full grid-cols-3 sm:w-auto sm:inline-flex">
             <TabsTrigger value="my-tasks">
               <ListChecks className="h-4 w-4 sm:mr-2" />
@@ -38,9 +38,6 @@ const ActivityHubWidget = () => {
               <span className="hidden sm:inline">Collaborators</span>
             </TabsTrigger>
           </TabsList>
-          <Button asChild variant="link" className="text-sm -my-2 self-end sm:self-center">
-            <Link to="/projects?view=tasks">View all</Link>
-          </Button>
         </CardHeader>
         <CardContent>
           <TabsContent value="my-tasks" className="mt-0 h-[300px] overflow-y-auto">
