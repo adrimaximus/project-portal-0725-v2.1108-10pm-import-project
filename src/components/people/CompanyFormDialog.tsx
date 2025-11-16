@@ -21,6 +21,8 @@ interface CompanyFormDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     company: Company | null;
+    onSuccess?: (company: Company) => void;
+    initialValues?: Partial<CompanyFormData>;
 }
 
 const formSchema = z.object({
@@ -33,7 +35,7 @@ const formSchema = z.object({
 
 type CompanyFormData = z.infer<typeof formSchema>;
 
-const CompanyFormDialog: React.FC<CompanyFormDialogProps> = ({ open, onOpenChange, company }) => {
+const CompanyFormDialog: React.FC<CompanyFormDialogProps> = ({ open, onOpenChange, company, onSuccess, initialValues }) => {
     const queryClient = useQueryClient();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const scrollRef = useDragScrollY<HTMLDivElement>();
@@ -69,10 +71,11 @@ const CompanyFormDialog: React.FC<CompanyFormDialogProps> = ({ open, onOpenChang
                     address: '',
                     logo_url: '',
                     custom_properties: {},
+                    ...initialValues,
                 });
             }
         }
-    }, [company, open, form]);
+    }, [company, open, form, initialValues]);
 
     const onSubmit = async (values: CompanyFormData) => {
         setIsSubmitting(true);
@@ -82,18 +85,20 @@ const CompanyFormDialog: React.FC<CompanyFormDialogProps> = ({ open, onOpenChang
             custom_properties: values.custom_properties || {},
         };
 
+        let data;
         let error;
         if (company) {
-            ({ error } = await supabase.from('companies').update(submissionData).eq('id', company.id));
+            ({ data, error } = await supabase.from('companies').update(submissionData).eq('id', company.id).select().single());
         } else {
-            ({ error } = await supabase.from('companies').insert(submissionData));
+            ({ data, error } = await supabase.from('companies').insert(submissionData).select().single());
         }
 
         if (error) {
             toast.error(`Failed to save company: ${error.message}`);
-        } else {
+        } else if (data) {
             toast.success(`Company ${company ? 'updated' : 'created'} successfully.`);
             queryClient.invalidateQueries({ queryKey: ['companies'] });
+            onSuccess?.(data as Company);
             onOpenChange(false);
         }
         setIsSubmitting(false);

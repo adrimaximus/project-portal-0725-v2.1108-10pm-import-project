@@ -46,6 +46,7 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
   const [venue, setVenue] = useState<string>("");
   const [selectedClient, setSelectedClient] = useState<{ type: 'person' | 'company', data: Person | Company } | null>(null);
   const [isPersonFormOpen, setIsPersonFormOpen] = useState(false);
+  const [newClientName, setNewClientName] = useState('');
 
   const { data: allUsers = [] } = useQuery<User[]>({
     queryKey: ['allUsersForRequestForm'],
@@ -242,7 +243,10 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
                 companies={allCompanies}
                 selectedClient={selectedClient}
                 onSelectClient={setSelectedClient}
-                onAddNewClient={() => setIsPersonFormOpen(true)}
+                onAddNewClient={(name) => {
+                  setNewClientName(name);
+                  setIsPersonFormOpen(true);
+                }}
               />
             </div>
             <div className="space-y-2">
@@ -345,6 +349,7 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
         onOpenChange={setIsPersonFormOpen}
         onSuccess={handlePersonCreated}
         person={null}
+        initialValues={{ full_name: newClientName }}
       />
     </>
   );

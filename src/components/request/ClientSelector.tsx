@@ -26,11 +26,12 @@ interface ClientSelectorProps {
   companies: Company[];
   selectedClient: { type: 'person' | 'company', data: Person | Company } | null;
   onSelectClient: (client: { type: 'person' | 'company', data: Person | Company } | null) => void;
-  onAddNewClient: () => void;
+  onAddNewClient: (name: string) => void;
 }
 
 export function ClientSelector({ people, companies, selectedClient, onSelectClient, onAddNewClient }: ClientSelectorProps) {
   const [open, setOpen] = React.useState(false)
+  const [search, setSearch] = React.useState("")
 
   const sortedCompanies = React.useMemo(() => [...companies].sort((a, b) => a.name.localeCompare(b.name)), [companies]);
   const sortedPeople = React.useMemo(() => [...people].sort((a, b) => a.full_name.localeCompare(b.full_name)), [people]);
@@ -84,9 +85,18 @@ export function ClientSelector({ people, companies, selectedClient, onSelectClie
       </PopoverTrigger>
       <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
         <Command>
-          <CommandInput placeholder="Search client..." />
+          <CommandInput 
+            placeholder="Search client..."
+            value={search}
+            onValueChange={setSearch}
+          />
           <CommandList>
-            <CommandEmpty>No client found.</CommandEmpty>
+            <CommandEmpty>
+              <Button variant="ghost" size="sm" className="w-full justify-start" onClick={() => onAddNewClient(search)}>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Create "{search}"
+              </Button>
+            </CommandEmpty>
             
             {sortedCompanies.length > 0 && (
               <CommandGroup heading="Companies">
@@ -146,7 +156,7 @@ export function ClientSelector({ people, companies, selectedClient, onSelectClie
             <CommandSeparator />
             <CommandGroup>
                 <CommandItem onSelect={() => {
-                    onAddNewClient();
+                    onAddNewClient(search);
                     setOpen(false);
                 }}>
                     <PlusCircle className="mr-2 h-4 w-4" />
