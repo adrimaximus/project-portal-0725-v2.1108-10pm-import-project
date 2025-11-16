@@ -128,7 +128,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
           .from('bank_accounts')
           .select('id, account_name, account_number, bank_name')
           .eq('owner_id', beneficiary.id)
-          .eq('owner_type', beneficiary.type);
+          .ilike('owner_type', beneficiary.type);
         
         if (error) {
           toast.error("Failed to fetch bank accounts.");
@@ -257,7 +257,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                               {beneficiaries.map((item) => (
                                 <CommandItem value={item.name} key={item.id} onSelect={() => { form.setValue("beneficiary", item.name); setBeneficiary(item); setBeneficiaryPopoverOpen(false); }}>
                                   <Check className={cn("mr-2 h-4 w-4", item.name === field.value ? "opacity-100" : "opacity-0")} />
-                                  {item.type === 'Person' ? <User className="mr-2 h-4 w-4 text-muted-foreground" /> : <Building className="mr-2 h-4 w-4 text-muted-foreground" />}
+                                  {item.type === 'person' ? <User className="mr-2 h-4 w-4 text-muted-foreground" /> : <Building className="mr-2 h-4 w-4 text-muted-foreground" />}
                                   <span className="flex-grow">{item.name}</span>
                                 </CommandItem>
                               ))}
