@@ -31,14 +31,31 @@ interface Profile {
   avatar_url: string | null;
 }
 
+const baseSchema = z.object({
+    first_name: z.string().min(1, 'First name is required'),
+    last_name: z.string().optional().nullable(),
+    email: z.string().email('Invalid email address').optional().or(z.literal('')),
+    phone: z.string().optional().nullable(),
+    company_id: z.string().uuid().optional().nullable(),
+    job_title: z.string().optional().nullable(),
+    department: z.string().optional().nullable(),
+    avatar_url: z.string().url().optional().nullable().or(z.literal('')),
+    birthday: z.string().optional().nullable(),
+    notes: z.string().optional().nullable(),
+    custom_properties: z.record(z.any()).optional(),
+});
+
+type PropertyFormValues = z.infer<typeof baseSchema>;
+
 interface PeopleFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   person: Person | null;
   onSuccess?: (person: Person) => void;
+  initialValues?: Partial<PropertyFormValues & { full_name?: string }>;
 }
 
-const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormDialogProps) => {
+const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess, initialValues }: PeopleFormDialogProps) => {
   const queryClient = useQueryClient();
   const { user: currentUser } = useAuth();
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
@@ -75,22 +92,6 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
       (prop) => !prop.is_default && !redundantFieldNames.includes(prop.name.toLowerCase())
     );
   }, [properties]);
-
-  const baseSchema = z.object({
-    first_name: z.string().min(1, 'First name is required'),
-    last_name: z.string().optional().nullable(),
-    email: z.string().email('Invalid email address').optional().or(z.literal('')),
-    phone: z.string().optional().nullable(),
-    company_id: z.string().uuid().optional().nullable(),
-    job_title: z.string().optional().nullable(),
-    department: z.string().optional().nullable(),
-    avatar_url: z.string().url().optional().nullable().or(z.literal('')),
-    birthday: z.string().optional().nullable(),
-    notes: z.string().optional().nullable(),
-    custom_properties: z.record(z.any()).optional(),
-  });
-
-  type PropertyFormValues = z.infer<typeof baseSchema>;
 
   const form = useForm<PropertyFormValues>({
     resolver: zodResolver(baseSchema),
@@ -132,9 +133,12 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
             : '',
         });
       } else {
+        const nameParts = initialValues?.full_name ? initialValues.full_name.split(' ') : [''];
+        const firstName = nameParts[0] || '';
+        const lastName = nameParts.slice(1).join(' ') || '';
         reset({
-          first_name: '',
-          last_name: '',
+          first_name: firstName,
+          last_name: lastName,
           email: '',
           phone: '',
           company_id: null,
@@ -146,12 +150,13 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
           custom_properties: {
             website: 'https://',
           },
+          ...initialValues,
         });
       }
     } else {
       setSelectedProfile(null);
     }
-  }, [person, open, reset]);
+  }, [person, open, reset, initialValues]);
 
   useEffect(() => {
     if (selectedProfile && !person) {
@@ -297,7 +302,7 @@ const PeopleFormDialog = ({ open, onOpenChange, person, onSuccess }: PeopleFormD
                 <FormField control={control} name="first_name" render={({ field }) => (
                   <FormItem>
                     <FormLabel>First Name</FormLabel>
-                    <FormControl><Input {...field} disabled={!!selectedProfile || isLinkedUser} /></FormControl>
+                    <FormControl><Input {...field} disabled={!!selectedProfile || isLinkedUser} autoFocus={!person} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />

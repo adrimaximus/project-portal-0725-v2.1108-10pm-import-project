@@ -11,11 +11,11 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
-import { CalendarIcon, Loader2 } from 'lucide-react';
+import { CalendarIcon, Loader2, Check, ChevronsUpDown, User, Building, Plus, X, Copy, Briefcase } from 'lucide-react';
 import { cn, getTaskStatusStyles, getPriorityStyles } from '@/lib/utils';
 import { format, addHours } from 'date-fns';
 import { useProjects } from '@/hooks/useProjects';
-import { Task, TaskStatus, TASK_PRIORITY_OPTIONS, TASK_STATUS_OPTIONS, Tag, User as Profile, Project, TaskAttachment, UpsertTaskPayload, TaskPriority } from '@/types';
+import { Task, TaskStatus, TASK_PRIORITY_OPTIONS, Tag, User as Profile, Project, TaskAttachment, UpsertTaskPayload, TaskPriority } from '@/types';
 import { useTags } from '@/hooks/useTags';
 import { TagsMultiselect } from '@/components/ui/TagsMultiselect';
 import { supabase } from '@/integrations/supabase/client';
@@ -360,7 +360,7 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task, proj
           <FormItem>
             <FormLabel>Title</FormLabel>
             <FormControl>
-              <Input placeholder="e.g., Design the main page" {...field} />
+              <Input placeholder="e.g., Design the main page" {...field} autoFocus={!task} />
             </FormControl>
             <FormMessage />
           </FormItem>
