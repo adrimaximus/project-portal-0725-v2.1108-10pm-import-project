@@ -1,11 +1,14 @@
 "use client";
 
 import React from 'react';
-import ReactQuill from 'react-quill';
+import ReactQuill, { Quill } from 'react-quill';
+import ImageResize from 'quill-image-resize-module-react';
 import 'react-quill/dist/quill.snow.css';
 import { Button } from '@/components/ui/button';
 import { Sparkles, RefreshCw } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+
+Quill.register('modules/imageResize', ImageResize);
 
 interface RichTextEditorProps {
   value: string;
@@ -29,6 +32,10 @@ const RichTextEditor = React.forwardRef<ReactQuill, RichTextEditorProps>(({ valu
       ['link', 'image', 'video', 'formula'],
       ['clean']
     ],
+    imageResize: {
+      parchment: Quill.import('parchment'),
+      modules: ['Resize', 'DisplaySize', 'Toolbar']
+    }
   };
 
   return (
