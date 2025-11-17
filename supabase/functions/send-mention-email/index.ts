@@ -15,7 +15,7 @@ const getFullName = (profile: any) => `${profile.first_name || ''} ${profile.las
 
 const formatMentions = (text: string | null | undefined): string => {
   if (!text) return '';
-  return text.replace(/@\[([^\]]+)\]\(([^)]+)\)/g, '@$1');
+  return text.replace(/@\[([^\]]+)\]\s*\(([^)]+)\)/g, '@$1');
 };
 
 const createEmailTemplate = ({ title, mainSubject, recipientName, bodyHtml, buttonText, buttonUrl }: { title: string, mainSubject?: string, recipientName: string, bodyHtml: string, buttonText: string, buttonUrl: string }) => {
