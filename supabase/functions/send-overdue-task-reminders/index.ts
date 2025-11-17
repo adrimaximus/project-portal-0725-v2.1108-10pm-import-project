@@ -54,20 +54,38 @@ Deno.serve(async (req) => {
       if (isEnabled) {
         const dueDate = new Date(task.due_date);
         const daysOverdue = Math.floor((new Date().getTime() - dueDate.getTime()) / (1000 * 3600 * 24));
-
-        notificationsToInsert.push({
-          recipient_id: task.assignee_id,
-          send_at: new Date(),
-          notification_type: 'task_overdue',
-          context_data: {
+        
+        const debounceKey = `task_overdue:${task.task_id}`;
+        const contextData = {
             task_id: task.task_id,
             task_title: task.task_title,
             project_id: task.project_id,
             project_name: task.project_name,
             project_slug: task.project_slug,
             days_overdue: daysOverdue,
-          }
-        });
+            debounce_key: debounceKey,
+        };
+
+        const taskOverduePrefs = (typeof prefs.task_overdue === 'object' && prefs.task_overdue !== null) ? prefs.task_overdue : {};
+
+        if (taskOverduePrefs.whatsapp !== false) {
+            notificationsToInsert.push({
+              recipient_id: task.assignee_id,
+              send_at: new Date(),
+              notification_type: 'task_overdue',
+              context_data: contextData,
+            });
+        }
+
+        if (taskOverduePrefs.email !== false) {
+            notificationsToInsert.push({
+              recipient_id: task.assignee_id,
+              send_at: new Date(),
+              notification_type: 'task_overdue_email',
+              context_data: contextData,
+            });
+        }
+
       } else {
         skippedCount++;
       }
@@ -79,7 +97,12 @@ Deno.serve(async (req) => {
         .insert(notificationsToInsert);
       
       if (insertError) {
-        throw new Error(`Failed to insert notifications: ${insertError.message}`);
+        // The unique index will cause an error if there's a conflict. We can ignore it.
+        if (insertError.code !== '23505') { // 23505 is unique_violation
+          throw new Error(`Failed to insert notifications: ${insertError.message}`);
+        } else {
+          console.log("Ignoring duplicate notification insert attempts.");
+        }
       }
     }
 
