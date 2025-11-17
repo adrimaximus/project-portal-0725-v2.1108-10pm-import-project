@@ -14,15 +14,15 @@ const InteractiveText: React.FC<InteractiveTextProps> = ({ text, members = [] })
     return null;
   }
 
-  // Regex to find mentions in the format @[DisplayName](uuid)
-  const mentionRegex = /@\[([^\]]+)\]\(([^)]+)\)/g;
+  // Regex untuk menemukan sebutan dalam format @[DisplayName](uuid) atau @[DisplayName] (uuid)
+  const mentionRegex = /@\[([^\]]+)\]\s*\(([^)]+)\)/g;
   const parts = text.split(mentionRegex);
 
   return (
     <>
       {parts.map((part, index) => {
-        // The parts array will be structured like: [text, displayName, userId, text, ...]
-        // So, the displayName is at index 1, 4, 7, ... (i.e., index % 3 === 1)
+        // Array bagian akan terstruktur seperti: [teks, displayName, userId, teks, ...]
+        // Jadi, displayName ada di indeks 1, 4, 7, ... (yaitu, indeks % 3 === 1)
         if (index > 0 && index % 3 === 1) {
           const displayName = part;
           const userId = parts[index + 1];
@@ -56,7 +56,7 @@ const InteractiveText: React.FC<InteractiveTextProps> = ({ text, members = [] })
               </TooltipProvider>
             );
           }
-          // Fallback if member is not found in the provided list
+          // Fallback jika anggota tidak ditemukan dalam daftar yang disediakan
           return (
             <span key={index} className="text-primary font-semibold bg-primary/10 px-1 rounded">
               @{displayName}
@@ -64,12 +64,12 @@ const InteractiveText: React.FC<InteractiveTextProps> = ({ text, members = [] })
           );
         }
         
-        // This is the userId part, which we've already processed with the displayName. Skip it.
+        // Ini adalah bagian userId, yang sudah kita proses dengan displayName. Lewati.
         if (index > 0 && index % 3 === 2) {
           return null;
         }
 
-        // This is a regular text part.
+        // Ini adalah bagian teks biasa.
         return <React.Fragment key={index}>{part}</React.Fragment>;
       })}
     </>
