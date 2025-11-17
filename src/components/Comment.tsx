@@ -162,7 +162,7 @@ const Comment: React.FC<CommentProps> = ({
                 </div>
               </button>
             )}
-            <div className="prose prose-sm dark:prose-invert max-w-none break-words prose-p:my-1 [&_p]:text-justify">
+            <div className="prose prose-sm dark:prose-invert max-w-none break-words prose-p:my-0 [&_p]:text-justify">
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
                 components={{
