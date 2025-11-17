@@ -15,7 +15,7 @@ import { CalendarIcon, Loader2, Check, ChevronsUpDown, User, Building, Plus, X, 
 import { cn, getTaskStatusStyles, getPriorityStyles } from '@/lib/utils';
 import { format, addHours } from 'date-fns';
 import { useProjects } from '@/hooks/useProjects';
-import { Task, TaskStatus, TASK_PRIORITY_OPTIONS, Tag, User as Profile, Project, TaskAttachment, UpsertTaskPayload, TaskPriority } from '@/types';
+import { Task, TaskStatus, TASK_PRIORITY_OPTIONS, Tag, User as Profile, Project, TaskAttachment, UpsertTaskPayload, TaskPriority, TASK_STATUS_OPTIONS } from '@/types';
 import { useTags } from '@/hooks/useTags';
 import { TagsMultiselect } from '@/components/ui/TagsMultiselect';
 import { supabase } from '@/integrations/supabase/client';
