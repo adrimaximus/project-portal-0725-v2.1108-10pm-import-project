@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { format, isSameDay } from "date-fns"
+import { format } from "date-fns"
 import { Calendar as CalendarIcon } from "lucide-react"
 import { DateRange } from "react-day-picker"
 
@@ -26,16 +26,6 @@ export function DatePickerWithRange({
   onDateChange
 }: DatePickerWithRangeProps) {
   const isDesktop = useMediaQuery("(min-width: 768px)")
-
-  const handleSelect = (range: DateRange | undefined, selectedDay: Date) => {
-    if (date?.from && !date.to) {
-      if (isSameDay(selectedDay, date.from)) {
-        onDateChange({ from: date.from, to: date.from });
-        return;
-      }
-    }
-    onDateChange(range);
-  };
 
   return (
     <div className={cn("grid gap-2", className)}>
@@ -70,7 +60,7 @@ export function DatePickerWithRange({
             mode="range"
             defaultMonth={date?.from}
             selected={date}
-            onSelect={handleSelect}
+            onSelect={onDateChange}
             numberOfMonths={isDesktop ? 2 : 1}
           />
         </PopoverContent>
