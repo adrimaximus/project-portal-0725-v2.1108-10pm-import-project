@@ -11,6 +11,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useChatContext } from "@/contexts/ChatContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import InteractiveText from "./InteractiveText";
 
 interface ChatListProps {
   highlightedId?: string | null;
@@ -63,17 +64,6 @@ const ChatList = ({ highlightedId, onHighlightComplete }: ChatListProps) => {
       console.error("Error formatting date:", e);
       return "";
     }
-  };
-
-  const formatLastMessage = (message: string) => {
-    if (!message) return "";
-    // This regex looks for markdown-style links and extracts the link text.
-    const linkRegex = /\[([^\]]+)\]\([^)]+\)/g;
-    const cleanedMessage = message.replace(linkRegex, '$1');
-    if (cleanedMessage.length > 25) {
-      return cleanedMessage.substring(0, 25) + "...";
-    }
-    return cleanedMessage;
   };
 
   return (
@@ -168,7 +158,7 @@ const ChatList = ({ highlightedId, onHighlightComplete }: ChatListProps) => {
                       isUnread && "text-foreground font-medium",
                       isLastMessageEmoji && "text-xl"
                     )}>
-                      {formatLastMessage(c.lastMessage)}
+                      <InteractiveText text={c.lastMessage} members={c.members} />
                     </p>
                     {isUnread && <div className="h-2 w-2 rounded-full bg-primary flex-shrink-0" />}
                   </div>

@@ -4,9 +4,9 @@ import { CSS } from '@dnd-kit/utilities';
 import { Task, User } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { cn, generatePastelColor, getAvatarUrl, getInitials, truncateText, getPriorityStyles } from '@/lib/utils';
+import { cn, generatePastelColor, getAvatarUrl, getInitials, getPriorityStyles } from '@/lib/utils';
 import { Badge } from '../ui/badge';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { format } from 'date-fns';
 import { MoreHorizontal, Edit, Trash2 } from 'lucide-react';
 import { Button } from '../ui/button';
@@ -55,8 +55,8 @@ const TasksKanbanCard: React.FC<TasksKanbanCardProps> = ({ task, onEdit, onDelet
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <h4 className="font-semibold text-sm mb-2 break-words">
-                    <InteractiveText text={truncateText(task.title, 60)} members={allUsers} />
+                  <h4 className="font-semibold text-sm mb-2 break-words line-clamp-2">
+                    <InteractiveText text={task.title} members={allUsers} />
                   </h4>
                 </TooltipTrigger>
                 <TooltipContent>
