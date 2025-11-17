@@ -5,6 +5,7 @@ import ListView from './ListView';
 import KanbanView from './KanbanView';
 import TasksView from './TasksView';
 import TasksKanbanView from './TasksKanbanView';
+import ProjectsEmptyState from './ProjectsEmptyState';
 
 interface ProjectViewContainerProps {
   view: ViewMode;
@@ -31,6 +32,9 @@ interface ProjectViewContainerProps {
   onStatusChange: (projectId: string, newStatus: ProjectStatus) => void;
   onTaskOrderChange: (payload: any) => void;
   unreadTaskIds: string[];
+  hasActiveFilters: boolean;
+  onClearFilters: () => void;
+  searchTerm: string;
 }
 
 type ViewMode = 'table' | 'list' | 'kanban' | 'tasks' | 'tasks-kanban';
@@ -39,8 +43,15 @@ const ProjectViewContainer = ({
   view, projects, tasks, isLoading, isTasksLoading, onDeleteProject, sortConfig, requestSort, rowRefs,
   kanbanGroupBy, onEditTask, onDeleteTask, onToggleTaskCompletion, onTaskStatusChange, isToggling,
   taskSortConfig, requestTaskSort, refetch, tasksQueryKey, highlightedTaskId, onHighlightComplete, onStatusChange,
-  onTaskOrderChange, unreadTaskIds
+  onTaskOrderChange, unreadTaskIds, hasActiveFilters, onClearFilters, searchTerm
 }: ProjectViewContainerProps) => {
+  const isProjectView = view === 'table' || view === 'list' || view === 'kanban';
+  const isTaskView = view === 'tasks' || view === 'tasks-kanban';
+
+  if (!isLoading && isProjectView && projects.length === 0) {
+    return <ProjectsEmptyState hasActiveFilters={hasActiveFilters} onClearFilters={onClearFilters} searchTerm={searchTerm} />;
+  }
+
   switch (view) {
     case 'table':
       return <TableView projects={projects} isLoading={isLoading} onDeleteProject={onDeleteProject} sortConfig={sortConfig} requestSort={requestSort} rowRefs={rowRefs} onStatusChange={onStatusChange} />;

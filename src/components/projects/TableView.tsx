@@ -300,12 +300,6 @@ const TableView = ({ projects, isLoading, onDeleteProject, sortConfig, requestSo
                 Loading projects...
               </TableCell>
             </TableRow>
-          ) : projects.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={7} className="h-24 text-center">
-                No projects found.
-              </TableCell>
-            </TableRow>
           ) : (
             <>
               {visibleUpcomingProjects.map(project => {

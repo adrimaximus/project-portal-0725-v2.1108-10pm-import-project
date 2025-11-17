@@ -77,8 +77,13 @@ const ProjectsPage = () => {
     advancedFilters, handleAdvancedFiltersChange,
     dateRange, setDateRange,
     sortConfig: projectSortConfig, requestSort: requestProjectSort,
-    sortedProjects
+    sortedProjects,
+    clearFilters,
   } = useProjectFilters(projectsData);
+
+  const hasActiveFilters = useMemo(() => {
+    return !!searchTerm || !!dateRange?.from || (advancedFilters.ownerIds?.length || 0) > 0 || (advancedFilters.memberIds?.length || 0) > 0 || (advancedFilters.excludedStatus?.length || 0) > 0;
+  }, [searchTerm, dateRange, advancedFilters]);
 
   const { data: allMembers = [] } = useQuery({
     queryKey: ['project_members_distinct'],
@@ -434,6 +439,9 @@ const ProjectsPage = () => {
               onStatusChange={handleStatusChange}
               onTaskOrderChange={handleTaskOrderChange}
               unreadTaskIds={unreadTaskIds}
+              hasActiveFilters={hasActiveFilters}
+              onClearFilters={clearFilters}
+              searchTerm={searchTerm}
             />
           </div>
           {hasNextPage && (

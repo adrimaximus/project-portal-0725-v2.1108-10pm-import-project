@@ -103,6 +103,18 @@ export const useProjectFilters = (projects: Project[]) => {
     });
   };
 
+  const clearFilters = useCallback(() => {
+    const newSearchParams = new URLSearchParams(searchParams);
+    newSearchParams.delete('search');
+    newSearchParams.delete('from');
+    newSearchParams.delete('to');
+    newSearchParams.delete('owner');
+    newSearchParams.delete('member');
+    newSearchParams.delete('excludeStatus');
+    setSearchParams(newSearchParams, { replace: true });
+    SafeLocalStorage.removeItem(PROJECTS_ADVANCED_FILTERS_KEY);
+  }, [searchParams, setSearchParams]);
+
   // --- Filtering and Sorting Logic ---
   const sortedProjects = useMemo(() => {
     let sortableItems = [...projects].filter(project => {
@@ -197,5 +209,6 @@ export const useProjectFilters = (projects: Project[]) => {
     dateRange, setDateRange,
     sortConfig, requestSort,
     sortedProjects,
+    clearFilters,
   };
 };
