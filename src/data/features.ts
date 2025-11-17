@@ -60,6 +60,13 @@ export const initialFeatures: Feature[] = [
     path: '/billing',
   },
   {
+    id: 'expense',
+    name: 'Expense',
+    description: 'Track and manage project-related expenses.',
+    status: 'enabled',
+    path: '/expense',
+  },
+  {
     id: 'people',
     name: 'People',
     description: 'Manage your contacts and connections.',

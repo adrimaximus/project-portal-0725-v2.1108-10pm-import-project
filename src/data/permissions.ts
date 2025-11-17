@@ -11,6 +11,7 @@ export const PERMISSIONS = [
       { id: 'module:mood-tracker', label: 'Mood Tracker', description: 'Access the Mood Tracker module.' },
       { id: 'module:goals', label: 'Goals', description: 'Access the Goals module.' },
       { id: 'module:billing', label: 'Billing', description: 'Access the Billing module.' },
+      { id: 'module:expense', label: 'Expense', description: 'Access the Expense module.' },
       { id: 'module:people', label: 'People', description: 'Access the People module.' },
       { id: 'module:knowledge-base', label: 'Knowledge Base', description: 'Access the Knowledge Base module.' },
       { id: 'module:settings', label: 'Settings', description: 'Access the Settings module.' },

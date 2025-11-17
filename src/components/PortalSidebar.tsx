@@ -156,6 +156,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
         'mood trackers': 'module:mood-tracker',
         'goals': 'module:goals',
         'billing': 'module:billing',
+        'expense': 'module:expense',
         'people': 'module:people',
         'knowledge base': 'module:knowledge-base',
         'settings': 'module:settings',
