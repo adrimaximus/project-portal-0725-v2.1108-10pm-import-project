@@ -63,17 +63,35 @@ const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({ onAddC
 
   useEffect(() => {
     if (replyTo) {
-      mentionsInputRef.current?.inputElement?.focus();
       // Only add mention if we are starting a new reply (or switching reply)
       if (replyTo.id !== prevReplyTo?.id) {
         const author = replyTo.author;
         if (author && user && author.id !== user.id) {
           const mentionText = `@[${author.name}](${author.id}) `;
           setText(mentionText);
+          
+          // Focus and set cursor position after state update
+          setTimeout(() => {
+            if (mentionsInputRef.current?.inputElement) {
+              const input = mentionsInputRef.current.inputElement;
+              input.focus();
+              const len = mentionText.length;
+              input.setSelectionRange(len, len);
+            }
+          }, 0);
+
         } else {
-          // Replying to self, or author is missing. Just clear the text.
+          // Replying to self, or author is missing. Just clear the text and focus.
           setText('');
+          setTimeout(() => {
+            mentionsInputRef.current?.inputElement?.focus();
+          }, 0);
         }
+      } else {
+        // If it's the same reply, just ensure focus
+        setTimeout(() => {
+          mentionsInputRef.current?.inputElement?.focus();
+        }, 0);
       }
     }
   }, [replyTo, prevReplyTo, user]);
