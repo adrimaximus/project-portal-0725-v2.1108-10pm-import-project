@@ -168,6 +168,9 @@ const TaskRow = ({ task, onToggleTaskCompletion, onEdit, onDelete, handleToggleR
           ))}
         </div>
       </TableCell>
+      <TableCell>
+        <TaskReactions reactions={task.reactions || []} onToggleReaction={(emoji) => handleToggleReaction(task.id, emoji)} />
+      </TableCell>
       <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -232,14 +235,15 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
             <SortableTableHead columnKey="priority" onSort={requestSort} sortConfig={sortConfig}>Priority</SortableTableHead>
             <SortableTableHead columnKey="due_date" onSort={requestSort} sortConfig={sortConfig}>Due Date</SortableTableHead>
             <TableHead>Assignees</TableHead>
+            <TableHead>Reactions</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {isLoading ? (
-            <TableRow><TableCell colSpan={8} className="text-center h-24">Loading...</TableCell></TableRow>
+            <TableRow><TableCell colSpan={9} className="text-center h-24">Loading...</TableCell></TableRow>
           ) : tasks.length === 0 ? (
-            <TableRow><TableCell colSpan={8} className="text-center h-24">No tasks found.</TableCell></TableRow>
+            <TableRow><TableCell colSpan={9} className="text-center h-24">No tasks found.</TableCell></TableRow>
           ) : (
             tasks.map(task => (
               <TaskRow
