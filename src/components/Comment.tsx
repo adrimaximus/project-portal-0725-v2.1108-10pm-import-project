@@ -14,6 +14,9 @@ import CommentReactions from './CommentReactions';
 import CommentAttachmentItem from './CommentAttachmentItem';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import InteractiveText from './InteractiveText';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import UserMention from './UserMention';
 
 interface CommentProps {
   comment: CommentType;
@@ -60,6 +63,8 @@ const Comment: React.FC<CommentProps> = ({
   const authorName = [author.first_name, author.last_name].filter(Boolean).join(' ') || author.email;
   const attachmentsData = comment.attachments_jsonb;
   const attachments: any[] = Array.isArray(attachmentsData) ? attachmentsData : attachmentsData ? [attachmentsData] : [];
+
+  const preprocessedText = (comment.text || '').replace(/@\[([^\]]+)\]\(([^)]+)\)/g, '[@$1](mention://$2)');
 
   return (
     <div id={`message-${comment.id}`} className="flex items-start gap-3">
@@ -158,7 +163,25 @@ const Comment: React.FC<CommentProps> = ({
               </button>
             )}
             <div className="prose prose-sm dark:prose-invert max-w-none break-words prose-p:my-1 [&_p]:text-justify">
-              <InteractiveText text={comment.text || ''} members={allUsers} />
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={{
+                  a: ({node, ...props}) => {
+                    if (props.href?.startsWith('mention://')) {
+                      const userId = props.href.substring('mention://'.length);
+                      const user = allUsers.find(u => u.id === userId);
+                      if (user) {
+                        return <UserMention user={user} />;
+                      } else {
+                        return <span>{props.children}</span>;
+                      }
+                    }
+                    return <a {...props} target="_blank" rel="noopener noreferrer" />;
+                  }
+                }}
+              >
+                {preprocessedText}
+              </ReactMarkdown>
             </div>
             {attachments.length > 0 && (
               <div className="mt-2 space-y-2">
