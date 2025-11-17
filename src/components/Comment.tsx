@@ -1,11 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Comment as CommentType, User } from '@/types';
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { getAvatarUrl, generatePastelColor, getInitials } from '@/lib/utils';
 import { Button } from './ui/button';
-import { MoreHorizontal, Edit, Trash2, Ticket, CornerUpLeft, Paperclip, X, FileText } from 'lucide-react';
+import { MoreHorizontal, Edit, Trash2, Ticket, CornerUpLeft, Paperclip, X, FileText, Download, Loader2 } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu';
 import { useAuth } from '@/contexts/AuthContext';
 import { Textarea } from './ui/textarea';
@@ -17,6 +17,9 @@ import InteractiveText from './InteractiveText';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import UserMention from './UserMention';
+import JSZip from 'jszip';
+import { saveAs } from 'file-saver';
+import { toast } from 'sonner';
 
 interface CommentProps {
   comment: CommentType;
@@ -58,6 +61,7 @@ const Comment: React.FC<CommentProps> = ({
   allUsers,
 }) => {
   const { user } = useAuth();
+  const [isBundling, setIsBundling] = useState(false);
   
   const author = comment.author as User;
   const authorName = [author.first_name, author.last_name].filter(Boolean).join(' ') || author.email;
@@ -65,6 +69,36 @@ const Comment: React.FC<CommentProps> = ({
   const attachments: any[] = Array.isArray(attachmentsData) ? attachmentsData : attachmentsData ? [attachmentsData] : [];
 
   const preprocessedText = (comment.text || '').replace(/@\[([^\]]+)\]\(([^)]+)\)/g, '[@$1](mention://$2)');
+
+  const handleDownloadAll = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsBundling(true);
+    const toastId = toast.loading(`Bundling ${attachments.length} files...`);
+
+    try {
+      const zip = new JSZip();
+      
+      const filePromises = attachments.map(async (file) => {
+        // Use supabase proxy to avoid CORS issues if any
+        const response = await fetch(file.file_url);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch ${file.file_name}`);
+        }
+        const blob = await response.blob();
+        zip.file(file.file_name, blob);
+      });
+
+      await Promise.all(filePromises);
+
+      const content = await zip.generateAsync({ type: "blob" });
+      saveAs(content, `attachments-${comment.id.substring(0, 8)}.zip`);
+      toast.success("Download started!", { id: toastId });
+    } catch (error: any) {
+      toast.error("Failed to create bundle.", { id: toastId, description: error.message });
+    } finally {
+      setIsBundling(false);
+    }
+  };
 
   return (
     <div id={`message-${comment.id}`} className="flex items-start gap-3">
@@ -185,6 +219,15 @@ const Comment: React.FC<CommentProps> = ({
             </div>
             {attachments.length > 0 && (
               <div className="mt-2 space-y-2">
+                <div className="flex justify-between items-center">
+                  <h4 className="font-semibold text-xs text-muted-foreground">Attachments ({attachments.length})</h4>
+                  {attachments.length > 1 && (
+                    <Button variant="ghost" size="sm" onClick={handleDownloadAll} disabled={isBundling} className="h-auto px-2 py-1 text-xs">
+                      {isBundling ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : <Download className="mr-2 h-3 w-3" />}
+                      Download All
+                    </Button>
+                  )}
+                </div>
                 {attachments.map((file: any, index: number) => (
                   <CommentAttachmentItem key={file.id || index} file={file} />
                 ))}
