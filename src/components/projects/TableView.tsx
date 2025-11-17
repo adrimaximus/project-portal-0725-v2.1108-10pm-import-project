@@ -161,10 +161,10 @@ const ProjectRow = ({ project, onDeleteProject, rowRefs, onStatusChange }: Proje
         </Badge>
       </TableCell>
       <TableCell>
-        <div className="flex items-center gap-2">
+        <Link to={`/projects/${project.slug}?tab=tasks`} className="flex items-center gap-2 group">
           <Progress value={project.progress} className="h-2" />
-          <span className="text-sm text-muted-foreground">{project.progress}%</span>
-        </div>
+          <span className="text-sm text-muted-foreground group-hover:text-primary">{project.progress}%</span>
+        </Link>
       </TableCell>
       <TableCell className="whitespace-nowrap">
         {formatProjectDateRange(project.start_date, project.due_date)}
