@@ -91,6 +91,7 @@ const ExpensePage = () => {
       expense.project_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       expense.beneficiary.toLowerCase().includes(searchTerm.toLowerCase()) ||
       expense.status_expense.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      ((expense as any).purpose_payment && (expense as any).purpose_payment.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (expense.remarks && expense.remarks.toLowerCase().includes(searchTerm.toLowerCase()))
     );
   }, [expenses, searchTerm]);
@@ -192,6 +193,7 @@ const ExpensePage = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Project</TableHead>
+                    <TableHead>Purpose</TableHead>
                     <TableHead>Owner</TableHead>
                     <TableHead>Beneficiary</TableHead>
                     <TableHead>Amount</TableHead>
@@ -203,7 +205,7 @@ const ExpensePage = () => {
                 <TableBody>
                   {filteredExpenses.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="h-24 text-center">
+                      <TableCell colSpan={8} className="h-24 text-center">
                         No expenses found.
                       </TableCell>
                     </TableRow>
@@ -222,6 +224,7 @@ const ExpensePage = () => {
                               {expense.project_name}
                             </Link>
                           </TableCell>
+                          <TableCell>{(expense as any).purpose_payment || '-'}</TableCell>
                           <TableCell>
                             <div className="flex items-center gap-2">
                               <Avatar className="h-8 w-8">
