@@ -197,7 +197,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
         const itemNameLower = item.name.toLowerCase();
 
         if (itemNameLower === 'tasks') {
-          href = unreadTaskIds.length > 0 ? '/projects?view=tasks&sort=unread' : '/projects?view=tasks';
+          href = '/projects?view=tasks';
         } else if (item.type === 'multi_embed') {
           href = `/multipage/${item.slug}`;
         } else if (item.url.startsWith('/')) {
