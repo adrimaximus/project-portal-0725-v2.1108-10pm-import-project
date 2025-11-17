@@ -58,6 +58,13 @@ const ProjectDetailPage = () => {
     enabled: !!slug,
   });
 
+  useEffect(() => {
+    if (!isLoading && !project) {
+      toast.error("Project not found or you don't have permission to view it.");
+      navigate('/projects', { replace: true });
+    }
+  }, [isLoading, project, navigate]);
+
   const storageKey = useMemo(() => project ? `project-description-draft-${project.id}` : null, [project]);
 
   const { 
@@ -167,14 +174,8 @@ const ProjectDetailPage = () => {
   const confirmDeleteTask = () => { if (taskToDelete) { deleteTask(taskToDelete.id); setTaskToDelete(null); } };
   const handleToggleTaskCompletion = (task: Task, completed: boolean) => toggleTaskCompletion({ task, completed });
 
-  if (isLoading) {
+  if (isLoading || !project) {
     return <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
-  }
-  if (error) {
-    return <div className="text-destructive p-4">Error loading project: {error.message}</div>;
-  }
-  if (!project) {
-    return <div className="p-4">Project not found.</div>;
   }
 
   const projectToDisplay = isEditing && editedProject ? editedProject : project;
