@@ -26,7 +26,22 @@ export interface CommentInputHandle {
 
 const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({ onAddCommentOrTicket, allUsers, initialValue, replyTo, onCancelReply }: CommentInputProps, ref) => {
   const { user } = useAuth();
-  const [text, setText] = useState(initialValue || '');
+  
+  const storageKey = typeof window !== 'undefined' ? `comment-draft:${window.location.pathname}` : null;
+
+  const [text, setText] = useState(() => {
+    if (storageKey) {
+      try {
+        const savedText = localStorage.getItem(storageKey);
+        return savedText || initialValue || '';
+      } catch (error) {
+        console.error("Failed to read from localStorage", error);
+        return initialValue || '';
+      }
+    }
+    return initialValue || '';
+  });
+
   const [isTicket, setIsTicket] = useState(false);
   const [attachments, setAttachments] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -44,6 +59,16 @@ const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({ onAddC
       containerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
   }));
+
+  useEffect(() => {
+    if (storageKey) {
+      try {
+        localStorage.setItem(storageKey, text);
+      } catch (error) {
+        console.error("Failed to write to localStorage", error);
+      }
+    }
+  }, [text, storageKey]);
 
   useEffect(() => {
     if (initialValue) {
@@ -77,6 +102,13 @@ const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({ onAddC
     setAttachments([]);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
+    }
+    if (storageKey) {
+      try {
+        localStorage.removeItem(storageKey);
+      } catch (error) {
+        console.error("Failed to remove from localStorage", error);
+      }
     }
   };
 
