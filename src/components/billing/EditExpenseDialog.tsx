@@ -37,6 +37,7 @@ interface BankAccount {
 
 const expenseSchema = z.object({
   project_id: z.string().uuid("Project is required."),
+  purpose_payment: z.string().optional(),
   beneficiary: z.string().min(1, "Beneficiary is required."),
   tf_amount: z.number().min(1, "Amount must be greater than 0."),
   payment_terms: z.array(z.object({
@@ -140,6 +141,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
       }
       reset({
         project_id: expense.project_id,
+        purpose_payment: (expense as any).purpose_payment || '',
         beneficiary: expense.beneficiary,
         tf_amount: expense.tf_amount,
         status_expense: expense.status_expense,
@@ -210,6 +212,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
 
       const { error } = await supabase.from('expenses').update({
         project_id: values.project_id,
+        purpose_payment: values.purpose_payment,
         beneficiary: values.beneficiary,
         tf_amount: values.tf_amount,
         payment_terms: values.payment_terms?.map(term => ({
@@ -282,6 +285,19 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
                         </Command>
                       </PopoverContent>
                     </Popover>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="purpose_payment"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Purpose Payment</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter purpose of payment" {...field} value={field.value || ''} />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
