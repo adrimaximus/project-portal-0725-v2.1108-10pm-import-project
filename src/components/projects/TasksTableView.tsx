@@ -24,7 +24,7 @@ import { useProfiles } from '@/hooks/useProfiles';
 import { toast } from 'sonner';
 import { markTaskAsRead } from '@/lib/tasksApi';
 
-interface TasksViewProps {
+interface TasksTableViewProps {
   tasks: ProjectTask[];
   isLoading: boolean;
   onEdit: (task: ProjectTask) => void;
@@ -183,7 +183,7 @@ const TaskRow = ({ task, onToggleTaskCompletion, onEdit, onDelete, handleToggleR
   );
 };
 
-const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion, onStatusChange, isToggling, sortConfig, requestSort, rowRefs, highlightedTaskId, onHighlightComplete, unreadTaskIds }: TasksViewProps) => {
+const TasksTableView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion, onStatusChange, isToggling, sortConfig, requestSort, rowRefs, highlightedTaskId, onHighlightComplete, unreadTaskIds }: TasksTableViewProps) => {
   const isMobile = useIsMobile();
   const { onOpen: onOpenTaskDrawer } = useTaskDrawer();
   const queryClient = useQueryClient();
@@ -268,4 +268,4 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
   );
 };
 
-export default TasksView;
+export default TasksTableView;
