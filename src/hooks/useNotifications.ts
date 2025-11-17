@@ -200,7 +200,7 @@ export const useNotifications = () => {
       toast.error("Failed to mark notification as read.");
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey });
+      // Do not invalidate here to prevent flicker
     },
   });
 
@@ -225,7 +225,7 @@ export const useNotifications = () => {
       toast.error("Failed to mark notification as unread.");
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey });
+      // Do not invalidate here to prevent flicker
     },
   });
 
@@ -259,7 +259,7 @@ export const useNotifications = () => {
       toast.error("Failed to mark all notifications as read.");
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey });
+      // Do not invalidate here to prevent flicker
     },
   });
 
