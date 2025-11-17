@@ -157,7 +157,7 @@ const Comment: React.FC<CommentProps> = ({
                 </div>
               </button>
             )}
-            <div className="prose prose-sm dark:prose-invert max-w-none break-words prose-p:my-1">
+            <div className="prose prose-sm dark:prose-invert max-w-none break-words prose-p:my-1 [&_p]:text-justify">
               <InteractiveText text={comment.text || ''} members={allUsers} />
             </div>
             {attachments.length > 0 && (
