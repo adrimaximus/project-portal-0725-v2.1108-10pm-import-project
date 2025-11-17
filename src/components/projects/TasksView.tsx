@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { Task as ProjectTask, User, TaskStatus, TASK_STATUS_OPTIONS } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -6,15 +6,11 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Link } from "react-router-dom";
 import { format, isPast } from "date-fns";
 import { generatePastelColor, getPriorityStyles, getTaskStatusStyles, isOverdue, cn, getAvatarUrl, getInitials } from "@/lib/utils";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "../ui/button";
-import { MoreHorizontal, Edit, Trash2, Ticket, Paperclip, Eye, Download, File as FileIconLucide, ChevronDown, Loader2, SmilePlus } from "lucide-react";
+import { MoreHorizontal, Edit, Trash2 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Checkbox } from "../ui/checkbox";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { useAuth } from "@/contexts/AuthContext";
-import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useTaskDrawer } from '@/contexts/TaskDrawerContext';
@@ -25,6 +21,8 @@ import { useTaskMutations } from '@/hooks/useTaskMutations';
 import { useQueryClient } from '@tanstack/react-query';
 import InteractiveText from '../InteractiveText';
 import { useProfiles } from '@/hooks/useProfiles';
+import { toast } from 'sonner';
+import { markTaskAsRead } from '@/lib/tasksApi';
 
 interface TasksViewProps {
   tasks: ProjectTask[];
@@ -93,14 +91,13 @@ const TaskListItem = ({ task, onToggleTaskCompletion, onTaskClick, isUnread, all
   );
 };
 
-const TaskRow = ({ task, onToggleTaskCompletion, onEdit, onDelete, handleToggleReaction, setRef, currentUserId, isUnread, onClick, allUsers, onStatusChange }: {
+const TaskRow = ({ task, onToggleTaskCompletion, onEdit, onDelete, handleToggleReaction, setRef, isUnread, onClick, allUsers, onStatusChange }: {
   task: ProjectTask;
   onToggleTaskCompletion: (task: ProjectTask, completed: boolean) => void;
   onEdit: (task: ProjectTask) => void;
   onDelete: (taskId: string) => void;
   handleToggleReaction: (taskId: string, emoji: string) => void;
   setRef: (el: HTMLTableRowElement | null) => void;
-  currentUserId?: string;
   isUnread: boolean;
   onClick: () => void;
   allUsers: User[];
@@ -195,6 +192,10 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
 
   const handleTaskClick = async (task: ProjectTask) => {
     try {
+      await markTaskAsRead(task.id);
+      queryClient.invalidateQueries({ queryKey: ['unreadTaskIds'] });
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+
       const projectForTask = await getProjectBySlug(task.project_slug);
       if (!projectForTask) {
         throw new Error("Project for this task could not be found.");
