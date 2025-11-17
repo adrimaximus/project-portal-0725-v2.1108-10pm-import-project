@@ -38,6 +38,15 @@ export const ChatWindow = forwardRef<HTMLTextAreaElement, ChatWindowProps>(({ on
     }
   };
 
+  const handleReply = (message: Message) => {
+    setReplyTo(message);
+    setTimeout(() => {
+      if (ref && 'current' in ref && ref.current) {
+        ref.current.focus();
+      }
+    }, 100);
+  };
+
   if (!selectedConversation) {
     return <ChatPlaceholder />;
   }
@@ -68,7 +77,7 @@ export const ChatWindow = forwardRef<HTMLTextAreaElement, ChatWindowProps>(({ on
       <ChatConversation
         messages={selectedConversation.messages}
         members={selectedConversation.members || []}
-        onReply={setReplyTo}
+        onReply={handleReply}
       />
       <ChatInput 
         ref={ref} 
