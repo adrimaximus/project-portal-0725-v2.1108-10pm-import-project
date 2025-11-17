@@ -1,76 +1,76 @@
 import React from 'react';
-import UserMention from './UserMention';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { User } from '@/types';
+import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
+import { getAvatarUrl, getInitials, generatePastelColor } from '@/lib/utils';
 
 interface InteractiveTextProps {
   text: string;
-  members: User[];
+  members?: User[];
 }
 
-const InteractiveText = ({ text, members }: InteractiveTextProps) => {
-  if (!text) return null;
+const InteractiveText: React.FC<InteractiveTextProps> = ({ text, members = [] }) => {
+  if (!text) {
+    return null;
+  }
 
-  // This regex will split the text by mentions, markdown bold, and URLs, keeping the delimiters.
-  const regex = /(\*.*?\*|@\[[^\]]+\]\([a-f0-9-]+\)|https?:\/\/[^\s]+|www\.[^\s]+)/g;
-  const parts = text.split(regex).filter(Boolean);
+  // Regex to find mentions in the format @[DisplayName](uuid)
+  const mentionRegex = /@\[([^\]]+)\]\(([^)]+)\)/g;
+  const parts = text.split(mentionRegex);
 
   return (
     <>
       {parts.map((part, index) => {
-        // Check for Mention: @[DisplayName](uuid)
-        const mentionMatch = part.match(/^@\[([^\]]+)\]\(([^)]+)\)$/);
-        if (mentionMatch) {
-          const userId = mentionMatch[2];
-          const user = members.find(m => m.id === userId);
-          return user ? <UserMention key={index} user={user} /> : `@${mentionMatch[1]}`;
-        }
+        // The parts array will be structured like: [text, displayName, userId, text, ...]
+        // So, the displayName is at index 1, 4, 7, ... (i.e., index % 3 === 1)
+        if (index > 0 && index % 3 === 1) {
+          const displayName = part;
+          const userId = parts[index + 1];
+          const member = members.find(m => m.id === userId);
 
-        // Check for Bold: *text*
-        if (part.startsWith('*') && part.endsWith('*') && part.length > 2) {
-          return <strong key={index}>{part.slice(1, -1)}</strong>;
-        }
-
-        // Check for URL
-        if (part.match(/^(https?:\/\/[^\s]+|www\.[^\s]+)$/)) {
-          let processedPart = part;
-  
-          // Heuristically remove trailing punctuation
-          // This loop will remove multiple trailing punctuation characters e.g. "url)."
-          while (/[.,!?)\]};:'"]$/.test(processedPart)) {
-            const lastChar = processedPart.slice(-1);
-            const rest = processedPart.slice(0, -1);
-            
-            // Don't remove closing parenthesis if there's an unbalanced opening one
-            if (lastChar === ')' && (rest.match(/\(/g) || []).length > (rest.match(/\)/g) || []).length) {
-              break;
-            }
-            // Similar logic for other brackets
-            if (lastChar === ']' && (rest.match(/\[/g) || []).length > (rest.match(/\]/g) || []).length) {
-              break;
-            }
-            if (lastChar === '}' && (rest.match(/{/g) || []).length > (rest.match(/}/g) || []).length) {
-              break;
-            }
-            
-            processedPart = rest;
+          if (member) {
+            const memberName = [member.first_name, member.last_name].filter(Boolean).join(' ') || member.email;
+            return (
+              <TooltipProvider key={index} delayDuration={100}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="text-primary font-semibold bg-primary/10 px-1 rounded cursor-pointer">
+                      @{displayName}
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <div className="flex items-center gap-2">
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src={getAvatarUrl(member.avatar_url, member.id)} />
+                        <AvatarFallback style={generatePastelColor(member.id)}>
+                          {getInitials(memberName || '', member.email || undefined)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="font-semibold">{memberName}</p>
+                        <p className="text-xs text-muted-foreground">{member.email}</p>
+                      </div>
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            );
           }
-
-          const href = processedPart.startsWith('www.') ? `https://${processedPart}` : processedPart;
+          // Fallback if member is not found in the provided list
           return (
-            <a
-              key={index}
-              href={href}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-primary underline hover:text-primary/80 break-all"
-            >
-              {processedPart}
-            </a>
+            <span key={index} className="text-primary font-semibold bg-primary/10 px-1 rounded">
+              @{displayName}
+            </span>
           );
         }
+        
+        // This is the userId part, which we've already processed with the displayName. Skip it.
+        if (index > 0 && index % 3 === 2) {
+          return null;
+        }
 
-        // Plain text
-        return part;
+        // This is a regular text part.
+        return <React.Fragment key={index}>{part}</React.Fragment>;
       })}
     </>
   );
