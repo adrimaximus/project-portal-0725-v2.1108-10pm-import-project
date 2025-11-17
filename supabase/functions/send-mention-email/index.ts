@@ -13,11 +13,6 @@ const supabaseAdmin = createClient(
 
 const getFullName = (profile: any) => `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email;
 
-const formatMentions = (text: string | null | undefined): string => {
-  if (!text) return '';
-  return text.replace(/@\[([^\]]+)\]\s*\(([^)]+)\)/g, '@$1');
-};
-
 const createEmailTemplate = ({ title, mainSubject, recipientName, bodyHtml, buttonText, buttonUrl }: { title: string, mainSubject?: string, recipientName: string, bodyHtml: string, buttonText: string, buttonUrl: string }) => {
   const APP_NAME = "7i Portal";
   const LOGO_URL = "https://quuecudndfztjlxbrvyb.supabase.co/storage/v1/object/public/General/logo.png";
@@ -122,17 +117,17 @@ Deno.serve(async (req) => {
       ? `${siteUrl}/projects/${projectData.slug}?tab=tasks&task=${task_id}`
       : `${siteUrl}/projects/${projectData.slug}?tab=discussion`;
     
-    const subject = `You were mentioned in: ${formatMentions(projectData.name)}`;
+    const subject = `You were mentioned in: ${projectData.name}`;
     const bodyHtml = `
         <p><strong>${getFullName(mentionerData)}</strong> mentioned you in a comment.</p>
         <blockquote style="border-left:4px solid #0c8e9f;padding-left:1em;margin:1.2em 0;color:#3b4754;background:#f8fafc;border-radius:6px 0 0 6px;">
-            ${formatMentions(commentData.text).replace(/\n/g, '<br>')}
+            ${commentData.text.replace(/\n/g, '<br>')}
         </blockquote>
     `;
-    const text = `Hi, ${getFullName(mentionerData)} mentioned you in a comment in ${formatMentions(projectData.name)}. View it here: ${url}`;
+    const text = `Hi, ${getFullName(mentionerData)} mentioned you in a comment in ${projectData.name}. View it here: ${url}`;
     const html = createEmailTemplate({
         title: `You were mentioned in:`,
-        mainSubject: formatMentions(projectData.name),
+        mainSubject: projectData.name,
         recipientName,
         bodyHtml,
         buttonText: "View Comment",
