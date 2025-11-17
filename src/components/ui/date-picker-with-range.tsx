@@ -27,6 +27,20 @@ export function DatePickerWithRange({
 }: DatePickerWithRangeProps) {
   const isDesktop = useMediaQuery("(min-width: 768px)")
 
+  const handleSelect = (range: DateRange | undefined) => {
+    const adjustedRange = range
+      ? {
+          from: range.from
+            ? new Date(Date.UTC(range.from.getFullYear(), range.from.getMonth(), range.from.getDate(), 12))
+            : undefined,
+          to: range.to
+            ? new Date(Date.UTC(range.to.getFullYear(), range.to.getMonth(), range.to.getDate(), 12))
+            : undefined,
+        }
+      : undefined;
+    onDateChange(adjustedRange);
+  };
+
   return (
     <div className={cn("grid gap-2", className)}>
       <Popover>
@@ -60,7 +74,7 @@ export function DatePickerWithRange({
             mode="range"
             defaultMonth={date?.from}
             selected={date}
-            onSelect={onDateChange}
+            onSelect={handleSelect}
             numberOfMonths={isDesktop ? 2 : 1}
           />
         </PopoverContent>
