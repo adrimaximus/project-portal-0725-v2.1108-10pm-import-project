@@ -539,10 +539,12 @@ export interface Expense {
   };
   beneficiary: string;
   tf_amount: number;
-  terms: string;
   status_expense: string;
   due_date: string;
   account_bank: { name: string; account: string; bank: string };
   remarks: string;
   created_at: string;
+  payment_terms: any[];
+  bank_account_id: string | null;
+  custom_properties?: Record<string, any> | null;
 }
