@@ -196,7 +196,6 @@ const ExpensePage = () => {
                     <TableHead>Beneficiary</TableHead>
                     <TableHead>Amount</TableHead>
                     <TableHead className="whitespace-nowrap">Payment Plan</TableHead>
-                    <TableHead>Bank Account</TableHead>
                     <TableHead>Remarks</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
@@ -204,7 +203,7 @@ const ExpensePage = () => {
                 <TableBody>
                   {filteredExpenses.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="h-24 text-center">
+                      <TableCell colSpan={7} className="h-24 text-center">
                         No expenses found.
                       </TableCell>
                     </TableRow>
@@ -234,7 +233,26 @@ const ExpensePage = () => {
                               <span className="font-medium">{expense.project_owner.name}</span>
                             </div>
                           </TableCell>
-                          <TableCell>{expense.beneficiary}</TableCell>
+                          <TableCell>
+                            {expense.account_bank && expense.account_bank.name ? (
+                              <TooltipProvider delayDuration={100}>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span className="cursor-help underline decoration-dotted">{expense.beneficiary}</span>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <div className="flex flex-col gap-0.5 text-xs">
+                                      <p className="font-semibold">{expense.account_bank.name}</p>
+                                      <p className="text-muted-foreground">{expense.account_bank.bank}</p>
+                                      <p className="text-muted-foreground">{expense.account_bank.account}</p>
+                                    </div>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            ) : (
+                              expense.beneficiary
+                            )}
+                          </TableCell>
                           <TableCell>
                             <div>
                               <p>{formatCurrency(expense.tf_amount)}</p>
@@ -295,14 +313,6 @@ const ExpensePage = () => {
                             ) : (
                               '-'
                             )}
-                          </TableCell>
-                          <TableCell>
-                            {expense.account_bank && expense.account_bank.name ? (
-                              <div>
-                                <p className="font-medium">{expense.account_bank.name}</p>
-                                <p className="text-sm text-muted-foreground">{expense.account_bank.bank} - {expense.account_bank.account}</p>
-                              </div>
-                            ) : '-'}
                           </TableCell>
                           <TableCell>{expense.remarks}</TableCell>
                           <TableCell className="text-right">
