@@ -160,7 +160,7 @@ const CompanyFormDialog: React.FC<CompanyFormDialogProps> = ({ open, onOpenChang
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>Company Name</FormLabel>
-                                            <FormControl><Input placeholder="e.g., Acme Inc." {...field} autoFocus={!company} /></FormControl>
+                                            <FormControl><Input placeholder="e.g., Acme Inc." {...field} /></FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     )}

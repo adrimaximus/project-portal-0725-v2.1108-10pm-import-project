@@ -129,7 +129,16 @@ const ProjectMainContent = ({
   const handleReply = (comment: CommentType) => {
     setReplyTo(comment);
     if (commentInputRef.current) {
+      const author = comment.author as User;
+      const authorName = [author.first_name, author.last_name].filter(Boolean).join(' ') || author.email;
+      const mentionText = `@[${authorName}](${author.id}) `;
       commentInputRef.current.scrollIntoView();
+      setTimeout(() => {
+        if (commentInputRef.current) {
+          commentInputRef.current.setText(mentionText, true);
+          commentInputRef.current.focus();
+        }
+      }, 300);
     }
   };
 
@@ -272,7 +281,7 @@ const ProjectMainContent = ({
             allUsers={allUsers}
             onGoToReply={handleScrollToMessage}
             highlightedCommentId={highlightedCommentId}
-            onCommentHighlightComplete={onCommentHighlightComplete}
+            onHighlightComplete={onCommentHighlightComplete}
           />
         </TabsContent>
         <TabsContent value="activity" className="mt-4 h-[350px] overflow-y-auto pr-4">

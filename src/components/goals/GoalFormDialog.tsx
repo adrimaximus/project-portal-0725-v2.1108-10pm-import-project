@@ -190,7 +190,7 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, goal }: GoalFormDialogP
         <div ref={scrollRef} className="flex-1 grid gap-4 py-4 overflow-y-auto pr-4 cursor-grab active:cursor-grabbing select-none">
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="title" className="text-right">Title</Label>
-            <Input id="title" value={formData.title} onChange={(e) => handleChange('title', e.target.value)} className="col-span-3" placeholder="e.g., Drink more water" autoFocus={!isEditMode} />
+            <Input id="title" value={formData.title} onChange={(e) => handleChange('title', e.target.value)} className="col-span-3" placeholder="e.g., Drink more water" />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="description" className="text-right">Description</Label>

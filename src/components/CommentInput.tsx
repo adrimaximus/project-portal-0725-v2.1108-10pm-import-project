@@ -24,15 +24,6 @@ export interface CommentInputHandle {
   scrollIntoView: () => void;
 }
 
-// Helper hook to get the previous value of a prop or state
-const usePrevious = <T,>(value: T): T | undefined => {
-  const ref = useRef<T>();
-  useEffect(() => {
-    ref.current = value;
-  });
-  return ref.current;
-};
-
 const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({ onAddCommentOrTicket, allUsers, initialValue, replyTo, onCancelReply }: CommentInputProps, ref) => {
   const { user } = useAuth();
   const [text, setText] = useState(initialValue || '');
@@ -41,7 +32,6 @@ const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({ onAddC
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mentionsInputRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const prevReplyTo = usePrevious(replyTo);
 
   useImperativeHandle(ref, () => ({
     setText: (newText: string, append: boolean = false) => {
@@ -60,41 +50,6 @@ const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({ onAddC
       setText(initialValue);
     }
   }, [initialValue]);
-
-  useEffect(() => {
-    if (replyTo) {
-      // Only add mention if we are starting a new reply (or switching reply)
-      if (replyTo.id !== prevReplyTo?.id) {
-        const author = replyTo.author;
-        if (author && user && author.id !== user.id) {
-          const mentionText = `@[${author.name}](${author.id}) `;
-          setText(mentionText);
-          
-          // Focus and set cursor position after state update
-          setTimeout(() => {
-            if (mentionsInputRef.current?.inputElement) {
-              const input = mentionsInputRef.current.inputElement;
-              input.focus();
-              const len = mentionText.length;
-              input.setSelectionRange(len, len);
-            }
-          }, 0);
-
-        } else {
-          // Replying to self, or author is missing. Just clear the text and focus.
-          setText('');
-          setTimeout(() => {
-            mentionsInputRef.current?.inputElement?.focus();
-          }, 0);
-        }
-      } else {
-        // If it's the same reply, just ensure focus
-        setTimeout(() => {
-          mentionsInputRef.current?.inputElement?.focus();
-        }, 0);
-      }
-    }
-  }, [replyTo, prevReplyTo, user]);
 
   const parseMentions = (text: string): string[] => {
     const mentionRegex = /@\[[^\]]+\]\(([^)]+)\)/g;
