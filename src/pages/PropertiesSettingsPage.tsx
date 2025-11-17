@@ -2,7 +2,7 @@ import PortalLayout from "@/components/PortalLayout";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import { Link, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChevronRight, User, Building, Briefcase, CreditCard } from "lucide-react";
+import { ChevronRight, User, Building, Briefcase, CreditCard, Receipt } from "lucide-react";
 import TagsPropertiesCard from "@/components/settings/TagsPropertiesCard";
 
 const PropertiesSettingsPage = () => {
@@ -90,6 +90,20 @@ const PropertiesSettingsPage = () => {
             </CardContent>
           </Card>
           <TagsPropertiesCard />
+          <Card onClick={() => navigate('/settings/expense-properties')} className="cursor-pointer hover:bg-muted/50 transition-colors">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-base font-medium flex items-center gap-2">
+                <Receipt className="h-4 w-4" />
+                Expense Properties
+              </CardTitle>
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Manage custom fields for expense tracking.
+              </p>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </PortalLayout>
