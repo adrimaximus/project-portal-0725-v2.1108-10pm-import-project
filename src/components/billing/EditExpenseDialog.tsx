@@ -17,7 +17,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Project, Person, Company, Expense } from '@/types';
+import { Project, Person, Company, Expense, CustomProperty } from '@/types';
 import { CurrencyInput } from '../ui/currency-input';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Label } from '../ui/label';
@@ -25,6 +25,7 @@ import BankAccountFormDialog from './BankAccountFormDialog';
 import BeneficiaryTypeDialog from './BeneficiaryTypeDialog';
 import PersonFormDialog from '../people/PersonFormDialog';
 import CompanyFormDialog from '../people/CompanyFormDialog';
+import CustomPropertyInput from '../settings/CustomPropertyInput';
 
 interface BankAccount {
   id: string;
@@ -48,6 +49,7 @@ const expenseSchema = z.object({
   bank_account_id: z.string().uuid("Please select a bank account.").optional().nullable(),
   remarks: z.string().optional(),
   status_expense: z.string().min(1, "Status is required"),
+  custom_properties: z.record(z.any()).optional(),
 });
 
 type ExpenseFormValues = z.infer<typeof expenseSchema>;
@@ -98,6 +100,16 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
     enabled: open,
   });
 
+  const { data: customProperties = [], isLoading: isLoadingProperties } = useQuery<CustomProperty[]>({
+    queryKey: ['custom_properties', 'expense'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('custom_properties').select('*').eq('category', 'expense');
+      if (error) throw error;
+      return data;
+    },
+    enabled: open,
+  });
+
   const form = useForm<ExpenseFormValues>({
     resolver: zodResolver(expenseSchema),
   });
@@ -138,6 +150,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
           release_date: t.release_date ? new Date(t.release_date) : undefined,
         })) || [{ amount: null, request_type: 'Requested', request_date: undefined, release_date: undefined, status: 'Pending' }],
         bank_account_id: (expense as any).bank_account_id || null,
+        custom_properties: expense.custom_properties || {},
       });
     }
   }, [expense, beneficiaries, projects, reset, open]);
@@ -208,6 +221,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
         account_bank: bankDetails,
         remarks: values.remarks,
         status_expense: values.status_expense,
+        custom_properties: values.custom_properties,
       }).eq('id', expense.id);
 
       if (error) throw error;
@@ -397,6 +411,30 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
               <FormField control={form.control} name="remarks" render={({ field }) => (
                 <FormItem><FormLabel>Remarks</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
               )} />
+              {isLoadingProperties ? (
+                <div className="flex justify-center"><Loader2 className="h-5 w-5 animate-spin" /></div>
+              ) : customProperties.length > 0 && (
+                <div className="space-y-4 border-t pt-4">
+                  {customProperties.map(prop => (
+                    <FormField
+                      key={prop.id}
+                      control={form.control}
+                      name={`custom_properties.${prop.name}`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <CustomPropertyInput
+                            property={prop}
+                            control={form.control}
+                            name={`custom_properties.${prop.name}`}
+                            bucket="expense-attachments"
+                          />
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  ))}
+                </div>
+              )}
             </form>
           </Form>
           <DialogFooter className="pt-4">
@@ -414,7 +452,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
           onOpenChange={setIsBankAccountFormOpen}
           ownerId={beneficiary.id}
           ownerType={beneficiary.type}
-          onSuccess={(newAccountId) => {
+          onSuccess={() => {
             const fetchNewAccounts = async () => {
               const { data, error } = await supabase.rpc('get_beneficiary_bank_accounts', {
                 p_owner_id: beneficiary!.id,
@@ -422,7 +460,10 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
               });
               if (data) {
                 setBankAccounts(data);
-                setValue('bank_account_id', newAccountId);
+                const newAccount = data[data.length - 1];
+                if (newAccount) {
+                  setValue('bank_account_id', newAccount.id);
+                }
               }
             };
             fetchNewAccounts();

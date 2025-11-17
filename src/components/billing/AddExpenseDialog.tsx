@@ -17,7 +17,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Project, Person, Company } from '@/types';
+import { Project, Person, Company, CustomProperty } from '@/types';
 import { CurrencyInput } from '../ui/currency-input';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Label } from '../ui/label';
@@ -26,6 +26,7 @@ import BeneficiaryTypeDialog from './BeneficiaryTypeDialog';
 import PersonFormDialog from '../people/PersonFormDialog';
 import CompanyFormDialog from '../people/CompanyFormDialog';
 import CreateProjectDialog from '../projects/CreateProjectDialog';
+import CustomPropertyInput from '../settings/CustomPropertyInput';
 
 interface BankAccount {
   id: string;
@@ -53,6 +54,7 @@ const expenseSchema = z.object({
   })).optional(),
   bank_account_id: z.string().uuid("Please select a bank account.").optional().nullable(),
   remarks: z.string().optional(),
+  custom_properties: z.record(z.any()).optional(),
 });
 
 type ExpenseFormValues = z.infer<typeof expenseSchema>;
@@ -112,6 +114,16 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
     enabled: open,
   });
 
+  const { data: customProperties = [], isLoading: isLoadingProperties } = useQuery<CustomProperty[]>({
+    queryKey: ['custom_properties', 'expense'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('custom_properties').select('*').eq('category', 'expense');
+      if (error) throw error;
+      return data;
+    },
+    enabled: open,
+  });
+
   const form = useForm<ExpenseFormValues>({
     resolver: zodResolver(expenseSchema),
     defaultValues: {
@@ -121,6 +133,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
       payment_terms: [{ amount: null, request_type: 'Requested', request_date: undefined, release_date: undefined, status: 'Pending' }],
       bank_account_id: null,
       remarks: '',
+      custom_properties: {},
     },
   });
 
@@ -222,6 +235,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
         bank_account_id: (selectedAccount && !selectedAccount.is_legacy) ? selectedAccount.id : null,
         account_bank: bankDetails,
         remarks: values.remarks,
+        custom_properties: values.custom_properties,
       });
 
       if (error) throw error;
@@ -399,7 +413,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                         )} />
                         <div className="grid grid-cols-2 gap-4">
                           <FormField control={form.control} name={`payment_terms.${index}.release_date`} render={({ field }) => (
-                            <FormItem><FormLabel className="text-xs">Release Date</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal bg-background", !field.value && "text-muted-foreground")}>{field.value ? format(field.value, "PPP") : <span>Pick a date</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value || undefined} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>
+                            <FormItem><FormLabel className="text-xs">Payment Schedule</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal bg-background", !field.value && "text-muted-foreground")}>{field.value ? format(field.value, "PPP") : <span>Pick a date</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value || undefined} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>
                           )} />
                           <FormField control={form.control} name={`payment_terms.${index}.status`} render={({ field }) => (
                             <FormItem><FormLabel className="text-xs">Status</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger className="bg-background"><SelectValue placeholder="Status" /></SelectTrigger></FormControl><SelectContent><SelectItem value="Pending">Pending</SelectItem><SelectItem value="Paid">Paid</SelectItem><SelectItem value="Rejected">Rejected</SelectItem></SelectContent></Select><FormMessage /></FormItem>
@@ -420,6 +434,30 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
               <FormField control={form.control} name="remarks" render={({ field }) => (
                 <FormItem><FormLabel>Remarks</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
               )} />
+              {isLoadingProperties ? (
+                <div className="flex justify-center"><Loader2 className="h-5 w-5 animate-spin" /></div>
+              ) : customProperties.length > 0 && (
+                <div className="space-y-4 border-t pt-4">
+                  {customProperties.map(prop => (
+                    <FormField
+                      key={prop.id}
+                      control={form.control}
+                      name={`custom_properties.${prop.name}`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <CustomPropertyInput
+                            property={prop}
+                            control={form.control}
+                            name={`custom_properties.${prop.name}`}
+                            bucket="expense-attachments"
+                          />
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  ))}
+                </div>
+              )}
             </form>
           </Form>
         </DialogContent>
@@ -439,11 +477,10 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
           ownerType={beneficiary.type}
           onSuccess={(newAccountId) => {
             const fetchNewAccounts = async () => {
-              const { data, error } = await supabase
-                .rpc('get_beneficiary_bank_accounts', {
-                  p_owner_id: beneficiary!.id,
-                  p_owner_type: beneficiary!.type,
-                });
+              const { data, error } = await supabase.rpc('get_beneficiary_bank_accounts', {
+                p_owner_id: beneficiary!.id,
+                p_owner_type: beneficiary!.type,
+              });
               if (data) {
                 setBankAccounts(data);
                 setValue('bank_account_id', newAccountId);
