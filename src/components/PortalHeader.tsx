@@ -110,11 +110,7 @@ const PortalHeader = ({ summary }: PortalHeaderProps) => {
             <DropdownMenuContent align="end" className="w-80 sm:w-96 max-h-[80vh] overflow-y-auto">
               <DropdownMenuLabel>Notifications</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              {notifications.length === 0 ? (
-                <div className="p-4 text-center text-sm text-muted-foreground">
-                  You have no notifications.
-                </div>
-              ) : unreadCount > 0 ? (
+              {unreadNotifications.length > 0 ? (
                 unreadNotifications.map(notification => {
                   const Icon = notificationIcons[notification.type as keyof typeof notificationIcons] || notificationIcons.system;
                   return (
@@ -137,7 +133,7 @@ const PortalHeader = ({ summary }: PortalHeaderProps) => {
                 })
               ) : (
                 <div className="p-4 text-center text-sm text-muted-foreground">
-                  You're all caught up!
+                  {notifications.length > 0 ? "You're all caught up!" : "You have no notifications."}
                 </div>
               )}
               <DropdownMenuSeparator />
