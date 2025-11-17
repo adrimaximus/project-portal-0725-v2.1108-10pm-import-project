@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Goal, GoalType, GoalPeriod, Tag } from '@/types';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -20,6 +20,7 @@ import { colors } from '@/data/colors';
 import { allIcons } from '@/data/icons';
 import { useQueryClient } from '@tanstack/react-query';
 import { useDragScrollY } from '@/hooks/useDragScrollY';
+import SafeLocalStorage from '@/lib/localStorage';
 
 interface GoalFormDialogProps {
   open: boolean;
@@ -39,6 +40,7 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, goal }: GoalFormDialogP
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const scrollRef = useDragScrollY<HTMLDivElement>();
+  const storageKey = useMemo(() => `goal-form-draft-${goal?.id || 'new'}`, [goal]);
 
   const [formData, setFormData] = useState({
     title: '', description: '', type: 'frequency' as GoalType,
@@ -59,7 +61,11 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, goal }: GoalFormDialogP
   useEffect(() => {
     if (open) {
       fetchTags();
-      if (isEditMode && goal) {
+      const savedDraft = SafeLocalStorage.getItem<typeof formData>(storageKey);
+      if (savedDraft) {
+        setFormData(savedDraft);
+        toast.info("Draft restored.");
+      } else if (isEditMode && goal) {
         setFormData({
           title: goal.title, description: goal.description || '', type: goal.type,
           frequency: goal.frequency, specificDays: goal.specific_days || [],
@@ -77,7 +83,13 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, goal }: GoalFormDialogP
         });
       }
     }
-  }, [goal, open, isEditMode, user, fetchTags]);
+  }, [goal, open, isEditMode, user, fetchTags, storageKey]);
+
+  useEffect(() => {
+    if (open) {
+      SafeLocalStorage.setItem(storageKey, formData);
+    }
+  }, [formData, open, storageKey]);
 
   const handleChange = (field: keyof typeof formData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -130,6 +142,7 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, goal }: GoalFormDialogP
         toast.success("Goal updated successfully.");
         queryClient.invalidateQueries({ queryKey: ['goal', goal.slug] });
         queryClient.invalidateQueries({ queryKey: ['goals'] });
+        SafeLocalStorage.removeItem(storageKey);
         onSuccess(goal);
       } else {
         const { tags, ...restOfFormData } = formData;
@@ -160,6 +173,7 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, goal }: GoalFormDialogP
         if (!newGoal) throw new Error("Goal creation did not return the new goal data.");
 
         toast.success(`Goal "${(newGoal as Goal).title}" created!`);
+        SafeLocalStorage.removeItem(storageKey);
         onSuccess(newGoal);
       }
     } catch (error: any) {

@@ -9,6 +9,7 @@ import '@/styles/mentions.css';
 import { useAuth } from '@/contexts/AuthContext';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import InteractiveText from './InteractiveText';
+import SafeLocalStorage from '@/lib/localStorage';
 
 interface CommentInputProps {
   onAddCommentOrTicket: (text: string, isTicket: boolean, attachments: File[] | null, mentionedUserIds: string[], replyToId?: string | null) => void;
@@ -16,6 +17,7 @@ interface CommentInputProps {
   initialValue?: string;
   replyTo?: CommentType | null;
   onCancelReply?: () => void;
+  storageKey: string;
 }
 
 export interface CommentInputHandle {
@@ -24,15 +26,13 @@ export interface CommentInputHandle {
   scrollIntoView: () => void;
 }
 
-const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({ onAddCommentOrTicket, allUsers, initialValue, replyTo, onCancelReply }: CommentInputProps, ref) => {
+const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({ onAddCommentOrTicket, allUsers, initialValue, replyTo, onCancelReply, storageKey }: CommentInputProps, ref) => {
   const { user } = useAuth();
   
-  const storageKey = typeof window !== 'undefined' ? `comment-draft:${window.location.pathname}` : null;
-
   const [text, setText] = useState(() => {
     if (storageKey) {
       try {
-        const savedText = localStorage.getItem(storageKey);
+        const savedText = SafeLocalStorage.getItem<string>(storageKey);
         return savedText || initialValue || '';
       } catch (error) {
         console.error("Failed to read from localStorage", error);
@@ -63,7 +63,7 @@ const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({ onAddC
   useEffect(() => {
     if (storageKey) {
       try {
-        localStorage.setItem(storageKey, text);
+        SafeLocalStorage.setItem(storageKey, text);
       } catch (error) {
         console.error("Failed to write to localStorage", error);
       }
@@ -105,7 +105,7 @@ const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({ onAddC
     }
     if (storageKey) {
       try {
-        localStorage.removeItem(storageKey);
+        SafeLocalStorage.removeItem(storageKey);
       } catch (error) {
         console.error("Failed to remove from localStorage", error);
       }

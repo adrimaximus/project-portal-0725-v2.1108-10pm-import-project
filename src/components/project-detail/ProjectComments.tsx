@@ -31,6 +31,7 @@ interface ProjectCommentsProps {
   onGoToReply: (messageId: string) => void;
   highlightedCommentId?: string | null;
   onHighlightComplete?: () => void;
+  storageKey: string;
 }
 
 const ProjectComments = forwardRef<CommentInputHandle, ProjectCommentsProps>(({
@@ -60,6 +61,7 @@ const ProjectComments = forwardRef<CommentInputHandle, ProjectCommentsProps>(({
   onGoToReply,
   highlightedCommentId,
   onHighlightComplete,
+  storageKey,
 }, ref) => {
   const [commentToDelete, setCommentToDelete] = useState<CommentType | null>(null);
   const lastProcessedMentionId = useRef<string | null>(null);
@@ -107,6 +109,7 @@ const ProjectComments = forwardRef<CommentInputHandle, ProjectCommentsProps>(({
           allUsers={allUsers}
           replyTo={replyTo}
           onCancelReply={onCancelReply}
+          storageKey={storageKey}
         />
       </div>
       <div className="flex-1 overflow-y-auto pr-4 space-y-4">

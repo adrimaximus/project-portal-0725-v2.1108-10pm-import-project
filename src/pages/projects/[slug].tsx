@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -27,6 +27,7 @@ import ProjectMainContent from '@/components/project-detail/ProjectMainContent';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTaskModal } from '@/contexts/TaskModalContext';
 import { useUnreadTasks } from '@/hooks/useUnreadTasks';
+import SafeLocalStorage from '@/lib/localStorage';
 
 const ProjectDetailPage = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -56,6 +57,8 @@ const ProjectDetailPage = () => {
     queryFn: () => getProjectBySlug(slug!),
     enabled: !!slug,
   });
+
+  const storageKey = useMemo(() => project ? `project-description-draft-${project.id}` : null, [project]);
 
   const { 
     updateProject, 
@@ -89,16 +92,25 @@ const ProjectDetailPage = () => {
 
   const enterEditMode = () => {
     if (project) {
-      setEditedProject(JSON.parse(JSON.stringify(project))); // Deep copy
+      const draft = storageKey ? SafeLocalStorage.getItem<string>(storageKey) : null;
+      const description = draft !== null ? draft : project.description;
+      setEditedProject({ ...project, description });
       setIsEditing(true);
-      setHasChanges(false);
+      setHasChanges(draft !== null);
     }
   };
+
+  useEffect(() => {
+    if (isEditing && editedProject && storageKey) {
+      SafeLocalStorage.setItem(storageKey, editedProject.description || '');
+    }
+  }, [isEditing, editedProject?.description, storageKey]);
 
   const handleCancelChanges = () => {
     setIsEditing(false);
     setEditedProject(null);
     setHasChanges(false);
+    if (storageKey) SafeLocalStorage.removeItem(storageKey);
   };
 
   const handleSaveChanges = useCallback(() => {
@@ -108,6 +120,7 @@ const ProjectDetailPage = () => {
           setIsEditing(false);
           setEditedProject(null);
           setHasChanges(false);
+          if (storageKey) SafeLocalStorage.removeItem(storageKey);
           if (slug && slug !== data.slug) {
             toast.success("Project updated successfully! Redirecting...");
             navigate(`/projects/${data.slug}`, { replace: true });
@@ -119,7 +132,7 @@ const ProjectDetailPage = () => {
     } else {
       setIsEditing(false);
     }
-  }, [editedProject, updateProject, slug, navigate]);
+  }, [editedProject, updateProject, slug, navigate, storageKey]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {

@@ -176,6 +176,7 @@ const TaskComments: React.FC<TaskCommentsProps> = ({ taskId, projectId }) => {
           allUsers={allUsers}
           replyTo={replyTo}
           onCancelReply={() => setReplyTo(null)}
+          storageKey={`comment-draft-task-${taskId}`}
         />
       </div>
       <AlertDialog open={!!commentToDelete} onOpenChange={() => setCommentToDelete(null)}>

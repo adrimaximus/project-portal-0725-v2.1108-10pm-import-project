@@ -281,7 +281,8 @@ const ProjectMainContent = ({
             allUsers={allUsers}
             onGoToReply={handleScrollToMessage}
             highlightedCommentId={highlightedCommentId}
-            onHighlightComplete={onCommentHighlightComplete}
+            onCommentHighlightComplete={onCommentHighlightComplete}
+            storageKey={`comment-draft-project-${project.id}`}
           />
         </TabsContent>
         <TabsContent value="activity" className="mt-4 h-[350px] overflow-y-auto pr-4">
