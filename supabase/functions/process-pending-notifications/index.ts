@@ -19,6 +19,11 @@ const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, { gl
 
 // --- Helper Functions ---
 
+const formatMentions = (text: string | null | undefined): string => {
+  if (!text) return '';
+  return text.replace(/@\[([^\]]+)\]\(([^)]+)\)/g, '@$1');
+};
+
 const createEmailTemplate = ({ title, mainSubject, recipientName, bodyHtml, buttonText, buttonUrl }: { title: string, mainSubject?: string, recipientName: string, bodyHtml: string, buttonText: string, buttonUrl: string }) => {
   const APP_NAME = "7i Portal";
   const LOGO_URL = "https://quuecudndfztjlxbrvyb.supabase.co/storage/v1/object/public/General/logo.png";
@@ -262,19 +267,19 @@ Deno.serve(async (req) => {
                     const { project_name: contextName, project_slug: contextSlug, mentioner_name: mentionerName, comment_text: commentText, task_id: taskId } = context;
                     const isChatMention = contextSlug === 'chat';
                     const url = isChatMention ? `${APP_URL}/chat` : (taskId ? `${APP_URL}/projects/${contextSlug}?tab=tasks&task=${taskId}` : `${APP_URL}/projects/${contextSlug}?tab=discussion`);
-                    subject = `You were mentioned in: ${contextName}`;
-                    const bodyHtml = `<p><strong>${mentionerName}</strong> mentioned you in a comment.</p><blockquote style="border-left:4px solid #0c8e9f;padding-left:1em;margin:1.2em 0;color:#3b4754;background:#f8fafc;border-radius:6px 0 0 6px;">${commentText.replace(/@\[([^\]]+)\]\(([^)]+)\)/g, '<strong>@$1</strong>')}</blockquote>`;
-                    text = `Hi, ${mentionerName} mentioned you in a comment in ${contextName}. View it here: ${url}`;
-                    html = createEmailTemplate({ title: `You were mentioned in:`, mainSubject: contextName, recipientName, bodyHtml, buttonText: "View Comment", buttonUrl: url });
+                    subject = `You were mentioned in: ${formatMentions(contextName)}`;
+                    const bodyHtml = `<p><strong>${mentionerName}</strong> mentioned you in a comment.</p><blockquote style="border-left:4px solid #0c8e9f;padding-left:1em;margin:1.2em 0;color:#3b4754;background:#f8fafc;border-radius:6px 0 0 6px;">${formatMentions(commentText).replace(/\n/g, '<br>')}</blockquote>`;
+                    text = `Hi, ${mentionerName} mentioned you in a comment in ${formatMentions(contextName)}. View it here: ${url}`;
+                    html = createEmailTemplate({ title: `You were mentioned in:`, mainSubject: formatMentions(contextName), recipientName, bodyHtml, buttonText: "View Comment", buttonUrl: url });
                     break;
                 }
                 case 'task_assignment_email': {
                     const { assigner_name, task_title, project_name, project_slug, task_id } = context;
                     const url = `${APP_URL}/projects/${project_slug}?tab=tasks&task=${task_id}`;
-                    subject = `New task assigned to you: ${task_title}`;
+                    subject = `New task assigned to you: ${formatMentions(task_title)}`;
                     const bodyHtml = `<p><strong>${assigner_name}</strong> has assigned you a new task in the project <strong>${project_name}</strong>.</p>`;
-                    text = `You have been assigned a new task: "${task_title}". View it here: ${url}`;
-                    html = createEmailTemplate({ title: `New Task Assigned:`, mainSubject: task_title, recipientName, bodyHtml, buttonText: "View Task", buttonUrl: url });
+                    text = `You have been assigned a new task: "${formatMentions(task_title)}". View it here: ${url}`;
+                    html = createEmailTemplate({ title: `New Task Assigned:`, mainSubject: formatMentions(task_title), recipientName, bodyHtml, buttonText: "View Task", buttonUrl: url });
                     break;
                 }
                 case 'project_status_updated_email': {
@@ -307,10 +312,10 @@ Deno.serve(async (req) => {
                 case 'task_overdue_email': {
                     const { task_title, project_name, project_slug, task_id, days_overdue } = context;
                     const url = `${APP_URL}/projects/${project_slug}?tab=tasks&task=${task_id}`;
-                    subject = `REMINDER: Task "${task_title}" is overdue`;
+                    subject = `REMINDER: Task "${formatMentions(task_title)}" is overdue`;
                     const bodyHtml = `<p>This is a reminder that the task in the project <strong>${project_name}</strong> is now <strong>${days_overdue} day(s)</strong> overdue.</p><p>Please take action as soon as possible.</p>`;
-                    text = `REMINDER: The task "${task_title}" is overdue by ${days_overdue} day(s). View it here: ${url}`;
-                    html = createEmailTemplate({ title: `Task Overdue:`, mainSubject: task_title, recipientName, bodyHtml, buttonText: "View Task", buttonUrl: url });
+                    text = `REMINDER: The task "${formatMentions(task_title)}" is overdue by ${days_overdue} day(s). View it here: ${url}`;
+                    html = createEmailTemplate({ title: `Task Overdue:`, mainSubject: formatMentions(task_title), recipientName, bodyHtml, buttonText: "View Task", buttonUrl: url });
                     break;
                 }
                 case 'billing_reminder_email': {
@@ -360,14 +365,14 @@ Deno.serve(async (req) => {
                     const { project_name: contextName, project_slug: contextSlug, mentioner_name: mentionerName, task_id: taskId } = context;
                     const isChatMention = contextSlug === 'chat';
                     const url = isChatMention ? `${APP_URL}/chat` : (taskId ? `${APP_URL}/projects/${contextSlug}?tab=tasks&task=${taskId}` : `${APP_URL}/projects/${contextSlug}?tab=discussion`);
-                    const contextDescription = isChatMention ? `di chat "${contextName}"` : `dalam proyek "${contextName}"`;
+                    const contextDescription = isChatMention ? `di chat "${formatMentions(contextName)}"` : `dalam proyek "${formatMentions(contextName)}"`;
                     userPrompt = `Buat notifikasi mention. Penerima: ${recipientName}. Pengirim: ${mentionerName}. Konteks: ${contextDescription}. URL: ${url}`;
                     break;
                 }
                 case 'task_assignment': {
                     const { assigner_name, task_title, project_name, project_slug, task_id } = context;
                     const url = `${APP_URL}/projects/${project_slug}?tab=tasks&task=${task_id}`;
-                    userPrompt = `Buat notifikasi penugasan tugas. Penerima: ${recipientName}. Pemberi tugas: ${assigner_name}. Judul tugas: ${task_title}. Proyek: ${project_name}. URL: ${url}`;
+                    userPrompt = `Buat notifikasi penugasan tugas. Penerima: ${recipientName}. Pemberi tugas: ${assigner_name}. Judul tugas: ${formatMentions(task_title)}. Proyek: ${project_name}. URL: ${url}`;
                     break;
                 }
                 case 'project_invite': {
@@ -409,7 +414,7 @@ Deno.serve(async (req) => {
                 case 'task_overdue': {
                     const { task_title, project_name, project_slug, task_id, days_overdue } = context;
                     const url = `${APP_URL}/projects/${project_slug}?tab=tasks&task=${task_id}`;
-                    userPrompt = `Buat notifikasi tugas jatuh tempo. Penerima: ${recipientName}. Judul tugas: ${task_title}. Proyek: ${project_name}. Keterlambatan: ${days_overdue} hari. URL: ${url}`;
+                    userPrompt = `Buat notifikasi tugas jatuh tempo. Penerima: ${recipientName}. Judul tugas: ${formatMentions(task_title)}. Proyek: ${project_name}. Keterlambatan: ${days_overdue} hari. URL: ${url}`;
                     break;
                 }
                 case 'billing_reminder': {

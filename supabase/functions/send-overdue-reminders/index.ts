@@ -9,6 +9,11 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
+const formatMentions = (text: string | null | undefined): string => {
+  if (!text) return '';
+  return text.replace(/@\[([^\]]+)\]\(([^)]+)\)/g, '@$1');
+};
+
 const getSystemPrompt = () => `Anda adalah asisten keuangan yang profesional, sopan, dan proaktif. Tugas Anda adalah membuat pesan pengingat WhatsApp tentang invoice yang telah jatuh tempo.
 
 **Aturan Penting:**
@@ -25,7 +30,7 @@ const getSystemPrompt = () => `Anda adalah asisten keuangan yang profesional, so
 
 const getFullName = (profile: any) => `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email;
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -115,7 +120,7 @@ serve(async (req) => {
         const userPrompt = `**Konteks:**
 - **Jenis:** Pengingat Invoice Jatuh Tempo
 - **Penerima:** ${recipientName}
-- **Proyek:** ${project.name}
+- **Proyek:** ${formatMentions(project.name)}
 - **Nomor Invoice:** ${project.invoice_number || 'N/A'}
 - **Jumlah Hari Terlambat:** ${overdueDays} hari
 - **Tingkat Urgensi:** ${urgency}
