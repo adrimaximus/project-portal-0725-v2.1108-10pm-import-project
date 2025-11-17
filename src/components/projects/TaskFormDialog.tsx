@@ -29,6 +29,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { AssigneeCombobox } from './AssigneeCombobox';
 import { useAuth } from '@/contexts/AuthContext';
 import { v4 as uuidv4 } from 'uuid';
+import { formatMentions } from '@/lib/mentionUtils';
 
 interface TaskFormDialogProps {
   open: boolean;
@@ -183,7 +184,7 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task, proj
         form.reset({
           title: task.title,
           project_id: task.project_id || project?.id,
-          description: task.description,
+          description: formatMentions(task.description),
           due_date: task.due_date ? new Date(task.due_date) : null,
           priority: task.priority || 'Normal',
           status: task.status || 'To do',
@@ -228,7 +229,7 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task, proj
         form.reset({
           title: initialData?.title || '',
           project_id: initialProjectId,
-          description: initialData?.description || '',
+          description: formatMentions(initialData?.description || ''),
           due_date: initialDueDate,
           priority: initialData?.priority || 'Normal',
           status: initialData?.status || 'To do',
