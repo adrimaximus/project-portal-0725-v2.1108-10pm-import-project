@@ -40,7 +40,7 @@ const PortalHeader = ({ summary }: PortalHeaderProps) => {
   const [isSupportDialogOpen, setIsSupportDialogOpen] = useState(false);
   const { data: allUsers = [] } = useProfiles();
 
-  const recentNotifications = notifications.slice(0, 5);
+  const unreadNotifications = notifications.filter(n => !n.read).slice(0, 5);
 
   if (!user) {
     return null;
@@ -115,7 +115,7 @@ const PortalHeader = ({ summary }: PortalHeaderProps) => {
                   You have no notifications.
                 </div>
               ) : unreadCount > 0 ? (
-                recentNotifications.map(notification => {
+                unreadNotifications.map(notification => {
                   const Icon = notificationIcons[notification.type as keyof typeof notificationIcons] || notificationIcons.system;
                   return (
                     <DropdownMenuItem key={notification.id} onSelect={() => {
