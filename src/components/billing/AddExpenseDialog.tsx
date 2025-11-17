@@ -43,6 +43,7 @@ interface AddExpenseDialogProps {
 
 const expenseSchema = z.object({
   project_id: z.string().uuid("Please select a project."),
+  purpose_payment: z.string().optional(),
   beneficiary: z.string().min(1, "Beneficiary is required."),
   tf_amount: z.number().min(1, "Amount must be greater than 0."),
   payment_terms: z.array(z.object({
@@ -223,6 +224,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
       const { error } = await supabase.from('expenses').insert({
         project_id: values.project_id,
         created_by: user.id,
+        purpose_payment: values.purpose_payment,
         beneficiary: values.beneficiary,
         tf_amount: values.tf_amount,
         payment_terms: values.payment_terms?.map(term => ({
@@ -310,45 +312,55 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
               />
               <FormField
                 control={form.control}
-                name="beneficiary"
+                name="purpose_payment"
                 render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Beneficiary</FormLabel>
-                    <Popover open={beneficiaryPopoverOpen} onOpenChange={setBeneficiaryPopoverOpen}>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button variant="outline" role="combobox" className={cn("w-full justify-between", !field.value && "text-muted-foreground")} disabled={isLoadingBeneficiaries}>
-                            {field.value || "Select a beneficiary"}
-                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                        <Command>
-                          <CommandInput placeholder="Search beneficiary..." value={beneficiarySearch} onValueChange={setBeneficiarySearch} />
-                          <CommandList>
-                            <CommandEmpty>
-                              <Button variant="ghost" className="w-full justify-start" onClick={() => handleCreateNewBeneficiary(beneficiarySearch)}>
-                                <Plus className="mr-2 h-4 w-4" />
-                                Create "{beneficiarySearch}"
-                              </Button>
-                            </CommandEmpty>
-                            <CommandGroup>
-                              {beneficiaries.map((item) => (
-                                <CommandItem value={item.name} key={item.id} onSelect={() => { form.setValue("beneficiary", item.name); setBeneficiary(item); setBeneficiaryPopoverOpen(false); }}>
-                                  <Check className={cn("mr-2 h-4 w-4", item.name === field.value ? "opacity-100" : "opacity-0")} />
-                                  {item.type === 'person' ? <User className="mr-2 h-4 w-4 text-muted-foreground" /> : <Building className="mr-2 h-4 w-4 text-muted-foreground" />}
-                                  <span className="flex-grow">{item.name}</span>
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          </CommandList>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
+                  <FormItem>
+                    <FormLabel>Purpose Payment</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter purpose of payment" {...field} value={field.value || ''} />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
-                )} />
+                )}
+              />
+              <FormField control={form.control} name="beneficiary" render={({ field }) => (
+                <FormItem className="flex flex-col">
+                  <FormLabel>Beneficiary</FormLabel>
+                  <Popover open={beneficiaryPopoverOpen} onOpenChange={setBeneficiaryPopoverOpen}>
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button variant="outline" role="combobox" className={cn("w-full justify-between", !field.value && "text-muted-foreground")} disabled={isLoadingBeneficiaries}>
+                          {field.value || "Select a beneficiary"}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                      <Command>
+                        <CommandInput placeholder="Search beneficiary..." value={beneficiarySearch} onValueChange={setBeneficiarySearch} />
+                        <CommandList>
+                          <CommandEmpty>
+                            <Button variant="ghost" className="w-full justify-start" onClick={() => handleCreateNewBeneficiary(beneficiarySearch)}>
+                              <Plus className="mr-2 h-4 w-4" />
+                              Create "{beneficiarySearch}"
+                            </Button>
+                          </CommandEmpty>
+                          <CommandGroup>
+                            {beneficiaries.map((item) => (
+                              <CommandItem value={item.name} key={item.id} onSelect={() => { form.setValue("beneficiary", item.name); setBeneficiary(item); setBeneficiaryPopoverOpen(false); }}>
+                                <Check className={cn("mr-2 h-4 w-4", item.name === field.value ? "opacity-100" : "opacity-0")} />
+                                {item.type === 'person' ? <User className="mr-2 h-4 w-4 text-muted-foreground" /> : <Building className="mr-2 h-4 w-4 text-muted-foreground" />}
+                                <span className="flex-grow">{item.name}</span>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                  <FormMessage />
+                </FormItem>
+              )} />
               <FormField control={form.control} name="bank_account_id" render={({ field }) => (
                 <FormItem>
                   <div className="flex justify-between items-center">
@@ -483,7 +495,10 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
               });
               if (data) {
                 setBankAccounts(data);
-                setValue('bank_account_id', newAccountId);
+                const newAccount = data[data.length - 1];
+                if (newAccount) {
+                  setValue('bank_account_id', newAccount.id);
+                }
               }
             };
             fetchNewAccounts();
