@@ -176,18 +176,19 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
 
   const handleReply = (comment: CommentType) => {
     setReplyTo(comment);
-    if (commentInputRef.current) {
-      const author = comment.author as User;
-      const authorName = [author.first_name, author.last_name].filter(Boolean).join(' ') || author.email;
-      const mentionText = `@[${authorName}](${author.id}) `;
-      commentInputRef.current.scrollIntoView();
-      setTimeout(() => {
-        if (commentInputRef.current) {
-          commentInputRef.current.setText(mentionText, true);
-          commentInputRef.current.focus();
-        }
-      }, 300);
-    }
+    
+    // Defer actions to ensure the UI has updated for the 'reply' state
+    setTimeout(() => {
+      if (commentInputRef.current) {
+        const author = comment.author as User;
+        const authorName = [author.first_name, author.last_name].filter(Boolean).join(' ') || author.email;
+        const mentionText = `@[${authorName}](${author.id}) `;
+        
+        commentInputRef.current.scrollIntoView();
+        commentInputRef.current.setText(mentionText, true);
+        commentInputRef.current.focus();
+      }
+    }, 100); // A short delay is usually enough
   };
 
   const handleCreateTicketFromComment = async (comment: CommentType) => {
