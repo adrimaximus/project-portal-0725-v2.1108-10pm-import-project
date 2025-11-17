@@ -12,6 +12,7 @@ import Picker from '@emoji-mart/react';
 import data from '@emoji-mart/data';
 import { useTheme } from "@/contexts/ThemeProvider";
 import InteractiveText from './InteractiveText';
+import SafeLocalStorage from '@/lib/localStorage';
 
 interface ChatInputProps {
   onSendMessage: (text: string, attachment: File | null, replyToMessageId?: string | null) => void;
@@ -34,7 +35,8 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
   editingMessage,
   onCancelEdit,
 }, ref) => {
-  const [text, setText] = useState("");
+  const storageKey = `chat-draft:${conversationId}`;
+  const [text, setText] = useState('');
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
   const lastTypingSentAtRef = useRef<number>(0);
   const { selectedConversation, projectSuggestions, taskSuggestions, billSuggestions } = useChatContext();
@@ -48,8 +50,12 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
       if (mentionsInputRef.current?.inputElement) {
         mentionsInputRef.current.inputElement.focus();
       }
+    } else {
+      // When conversation changes or editing is cancelled, restore draft
+      const savedDraft = SafeLocalStorage.getItem(storageKey, '');
+      setText(savedDraft || '');
     }
-  }, [editingMessage, onCancelReply]);
+  }, [editingMessage, onCancelReply, conversationId, storageKey]);
 
   const userSuggestions: UserSuggestion[] = (selectedConversation?.members || []).map(m => ({
     id: m.id,
@@ -97,6 +103,7 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
     onSendMessage(text, attachmentFile, replyTo?.id);
     setText("");
     setAttachmentFile(null);
+    SafeLocalStorage.removeItem(storageKey);
   };
 
   const handleSendVoiceMessage = (file: File) => {
@@ -106,6 +113,9 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
 
   const handleTextChange = (newText: string) => {
     setText(newText);
+    if (!editingMessage) {
+      SafeLocalStorage.setItem(storageKey, newText);
+    }
     triggerTyping();
   }
 
@@ -119,7 +129,8 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
   };
 
   const handleEmojiSelect = (emoji: any) => {
-    setText(prev => prev + emoji.native);
+    const newText = text + emoji.native;
+    handleTextChange(newText);
   };
 
   return (
