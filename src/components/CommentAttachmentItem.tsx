@@ -1,63 +1,108 @@
-import React from 'react';
-import { Button } from '@/components/ui/button';
-import { Eye, Download } from 'lucide-react';
-import FileIcon from './FileIcon';
-
-// More flexible type to handle different data shapes from the database
-interface AttachmentFile {
-  id?: string;
-  name?: string;
-  file_name?: string;
-  size?: number;
-  file_size?: number;
-  type?: string;
-  file_type?: string;
-  url?: string;
-  file_url?: string;
-}
+import { TaskAttachment } from '@/types';
+import { Download, Eye, FileText } from 'lucide-react';
+import { Button } from './ui/button';
+import { formatBytes } from '@/lib/utils';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 
 interface CommentAttachmentItemProps {
-  file: AttachmentFile;
+  file: TaskAttachment;
 }
 
-const CommentAttachmentItem: React.FC<CommentAttachmentItemProps> = ({ file }) => {
-  const formatBytes = (bytes: number | null | undefined, decimals = 2) => {
-    if (bytes === 0 || bytes == null) return '';
-    const k = 1024;
-    const dm = decimals < 0 ? 0 : decimals;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+const isImage = (fileName?: string) => {
+  if (!fileName) return false;
+  const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg'];
+  const extension = fileName.split('.').pop()?.toLowerCase();
+  return extension ? imageExtensions.includes(extension) : false;
+};
+
+const CommentAttachmentItem = ({ file }: CommentAttachmentItemProps) => {
+  const url = file.file_url || file.url;
+  const name = file.file_name || file.name;
+
+  if (!url || !name) {
+    return (
+      <div className="flex items-center gap-3 p-2 rounded-md border text-destructive">
+        <FileText className="h-5 w-5" />
+        <p className="text-sm font-medium">Attachment data is invalid.</p>
+      </div>
+    );
   }
 
-  // Handle inconsistent property names from different data sources
-  const name = file.name || file.file_name;
-  const url = file.url || file.file_url;
-  const type = file.type || file.file_type;
-  const size = file.size || file.file_size;
+  const handleView = () => {
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
+  const handleDownload = () => {
+    fetch(url)
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        return response.blob();
+      })
+      .then(blob => {
+        const blobUrl = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = blobUrl;
+        a.download = name;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(blobUrl);
+        document.body.removeChild(a);
+      })
+      .catch(() => {
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      });
+  };
 
   return (
-    <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/50">
-      <div className="flex items-center gap-3 truncate min-w-0">
-        <FileIcon fileType={type || ''} className="h-5 w-5 flex-shrink-0 text-muted-foreground" />
-        <div className="min-w-0">
-          <span className="text-sm font-medium truncate block">{name}</span>
-          {size != null && size > 0 && (
-            <span className="text-xs text-muted-foreground">{formatBytes(size)}</span>
+    <div className="flex items-center justify-between gap-2 p-2 rounded-md border hover:bg-muted/50 transition-colors">
+      <div className="flex items-center gap-3 min-w-0">
+        {isImage(name) ? (
+          <img src={url} alt={name} className="h-10 w-10 rounded object-cover flex-shrink-0" />
+        ) : (
+          <div className="h-10 w-10 rounded bg-muted flex items-center justify-center flex-shrink-0">
+            <FileText className="h-5 w-5 text-muted-foreground" />
+          </div>
+        )}
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium break-words">{name}</p>
+          {file.file_size != null && (
+            <p className="text-xs text-muted-foreground">{formatBytes(file.file_size)}</p>
           )}
         </div>
       </div>
       <div className="flex items-center gap-1 flex-shrink-0">
-        <a href={url} target="_blank" rel="noopener noreferrer" title="View file">
-          <Button variant="ghost" size="icon" className="h-8 w-8" disabled={!url}>
-            <Eye className="h-4 w-4" />
-          </Button>
-        </a>
-        <a href={url} download={name} title="Download file">
-          <Button variant="ghost" size="icon" className="h-8 w-8" disabled={!url}>
-            <Download className="h-4 w-4" />
-          </Button>
-        </a>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="icon" onClick={handleView}>
+                <Eye className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>View file</p>
+            </TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="icon" onClick={handleDownload}>
+                <Download className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Download file</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </div>
     </div>
   );
