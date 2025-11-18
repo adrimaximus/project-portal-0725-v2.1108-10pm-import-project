@@ -91,73 +91,77 @@ export function ProjectCombobox({ projects, value, onChange, isLoading, disabled
       <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
         <Command filter={filter}>
           <CommandInput placeholder="Search project..." />
-          <CommandList>
+          <CommandList className="max-h-72">
             <CommandEmpty>No project found.</CommandEmpty>
-            <div className="max-h-72 overflow-y-auto">
-              {personalProject && (
-                <CommandItem
-                  key={personalProject.id}
-                  value={personalProject.name}
-                  onSelect={() => {
-                    onChange(personalProject.id)
-                    setOpen(false)
-                  }}
-                  className="flex items-center"
-                >
-                  <Check
-                    className={cn(
-                      "mr-2 h-4 w-4",
-                      value === personalProject.id ? "opacity-100" : "opacity-0"
-                    )}
-                  />
-                  <User className="mr-2 h-4 w-4 text-muted-foreground" />
-                  {personalProject.name}
-                </CommandItem>
-              )}
-              {generalTasksProject && (
-                <CommandItem
-                  key={generalTasksProject.id}
-                  value={generalTasksProject.name}
-                  onSelect={() => {
-                    onChange(generalTasksProject.id)
-                    setOpen(false)
-                  }}
-                >
-                  <Check
-                    className={cn(
-                      "mr-2 h-4 w-4",
-                      value === generalTasksProject.id ? "opacity-100" : "opacity-0"
-                    )}
-                  />
-                  {generalTasksProject.name}
-                </CommandItem>
-              )}
-              {(personalProject || generalTasksProject) && groupedProjects.length > 0 && <CommandSeparator />}
-              
-              {groupedProjects.map(([category, projectsInCategory]) => (
-                <CommandGroup key={category} heading={category}>
-                  {projectsInCategory.map((project) => (
-                    <CommandItem
-                      key={project.id}
-                      value={project.name}
-                      onSelect={() => {
-                        onChange(project.id)
-                        setOpen(false)
-                      }}
-                    >
-                      <Check
-                        className={cn(
-                          "mr-2 h-4 w-4",
-                          value === project.id ? "opacity-100" : "opacity-0"
-                        )}
-                      />
-                      <Briefcase className="mr-2 h-4 w-4 text-muted-foreground" />
-                      {project.name}
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              ))}
-            </div>
+            
+            {(personalProject || generalTasksProject) && (
+              <CommandGroup>
+                {personalProject && (
+                  <CommandItem
+                    key={personalProject.id}
+                    value={personalProject.name}
+                    onSelect={() => {
+                      onChange(personalProject.id)
+                      setOpen(false)
+                    }}
+                    className="flex items-center"
+                  >
+                    <Check
+                      className={cn(
+                        "mr-2 h-4 w-4",
+                        value === personalProject.id ? "opacity-100" : "opacity-0"
+                      )}
+                    />
+                    <User className="mr-2 h-4 w-4 text-muted-foreground" />
+                    {personalProject.name}
+                  </CommandItem>
+                )}
+                {generalTasksProject && (
+                  <CommandItem
+                    key={generalTasksProject.id}
+                    value={generalTasksProject.name}
+                    onSelect={() => {
+                      onChange(generalTasksProject.id)
+                      setOpen(false)
+                    }}
+                  >
+                    <Check
+                      className={cn(
+                        "mr-2 h-4 w-4",
+                        value === generalTasksProject.id ? "opacity-100" : "opacity-0"
+                      )}
+                    />
+                    {generalTasksProject.name}
+                  </CommandItem>
+                )}
+              </CommandGroup>
+            )}
+            
+            {(personalProject || generalTasksProject) && groupedProjects.length > 0 && <CommandSeparator />}
+            
+            {groupedProjects.map(([category, projectsInCategory]) => (
+              <CommandGroup key={category} heading={category}>
+                {projectsInCategory.map((project) => (
+                  <CommandItem
+                    key={project.id}
+                    value={project.name}
+                    onSelect={() => {
+                      onChange(project.id)
+                      setOpen(false)
+                    }}
+                  >
+                    <Check
+                      className={cn(
+                        "mr-2 h-4 w-4",
+                        value === project.id ? "opacity-100" : "opacity-0"
+                      )}
+                    />
+                    <Briefcase className="mr-2 h-4 w-4 text-muted-foreground" />
+                    {project.name}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            ))}
           </CommandList>
         </Command>
       </PopoverContent>
