@@ -85,13 +85,21 @@ const ProjectDetailPage = () => {
       queryFn: async () => {
           if (!project?.id) return [];
           const { data, error } = await supabase
-              .from('project_activities')
-              .select('*, user:profiles(id, name, avatar_url, initials)')
-              .eq('project_id', project.id)
-              .order('created_at', { ascending: false })
-              .limit(50);
+              .rpc('get_project_activities', { p_project_id: project.id });
           if (error) throw error;
-          return data as Activity[];
+          // Map the flat structure from RPC to the nested structure expected by the Activity type
+          return data.map((activity: any) => ({
+            id: activity.id,
+            type: activity.type,
+            details: activity.details,
+            timestamp: activity.created_at,
+            user: {
+              id: activity.user_id,
+              name: activity.user_name,
+              avatar_url: activity.user_avatar_url,
+              initials: activity.user_initials,
+            }
+          })) as Activity[];
       },
       enabled: !!project?.id,
   });
