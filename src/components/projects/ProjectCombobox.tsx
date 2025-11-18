@@ -45,6 +45,11 @@ export function ProjectCombobox({ projects, value, onChange, isLoading, disabled
     (project) => project.id === value
   )
 
+  const filter = (value: string, search: string) => {
+    if (value.toLowerCase().includes(search.toLowerCase())) return 1
+    return 0
+  }
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -64,7 +69,7 @@ export function ProjectCombobox({ projects, value, onChange, isLoading, disabled
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-        <Command>
+        <Command filter={filter}>
           <CommandInput placeholder="Search project..." />
           <CommandList>
             <CommandEmpty>No project found.</CommandEmpty>
