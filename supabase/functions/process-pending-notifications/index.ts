@@ -426,7 +426,7 @@ Deno.serve(async (req) => {
 - **Jenis:** Pengingat Invoice Jatuh Tempo
 - **Penerima:** ${recipientName}
 - **Proyek:** ${project_name}
-- **Jumlah Hari Terlambat:** ${overdueDays} hari
+- **Jumlah Hari Terlambat:** ${days_overdue} hari
 - **Tingkat Urgensi:** ${urgency}
 - **URL:** ${APP_URL}/billing
 
