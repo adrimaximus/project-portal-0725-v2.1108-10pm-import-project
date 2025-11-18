@@ -10,7 +10,7 @@ import { useMemo, useRef, useEffect, useState } from "react";
 import FileIcon from "../FileIcon";
 import TaskReactions from '../projects/TaskReactions';
 import { useTaskMutations } from '@/hooks/useTaskMutations';
-import { useQueryClient, useMutation } from '@tanstack/react-query';
+import { useQueryClient, useMutation, useQuery } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import TaskAttachmentList from '../projects/TaskAttachmentList';
 import { cn, getErrorMessage, formatBytes } from "@/lib/utils";
@@ -39,6 +39,7 @@ interface ProjectTasksProps {
   onHighlightComplete?: () => void;
   unreadTaskIds: string[];
   onOpenTaskModal: (task?: Task | null, initialData?: Partial<UpsertTaskPayload>, project?: Project | null) => void;
+  highlightedCommentId?: string | null;
 }
 
 const TaskRow = ({ task, onToggleTaskCompletion, onEditTask, onDeleteTask, handleToggleReaction, setRef, currentUserId, isUnread, onClick, allUsers }: {
@@ -205,7 +206,7 @@ const TaskRow = ({ task, onToggleTaskCompletion, onEditTask, onDeleteTask, handl
   );
 };
 
-const ProjectTasks = ({ project, tasks, projectId, projectSlug, onEditTask, onDeleteTask, onToggleTaskCompletion, highlightedTaskId, onHighlightComplete, unreadTaskIds, onOpenTaskModal }: ProjectTasksProps) => {
+const ProjectTasks = ({ project, tasks, projectId, projectSlug, onEditTask, onDeleteTask, onToggleTaskCompletion, highlightedTaskId, onHighlightComplete, unreadTaskIds, onOpenTaskModal, highlightedCommentId }: ProjectTasksProps) => {
   const queryClient = useQueryClient();
   const { createTasks, isCreatingTasks, toggleTaskReaction } = useTaskMutations(() => queryClient.invalidateQueries({ queryKey: ['project', projectSlug] }));
   const taskRefs = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -254,7 +255,6 @@ const ProjectTasks = ({ project, tasks, projectId, projectSlug, onEditTask, onDe
     const tasksToCreate = selectedItems.map(item => ({
       title: item.title,
       project_id: project.id,
-      created_by: user!.id,
       priority: item.priority,
     }));
     createTasks(tasksToCreate, {
@@ -266,7 +266,7 @@ const ProjectTasks = ({ project, tasks, projectId, projectSlug, onEditTask, onDe
 
   const handleAddNewTask = () => {
     if (newTaskTitle.trim()) {
-        createTasks([{ title: newTaskTitle.trim(), project_id: projectId, created_by: authUser!.id }], {
+        createTasks([{ title: newTaskTitle.trim(), project_id: projectId }], {
           onSuccess: () => {
             setShowNewTaskForm(false);
             setNewTaskTitle("");

@@ -8,19 +8,25 @@ import { toast } from 'sonner';
 import ProjectsToolbar from '@/components/projects/ProjectsToolbar';
 import ProjectViewContainer from '@/components/projects/ProjectViewContainer';
 import { GoogleCalendarImportDialog } from '@/components/projects/GoogleCalendarImportDialog';
+import { AdvancedFiltersState } from '@/types';
 import { useProjectFilters } from '@/hooks/useProjectFilters';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProjects } from '@/hooks/useProjects';
+import { useCreateProject } from '@/hooks/useCreateProject';
+import { useTaskMutations, UpdateTaskOrderPayload } from '@/hooks/useTaskMutations';
 import { useProjectMutations } from '@/hooks/useProjectMutations';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import PortalLayout from '@/components/PortalLayout';
-import { getErrorMessage } from '@/lib/utils';
+import { getErrorMessage, formatInJakarta } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Loader2, AlertTriangle } from 'lucide-react';
 import { useTaskModal } from '@/contexts/TaskModalContext';
+import { getProjectBySlug } from '@/lib/projectsApi';
 import { useUnreadTasks } from '@/hooks/useUnreadTasks';
+import { useSortConfig } from '@/hooks/useSortConfig';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import ProjectTasksView from '@/components/projects/ProjectTasksView';
+import NewProjectDialog from '@/components/projects/NewProjectDialog';
 
 type ViewMode = 'table' | 'list' | 'kanban' | 'tasks' | 'tasks-kanban';
 
@@ -119,6 +125,8 @@ const ProjectsPage = () => {
 
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [isCreateProjectDialogOpen, setIsCreateProjectDialogOpen] = useState(false);
+  const createProjectMutation = useCreateProject();
 
   const { data: isGCalConnected } = useQuery({
     queryKey: ['googleCalendarConnection', user?.id],
@@ -200,6 +208,20 @@ const ProjectsPage = () => {
     updateProjectStatus.mutate({ projectId, status: newStatus });
   };
 
+  const handleCreateProject = (values: { name: string, description?: string }) => {
+    createProjectMutation.mutate(
+      { name: values.name, description: values.description, category: 'General' },
+      {
+        onSuccess: (newProject) => {
+          if (newProject.slug) {
+            navigate(`/projects/${newProject.slug}`);
+          }
+          setIsCreateProjectDialogOpen(false);
+        },
+      }
+    );
+  };
+
   const sortParam = searchParams.get('sort');
   const isUnreadSortActive = isTaskView && sortParam === 'unread';
 
@@ -225,6 +247,13 @@ const ProjectsPage = () => {
         isImporting={importEventsMutation.isPending}
       />
 
+      <NewProjectDialog
+        isOpen={isCreateProjectDialogOpen}
+        onClose={() => setIsCreateProjectDialogOpen(false)}
+        onSave={handleCreateProject}
+        isLoading={createProjectMutation.isPending}
+      />
+
       <div className="flex-1 flex flex-col min-h-0 rounded-none border-0 sm:border sm:rounded-lg">
         <div className="flex-shrink-0 bg-background z-10 border-b">
           <ProjectsToolbar
@@ -233,6 +262,7 @@ const ProjectsPage = () => {
             hideCompletedTasks={hideCompletedTasks}
             onToggleHideCompleted={toggleHideCompleted}
             onNewTaskClick={() => onOpenTaskModal()}
+            onNewProjectClick={() => setIsCreateProjectDialogOpen(true)}
             isTaskView={isTaskView}
             isGCalConnected={isGCalConnected}
             onImportClick={() => setIsImportDialogOpen(true)}
@@ -254,20 +284,6 @@ const ProjectsPage = () => {
             </div>
           )}
           <div className="p-0 data-[view=kanban]:px-4 data-[view=kanban]:pb-4 data-[view=kanban]:md:px-6 data-[view=kanban]:md:pb-6 data-[view=tasks-kanban]:p-0" data-view={view}>
-            {isUnreadSortActive && (
-              <div className="p-4 md:p-6 pt-0">
-                <Alert className="border-blue-500/50 bg-blue-50 dark:bg-blue-900/20 text-blue-900 dark:text-blue-200">
-                  <AlertTriangle className="h-4 w-4 !text-blue-500" />
-                  <AlertTitle className="font-semibold">Showing Unread First</AlertTitle>
-                  <AlertDescription className="flex items-center justify-between">
-                    {unreadTaskIds.length > 0 
-                      ? "Unread tasks are prioritized at the top of the list."
-                      : "No unread tasks found. Displaying all tasks."}
-                    <Button variant="link" className="p-0 h-auto text-blue-600 dark:text-blue-300" onClick={handleClearUnreadSort}>Clear Filter</Button>
-                  </AlertDescription>
-                </Alert>
-              </div>
-            )}
             {isTaskView ? (
               <ProjectTasksView
                 view={view}
