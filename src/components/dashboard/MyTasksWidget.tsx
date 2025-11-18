@@ -59,14 +59,7 @@ const TaskItem = ({ task, onToggle, isToggling, allUsers }: { task: Task, onTogg
       className={cn("flex items-start gap-3 p-2 rounded-r-md hover:bg-muted/50 border-l-2")}
       style={{ borderLeftColor: getPriorityStyles(task.priority).hex }}
     >
-      <Checkbox
-        id={`task-dash-${task.id}`}
-        checked={task.completed}
-        onCheckedChange={(checked) => onToggle(task, !!checked)}
-        className="mt-1"
-        onClick={(e) => e.stopPropagation()}
-        disabled={isToggling}
-      />
+      {/* Checkbox removed as requested */}
       <div className="flex-1 min-w-0 cursor-pointer overflow-hidden" onClick={handleTaskClick}>
         <div className={cn("font-medium text-sm break-words", task.completed && "line-through text-muted-foreground")}>
           <InteractiveText text={task.title} members={allUsers} />
