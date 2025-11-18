@@ -15,6 +15,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./ui/collap
 import { toast } from "sonner";
 import { useChatContext } from "@/contexts/ChatContext";
 import { useUnreadTasks } from "@/hooks/useUnreadTasks";
+import { getDashboardProjects } from "@/api/projects";
 
 type PortalSidebarProps = { isCollapsed: boolean; onToggle: () => void; };
 type NavItem = { id: string; href: string; label: string; icon: LucideIcon; badge?: number; folder_id: string | null; };
@@ -23,6 +24,7 @@ const Icons = LucideIcons as unknown as { [key: string]: LucideIcons.LucideIcon 
 
 const NavLink = ({ item, isCollapsed }: { item: NavItem, isCollapsed: boolean }) => {
   const location = useLocation();
+  const queryClient = useQueryClient();
   const [itemPath, itemQueryString] = item.href.split('?');
   
   let isActive = false;
@@ -51,11 +53,46 @@ const NavLink = ({ item, isCollapsed }: { item: NavItem, isCollapsed: boolean })
       isActive = true;
   }
 
+  const handleMouseEnter = () => {
+    if (item.href.startsWith('/projects')) {
+      // Prefetch projects
+      const projectsQueryKey = ['projects', { searchTerm: null, fetchAll: true, excludeOtherPersonal: false, year: null }];
+      queryClient.prefetchQuery({
+        queryKey: [...projectsQueryKey, 'upcoming'],
+        queryFn: () => getDashboardProjects({
+          limit: 1000, offset: 0, searchTerm: null, excludeOtherPersonal: false, year: null, timeframe: 'upcoming', sortDirection: 'asc',
+        }),
+      });
+      queryClient.prefetchInfiniteQuery({
+        queryKey: [...projectsQueryKey, 'past'],
+        queryFn: async ({ pageParam = 0 }) => {
+          const projects = await getDashboardProjects({
+            limit: 30, offset: pageParam * 30, searchTerm: null, excludeOtherPersonal: false, year: null, timeframe: 'past', sortDirection: 'desc',
+          });
+          return { projects, nextPage: projects.length === 30 ? pageParam + 1 : null };
+        },
+        initialPageParam: 0,
+      });
+
+      // Prefetch tasks
+      queryClient.prefetchQuery({
+        queryKey: ['tasks', { projectIds: undefined, hideCompleted: false, sortConfig: { key: 'updated_at', direction: 'desc' } }],
+        queryFn: async () => {
+          const { data, error } = await supabase.rpc('get_project_tasks', {
+            p_project_ids: null, p_completed: false, p_order_by: 'updated_at', p_order_direction: 'desc', p_limit: 1000, p_offset: 0,
+          });
+          if (error) throw error;
+          return data || [];
+        },
+      });
+    }
+  };
+
   if (isCollapsed) {
     return (
       <Tooltip>
         <TooltipTrigger asChild>
-          <Link to={item.href} className={cn("flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-primary md:h-8 md:w-8 relative", isActive && "bg-muted text-primary")}>
+          <Link to={item.href} onMouseEnter={handleMouseEnter} className={cn("flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-primary md:h-8 md:w-8 relative", isActive && "bg-muted text-primary")}>
             <item.icon className="h-5 w-5" />
             <span className="sr-only">{item.label}</span>
             {item.badge && (
@@ -68,7 +105,7 @@ const NavLink = ({ item, isCollapsed }: { item: NavItem, isCollapsed: boolean })
     );
   }
   return (
-    <Link to={item.href} className={cn("flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary group", isActive && "bg-muted text-primary")}>
+    <Link to={item.href} onMouseEnter={handleMouseEnter} className={cn("flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary group", isActive && "bg-muted text-primary")}>
       <item.icon className="h-4 w-4" />
       {item.label}
       {item.badge ? (
