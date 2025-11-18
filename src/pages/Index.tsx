@@ -16,19 +16,45 @@ const Index = () => {
     to: new Date(new Date().getFullYear(), 11, 31),
   });
 
-  const { 
-    data, 
-    isLoading, 
-    isFetchingNextPage 
-  } = useProjects({ 
-    fetchAll: true,
-    dateRange: date,
+  const yearFilter = useMemo(() => {
+    if (date?.from && date?.to) {
+        if (date.from.getFullYear() === date.to.getFullYear()) {
+            return date.from.getFullYear();
+        }
+    } else if (date?.from) {
+        // If only 'from' is selected, use that year.
+        return date.from.getFullYear();
+    }
+    // If range spans multiple years or is not set, fetch all.
+    return null;
+  }, [date]);
+
+  const { data, isLoading, hasNextPage, isFetchingNextPage } = useProjects({ 
+    year: yearFilter,
+    fetchAll: true, // Fetch all data in the background
   });
   
   const projects = useMemo(() => data?.pages.flatMap(page => page.projects) ?? [], [data]);
   const { user } = useAuth();
 
-  const isStillLoading = isLoading || isFetchingNextPage;
+  const filteredProjects = projects.filter(project => {
+    if (date?.from && project.start_date) {
+        const projectStart = new Date(project.start_date);
+        const pickerFrom = date.from;
+        const pickerTo = date.to || date.from;
+
+        if (project.due_date) {
+            const projectEnd = new Date(project.due_date);
+            return projectStart <= pickerTo && projectEnd >= pickerFrom;
+        }
+        return projectStart >= pickerFrom && projectStart <= pickerTo;
+    }
+    // If no date range is selected, we still might have a year filter from the hook
+    // but for client-side filtering, if there's no date range, we show all fetched projects.
+    return true;
+  });
+
+  const isStillLoading = isLoading || (hasNextPage && isFetchingNextPage);
 
   if (isStillLoading && projects.length === 0) {
     return (
@@ -72,11 +98,11 @@ const Index = () => {
                 <DateRangePicker date={date} onDateChange={setDate} />
             </div>
             <div className="grid gap-6 md:grid-cols-2">
-              <MonthlyProgressChart projects={projects} />
+              <MonthlyProgressChart projects={filteredProjects} />
               <UnsplashImage />
             </div>
             <ActivityHubWidget />
-            <DashboardStatsGrid projects={projects} />
+            <DashboardStatsGrid projects={filteredProjects} />
         </div>
       </div>
     </PortalLayout>

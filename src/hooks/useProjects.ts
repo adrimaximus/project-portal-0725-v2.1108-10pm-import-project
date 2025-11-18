@@ -1,8 +1,7 @@
 import { useInfiniteQuery, useQuery, InfiniteData } from '@tanstack/react-query';
 import { getDashboardProjects } from '@/api/projects';
 import { useEffect, useMemo } from 'react';
-import { Project, AdvancedFiltersState } from '@/types';
-import { DateRange } from 'react-day-picker';
+import { Project } from '@/types';
 
 const PAGE_SIZE = 30;
 
@@ -11,44 +10,43 @@ type ProjectsPage = {
   nextPage: number | null;
 };
 
-export const useProjects = ({ 
-  searchTerm, 
-  fetchAll = false, 
-  excludeOtherPersonal = false, 
-  advancedFilters,
-  dateRange,
-  sortConfig,
-}: { 
-  searchTerm?: string, 
-  fetchAll?: boolean, 
-  excludeOtherPersonal?: boolean, 
-  advancedFilters?: AdvancedFiltersState,
-  dateRange?: DateRange,
-  sortConfig?: { key: string | null, direction: 'asc' | 'desc' }
-} = {}) => {
-  const queryKey = ['projects', { searchTerm, excludeOtherPersonal, advancedFilters, dateRange, sortConfig }];
+export const useProjects = ({ searchTerm, fetchAll = false, excludeOtherPersonal = false, year }: { searchTerm?: string, fetchAll?: boolean, excludeOtherPersonal?: boolean, year?: number | null } = {}) => {
+  const queryKeyPrefix = ['projects', { searchTerm, excludeOtherPersonal, year }];
 
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, ...rest } = useInfiniteQuery<
+  // 1. Fetch all upcoming projects
+  const upcomingQuery = useQuery<Project[], Error>({
+    queryKey: [...queryKeyPrefix, 'upcoming'],
+    queryFn: async () => {
+      return await getDashboardProjects({
+        limit: 1000, // A large number to fetch all upcoming
+        offset: 0,
+        searchTerm: searchTerm || null,
+        excludeOtherPersonal,
+        year: year === undefined ? null : year,
+        timeframe: 'upcoming',
+        sortDirection: 'asc',
+      });
+    },
+  });
+
+  // 2. Fetch past projects with pagination
+  const pastQuery = useInfiniteQuery<
     ProjectsPage,
     Error,
     InfiniteData<ProjectsPage, number>,
     any[],
     number
   >({
-    queryKey,
+    queryKey: [...queryKeyPrefix, 'past'],
     queryFn: async ({ pageParam = 0 }) => {
       const projects = await getDashboardProjects({
         limit: PAGE_SIZE,
         offset: pageParam * PAGE_SIZE,
         searchTerm: searchTerm || null,
         excludeOtherPersonal,
-        ownerIds: advancedFilters?.ownerIds,
-        memberIds: advancedFilters?.memberIds,
-        excludedStatus: advancedFilters?.excludedStatus,
-        dateFrom: dateRange?.from?.toISOString(),
-        dateTo: dateRange?.to?.toISOString(),
-        sortKey: sortConfig?.key,
-        sortDirection: sortConfig?.direction,
+        year: year === undefined ? null : year,
+        timeframe: 'past',
+        sortDirection: 'desc',
       });
       return {
         projects,
@@ -59,11 +57,39 @@ export const useProjects = ({
     getNextPageParam: (lastPage) => lastPage.nextPage,
   });
 
+  // Auto-fetch all pages if fetchAll is true
+  const { fetchNextPage, hasNextPage, isFetchingNextPage } = pastQuery;
   useEffect(() => {
     if (fetchAll && hasNextPage && !isFetchingNextPage) {
       fetchNextPage();
     }
   }, [fetchAll, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  return { data, fetchNextPage, hasNextPage, isFetchingNextPage, ...rest };
+  // 3. Combine results
+  const combinedData = useMemo(() => {
+    const upcomingProjects = upcomingQuery.data || [];
+    const pastProjectsPages = pastQuery.data?.pages || [];
+    
+    // Create a structure that mimics InfiniteData<ProjectsPage>
+    const combinedPages = [
+      { projects: upcomingProjects, nextPage: null }, // All upcoming projects are in the first "page"
+      ...pastProjectsPages.map(page => ({ ...page }))
+    ];
+
+    return {
+      pages: combinedPages,
+      pageParams: [0, ...(pastQuery.data?.pageParams || [])],
+    };
+  }, [upcomingQuery.data, pastQuery.data]);
+
+  return {
+    ...pastQuery, // Return infinite query properties for past projects
+    data: combinedData,
+    isLoading: upcomingQuery.isLoading || pastQuery.isLoading,
+    error: upcomingQuery.error || pastQuery.error,
+    refetch: () => {
+      upcomingQuery.refetch();
+      pastQuery.refetch();
+    }
+  };
 };

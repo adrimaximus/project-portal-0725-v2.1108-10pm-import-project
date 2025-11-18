@@ -2,27 +2,32 @@ import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { useSearchParams, useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { getProjectBySlug } from '@/lib/projectsApi';
-import { Task, UpsertTaskPayload, Project, ProjectStatus } from '@/types';
+import { createProject, updateProjectDetails, deleteProject } from '@/api/projects';
+import { getProjectTasks, upsertTask, deleteTask, toggleTaskCompletion } from '@/api/tasks';
+import { getPeople } from '@/api/people';
+import { Project, Task as ProjectTask, Person, UpsertTaskPayload, TaskStatus, ProjectStatus } from '@/types';
 import { toast } from 'sonner';
 
 import ProjectsToolbar from '@/components/projects/ProjectsToolbar';
 import ProjectViewContainer from '@/components/projects/ProjectViewContainer';
 import { GoogleCalendarImportDialog } from '@/components/projects/GoogleCalendarImportDialog';
+import { AdvancedFiltersState } from '@/types';
 import { useProjectFilters } from '@/hooks/useProjectFilters';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTasks } from '@/hooks/useTasks';
 import { useProjects } from '@/hooks/useProjects';
+import { useCreateProject } from '@/hooks/useCreateProject';
 import { useTaskMutations, UpdateTaskOrderPayload } from '@/hooks/useTaskMutations';
 import { useProjectMutations } from '@/hooks/useProjectMutations';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import PortalLayout from '@/components/PortalLayout';
-import { getErrorMessage } from '@/lib/utils';
+import { getErrorMessage, formatInJakarta } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Loader2, AlertTriangle } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { useTaskModal } from '@/contexts/TaskModalContext';
+import { getProjectBySlug } from '@/lib/projectsApi';
 import { useUnreadTasks } from '@/hooks/useUnreadTasks';
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import ProjectTasksView from '@/components/projects/ProjectTasksView';
+import { useSortConfig } from '@/hooks/useSortConfig';
 
 type ViewMode = 'table' | 'list' | 'kanban' | 'tasks' | 'tasks-kanban';
 
@@ -52,6 +57,17 @@ const ProjectsPage = () => {
     setTaskToHighlight(null);
   }, [searchParams, setSearchParams, taskIdFromParams, navigate]);
 
+  const { 
+    data, 
+    isLoading: isLoadingProjects, 
+    fetchNextPage, 
+    hasNextPage, 
+    isFetchingNextPage,
+    refetch: refetchProjects 
+  } = useProjects({ fetchAll: true });
+
+  const projectsData = useMemo(() => data?.pages.flatMap(page => page.projects) ?? [], [data]);
+  
   const {
     view, handleViewChange,
     kanbanGroupBy, setKanbanGroupBy,
@@ -60,25 +76,9 @@ const ProjectsPage = () => {
     advancedFilters, handleAdvancedFiltersChange,
     dateRange, setDateRange,
     sortConfig: projectSortConfig, requestSort: requestProjectSort,
-    clearFilters,
-  } = useProjectFilters();
+    sortedProjects
+  } = useProjectFilters(projectsData);
 
-  const { 
-    data, 
-    isLoading: isLoadingProjects, 
-    fetchNextPage, 
-    hasNextPage, 
-    isFetchingNextPage,
-    refetch: refetchProjects 
-  } = useProjects({ 
-    searchTerm,
-    advancedFilters,
-    dateRange,
-    sortConfig: projectSortConfig,
-  });
-
-  const projectsData = useMemo(() => data?.pages.flatMap(page => page.projects) ?? [], [data]);
-  
   const { data: allMembers = [] } = useQuery({
     queryKey: ['project_members_distinct'],
     queryFn: async () => {
@@ -105,9 +105,69 @@ const ProjectsPage = () => {
     }
   });
 
+  const { sortConfig: taskSortConfig, requestSort: requestTaskSort } = useSortConfig({ key: 'updated_at', direction: 'desc' });
+
   const isTaskView = view === 'tasks' || view === 'tasks-kanban';
 
+  const projectIdsForTaskView = useMemo(() => {
+    if (!isTaskView) return undefined;
+    // When projects are loading, we don't have the IDs yet. Return undefined to keep useTasks disabled.
+    if (isLoadingProjects) return undefined;
+  
+    const visibleProjects = projectsData.filter(project => 
+      !(advancedFilters.excludedStatus || []).includes(project.status)
+    );
+    
+    return visibleProjects.map(project => project.id);
+  
+  }, [isTaskView, projectsData, advancedFilters.excludedStatus, isLoadingProjects]);
+
+  const finalTaskSortConfig = useMemo(() => {
+    if (view === 'tasks-kanban') {
+      return { key: 'kanban_order', direction: 'asc' as const };
+    }
+    return {
+      key: taskSortConfig.key || 'updated_at',
+      direction: taskSortConfig.direction,
+    };
+  }, [view, taskSortConfig]);
+
+  const { data: tasksData = [], isLoading: isLoadingTasks, refetch: refetchTasks } = useTasks({
+    projectIds: projectIdsForTaskView,
+    hideCompleted: hideCompletedTasks,
+    sortConfig: finalTaskSortConfig,
+    enabled: isTaskView && projectIdsForTaskView !== undefined,
+  });
+
+  useEffect(() => {
+    if (highlightedTaskId && tasksData.length > 0) {
+      const task = tasksData.find(t => t.id === highlightedTaskId);
+      if (task) {
+        const originalTitle = document.title;
+        document.title = `Task: ${task.title} | ${task.project_name || 'Project'}`;
+        return () => { document.title = originalTitle; };
+      }
+    }
+  }, [highlightedTaskId, tasksData]);
+
+  useEffect(() => {
+    if (isLoadingProjects || isLoadingTasks || searchParams.get('highlight') || taskIdFromParams) {
+      return;
+    }
+
+    if (tasksData.length > 0 && unreadTaskIds.length > 0) {
+      const unreadTasks = tasksData.filter(task => unreadTaskIds.includes(task.id));
+      
+      if (unreadTasks.length > 0) {
+        unreadTasks.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+        const newestUnreadTask = unreadTasks[0];
+        setTaskToHighlight(newestUnreadTask.id);
+      }
+    }
+  }, [tasksData, unreadTaskIds, isLoadingProjects, isLoadingTasks, searchParams, taskIdFromParams]);
+
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
+  const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
 
   const { data: isGCalConnected } = useQuery({
@@ -136,14 +196,47 @@ const ProjectsPage = () => {
   });
 
   const refetch = useCallback(() => {
-    if (isTaskView) {
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
-    } else {
-      refetchProjects();
-    }
-  }, [isTaskView, refetchProjects, queryClient]);
+    if (isTaskView) refetchTasks();
+    else refetchProjects();
+  }, [isTaskView, refetchTasks, refetchProjects]);
 
+  const { deleteTask, toggleTaskCompletion, isToggling, upsertTask, updateTaskStatusAndOrder } = useTaskMutations(refetch);
   const { updateProjectStatus } = useProjectMutations();
+
+  const filteredTasks = useMemo(() => {
+    let tasksToFilter = tasksData || [];
+    const selectedPeopleIds = [...(advancedFilters.ownerIds || []), ...(advancedFilters.memberIds || [])];
+    if (selectedPeopleIds.length > 0) {
+        const uniqueSelectedPeopleIds = [...new Set(selectedPeopleIds)];
+        tasksToFilter = tasksToFilter.filter(task => 
+            task.assignedTo?.some(assignee => uniqueSelectedPeopleIds.includes(assignee.id))
+        );
+    }
+    if (!searchTerm) return tasksToFilter;
+    const lowercasedFilter = searchTerm.toLowerCase();
+    return tasksToFilter.filter(task => 
+      task.title.toLowerCase().includes(lowercasedFilter) ||
+      (task.description && task.description.toLowerCase().includes(lowercasedFilter)) ||
+      (task.project_name && task.project_name.toLowerCase().includes(lowercasedFilter))
+    );
+  }, [tasksData, searchTerm, advancedFilters.ownerIds, advancedFilters.memberIds]);
+
+  const finalSortedTasks = useMemo(() => {
+    const sortParam = searchParams.get('sort');
+    if (sortParam === 'unread' && unreadTaskIds.length > 0) {
+      const unread: ProjectTask[] = [];
+      const read: ProjectTask[] = [];
+      for (const task of filteredTasks) {
+        if (unreadTaskIds.includes(task.id)) {
+          unread.push(task);
+        } else {
+          read.push(task);
+        }
+      }
+      return [...unread, ...read];
+    }
+    return filteredTasks;
+  }, [filteredTasks, searchParams, unreadTaskIds]);
 
   const deleteProjectMutation = useMutation({
     mutationFn: async (projectId: string) => {
@@ -179,6 +272,34 @@ const ProjectsPage = () => {
     refetch();
   };
 
+  const confirmDeleteTask = () => {
+    if (taskToDelete) {
+      deleteTask(taskToDelete, {
+        onSuccess: () => {
+          setTaskToDelete(null);
+        }
+      });
+    }
+  };
+
+  const handleToggleTaskCompletion = (task: ProjectTask, completed: boolean) => {
+    toggleTaskCompletion({ task, completed });
+  };
+
+  const handleTaskStatusChange = (task: ProjectTask, newStatus: TaskStatus) => {
+    upsertTask({
+        id: task.id,
+        project_id: task.project_id,
+        title: task.title,
+        status: newStatus,
+        completed: newStatus === 'Done',
+    }, {
+        onSuccess: () => {
+            toast.success(`Task "${task.title}" status updated to "${newStatus}"`);
+        }
+    });
+  };
+
   const handleStatusChange = (projectId: string, newStatus: ProjectStatus) => {
     const project = projectsData.find(p => p.id === projectId);
     if (!project) return;
@@ -190,18 +311,27 @@ const ProjectsPage = () => {
     updateProjectStatus.mutate({ projectId, status: newStatus });
   };
 
-  const sortParam = searchParams.get('sort');
-  const isUnreadSortActive = isTaskView && sortParam === 'unread';
-
-  const handleClearUnreadSort = () => {
-    const newSearchParams = new URLSearchParams(searchParams);
-    newSearchParams.delete('sort');
-    setSearchParams(newSearchParams, { replace: true });
+  const handleTaskOrderChange = (payload: UpdateTaskOrderPayload) => {
+    updateTaskStatusAndOrder(payload);
   };
 
-  const hasActiveFilters = useMemo(() => {
-    return !!searchTerm || !!dateRange?.from || (advancedFilters.ownerIds?.length || 0) > 0 || (advancedFilters.memberIds?.length || 0) > 0 || (advancedFilters.excludedStatus?.length || 0) > 0;
-  }, [searchTerm, dateRange, advancedFilters]);
+  const handleEditTask = async (task: ProjectTask) => {
+    try {
+      const projectForTask = await getProjectBySlug(task.project_slug);
+      if (!projectForTask) {
+        throw new Error("Project for this task could not be found.");
+      }
+      onOpenTaskModal(task, undefined, projectForTask);
+    } catch (error) {
+      toast.error("Could not open task editor.", { description: getErrorMessage(error) });
+    }
+  };
+
+  const tasksQueryKey = ['tasks', { 
+    projectIds: projectIdsForTaskView, 
+    hideCompleted: hideCompletedTasks, 
+    sortConfig: finalTaskSortConfig 
+  }];
 
   return (
     <PortalLayout disableMainScroll noPadding>
@@ -209,6 +339,13 @@ const ProjectsPage = () => {
         <AlertDialogContent>
           <AlertDialogHeader><AlertDialogTitle>Are you sure?</AlertDialogTitle><AlertDialogDescription>This action cannot be undone. This will permanently delete the project "{projectToDelete?.name}".</AlertDialogDescription></AlertDialogHeader>
           <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={confirmDeleteProject}>Delete</AlertDialogAction></AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!taskToDelete} onOpenChange={(open) => !open && setTaskToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader><AlertDialogTitle>Delete Task?</AlertDialogTitle><AlertDialogDescription>This action cannot be undone. Are you sure you want to delete this task?</AlertDialogDescription></AlertDialogHeader>
+          <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={confirmDeleteTask}>Delete</AlertDialogAction></AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
@@ -242,51 +379,38 @@ const ProjectsPage = () => {
           />
         </div>
         <div ref={scrollContainerRef} className="flex-grow min-h-0 overflow-y-auto relative">
-          {(isLoadingProjects) && (
+          {(isLoadingProjects || (isTaskView && isLoadingTasks)) && (
             <div className="absolute inset-0 bg-background/50 flex items-center justify-center z-10">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
           )}
           <div className="p-0 data-[view=kanban]:px-4 data-[view=kanban]:pb-4 data-[view=kanban]:md:px-6 data-[view=kanban]:md:pb-6 data-[view=tasks-kanban]:p-0" data-view={view}>
-            {isUnreadSortActive && (
-              <div className="p-4 md:p-6 pt-0">
-                <Alert className="border-blue-500/50 bg-blue-50 dark:bg-blue-900/20 text-blue-900 dark:text-blue-200">
-                  <AlertTriangle className="h-4 w-4 !text-blue-500" />
-                  <AlertTitle className="font-semibold">Showing Unread First</AlertTitle>
-                  <AlertDescription className="flex items-center justify-between">
-                    {unreadTaskIds.length > 0 
-                      ? "Unread tasks are prioritized at the top of the list."
-                      : "No unread tasks found. Displaying all tasks."}
-                    <Button variant="link" className="p-0 h-auto text-blue-600 dark:text-blue-300" onClick={handleClearUnreadSort}>Clear Filter</Button>
-                  </AlertDescription>
-                </Alert>
-              </div>
-            )}
-            {isTaskView ? (
-              <ProjectTasksView
-                view={view}
-                projectIds={projectIdsForTaskView}
-                hideCompletedTasks={hideCompletedTasks}
-                searchTerm={searchTerm}
-                highlightedTaskId={highlightedTaskId}
-                onHighlightComplete={onHighlightComplete}
-              />
-            ) : (
-              <ProjectViewContainer
-                view={view}
-                projects={projectsData}
-                isLoading={isLoadingProjects && !projectsData.length}
-                onDeleteProject={handleDeleteProject}
-                sortConfig={projectSortConfig}
-                requestSort={(key) => requestProjectSort(key as keyof Project)}
-                rowRefs={rowRefs}
-                kanbanGroupBy={kanbanGroupBy}
-                onStatusChange={handleStatusChange}
-                hasActiveFilters={hasActiveFilters}
-                onClearFilters={clearFilters}
-                searchTerm={searchTerm}
-              />
-            )}
+            <ProjectViewContainer
+              view={view}
+              projects={sortedProjects}
+              tasks={finalSortedTasks}
+              isLoading={isLoadingProjects && !projectsData.length}
+              isTasksLoading={isLoadingTasks}
+              onDeleteProject={handleDeleteProject}
+              sortConfig={projectSortConfig}
+              requestSort={(key) => requestProjectSort(key as keyof Project)}
+              rowRefs={rowRefs}
+              kanbanGroupBy={kanbanGroupBy}
+              onEditTask={handleEditTask}
+              onDeleteTask={setTaskToDelete}
+              onToggleTaskCompletion={handleToggleTaskCompletion}
+              onTaskStatusChange={handleTaskStatusChange}
+              isToggling={isToggling}
+              taskSortConfig={taskSortConfig}
+              requestTaskSort={requestTaskSort}
+              refetch={refetch}
+              tasksQueryKey={tasksQueryKey}
+              highlightedTaskId={highlightedTaskId}
+              onHighlightComplete={onHighlightComplete}
+              onStatusChange={handleStatusChange}
+              onTaskOrderChange={handleTaskOrderChange}
+              unreadTaskIds={unreadTaskIds}
+            />
           </div>
           {hasNextPage && (
             <div className="flex justify-center py-4">
