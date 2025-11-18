@@ -1,9 +1,9 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useTasks } from '@/hooks/useTasks';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Link } from 'react-router-dom';
-import { Loader2, Clock, CheckCircle2, AlertTriangle, ListChecks, PlusSquare, ArrowUp, ArrowDown } from 'lucide-react';
+import { Loader2, Clock, CheckCircle2, AlertTriangle, ListChecks, PlusSquare, ArrowUp, ArrowDown, Plus } from 'lucide-react';
 import { Task, User } from '@/types';
 import { format, isPast, isToday, isTomorrow, differenceInDays } from 'date-fns';
 import { cn, getInitials, getAvatarUrl, generatePastelColor, getPriorityStyles } from '@/lib/utils';
@@ -23,6 +23,8 @@ import { Checkbox } from '../ui/checkbox';
 import InteractiveText from '../InteractiveText';
 import { useProfiles } from '@/hooks/useProfiles';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { supabase } from '@/integrations/supabase/client';
 
 const TaskItem = ({ task, onToggle, isToggling, allUsers }: { task: Task, onToggle: (task: Task, completed: boolean) => void, isToggling: boolean, allUsers: User[] }) => {
   const { onOpen: onOpenTaskDrawer } = useTaskDrawer();
@@ -42,51 +44,41 @@ const TaskItem = ({ task, onToggle, isToggling, allUsers }: { task: Task, onTogg
   const dueDate = task.due_date ? new Date(task.due_date) : null;
   let dueDateText = '';
   let dueDateColor = 'text-muted-foreground';
-  const isOverdue = dueDate && isPast(dueDate) && !task.completed;
 
   if (dueDate) {
-    if (isToday(dueDate)) {
-      dueDateText = 'Today';
-      dueDateColor = 'text-primary';
-    } else if (isTomorrow(dueDate)) {
-      dueDateText = 'Tomorrow';
-    } else if (isOverdue) {
-      const daysOverdue = differenceInDays(new Date(), dueDate);
-      dueDateText = `${daysOverdue}d ago`;
+    if (isPast(dueDate) && !task.completed) {
+      dueDateText = format(dueDate, 'MMM d, p');
       dueDateColor = 'text-destructive';
     } else {
-      dueDateText = format(dueDate, 'MMM d');
+      dueDateText = format(dueDate, 'MMM d, p');
     }
   }
-
-  const displayPriority = isOverdue ? 'High' : task.priority;
-  const priorityStyles = getPriorityStyles(displayPriority);
 
   return (
     <div 
       className={cn("flex items-start gap-3 p-2 rounded-r-md hover:bg-muted/50 border-l-2")}
-      style={{ borderLeftColor: priorityStyles.hex }}
+      style={{ borderLeftColor: getPriorityStyles(task.priority).hex }}
     >
       <Checkbox
         id={`task-dash-${task.id}`}
         checked={task.completed}
         onCheckedChange={(checked) => onToggle(task, !!checked)}
-        className="mt-1 hidden"
+        className="mt-1"
         onClick={(e) => e.stopPropagation()}
         disabled={isToggling}
       />
-      <div className="flex-grow w-0 min-w-0 cursor-pointer overflow-hidden" onClick={handleTaskClick}>
-        <div className={cn("font-medium text-sm break-word", task.completed && "line-through text-muted-foreground")}>
+      <div className="flex-1 min-w-0 cursor-pointer overflow-hidden" onClick={handleTaskClick}>
+        <div className={cn("font-medium text-sm break-words", task.completed && "line-through text-muted-foreground")}>
           <InteractiveText text={task.title} members={allUsers} />
         </div>
         <p className="text-sm text-muted-foreground truncate">{task.project_name}</p>
-        <div className="flex items-center justify-between mt-2">
+        <div className="flex items-center justify-between mt-2 border-t pt-2">
           <div className="flex items-center gap-2">
-            {displayPriority && (
-              <Badge className={cn(getPriorityStyles(displayPriority).tw, 'text-xs')}>{displayPriority}</Badge>
+            {task.priority && (
+              <Badge className={cn(getPriorityStyles(task.priority).tw, 'text-xs')}>{task.priority}</Badge>
             )}
             <div className="flex -space-x-2">
-              {task.assignedTo?.slice(0, 2).map(user => (
+              {task.assignedTo?.slice(0, 3).map(user => (
                 <TooltipProvider key={user.id}>
                   <Tooltip>
                     <TooltipTrigger>
@@ -111,8 +103,30 @@ const TaskItem = ({ task, onToggle, isToggling, allUsers }: { task: Task, onTogg
 const MyTasksWidget = () => {
   const { user } = useAuth();
   const { data: allTasks, isLoading, refetch } = useTasks({ sortConfig: { key: 'due_date', direction: 'asc' } });
-  const { toggleTaskCompletion, isToggling } = useTaskMutations(refetch);
+  const { toggleTaskCompletion, isToggling, createTasks, isCreatingTasks } = useTaskMutations(refetch);
   const { data: allUsers = [] } = useProfiles();
+  const [newTaskTitle, setNewTaskTitle] = useState('');
+
+  const handleAddTask = async () => {
+    if (!newTaskTitle.trim() || !user) return;
+
+    try {
+      const { data: projectId, error: rpcError } = await supabase.rpc('ensure_general_tasks_project_and_membership');
+      if (rpcError) throw rpcError;
+
+      createTasks(
+        [{ title: newTaskTitle.trim(), project_id: projectId, assignee_ids: [user.id] }],
+        {
+          onSuccess: () => {
+            setNewTaskTitle('');
+            toast.success("Quick task added to General Tasks.");
+          }
+        }
+      );
+    } catch (error: any) {
+      toast.error("Failed to add task.", { description: error.message });
+    }
+  };
 
   const myTasks = useMemo(() => {
     if (!user || !allTasks) return [];
@@ -189,6 +203,23 @@ const MyTasksWidget = () => {
 
   return (
     <div className="space-y-4">
+      <div className="flex items-center gap-2">
+        <Input
+          placeholder="Add a quick task for yourself..."
+          value={newTaskTitle}
+          onChange={(e) => setNewTaskTitle(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              handleAddTask();
+            }
+          }}
+          disabled={isCreatingTasks}
+        />
+        <Button onClick={handleAddTask} disabled={isCreatingTasks || !newTaskTitle.trim()}>
+          {isCreatingTasks ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+        </Button>
+      </div>
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>

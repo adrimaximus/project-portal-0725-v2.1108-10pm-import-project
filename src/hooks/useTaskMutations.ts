@@ -297,9 +297,15 @@ export const useTaskMutations = (refetch?: () => void) => {
   });
 
   const { mutate: createTasks, isPending: isCreatingTasks } = useMutation({
-    mutationFn: async (tasksToCreate: { title: string, project_id: string, created_by: string }[]) => {
-      const { error } = await supabase.from('tasks').insert(tasksToCreate.map(task => ({ ...task, status: 'To do' })));
-      if (error) throw error;
+    mutationFn: async (tasksToCreate: { title: string, project_id: string, assignee_ids?: string[] }[]) => {
+      for (const task of tasksToCreate) {
+        const { error } = await supabase.rpc('create_task_with_assignees', {
+          p_project_id: task.project_id,
+          p_title: task.title,
+          p_assignee_ids: task.assignee_ids || [],
+        });
+        if (error) throw error;
+      }
     },
     onSuccess: (_, variables) => {
       toast.success(`${variables.length} task(s) added successfully.`);
