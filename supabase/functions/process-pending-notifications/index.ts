@@ -9,7 +9,7 @@ const corsHeaders = {
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const APP_URL = Deno.env.get("SITE_URL")! || Deno.env.get("VITE_APP_URL")!;
+const APP_URL = Deno.env.get("SITE_URL") ?? Deno.env.get("VITE_APP_URL") ?? 'https://app.example.com';
 const CRON_SECRET = Deno.env.get("CRON_SECRET");
 
 const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, { global: { headers: { 'Accept': 'application/json' } } });
@@ -189,6 +189,108 @@ const generateTemplatedMessage = (type: string, context: any, recipientName: str
   return `${message}\n\n${url}`;
 };
 
+const generateTemplatedEmail = (type: string, context: any, recipientName: string): { subject: string, html: string, text: string } => {
+  const cleanType = type.replace('_email', '');
+  let title = 'New Notification';
+  let mainSubject = '';
+  let bodyHtml = '';
+  let buttonText = 'View Details';
+  let buttonUrl = APP_URL;
+
+  switch (cleanType) {
+    case 'discussion_mention':
+      title = `You were mentioned in:`;
+      mainSubject = context.project_name;
+      buttonUrl = context.project_slug === 'chat'
+        ? `${APP_URL}/chat`
+        : (context.task_id
+          ? `${APP_URL}/projects/${context.project_slug}?tab=tasks&task=${context.task_id}`
+          : `${APP_URL}/projects/${context.project_slug}?tab=discussion`);
+      bodyHtml = `<p><strong>${context.mentioner_name}</strong> mentioned you in a comment:</p>
+                  <blockquote style="border-left:4px solid #ccc;padding-left:1em;margin:1.2em 0;color:#3b4754;background:#f8fafc;border-radius:6px 0 0 6px;">
+                      ${context.comment_text.replace(/\n/g, '<br>')}
+                  </blockquote>`;
+      buttonText = "View Comment";
+      break;
+    case 'task_assignment':
+      title = `New Task Assigned in:`;
+      mainSubject = context.project_name;
+      buttonUrl = `${APP_URL}/projects/${context.project_slug}?tab=tasks&task=${context.task_id}`;
+      bodyHtml = `<p><strong>${context.assigner_name}</strong> assigned you a new task: <strong>"${context.task_title}"</strong>.</p>`;
+      buttonText = "View Task";
+      break;
+    case 'project_invite':
+      title = `You've been invited to:`;
+      mainSubject = context.project_name;
+      buttonUrl = `${APP_URL}/projects/${context.project_slug}`;
+      bodyHtml = `<p><strong>${context.inviter_name}</strong> invited you to collaborate on this project.</p>`;
+      buttonText = "View Project";
+      break;
+    case 'kb_invite':
+      title = `You've been invited to:`;
+      mainSubject = context.folder_name;
+      buttonUrl = `${APP_URL}/knowledge-base/folders/${context.folder_slug}`;
+      bodyHtml = `<p><strong>${context.inviter_name}</strong> invited you to collaborate on this knowledge base folder.</p>`;
+      buttonText = "View Folder";
+      break;
+    case 'goal_invite':
+      title = `You've been invited to a Goal:`;
+      mainSubject = context.goal_title;
+      buttonUrl = `${APP_URL}/goals/${context.goal_slug}`;
+      bodyHtml = `<p><strong>${context.inviter_name}</strong> invited you to collaborate on this goal.</p>`;
+      buttonText = "View Goal";
+      break;
+    case 'goal_progress_update':
+      title = `Progress on your Goal:`;
+      mainSubject = context.goal_title;
+      buttonUrl = `${APP_URL}/goals/${context.goal_slug}`;
+      bodyHtml = `<p><strong>${context.updater_name}</strong> just logged progress on your shared goal.</p>`;
+      buttonText = "View Progress";
+      break;
+    case 'payment_status_updated':
+      title = `Payment Status Updated for:`;
+      mainSubject = context.project_name;
+      buttonUrl = `${APP_URL}/projects/${context.project_slug}`;
+      bodyHtml = `<p>The payment status was updated to <strong>${context.new_status}</strong> by <strong>${context.updater_name}</strong>.</p>`;
+      buttonText = "View Project";
+      break;
+    case 'project_status_updated':
+      title = `Project Status Updated for:`;
+      mainSubject = context.project_name;
+      buttonUrl = `${APP_URL}/projects/${context.project_slug}`;
+      bodyHtml = `<p>The project status was updated to <strong>${context.new_status}</strong> by <strong>${context.updater_name}</strong>.</p>`;
+      buttonText = "View Project";
+      break;
+    case 'task_overdue':
+      title = `Task Overdue in:`;
+      mainSubject = context.project_name;
+      buttonUrl = `${APP_URL}/projects/${context.project_slug}?tab=tasks&task=${context.task_id}`;
+      bodyHtml = `<p>The task <strong>"${context.task_title}"</strong> is now <strong>${context.days_overdue} day(s)</strong> overdue.</p>`;
+      buttonText = "View Task";
+      break;
+    case 'billing_reminder':
+      title = `Payment Reminder for:`;
+      mainSubject = context.project_name;
+      buttonUrl = `${APP_URL}/projects/${context.project_slug}`;
+      bodyHtml = `<p>This is a reminder that the payment for this project is now <strong>${context.days_overdue} day(s)</strong> overdue. Please process it as soon as possible.</p>`;
+      buttonText = "View Billing Details";
+      break;
+    default:
+      title = "New Notification";
+      mainSubject = "You have a new notification";
+      bodyHtml = `<p>Please check your dashboard for a new update.</p>`;
+      buttonText = "Go to Dashboard";
+      buttonUrl = APP_URL;
+      break;
+  }
+
+  const subject = `${title} ${mainSubject}`;
+  const html = createEmailTemplate({ title, mainSubject, recipientName, bodyHtml, buttonText, buttonUrl });
+  const text = `${subject}\n\n${bodyHtml.replace(/<[^>]+>/g, '')}\n\nView here: ${buttonUrl}`;
+
+  return { subject, html, text };
+};
+
 // --- Main Server Logic ---
 
 Deno.serve(async (req) => {
@@ -238,12 +340,13 @@ Deno.serve(async (req) => {
 
         if (notification.notification_type.includes('email')) {
             if (!emailitApiKey || !recipient.email) {
-                return { status: 'skipped', reason: 'No email or config' };
+                return { status: 'skipped', reason: 'No email or email config' };
             }
-            // Email logic here...
+            const { subject, html, text } = generateTemplatedEmail(notification.notification_type, notification.context_data, recipientName);
+            await sendEmail(emailitApiKey, recipient.email, subject, html, text);
         } else { // WhatsApp
             if (!wbizConfig || !recipient.phone) {
-                return { status: 'skipped', reason: 'No phone or config' };
+                return { status: 'skipped', reason: 'No phone or WhatsApp config' };
             }
             const message = generateTemplatedMessage(notification.notification_type, notification.context_data, recipientName);
             await sendWhatsappMessage(wbizConfig, recipient.phone, message);
