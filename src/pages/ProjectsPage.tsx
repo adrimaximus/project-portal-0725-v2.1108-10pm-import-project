@@ -113,7 +113,8 @@ const ProjectsPage = () => {
 
   const projectIdsForTaskView = useMemo(() => {
     if (!isTaskView) return undefined;
-    if (isLoadingProjects) return undefined;
+    // Wait until all projects are fetched to prevent re-fetching tasks
+    if (isLoadingProjects || isFetchingNextPage) return undefined;
   
     const visibleProjects = projectsData.filter(project => 
       !(advancedFilters.excludedStatus || []).includes(project.status)
@@ -121,7 +122,7 @@ const ProjectsPage = () => {
     
     return visibleProjects.map(project => project.id);
   
-  }, [isTaskView, projectsData, advancedFilters.excludedStatus, isLoadingProjects]);
+  }, [isTaskView, projectsData, advancedFilters.excludedStatus, isLoadingProjects, isFetchingNextPage]);
 
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
@@ -278,7 +279,7 @@ const ProjectsPage = () => {
           />
         </div>
         <div ref={scrollContainerRef} className="flex-grow min-h-0 overflow-y-auto relative">
-          {(isLoadingProjects) && (
+          {(isLoadingProjects && !projectsData.length) && (
             <div className="absolute inset-0 bg-background/50 flex items-center justify-center z-10">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>

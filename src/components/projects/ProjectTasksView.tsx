@@ -1,15 +1,16 @@
 import { useState, useMemo, useCallback, useRef } from 'react';
-import { useTasks } from '@/hooks/useTasks';
-import { useTaskMutations, UpdateTaskOrderPayload } from '@/hooks/useTaskMutations';
-import { useSortConfig } from '@/hooks/useSortConfig';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { Project, Task as ProjectTask, UpsertTaskPayload, TaskStatus } from '@/types';
+import { toast } from 'sonner';
 import { useTaskModal } from '@/contexts/TaskModalContext';
 import { useUnreadTasks } from '@/hooks/useUnreadTasks';
-import { Task, UpsertTaskPayload, Project, TaskStatus } from '@/types';
-import { toast } from 'sonner';
-import { getProjectBySlug } from '@/lib/projectsApi';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { useSortConfig } from '@/hooks/useSortConfig';
+import { useTaskMutations } from '@/hooks/useTaskMutations';
 import TasksTableView from './TasksTableView';
 import TasksKanbanView from './TasksKanbanView';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { getErrorMessage } from '@/lib/utils';
 import { Loader2 } from 'lucide-react';
 
 interface ProjectTasksViewProps {
@@ -22,102 +23,113 @@ interface ProjectTasksViewProps {
 }
 
 const ProjectTasksView = ({ view, projectIds, hideCompletedTasks, searchTerm, highlightedTaskId, onHighlightComplete }: ProjectTasksViewProps) => {
+  const queryClient = useQueryClient();
   const { onOpen: onOpenTaskModal } = useTaskModal();
   const { unreadTaskIds } = useUnreadTasks();
-  const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
   const rowRefs = useRef(new Map<string, HTMLTableRowElement>());
+  const [taskToDelete, setTaskToDelete] = useState<ProjectTask | null>(null);
 
-  const { sortConfig, requestSort } = useSortConfig({ key: 'updated_at', direction: 'desc' });
+  const { sortConfig, requestSort, sortedData: sortedTasks } = useSortConfig<ProjectTask>([], { key: 'updated_at', direction: 'desc' });
 
-  const finalTaskSortConfig = useMemo(() => {
-    if (view === 'tasks-kanban') {
-      return { key: 'kanban_order', direction: 'asc' as const };
-    }
-    return {
-      key: sortConfig.key || 'updated_at',
-      direction: sortConfig.direction,
-    };
-  }, [view, sortConfig]);
-
-  const { data: tasksData = [], isLoading: isLoadingTasks, refetch } = useTasks({
-    projectIds,
-    hideCompleted: hideCompletedTasks,
-    sortConfig: finalTaskSortConfig,
-    enabled: projectIds !== undefined,
+  const { data: tasks = [], isLoading: isLoadingTasks, error: tasksError } = useQuery({
+    queryKey: ['tasks', { projectIds, hideCompleted: hideCompletedTasks, sortConfig }],
+    queryFn: async () => {
+      if (projectIds === undefined) {
+        return []; // Don't fetch if projectIds are not ready
+      }
+      const { data, error } = await supabase.rpc('get_project_tasks', {
+        p_project_ids: projectIds.length > 0 ? projectIds : null,
+        p_completed: hideCompletedTasks ? false : null,
+        p_order_by: sortConfig.key || 'updated_at',
+        p_order_direction: sortConfig.direction,
+        p_limit: 1000,
+        p_offset: 0,
+        p_search_term: searchTerm || null,
+      });
+      if (error) throw error;
+      return (data as ProjectTask[]) || [];
+    },
+    enabled: projectIds !== undefined, // Only run query when projectIds are available
   });
 
-  const { deleteTask, toggleTaskCompletion, isToggling, updateTaskStatusAndOrder } = useTaskMutations(refetch);
+  const { deleteTask, toggleTaskCompletion, updateTaskStatus, isTogglingTask } = useTaskMutations(() => {
+    queryClient.invalidateQueries({ queryKey: ['tasks'] });
+    queryClient.invalidateQueries({ queryKey: ['project'] });
+  });
 
-  const filteredTasks = useMemo(() => {
-    if (!searchTerm) return tasksData;
-    const lowercasedFilter = searchTerm.toLowerCase();
-    return tasksData.filter(task => 
-      task.title.toLowerCase().includes(lowercasedFilter) ||
-      (task.description && task.description.toLowerCase().includes(lowercasedFilter)) ||
-      (task.project_name && task.project_name.toLowerCase().includes(lowercasedFilter))
-    );
-  }, [tasksData, searchTerm]);
-
-  const handleEditTask = async (task: Task) => {
-    try {
-      const projectForTask = await getProjectBySlug(task.project_slug);
-      if (!projectForTask) {
-        throw new Error("Project for this task could not be found.");
-      }
-      onOpenTaskModal(task, undefined, projectForTask);
-    } catch (error) {
-      toast.error("Could not open task editor.", { description: (error as Error).message });
-    }
+  const handleDeleteTask = (task: ProjectTask) => {
+    setTaskToDelete(task);
   };
 
   const confirmDeleteTask = () => {
     if (taskToDelete) {
-      deleteTask(taskToDelete, {
+      deleteTask(taskToDelete.id, {
         onSuccess: () => {
+          toast.success(`Task "${taskToDelete.title}" deleted.`);
           setTaskToDelete(null);
+        },
+        onError: (error) => {
+          toast.error(`Failed to delete task.`, { description: getErrorMessage(error) });
         }
       });
     }
   };
 
-  const handleToggleTaskCompletion = (task: Task, completed: boolean) => {
-    toggleTaskCompletion({ task, completed });
+  const handleToggleTaskCompletion = (task: ProjectTask, completed: boolean) => {
+    toggleTaskCompletion({ taskId: task.id, completed });
   };
 
-  const handleTaskStatusChange = (task: Task, newStatus: TaskStatus) => {
-    updateTaskStatusAndOrder({
-      taskId: task.id,
-      newStatus,
-      orderedTaskIds: [],
-      newTasks: [],
-      queryKey: ['tasks'],
-      movedColumns: true,
-    });
+  const handleStatusChange = (task: ProjectTask, newStatus: TaskStatus) => {
+    updateTaskStatus({ taskId: task.id, status: newStatus });
   };
 
-  const handleTaskOrderChange = (payload: UpdateTaskOrderPayload) => {
-    updateTaskStatusAndOrder(payload);
+  const handleEditTask = (task: ProjectTask) => {
+    onOpenTaskModal(task);
   };
 
-  if (isLoadingTasks) {
+  if (projectIds === undefined) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <div className="flex items-center justify-center h-full py-24">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
+  const filteredTasks = useMemo(() => {
+    if (!searchTerm) return tasks;
+    return tasks.filter(task =>
+      task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      task.project_name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [tasks, searchTerm]);
+
   return (
     <>
+      <AlertDialog open={!!taskToDelete} onOpenChange={(open) => !open && setTaskToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>This action cannot be undone. This will permanently delete the task "{taskToDelete?.title}".</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteTask}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {view === 'tasks' ? (
         <TasksTableView
           tasks={filteredTasks}
           isLoading={isLoadingTasks}
           onEdit={handleEditTask}
-          onDelete={setTaskToDelete}
+          onDelete={(taskId) => {
+            const task = tasks.find(t => t.id === taskId);
+            if (task) handleDeleteTask(task);
+          }}
           onToggleTaskCompletion={handleToggleTaskCompletion}
-          onStatusChange={handleTaskStatusChange}
-          isToggling={isToggling}
+          onStatusChange={handleStatusChange}
+          isToggling={isTogglingTask}
           sortConfig={sortConfig}
           requestSort={requestSort}
           rowRefs={rowRefs}
@@ -128,22 +140,19 @@ const ProjectTasksView = ({ view, projectIds, hideCompletedTasks, searchTerm, hi
       ) : (
         <TasksKanbanView
           tasks={filteredTasks}
-          onEdit={handleEditTask}
-          onDelete={setTaskToDelete}
-          refetch={refetch}
-          tasksQueryKey={['tasks', { projectIds, hideCompletedTasks, sortConfig: finalTaskSortConfig }]}
-          onTaskOrderChange={handleTaskOrderChange}
+          isLoading={isLoadingTasks}
+          onEditTask={handleEditTask}
+          onDeleteTask={(taskId) => {
+            const task = tasks.find(t => t.id === taskId);
+            if (task) handleDeleteTask(task);
+          }}
+          onToggleTaskCompletion={handleToggleTaskCompletion}
+          onStatusChange={handleStatusChange}
+          highlightedTaskId={highlightedTaskId}
+          onHighlightComplete={onHighlightComplete}
+          unreadTaskIds={unreadTaskIds}
         />
       )}
-      <AlertDialog open={!!taskToDelete} onOpenChange={() => setTaskToDelete(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader><AlertDialogTitle>Delete Task?</AlertDialogTitle><AlertDialogDescription>This action cannot be undone. Are you sure you want to delete this task?</AlertDialogDescription></AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDeleteTask}>Delete</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
   );
 };
