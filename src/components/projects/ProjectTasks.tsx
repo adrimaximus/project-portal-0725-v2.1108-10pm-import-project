@@ -12,7 +12,6 @@ import TaskReactions from '../projects/TaskReactions';
 import { useTaskMutations } from '@/hooks/useTaskMutations';
 import { useQueryClient, useMutation, useQuery } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
-import TaskAttachmentList from './TaskAttachmentList';
 import { cn, getErrorMessage, formatBytes } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { Separator } from "@/components/ui/separator";
@@ -131,7 +130,7 @@ const TaskRow = ({ task, onToggleTaskCompletion, onEditTask, onDeleteTask, handl
                 <h4 className="font-medium leading-none">Attachments ({attachmentCount})</h4>
                 <div className="space-y-2 pt-2">
                   {allAttachments.map(att => (
-                    <div key={att.id} className="flex items-center justify-between p-2 rounded-md border bg-card">
+                    <div key={att.id || att.name} className="flex items-center justify-between p-2 rounded-md border bg-card">
                       <div className="flex items-center gap-3 min-w-0">
                         <FileIcon fileType={att.file_type || ''} className="h-5 w-5 text-muted-foreground flex-shrink-0" />
                         <div className="min-w-0">

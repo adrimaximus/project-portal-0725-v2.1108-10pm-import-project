@@ -253,6 +253,7 @@ export interface Person {
   slug: string;
   company_id?: string | null;
   custom_properties?: Record<string, any>;
+  kanban_order?: number;
 }
 
 export interface Company {
@@ -263,6 +264,7 @@ export interface Company {
   logo_url?: string | null;
   custom_properties?: Record<string, any>;
   slug?: string;
+  updated_at: string;
 }
 
 export interface KbFolder {

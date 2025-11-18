@@ -1,66 +1,104 @@
-"use client";
+"use client"
 
-import React from "react";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { X } from "lucide-react";
-import { cn } from '@/lib/utils';
-import { getColorForTag } from '@/lib/utils';
+import React from "react"
+import { X } from "lucide-react"
 
-interface TagInputProps {
-  value: string[];
-  onChange: (value: string[]) => void;
-  placeholder?: string;
-}
+import { Badge } from "@/components/ui/badge"
+import {
+  Command,
+  CommandGroup,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command"
+import { Command as CommandPrimitive } from "cmdk"
 
-export const TagInput = ({ value, onChange, placeholder }: TagInputProps) => {
-  const [inputValue, setInputValue] = React.useState("");
+type Tag = Record<"value" | "label", string>
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter" || e.key === ",") {
-      e.preventDefault();
-      const newTag = inputValue.trim();
-      if (newTag && !value.includes(newTag)) {
-        onChange([...value, newTag]);
+export function TagInput({
+  placeholder,
+  tags,
+  setTags,
+  className,
+  ...props
+}: React.ComponentPropsWithoutRef<typeof CommandPrimitive> & {
+  tags: Tag[]
+  setTags: React.Dispatch<React.SetStateAction<Tag[]>>
+}) {
+  const inputRef = React.useRef<HTMLInputElement>(null)
+  const [open, setOpen] = React.useState(false)
+  const [inputValue, setInputValue] = React.useState("")
+
+  const handleUnselect = React.useCallback(
+    (tag: Tag) => {
+      setTags((prev) => prev.filter((s) => s.value !== tag.value))
+    },
+    [setTags]
+  )
+
+  const handleKeyDown = React.useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      const input = inputRef.current
+      if (input) {
+        if (e.key === "Delete" || e.key === "Backspace") {
+          if (input.value === "") {
+            setTags((prev) => {
+              const newTags = [...prev]
+              newTags.pop()
+              return newTags
+            })
+          }
+        }
+        if (e.key === "Escape") {
+          input.blur()
+        }
       }
-      setInputValue("");
-    }
-  };
+    },
+    [setTags]
+  )
 
   return (
     <div>
-      <div className="flex flex-wrap gap-2 mb-2">
-        {value.map((tag, index) => {
-          const color = getColorForTag(tag);
-          return (
-            <div
-              key={index}
-              className="flex items-center gap-1 rounded-md px-2 py-1 text-sm border"
-              style={{
-                backgroundColor: `${color}20`,
-                borderColor: color,
-                color: color,
-              }}
-            >
-              {tag}
-              <button
-                type="button"
-                onClick={() => {
-                  onChange(value.filter((_, i) => i !== index));
-                }}
-              >
-                <X size={14} />
-              </button>
-            </div>
-          );
-        })}
+      <div className="group rounded-md border border-input px-3 py-2 text-sm ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
+        <div className="flex flex-wrap gap-1">
+          {tags.map((tag) => {
+            return (
+              <Badge key={tag.value} variant="secondary">
+                {tag.label}
+                <button
+                  className="ml-1 rounded-full outline-none ring-offset-background focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      handleUnselect(tag)
+                    }
+                  }}
+                  onMouseDown={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                  }}
+                  onClick={() => handleUnselect(tag)}
+                >
+                  <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
+                </button>
+              </Badge>
+            )
+          })}
+          <CommandPrimitive
+            onKeyDown={handleKeyDown}
+            className="overflow-visible bg-transparent"
+          >
+            <CommandPrimitive.Input
+              ref={inputRef}
+              value={inputValue}
+              onValueChange={setInputValue}
+              onBlur={() => setOpen(false)}
+              onFocus={() => setOpen(true)}
+              placeholder={placeholder}
+              className="ml-2 flex-1 bg-transparent outline-none placeholder:text-muted-foreground"
+              {...props}
+            />
+          </CommandPrimitive>
+        </div>
       </div>
-      <Input
-        value={inputValue}
-        onChange={(e) => setInputValue(e.target.value)}
-        onKeyDown={handleKeyDown}
-        placeholder={placeholder || "Add a tag..."}
-      />
     </div>
-  );
-};
+  )
+}
