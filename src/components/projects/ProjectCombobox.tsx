@@ -1,5 +1,5 @@
 import * as React from "react"
-import { Check, ChevronsUpDown, User } from "lucide-react"
+import { Check, ChevronsUpDown, User, Briefcase } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -32,13 +32,33 @@ export function ProjectCombobox({ projects, value, onChange, isLoading, disabled
   const [open, setOpen] = React.useState(false)
   const { user } = useAuth();
 
-  const { personalProject, generalTasksProject, sortedProjects } = React.useMemo(() => {
+  const { personalProject, generalTasksProject, groupedProjects } = React.useMemo(() => {
     const personal = projects.find(p => p.personal_for_user_id === user?.id);
     const general = projects.find(p => p.slug === 'general-tasks');
+    
     const otherProjects = projects
-      .filter(p => p.personal_for_user_id !== user?.id && p.slug !== 'general-tasks')
-      .sort((a, b) => a.name.localeCompare(b.name));
-    return { personalProject: personal, generalTasksProject: general, sortedProjects: otherProjects };
+      .filter(p => p.personal_for_user_id !== user?.id && p.slug !== 'general-tasks');
+
+    const grouped = otherProjects.reduce((acc, project) => {
+      const category = project.category || 'Uncategorized';
+      if (!acc[category]) {
+        acc[category] = [];
+      }
+      acc[category].push(project);
+      return acc;
+    }, {} as Record<string, Project[]>);
+
+    for (const category in grouped) {
+      grouped[category].sort((a, b) => a.name.localeCompare(b.name));
+    }
+
+    const sortedGroupedProjects = Object.entries(grouped).sort(([catA], [catB]) => {
+        if (catA === 'Uncategorized') return 1;
+        if (catB === 'Uncategorized') return -1;
+        return catA.localeCompare(catB);
+    });
+
+    return { personalProject: personal, generalTasksProject: general, groupedProjects: sortedGroupedProjects };
   }, [projects, user]);
 
   const selectedProject = projects.find(
@@ -73,7 +93,7 @@ export function ProjectCombobox({ projects, value, onChange, isLoading, disabled
           <CommandInput placeholder="Search project..." />
           <CommandList>
             <CommandEmpty>No project found.</CommandEmpty>
-            <CommandGroup className="max-h-72 overflow-y-auto">
+            <div className="max-h-72 overflow-y-auto">
               {personalProject && (
                 <CommandItem
                   key={personalProject.id}
@@ -112,26 +132,32 @@ export function ProjectCombobox({ projects, value, onChange, isLoading, disabled
                   {generalTasksProject.name}
                 </CommandItem>
               )}
-              {(personalProject || generalTasksProject) && sortedProjects.length > 0 && <CommandSeparator />}
-              {sortedProjects.map((project) => (
-                <CommandItem
-                  key={project.id}
-                  value={project.name}
-                  onSelect={() => {
-                    onChange(project.id)
-                    setOpen(false)
-                  }}
-                >
-                  <Check
-                    className={cn(
-                      "mr-2 h-4 w-4",
-                      value === project.id ? "opacity-100" : "opacity-0"
-                    )}
-                  />
-                  {project.name}
-                </CommandItem>
+              {(personalProject || generalTasksProject) && groupedProjects.length > 0 && <CommandSeparator />}
+              
+              {groupedProjects.map(([category, projectsInCategory]) => (
+                <CommandGroup key={category} heading={category}>
+                  {projectsInCategory.map((project) => (
+                    <CommandItem
+                      key={project.id}
+                      value={project.name}
+                      onSelect={() => {
+                        onChange(project.id)
+                        setOpen(false)
+                      }}
+                    >
+                      <Check
+                        className={cn(
+                          "mr-2 h-4 w-4",
+                          value === project.id ? "opacity-100" : "opacity-0"
+                        )}
+                      />
+                      <Briefcase className="mr-2 h-4 w-4 text-muted-foreground" />
+                      {project.name}
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
               ))}
-            </CommandGroup>
+            </div>
           </CommandList>
         </Command>
       </PopoverContent>
