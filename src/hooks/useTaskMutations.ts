@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Task, TaskStatus, Reaction, UpsertTaskPayload, Project } from '@/types';
+import { Task, TaskStatus, Reaction, UpsertTaskPayload, Project, TaskPriority } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { getErrorMessage } from '@/lib/utils';
 import { v4 as uuidv4 } from 'uuid';
@@ -71,6 +71,7 @@ export const useTaskMutations = (refetch?: () => void) => {
 
       // Step 3: Handle new file uploads
       if (taskData.new_files && taskData.new_files.length > 0) {
+        toast.info(`Uploading ${taskData.new_files.length} file(s)...`);
         const uploadPromises = taskData.new_files.map(async (file) => {
           const sanitizedFileName = file.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
           const filePath = `${taskData.project_id}/${taskId}/${Date.now()}-${sanitizedFileName}`;
@@ -297,15 +298,12 @@ export const useTaskMutations = (refetch?: () => void) => {
   });
 
   const { mutate: createTasks, isPending: isCreatingTasks } = useMutation({
-    mutationFn: async (tasksToCreate: { title: string, project_id: string, assignee_ids?: string[] }[]) => {
-      for (const task of tasksToCreate) {
-        const { error } = await supabase.rpc('create_task_with_assignees', {
-          p_project_id: task.project_id,
-          p_title: task.title,
-          p_assignee_ids: task.assignee_ids || [],
-        });
-        if (error) throw error;
-      }
+    mutationFn: async (tasksToCreate: { title: string, project_id: string, assignee_ids?: string[], priority?: TaskPriority }[]) => {
+      const { data, error } = await supabase.rpc('create_multiple_tasks', {
+        tasks_data: tasksToCreate
+      });
+      if (error) throw error;
+      return data;
     },
     onSuccess: (_, variables) => {
       toast.success(`${variables.length} task(s) added successfully.`);
