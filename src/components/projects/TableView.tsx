@@ -135,7 +135,7 @@ const ProjectRow = ({ project, onDeleteProject, rowRefs, onStatusChange }: Proje
     if (dueDate && isBefore(dueDate, now)) {
       displayStatus = "Billing Process";
     } else {
-      displayStatus = "In Progress";
+      displayStatus = "On Track";
     }
   }
 

@@ -29,10 +29,10 @@ const ProjectTasksView = ({ view, projectIds, hideCompletedTasks, searchTerm, hi
   const rowRefs = useRef(new Map<string, HTMLTableRowElement>());
   const [taskToDelete, setTaskToDelete] = useState<ProjectTask | null>(null);
 
-  const { sortConfig, requestSort, sortedData: sortedTasks } = useSortConfig<ProjectTask>([], { key: 'updated_at', direction: 'desc' });
+  const { sortConfig, requestSort } = useSortConfig<keyof ProjectTask>({ key: 'updated_at', direction: 'desc' });
 
   const { data: tasks = [], isLoading: isLoadingTasks, error: tasksError } = useQuery({
-    queryKey: ['tasks', { projectIds, hideCompleted: hideCompletedTasks, sortConfig }],
+    queryKey: ['tasks', { projectIds, hideCompleted: hideCompletedTasks, sortConfig, searchTerm }],
     queryFn: async () => {
       if (projectIds === undefined) {
         return []; // Don't fetch if projectIds are not ready
@@ -52,18 +52,10 @@ const ProjectTasksView = ({ view, projectIds, hideCompletedTasks, searchTerm, hi
     enabled: projectIds !== undefined, // Only run query when projectIds are available
   });
 
-  const { deleteTask, toggleTaskCompletion, updateTaskStatus, isTogglingTask } = useTaskMutations(() => {
+  const { deleteTask, toggleTaskCompletion, updateTask, isToggling } = useTaskMutations(() => {
     queryClient.invalidateQueries({ queryKey: ['tasks'] });
     queryClient.invalidateQueries({ queryKey: ['project'] });
   });
-
-  const filteredTasks = useMemo(() => {
-    if (!searchTerm) return tasks;
-    return tasks.filter(task =>
-      task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      task.project_name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [tasks, searchTerm]);
 
   const handleDeleteTask = (task: ProjectTask) => {
     setTaskToDelete(task);
@@ -84,11 +76,11 @@ const ProjectTasksView = ({ view, projectIds, hideCompletedTasks, searchTerm, hi
   };
 
   const handleToggleTaskCompletion = (task: ProjectTask, completed: boolean) => {
-    toggleTaskCompletion({ taskId: task.id, completed });
+    toggleTaskCompletion({ task, completed });
   };
 
   const handleStatusChange = (task: ProjectTask, newStatus: TaskStatus) => {
-    updateTaskStatus({ taskId: task.id, status: newStatus });
+    updateTask({ taskId: task.id, updates: { status: newStatus } });
   };
 
   const handleEditTask = (task: ProjectTask) => {
@@ -120,7 +112,7 @@ const ProjectTasksView = ({ view, projectIds, hideCompletedTasks, searchTerm, hi
 
       {view === 'tasks' ? (
         <TasksTableView
-          tasks={filteredTasks}
+          tasks={tasks}
           isLoading={isLoadingTasks}
           onEdit={handleEditTask}
           onDelete={(taskId) => {
@@ -129,7 +121,7 @@ const ProjectTasksView = ({ view, projectIds, hideCompletedTasks, searchTerm, hi
           }}
           onToggleTaskCompletion={handleToggleTaskCompletion}
           onStatusChange={handleStatusChange}
-          isToggling={isTogglingTask}
+          isToggling={isToggling}
           sortConfig={sortConfig}
           requestSort={requestSort}
           rowRefs={rowRefs}
@@ -139,8 +131,7 @@ const ProjectTasksView = ({ view, projectIds, hideCompletedTasks, searchTerm, hi
         />
       ) : (
         <TasksKanbanView
-          tasks={filteredTasks}
-          isLoading={isLoadingTasks}
+          tasks={tasks}
           onEditTask={handleEditTask}
           onDeleteTask={(taskId) => {
             const task = tasks.find(t => t.id === taskId);
