@@ -149,6 +149,7 @@ export interface Task {
   ticket_attachments?: TaskAttachment[];
   attachment_url?: string;
   attachment_name?: string;
+  last_reminder_sent_at?: string | null;
 }
 
 export interface Comment {
