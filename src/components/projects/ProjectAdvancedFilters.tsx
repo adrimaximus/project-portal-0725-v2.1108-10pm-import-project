@@ -33,12 +33,12 @@ export interface AdvancedFiltersState {
 
 interface ProjectAdvancedFiltersProps {
   filters: AdvancedFiltersState;
-  onFiltersChange: (filters: AdvancedFiltersState) => void;
+  onAdvancedFiltersChange: (filters: AdvancedFiltersState) => void;
   allPeople: Person[];
   allOwners: Person[];
 }
 
-const ProjectAdvancedFilters = ({ filters, onFiltersChange, allPeople, allOwners }: ProjectAdvancedFiltersProps) => {
+const ProjectAdvancedFilters = ({ filters, onAdvancedFiltersChange, allPeople, allOwners }: ProjectAdvancedFiltersProps) => {
   const [open, setOpen] = useState(false);
 
   const handleOwnerToggle = (personId: string) => {
@@ -46,7 +46,7 @@ const ProjectAdvancedFilters = ({ filters, onFiltersChange, allPeople, allOwners
     const newOwnerIds = currentOwners.includes(personId)
       ? currentOwners.filter(id => id !== personId)
       : [...currentOwners, personId];
-    onFiltersChange({ ...filters, ownerIds: newOwnerIds });
+    onAdvancedFiltersChange({ ...filters, ownerIds: newOwnerIds });
   };
 
   const handleMemberToggle = (personId: string) => {
@@ -54,7 +54,7 @@ const ProjectAdvancedFilters = ({ filters, onFiltersChange, allPeople, allOwners
     const newMemberIds = currentMembers.includes(personId)
       ? currentMembers.filter(id => id !== personId)
       : [...currentMembers, personId];
-    onFiltersChange({ ...filters, memberIds: newMemberIds });
+    onAdvancedFiltersChange({ ...filters, memberIds: newMemberIds });
   };
 
   const handleStatusToggle = (statusValue: string) => {
@@ -62,13 +62,13 @@ const ProjectAdvancedFilters = ({ filters, onFiltersChange, allPeople, allOwners
     const newExcludedStatus = currentExcluded.includes(statusValue)
       ? currentExcluded.filter(s => s !== statusValue)
       : [...currentExcluded, statusValue];
-    onFiltersChange({ ...filters, excludedStatus: newExcludedStatus });
+    onAdvancedFiltersChange({ ...filters, excludedStatus: newExcludedStatus });
   };
 
   const activeFilterCount = (filters.ownerIds?.length || 0) + (filters.memberIds?.length || 0) + (filters.excludedStatus?.length || 0);
 
   const clearFilters = () => {
-    onFiltersChange({ ownerIds: [], memberIds: [], excludedStatus: [] });
+    onAdvancedFiltersChange({ ownerIds: [], memberIds: [], excludedStatus: [] });
   };
 
   const ownerFilterContent = (

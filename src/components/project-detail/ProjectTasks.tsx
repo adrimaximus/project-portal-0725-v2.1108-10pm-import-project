@@ -12,7 +12,7 @@ import TaskReactions from '../projects/TaskReactions';
 import { useTaskMutations } from '@/hooks/useTaskMutations';
 import { useQueryClient, useMutation, useQuery } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
-import TaskAttachmentList from '../projects/TaskAttachmentList';
+import TaskAttachmentList from './TaskAttachmentList';
 import { cn, getErrorMessage, formatBytes } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { Separator } from "@/components/ui/separator";
@@ -285,6 +285,10 @@ const ProjectTasks = ({ project, tasks, projectId, projectSlug, onEditTask, onDe
 
   useEffect(() => {
     if (highlightedTaskId) {
+      const taskToOpen = tasks.find(t => t.id === highlightedTaskId);
+      if (taskToOpen) {
+        onOpenTaskDrawer(taskToOpen, project, highlightedCommentId);
+      }
       const element = taskRefs.current.get(highlightedTaskId);
       if (element) {
         element.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -297,7 +301,7 @@ const ProjectTasks = ({ project, tasks, projectId, projectSlug, onEditTask, onDe
         }, 2000);
       }
     }
-  }, [highlightedTaskId, onHighlightComplete]);
+  }, [highlightedTaskId, tasks, onOpenTaskDrawer, project, highlightedCommentId, onHighlightComplete]);
 
   const handleToggleReaction = (taskId: string, emoji: string) => {
     toggleTaskReaction({ taskId, emoji }, {
