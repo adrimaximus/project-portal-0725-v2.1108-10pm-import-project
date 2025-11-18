@@ -17,16 +17,24 @@ export const getDashboardProjects = async ({
   offset, 
   searchTerm, 
   excludeOtherPersonal, 
-  year,
-  timeframe,
+  ownerIds,
+  memberIds,
+  excludedStatus,
+  dateFrom,
+  dateTo,
+  sortKey,
   sortDirection
 }: { 
   limit: number, 
   offset: number, 
   searchTerm: string | null, 
   excludeOtherPersonal: boolean, 
-  year: number | null,
-  timeframe?: 'upcoming' | 'past' | null,
+  ownerIds?: string[],
+  memberIds?: string[],
+  excludedStatus?: string[],
+  dateFrom?: string | null,
+  dateTo?: string | null,
+  sortKey?: string | null,
   sortDirection?: 'asc' | 'desc'
 }): Promise<Project[]> => {
   const { data, error } = await supabase.rpc('get_dashboard_projects', {
@@ -34,8 +42,12 @@ export const getDashboardProjects = async ({
     p_offset: offset,
     p_search_term: searchTerm || null,
     p_exclude_other_personal: excludeOtherPersonal,
-    p_year: year,
-    p_timeframe: timeframe || null,
+    p_owner_ids: ownerIds?.length ? ownerIds : null,
+    p_member_ids: memberIds?.length ? memberIds : null,
+    p_status_exclude: excludedStatus?.length ? excludedStatus : null,
+    p_date_from: dateFrom,
+    p_date_to: dateTo,
+    p_sort_key: sortKey || 'start_date',
     p_sort_direction: sortDirection || 'desc'
   });
   if (error) throw error;
