@@ -15,7 +15,6 @@ import { Command as CommandPrimitive } from "cmdk"
 type Tag = Record<"value" | "label", string>
 
 export function TagInput({
-  placeholder,
   tags,
   setTags,
   className,
@@ -92,7 +91,6 @@ export function TagInput({
               onValueChange={setInputValue}
               onBlur={() => setOpen(false)}
               onFocus={() => setOpen(true)}
-              placeholder={placeholder}
               className="ml-2 flex-1 bg-transparent outline-none placeholder:text-muted-foreground"
               {...props}
             />

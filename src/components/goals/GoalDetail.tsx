@@ -26,7 +26,7 @@ const GoalDetail = ({ goal, onUpdate, onDelete, onClose }: GoalDetailProps) => {
     setEditedGoal(goal);
   }, [goal]);
 
-  const handleChange = (field: keyof EditableGoal, value: any) => {
+  const handleChange = <K extends keyof EditableGoal>(field: K, value: EditableGoal[K]) => {
     setEditedGoal(prev => ({ ...prev, [field]: value }));
   };
 
