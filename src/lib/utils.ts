@@ -1,7 +1,7 @@
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
 import { isPast, isToday, isTomorrow } from 'date-fns';
-import { TaskPriority, ProjectStatus, PaymentStatus } from "@/types";
+import { TaskPriority, ProjectStatus, PaymentStatus, TaskStatus } from "@/types";
 import { format as formatTz, toZonedTime } from 'date-fns-tz';
 
 export function cn(...inputs: ClassValue[]) {
@@ -59,11 +59,11 @@ export const formatPhoneNumberForApi = (phone: string | undefined | null): strin
     if (cleaned.startsWith('0')) {
       return '62' + cleaned.substring(1);
     }
-    if (cleaned.startsWith('62')) {
-      return cleaned;
-    }
     if (cleaned.length > 8 && cleaned.startsWith('8')) {
       return '62' + cleaned;
+    }
+    if (cleaned.startsWith('62')) {
+      return cleaned;
     }
     return cleaned;
 };

@@ -32,7 +32,7 @@ export type Collaborator = User & {
 };
 
 export type Owner = Pick<User, 'id' | 'name' | 'avatar_url' | 'initials' | 'email'>;
-export type AssignedUser = Pick<User, 'id' | 'name' | 'avatar_url' | 'initials' | 'role'>;
+export type AssignedUser = Pick<User, 'id' | 'name' | 'avatar_url' | 'initials' | 'role' | 'email'>;
 
 // Enums and Constants
 export const PROJECT_STATUS_OPTIONS = [
@@ -124,6 +124,7 @@ export interface Project {
   total_task_count?: number;
   people?: Person[];
   person_ids?: string[];
+  origin_event_id?: string;
 }
 
 export interface Task {
