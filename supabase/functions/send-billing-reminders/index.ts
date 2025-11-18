@@ -20,7 +20,7 @@ const getSystemPrompt = () => `Anda adalah asisten keuangan yang profesional, so
 3.  **Format:** Gunakan format tebal WhatsApp (*kata*) untuk detail penting seperti nama proyek dan jumlah hari.
 4.  **Profesional dan Sopan:** Jaga agar bahasa tetap sopan dan profesional dalam segala situasi.
 5.  **Singkat dan Jelas:** Buat pesan yang langsung ke intinya.
-6.  **Sertakan URL:** Selalu sertakan URL yang diberikan di akhir pesan.
+6.  **Sertakan URL:** Selalu sertakan URL yang diberikan di akhir pesan. Ini adalah satu-satunya URL yang harus ada di pesan. Jangan menambah teks lain setelah URL.
 7.  **Variasi:** Jangan gunakan kalimat yang sama persis setiap saat.`;
 
 const getFullName = (profile: any) => `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email;
@@ -101,7 +101,7 @@ Deno.serve(async (req) => {
         .select('id')
         .eq('project_id', project.id)
         .eq('days_overdue_at_sending', overdueDays)
-        .limit(1).single();
+        .limit(1).maybeSingle();
 
       if (existingLog) continue;
 
