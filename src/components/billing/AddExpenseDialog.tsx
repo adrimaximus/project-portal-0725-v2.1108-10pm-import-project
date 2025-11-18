@@ -17,7 +17,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Project, Person, Company, CustomProperty } from '@/types';
+import { Project, Person, Company, Expense, CustomProperty, BankAccount } from '@/types';
 import { CurrencyInput } from '../ui/currency-input';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Label } from '../ui/label';
@@ -27,14 +27,6 @@ import PersonFormDialog from '../people/PersonFormDialog';
 import CompanyFormDialog from '../people/CompanyFormDialog';
 import CreateProjectDialog from '../projects/CreateProjectDialog';
 import CustomPropertyInput from '../settings/CustomPropertyInput';
-
-interface BankAccount {
-  id: string;
-  account_name: string;
-  account_number: string;
-  bank_name: string;
-  is_legacy: boolean;
-}
 
 interface AddExpenseDialogProps {
   open: boolean;
@@ -487,7 +479,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
           onOpenChange={setIsBankAccountFormOpen}
           ownerId={beneficiary.id}
           ownerType={beneficiary.type}
-          onSuccess={(newAccountId) => {
+          onSuccess={() => {
             const fetchNewAccounts = async () => {
               const { data, error } = await supabase.rpc('get_beneficiary_bank_accounts', {
                 p_owner_id: beneficiary!.id,

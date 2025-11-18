@@ -9,18 +9,7 @@ import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2 } from 'lucide-react';
-
-export interface BankAccount {
-  id: string;
-  account_name: string;
-  account_number: string;
-  bank_name: string;
-  swift_code?: string | null;
-  country?: string | null;
-  city?: string | null;
-  owner_id: string;
-  owner_type: 'person' | 'company';
-}
+import { BankAccount } from '@/types';
 
 interface BankAccountFormDialogProps {
   open: boolean;

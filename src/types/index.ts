@@ -528,6 +528,22 @@ export interface Invoice {
   last_billing_reminder_sent_at: string | null;
 }
 
+export interface BankAccount {
+  id: string;
+  account_name: string;
+  account_number: string;
+  bank_name: string;
+  swift_code?: string | null;
+  country?: string | null;
+  city?: string | null;
+  owner_id: string;
+  owner_type: 'person' | 'company';
+  owner_name?: string;
+  owner_avatar_url?: string | null;
+  owner_slug?: string | null;
+  is_legacy?: boolean;
+}
+
 export interface Expense {
   id: string;
   project_id: string;
@@ -549,4 +565,5 @@ export interface Expense {
   payment_terms: any[];
   bank_account_id: string | null;
   custom_properties?: Record<string, any> | null;
+  kanban_order?: number;
 }

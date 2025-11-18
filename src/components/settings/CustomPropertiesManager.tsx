@@ -10,7 +10,7 @@ import { toast } from 'sonner';
 import { CustomProperty } from '@/types';
 
 interface CustomPropertiesManagerProps {
-  category: 'contact' | 'company' | 'project' | 'billing';
+  category: 'contact' | 'company' | 'project' | 'billing' | 'expense';
   title: string;
   description: string;
 }

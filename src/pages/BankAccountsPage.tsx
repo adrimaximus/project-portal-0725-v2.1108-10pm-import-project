@@ -12,8 +12,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getAvatarUrl, generatePastelColor } from '@/lib/utils';
-import BankAccountFormDialog, { BankAccount } from '@/components/billing/BankAccountFormDialog';
+import BankAccountFormDialog from '@/components/billing/BankAccountFormDialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { BankAccount } from '@/types';
 
 const BankAccountsPage = () => {
   const queryClient = useQueryClient();
