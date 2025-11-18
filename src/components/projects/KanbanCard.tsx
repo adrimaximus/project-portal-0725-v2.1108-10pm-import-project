@@ -7,8 +7,9 @@ import { useNavigate } from 'react-router-dom';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { formatInJakarta, cn, generatePastelColor, getAvatarUrl } from '@/lib/utils';
 import { Badge } from '../ui/badge';
-import { CheckCircle } from 'lucide-react';
+import { CheckCircle, User } from 'lucide-react';
 import { isSameDay, subDays } from 'date-fns';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 
 const KanbanCard = ({ project, dragHappened }: { project: Project, dragHappened: React.MutableRefObject<boolean> }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ 
@@ -52,11 +53,11 @@ const KanbanCard = ({ project, dragHappened }: { project: Project, dragHappened:
     const adjustedDueDate = isExclusiveEndDate ? subDays(dueDate, 1) : dueDate;
 
     if (isSameDay(startDate, adjustedDueDate)) {
-      return (
-        <Badge variant="outline" className="text-xs font-normal">
-          {formatInJakarta(start_date, 'd MMM')}
-        </Badge>
-      );
+        return (
+          <Badge variant="outline" className="text-xs font-normal">
+            {formatInJakarta(start_date, 'd MMM')}
+          </Badge>
+        );
     }
 
     const startMonth = formatInJakarta(start_date, 'MMM');
@@ -84,6 +85,18 @@ const KanbanCard = ({ project, dragHappened }: { project: Project, dragHappened:
           <div className="space-y-2 block">
             <h4 className="font-semibold text-sm leading-snug flex items-center gap-1.5">
               {project.status === 'Completed' && <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />}
+              {project.personal_for_user_id && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Personal Project</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
               {project.name}
             </h4>
             

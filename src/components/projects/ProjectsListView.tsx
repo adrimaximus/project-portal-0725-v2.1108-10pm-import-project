@@ -3,10 +3,11 @@ import { formatDistanceToNow } from 'date-fns';
 import { Link } from 'react-router-dom';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { MoreHorizontal, Trash2 } from 'lucide-react';
+import { MoreHorizontal, Trash2, User } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import StatusBadge from '../StatusBadge';
 import { generatePastelColor, getAvatarUrl } from '@/lib/utils';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 
 const ProjectsListView = ({ projects, onDeleteProject }: { projects: Project[], onDeleteProject: (projectId: string) => void }) => {
   return (
@@ -23,7 +24,21 @@ const ProjectsListView = ({ projects, onDeleteProject }: { projects: Project[], 
               ))}
             </div>
             <div className="min-w-0">
-              <Link to={`/projects/${project.slug}`} className="font-medium text-primary hover:underline truncate block">{project.name}</Link>
+              <div className="flex items-center gap-2">
+                {project.personal_for_user_id && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <User className="h-4 w-4 text-muted-foreground" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Personal Project</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
+                <Link to={`/projects/${project.slug}`} className="font-medium text-primary hover:underline truncate block">{project.name}</Link>
+              </div>
               <p className="text-sm text-muted-foreground">Updated {formatDistanceToNow(new Date(project.updated_at || project.created_at), { addSuffix: true })}</p>
             </div>
           </div>

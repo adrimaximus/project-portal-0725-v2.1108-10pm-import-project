@@ -6,6 +6,7 @@ import { Progress } from '@/components/ui/progress';
 import { getProjectStatusStyles, generatePastelColor, getAvatarUrl } from '@/lib/utils';
 import { Link } from 'react-router-dom';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
+import { User } from 'lucide-react';
 
 const ProjectCard = ({ project }: { project: Project }) => {
   const statusStyles = getProjectStatusStyles(project.status);
@@ -15,7 +16,21 @@ const ProjectCard = ({ project }: { project: Project }) => {
         <CardHeader>
           <div className="flex justify-between items-start gap-4">
             <div className="flex-1 min-w-0">
-              <CardTitle className="truncate">{project.name}</CardTitle>
+              <CardTitle className="truncate flex items-center gap-2">
+                {project.personal_for_user_id && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <User className="h-4 w-4 text-muted-foreground" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Personal Project</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
+                {project.name}
+              </CardTitle>
               <Badge variant="outline" className={statusStyles.tw}>{project.status}</Badge>
             </div>
             {project.client_company_logo_url && (

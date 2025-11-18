@@ -1,5 +1,5 @@
 import * as React from "react"
-import { Check, ChevronsUpDown } from "lucide-react"
+import { Check, ChevronsUpDown, User } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -77,6 +77,7 @@ export function ProjectCombobox({ projects, value, onChange, isLoading, disabled
                     onChange(personalProject.id)
                     setOpen(false)
                   }}
+                  className="flex items-center"
                 >
                   <Check
                     className={cn(
@@ -84,6 +85,7 @@ export function ProjectCombobox({ projects, value, onChange, isLoading, disabled
                       value === personalProject.id ? "opacity-100" : "opacity-0"
                     )}
                   />
+                  <User className="mr-2 h-4 w-4 text-muted-foreground" />
                   {personalProject.name}
                 </CommandItem>
               )}
