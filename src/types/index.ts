@@ -256,6 +256,8 @@ export interface Project {
   category: string | null;
   status: ProjectStatus;
   progress: number;
+  total_task_count?: number;
+  active_task_count?: number;
   budget: number | null;
   start_date: string | null;
   due_date: string | null;

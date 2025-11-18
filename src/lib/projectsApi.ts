@@ -26,16 +26,17 @@ export const getProjectBySlug = async (slug: string): Promise<Project | null> =>
 
   const projectData = data as any;
 
-  // The RPC returns JSON strings for nested arrays, so we need to parse them.
+  // The RPC returns JSON fields which might need parsing if they are strings.
+  // Tasks, comments, and activities are now fetched separately on the project page.
   return {
     ...projectData,
     assignedTo: safeParse(projectData.assignedTo) || [],
-    tasks: safeParse(projectData.tasks) || [],
-    comments: safeParse(projectData.comments) || [],
     briefFiles: safeParse(projectData.briefFiles) || [],
-    activities: safeParse(projectData.activities) || [],
     tags: safeParse(projectData.tags) || [],
     reactions: safeParse(projectData.reactions) || [],
     services: safeParse(projectData.services) || [],
+    tasks: [],
+    comments: [],
+    activities: [],
   } as Project;
 };

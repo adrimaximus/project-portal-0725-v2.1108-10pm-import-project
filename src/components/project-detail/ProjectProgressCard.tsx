@@ -1,4 +1,4 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Project } from "@/types";
 import { ListChecks } from "lucide-react";
@@ -8,10 +8,9 @@ interface ProjectProgressCardProps {
 }
 
 const ProjectProgressCard = ({ project }: ProjectProgressCardProps) => {
-  const tasks = project.tasks || [];
-  const completedTasks = tasks.filter(task => task.completed).length;
-  const totalTasks = tasks.length;
-  const progressPercentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+  const progressPercentage = project.progress || 0;
+  const totalTasks = project.total_task_count || 0;
+  const completedTasks = totalTasks > 0 ? Math.round((progressPercentage / 100) * totalTasks) : 0;
 
   return (
     <Card>

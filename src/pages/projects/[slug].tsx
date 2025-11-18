@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { getProjectBySlug } from '@/lib/projectsApi';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { Task, UpsertTaskPayload, Project, ProjectStatus, Reaction, Comment as CommentType } from '@/types';
+import { Task, UpsertTaskPayload, Project, ProjectStatus, Reaction, Comment as CommentType, Activity } from '@/types';
 import { useTaskMutations } from '@/hooks/useTaskMutations';
 import { useProjectMutations } from '@/hooks/useProjectMutations';
 import {
@@ -58,12 +58,53 @@ const ProjectDetailPage = () => {
     enabled: !!slug,
   });
 
-  useEffect(() => {
-    if (!isLoading && !project) {
-      toast.error("Project not found or you don't have permission to view it.");
-      navigate('/projects', { replace: true });
-    }
-  }, [isLoading, project, navigate]);
+  const { data: tasks, isLoading: isLoadingTasks } = useQuery<Task[]>({
+    queryKey: ['project-tasks', project?.id],
+    queryFn: async () => {
+        if (!project?.id) return [];
+        const { data, error } = await supabase.rpc('get_project_tasks', { p_project_ids: [project.id] });
+        if (error) throw error;
+        return data;
+    },
+    enabled: !!project?.id,
+  });
+
+  const { data: comments, isLoading: isLoadingComments } = useQuery<CommentType[]>({
+      queryKey: ['project-comments', project?.id],
+      queryFn: async () => {
+          if (!project?.id) return [];
+          const { data, error } = await supabase.rpc('get_project_comments', { p_project_id: project.id });
+          if (error) throw error;
+          return data;
+      },
+      enabled: !!project?.id,
+  });
+
+  const { data: activities, isLoading: isLoadingActivities } = useQuery<Activity[]>({
+      queryKey: ['project-activities', project?.id],
+      queryFn: async () => {
+          if (!project?.id) return [];
+          const { data, error } = await supabase
+              .from('project_activities')
+              .select('*, user:profiles(id, name, avatar_url, initials)')
+              .eq('project_id', project.id)
+              .order('created_at', { ascending: false })
+              .limit(50);
+          if (error) throw error;
+          return data as Activity[];
+      },
+      enabled: !!project?.id,
+  });
+
+  const projectWithDetails = useMemo(() => {
+    if (!project) return null;
+    return {
+        ...project,
+        tasks: tasks || [],
+        comments: comments || [],
+        activities: activities || [],
+    };
+  }, [project, tasks, comments, activities]);
 
   const storageKey = useMemo(() => project ? `project-description-draft-${project.id}` : null, [project]);
 
@@ -85,9 +126,9 @@ const ProjectDetailPage = () => {
       const channel = supabase
         .channel(`project-updates-${project.id}`)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'projects', filter: `id=eq.${project.id}` }, () => queryClient.invalidateQueries({ queryKey: ['project', slug] }))
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks', filter: `project_id=eq.${project.id}` }, () => queryClient.invalidateQueries({ queryKey: ['project', slug] }))
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'comments', filter: `project_id=eq.${project.id}` }, () => queryClient.invalidateQueries({ queryKey: ['project', slug] }))
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'project_activities', filter: `project_id=eq.${project.id}` }, () => queryClient.invalidateQueries({ queryKey: ['project', slug] }))
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks', filter: `project_id=eq.${project.id}` }, () => queryClient.invalidateQueries({ queryKey: ['project-tasks', project.id] }))
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'comments', filter: `project_id=eq.${project.id}` }, () => queryClient.invalidateQueries({ queryKey: ['project-comments', project.id] }))
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'project_activities', filter: `project_id=eq.${project.id}` }, () => queryClient.invalidateQueries({ queryKey: ['project-activities', project.id] }))
         .on('postgres_changes', { event: '*', schema: 'public', table: 'project_files', filter: `project_id=eq.${project.id}` }, () => queryClient.invalidateQueries({ queryKey: ['project', slug] }))
         .on('postgres_changes', { event: '*', schema: 'public', table: 'project_members', filter: `project_id=eq.${project.id}` }, () => queryClient.invalidateQueries({ queryKey: ['project', slug] }))
         .subscribe();
@@ -98,10 +139,10 @@ const ProjectDetailPage = () => {
   const canEdit = hasPermission('projects:edit') || hasPermission('projects:edit_all');
 
   const enterEditMode = () => {
-    if (project) {
+    if (projectWithDetails) {
       const draft = storageKey ? SafeLocalStorage.getItem<string>(storageKey) : null;
-      const description = draft !== null ? draft : project.description;
-      setEditedProject({ ...project, description });
+      const description = draft !== null ? draft : projectWithDetails.description;
+      setEditedProject({ ...projectWithDetails, description });
       setIsEditing(true);
       setHasChanges(draft !== null);
     }
@@ -174,12 +215,15 @@ const ProjectDetailPage = () => {
   const confirmDeleteTask = () => { if (taskToDelete) { deleteTask(taskToDelete.id); setTaskToDelete(null); } };
   const handleToggleTaskCompletion = (task: Task, completed: boolean) => toggleTaskCompletion({ task, completed });
 
-  if (isLoading || !project) {
+  if (isLoading || !projectWithDetails) {
     return <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   }
+  if (error) {
+    return <div className="text-destructive p-4">Error loading project: {error.message}</div>;
+  }
 
-  const projectToDisplay = isEditing && editedProject ? editedProject : project;
-  const hasOpenTasks = project.tasks?.some(task => !task.completed) ?? false;
+  const projectToDisplay = isEditing && editedProject ? editedProject : projectWithDetails;
+  const hasOpenTasks = projectWithDetails.tasks?.some(task => !task.completed) ?? false;
 
   return (
     <>
@@ -234,8 +278,8 @@ const ProjectDetailPage = () => {
               />
             </div>
             <div className="lg:col-span-1 space-y-6">
-              <ProjectProgressCard project={project} />
-              <ProjectTeamCard project={project} />
+              <ProjectProgressCard project={projectWithDetails} />
+              <ProjectTeamCard project={projectWithDetails} />
             </div>
           </div>
         </div>
