@@ -81,8 +81,7 @@ const getWbizConfig = async () => {
   return { clientId, apiKey, whatsappClientId };
 };
 
-const sendWhatsappMessage = async (phone: string, message: string) => {
-  const config = await getWbizConfig();
+const sendWhatsappMessage = async (config: any, phone: string, message: string) => {
   const formattedPhone = formatPhoneNumberForApi(phone);
   if (!formattedPhone) {
     console.warn(`Invalid phone number format: ${phone}. Skipping.`);
@@ -121,20 +120,8 @@ const sendWhatsappMessage = async (phone: string, message: string) => {
   return messageResponse.json();
 };
 
-const sendEmail = async (to: string, subject: string, html: string, text: string) => {
-    const { data: config, error: configError } = await supabaseAdmin
-      .from('app_config')
-      .select('value')
-      .eq('key', 'EMAILIT_API_KEY')
-      .single();
-
-    if (configError || !config?.value) {
-        console.warn("Emailit API key not configured. Skipping email.");
-        return;
-    }
-    const emailitApiKey = config.value;
+const sendEmail = async (emailitApiKey: string, to: string, subject: string, html: string, text: string) => {
     const emailFrom = Deno.env.get("EMAIL_FROM") ?? "7i Portal <no-reply@mail.ahensi.com>";
-
     const payload = { from: emailFrom, to, subject, html, text };
 
     const response = await fetch("https://api.emailit.com/v1/emails", {
@@ -170,10 +157,9 @@ const getOpenAIClient = async (supabaseAdmin: any) => {
   return new OpenAI({ apiKey: config.value });
 };
 
-const generateAiMessage = async (userPrompt: string): Promise<string> => {
-  if (ANTHROPIC_API_KEY) {
+const generateAiMessage = async (userPrompt: string, openai: OpenAI | null, anthropic: Anthropic | null): Promise<string> => {
+  if (anthropic) {
     try {
-      const anthropic = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
       const aiResponse = await anthropic.messages.create({ model: "claude-3-haiku-20240307", max_tokens: 200, system: getSystemPrompt(), messages: [{ role: "user", content: userPrompt }] });
       return aiResponse.content[0].text;
     } catch (anthropicError) {
@@ -181,7 +167,6 @@ const generateAiMessage = async (userPrompt: string): Promise<string> => {
     }
   }
 
-  const openai = await getOpenAIClient(supabaseAdmin);
   if (openai) {
     try {
       const aiResponse = await openai.chat.completions.create({
@@ -237,6 +222,13 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ message: 'No pending notifications.' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
+    // Fetch configs ONCE
+    const wbizConfig = await getWbizConfig().catch(e => { console.warn(e.message); return null; });
+    const { data: emailitConfig } = await supabaseAdmin.from('app_config').select('value').eq('key', 'EMAILIT_API_KEY').single();
+    const emailitApiKey = emailitConfig?.value;
+    const openai = await getOpenAIClient(supabaseAdmin);
+    const anthropic = ANTHROPIC_API_KEY ? new Anthropic({ apiKey: ANTHROPIC_API_KEY }) : null;
+
     let successCount = 0, failureCount = 0, skippedCount = 0;
 
     for (const notification of notifications) {
@@ -256,6 +248,11 @@ Deno.serve(async (req) => {
         const recipientName = recipient.first_name || recipient.email.split('@')[0];
 
         if (notification.notification_type.includes('email')) {
+            if (!emailitApiKey) {
+                console.warn("Emailit API key not configured. Skipping email.");
+                skippedCount++;
+                continue;
+            }
             let subject = '', html = '', text = '';
             switch (notification.notification_type) {
                 case 'discussion_mention_email': {
@@ -352,8 +349,13 @@ Deno.serve(async (req) => {
                 default:
                     throw new Error(`Unsupported email notification type: ${notification.notification_type}`);
             }
-            await sendEmail(recipient.email, subject, html, text);
-        } else {
+            await sendEmail(emailitApiKey, recipient.email, subject, html, text);
+        } else { // WhatsApp
+            if (!wbizConfig) {
+                console.warn("WBIZTOOL config not found. Skipping WhatsApp.");
+                skippedCount++;
+                continue;
+            }
             let userPrompt = '';
             switch (notification.notification_type) {
                 case 'discussion_mention': {
@@ -424,7 +426,7 @@ Deno.serve(async (req) => {
 - **Jenis:** Pengingat Invoice Jatuh Tempo
 - **Penerima:** ${recipientName}
 - **Proyek:** ${project_name}
-- **Jumlah Hari Terlambat:** ${days_overdue} hari
+- **Jumlah Hari Terlambat:** ${overdueDays} hari
 - **Tingkat Urgensi:** ${urgency}
 - **URL:** ${APP_URL}/billing
 
@@ -434,10 +436,10 @@ Buat pesan pengingat yang sopan dan profesional sesuai dengan tingkat urgensi ya
                 default:
                     throw new Error(`Unsupported WhatsApp notification type: ${notification.notification_type}`);
             }
-            const aiMessage = await generateAiMessage(userPrompt);
+            const aiMessage = await generateAiMessage(userPrompt, openai, anthropic);
             const finalMessage = aiMessage.trim();
             if (finalMessage) {
-                await sendWhatsappMessage(recipient.phone, finalMessage);
+                await sendWhatsappMessage(wbizConfig, recipient.phone, finalMessage);
             }
         }
 
