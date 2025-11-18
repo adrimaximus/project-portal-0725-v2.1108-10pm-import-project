@@ -7,7 +7,7 @@ import { Check, ChevronsUpDown } from "lucide-react";
 import { useState } from "react";
 import { useServices } from "@/hooks/useServices";
 import { Service } from "@/types";
-import Icon from "@/components/Icon";
+import { getIconComponent } from "@/data/icons";
 
 interface ProjectServicesProps {
   selectedServices: string[];
@@ -35,16 +35,19 @@ const ProjectServices = ({ selectedServices = [], isEditing, onServicesChange }:
   if (!isEditing) {
     return (
       <div className="flex flex-wrap gap-2">
-        {serviceDetails.length > 0 ? serviceDetails.map((service) => (
-          <Badge
-            key={service.title}
-            variant="secondary"
-            className="flex items-center gap-2"
-          >
-            <Icon name={service.icon as any} className={cn("h-4 w-4", service.icon_color)} />
-            <span>{service.title}</span>
-          </Badge>
-        )) : <p className="text-sm text-muted-foreground">No services selected.</p>}
+        {serviceDetails.length > 0 ? serviceDetails.map((service) => {
+          const Icon = getIconComponent(service.icon);
+          return (
+            <Badge
+              key={service.title}
+              variant="secondary"
+              className="flex items-center gap-2"
+            >
+              <Icon className={cn("h-4 w-4", service.icon_color)} />
+              <span>{service.title}</span>
+            </Badge>
+          )
+        }) : <p className="text-sm text-muted-foreground">No services selected.</p>}
       </div>
     );
   }
@@ -71,23 +74,26 @@ const ProjectServices = ({ selectedServices = [], isEditing, onServicesChange }:
           <CommandList>
             <CommandEmpty>No services found.</CommandEmpty>
             <CommandGroup>
-              {allServices.map((service) => (
-                <CommandItem
-                  key={service.title}
-                  value={service.title}
-                  onSelect={() => handleSelect(service.title)}
-                  className="cursor-pointer"
-                >
-                  <Check
-                    className={cn(
-                      "mr-2 h-4 w-4",
-                      selectedServices.includes(service.title) ? "opacity-100" : "opacity-0"
-                    )}
-                  />
-                  <Icon name={service.icon as any} className={cn("mr-2 h-4 w-4", service.icon_color)} />
-                  {service.title}
-                </CommandItem>
-              ))}
+              {allServices.map((service) => {
+                const Icon = getIconComponent(service.icon);
+                return (
+                  <CommandItem
+                    key={service.title}
+                    value={service.title}
+                    onSelect={() => handleSelect(service.title)}
+                    className="cursor-pointer"
+                  >
+                    <Check
+                      className={cn(
+                        "mr-2 h-4 w-4",
+                        selectedServices.includes(service.title) ? "opacity-100" : "opacity-0"
+                      )}
+                    />
+                    <Icon className={cn("mr-2 h-4 w-4", service.icon_color)} />
+                    {service.title}
+                  </CommandItem>
+                )
+              })}
             </CommandGroup>
           </CommandList>
         </Command>

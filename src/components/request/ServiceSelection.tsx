@@ -5,10 +5,10 @@ import { Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import Icon from "@/components/Icon";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Service } from "@/types";
 import { Badge } from "@/components/ui/badge";
+import { getIconComponent } from "@/data/icons";
 
 interface ServiceSelectionProps {
   searchTerm: string;
@@ -84,33 +84,36 @@ const ServiceSelection = ({
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {filteredServices.map((service) => (
-          <Card
-            key={service.title}
-            className={cn(
-              "hover:bg-muted/50 transition-colors cursor-pointer h-full flex flex-col",
-              isSelected(service) && "ring-2 ring-primary"
-            )}
-            onClick={() => onServiceSelect(service)}
-          >
-            <CardContent className="p-4 flex flex-col items-start gap-4 flex-grow">
-              <div className="flex justify-between items-start w-full">
-                <div
-                  className={cn("p-2 rounded-lg", service.icon_color)}
-                >
-                  <Icon name={service.icon as any} className="h-6 w-6" />
+        {filteredServices.map((service) => {
+          const Icon = getIconComponent(service.icon);
+          return (
+            <Card
+              key={service.title}
+              className={cn(
+                "hover:bg-muted/50 transition-colors cursor-pointer h-full flex flex-col",
+                isSelected(service) && "ring-2 ring-primary"
+              )}
+              onClick={() => onServiceSelect(service)}
+            >
+              <CardContent className="p-4 flex flex-col items-start gap-4 flex-grow">
+                <div className="flex justify-between items-start w-full">
+                  <div
+                    className={cn("p-2 rounded-lg", service.icon_color)}
+                  >
+                    <Icon className="h-6 w-6" />
+                  </div>
+                  {service.is_featured && <Badge>Featured</Badge>}
                 </div>
-                {service.is_featured && <Badge>Featured</Badge>}
-              </div>
-              <div className="flex-grow">
-                <h3 className="font-semibold">{service.title}</h3>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {service.description}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+                <div className="flex-grow">
+                  <h3 className="font-semibold">{service.title}</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {service.description}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
     </div>
   );

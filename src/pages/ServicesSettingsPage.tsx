@@ -22,7 +22,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import ServiceFormDialog from '@/components/settings/ServiceFormDialog';
-import Icon from '@/components/Icon';
+import { getIconComponent } from '@/data/icons';
 import { cn } from '@/lib/utils';
 import { Service } from '@/types';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -134,40 +134,43 @@ const ServicesSettingsPage = () => {
                     <TableCell colSpan={4} className="text-center h-24">Loading...</TableCell>
                   </TableRow>
                 ) : services.length > 0 ? (
-                  services.map((service) => (
-                    <TableRow key={service.id}>
-                      <TableCell className="font-medium pl-6">
-                        <div className="flex items-center gap-3">
-                          <div className={cn("h-10 w-10 flex items-center justify-center rounded-lg", service.icon_color)}>
-                            <Icon name={(service.icon || 'Package') as any} className={cn("h-5 w-5", service.icon_color.split(' ').find(c => c.startsWith('text-')))} />
+                  services.map((service) => {
+                    const Icon = getIconComponent(service.icon);
+                    return (
+                      <TableRow key={service.id}>
+                        <TableCell className="font-medium pl-6">
+                          <div className="flex items-center gap-3">
+                            <div className={cn("h-10 w-10 flex items-center justify-center rounded-lg", service.icon_color)}>
+                              <Icon className={cn("h-5 w-5", service.icon_color.split(' ').find(c => c.startsWith('text-')))} />
+                            </div>
+                            {service.title}
                           </div>
-                          {service.title}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{service.description}</TableCell>
-                      <TableCell>{service.is_featured ? 'Yes' : 'No'}</TableCell>
-                      <TableCell className="pr-6">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                              <span className="sr-only">Open menu</span>
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleEditService(service)}>
-                              <Edit className="mr-2 h-4 w-4" />
-                              <span>Edit</span>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => setServiceToDelete(service)} className="text-red-600">
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              <span>Delete</span>
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">{service.description}</TableCell>
+                        <TableCell>{service.is_featured ? 'Yes' : 'No'}</TableCell>
+                        <TableCell className="pr-6">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" className="h-8 w-8 p-0">
+                                <span className="sr-only">Open menu</span>
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleEditService(service)}>
+                                <Edit className="mr-2 h-4 w-4" />
+                                <span>Edit</span>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => setServiceToDelete(service)} className="text-red-600">
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                <span>Delete</span>
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })
                 ) : (
                   <TableRow>
                     <TableCell colSpan={4} className="text-center h-24">No services found.</TableCell>
