@@ -487,7 +487,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
           {description && (
             <div className="pt-4 border-t">
               <h4 className="font-semibold mb-2">Description</h4>
-              <div className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap break-word">
+              <div className="prose prose-sm dark:prose-invert max-w-none break-word">
                 <InteractiveText text={displayedDescription} members={allUsers} />
               </div>
               {isLongDescription && (
@@ -538,6 +538,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
             allUsers={allUsers}
             replyTo={replyTo}
             onCancelReply={() => setReplyTo(null)}
+            storageKey={`comment-draft-task-${task.id}`}
           />
         </div>
       </DrawerContent>
