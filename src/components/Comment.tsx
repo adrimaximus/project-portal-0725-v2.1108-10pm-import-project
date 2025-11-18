@@ -1,22 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Comment as CommentType, User } from '@/types';
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { getAvatarUrl, generatePastelColor, getInitials } from '@/lib/utils';
 import { Button } from './ui/button';
-import { MoreHorizontal, Edit, Trash2, Ticket, CornerUpLeft, Paperclip, X, FileText, Download, Loader2 } from 'lucide-react';
+import { MoreHorizontal, Edit, Trash2, Ticket, CornerUpLeft, Paperclip, X, FileText } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu';
 import { useAuth } from '@/contexts/AuthContext';
 import { Textarea } from './ui/textarea';
 import { Badge } from './ui/badge';
 import CommentReactions from './CommentReactions';
-import CommentAttachmentItem from './CommentAttachmentItem';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import InteractiveText from './InteractiveText';
-import JSZip from 'jszip';
-import { saveAs } from 'file-saver';
-import { toast } from 'sonner';
+import AttachmentViewerModal from './AttachmentViewerModal';
 
 interface CommentProps {
   comment: CommentType;
@@ -58,174 +55,146 @@ const Comment: React.FC<CommentProps> = ({
   allUsers,
 }) => {
   const { user } = useAuth();
-  const [isBundling, setIsBundling] = useState(false);
+  const [isAttachmentModalOpen, setIsAttachmentModalOpen] = useState(false);
   
   const author = comment.author as User;
   const authorName = [author.first_name, author.last_name].filter(Boolean).join(' ') || author.email;
   const attachmentsData = comment.attachments_jsonb;
   const attachments: any[] = Array.isArray(attachmentsData) ? attachmentsData : attachmentsData ? [attachmentsData] : [];
 
-  const handleDownloadAll = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setIsBundling(true);
-    const toastId = toast.loading(`Bundling ${attachments.length} files...`);
-
-    try {
-      const zip = new JSZip();
-      
-      const filePromises = attachments.map(async (file) => {
-        // Use supabase proxy to avoid CORS issues if any
-        const response = await fetch(file.file_url);
-        if (!response.ok) {
-          throw new Error(`Failed to fetch ${file.file_name}`);
-        }
-        const blob = await response.blob();
-        zip.file(file.file_name, blob);
-      });
-
-      await Promise.all(filePromises);
-
-      const content = await zip.generateAsync({ type: "blob" });
-      saveAs(content, `attachments-${comment.id.substring(0, 8)}.zip`);
-      toast.success("Download started!", { id: toastId });
-    } catch (error: any) {
-      toast.error("Failed to create bundle.", { id: toastId, description: error.message });
-    } finally {
-      setIsBundling(false);
-    }
-  };
-
   return (
-    <div id={`message-${comment.id}`} className="flex items-start gap-3">
-      <Avatar className="h-8 w-8">
-        <AvatarImage src={getAvatarUrl(author.avatar_url, author.id)} />
-        <AvatarFallback style={generatePastelColor(author.id)}>
-          {getInitials(authorName, author.email)}
-        </AvatarFallback>
-      </Avatar>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="font-semibold text-sm">{authorName}</span>
-            <span className="text-xs text-muted-foreground">
-              {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true, locale: id })}
-            </span>
-            {comment.is_ticket && <Badge variant="outline">from ticket</Badge>}
+    <>
+      <div id={`message-${comment.id}`} className="flex items-start gap-3">
+        <Avatar className="h-8 w-8">
+          <AvatarImage src={getAvatarUrl(author.avatar_url, author.id)} />
+          <AvatarFallback style={generatePastelColor(author.id)}>
+            {getInitials(authorName, author.email)}
+          </AvatarFallback>
+        </Avatar>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-sm">{authorName}</span>
+              <span className="text-xs text-muted-foreground">
+                {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true, locale: id })}
+              </span>
+              {comment.is_ticket && <Badge variant="outline">from ticket</Badge>}
+            </div>
+            {user && user.id === author.id && !isEditing && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-6 w-6">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onSelect={() => onEdit(comment)}>
+                    <Edit className="mr-2 h-4 w-4" /> Edit
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => onDelete(comment)} className="text-destructive">
+                    <Trash2 className="mr-2 h-4 w-4" /> Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </div>
-          {user && user.id === author.id && !isEditing && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-6 w-6">
-                  <MoreHorizontal className="h-4 w-4" />
+          {isEditing ? (
+            <div className="mt-1 space-y-2">
+              <Textarea value={editedText} onChange={(e) => setEditedText(e.target.value)} className="text-sm" />
+              {(attachments.length > 0 || (newAttachments && newAttachments.length > 0)) && (
+                <div className="mt-2">
+                    <h4 className="font-semibold text-xs text-muted-foreground mb-2">Attachments</h4>
+                    <div className="space-y-1">
+                        {attachments.map((file, index) => (
+                            <div key={file.url || file.file_url || index} className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <FileText className="h-4 w-4" />
+                                <span>{file.name || file.file_name}</span>
+                            </div>
+                        ))}
+                        {newAttachments && newAttachments.map((file, index) => (
+                          <div key={index} className="flex items-center justify-between text-sm bg-muted p-1 rounded-md">
+                            <span className="truncate">{file.name}</span>
+                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeNewAttachment && removeNewAttachment(index)}>
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ))}
+                    </div>
+                </div>
+              )}
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-1">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="ghost" size="icon" onClick={() => editFileInputRef?.current?.click()}>
+                          <Paperclip className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent><p>Attach files</p></TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  <input type="file" ref={editFileInputRef} multiple onChange={handleEditFileChange} className="hidden" />
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button variant="ghost" size="sm" onClick={handleCancelEdit}>Cancel</Button>
+                  <Button size="sm" onClick={handleSaveEdit}>Save</Button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <>
+              {comment.repliedMessage && (
+                <button
+                  onClick={() => onGoToReply && comment.reply_to_comment_id && onGoToReply(comment.reply_to_comment_id)}
+                  className="w-full text-left flex items-start gap-2 text-xs p-2 mb-2 bg-muted rounded-md hover:bg-muted/80 transition-colors"
+                  disabled={!onGoToReply || !comment.reply_to_comment_id}
+                >
+                  <div className="w-0.5 bg-primary rounded-full self-stretch"></div>
+                  <div className="flex-1 overflow-hidden">
+                    <p className="font-semibold text-primary">Replying to {comment.repliedMessage.senderName}</p>
+                    <div className="italic line-clamp-1 prose prose-sm dark:prose-invert max-w-none text-muted-foreground">
+                      <InteractiveText text={comment.repliedMessage.content || ''} members={allUsers} />
+                    </div>
+                  </div>
+                </button>
+              )}
+              <div className="prose prose-sm dark:prose-invert max-w-none break-words whitespace-pre-wrap prose-p:my-0 [&_p]:text-justify">
+                <InteractiveText text={comment.text || ''} members={allUsers} />
+              </div>
+              {attachments.length > 0 && (
+                <div className="mt-2">
+                  <Button variant="outline" size="sm" onClick={() => setIsAttachmentModalOpen(true)}>
+                    <Paperclip className="h-4 w-4 mr-2" />
+                    {attachments.length} Attachment{attachments.length > 1 ? 's' : ''}
+                  </Button>
+                </div>
+              )}
+              <div className="mt-1 flex items-center gap-2">
+                <Button variant="ghost" size="sm" className="text-muted-foreground h-auto p-1 text-xs" onClick={() => onReply(comment)}>
+                  <CornerUpLeft className="h-3 w-3 mr-1" /> Reply
                 </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onSelect={() => onEdit(comment)}>
-                  <Edit className="mr-2 h-4 w-4" /> Edit
-                </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => onDelete(comment)} className="text-destructive">
-                  <Trash2 className="mr-2 h-4 w-4" /> Delete
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                <CommentReactions reactions={comment.reactions || []} onToggleReaction={(emoji) => onToggleReaction(comment.id, emoji)} />
+                {!comment.is_ticket && (
+                  <Button variant="ghost" size="sm" className="text-muted-foreground h-auto p-1 text-xs" onClick={() => onCreateTicketFromComment(comment)}>
+                    <Ticket className="h-3 w-3 sm:mr-1" />
+                    <span className="hidden sm:inline">Create Ticket</span>
+                  </Button>
+                )}
+              </div>
+            </>
           )}
         </div>
-        {isEditing ? (
-          <div className="mt-1 space-y-2">
-            <Textarea value={editedText} onChange={(e) => setEditedText(e.target.value)} className="text-sm" />
-            {(attachments.length > 0 || (newAttachments && newAttachments.length > 0)) && (
-              <div className="mt-2">
-                  <h4 className="font-semibold text-xs text-muted-foreground mb-2">Attachments</h4>
-                  <div className="space-y-1">
-                      {attachments.map((file, index) => (
-                          <div key={file.url || file.file_url || index} className="flex items-center gap-2 text-sm text-muted-foreground">
-                              <FileText className="h-4 w-4" />
-                              <span>{file.name || file.file_name}</span>
-                          </div>
-                      ))}
-                      {newAttachments && newAttachments.map((file, index) => (
-                        <div key={index} className="flex items-center justify-between text-sm bg-muted p-1 rounded-md">
-                          <span className="truncate">{file.name}</span>
-                          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeNewAttachment && removeNewAttachment(index)}>
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ))}
-                  </div>
-              </div>
-            )}
-            <div className="flex justify-between items-center">
-              <div className="flex items-center gap-1">
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" onClick={() => editFileInputRef?.current?.click()}>
-                        <Paperclip className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent><p>Attach files</p></TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-                <input type="file" ref={editFileInputRef} multiple onChange={handleEditFileChange} className="hidden" />
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button variant="ghost" size="sm" onClick={handleCancelEdit}>Cancel</Button>
-                <Button size="sm" onClick={handleSaveEdit}>Save</Button>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <>
-            {comment.repliedMessage && (
-              <button
-                onClick={() => onGoToReply && comment.reply_to_comment_id && onGoToReply(comment.reply_to_comment_id)}
-                className="w-full text-left flex items-start gap-2 text-xs p-2 mb-2 bg-muted rounded-md hover:bg-muted/80 transition-colors"
-                disabled={!onGoToReply || !comment.reply_to_comment_id}
-              >
-                <div className="w-0.5 bg-primary rounded-full self-stretch"></div>
-                <div className="flex-1 overflow-hidden">
-                  <p className="font-semibold text-primary">Replying to {comment.repliedMessage.senderName}</p>
-                  <div className="italic line-clamp-1 prose prose-sm dark:prose-invert max-w-none text-muted-foreground">
-                    <InteractiveText text={comment.repliedMessage.content || ''} members={allUsers} />
-                  </div>
-                </div>
-              </button>
-            )}
-            <div className="prose prose-sm dark:prose-invert max-w-none break-words whitespace-pre-wrap prose-p:my-0 [&_p]:text-justify">
-              <InteractiveText text={comment.text || ''} members={allUsers} />
-            </div>
-            {attachments.length > 0 && (
-              <div className="mt-2 space-y-2">
-                <div className="flex justify-between items-center">
-                  <h4 className="font-semibold text-xs text-muted-foreground">Attachments ({attachments.length})</h4>
-                  {attachments.length > 1 && (
-                    <Button variant="ghost" size="sm" onClick={handleDownloadAll} disabled={isBundling} className="h-auto px-2 py-1 text-xs">
-                      {isBundling ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : <Download className="mr-2 h-3 w-3" />}
-                      Download All
-                    </Button>
-                  )}
-                </div>
-                {attachments.map((file: any, index: number) => (
-                  <CommentAttachmentItem key={file.id || index} file={file} />
-                ))}
-              </div>
-            )}
-            <div className="mt-1 flex items-center gap-2">
-              <Button variant="ghost" size="sm" className="text-muted-foreground h-auto p-1 text-xs" onClick={() => onReply(comment)}>
-                <CornerUpLeft className="h-3 w-3 mr-1" /> Reply
-              </Button>
-              <CommentReactions reactions={comment.reactions || []} onToggleReaction={(emoji) => onToggleReaction(comment.id, emoji)} />
-              {!comment.is_ticket && (
-                <Button variant="ghost" size="sm" className="text-muted-foreground h-auto p-1 text-xs" onClick={() => onCreateTicketFromComment(comment)}>
-                  <Ticket className="h-3 w-3 sm:mr-1" />
-                  <span className="hidden sm:inline">Create Ticket</span>
-                </Button>
-              )}
-            </div>
-          </>
-        )}
       </div>
-    </div>
+      {attachments.length > 0 && (
+        <AttachmentViewerModal
+          open={isAttachmentModalOpen}
+          onOpenChange={setIsAttachmentModalOpen}
+          attachments={attachments}
+          commentId={comment.id}
+        />
+      )}
+    </>
   );
 };
 
