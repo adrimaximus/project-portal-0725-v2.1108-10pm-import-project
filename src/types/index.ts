@@ -163,7 +163,7 @@ export interface Comment {
   attachments_jsonb?: TaskAttachment[];
   reply_to_comment_id?: string | null;
   repliedMessage?: {
-    content: string;
+    content: string | null;
     senderName: string;
     isDeleted: boolean;
     attachment?: ChatMessageAttachment | null;
