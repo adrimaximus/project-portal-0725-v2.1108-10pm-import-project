@@ -22,7 +22,6 @@ import {
   User as UserIcon,
   ChevronDown,
 } from 'lucide-react';
-import TaskAttachmentList from '../projects/TaskAttachmentList';
 import { useTaskMutations } from '@/hooks/useTaskMutations';
 import { useQueryClient, useMutation, useQuery } from '@tanstack/react-query';
 import {
@@ -50,6 +49,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../ui/colla
 import { useTaskModal } from '@/contexts/TaskModalContext';
 import { Input } from '../ui/input';
 import InteractiveText from '../InteractiveText';
+import AttachmentViewerModal from '../AttachmentViewerModal';
 
 interface TaskDetailCardProps {
   task: Task;
@@ -113,6 +113,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
   const [replyTo, setReplyTo] = useState<CommentType | null>(null);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editedTitle, setEditedTitle] = useState(task.title);
+  const [isAttachmentModalOpen, setIsAttachmentModalOpen] = useState(false);
 
   useEffect(() => {
     setEditedTitle(task.title);
@@ -500,8 +501,10 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
 
           {allAttachments.length > 0 && (
             <div className="pt-4 border-t">
-              <h4 className="font-semibold mb-2">Attachments ({allAttachments.length})</h4>
-              <TaskAttachmentList attachments={allAttachments} />
+              <div className="flex justify-between items-center mb-2">
+                <h4 className="font-semibold">Attachments ({allAttachments.length})</h4>
+                <Button variant="outline" size="sm" onClick={() => setIsAttachmentModalOpen(true)}>View All</Button>
+              </div>
             </div>
           )}
 
@@ -556,6 +559,12 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <AttachmentViewerModal
+        open={isAttachmentModalOpen}
+        onOpenChange={setIsAttachmentModalOpen}
+        attachments={allAttachments}
+        commentId={`task-${task.id}`}
+      />
     </>
   );
 };
