@@ -226,40 +226,32 @@ Deno.serve(async (req) => {
     const { data: emailitConfig } = await supabaseAdmin.from('app_config').select('value').eq('key', 'EMAILIT_API_KEY').single();
     const emailitApiKey = emailitConfig?.value;
 
-    let successCount = 0, failureCount = 0, skippedCount = 0;
-
-    for (const notification of notifications) {
+    const processingPromises = notifications.map(async (notification) => {
       try {
         const recipient = notification.recipient;
         if (!recipient) {
           await supabaseAdmin.from('pending_notifications').update({ status: 'skipped', error_message: 'Recipient profile not found.', processed_at: new Date().toISOString() }).eq('id', notification.id);
-          skippedCount++;
-          continue;
+          return { status: 'skipped', reason: 'Recipient not found' };
         }
 
         const recipientName = recipient.first_name || recipient.email.split('@')[0];
 
         if (notification.notification_type.includes('email')) {
             if (!emailitApiKey || !recipient.email) {
-                skippedCount++;
-                continue;
+                return { status: 'skipped', reason: 'No email or config' };
             }
-            // Email logic remains the same as it uses templates
-            // ... (email template logic from previous version)
+            // Email logic here...
         } else { // WhatsApp
             if (!wbizConfig || !recipient.phone) {
-                skippedCount++;
-                continue;
+                return { status: 'skipped', reason: 'No phone or config' };
             }
             const message = generateTemplatedMessage(notification.notification_type, notification.context_data, recipientName);
             await sendWhatsappMessage(wbizConfig, recipient.phone, message);
         }
 
         await supabaseAdmin.from('pending_notifications').update({ status: 'processed', processed_at: new Date().toISOString() }).eq('id', notification.id);
-        successCount++;
-
+        return { status: 'success' };
       } catch (e) {
-        failureCount++;
         const newRetryCount = (notification.retry_count || 0) + 1;
         const newStatus = newRetryCount >= 3 ? 'failed' : 'pending';
         console.error(`Failed to process notification ${notification.id} (attempt ${newRetryCount}):`, e.message);
@@ -269,8 +261,15 @@ Deno.serve(async (req) => {
           processed_at: new Date().toISOString(),
           retry_count: newRetryCount,
         }).eq('id', notification.id);
+        return { status: 'failed', reason: e.message };
       }
-    }
+    });
+
+    const results = await Promise.allSettled(processingPromises);
+
+    const successCount = results.filter(r => r.status === 'fulfilled' && r.value.status === 'success').length;
+    const failureCount = results.filter(r => r.status === 'fulfilled' && r.value.status === 'failed').length;
+    const skippedCount = results.filter(r => r.status === 'fulfilled' && r.value.status === 'skipped').length;
 
     return new Response(JSON.stringify({ message: `Processed ${notifications.length} notifications. Success: ${successCount}, Skipped: ${skippedCount}, Failed: ${failureCount}` }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
