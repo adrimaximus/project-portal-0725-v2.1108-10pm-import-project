@@ -1,4 +1,4 @@
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import ChatList from "@/components/ChatList";
 import { ChatWindow } from "@/components/ChatWindow";
@@ -11,8 +11,14 @@ import {
   ResizableHandle,
 } from "@/components/ui/resizable";
 import { cn } from "@/lib/utils";
+import { Loader2 } from "lucide-react";
 
 const ChatPageContent = () => {
+  const [hasMounted, setHasMounted] = useState(false);
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
+
   const isMobile = useIsMobile();
   const { selectedConversation, selectConversation, setIsChatPageActive } = useChatContext();
   const chatInputRef = useRef<HTMLTextAreaElement>(null);
@@ -38,6 +44,10 @@ const ChatPageContent = () => {
     searchParams.delete('highlight');
     setSearchParams(searchParams, { replace: true });
   };
+
+  if (!hasMounted) {
+    return <div className="flex-1 h-full flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
+  }
 
   if (isMobile) {
     return (
