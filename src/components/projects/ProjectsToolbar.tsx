@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { DatePickerWithRange } from "@/components/ui/date-picker-with-range";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -66,9 +66,18 @@ const ProjectsToolbar = ({
   dateRange,
   onDateRangeChange,
 }: ProjectsToolbarProps) => {
+  const [hasMounted, setHasMounted] = useState(false);
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
+
   const isMobile = useIsMobile();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isViewSwitcherOpen, setIsViewSwitcherOpen] = useState(false);
+
+  if (!hasMounted) {
+    return <div className="p-4 border-t h-[73px]" />; // Placeholder to prevent layout shift
+  }
 
   return (
     <div className="p-4 border-t flex flex-nowrap items-center justify-between gap-4 overflow-x-auto">
@@ -180,41 +189,29 @@ const ProjectsToolbar = ({
             allPeople={allPeople}
             allOwners={allOwners}
           />
-          {isMobile ? (
-            isSearchOpen ? (
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search..."
-                  value={searchTerm}
-                  onChange={(e) => onSearchChange(e.target.value)}
-                  onBlur={() => { if (!searchTerm) setIsSearchOpen(false); }}
-                  autoFocus
-                  className="pl-9 w-full"
-                />
-              </div>
-            ) : (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="outline" size="icon" onClick={() => setIsSearchOpen(true)}>
-                      <Search className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent><p>Search</p></TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            )
-          ) : (
+          {isSearchOpen ? (
             <div className="relative flex-1 sm:flex-initial">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search..."
                 value={searchTerm}
                 onChange={(e) => onSearchChange(e.target.value)}
+                onBlur={() => { if (!searchTerm) setIsSearchOpen(false); }}
+                autoFocus
                 className="pl-9 w-full sm:w-48"
               />
             </div>
+          ) : (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="outline" size="icon" onClick={() => setIsSearchOpen(true)}>
+                    <Search className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent><p>Search</p></TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           )}
           <DatePickerWithRange date={dateRange} onDateChange={onDateRangeChange} />
         </div>
