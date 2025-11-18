@@ -111,15 +111,18 @@ const MyTasksWidget = () => {
     if (!newTaskTitle.trim() || !user) return;
 
     try {
-      const { data: projectId, error: rpcError } = await supabase.rpc('ensure_general_tasks_project_and_membership');
+      // Fetch the user's personal project ID
+      const { data: projectId, error: rpcError } = await supabase.rpc('get_personal_project_id');
+      
       if (rpcError) throw rpcError;
+      if (!projectId) throw new Error("Could not find your personal task project. Please contact support.");
 
       createTasks(
         [{ title: newTaskTitle.trim(), project_id: projectId, assignee_ids: [user.id] }],
         {
           onSuccess: () => {
             setNewTaskTitle('');
-            toast.success("Quick task added to General Tasks.");
+            toast.success("Quick task added to your personal tasks.");
           }
         }
       );
