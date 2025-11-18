@@ -66,7 +66,7 @@ const GoalDetail = ({ goal, onUpdate, onDelete, onClose }: GoalDetailProps) => {
         </Label>
         <Select
           value={editedGoal.frequency || undefined}
-          onValueChange={(value) => handleChange('frequency', value)}
+          onValueChange={(value) => handleChange('frequency', value as 'Daily' | 'Weekly')}
         >
           <SelectTrigger className="col-span-3">
             <SelectValue placeholder="Select frequency" />
