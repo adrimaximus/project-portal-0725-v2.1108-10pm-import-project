@@ -251,6 +251,7 @@ const ProjectMainContent = ({
             }}
             unreadTaskIds={unreadTaskIds}
             onOpenTaskModal={onOpenTaskModal}
+            highlightedCommentId={highlightedCommentId}
           />
         </TabsContent>
         <TabsContent value="discussion" className="mt-4">
@@ -281,7 +282,7 @@ const ProjectMainContent = ({
             allUsers={allUsers}
             onGoToReply={handleScrollToMessage}
             highlightedCommentId={highlightedCommentId}
-            onCommentHighlightComplete={onCommentHighlightComplete}
+            onHighlightComplete={onCommentHighlightComplete}
             storageKey={`comment-draft-project-${project.id}`}
           />
         </TabsContent>
