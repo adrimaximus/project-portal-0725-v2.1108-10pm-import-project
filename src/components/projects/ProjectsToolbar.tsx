@@ -28,6 +28,7 @@ type ProjectsToolbarProps = {
   hideCompletedTasks: boolean;
   onToggleHideCompleted: () => void;
   onNewTaskClick: () => void;
+  onNewProjectClick: () => void;
   isTaskView: boolean;
   isGCalConnected: boolean | undefined;
   onImportClick: () => void;
@@ -50,6 +51,7 @@ const ProjectsToolbar = ({
   hideCompletedTasks,
   onToggleHideCompleted,
   onNewTaskClick,
+  onNewProjectClick,
   isTaskView,
   isGCalConnected,
   onImportClick,
@@ -172,7 +174,7 @@ const ProjectsToolbar = ({
         <div className="flex items-center gap-2">
           <ProjectAdvancedFilters
             filters={advancedFilters}
-            onFiltersChange={onAdvancedFiltersChange}
+            onAdvancedFiltersChange={onAdvancedFiltersChange}
             allPeople={allPeople}
             allOwners={allOwners}
           />
@@ -230,11 +232,9 @@ const ProjectsToolbar = ({
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button size="icon" variant="outline" asChild>
-                    <Link to="/request">
-                      <PlusCircle className="h-4 w-4" />
-                      <span className="sr-only">New Project</span>
-                    </Link>
+                  <Button size="icon" variant="outline" onClick={onNewProjectClick}>
+                    <PlusCircle className="h-4 w-4" />
+                    <span className="sr-only">New Project</span>
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent><p>New Project</p></TooltipContent>

@@ -2,9 +2,6 @@ import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { useSearchParams, useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { createProject, updateProjectDetails, deleteProject } from '@/api/projects';
-import { getProjectTasks, upsertTask, deleteTask, toggleTaskCompletion } from '@/api/tasks';
-import { getPeople } from '@/api/people';
 import { Project, Task as ProjectTask, Person, UpsertTaskPayload, TaskStatus, ProjectStatus } from '@/types';
 import { toast } from 'sonner';
 
@@ -14,7 +11,6 @@ import { GoogleCalendarImportDialog } from '@/components/projects/GoogleCalendar
 import { AdvancedFiltersState } from '@/types';
 import { useProjectFilters } from '@/hooks/useProjectFilters';
 import { useAuth } from '@/contexts/AuthContext';
-import { useTasks } from '@/hooks/useTasks';
 import { useProjects } from '@/hooks/useProjects';
 import { useCreateProject } from '@/hooks/useCreateProject';
 import { useTaskMutations, UpdateTaskOrderPayload } from '@/hooks/useTaskMutations';
@@ -30,6 +26,7 @@ import { useUnreadTasks } from '@/hooks/useUnreadTasks';
 import { useSortConfig } from '@/hooks/useSortConfig';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import ProjectTasksView from '@/components/projects/ProjectTasksView';
+import NewProjectDialog from '@/components/projects/NewProjectDialog';
 
 type ViewMode = 'table' | 'list' | 'kanban' | 'tasks' | 'tasks-kanban';
 
@@ -128,6 +125,8 @@ const ProjectsPage = () => {
 
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [isCreateProjectDialogOpen, setIsCreateProjectDialogOpen] = useState(false);
+  const createProjectMutation = useCreateProject();
 
   const { data: isGCalConnected } = useQuery({
     queryKey: ['googleCalendarConnection', user?.id],
@@ -209,6 +208,20 @@ const ProjectsPage = () => {
     updateProjectStatus.mutate({ projectId, status: newStatus });
   };
 
+  const handleCreateProject = (values: { name: string, description?: string }) => {
+    createProjectMutation.mutate(
+      { name: values.name, description: values.description, category: 'General' },
+      {
+        onSuccess: (newProject) => {
+          if (newProject.slug) {
+            navigate(`/projects/${newProject.slug}`);
+          }
+          setIsCreateProjectDialogOpen(false);
+        },
+      }
+    );
+  };
+
   const sortParam = searchParams.get('sort');
   const isUnreadSortActive = isTaskView && sortParam === 'unread';
 
@@ -234,6 +247,13 @@ const ProjectsPage = () => {
         isImporting={importEventsMutation.isPending}
       />
 
+      <NewProjectDialog
+        isOpen={isCreateProjectDialogOpen}
+        onClose={() => setIsCreateProjectDialogOpen(false)}
+        onSave={handleCreateProject}
+        isLoading={createProjectMutation.isPending}
+      />
+
       <div className="flex-1 flex flex-col min-h-0 rounded-none border-0 sm:border sm:rounded-lg">
         <div className="flex-shrink-0 bg-background z-10 border-b">
           <ProjectsToolbar
@@ -242,6 +262,7 @@ const ProjectsPage = () => {
             hideCompletedTasks={hideCompletedTasks}
             onToggleHideCompleted={toggleHideCompleted}
             onNewTaskClick={() => onOpenTaskModal()}
+            onNewProjectClick={() => setIsCreateProjectDialogOpen(true)}
             isTaskView={isTaskView}
             isGCalConnected={isGCalConnected}
             onImportClick={() => setIsImportDialogOpen(true)}
