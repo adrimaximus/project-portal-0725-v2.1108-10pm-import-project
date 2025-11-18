@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import { useTaskModal } from '@/contexts/TaskModalContext';
 import { useUnreadTasks } from '@/hooks/useUnreadTasks';
 import { useSortConfig } from '@/hooks/useSortConfig';
-import { useTaskMutations } from '@/hooks/useTaskMutations';
+import { useTaskMutations, UpdateTaskOrderPayload } from '@/hooks/useTaskMutations';
 import TasksTableView from './TasksTableView';
 import TasksKanbanView from './TasksKanbanView';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -29,10 +29,12 @@ const ProjectTasksView = ({ view, projectIds, hideCompletedTasks, searchTerm, hi
   const rowRefs = useRef(new Map<string, HTMLTableRowElement>());
   const [taskToDelete, setTaskToDelete] = useState<ProjectTask | null>(null);
 
-  const { sortConfig, requestSort } = useSortConfig<keyof ProjectTask>({ key: 'updated_at', direction: 'desc' });
+  const { sortConfig, requestSort } = useSortConfig<string>({ key: 'updated_at', direction: 'desc' });
 
-  const { data: tasks = [], isLoading: isLoadingTasks, error: tasksError } = useQuery({
-    queryKey: ['tasks', { projectIds, hideCompleted: hideCompletedTasks, sortConfig, searchTerm }],
+  const tasksQueryKey = ['tasks', { projectIds, hideCompleted: hideCompletedTasks, sortConfig, searchTerm }];
+
+  const { data: tasks = [], isLoading: isLoadingTasks, error: tasksError, refetch } = useQuery({
+    queryKey: tasksQueryKey,
     queryFn: async () => {
       if (projectIds === undefined) {
         return []; // Don't fetch if projectIds are not ready
@@ -52,7 +54,7 @@ const ProjectTasksView = ({ view, projectIds, hideCompletedTasks, searchTerm, hi
     enabled: projectIds !== undefined, // Only run query when projectIds are available
   });
 
-  const { deleteTask, toggleTaskCompletion, updateTask, isToggling } = useTaskMutations(() => {
+  const { deleteTask, toggleTaskCompletion, updateTask, isToggling, updateTaskStatusAndOrder } = useTaskMutations(() => {
     queryClient.invalidateQueries({ queryKey: ['tasks'] });
     queryClient.invalidateQueries({ queryKey: ['project'] });
   });
@@ -132,16 +134,14 @@ const ProjectTasksView = ({ view, projectIds, hideCompletedTasks, searchTerm, hi
       ) : (
         <TasksKanbanView
           tasks={tasks}
-          onEditTask={handleEditTask}
-          onDeleteTask={(taskId) => {
+          onEdit={handleEditTask}
+          onDelete={(taskId) => {
             const task = tasks.find(t => t.id === taskId);
             if (task) handleDeleteTask(task);
           }}
-          onToggleTaskCompletion={handleToggleTaskCompletion}
-          onStatusChange={handleStatusChange}
-          highlightedTaskId={highlightedTaskId}
-          onHighlightComplete={onHighlightComplete}
-          unreadTaskIds={unreadTaskIds}
+          refetch={refetch}
+          tasksQueryKey={tasksQueryKey}
+          onTaskOrderChange={updateTaskStatusAndOrder}
         />
       )}
     </>

@@ -1,14 +1,15 @@
 import { useState, useEffect } from 'react';
-import { Goal } from '@/types';
+import { Goal, Tag } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { TagInput } from '@/components/ui/TagInput';
+import { TagsMultiselect } from '@/components/ui/TagsMultiselect';
 import { allIcons, getIconComponent } from '@/data/icons';
 import { colors } from '@/data/colors';
+import { useTags } from '@/hooks/useTags';
 
-type EditableGoal = Goal & { tags?: string[] };
+type EditableGoal = Goal & { tags?: Tag[] };
 
 interface GoalDetailProps {
   goal: EditableGoal;
@@ -19,6 +20,7 @@ interface GoalDetailProps {
 
 const GoalDetail = ({ goal, onUpdate, onDelete, onClose }: GoalDetailProps) => {
   const [editedGoal, setEditedGoal] = useState<EditableGoal>(goal);
+  const { data: allTags = [] } = useTags();
 
   useEffect(() => {
     setEditedGoal(goal);
@@ -30,6 +32,17 @@ const GoalDetail = ({ goal, onUpdate, onDelete, onClose }: GoalDetailProps) => {
 
   const handleSave = () => {
     onUpdate(editedGoal);
+  };
+
+  const handleTagCreate = (tagName: string): Tag => {
+    const newTag: Tag = {
+      id: `new-${tagName}`,
+      name: tagName,
+      color: '#cccccc', // Default color for new tags
+      isNew: true,
+      user_id: goal.user_id,
+    };
+    return newTag;
   };
 
   const Icon = getIconComponent(editedGoal.icon);
@@ -52,7 +65,7 @@ const GoalDetail = ({ goal, onUpdate, onDelete, onClose }: GoalDetailProps) => {
           Frequency
         </Label>
         <Select
-          value={editedGoal.frequency}
+          value={editedGoal.frequency || undefined}
           onValueChange={(value) => handleChange('frequency', value)}
         >
           <SelectTrigger className="col-span-3">
@@ -116,10 +129,11 @@ const GoalDetail = ({ goal, onUpdate, onDelete, onClose }: GoalDetailProps) => {
           Tags
         </Label>
         <div className="col-span-3">
-          <TagInput
+          <TagsMultiselect
+            options={allTags}
             value={editedGoal.tags || []}
             onChange={(tags) => handleChange('tags', tags)}
-            placeholder="Add tags and press Enter"
+            onTagCreate={handleTagCreate}
           />
         </div>
       </div>
