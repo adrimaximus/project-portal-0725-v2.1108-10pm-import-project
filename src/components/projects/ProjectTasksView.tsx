@@ -57,6 +57,14 @@ const ProjectTasksView = ({ view, projectIds, hideCompletedTasks, searchTerm, hi
     queryClient.invalidateQueries({ queryKey: ['project'] });
   });
 
+  const filteredTasks = useMemo(() => {
+    if (!searchTerm) return tasks;
+    return tasks.filter(task =>
+      task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      task.project_name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [tasks, searchTerm]);
+
   const handleDeleteTask = (task: ProjectTask) => {
     setTaskToDelete(task);
   };
@@ -94,14 +102,6 @@ const ProjectTasksView = ({ view, projectIds, hideCompletedTasks, searchTerm, hi
       </div>
     );
   }
-
-  const filteredTasks = useMemo(() => {
-    if (!searchTerm) return tasks;
-    return tasks.filter(task =>
-      task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      task.project_name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [tasks, searchTerm]);
 
   return (
     <>
