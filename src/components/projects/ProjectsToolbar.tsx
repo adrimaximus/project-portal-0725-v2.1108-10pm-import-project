@@ -12,6 +12,7 @@ import { Separator } from "../ui/separator";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 type ViewMode = 'table' | 'list' | 'kanban' | 'tasks' | 'tasks-kanban';
 
@@ -65,6 +66,7 @@ const ProjectsToolbar = ({
   dateRange,
   onDateRangeChange,
 }: ProjectsToolbarProps) => {
+  const isMobile = useIsMobile();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isViewSwitcherOpen, setIsViewSwitcherOpen] = useState(false);
 
@@ -178,35 +180,41 @@ const ProjectsToolbar = ({
             allPeople={allPeople}
             allOwners={allOwners}
           />
-          {isSearchOpen ? (
+          {isMobile ? (
+            isSearchOpen ? (
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search..."
+                  value={searchTerm}
+                  onChange={(e) => onSearchChange(e.target.value)}
+                  onBlur={() => { if (!searchTerm) setIsSearchOpen(false); }}
+                  autoFocus
+                  className="pl-9 w-full"
+                />
+              </div>
+            ) : (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="outline" size="icon" onClick={() => setIsSearchOpen(true)}>
+                      <Search className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent><p>Search</p></TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )
+          ) : (
             <div className="relative flex-1 sm:flex-initial">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search..."
                 value={searchTerm}
                 onChange={(e) => onSearchChange(e.target.value)}
-                onBlur={() => {
-                  if (!searchTerm) {
-                    setIsSearchOpen(false);
-                  }
-                }}
-                autoFocus
                 className="pl-9 w-full sm:w-48"
               />
             </div>
-          ) : (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="outline" size="icon" onClick={() => setIsSearchOpen(true)}>
-                    <Search className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Search</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
           )}
           <DatePickerWithRange date={dateRange} onDateChange={onDateRangeChange} />
         </div>
