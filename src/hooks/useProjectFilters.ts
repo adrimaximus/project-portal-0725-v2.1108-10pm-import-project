@@ -81,14 +81,14 @@ export const useProjectFilters = (projects: Project[]) => {
     updateSearchParams({ hideCompleted: newHide });
     SafeLocalStorage.setItem(PROJECTS_HIDE_COMPLETED_KEY, newHide);
   };
-  const handleAdvancedFiltersChange = (filters: AdvancedFiltersState) => {
+  const handleAdvancedFiltersChange = useCallback((filters: AdvancedFiltersState) => {
     updateSearchParams({
       owner: filters.ownerIds,
       member: filters.memberIds,
       excludeStatus: filters.excludedStatus,
     });
     SafeLocalStorage.setItem(PROJECTS_ADVANCED_FILTERS_KEY, filters);
-  };
+  }, [updateSearchParams]);
   const setDateRange = (range: DateRange | undefined) => {
     updateSearchParams({
       from: range?.from ? range.from.toISOString().split('T')[0] : null,
