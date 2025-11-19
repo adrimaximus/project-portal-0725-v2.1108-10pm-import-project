@@ -19,7 +19,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import PortalLayout from '@/components/PortalLayout';
 import { getErrorMessage, formatInJakarta } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Loader2, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Loader2, AlertTriangle } from 'lucide-react';
 import { useTaskModal } from '@/contexts/TaskModalContext';
 import { getProjectBySlug } from '@/lib/projectsApi';
 import { useUnreadTasks } from '@/hooks/useUnreadTasks';
@@ -255,8 +255,7 @@ const ProjectsPage = () => {
       />
 
       <div className="flex-1 flex flex-col min-h-0 rounded-none border-0 sm:border sm:rounded-lg">
-        <div className="flex-shrink-0 bg-background z-10 border-b flex items-center justify-between pr-2">
-          <div className="flex-1">
+        <div className="flex-shrink-0 bg-background z-10 border-b">
             <ProjectsToolbar
                 view={view} onViewChange={handleViewChange}
                 kanbanGroupBy={kanbanGroupBy} onKanbanGroupByChange={setKanbanGroupBy}
@@ -276,24 +275,10 @@ const ProjectsPage = () => {
                 onSearchChange={handleSearchChange}
                 dateRange={dateRange}
                 onDateRangeChange={setDateRange}
+                unreadTaskCount={unreadTaskIds.length}
+                onMarkAllRead={() => markAllAsRead()}
+                isMarkingAllRead={isMarkingAllRead}
             />
-          </div>
-          
-          {/* Unread Tasks Indicator and Action */}
-          {isTaskView && unreadTaskIds.length > 0 && (
-             <Button 
-               variant="ghost" 
-               size="sm" 
-               onClick={() => markAllAsRead()} 
-               disabled={isMarkingAllRead}
-               className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1 ml-2"
-             >
-               <span className="h-2 w-2 rounded-full bg-red-500"></span>
-               {unreadTaskIds.length} unread
-               <CheckCircle2 className="h-3.5 w-3.5 ml-1" />
-               Mark read
-             </Button>
-          )}
         </div>
         <div ref={scrollContainerRef} className="flex-grow min-h-0 overflow-y-auto relative">
           {(isLoadingProjects) && (
