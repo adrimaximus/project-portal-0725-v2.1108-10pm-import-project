@@ -1,3 +1,4 @@
+prev pada useQuery tasks untuk mempertahankan data lama saat fetching data baru, mencegah flicker.">
 import { useState, useMemo, useCallback, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -52,6 +53,7 @@ const ProjectTasksView = ({ view, projectIds, hideCompletedTasks, searchTerm, hi
       return (data as ProjectTask[]) || [];
     },
     enabled: projectIds !== undefined, // Only run query when projectIds are available
+    placeholderData: (prev) => prev, // Keep previous data while fetching new data to avoid flicker
   });
 
   const { deleteTask, toggleTaskCompletion, updateTask, isToggling, updateTaskStatusAndOrder } = useTaskMutations(() => {
@@ -115,7 +117,7 @@ const ProjectTasksView = ({ view, projectIds, hideCompletedTasks, searchTerm, hi
       {view === 'tasks' ? (
         <TasksTableView
           tasks={tasks}
-          isLoading={isLoadingTasks}
+          isLoading={isLoadingTasks && !tasks.length}
           onEdit={handleEditTask}
           onDelete={(taskId) => {
             const task = tasks.find(t => t.id === taskId);

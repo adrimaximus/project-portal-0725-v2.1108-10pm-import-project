@@ -51,7 +51,7 @@ const ProjectsPage = () => {
     } else {
       const newSearchParams = new URLSearchParams(searchParams);
       newSearchParams.delete('highlight');
-      setSearchParams(newSearchParams, { replace: true });
+      setSearchParams(newParams, { replace: true });
     }
     setTaskToHighlight(null);
   }, [searchParams, setSearchParams, taskIdFromParams, navigate]);
@@ -113,8 +113,8 @@ const ProjectsPage = () => {
 
   const projectIdsForTaskView = useMemo(() => {
     if (!isTaskView) return undefined;
-    // Wait until all projects are fetched to prevent re-fetching tasks
-    if (isLoadingProjects || isFetchingNextPage) return undefined;
+    // Return undefined only on initial load when no data is available yet
+    if (isLoadingProjects && projectsData.length === 0) return undefined;
   
     const visibleProjects = projectsData.filter(project => 
       !(advancedFilters.excludedStatus || []).includes(project.status)
@@ -122,7 +122,7 @@ const ProjectsPage = () => {
     
     return visibleProjects.map(project => project.id);
   
-  }, [isTaskView, projectsData, advancedFilters.excludedStatus, isLoadingProjects, isFetchingNextPage]);
+  }, [isTaskView, projectsData, advancedFilters.excludedStatus, isLoadingProjects]);
 
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
