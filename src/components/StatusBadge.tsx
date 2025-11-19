@@ -5,15 +5,18 @@ import { useProjectStatuses } from "@/hooks/useProjectStatuses";
 import { getStatusBadgeStyle } from "@/lib/colors";
 import { cn } from "@/lib/utils";
 import { useResolvedTheme } from "@/hooks/useResolvedTheme";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface StatusBadgeProps {
   status: string;
   onStatusChange?: (newStatus: string) => void;
   hasOpenTasks?: boolean;
   className?: string;
+  projectId?: string;
 }
 
-const StatusBadge = ({ status, onStatusChange, hasOpenTasks, className }: StatusBadgeProps) => {
+const StatusBadge = ({ status, onStatusChange, hasOpenTasks, className, projectId }: StatusBadgeProps) => {
   const [localStatus, setLocalStatus] = useState(status);
   const { data: statuses = [] } = useProjectStatuses();
   const theme = useResolvedTheme();
@@ -33,14 +36,34 @@ const StatusBadge = ({ status, onStatusChange, hasOpenTasks, className }: Status
   
   const badgeStyle = getStatusBadgeStyle(baseColor, theme);
 
-  const handleStatusChange = (newStatus: string) => {
+  const handleStatusChange = async (newStatus: string) => {
+    // Optimistic update
     setLocalStatus(newStatus);
+    
     if (onStatusChange) {
       onStatusChange(newStatus);
+    } else if (projectId) {
+      try {
+        const { error } = await supabase.rpc('update_project_status', {
+          p_project_id: projectId,
+          p_new_status: newStatus
+        });
+        
+        if (error) throw error;
+        toast.success(`Status updated to ${newStatus}`);
+      } catch (error: any) {
+        console.error("Error updating status:", error);
+        toast.error(error.message || "Failed to update status");
+        // Revert on error
+        setLocalStatus(status);
+      }
     }
   };
 
-  if (onStatusChange) {
+  // Component is editable if a handler is provided OR if a projectId is provided (for self-update)
+  const isEditable = !!onStatusChange || !!projectId;
+
+  if (isEditable) {
     return (
       <Select value={localStatus} onValueChange={handleStatusChange}>
         <SelectTrigger className={cn("h-auto p-0 border-0 focus:ring-0 focus:ring-offset-0 w-auto bg-transparent shadow-none", className)}>
