@@ -16,13 +16,14 @@ import { toast } from "sonner";
 import { useChatContext } from "@/contexts/ChatContext";
 import { useUnreadTasks } from "@/hooks/useUnreadTasks";
 import { getDashboardProjects } from "@/api/projects";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 type PortalSidebarProps = { isCollapsed: boolean; onToggle: () => void; };
 type NavItem = { id: string; href: string; label: string; icon: LucideIcon; badge?: number; folder_id: string | null; };
 
 const Icons = LucideIcons as unknown as { [key: string]: LucideIcons.LucideIcon };
 
-const NavLink = ({ item, isCollapsed }: { item: NavItem, isCollapsed: boolean }) => {
+const NavLink = ({ item, isCollapsed, onClick }: { item: NavItem, isCollapsed: boolean, onClick?: () => void }) => {
   const location = useLocation();
   const queryClient = useQueryClient();
   const [itemPath, itemQueryString] = item.href.split('?');
@@ -92,7 +93,7 @@ const NavLink = ({ item, isCollapsed }: { item: NavItem, isCollapsed: boolean })
     return (
       <Tooltip>
         <TooltipTrigger asChild>
-          <Link to={item.href} onMouseEnter={handleMouseEnter} className={cn("flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-primary md:h-8 md:w-8 relative", isActive && "bg-muted text-primary")}>
+          <Link to={item.href} onMouseEnter={handleMouseEnter} onClick={onClick} className={cn("flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-primary md:h-8 md:w-8 relative", isActive && "bg-muted text-primary")}>
             <item.icon className="h-5 w-5" />
             <span className="sr-only">{item.label}</span>
             {item.badge && (
@@ -105,7 +106,7 @@ const NavLink = ({ item, isCollapsed }: { item: NavItem, isCollapsed: boolean })
     );
   }
   return (
-    <Link to={item.href} onMouseEnter={handleMouseEnter} className={cn("flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary group", isActive && "bg-muted text-primary")}>
+    <Link to={item.href} onMouseEnter={handleMouseEnter} onClick={onClick} className={cn("flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary group", isActive && "bg-muted text-primary")}>
       <item.icon className="h-4 w-4" />
       {item.label}
       {item.badge ? (
@@ -122,6 +123,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
   const { unreadTaskIds } = useUnreadTasks();
   const queryClient = useQueryClient();
   const backfillAttempted = useRef(false);
+  const isMobile = useIsMobile();
 
   const { data: customNavItems = [], isLoading: isLoadingItems, error: navItemsError, refetch } = useQuery({ 
     queryKey: ['user_navigation_items', user?.id], 
@@ -284,13 +286,19 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
 
   const topLevelItems = useMemo(() => navItems.filter(item => !item.folder_id), [navItems]);
 
+  const handleNavItemClick = () => {
+    if (isMobile && !isCollapsed) {
+      onToggle();
+    }
+  };
+
   if (!user) return null;
 
   return (
     <div className="h-screen border-r bg-muted/40 transition-all duration-300 ease-in-out" onDoubleClick={onToggle}>
       <div className="flex h-full max-h-screen flex-col">
         <div className={cn("flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6", isCollapsed && "justify-center px-2")}>
-          <Link to="/dashboard" className="flex items-center gap-2 font-semibold" title="7i Portal">
+          <Link to="/dashboard" className="flex items-center gap-2 font-semibold" title="7i Portal" onClick={handleNavItemClick}>
             <img src="https://quuecudndfztjlxbrvyb.supabase.co/storage/v1/object/public/General/logo.png" alt="7i Portal Logo" className="h-8 w-8" />
             <span className={cn(isCollapsed && "sr-only")}>7i Portal</span>
           </Link>
@@ -299,7 +307,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
           <div className="flex-1 overflow-y-auto py-2">
             <TooltipProvider delayDuration={0}>
               <nav className={cn("grid items-start gap-1 text-sm font-medium", isCollapsed ? "px-2" : "px-2 lg:px-4")}>
-                {topLevelItems.map(item => <NavLink key={item.id} item={item} isCollapsed={isCollapsed} />)}
+                {topLevelItems.map(item => <NavLink key={item.id} item={item} isCollapsed={isCollapsed} onClick={handleNavItemClick} />)}
                 {!navItemsError && !foldersError && folders.map(folder => {
                   const itemsInFolder = navItems.filter(item => item.folder_id === folder.id);
                   if (itemsInFolder.length === 0) return null;
@@ -314,7 +322,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
                         </div>
                       </CollapsibleTrigger>
                       <CollapsibleContent className={cn("space-y-1", !isCollapsed && "pl-4")}>
-                        {itemsInFolder.map(item => <NavLink key={item.id} item={item} isCollapsed={isCollapsed} />)}
+                        {itemsInFolder.map(item => <NavLink key={item.id} item={item} isCollapsed={isCollapsed} onClick={handleNavItemClick} />)}
                       </CollapsibleContent>
                     </Collapsible>
                   );
@@ -326,7 +334,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
             <div className="mt-auto border-t p-2">
               <TooltipProvider delayDuration={0}>
                 <nav className={cn("grid items-start gap-1 text-sm font-medium", isCollapsed ? "px-2" : "px-2 lg:px-4")}>
-                  <NavLink item={settingsItem} isCollapsed={isCollapsed} />
+                  <NavLink item={settingsItem} isCollapsed={isCollapsed} onClick={handleNavItemClick} />
                 </nav>
               </TooltipProvider>
             </div>
