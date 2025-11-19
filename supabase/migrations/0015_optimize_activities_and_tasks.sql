@@ -144,16 +144,16 @@ BEGIN
     WHERE tt.task_id IN (SELECT tb.id FROM tasks_base tb)
     GROUP BY tt.task_id
   ),
+  ranked_clients AS (
+    SELECT
+      pp.project_id,
+      cl.full_name,
+      ROW_NUMBER() OVER(PARTITION BY pp.project_id ORDER BY cl.created_at ASC) as rn
+    FROM people_projects pp
+    JOIN people cl ON pp.person_id = cl.id
+    WHERE pp.project_id IN (SELECT DISTINCT tb.project_id FROM tasks_base tb)
+  ),
   project_client_data AS (
-    WITH ranked_clients AS (
-      SELECT
-        pp.project_id,
-        cl.full_name,
-        ROW_NUMBER() OVER(PARTITION BY pp.project_id ORDER BY cl.created_at ASC) as rn
-      FROM people_projects pp
-      JOIN people cl ON pp.person_id = cl.id
-      WHERE pp.project_id IN (SELECT DISTINCT tb.project_id FROM tasks_base tb)
-    )
     SELECT rc.project_id as pcd_project_id, rc.full_name
     FROM ranked_clients rc
     WHERE rc.rn = 1
