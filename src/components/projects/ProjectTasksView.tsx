@@ -1,4 +1,3 @@
-prev pada useQuery tasks untuk mempertahankan data lama saat fetching data baru, mencegah flicker.">
 import { useState, useMemo, useCallback, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
