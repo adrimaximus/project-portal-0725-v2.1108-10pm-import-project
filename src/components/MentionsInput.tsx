@@ -12,7 +12,7 @@ interface MentionsInputProps {
   className?: string;
   placeholder?: string;
   autoFocus?: boolean;
-  inputRef?: React.RefObject<HTMLTextAreaElement | HTMLInputElement>;
+  inputRef?: any;
 }
 
 const MentionsInput = ({ value, onChange, users, className, placeholder, autoFocus, inputRef }: MentionsInputProps) => {

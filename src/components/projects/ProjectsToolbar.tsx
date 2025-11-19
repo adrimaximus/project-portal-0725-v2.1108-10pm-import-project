@@ -207,7 +207,7 @@ const ProjectsToolbar = ({
           <div className="flex items-center gap-2 flex-nowrap flex-shrink-0">
             <ProjectAdvancedFilters
               filters={advancedFilters}
-              onFiltersChange={onAdvancedFiltersChange}
+              onAdvancedFiltersChange={onAdvancedFiltersChange}
               allPeople={allPeople}
               allOwners={allOwners}
             />

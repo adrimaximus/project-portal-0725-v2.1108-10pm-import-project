@@ -43,7 +43,7 @@ const ProjectsPage = () => {
   const highlightedTaskId = taskIdFromParams || searchParams.get('highlight') || taskToHighlight;
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  const { unreadTaskIds } = useUnreadTasks();
+  const { unreadTaskIds, markAllAsRead, isMarkingAllRead } = useUnreadTasks();
 
   const onHighlightComplete = useCallback(() => {
     if (taskIdFromParams) {
@@ -51,7 +51,7 @@ const ProjectsPage = () => {
     } else {
       const newSearchParams = new URLSearchParams(searchParams);
       newSearchParams.delete('highlight');
-      setSearchParams(newParams, { replace: true });
+      setSearchParams(newSearchParams, { replace: true });
     }
     setTaskToHighlight(null);
   }, [searchParams, setSearchParams, taskIdFromParams, navigate]);
@@ -113,8 +113,7 @@ const ProjectsPage = () => {
 
   const projectIdsForTaskView = useMemo(() => {
     if (!isTaskView) return undefined;
-    // Return undefined only on initial load when no data is available yet
-    if (isLoadingProjects && projectsData.length === 0) return undefined;
+    if (isLoadingProjects) return undefined;
   
     const visibleProjects = projectsData.filter(project => 
       !(advancedFilters.excludedStatus || []).includes(project.status)
@@ -257,29 +256,32 @@ const ProjectsPage = () => {
 
       <div className="flex-1 flex flex-col min-h-0 rounded-none border-0 sm:border sm:rounded-lg">
         <div className="flex-shrink-0 bg-background z-10 border-b">
-          <ProjectsToolbar
-            view={view} onViewChange={handleViewChange}
-            kanbanGroupBy={kanbanGroupBy} onKanbanGroupByChange={setKanbanGroupBy}
-            hideCompletedTasks={hideCompletedTasks}
-            onToggleHideCompleted={toggleHideCompleted}
-            onNewTaskClick={() => onOpenTaskModal()}
-            onNewProjectClick={() => setIsCreateProjectDialogOpen(true)}
-            isTaskView={isTaskView}
-            isGCalConnected={isGCalConnected}
-            onImportClick={() => setIsImportDialogOpen(true)}
-            onRefreshClick={handleRefresh}
-            advancedFilters={advancedFilters}
-            onAdvancedFiltersChange={handleAdvancedFiltersChange}
-            allPeople={allMembers}
-            allOwners={allOwners}
-            searchTerm={searchTerm}
-            onSearchChange={handleSearchChange}
-            dateRange={dateRange}
-            onDateRangeChange={setDateRange}
-          />
+            <ProjectsToolbar
+                view={view} onViewChange={handleViewChange}
+                kanbanGroupBy={kanbanGroupBy} onKanbanGroupByChange={setKanbanGroupBy}
+                hideCompletedTasks={hideCompletedTasks}
+                onToggleHideCompleted={toggleHideCompleted}
+                onNewTaskClick={() => onOpenTaskModal()}
+                onNewProjectClick={() => setIsCreateProjectDialogOpen(true)}
+                isTaskView={isTaskView}
+                isGCalConnected={isGCalConnected}
+                onImportClick={() => setIsImportDialogOpen(true)}
+                onRefreshClick={handleRefresh}
+                advancedFilters={advancedFilters}
+                onAdvancedFiltersChange={handleAdvancedFiltersChange}
+                allPeople={allMembers}
+                allOwners={allOwners}
+                searchTerm={searchTerm}
+                onSearchChange={handleSearchChange}
+                dateRange={dateRange}
+                onDateRangeChange={setDateRange}
+                unreadTaskCount={unreadTaskIds.length}
+                onMarkAllRead={() => markAllAsRead()}
+                isMarkingAllRead={isMarkingAllRead}
+            />
         </div>
         <div ref={scrollContainerRef} className="flex-grow min-h-0 overflow-y-auto relative">
-          {(isLoadingProjects && !projectsData.length) && (
+          {(isLoadingProjects) && (
             <div className="absolute inset-0 bg-background/50 flex items-center justify-center z-10">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>

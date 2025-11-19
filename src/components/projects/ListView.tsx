@@ -84,7 +84,7 @@ const ProjectListItem = ({
               status={currentStatus as any} 
               projectId={project.id} 
               hasOpenTasks={hasOpenTasks}
-              onStatusChange={setCurrentStatus}
+              onStatusChange={(value) => setCurrentStatus(value as any)}
             />
             <div className="flex items-center -space-x-2">
               {project.assignedTo.slice(0, 3).map((user) => (
