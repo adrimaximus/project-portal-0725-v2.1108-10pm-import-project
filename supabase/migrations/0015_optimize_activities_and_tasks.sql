@@ -232,8 +232,7 @@ AS $function$
         UNION
         SELECT project_id AS id FROM public.project_members WHERE user_id = auth.uid()
     ),
-    -- This CTE now contains only the IDs of projects that pass all filters.
-    filtered_project_ids AS (
+    user_project_ids AS (
         SELECT p.id
         FROM public.projects p
         WHERE p.id IN (SELECT id FROM accessible_project_ids)
@@ -270,11 +269,10 @@ AS $function$
                 )
             )
     ),
-    -- Apply sorting, limit, and offset to the filtered IDs
     projects_to_fetch AS (
         SELECT p_filter.id 
         FROM public.projects p_filter
-        WHERE p_filter.id IN (SELECT id FROM filtered_project_ids)
+        WHERE p_filter.id IN (SELECT id FROM user_project_ids)
         ORDER BY
             CASE WHEN p_sort_key = 'start_date' AND p_sort_direction = 'asc' THEN p_filter.start_date END ASC NULLS LAST,
             CASE WHEN p_sort_key = 'start_date' AND p_sort_direction = 'desc' THEN p_filter.start_date END DESC NULLS LAST,
@@ -286,7 +284,6 @@ AS $function$
         LIMIT p_limit
         OFFSET p_offset
     ),
-    -- Now, fetch full project data and aggregate related info ONLY for the paginated set
     project_members_agg AS (
         SELECT
             pm.project_id,
