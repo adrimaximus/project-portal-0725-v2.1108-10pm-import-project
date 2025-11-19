@@ -28,15 +28,15 @@ const TestNotificationToast = ({ user, type }: TestNotificationToastProps) => {
       case 'project_update':
         return 'Anda ditambahkan ke proyek "Website Baru".';
       case 'mention':
-        return '@' + (name.split(' ')[0] || 'Anda') + ' bisa tolong periksa ini?';
+        return '👋 ' + (name.split(' ')[0] || 'Anda') + ' menyebut Anda: "Tolong cek ini..."';
       case 'comment':
-        return 'Hai, hanya ingin menindaklanjuti diskusi terakhir kita.';
+        return '💬 Pesan baru di diskusi proyek.';
       case 'goal':
-        return 'Goal baru "Selesaikan Laporan Q3" telah dibuat untuk Anda.';
+        return '🎯 Goal baru telah dibuat untuk Anda.';
       case 'system':
-        return 'Pembaruan sistem baru tersedia. Silakan segarkan halaman.';
+        return 'Pembaruan sistem tersedia.';
       default:
-        return `Ini adalah notifikasi tes untuk ${type.label}.`;
+        return `Tes notifikasi untuk ${type.label}.`;
     }
   };
 
