@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { useResolvedTheme } from "@/hooks/useResolvedTheme";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface StatusBadgeProps {
   status: string;
@@ -20,6 +21,7 @@ const StatusBadge = ({ status, onStatusChange, hasOpenTasks, className, projectI
   const [localStatus, setLocalStatus] = useState(status);
   const { data: statuses = [] } = useProjectStatuses();
   const theme = useResolvedTheme();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     setLocalStatus(status);
@@ -40,9 +42,7 @@ const StatusBadge = ({ status, onStatusChange, hasOpenTasks, className, projectI
     // Optimistic update
     setLocalStatus(newStatus);
     
-    if (onStatusChange) {
-      onStatusChange(newStatus);
-    } else if (projectId) {
+    if (projectId) {
       try {
         const { error } = await supabase.rpc('update_project_status', {
           p_project_id: projectId,
@@ -51,12 +51,26 @@ const StatusBadge = ({ status, onStatusChange, hasOpenTasks, className, projectI
         
         if (error) throw error;
         toast.success(`Status updated to ${newStatus}`);
+        
+        // Invalidate queries to ensure lists and other UIs update
+        queryClient.invalidateQueries({ queryKey: ['projects'] });
+        queryClient.invalidateQueries({ queryKey: ['dashboard_projects'] });
+        queryClient.invalidateQueries({ queryKey: ['company_details'] });
+        queryClient.invalidateQueries({ queryKey: ['person'] });
+
+        // Notify parent if callback is provided
+        if (onStatusChange) {
+          onStatusChange(newStatus);
+        }
       } catch (error: any) {
         console.error("Error updating status:", error);
         toast.error(error.message || "Failed to update status");
         // Revert on error
         setLocalStatus(status);
       }
+    } else if (onStatusChange) {
+      // Controlled component mode without internal DB update
+      onStatusChange(newStatus);
     }
   };
 

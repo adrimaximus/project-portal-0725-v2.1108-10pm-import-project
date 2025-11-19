@@ -11,6 +11,114 @@ import { Progress } from "../ui/progress";
 import StatusBadge from "../StatusBadge";
 import { useProjectStatuses, ProjectStatusDef } from "@/hooks/useProjectStatuses";
 
+const ProjectListItem = ({
+  project,
+  navigate,
+  onDeleteProject,
+  statuses
+}: {
+  project: Project;
+  navigate: (path: string) => void;
+  onDeleteProject: (id: string) => void;
+  statuses: ProjectStatusDef[];
+}) => {
+  const [currentStatus, setCurrentStatus] = useState(project.status);
+  
+  const startDate = new Date(project.start_date!);
+  const dueDate = project.due_date ? new Date(project.due_date) : null;
+  
+  let displayDueDate = dueDate;
+  if (dueDate) {
+    const isExclusiveEndDate = 
+      project.due_date &&
+      dueDate.getUTCHours() === 0 &&
+      dueDate.getUTCMinutes() === 0 &&
+      dueDate.getUTCSeconds() === 0 &&
+      dueDate.getUTCMilliseconds() === 0 &&
+      !isSameDay(startDate, dueDate);
+    
+    if (isExclusiveEndDate) {
+      displayDueDate = subDays(dueDate, 1);
+    }
+  }
+
+  const isMultiDay = displayDueDate && !isSameDay(startDate, displayDueDate);
+
+  // Find dynamic color from statuses prop based on LOCAL currentStatus
+  const statusDef = statuses.find(s => s.name === currentStatus);
+  const borderColor = statusDef?.color || '#94a3b8'; // Default fallback
+  
+  const hasOpenTasks = project.tasks?.some(t => !t.completed) ?? false;
+
+  return (
+    <div 
+      className="bg-card border border-l-4 rounded-lg p-2 sm:p-3 flex flex-col hover:shadow-md transition-shadow group relative"
+      style={{ borderLeftColor: borderColor }}
+    >
+      <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between w-full">
+        <div 
+          className="flex-1 flex items-center space-x-2 sm:space-x-3 cursor-pointer min-w-0"
+          onClick={() => navigate(`/projects/${project.slug}`)}
+        >
+          <div className="flex-1 min-w-0">
+            <div className="flex items-start gap-2">
+              <p className="text-sm sm:text-base font-medium break-words" title={project.name}>
+                {project.name}
+              </p>
+            </div>
+            <div className="flex items-center flex-wrap gap-x-2 text-xs text-muted-foreground mt-1 break-words">
+              <span>{project.client_company_name || project.client_name}</span>
+              {isMultiDay && displayDueDate && (
+                <>
+                  <span className="text-muted-foreground/50">•</span>
+                  <span>Ends: {formatInJakarta(displayDueDate, 'dd MMM')}</span>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+        
+        <div className="flex items-center space-x-2 sm:space-x-4 flex-shrink-0 pl-0 sm:pl-2 mt-2 sm:mt-0 w-full sm:w-auto justify-start sm:justify-end">
+          <div className="flex items-center space-x-2">
+            <StatusBadge 
+              status={currentStatus as any} 
+              projectId={project.id} 
+              hasOpenTasks={hasOpenTasks}
+              onStatusChange={setCurrentStatus}
+            />
+            <div className="flex items-center -space-x-2">
+              {project.assignedTo.slice(0, 3).map((user) => (
+                <Avatar key={user.id} className="h-5 w-5 sm:h-6 sm:w-6 border-2 border-card">
+                  <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
+                  <AvatarFallback style={generatePastelColor(user.id)}>{user.initials}</AvatarFallback>
+                </Avatar>
+              ))}
+            </div>
+          </div>
+          <div onClick={(e) => e.stopPropagation()} className="absolute top-1 right-1 sm:relative sm:top-auto sm:right-auto">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 transition-opacity h-7 w-7 sm:h-8 sm:w-8 p-0">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem className="text-destructive" onSelect={() => onDeleteProject(project.id)}>
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  <span>Delete</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+      </div>
+      <div className="mt-2 w-full">
+        <Progress value={project.progress} className="h-1" />
+      </div>
+    </div>
+  );
+};
+
 const DayEntry = ({ 
   dateStr, 
   projectsOnDay, 
@@ -42,101 +150,15 @@ const DayEntry = ({
           <span className="text-base sm:text-xl font-bold text-primary">{dayOfMonth}</span>
         </div>
         <div className="flex-1 space-y-3 pt-1 min-w-0">
-          {projectsOnDay.map((project: Project) => {
-            const startDate = new Date(project.start_date!);
-            const dueDate = project.due_date ? new Date(project.due_date) : null;
-            
-            let displayDueDate = dueDate;
-            if (dueDate) {
-              const isExclusiveEndDate = 
-                project.due_date &&
-                dueDate.getUTCHours() === 0 &&
-                dueDate.getUTCMinutes() === 0 &&
-                dueDate.getUTCSeconds() === 0 &&
-                dueDate.getUTCMilliseconds() === 0 &&
-                !isSameDay(startDate, dueDate);
-              
-              if (isExclusiveEndDate) {
-                displayDueDate = subDays(dueDate, 1);
-              }
-            }
-
-            const isMultiDay = displayDueDate && !isSameDay(startDate, displayDueDate);
-
-            // Find dynamic color from statuses prop
-            const statusDef = statuses.find(s => s.name === project.status);
-            const borderColor = statusDef?.color || '#94a3b8'; // Default fallback
-            
-            const hasOpenTasks = project.tasks?.some(t => !t.completed) ?? false;
-
-            return (
-              <div 
-                key={project.id} 
-                className="bg-card border border-l-4 rounded-lg p-2 sm:p-3 flex flex-col hover:shadow-md transition-shadow group relative"
-                style={{ borderLeftColor: borderColor }}
-              >
-                <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between w-full">
-                  <div 
-                    className="flex-1 flex items-center space-x-2 sm:space-x-3 cursor-pointer min-w-0"
-                    onClick={() => navigate(`/projects/${project.slug}`)}
-                  >
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start gap-2">
-                        <p className="text-sm sm:text-base font-medium break-words" title={project.name}>
-                          {project.name}
-                        </p>
-                      </div>
-                      <div className="flex items-center flex-wrap gap-x-2 text-xs text-muted-foreground mt-1 break-words">
-                        <span>{project.client_company_name || project.client_name}</span>
-                        {isMultiDay && displayDueDate && (
-                          <>
-                            <span className="text-muted-foreground/50">•</span>
-                            <span>Ends: {formatInJakarta(displayDueDate, 'dd MMM')}</span>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center space-x-2 sm:space-x-4 flex-shrink-0 pl-0 sm:pl-2 mt-2 sm:mt-0 w-full sm:w-auto justify-start sm:justify-end">
-                    <div className="flex items-center space-x-2">
-                      <StatusBadge 
-                        status={project.status as any} 
-                        projectId={project.id} 
-                        hasOpenTasks={hasOpenTasks}
-                      />
-                      <div className="flex items-center -space-x-2">
-                        {project.assignedTo.slice(0, 3).map((user) => (
-                          <Avatar key={user.id} className="h-5 w-5 sm:h-6 sm:w-6 border-2 border-card">
-                            <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
-                            <AvatarFallback style={generatePastelColor(user.id)}>{user.initials}</AvatarFallback>
-                          </Avatar>
-                        ))}
-                      </div>
-                    </div>
-                    <div onClick={(e) => e.stopPropagation()} className="absolute top-1 right-1 sm:relative sm:top-auto sm:right-auto">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 transition-opacity h-7 w-7 sm:h-8 sm:w-8 p-0">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem className="text-destructive" onSelect={() => onDeleteProject(project.id)}>
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            <span>Delete</span>
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </div>
-                </div>
-                <div className="mt-2 w-full">
-                  <Progress value={project.progress} className="h-1" />
-                </div>
-              </div>
-            );
-          })}
+          {projectsOnDay.map((project: Project) => (
+            <ProjectListItem 
+              key={project.id} 
+              project={project} 
+              navigate={navigate} 
+              onDeleteProject={onDeleteProject} 
+              statuses={statuses}
+            />
+          ))}
         </div>
       </div>
     </div>
