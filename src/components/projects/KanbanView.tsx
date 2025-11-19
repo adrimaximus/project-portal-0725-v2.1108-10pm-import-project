@@ -2,15 +2,10 @@ import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { DndContext, DragOverlay, DragStartEvent, DragEndEvent, MouseSensor, TouchSensor, useSensor, useSensors, DragOverEvent, DropAnimation, defaultDropAnimationSideEffects } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
 import { Project, PROJECT_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS, ProjectStatus, PaymentStatus } from '@/types';
-import { Card, CardContent } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { formatInJakarta, cn, generatePastelColor, getAvatarUrl } from '@/lib/utils';
-import { Badge } from '../ui/badge';
-import { CheckCircle } from 'lucide-react';
-import KanbanColumn from './KanbanColumn';
 import { useProjectKanbanMutations } from '@/hooks/useProjectKanbanMutations';
-import { isSameDay, subDays } from 'date-fns';
 import KanbanCard from './KanbanCard';
+import KanbanColumn from './KanbanColumn';
+import { useProjectStatuses } from '@/hooks/useProjectStatuses';
 
 const dropAnimation: DropAnimation = {
   sideEffects: defaultDropAnimationSideEffects({
@@ -28,10 +23,20 @@ const KanbanView = ({ projects, groupBy }: { projects: Project[], groupBy: 'stat
   const dragHappened = useRef(false);
   const { updateProjectOrder } = useProjectKanbanMutations();
   const [projectGroups, setProjectGroups] = useState<Record<string, Project[]>>({});
+  
+  // Fetch dynamic statuses
+  const { data: dynamicStatuses = [] } = useProjectStatuses();
 
   const columns = useMemo(() => {
-    return groupBy === 'status' ? PROJECT_STATUS_OPTIONS : PAYMENT_STATUS_OPTIONS;
-  }, [groupBy]);
+    if (groupBy === 'status') {
+      // Use dynamic statuses if available, otherwise fallback (though dynamicStatuses should load)
+      if (dynamicStatuses.length > 0) {
+        return dynamicStatuses.map(s => ({ value: s.name, label: s.name }));
+      }
+      return PROJECT_STATUS_OPTIONS;
+    }
+    return PAYMENT_STATUS_OPTIONS;
+  }, [groupBy, dynamicStatuses]);
 
   useEffect(() => {
     if (!activeProject) {
@@ -45,8 +50,12 @@ const KanbanView = ({ projects, groupBy }: { projects: Project[], groupBy: 'stat
         if (key && Object.prototype.hasOwnProperty.call(groups, key)) {
           groups[key].push(project);
         } else {
+          // Fallback for projects with statuses that might not exist in columns anymore
+          // Try to put in the first column
           if (columns.length > 0) {
-            groups[columns[0].value].push(project);
+             const firstCol = columns[0].value;
+             if (!groups[firstCol]) groups[firstCol] = [];
+             groups[firstCol].push(project);
           }
         }
       });

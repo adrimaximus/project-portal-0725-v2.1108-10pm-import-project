@@ -17,8 +17,6 @@ export function getContrastColor(hexColor: string): string {
     return yiq >= 128 ? '#000000' : '#ffffff';
   }
   
-  // Fallback for other color formats (hsl, rgb, etc.)
-  // For system colors usually white text is safer on dark/colored badges, 
-  // but let's default to white as most statuses are colored.
+  // Fallback for other color formats
   return '#ffffff'; 
 }

@@ -10,6 +10,7 @@ import { Badge } from '../ui/badge';
 import { CheckCircle, User } from 'lucide-react';
 import { isSameDay, subDays } from 'date-fns';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
+import { useProjectStatuses } from '@/hooks/useProjectStatuses';
 
 const KanbanCard = ({ project, dragHappened }: { project: Project, dragHappened: React.MutableRefObject<boolean> }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ 
@@ -20,6 +21,7 @@ const KanbanCard = ({ project, dragHappened }: { project: Project, dragHappened:
     }
   });
   const navigate = useNavigate();
+  const { data: statuses = [] } = useProjectStatuses();
   
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -78,9 +80,17 @@ const KanbanCard = ({ project, dragHappened }: { project: Project, dragHappened:
     );
   };
 
+  // Determine border color based on status
+  const statusDef = statuses.find(s => s.name === project.status);
+  const borderColor = statusDef?.color || '#e5e7eb'; // Default gray if not found
+
   return (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners} className={cn(isDragging && "opacity-30")}>
-      <Card className="mb-3 hover:shadow-md transition-shadow cursor-pointer" onClick={handleClick}>
+      <Card 
+        className="mb-3 hover:shadow-md transition-shadow cursor-pointer border-l-4" 
+        onClick={handleClick}
+        style={{ borderLeftColor: borderColor }}
+      >
         <CardContent className="p-3">
           <div className="space-y-2 block">
             <h4 className="font-semibold text-sm leading-snug flex items-center gap-1.5">

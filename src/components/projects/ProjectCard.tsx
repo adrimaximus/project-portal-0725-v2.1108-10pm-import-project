@@ -3,13 +3,13 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { getProjectStatusStyles, generatePastelColor, getAvatarUrl } from '@/lib/utils';
+import { generatePastelColor, getAvatarUrl } from '@/lib/utils';
 import { Link } from 'react-router-dom';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 import { User } from 'lucide-react';
+import StatusBadge from '../StatusBadge';
 
 const ProjectCard = ({ project }: { project: Project }) => {
-  const statusStyles = getProjectStatusStyles(project.status);
   return (
     <Link to={`/projects/${project.slug}`}>
       <Card className="hover:shadow-md transition-shadow h-full flex flex-col">
@@ -31,7 +31,9 @@ const ProjectCard = ({ project }: { project: Project }) => {
                 )}
                 {project.name}
               </CardTitle>
-              <Badge variant="outline" className={statusStyles.tw}>{project.status}</Badge>
+              <div className="mt-1">
+                <StatusBadge status={project.status} />
+              </div>
             </div>
             {project.client_company_logo_url && (
               <TooltipProvider>

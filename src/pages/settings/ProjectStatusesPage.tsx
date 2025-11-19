@@ -120,11 +120,13 @@ const ProjectStatusesPage = () => {
         const newIndex = items.findIndex((i) => i.id === over.id);
         const newItems = arrayMove(items, oldIndex, newIndex);
         
+        // Prepare updates for backend
         const updates = newItems.map((item, index) => ({
           id: item.id,
           position: index
         }));
         
+        // Trigger mutation
         updatePositions(updates);
         
         return newItems;
@@ -146,6 +148,7 @@ const ProjectStatusesPage = () => {
     setIsSaving(true);
     try {
       if (statusToEdit) {
+        // Update existing status via RPC to sync with projects table
         const { error } = await supabase.rpc('update_project_status_definition', {
           p_id: statusToEdit.id,
           p_name: data.name,
@@ -155,6 +158,7 @@ const ProjectStatusesPage = () => {
         if (error) throw error;
         toast.success(`Status "${data.name}" updated successfully.`);
       } else {
+        // Create new status
         const maxPosition = statuses.length > 0 
           ? Math.max(...statuses.map(s => s.position || 0)) 
           : -1;
