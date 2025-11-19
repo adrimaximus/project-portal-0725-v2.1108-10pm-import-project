@@ -40,22 +40,22 @@ const InteractiveText: React.FC<InteractiveTextProps> = ({ text, members }) => {
 
       if (mentionedUser) {
         // Link to a generic user profile page using ID
-        // Updated styling to match screenshot: Green text with subtle green background
+        // Updated styling to use theme primary colors: text-primary with bg-primary/10
         parts.push(
           <Link 
             key={`mention-${startIndex}`} 
             to={`/profile/${mentionedUser.id}`} 
-            className="text-green-500 dark:text-green-400 bg-green-500/10 dark:bg-green-400/10 hover:bg-green-500/20 dark:hover:bg-green-400/20 rounded-md px-1.5 py-0.5 font-medium transition-colors no-underline"
+            className="text-primary bg-primary/10 hover:bg-primary/20 rounded-md px-1.5 py-0.5 font-medium transition-colors no-underline"
           >
             @{displayName}
           </Link>
         );
       } else {
-        // Unlinked mention styling to match
+        // Unlinked mention styling to match theme
         parts.push(
             <span 
                 key={`mention-${startIndex}`} 
-                className="text-green-500/70 dark:text-green-400/70 bg-green-500/5 dark:bg-green-400/5 rounded-md px-1.5 py-0.5 font-medium"
+                className="text-primary/70 bg-primary/5 rounded-md px-1.5 py-0.5 font-medium"
             >
                 @{displayName}
             </span>
