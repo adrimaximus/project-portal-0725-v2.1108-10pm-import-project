@@ -60,7 +60,7 @@ const NavLink = ({ item, isCollapsed }: { item: NavItem, isCollapsed: boolean })
       queryClient.prefetchQuery({
         queryKey: [...projectsQueryKey, 'upcoming'],
         queryFn: () => getDashboardProjects({
-          limit: 1000, offset: 0, searchTerm: null, excludeOtherPersonal: false, year: null, timeframe: 'upcoming', sortDirection: 'asc',
+          limit: 50, offset: 0, searchTerm: null, excludeOtherPersonal: false, year: null, timeframe: 'upcoming', sortDirection: 'asc',
         }),
       });
       queryClient.prefetchInfiniteQuery({
@@ -79,7 +79,7 @@ const NavLink = ({ item, isCollapsed }: { item: NavItem, isCollapsed: boolean })
         queryKey: ['tasks', { projectIds: undefined, hideCompleted: false, sortConfig: { key: 'updated_at', direction: 'desc' } }],
         queryFn: async () => {
           const { data, error } = await supabase.rpc('get_project_tasks', {
-            p_project_ids: null, p_completed: false, p_order_by: 'updated_at', p_order_direction: 'desc', p_limit: 1000, p_offset: 0,
+            p_project_ids: null, p_completed: false, p_order_by: 'updated_at', p_order_direction: 'desc', p_limit: 50, p_offset: 0,
           });
           if (error) throw error;
           return data || [];
