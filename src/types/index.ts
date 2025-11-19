@@ -46,7 +46,7 @@ export const PROJECT_STATUS_OPTIONS = [
   { value: 'Pending', label: 'Pending' },
   { value: 'Billing Process', label: 'Billing Process' },
 ] as const;
-export type ProjectStatus = typeof PROJECT_STATUS_OPTIONS[number]['value'];
+export type ProjectStatus = string; // Allow any string for dynamic statuses
 
 export const PAYMENT_STATUS_OPTIONS = [
     { value: 'Paid', label: 'Paid' },
