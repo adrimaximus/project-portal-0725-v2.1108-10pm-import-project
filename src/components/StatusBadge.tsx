@@ -4,7 +4,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useProjectStatuses } from "@/hooks/useProjectStatuses";
 import { getStatusBadgeStyle } from "@/lib/colors";
 import { cn } from "@/lib/utils";
-import { useTheme } from "@/contexts/ThemeProvider";
+import { useResolvedTheme } from "@/hooks/useResolvedTheme";
 
 interface StatusBadgeProps {
   status: string;
@@ -16,7 +16,7 @@ interface StatusBadgeProps {
 const StatusBadge = ({ status, onStatusChange, hasOpenTasks, className }: StatusBadgeProps) => {
   const [localStatus, setLocalStatus] = useState(status);
   const { data: statuses = [] } = useProjectStatuses();
-  const { theme } = useTheme();
+  const theme = useResolvedTheme();
 
   useEffect(() => {
     setLocalStatus(status);
