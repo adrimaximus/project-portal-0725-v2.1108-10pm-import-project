@@ -80,9 +80,9 @@ const ProjectsToolbar = ({
   }
 
   return (
-    <div className="p-4 border-t flex flex-nowrap items-center justify-between gap-4 overflow-x-auto">
+    <div className="p-4 border-t flex flex-nowrap items-center justify-between gap-4 overflow-x-auto w-full">
       {/* Left Section: View Controls */}
-      <div className="flex items-center gap-4 flex-nowrap">
+      <div className="flex items-center gap-4 flex-nowrap flex-shrink-0">
         {/* Desktop View Switcher */}
         <TooltipProvider>
           <ToggleGroup type="single" value={view} onValueChange={onViewChange} aria-label="Project view" className="hidden sm:flex">
