@@ -1,6 +1,6 @@
-import { createClient } from 'npm:@supabase/supabase-js@2';
-import OpenAI from 'npm:openai@4';
-import Anthropic from 'npm:@anthropic-ai/sdk@0.22.0';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.54.0';
+import OpenAI from 'https://esm.sh/openai@4.29.2';
+import Anthropic from 'https://esm.sh/@anthropic-ai/sdk@0.22.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -47,8 +47,9 @@ Deno.serve(async (req) => {
 
     if (!openai && !anthropic) {
       console.error("No AI provider configured.");
-      return new Response(JSON.stringify({ error: "No AI provider is configured." }), {
-        status: 500,
+      // Fallback to just returning the alt text if no AI is available, to prevent 500s
+      return new Response(JSON.stringify({ caption: altText }), {
+        status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -82,7 +83,6 @@ Deno.serve(async (req) => {
       }
     } catch (aiError) {
       console.error("AI generation error:", aiError);
-      // Fallback to alt text if AI fails
       caption = altText;
     }
 
