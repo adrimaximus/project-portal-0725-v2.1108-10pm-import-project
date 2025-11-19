@@ -2,14 +2,17 @@ import { useState, useEffect } from 'react';
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useProjectStatuses } from "@/hooks/useProjectStatuses";
+import { getContrastColor } from "@/lib/colors";
+import { cn } from "@/lib/utils";
 
 interface StatusBadgeProps {
   status: string;
   onStatusChange?: (newStatus: string) => void;
   hasOpenTasks?: boolean;
+  className?: string;
 }
 
-const StatusBadge = ({ status, onStatusChange, hasOpenTasks }: StatusBadgeProps) => {
+const StatusBadge = ({ status, onStatusChange, hasOpenTasks, className }: StatusBadgeProps) => {
   const [localStatus, setLocalStatus] = useState(status);
   const { data: statuses = [] } = useProjectStatuses();
 
@@ -25,6 +28,7 @@ const StatusBadge = ({ status, onStatusChange, hasOpenTasks }: StatusBadgeProps)
   const statusDef = statuses.find(s => s.name === localStatus);
   // Default fallback color if not found in DB
   const backgroundColor = statusDef?.color || '#94a3b8'; 
+  const textColor = getContrastColor(backgroundColor);
 
   const handleStatusChange = (newStatus: string) => {
     setLocalStatus(newStatus);
@@ -36,13 +40,13 @@ const StatusBadge = ({ status, onStatusChange, hasOpenTasks }: StatusBadgeProps)
   // Common badge style
   const badgeStyle = {
     backgroundColor,
-    color: 'white', // Ensure text is readable on colored badges
+    color: textColor,
   };
 
   if (onStatusChange) {
     return (
       <Select value={localStatus} onValueChange={handleStatusChange}>
-        <SelectTrigger className="h-auto p-0 border-0 focus:ring-0 focus:ring-offset-0 w-auto bg-transparent shadow-none">
+        <SelectTrigger className={cn("h-auto p-0 border-0 focus:ring-0 focus:ring-offset-0 w-auto bg-transparent shadow-none", className)}>
           <SelectValue>
             <Badge 
               className="hover:opacity-90 transition-opacity border-0 font-medium px-2.5 py-0.5"
@@ -54,21 +58,23 @@ const StatusBadge = ({ status, onStatusChange, hasOpenTasks }: StatusBadgeProps)
         </SelectTrigger>
         <SelectContent>
           {statuses.length > 0 ? (
-            statuses.map(option => (
-              <SelectItem 
-                key={option.id} 
-                value={option.name}
-                disabled={option.name === 'Completed' && hasOpenTasks}
-              >
-                <div className="flex items-center gap-2">
-                  <div 
-                    className="w-2 h-2 rounded-full" 
-                    style={{ backgroundColor: option.color }}
-                  />
-                  {option.name}
-                </div>
-              </SelectItem>
-            ))
+            statuses.map(option => {
+                return (
+                    <SelectItem 
+                        key={option.id} 
+                        value={option.name}
+                        disabled={option.name === 'Completed' && hasOpenTasks}
+                    >
+                        <div className="flex items-center gap-2">
+                        <div 
+                            className="w-2 h-2 rounded-full" 
+                            style={{ backgroundColor: option.color }}
+                        />
+                        {option.name}
+                        </div>
+                    </SelectItem>
+                );
+            })
           ) : (
             <SelectItem value={localStatus}>{localStatus}</SelectItem>
           )}
@@ -79,7 +85,7 @@ const StatusBadge = ({ status, onStatusChange, hasOpenTasks }: StatusBadgeProps)
 
   return (
     <Badge 
-      className="border-0 font-medium px-2.5 py-0.5" 
+      className={cn("border-0 font-medium px-2.5 py-0.5", className)}
       style={badgeStyle}
     >
       {localStatus}

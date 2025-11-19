@@ -17,6 +17,7 @@ import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, us
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useQueryClient } from '@tanstack/react-query';
+import { getContrastColor } from "@/lib/colors";
 
 // Sortable Row Component
 const SortableTableRow = ({ status, onEdit, onDelete }: { status: ProjectStatusDef, onEdit: (s: ProjectStatusDef) => void, onDelete: (s: ProjectStatusDef) => void }) => {
@@ -34,8 +35,10 @@ const SortableTableRow = ({ status, onEdit, onDelete }: { status: ProjectStatusD
     transition,
     zIndex: isDragging ? 10 : 1,
     opacity: isDragging ? 0.5 : 1,
-    position: 'relative' as 'relative', // Explicitly cast to literal type
+    position: 'relative' as 'relative',
   };
+
+  const textColor = getContrastColor(status.color);
 
   return (
     <TableRow ref={setNodeRef} style={style} className={isDragging ? "bg-muted" : ""}>
@@ -46,19 +49,21 @@ const SortableTableRow = ({ status, onEdit, onDelete }: { status: ProjectStatusD
       </TableCell>
       <TableCell className="font-medium">
         <div className="flex items-center gap-2">
-          <div 
-            className="w-3 h-3 rounded-full" 
-            style={{ backgroundColor: status.color }}
-          />
-          {status.name}
+          {/* Preview as it appears in the app */}
+          <Badge 
+            className="border-0 font-medium px-2.5 py-0.5"
+            style={{ backgroundColor: status.color, color: textColor }}
+          >
+            {status.name}
+          </Badge>
         </div>
       </TableCell>
       <TableCell>
         <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded-full" style={{ backgroundColor: status.color }} />
-          <Badge variant="outline" className="font-mono">
+          <div className="w-4 h-4 rounded-full border" style={{ backgroundColor: status.color }} />
+          <span className="font-mono text-xs text-muted-foreground">
             {status.color}
-          </Badge>
+          </span>
         </div>
       </TableCell>
       <TableCell className="text-right">
@@ -115,13 +120,11 @@ const ProjectStatusesPage = () => {
         const newIndex = items.findIndex((i) => i.id === over.id);
         const newItems = arrayMove(items, oldIndex, newIndex);
         
-        // Prepare updates for backend
         const updates = newItems.map((item, index) => ({
           id: item.id,
           position: index
         }));
         
-        // Trigger mutation
         updatePositions(updates);
         
         return newItems;
@@ -143,7 +146,6 @@ const ProjectStatusesPage = () => {
     setIsSaving(true);
     try {
       if (statusToEdit) {
-        // Update existing status via RPC to sync with projects table
         const { error } = await supabase.rpc('update_project_status_definition', {
           p_id: statusToEdit.id,
           p_name: data.name,
@@ -153,7 +155,6 @@ const ProjectStatusesPage = () => {
         if (error) throw error;
         toast.success(`Status "${data.name}" updated successfully.`);
       } else {
-        // Create new status
         const maxPosition = statuses.length > 0 
           ? Math.max(...statuses.map(s => s.position || 0)) 
           : -1;
@@ -248,7 +249,7 @@ const ProjectStatusesPage = () => {
                     <TableRow>
                       <TableHead className="w-[50px]"></TableHead>
                       <TableHead>Name</TableHead>
-                      <TableHead>Color</TableHead>
+                      <TableHead>Color Code</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
