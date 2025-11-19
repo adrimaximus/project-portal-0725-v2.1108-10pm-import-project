@@ -80,164 +80,154 @@ const ProjectsToolbar = ({
   }
 
   return (
-    <div className="p-4 border-t flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+    <div className="p-4 border-t flex flex-nowrap items-center justify-between gap-4 overflow-x-auto">
       {/* Left Section: View Controls */}
-      <div className="flex items-center gap-2 sm:gap-4 w-full lg:w-auto justify-between lg:justify-start">
-        <div className="flex items-center gap-2">
-          {/* Desktop View Switcher */}
-          <TooltipProvider>
-            <ToggleGroup type="single" value={view} onValueChange={onViewChange} aria-label="Project view" className="hidden sm:flex">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <ToggleGroupItem value="list" aria-label="List view"><List className="h-4 w-4" /></ToggleGroupItem>
-                </TooltipTrigger>
-                <TooltipContent><p>List view</p></TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <ToggleGroupItem value="table" aria-label="Grid view"><LayoutGrid className="h-4 w-4" /></ToggleGroupItem>
-                </TooltipTrigger>
-                <TooltipContent><p>Grid view</p></TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <ToggleGroupItem value="kanban" aria-label="Kanban view"><KanbanSquare className="h-4 w-4" /></ToggleGroupItem>
-                </TooltipTrigger>
-                <TooltipContent><p>Kanban view</p></TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <ToggleGroupItem value="tasks" aria-label="Tasks list view"><ListChecks className="h-4 w-4" /></ToggleGroupItem>
-                </TooltipTrigger>
-                <TooltipContent><p>Tasks list view</p></TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <ToggleGroupItem value="tasks-kanban" aria-label="Tasks kanban view"><CheckSquare className="h-4 w-4" /></ToggleGroupItem>
-                </TooltipTrigger>
-                <TooltipContent><p>Tasks kanban view</p></TooltipContent>
-              </Tooltip>
-            </ToggleGroup>
-          </TooltipProvider>
-
-          {/* Mobile View Switcher */}
-          <div className="sm:hidden flex items-center gap-2">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="outline" size="icon" onClick={() => setIsViewSwitcherOpen(!isViewSwitcherOpen)}>
-                    <View className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent><p>Change view</p></TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            {isViewSwitcherOpen && (
-              <ToggleGroup
-                type="single"
-                value={view}
-                onValueChange={(value: ViewMode | null) => {
-                  if (value) onViewChange(value);
-                  setIsViewSwitcherOpen(false);
-                }}
-                aria-label="Project view"
-                className="absolute top-16 left-4 z-50 bg-background border rounded-md shadow-lg p-1"
-              >
+      <div className="flex items-center gap-4 flex-nowrap">
+        {/* Desktop View Switcher */}
+        <TooltipProvider>
+          <ToggleGroup type="single" value={view} onValueChange={onViewChange} aria-label="Project view" className="hidden sm:flex">
+            <Tooltip>
+              <TooltipTrigger asChild>
                 <ToggleGroupItem value="list" aria-label="List view"><List className="h-4 w-4" /></ToggleGroupItem>
+              </TooltipTrigger>
+              <TooltipContent><p>List view</p></TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
                 <ToggleGroupItem value="table" aria-label="Grid view"><LayoutGrid className="h-4 w-4" /></ToggleGroupItem>
+              </TooltipTrigger>
+              <TooltipContent><p>Grid view</p></TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
                 <ToggleGroupItem value="kanban" aria-label="Kanban view"><KanbanSquare className="h-4 w-4" /></ToggleGroupItem>
+              </TooltipTrigger>
+              <TooltipContent><p>Kanban view</p></TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
                 <ToggleGroupItem value="tasks" aria-label="Tasks list view"><ListChecks className="h-4 w-4" /></ToggleGroupItem>
+              </TooltipTrigger>
+              <TooltipContent><p>Tasks list view</p></TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
                 <ToggleGroupItem value="tasks-kanban" aria-label="Tasks kanban view"><CheckSquare className="h-4 w-4" /></ToggleGroupItem>
-              </ToggleGroup>
-            )}
-          </div>
+              </TooltipTrigger>
+              <TooltipContent><p>Tasks kanban view</p></TooltipContent>
+            </Tooltip>
+          </ToggleGroup>
+        </TooltipProvider>
+
+        {/* Mobile View Switcher */}
+        <div className="sm:hidden flex items-center gap-2">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="outline" size="icon" onClick={() => setIsViewSwitcherOpen(!isViewSwitcherOpen)}>
+                  <View className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent><p>Change view</p></TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          {isViewSwitcherOpen && (
+            <ToggleGroup
+              type="single"
+              value={view}
+              onValueChange={(value: ViewMode | null) => {
+                if (value) onViewChange(value);
+                setIsViewSwitcherOpen(false);
+              }}
+              aria-label="Project view"
+            >
+              <ToggleGroupItem value="list" aria-label="List view"><List className="h-4 w-4" /></ToggleGroupItem>
+              <ToggleGroupItem value="table" aria-label="Grid view"><LayoutGrid className="h-4 w-4" /></ToggleGroupItem>
+              <ToggleGroupItem value="kanban" aria-label="Kanban view"><KanbanSquare className="h-4 w-4" /></ToggleGroupItem>
+              <ToggleGroupItem value="tasks" aria-label="Tasks list view"><ListChecks className="h-4 w-4" /></ToggleGroupItem>
+              <ToggleGroupItem value="tasks-kanban" aria-label="Tasks kanban view"><CheckSquare className="h-4 w-4" /></ToggleGroupItem>
+            </ToggleGroup>
+          )}
         </div>
 
-        <div className="flex items-center gap-2">
-          {view === 'kanban' && (
-            <Select value={kanbanGroupBy} onValueChange={onKanbanGroupByChange}>
-              <SelectTrigger className="w-[110px] sm:w-[130px] h-9"><SelectValue placeholder="Group by..." /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="status">Status</SelectItem>
-                <SelectItem value="payment_status">Payment</SelectItem>
-              </SelectContent>
-            </Select>
-          )}
-          {isTaskView && (
-            <TooltipProvider>
-              <div className="flex items-center space-x-2">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <label htmlFor="hide-completed" className="flex items-center space-x-2 cursor-pointer bg-secondary/50 px-2 py-1.5 rounded-md hover:bg-secondary">
-                      <Switch id="hide-completed" checked={hideCompletedTasks} onCheckedChange={onToggleHideCompleted} className="scale-75 data-[state=checked]:bg-primary" />
-                      <span className="text-xs font-medium whitespace-nowrap">Hide Done</span>
-                    </label>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Hide Done</p>
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-            </TooltipProvider>
-          )}
-        </div>
+        {view === 'kanban' && (
+          <Select value={kanbanGroupBy} onValueChange={onKanbanGroupByChange}>
+            <SelectTrigger className="w-[80px]"><SelectValue placeholder="Group by..." /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="status">Status</SelectItem>
+              <SelectItem value="payment_status">Payment Status</SelectItem>
+            </SelectContent>
+          </Select>
+        )}
+        {isTaskView && (
+          <TooltipProvider>
+            <div className="flex items-center space-x-2">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <label htmlFor="hide-completed" className="flex items-center space-x-2 cursor-pointer">
+                    <Switch id="hide-completed" checked={hideCompletedTasks} onCheckedChange={onToggleHideCompleted} />
+                    <span className="text-sm hidden sm:inline">Hide Done</span>
+                  </label>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Hide Done</p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
+          </TooltipProvider>
+        )}
       </div>
 
       {/* Right Section: Filters, Search, Date Range, and Action Buttons */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 w-full lg:w-auto lg:justify-end">
+      <div className="flex-shrink-0 flex items-center gap-2 flex-nowrap justify-end">
         
         {/* Filters, Search, Date Range */}
-        <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap sm:flex-nowrap">
-          <div className="flex-1 sm:flex-none flex items-center gap-2">
-            <ProjectAdvancedFilters
-              filters={advancedFilters}
-              onFiltersChange={onAdvancedFiltersChange}
-              allPeople={allPeople}
-              allOwners={allOwners}
-            />
-            {isSearchOpen ? (
-              <div className="relative flex-1 sm:flex-initial sm:w-auto">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search..."
-                  value={searchTerm}
-                  onChange={(e) => onSearchChange(e.target.value)}
-                  onBlur={() => { if (!searchTerm) setIsSearchOpen(false); }}
-                  autoFocus
-                  className="pl-9 h-9 w-full sm:w-48"
-                />
-              </div>
-            ) : (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="outline" size="icon" onClick={() => setIsSearchOpen(true)}>
-                      <Search className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent><p>Search</p></TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            )}
-          </div>
-          
-          <div className="flex-1 sm:flex-none min-w-[240px]">
-             <DatePickerWithRange date={dateRange} onDateChange={onDateRangeChange} className="w-full" />
-          </div>
+        <div className="flex items-center gap-2">
+          <ProjectAdvancedFilters
+            filters={advancedFilters}
+            onFiltersChange={onAdvancedFiltersChange}
+            allPeople={allPeople}
+            allOwners={allOwners}
+          />
+          {isSearchOpen ? (
+            <div className="relative flex-1 sm:flex-initial">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search..."
+                value={searchTerm}
+                onChange={(e) => onSearchChange(e.target.value)}
+                onBlur={() => { if (!searchTerm) setIsSearchOpen(false); }}
+                autoFocus
+                className="pl-9 w-full sm:w-48"
+              />
+            </div>
+          ) : (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="outline" size="icon" onClick={() => setIsSearchOpen(true)}>
+                    <Search className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent><p>Search</p></TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+          <DatePickerWithRange date={dateRange} onDateChange={onDateRangeChange} />
         </div>
 
         {/* Separator for desktop view */}
-        <Separator orientation="vertical" className="hidden lg:block h-8 mx-2" />
+        <Separator orientation="vertical" className="hidden sm:block h-8" />
 
         {/* Action Buttons (New Project/Task, Import/Refresh) */}
-        <div className="flex items-center gap-2 w-full sm:w-auto justify-end sm:justify-start border-t sm:border-t-0 pt-2 sm:pt-0 mt-2 sm:mt-0 border-border">
+        <div className="flex items-center gap-2">
           {isTaskView ? (
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button size="sm" variant="outline" onClick={onNewTaskClick} className="h-9">
-                    <ListPlus className="h-4 w-4 sm:mr-2" />
-                    <span className="hidden sm:inline">New Task</span>
+                  <Button size="icon" variant="outline" onClick={onNewTaskClick}>
+                    <ListPlus className="h-4 w-4" />
+                    <span className="sr-only">New Task</span>
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent><p>New Task</p></TooltipContent>
@@ -247,9 +237,9 @@ const ProjectsToolbar = ({
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button size="sm" variant="outline" onClick={onNewProjectClick} className="h-9">
-                    <PlusCircle className="h-4 w-4 sm:mr-2" />
-                    <span className="hidden sm:inline">New Project</span>
+                  <Button size="icon" variant="outline" onClick={onNewProjectClick}>
+                    <PlusCircle className="h-4 w-4" />
+                    <span className="sr-only">New Project</span>
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent><p>New Project</p></TooltipContent>
@@ -260,7 +250,7 @@ const ProjectsToolbar = ({
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button variant="outline" size="icon" onClick={onImportClick} className="h-9 w-9">
+                  <Button variant="outline" size="icon" onClick={onImportClick}>
                     <Download className="h-4 w-4" />
                     <span className="sr-only">Import from Calendar</span>
                   </Button>
@@ -272,7 +262,7 @@ const ProjectsToolbar = ({
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button variant="outline" size="icon" onClick={onRefreshClick} className="h-9 w-9">
+                  <Button variant="outline" size="icon" onClick={onRefreshClick}>
                     <RefreshCw className="h-4 w-4" />
                     <span className="sr-only">Refresh data</span>
                   </Button>
