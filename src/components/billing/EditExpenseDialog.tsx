@@ -267,7 +267,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
                           </Button>
                         </FormControl>
                       </PopoverTrigger>
-                      <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                      <PopoverContent className="w-[300px] p-0" align="start">
                         <Command>
                           <CommandInput placeholder="Search project..." />
                           <CommandList>
@@ -314,7 +314,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
                         </Button>
                       </FormControl>
                     </PopoverTrigger>
-                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                    <PopoverContent className="w-[300px] p-0" align="start">
                       <Command>
                         <CommandInput placeholder="Search beneficiary..." value={beneficiarySearch} onValueChange={setBeneficiarySearch} />
                         <CommandList>

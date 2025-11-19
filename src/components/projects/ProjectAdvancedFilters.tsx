@@ -80,7 +80,7 @@ const ProjectAdvancedFilters = ({ filters, onAdvancedFiltersChange, allPeople, a
             {filters.ownerIds?.length > 0 ? `${filters.ownerIds.length} owner(s) selected` : "Select owners..."}
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+        <PopoverContent className="w-[300px] p-0">
           <Command>
             <CommandInput placeholder="Search person..." />
             <CommandList>
@@ -109,7 +109,7 @@ const ProjectAdvancedFilters = ({ filters, onAdvancedFiltersChange, allPeople, a
             {filters.memberIds?.length > 0 ? `${filters.memberIds.length} member(s) selected` : "Select members..."}
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+        <PopoverContent className="w-[300px] p-0">
           <Command>
             <CommandInput placeholder="Search person..." />
             <CommandList>
@@ -138,7 +138,7 @@ const ProjectAdvancedFilters = ({ filters, onAdvancedFiltersChange, allPeople, a
             {filters.excludedStatus?.length > 0 ? `${filters.excludedStatus.length} status(es) excluded` : "Select statuses to exclude..."}
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+        <PopoverContent className="w-[300px] p-0">
           <Command>
             <CommandInput placeholder="Search status..." />
             <CommandList>

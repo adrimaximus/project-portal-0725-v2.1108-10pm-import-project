@@ -53,7 +53,7 @@ const PeopleAdvancedFilters = ({ filters, onFiltersChange, allTags, allCompanies
             {filters.tagIds?.length > 0 ? `${filters.tagIds.length} tag(s) selected` : "Select tags..."}
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+        <PopoverContent className="w-[300px] p-0">
           <Command>
             <CommandInput placeholder="Search tags..." />
             <CommandList>
@@ -82,7 +82,7 @@ const PeopleAdvancedFilters = ({ filters, onFiltersChange, allTags, allCompanies
             {filters.companyIds?.length > 0 ? `${filters.companyIds.length} company(s) selected` : "Select companies..."}
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+        <PopoverContent className="w-[300px] p-0">
           <Command>
             <CommandInput placeholder="Search companies..." />
             <CommandList>
