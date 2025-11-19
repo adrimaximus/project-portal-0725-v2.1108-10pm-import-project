@@ -39,19 +39,27 @@ const InteractiveText: React.FC<InteractiveTextProps> = ({ text, members }) => {
       const mentionedUser = members.find(m => m.id === userId);
 
       if (mentionedUser) {
-        // Link to a generic user profile page using ID, with theme-neutral styling and subtle background
+        // Link to a generic user profile page using ID
+        // Updated styling to match screenshot: Green text with subtle green background
         parts.push(
           <Link 
             key={`mention-${startIndex}`} 
             to={`/profile/${mentionedUser.id}`} 
-            className="text-foreground bg-muted/50 hover:bg-muted rounded-sm px-1 py-0.5 font-medium transition-colors no-underline"
+            className="text-green-500 dark:text-green-400 bg-green-500/10 dark:bg-green-400/10 hover:bg-green-500/20 dark:hover:bg-green-400/20 rounded-md px-1.5 py-0.5 font-medium transition-colors no-underline"
           >
             @{displayName}
           </Link>
         );
       } else {
-        // Unlinked mention, with theme-neutral styling and subtle background
-        parts.push(<span key={`mention-${startIndex}`} className="text-muted-foreground bg-muted/30 rounded-sm px-1 py-0.5">@{displayName}</span>);
+        // Unlinked mention styling to match
+        parts.push(
+            <span 
+                key={`mention-${startIndex}`} 
+                className="text-green-500/70 dark:text-green-400/70 bg-green-500/5 dark:bg-green-400/5 rounded-md px-1.5 py-0.5 font-medium"
+            >
+                @{displayName}
+            </span>
+        );
       }
     } else if (match[4]) { // This means it's a URL
       const url = match[4];
