@@ -5,12 +5,27 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { MoreHorizontal, Trash2 } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { getProjectStatusStyles, cn, formatInJakarta, generatePastelColor, getAvatarUrl } from '@/lib/utils';
+import { cn, formatInJakarta, generatePastelColor, getAvatarUrl } from '@/lib/utils';
 import { isSameDay, isBefore, startOfToday, differenceInDays, subDays } from 'date-fns';
 import { Progress } from "../ui/progress";
 import StatusBadge from "../StatusBadge";
+import { useProjectStatuses, ProjectStatusDef } from "@/hooks/useProjectStatuses";
 
-const DayEntry = ({ dateStr, projectsOnDay, showMonthHeader, onDeleteProject, navigate }: { dateStr: string, projectsOnDay: Project[], showMonthHeader: boolean, onDeleteProject: (id: string) => void, navigate: (path: string) => void }) => {
+const DayEntry = ({ 
+  dateStr, 
+  projectsOnDay, 
+  showMonthHeader, 
+  onDeleteProject, 
+  navigate,
+  statuses 
+}: { 
+  dateStr: string, 
+  projectsOnDay: Project[], 
+  showMonthHeader: boolean, 
+  onDeleteProject: (id: string) => void, 
+  navigate: (path: string) => void,
+  statuses: ProjectStatusDef[]
+}) => {
   const date = new Date(`${dateStr}T00:00:00`);
   const currentMonth = formatInJakarta(date, 'MMMM yyyy');
   const dayOfWeek = formatInJakarta(date, 'EEE');
@@ -48,11 +63,15 @@ const DayEntry = ({ dateStr, projectsOnDay, showMonthHeader, onDeleteProject, na
 
             const isMultiDay = displayDueDate && !isSameDay(startDate, displayDueDate);
 
+            // Find dynamic color from statuses prop
+            const statusDef = statuses.find(s => s.name === project.status);
+            const borderColor = statusDef?.color || '#94a3b8'; // Default fallback
+
             return (
               <div 
                 key={project.id} 
                 className="bg-card border border-l-4 rounded-lg p-2 sm:p-3 flex flex-col hover:shadow-md transition-shadow group relative"
-                style={{ borderLeftColor: getProjectStatusStyles(project.status).hex }}
+                style={{ borderLeftColor: borderColor }}
               >
                 <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between w-full">
                   <div 
@@ -122,6 +141,9 @@ const ListView = ({ projects, onDeleteProject }: { projects: Project[], onDelete
   const navigate = useNavigate();
   const [visibleUpcomingCount, setVisibleUpcomingCount] = useState(10);
   const [visiblePastCount, setVisiblePastCount] = useState(5);
+  
+  // Fetch statuses here to pass down to DayEntry
+  const { data: statuses = [] } = useProjectStatuses();
 
   const { upcomingDayEntries, pastDayEntries } = useMemo(() => {
     const today = startOfToday();
@@ -170,7 +192,7 @@ const ListView = ({ projects, onDeleteProject }: { projects: Project[], onDelete
         const currentMonth = formatInJakarta(new Date(`${dateStr}T00:00:00`), 'MMMM yyyy');
         const showMonthHeader = currentMonth !== lastUpcomingMonth;
         if (showMonthHeader) lastUpcomingMonth = currentMonth;
-        return <DayEntry key={dateStr} dateStr={dateStr} projectsOnDay={projectsOnDay} showMonthHeader={showMonthHeader} onDeleteProject={onDeleteProject} navigate={navigate} />;
+        return <DayEntry key={dateStr} dateStr={dateStr} projectsOnDay={projectsOnDay} showMonthHeader={showMonthHeader} onDeleteProject={onDeleteProject} navigate={navigate} statuses={statuses} />;
       })}
 
       {upcomingDayEntries.length > visibleUpcomingCount && (
@@ -202,7 +224,7 @@ const ListView = ({ projects, onDeleteProject }: { projects: Project[], onDelete
         const currentMonth = formatInJakarta(new Date(`${dateStr}T00:00:00`), 'MMMM yyyy');
         const showMonthHeader = currentMonth !== lastPastMonth;
         if (showMonthHeader) lastPastMonth = currentMonth;
-        return <DayEntry key={dateStr} dateStr={dateStr} projectsOnDay={projectsOnDay} showMonthHeader={showMonthHeader} onDeleteProject={onDeleteProject} navigate={navigate} />;
+        return <DayEntry key={dateStr} dateStr={dateStr} projectsOnDay={projectsOnDay} showMonthHeader={showMonthHeader} onDeleteProject={onDeleteProject} navigate={navigate} statuses={statuses} />;
       })}
 
       {pastDayEntries.length > visiblePastCount && (
