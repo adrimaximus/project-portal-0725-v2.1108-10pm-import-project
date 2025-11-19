@@ -8,12 +8,12 @@ import { Button } from './ui/button';
 import { MoreHorizontal, Edit, Trash2, Ticket, CornerUpLeft, Paperclip, X, FileText } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu';
 import { useAuth } from '@/contexts/AuthContext';
-import { Textarea } from './ui/textarea';
 import { Badge } from './ui/badge';
 import CommentReactions from './CommentReactions';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import InteractiveText from './InteractiveText';
 import AttachmentViewerModal from './AttachmentViewerModal';
+import MentionsInput from './MentionsInput';
 
 interface CommentProps {
   comment: CommentType;
@@ -100,7 +100,14 @@ const Comment: React.FC<CommentProps> = ({
           </div>
           {isEditing ? (
             <div className="mt-1 space-y-2">
-              <Textarea value={editedText} onChange={(e) => setEditedText(e.target.value)} className="text-sm" />
+              <MentionsInput
+                value={editedText}
+                onChange={setEditedText}
+                users={allUsers}
+                className="text-sm min-h-[80px]"
+                placeholder="Edit your comment..."
+                autoFocus
+              />
               {(attachments.length > 0 || (newAttachments && newAttachments.length > 0)) && (
                 <div className="mt-2">
                     <h4 className="font-semibold text-xs text-muted-foreground mb-2">Attachments</h4>
