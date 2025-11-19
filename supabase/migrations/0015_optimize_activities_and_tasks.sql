@@ -220,3 +220,150 @@ BEGIN
   OFFSET p_offset;
 END;
 $function$;
+
+-- Re-optimizing get_dashboard_projects to filter IDs first before fetching details
+CREATE OR REPLACE FUNCTION public.get_dashboard_projects(p_limit integer DEFAULT 20, p_offset integer DEFAULT 0, p_search_term text DEFAULT NULL::text, p_exclude_other_personal boolean DEFAULT true, p_owner_ids uuid[] DEFAULT NULL::uuid[], p_member_ids uuid[] DEFAULT NULL::uuid[], p_status_exclude text[] DEFAULT NULL::text[], p_year integer DEFAULT NULL::integer, p_timeframe text DEFAULT NULL::text, p_sort_key text DEFAULT 'start_date'::text, p_sort_direction text DEFAULT 'desc'::text)
+ RETURNS TABLE(id uuid, created_at timestamp with time zone, updated_at timestamp with time zone, name text, category text, description text, status text, progress integer, budget numeric, start_date timestamp with time zone, due_date timestamp with time zone, payment_status text, origin_event_id text, payment_due_date timestamp with time zone, slug text, public boolean, venue text, kanban_order integer, "position" integer, payment_kanban_order integer, invoice_number text, email_sending_date timestamp with time zone, hardcopy_sending_date timestamp with time zone, channel text, po_number text, paid_date timestamp with time zone, invoice_attachment_url text, invoice_attachment_name text, client_company_id uuid, personal_for_user_id uuid, payment_terms jsonb, created_by jsonb, "assignedTo" jsonb, tasks jsonb, comments jsonb, services jsonb, "briefFiles" jsonb, activities jsonb, tags jsonb, client_name text, client_avatar_url text, client_company_logo_url text, client_company_name text, client_company_custom_properties jsonb, reactions jsonb, invoice_attachments jsonb)
+ LANGUAGE sql
+ SET search_path TO ''
+AS $function$
+    WITH accessible_project_ids AS (
+        SELECT id FROM public.projects WHERE created_by = auth.uid()
+        UNION
+        SELECT project_id AS id FROM public.project_members WHERE user_id = auth.uid()
+    ),
+    -- This CTE now contains only the IDs of projects that pass all filters.
+    filtered_project_ids AS (
+        SELECT p.id
+        FROM public.projects p
+        WHERE p.id IN (SELECT id FROM accessible_project_ids)
+            AND (NOT p_exclude_other_personal OR p.personal_for_user_id IS NULL OR p.personal_for_user_id = auth.uid())
+            AND (p_owner_ids IS NULL OR p.created_by = ANY(p_owner_ids))
+            AND (p_member_ids IS NULL OR EXISTS (
+                SELECT 1 FROM public.project_members pm WHERE pm.project_id = p.id AND pm.user_id = ANY(p_member_ids)
+            ))
+            AND (p_status_exclude IS NULL OR NOT (p.status = ANY(p_status_exclude)))
+            AND (p_year IS NULL OR EXTRACT(YEAR FROM p.start_date) = p_year)
+            AND (
+                p_timeframe IS NULL OR
+                (p_timeframe = 'upcoming' AND p.start_date >= now()) OR
+                (p_timeframe = 'past' AND p.start_date < now())
+            )
+            AND (p_search_term IS NULL OR p_search_term = '' OR
+                p.name ILIKE '%' || p_search_term || '%' OR
+                COALESCE(p.description, '') ILIKE '%' || p_search_term || '%' OR
+                COALESCE(p.venue, '') ILIKE '%' || p_search_term || '%' OR
+                EXISTS (
+                    SELECT 1 FROM public.people_projects pp
+                    JOIN public.people p_client ON pp.person_id = p_client.id
+                    WHERE pp.project_id = p.id AND p_client.full_name ILIKE '%' || p_search_term || '%'
+                ) OR
+                EXISTS (
+                    SELECT 1 FROM public.people_projects pp
+                    JOIN public.people p_client ON pp.person_id = p_client.id
+                    JOIN public.companies c ON p_client.company_id = c.id
+                    WHERE pp.project_id = p.id AND c.name ILIKE '%' || p_search_term || '%'
+                ) OR
+                EXISTS (
+                    SELECT 1 FROM public.companies dc
+                    WHERE p.client_company_id = dc.id AND dc.name ILIKE '%' || p_search_term || '%'
+                )
+            )
+    ),
+    -- Apply sorting, limit, and offset to the filtered IDs
+    projects_to_fetch AS (
+        SELECT p_filter.id 
+        FROM public.projects p_filter
+        WHERE p_filter.id IN (SELECT id FROM filtered_project_ids)
+        ORDER BY
+            CASE WHEN p_sort_key = 'start_date' AND p_sort_direction = 'asc' THEN p_filter.start_date END ASC NULLS LAST,
+            CASE WHEN p_sort_key = 'start_date' AND p_sort_direction = 'desc' THEN p_filter.start_date END DESC NULLS LAST,
+            CASE WHEN p_sort_key = 'name' AND p_sort_direction = 'asc' THEN p_filter.name END ASC,
+            CASE WHEN p_sort_key = 'name' AND p_sort_direction = 'desc' THEN p_filter.name END DESC,
+            CASE WHEN p_sort_key = 'updated_at' AND p_sort_direction = 'asc' THEN p_filter.updated_at END ASC,
+            CASE WHEN p_sort_key = 'updated_at' AND p_sort_direction = 'desc' THEN p_filter.updated_at END DESC,
+            p_filter.created_at DESC
+        LIMIT p_limit
+        OFFSET p_offset
+    ),
+    -- Now, fetch full project data and aggregate related info ONLY for the paginated set
+    project_members_agg AS (
+        SELECT
+            pm.project_id,
+            jsonb_agg(jsonb_build_object(
+                'id', p.id,
+                'name', COALESCE(p.first_name || ' ' || p.last_name, p.email),
+                'avatar_url', p.avatar_url,
+                'initials', COALESCE(UPPER(SUBSTRING(p.first_name, 1, 1) || SUBSTRING(p.last_name, 1, 1)), 'NN'),
+                'role', pm.role
+            )) AS "assignedTo"
+        FROM public.project_members pm
+        JOIN public.profiles p ON pm.user_id = p.id
+        WHERE pm.project_id IN (SELECT id FROM projects_to_fetch)
+        GROUP BY pm.project_id
+    ),
+    project_tags_agg AS (
+        SELECT
+            pt.project_id,
+            jsonb_agg(jsonb_build_object('id', t.id, 'name', t.name, 'color', t.color)) as tags
+        FROM public.project_tags pt
+        JOIN public.tags t ON pt.tag_id = t.id
+        WHERE pt.project_id IN (SELECT id FROM projects_to_fetch)
+        GROUP BY pt.project_id
+    ),
+    project_clients AS (
+        SELECT
+            pp.project_id,
+            p.full_name as client_name,
+            p.avatar_url as client_avatar_url,
+            c.logo_url as client_company_logo_url,
+            COALESCE(c.name, p.company) as client_company_name,
+            c.custom_properties as client_company_custom_properties,
+            ROW_NUMBER() OVER(PARTITION BY pp.project_id ORDER BY p.created_at) as rn
+        FROM public.people_projects pp
+        LEFT JOIN public.people p ON pp.person_id = p.id
+        LEFT JOIN public.companies c ON p.company_id = c.id
+        WHERE pp.project_id IN (SELECT id FROM projects_to_fetch)
+    )
+    SELECT
+        p.id, p.created_at, p.updated_at, p.name, p.category, p.description, p.status, p.progress, p.budget,
+        p.start_date, p.due_date, p.payment_status, p.origin_event_id, p.payment_due_date, p.slug, p.public,
+        p.venue, p.kanban_order, p.position, p.payment_kanban_order, p.invoice_number, p.email_sending_date,
+        p.hardcopy_sending_date, p.channel, p.po_number, p.paid_date, p.invoice_attachment_url,
+        p.invoice_attachment_name, p.client_company_id, p.personal_for_user_id, p.payment_terms,
+        jsonb_build_object(
+            'id', creator.id,
+            'name', COALESCE(creator.first_name || ' ' || creator.last_name, creator.email),
+            'avatar_url', creator.avatar_url,
+            'initials', COALESCE(UPPER(SUBSTRING(creator.first_name, 1, 1) || SUBSTRING(creator.last_name, 1, 1)), 'NN')
+        ) as created_by,
+        COALESCE(pma."assignedTo", '[]'::jsonb),
+        '[]'::jsonb as tasks,
+        '[]'::jsonb as comments,
+        '[]'::jsonb as services,
+        '[]'::jsonb as "briefFiles",
+        '[]'::jsonb as activities,
+        COALESCE(ptags.tags, '[]'::jsonb),
+        COALESCE(pc.client_name, direct_company.name) as client_name,
+        pc.client_avatar_url,
+        COALESCE(pc.client_company_logo_url, direct_company.logo_url) as client_company_logo_url,
+        COALESCE(pc.client_company_name, direct_company.name) as client_company_name,
+        COALESCE(pc.client_company_custom_properties, direct_company.custom_properties) as client_company_custom_properties,
+        '[]'::jsonb as reactions,
+        '[]'::jsonb as invoice_attachments
+    FROM public.projects p
+    JOIN projects_to_fetch ptf ON p.id = ptf.id
+    LEFT JOIN public.profiles creator ON p.created_by = creator.id
+    LEFT JOIN project_members_agg pma ON p.id = pma.project_id
+    LEFT JOIN project_tags_agg ptags ON p.id = ptags.project_id
+    LEFT JOIN project_clients pc ON p.id = pc.project_id AND pc.rn = 1
+    LEFT JOIN public.companies direct_company ON p.client_company_id = direct_company.id
+    ORDER BY
+        CASE WHEN p_sort_key = 'start_date' AND p_sort_direction = 'asc' THEN p.start_date END ASC NULLS LAST,
+        CASE WHEN p_sort_key = 'start_date' AND p_sort_direction = 'desc' THEN p.start_date END DESC NULLS LAST,
+        CASE WHEN p_sort_key = 'name' AND p_sort_direction = 'asc' THEN p.name END ASC,
+        CASE WHEN p_sort_key = 'name' AND p_sort_direction = 'desc' THEN p.name END DESC,
+        CASE WHEN p_sort_key = 'updated_at' AND p_sort_direction = 'asc' THEN p.updated_at END ASC,
+        CASE WHEN p_sort_key = 'updated_at' AND p_sort_direction = 'desc' THEN p.updated_at END DESC,
+        p.created_at DESC;
+$function$;
