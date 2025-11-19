@@ -20,19 +20,45 @@ export const useUnreadTasks = () => {
       return (data || []).map((t: { task_id: string }) => t.task_id);
     },
     enabled: !!user,
-    // Refetch more aggressively to keep UI in sync
     staleTime: 0, 
+  });
+
+  const undoMarkReadMutation = useMutation({
+    mutationFn: async (taskIds: string[]) => {
+      if (!taskIds || taskIds.length === 0) return;
+      const { error } = await supabase.rpc('mark_tasks_as_unread', { p_task_ids: taskIds });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Undo successful. Notifications restored.');
+      refetch();
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+    },
+    onError: (error) => {
+      toast.error('Failed to undo action.');
+      console.error(error);
+    }
   });
 
   const markAllReadMutation = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.rpc('mark_all_tasks_as_read');
+      const { data, error } = await supabase.rpc('mark_all_tasks_as_read');
       if (error) throw error;
+      return data as string[];
     },
-    onSuccess: () => {
-      toast.success('All tasks marked as read');
+    onSuccess: (markedTaskIds) => {
+      if (markedTaskIds && markedTaskIds.length > 0) {
+        toast.success('All tasks marked as read', {
+          action: {
+            label: 'Undo',
+            onClick: () => undoMarkReadMutation.mutate(markedTaskIds),
+          },
+          duration: 5000,
+        });
+      } else {
+        toast.success('All tasks marked as read');
+      }
       refetch();
-      // Invalidate tasks to refresh UI
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
     },
     onError: (error) => {
@@ -49,7 +75,6 @@ export const useUnreadTasks = () => {
         'postgres_changes',
         { event: '*', schema: 'public', table: 'task_views', filter: `user_id=eq.${user.id}` },
         () => {
-          // When we view a task, refresh the list immediately
           refetch();
         }
       )
@@ -57,7 +82,6 @@ export const useUnreadTasks = () => {
         'postgres_changes',
         { event: '*', schema: 'public', table: 'tasks' },
         () => {
-           // When tasks are updated/created, refresh
            refetch();
         }
       )
@@ -65,7 +89,6 @@ export const useUnreadTasks = () => {
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'comments' },
         () => {
-           // New comments make tasks unread
            refetch();
         }
       )
