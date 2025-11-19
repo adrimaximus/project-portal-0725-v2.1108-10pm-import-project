@@ -376,13 +376,38 @@ Deno.serve(async (req) => {
         return { status: 'success' };
       } catch (e) {
         const newRetryCount = (notification.retry_count || 0) + 1;
-        const newStatus = newRetryCount >= 3 ? 'failed' : 'pending';
+        let newStatus = newRetryCount >= 3 ? 'failed' : 'pending';
         console.error(`Failed to process notification ${notification.id} (attempt ${newRetryCount}):`, e.message);
+        
+        // NEW LOGIC: Handle invalid WhatsApp number error
+        if (e.message && e.message.includes("The phone number is not registered on WhatsApp")) {
+          newStatus = 'failed'; // Immediately fail, don't retry
+          
+          // Create an in-app notification for the user
+          const { data: notifData, error: notifError } = await supabaseAdmin.from('notifications').insert({
+            type: 'system',
+            title: 'WhatsApp Number Invalid',
+            body: 'The phone number on your profile is not registered on WhatsApp. Please update it to receive notifications.',
+            resource_type: 'profile',
+            resource_id: notification.recipient_id,
+            data: { link: '/profile' }
+          }).select('id').single();
+
+          if (notifError) {
+            console.error(`Failed to create in-app notification for invalid phone number:`, notifError.message);
+          } else if (notifData) {
+            await supabaseAdmin.from('notification_recipients').insert({
+              notification_id: notifData.id,
+              user_id: notification.recipient_id,
+            });
+          }
+        }
+        
         await supabaseAdmin.from('pending_notifications').update({ 
           status: newStatus, 
           error_message: e.message, 
           processed_at: new Date().toISOString(),
-          retry_count: newRetryCount,
+          retry_count: newStatus === 'failed' ? 3 : newRetryCount,
         }).eq('id', notification.id);
         return { status: 'failed', reason: e.message };
       }
