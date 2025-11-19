@@ -44,7 +44,7 @@ const InteractiveText: React.FC<InteractiveTextProps> = ({ text, members }) => {
           <Link 
             key={`mention-${startIndex}`} 
             to={`/profile/${mentionedUser.id}`} 
-            className="text-foreground bg-muted/50 hover:bg-muted rounded-sm px-1 py-0.5 font-medium transition-colors"
+            className="text-foreground bg-muted/50 hover:bg-muted rounded-sm px-1 py-0.5 font-medium transition-colors no-underline"
           >
             @{displayName}
           </Link>
