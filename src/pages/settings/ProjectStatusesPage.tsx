@@ -1,11 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import PortalLayout from "@/components/PortalLayout";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Edit, MoreHorizontal, Trash2 } from "lucide-react";
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { PlusCircle, Edit, MoreHorizontal, Trash2, GripVertical } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -13,40 +12,129 @@ import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import StatusFormDialog, { StatusFormValues } from '@/components/settings/StatusFormDialog';
+import { useProjectStatuses, ProjectStatusDef } from '@/hooks/useProjectStatuses';
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { useQueryClient } from '@tanstack/react-query';
 
-interface ProjectStatus {
-  id: string;
-  name: string;
-  color: string;
-  position: number;
-}
+// Sortable Row Component
+const SortableTableRow = ({ status, onEdit, onDelete }: { status: ProjectStatusDef, onEdit: (s: ProjectStatusDef) => void, onDelete: (s: ProjectStatusDef) => void }) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: status.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 10 : 1,
+    opacity: isDragging ? 0.5 : 1,
+    position: 'relative' as 'relative', // Explicitly cast to literal type
+  };
+
+  return (
+    <TableRow ref={setNodeRef} style={style} className={isDragging ? "bg-muted" : ""}>
+      <TableCell className="w-[50px]">
+        <Button variant="ghost" size="icon" className="cursor-grab touch-none" {...attributes} {...listeners}>
+          <GripVertical className="h-4 w-4 text-muted-foreground" />
+        </Button>
+      </TableCell>
+      <TableCell className="font-medium">
+        <div className="flex items-center gap-2">
+          <div 
+            className="w-3 h-3 rounded-full" 
+            style={{ backgroundColor: status.color }}
+          />
+          {status.name}
+        </div>
+      </TableCell>
+      <TableCell>
+        <div className="flex items-center gap-2">
+          <div className="w-4 h-4 rounded-full" style={{ backgroundColor: status.color }} />
+          <Badge variant="outline" className="font-mono">
+            {status.color}
+          </Badge>
+        </div>
+      </TableCell>
+      <TableCell className="text-right">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-8 w-8">
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onSelect={() => onEdit(status)}>
+              <Edit className="mr-2 h-4 w-4" /> Edit
+            </DropdownMenuItem>
+            <DropdownMenuItem 
+              onSelect={() => onDelete(status)} 
+              className="text-destructive"
+            >
+              <Trash2 className="mr-2 h-4 w-4" /> Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </TableCell>
+    </TableRow>
+  );
+};
 
 const ProjectStatusesPage = () => {
   const queryClient = useQueryClient();
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [statusToEdit, setStatusToEdit] = useState<ProjectStatus | null>(null);
-  const [statusToDelete, setStatusToDelete] = useState<ProjectStatus | null>(null);
+  const [statusToEdit, setStatusToEdit] = useState<ProjectStatusDef | null>(null);
+  const [statusToDelete, setStatusToDelete] = useState<ProjectStatusDef | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [localStatuses, setLocalStatuses] = useState<ProjectStatusDef[]>([]);
 
-  const { data: statuses = [], isLoading } = useQuery({
-    queryKey: ['project_statuses'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('project_statuses')
-        .select('*')
-        .order('position', { ascending: true });
-      
-      if (error) throw error;
-      return data as ProjectStatus[];
+  const { data: statuses = [], isLoading, updatePositions } = useProjectStatuses();
+
+  useEffect(() => {
+    setLocalStatuses(statuses);
+  }, [statuses]);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      setLocalStatuses((items) => {
+        const oldIndex = items.findIndex((i) => i.id === active.id);
+        const newIndex = items.findIndex((i) => i.id === over.id);
+        const newItems = arrayMove(items, oldIndex, newIndex);
+        
+        // Prepare updates for backend
+        const updates = newItems.map((item, index) => ({
+          id: item.id,
+          position: index
+        }));
+        
+        // Trigger mutation
+        updatePositions(updates);
+        
+        return newItems;
+      });
     }
-  });
+  };
 
   const handleAddNew = () => {
     setStatusToEdit(null);
     setIsFormOpen(true);
   };
 
-  const handleEdit = (status: ProjectStatus) => {
+  const handleEdit = (status: ProjectStatusDef) => {
     setStatusToEdit(status);
     setIsFormOpen(true);
   };
@@ -66,7 +154,6 @@ const ProjectStatusesPage = () => {
         toast.success(`Status "${data.name}" updated successfully.`);
       } else {
         // Create new status
-        // Calculate next position
         const maxPosition = statuses.length > 0 
           ? Math.max(...statuses.map(s => s.position || 0)) 
           : -1;
@@ -134,7 +221,7 @@ const ProjectStatusesPage = () => {
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Project Statuses</h1>
             <p className="text-muted-foreground">
-              Manage the different statuses for your projects.
+              Manage and reorder your project statuses. The order here will be reflected everywhere.
             </p>
           </div>
           <Button onClick={handleAddNew}>
@@ -146,68 +233,49 @@ const ProjectStatusesPage = () => {
           <CardHeader>
             <CardTitle>Statuses</CardTitle>
             <CardDescription>
-              Define the workflow stages for your projects. Renaming a status will update all associated projects.
+              Drag and drop to reorder statuses.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Color</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoading ? (
-                  <TableRow><TableCell colSpan={3} className="text-center">Loading statuses...</TableCell></TableRow>
-                ) : statuses.length === 0 ? (
-                  <TableRow><TableCell colSpan={3} className="text-center h-24">No statuses found.</TableCell></TableRow>
-                ) : (
-                  statuses.map((status) => (
-                    <TableRow key={status.id}>
-                      <TableCell className="font-medium">
-                        <div className="flex items-center gap-2">
-                          <div 
-                            className="w-3 h-3 rounded-full" 
-                            style={{ backgroundColor: status.color }}
-                          />
-                          {status.name}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <div className="w-4 h-4 rounded-full" style={{ backgroundColor: status.color }} />
-                          <Badge variant="outline" className="font-mono">
-                            {status.color}
-                          </Badge>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onSelect={() => handleEdit(status)}>
-                              <Edit className="mr-2 h-4 w-4" /> Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem 
-                              onSelect={() => setStatusToDelete(status)} 
-                              className="text-destructive"
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" /> Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
+            <div className="rounded-md border">
+              <DndContext 
+                sensors={sensors} 
+                collisionDetection={closestCenter} 
+                onDragEnd={handleDragEnd}
+              >
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[50px]"></TableHead>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Color</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {isLoading ? (
+                      <TableRow><TableCell colSpan={4} className="text-center py-8">Loading statuses...</TableCell></TableRow>
+                    ) : localStatuses.length === 0 ? (
+                      <TableRow><TableCell colSpan={4} className="text-center h-24">No statuses found.</TableCell></TableRow>
+                    ) : (
+                      <SortableContext 
+                        items={localStatuses.map(s => s.id)} 
+                        strategy={verticalListSortingStrategy}
+                      >
+                        {localStatuses.map((status) => (
+                          <SortableTableRow 
+                            key={status.id} 
+                            status={status} 
+                            onEdit={handleEdit} 
+                            onDelete={setStatusToDelete} 
+                          />
+                        ))}
+                      </SortableContext>
+                    )}
+                  </TableBody>
+                </Table>
+              </DndContext>
+            </div>
           </CardContent>
         </Card>
       </div>
