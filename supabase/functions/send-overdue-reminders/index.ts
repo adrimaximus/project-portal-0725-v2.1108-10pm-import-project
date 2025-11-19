@@ -25,7 +25,7 @@ const getSystemPrompt = () => `Anda adalah asisten keuangan yang profesional, so
 3.  **Format:** Gunakan format tebal WhatsApp (*kata*) untuk detail penting seperti nama proyek dan jumlah hari.
 4.  **Profesional dan Sopan:** Jaga agar bahasa tetap sopan dan profesional dalam segala situasi.
 5.  **Singkat dan Jelas:** Buat pesan yang langsung ke intinya.
-6.  **Sertakan URL:** Selalu sertakan URL yang diberikan di akhir pesan.
+6.  **Sertakan URL:** Selalu sertakan URL yang diberikan di akhir pesan. Ini adalah satu-satunya URL yang harus ada di pesan. Jangan menambah teks lain setelah URL.
 7.  **Variasi:** Jangan gunakan kalimat yang sama persis setiap saat.`;
 
 const getFullName = (profile: any) => `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email;
@@ -46,7 +46,8 @@ Deno.serve(async (req) => {
 
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      { global: { headers: { 'Accept': 'application/json' } } }
     );
 
     console.log("[send-overdue-reminders] Job started. Fetching overdue invoices.");
@@ -140,7 +141,7 @@ Buat pesan pengingat yang sopan dan profesional sesuai dengan tingkat urgensi ya
 
           if (!clientId || !apiKey || !whatsappClientId) throw new Error("WBIZTOOL credentials not fully configured.");
 
-          const wbizResponse = await fetch('https://app.wbiztool.com/api/v1/send_msg/', {
+          const wbizResponse = await fetch('https://wbiztool.com/api/v1/send_msg/', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-Client-ID': clientId, 'X-Api-Key': apiKey },
             body: JSON.stringify({ 
@@ -153,8 +154,26 @@ Buat pesan pengingat yang sopan dan profesional sesuai dengan tingkat urgensi ya
           });
 
           if (!wbizResponse.ok) {
-              const errorData = await wbizResponse.json().catch(() => ({}));
-              throw new Error(`WBIZTOOL API Error (${wbizResponse.status}): ${errorData.message || 'Unknown error'}`);
+            const status = wbizResponse.status;
+            const errorText = await wbizResponse.text();
+            let errorMessage = `Failed to send message (Status: ${status}).`;
+
+            // Enhanced Error Handling for HTML/Cloudflare pages
+            if (errorText.includes("Cloudflare") || errorText.includes("524") || errorText.includes("502")) {
+                 if (status === 524) errorMessage = "WBIZTOOL API Timeout (Cloudflare 524). The service is taking too long to respond.";
+                 else if (status === 502) errorMessage = "WBIZTOOL API Bad Gateway (Cloudflare 502). The service is down.";
+                 else errorMessage = `WBIZTOOL API Error (Status: ${status}). Service might be experiencing issues.`;
+            } else {
+                try {
+                  const errorJson = JSON.parse(errorText);
+                  errorMessage = errorJson.message || JSON.stringify(errorJson);
+                } catch (e) {
+                  // Clean up HTML tags and truncate
+                  const cleanText = errorText.replace(/<[^>]*>?/gm, ' ').replace(/\s+/g, ' ').trim();
+                  errorMessage = cleanText.substring(0, 200) + (cleanText.length > 200 ? '...' : '');
+                }
+            }
+            throw new Error(errorMessage);
           }
           successCount++;
           console.log(`[send-overdue-reminders] Sent reminder for project ${project.id} to ${profile.email}.`);

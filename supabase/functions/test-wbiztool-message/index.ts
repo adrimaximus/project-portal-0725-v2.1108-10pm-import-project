@@ -57,13 +57,23 @@ Deno.serve(async (req) => {
       const status = messageResponse.status;
       const errorText = await messageResponse.text();
       let errorMessage = `Failed to send message (Status: ${status}).`;
-      try {
-        const errorJson = JSON.parse(errorText);
-        errorMessage = errorJson.message || JSON.stringify(errorJson);
-      } catch (e) {
-        errorMessage = errorText.replace(/<[^>]*>?/gm, ' ').trim() || `Received an empty error response (Status: ${status}).`;
+
+      // Enhanced Error Handling for HTML/Cloudflare pages
+      if (errorText.includes("Cloudflare") || errorText.includes("524") || errorText.includes("502")) {
+         if (status === 524) errorMessage = "WBIZTOOL API Timeout (Cloudflare 524). The service is taking too long to respond.";
+         else if (status === 502) errorMessage = "WBIZTOOL API Bad Gateway (Cloudflare 502). The service is down.";
+         else errorMessage = `WBIZTOOL API Error (Status: ${status}). Service might be experiencing issues.`;
+      } else {
+          try {
+            const errorJson = JSON.parse(errorText);
+            errorMessage = errorJson.message || JSON.stringify(errorJson);
+          } catch (e) {
+            // Clean up HTML tags and truncate
+            const cleanText = errorText.replace(/<[^>]*>?/gm, ' ').replace(/\s+/g, ' ').trim();
+            errorMessage = cleanText.substring(0, 200) + (cleanText.length > 200 ? '...' : '');
+          }
       }
-      throw new Error(`WBIZTOOL API Error: ${errorMessage}`)
+      throw new Error(`WBIZTOOL API Error: ${errorMessage}`);
     }
 
     await messageResponse.json()

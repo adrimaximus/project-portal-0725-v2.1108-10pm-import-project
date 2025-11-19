@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.54.0';
+import { createClient } from 'npm:@supabase/supabase-js@2.54.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -85,53 +85,73 @@ const sendWhatsappMessage = async (config: any, phone: string, message: string) 
     return;
   }
 
-  const messageResponse = await fetch('https://wbiztool.com/api/v1/send_msg/', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Client-ID': config.clientId,
-      'X-Api-Key': config.apiKey,
-    },
-    body: JSON.stringify({
-      client_id: parseInt(config.clientId, 10),
-      api_key: config.apiKey,
-      whatsapp_client: parseInt(config.whatsappClientId, 10),
-      phone: formattedPhone,
-      message: message,
-    }),
-  });
+  try {
+    const messageResponse = await fetch('https://wbiztool.com/api/v1/send_msg/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Client-ID': config.clientId,
+        'X-Api-Key': config.apiKey,
+      },
+      body: JSON.stringify({
+        client_id: parseInt(config.clientId, 10),
+        api_key: config.apiKey,
+        whatsapp_client: parseInt(config.whatsappClientId, 10),
+        phone: formattedPhone,
+        message: message,
+      }),
+    });
 
-  if (!messageResponse.ok) {
-    const status = messageResponse.status;
-    const errorText = await messageResponse.text();
-    let errorMessage = `Failed to send message (Status: ${status}).`;
-    try {
-      const errorJson = JSON.parse(errorText);
-      errorMessage = errorJson.message || JSON.stringify(errorJson);
-    } catch (e) {
-      errorMessage = errorText.replace(/<[^>]*>?/gm, ' ').trim() || `Received an empty error response (Status: ${status}).`;
+    if (!messageResponse.ok) {
+      const status = messageResponse.status;
+      const errorText = await messageResponse.text();
+      let errorMessage = `Failed to send message (Status: ${status}).`;
+
+      // Enhanced Error Handling for HTML/Cloudflare pages
+      if (errorText.includes("Cloudflare") || errorText.includes("524") || errorText.includes("502")) {
+         if (status === 524) errorMessage = "WBIZTOOL API Timeout (Cloudflare 524). The service is taking too long to respond.";
+         else if (status === 502) errorMessage = "WBIZTOOL API Bad Gateway (Cloudflare 502). The service is down.";
+         else errorMessage = `WBIZTOOL API Error (Status: ${status}). Service might be experiencing issues.`;
+      } else {
+          try {
+            const errorJson = JSON.parse(errorText);
+            errorMessage = errorJson.message || JSON.stringify(errorJson);
+          } catch (e) {
+            // Clean up HTML tags and truncate
+            const cleanText = errorText.replace(/<[^>]*>?/gm, ' ').replace(/\s+/g, ' ').trim();
+            errorMessage = cleanText.substring(0, 200) + (cleanText.length > 200 ? '...' : '');
+          }
+      }
+      throw new Error(errorMessage);
     }
-    throw new Error(`WBIZTOOL API Error: ${errorMessage}`);
-  }
 
-  return messageResponse.json();
+    return messageResponse.json();
+  } catch (error) {
+    console.error(`Error sending WhatsApp to ${formattedPhone}:`, error.message);
+    throw error;
+  }
 };
 
 const sendEmail = async (emailitApiKey: string, to: string, subject: string, html: string, text: string) => {
     const emailFrom = Deno.env.get("EMAIL_FROM") ?? "7i Portal <no-reply@mail.ahensi.com>";
     const payload = { from: emailFrom, to, subject, html, text };
 
-    const response = await fetch("https://api.emailit.com/v1/emails", {
-        method: "POST",
-        headers: { "Authorization": `Bearer ${emailitApiKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-    });
+    try {
+      const response = await fetch("https://api.emailit.com/v1/emails", {
+          method: "POST",
+          headers: { "Authorization": `Bearer ${emailitApiKey}`, "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+      });
 
-    if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(`Emailit API Error (${response.status}): ${errorData.message || 'Unknown error'}`);
+      if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(`Emailit API Error (${response.status}): ${errorData.message || 'Unknown error'}`);
+      }
+      console.log(`Email sent to ${to}`);
+    } catch (error) {
+       console.error(`Error sending email to ${to}:`, error.message);
+       throw error;
     }
-    console.log(`Email sent to ${to}`);
 };
 
 const generateTemplatedMessage = (type: string, context: any, recipientName: string): string => {
