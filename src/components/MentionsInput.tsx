@@ -54,7 +54,16 @@ const MentionsInput = ({ value, onChange, users, className, placeholder, autoFoc
               </div>
             </div>
           )}
-          style={{ backgroundColor: 'hsl(var(--primary) / 0.1)', color: 'hsl(var(--primary))', fontWeight: 500 }}
+          style={{ 
+            // Use green background for the mention
+            backgroundColor: 'hsl(var(--primary) / 0.3)', 
+            // Make text transparent in the highlighter to prevent "doubling" ghost effect
+            // The actual text will be shown by the textarea overlay
+            color: 'transparent', 
+            fontWeight: 500,
+            padding: '0 1px',
+            borderRadius: '2px'
+          }}
         />
       </ReactMentionsInput>
     </div>
