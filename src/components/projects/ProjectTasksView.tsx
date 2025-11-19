@@ -91,11 +91,8 @@ const ProjectTasksView = ({ view, projectIds, hideCompletedTasks, searchTerm, hi
   };
 
   if (projectIds === undefined) {
-    return (
-      <div className="flex items-center justify-center h-full py-24">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+    // Return null instead of a loader to avoid duplicate loaders with the parent page (ProjectsPage)
+    return null;
   }
 
   return (
