@@ -12,8 +12,10 @@ const InteractiveText: React.FC<InteractiveTextProps> = ({ text, members }) => {
 
   // Regex to find mentions: @[Display Name](uuid)
   const mentionRegex = /@\[([^\]]+)\]\(([^)]+)\)/g;
-  // Regex to find URLs: http(s)://...
-  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  
+  // Regex to find URLs: http(s)://... 
+  // Changed [^\s]+ to [^\s)]+ to exclude closing parentheses from the URL match
+  const urlRegex = /(https?:\/\/[^\s)]+)/g;
 
   const parts: React.ReactNode[] = [];
   let lastIndex = 0;
@@ -33,6 +35,12 @@ const InteractiveText: React.FC<InteractiveTextProps> = ({ text, members }) => {
     }
 
     // Check if it's a mention (group 1 is for mention, group 4 is for URL)
+    // Note: Group indices shift because of the wrapping parentheses in combinedRegex
+    // match[1] -> Full mention match
+    // match[2] -> Display Name
+    // match[3] -> UUID
+    // match[4] -> Full URL match
+    
     if (match[1]) { // This means it's a mention
       const displayName = match[2];
       const userId = match[3];
@@ -44,7 +52,7 @@ const InteractiveText: React.FC<InteractiveTextProps> = ({ text, members }) => {
         parts.push(
           <Link 
             key={`mention-${startIndex}`} 
-            to={`/profile/${mentionedUser.id}`} 
+            to={`/users/${mentionedUser.id}`} 
             className="text-primary bg-primary/10 hover:bg-primary/20 rounded-md px-1.5 py-0.5 font-medium transition-colors no-underline"
           >
             @{displayName}
