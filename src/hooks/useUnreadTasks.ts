@@ -20,6 +20,7 @@ export const useUnreadTasks = () => {
       return (data || []).map((t: { task_id: string }) => t.task_id);
     },
     enabled: !!user,
+    // Refetch more aggressively to keep UI in sync
     staleTime: 0, 
   });
 
@@ -32,6 +33,7 @@ export const useUnreadTasks = () => {
     onSuccess: () => {
       toast.success('Undo successful. Notifications restored.');
       refetch();
+      // Invalidate tasks to refresh UI
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
     },
     onError: (error) => {
