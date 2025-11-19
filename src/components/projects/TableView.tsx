@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import {
   Table,
   TableBody,
@@ -29,6 +29,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useProjectStatuses, ProjectStatusDef } from "@/hooks/useProjectStatuses";
 
 interface TableViewProps {
   projects: Project[];
@@ -119,16 +120,29 @@ interface ProjectRowProps {
   onDeleteProject: (projectId: string) => void;
   rowRefs: React.MutableRefObject<Map<string, HTMLTableRowElement>>;
   onStatusChange: (projectId: string, newStatus: ProjectStatus) => void;
+  statuses: ProjectStatusDef[];
 }
 
-const ProjectRow = ({ project, onDeleteProject, rowRefs, onStatusChange }: ProjectRowProps) => {
+const ProjectRow = ({ project, onDeleteProject, rowRefs, onStatusChange, statuses }: ProjectRowProps) => {
+  const [currentStatus, setCurrentStatus] = useState<string>(project.status);
+
+  // Sync local state if prop changes (e.g. from refresh)
+  useEffect(() => {
+    setCurrentStatus(project.status);
+  }, [project.status]);
+
   const paymentBadgeColor = getPaymentStatusStyles(project.payment_status).tw;
   const { name: venueName, full: fullVenue } = formatVenue(project.venue);
   const hasOpenTasks = useMemo(() => project.tasks?.some(task => !task.completed) ?? false, [project.tasks]);
 
   const displayVenueName = venueName.length > 20 ? venueName.substring(0, 20) + '....' : venueName;
 
-  let displayStatus: ProjectStatus = project.status as ProjectStatus;
+  let displayStatus = currentStatus;
+  
+  // Logic to check if it should be "Billing Process" automatically based on date, 
+  // but only if the status hasn't been manually set to something else/valid in the DB
+  // Actually, sticking to the explicit status is safer for consistency with ListView logic
+  // unless the project status is truly missing/invalid.
   if (!displayStatus) {
     const now = new Date();
     const dueDate = project.due_date ? new Date(project.due_date) : null;
@@ -139,6 +153,15 @@ const ProjectRow = ({ project, onDeleteProject, rowRefs, onStatusChange }: Proje
     }
   }
 
+  // Determine border color
+  const statusDef = statuses.find(s => s.name === displayStatus);
+  const borderColor = statusDef?.color || getProjectStatusStyles(displayStatus).hex;
+
+  const handleLocalStatusChange = (newStatus: string) => {
+    setCurrentStatus(newStatus);
+    onStatusChange(project.id, newStatus as ProjectStatus);
+  };
+
   return (
     <TableRow 
       ref={el => {
@@ -146,14 +169,18 @@ const ProjectRow = ({ project, onDeleteProject, rowRefs, onStatusChange }: Proje
         else rowRefs.current.delete(project.id);
       }}
     >
-      <TableCell style={{ borderLeft: `4px solid ${getProjectStatusStyles(displayStatus).hex}` }}>
+      <TableCell style={{ borderLeft: `4px solid ${borderColor}` }}>
         <Link to={`/projects/${project.slug}`} className="font-medium text-primary hover:underline">
           {project.name}
         </Link>
         <div className="text-sm text-muted-foreground">{project.category}</div>
       </TableCell>
       <TableCell>
-        <StatusBadge status={displayStatus} onStatusChange={(newStatus) => onStatusChange(project.id, newStatus)} hasOpenTasks={hasOpenTasks} />
+        <StatusBadge 
+          status={displayStatus} 
+          onStatusChange={handleLocalStatusChange} 
+          hasOpenTasks={hasOpenTasks} 
+        />
       </TableCell>
       <TableCell>
         <Badge variant="outline" className={cn("border-transparent font-normal", paymentBadgeColor)}>
@@ -206,6 +233,7 @@ const ProjectRow = ({ project, onDeleteProject, rowRefs, onStatusChange }: Proje
 const TableView = ({ projects, isLoading, onDeleteProject, sortConfig, requestSort, rowRefs, onStatusChange }: TableViewProps) => {
   const [visibleUpcomingCount, setVisibleUpcomingCount] = useState(10);
   const [visiblePastCount, setVisiblePastCount] = useState(15);
+  const { data: statuses = [] } = useProjectStatuses();
 
   const sortedProjects = useMemo(() => {
     if (sortConfig.key === 'venue') {
@@ -319,7 +347,13 @@ const TableView = ({ projects, isLoading, onDeleteProject, sortConfig, requestSo
                         </TableCell>
                       </TableRow>
                     )}
-                    <ProjectRow project={project} onDeleteProject={onDeleteProject} rowRefs={rowRefs} onStatusChange={onStatusChange} />
+                    <ProjectRow 
+                      project={project} 
+                      onDeleteProject={onDeleteProject} 
+                      rowRefs={rowRefs} 
+                      onStatusChange={onStatusChange} 
+                      statuses={statuses} 
+                    />
                   </React.Fragment>
                 );
               })}
@@ -365,7 +399,13 @@ const TableView = ({ projects, isLoading, onDeleteProject, sortConfig, requestSo
                         </TableCell>
                       </TableRow>
                     )}
-                    <ProjectRow project={project} onDeleteProject={onDeleteProject} rowRefs={rowRefs} onStatusChange={onStatusChange} />
+                    <ProjectRow 
+                      project={project} 
+                      onDeleteProject={onDeleteProject} 
+                      rowRefs={rowRefs} 
+                      onStatusChange={onStatusChange} 
+                      statuses={statuses} 
+                    />
                   </React.Fragment>
                 );
               })}
