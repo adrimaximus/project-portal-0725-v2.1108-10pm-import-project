@@ -275,7 +275,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                           </Button>
                         </FormControl>
                       </PopoverTrigger>
-                      <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                      <PopoverContent className="w-[300px] p-0" align="start">
                         <Command>
                           <CommandInput placeholder="Search project..." value={projectSearch} onValueChange={setProjectSearch} />
                           <CommandList>
@@ -327,7 +327,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                         </Button>
                       </FormControl>
                     </PopoverTrigger>
-                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                    <PopoverContent className="w-[300px] p-0" align="start">
                       <Command>
                         <CommandInput placeholder="Search beneficiary..." value={beneficiarySearch} onValueChange={setBeneficiarySearch} />
                         <CommandList>
@@ -382,9 +382,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                           </div>
                         ))
                       ) : (
-                        <div className="text-center text-sm text-muted-foreground py-4 border-2 border-dashed rounded-lg">
-                          No bank accounts found for this beneficiary.
-                        </div>
+                        <div className="text-center text-sm text-muted-foreground py-4 border-2 border-dashed rounded-lg">No bank accounts found for this beneficiary.</div>
                       )}
                     </div>
                   </FormControl>
