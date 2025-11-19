@@ -139,10 +139,7 @@ const ProjectRow = ({ project, onDeleteProject, rowRefs, onStatusChange, statuse
 
   let displayStatus = currentStatus;
   
-  // Logic to check if it should be "Billing Process" automatically based on date, 
-  // but only if the status hasn't been manually set to something else/valid in the DB
-  // Actually, sticking to the explicit status is safer for consistency with ListView logic
-  // unless the project status is truly missing/invalid.
+  // Logic to check if it should be "Billing Process" automatically based on date
   if (!displayStatus) {
     const now = new Date();
     const dueDate = project.due_date ? new Date(project.due_date) : null;
@@ -153,7 +150,7 @@ const ProjectRow = ({ project, onDeleteProject, rowRefs, onStatusChange, statuse
     }
   }
 
-  // Determine border color
+  // Determine border color based on dynamic status definition
   const statusDef = statuses.find(s => s.name === displayStatus);
   const borderColor = statusDef?.color || getProjectStatusStyles(displayStatus).hex;
 

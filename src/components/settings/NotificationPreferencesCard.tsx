@@ -14,6 +14,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Mail } from "lucide-react";
 import { PAYMENT_STATUS_OPTIONS } from "@/types";
+import { useProjectStatuses } from "@/hooks/useProjectStatuses";
 
 interface NotificationEvent {
   id: string;
@@ -40,20 +41,12 @@ const REMINDER_STATUS_OPTIONS = PAYMENT_STATUS_OPTIONS.filter(opt =>
   ['Unpaid', 'Overdue', 'Pending', 'In Process'].includes(opt.value)
 );
 
-const PROJECT_STATUS_OPTIONS = [
-  { label: 'On Track', value: 'On Track' },
-  { label: 'Completed', value: 'Completed' },
-  { label: 'Cancelled', value: 'Cancelled' },
-  { label: 'On Hold', value: 'On Hold' },
-  { label: 'Planning', value: 'Planning' },
-  { label: 'Pending', value: 'Pending' },
-];
-
 const NotificationPreferencesCard = () => {
   const { user, refreshUser } = useAuth();
   const [preferences, setPreferences] = useState<Record<string, any>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [notificationPermission, setNotificationPermission] = useState(Notification.permission);
+  const { data: projectStatuses = [] } = useProjectStatuses();
 
   const { data: notificationEvents = [], isLoading: isLoadingEvents } = useQuery<NotificationEvent[]>({
     queryKey: ['notification_events'],
@@ -419,18 +412,22 @@ const NotificationPreferencesCard = () => {
                                 <div className="p-4 pl-12 bg-muted/50">
                                   <Label className="font-medium text-xs uppercase tracking-wider text-muted-foreground">Notify for statuses</Label>
                                   <div className="flex flex-wrap gap-x-6 gap-y-2 mt-2">
-                                    {PROJECT_STATUS_OPTIONS.map(statusOption => (
-                                      <div key={statusOption.value} className="flex items-center space-x-2">
-                                        <Checkbox
-                                          id={`project-status-${statusOption.value}`}
-                                          checked={selectedProjectStatuses.includes(statusOption.value)}
-                                          onCheckedChange={(checked) => handleProjectStatusChange(statusOption.value, !!checked)}
-                                        />
-                                        <Label htmlFor={`project-status-${statusOption.value}`} className="text-sm font-normal">
-                                          {statusOption.label}
-                                        </Label>
-                                      </div>
-                                    ))}
+                                    {projectStatuses.length > 0 ? (
+                                      projectStatuses.map(statusOption => (
+                                        <div key={statusOption.id} className="flex items-center space-x-2">
+                                          <Checkbox
+                                            id={`project-status-${statusOption.id}`}
+                                            checked={selectedProjectStatuses.includes(statusOption.name)}
+                                            onCheckedChange={(checked) => handleProjectStatusChange(statusOption.name, !!checked)}
+                                          />
+                                          <Label htmlFor={`project-status-${statusOption.id}`} className="text-sm font-normal">
+                                            {statusOption.name}
+                                          </Label>
+                                        </div>
+                                      ))
+                                    ) : (
+                                      <p className="text-xs text-muted-foreground">No statuses found.</p>
+                                    )}
                                   </div>
                                 </div>
                               </TableCell>
