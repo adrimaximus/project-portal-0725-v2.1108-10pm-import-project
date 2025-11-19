@@ -18,7 +18,7 @@ import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSo
 import { CSS } from '@dnd-kit/utilities';
 import { useQueryClient } from '@tanstack/react-query';
 import { getStatusBadgeStyle } from "@/lib/colors";
-import { useTheme } from "@/contexts/ThemeProvider";
+import { useResolvedTheme } from "@/hooks/useResolvedTheme";
 
 // Sortable Row Component
 const SortableTableRow = ({ status, onEdit, onDelete }: { status: ProjectStatusDef, onEdit: (s: ProjectStatusDef) => void, onDelete: (s: ProjectStatusDef) => void }) => {
@@ -30,7 +30,7 @@ const SortableTableRow = ({ status, onEdit, onDelete }: { status: ProjectStatusD
     transition,
     isDragging,
   } = useSortable({ id: status.id });
-  const { theme } = useTheme();
+  const theme = useResolvedTheme();
 
   const style = {
     transform: CSS.Transform.toString(transform),
