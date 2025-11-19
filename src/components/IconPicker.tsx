@@ -27,7 +27,7 @@ const IconPicker = ({ value, onChange }: { value?: string; onChange: (icon: stri
           {value || "Select an icon"}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-80">
+      <PopoverContent className="w-[300px]">
         <div className="space-y-2">
           <Input
             placeholder="Search icons..."
