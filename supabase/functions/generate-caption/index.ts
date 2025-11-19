@@ -1,37 +1,29 @@
-// @ts-nocheck
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.54.0';
-import OpenAI from 'https://esm.sh/openai@4.29.2';
-import Anthropic from 'https://esm.sh/@anthropic-ai/sdk@0.22.0';
+import { createClient } from 'npm:@supabase/supabase-js@2';
+import OpenAI from 'npm:openai@4';
+import Anthropic from 'npm:@anthropic-ai/sdk@0.22.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
 const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
 
-const getOpenAIClient = async (supabaseAdmin: any) => {
-  const { data: config, error: configError } = await supabaseAdmin
-    .from('app_config')
-    .select('value')
-    .eq('key', 'OPENAI_API_KEY')
-    .single();
-
-  if (configError || !config?.value) {
-    return null;
-  }
-  return new OpenAI({ apiKey: config.value });
-};
-
 Deno.serve(async (req) => {
+  // Handle CORS preflight request
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
 
   try {
     const { altText } = await req.json();
+
     if (!altText) {
-      throw new Error("altText is required for generating a caption.");
+      return new Response(JSON.stringify({ error: "altText is required for generating a caption." }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     const supabaseAdmin = createClient(
@@ -39,48 +31,69 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const openai = await getOpenAIClient(supabaseAdmin);
+    // Fetch OpenAI key from DB config
+    const { data: config, error: configError } = await supabaseAdmin
+      .from('app_config')
+      .select('value')
+      .eq('key', 'OPENAI_API_KEY')
+      .single();
+
+    let openai = null;
+    if (!configError && config?.value) {
+      openai = new OpenAI({ apiKey: config.value });
+    }
+
     const anthropic = ANTHROPIC_API_KEY ? new Anthropic({ apiKey: ANTHROPIC_API_KEY }) : null;
 
     if (!openai && !anthropic) {
-      throw new Error("No AI provider is configured.");
+      console.error("No AI provider configured.");
+      return new Response(JSON.stringify({ error: "No AI provider is configured." }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     const systemPrompt = `You are an AI that generates a short, inspiring, one-line caption for an image. The caption should be suitable for a professional dashboard related to events, marketing, and project management. Respond with ONLY the caption, no extra text or quotes. Keep it under 12 words.`;
     const userPrompt = `Generate a caption for an image described as: "${altText}"`;
 
-    let caption;
-    if (anthropic) {
-      const response = await anthropic.messages.create({
-        model: "claude-3-haiku-20240307",
-        messages: [{ role: "user", content: userPrompt }],
-        system: systemPrompt,
-        temperature: 0.7,
-        max_tokens: 30,
-      });
-      caption = response.content[0].text;
-    } else if (openai) {
-      const response = await openai.chat.completions.create({
-        model: "gpt-3.5-turbo",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt }
-        ],
-        temperature: 0.7,
-        max_tokens: 30,
-      });
-      caption = response.choices[0].message.content;
-    } else {
-      throw new Error("No AI provider configured.");
+    let caption = "";
+    
+    try {
+      if (anthropic) {
+        const response = await anthropic.messages.create({
+          model: "claude-3-haiku-20240307",
+          messages: [{ role: "user", content: userPrompt }],
+          system: systemPrompt,
+          temperature: 0.7,
+          max_tokens: 50,
+        });
+        caption = response.content[0].text;
+      } else if (openai) {
+        const response = await openai.chat.completions.create({
+          model: "gpt-3.5-turbo",
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt }
+          ],
+          temperature: 0.7,
+          max_tokens: 50,
+        });
+        caption = response.choices[0].message.content;
+      }
+    } catch (aiError) {
+      console.error("AI generation error:", aiError);
+      // Fallback to alt text if AI fails
+      caption = altText;
     }
 
-    return new Response(JSON.stringify({ caption: caption?.trim().replace(/"/g, '') }), {
+    return new Response(JSON.stringify({ caption: caption?.trim().replace(/^"|"$/g, '') }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     });
 
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+    console.error("Edge function error:", error);
+    return new Response(JSON.stringify({ error: error.message || "Internal Server Error" }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,
     });
