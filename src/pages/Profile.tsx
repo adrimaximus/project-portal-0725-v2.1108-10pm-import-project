@@ -8,7 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import PortalLayout from "@/components/PortalLayout";
 import { supabase } from "@/integrations/supabase/client";
-import { Eye, EyeOff, Loader2, Camera } from "lucide-react";
+import { Eye, EyeOff, Loader2, Camera, CheckCircle, XCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { generatePastelColor, getAvatarUrl, getInitials } from "@/lib/utils";
 import { useQueryClient } from "@tanstack/react-query";
@@ -31,6 +31,8 @@ const Profile = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [imageToCrop, setImageToCrop] = useState<string | null>(null);
+  const [verificationStatus, setVerificationStatus] = useState<'idle' | 'verifying' | 'verified' | 'failed'>('idle');
+  const [verificationMessage, setVerificationMessage] = useState('');
 
   useEffect(() => {
     if (user) {
@@ -41,6 +43,7 @@ const Profile = () => {
       setFirstName(savedFirstName !== null ? savedFirstName : user.first_name || "");
       setLastName(savedLastName !== null ? savedLastName : user.last_name || "");
       setPhone(savedPhone !== null ? savedPhone : user.phone || "");
+      setVerificationStatus('idle');
     }
   }, [user]);
 
@@ -63,6 +66,7 @@ const Profile = () => {
   useEffect(() => {
     if (user && phone !== (user.phone || '')) {
       SafeLocalStorage.setItem(`profile-form-phone-${user.id}`, phone);
+      setVerificationStatus('idle');
     } else if (user) {
       SafeLocalStorage.removeItem(`profile-form-phone-${user.id}`);
     }
@@ -245,6 +249,31 @@ const Profile = () => {
     await logout();
   };
 
+  const handleVerifyPhone = async () => {
+    if (!phone) {
+      toast.error("Please enter a phone number to verify.");
+      return;
+    }
+    setVerificationStatus('verifying');
+    setVerificationMessage('');
+    try {
+      const { data, error } = await supabase.functions.invoke('verify-whatsapp-number', {
+        body: { phone },
+      });
+      if (error) throw error;
+      if (data.error) throw new Error(data.error);
+
+      setVerificationStatus('verified');
+      setVerificationMessage(data.message);
+      toast.success("Phone number verified successfully!");
+    } catch (error: any) {
+      setVerificationStatus('failed');
+      const errorMessage = error.message || "Verification failed.";
+      setVerificationMessage(errorMessage);
+      toast.error("Verification failed", { description: errorMessage });
+    }
+  };
+
   return (
     <PortalLayout>
       <div className="space-y-6">
@@ -310,7 +339,22 @@ const Profile = () => {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="phone">Phone Number (for WhatsApp)</Label>
-                <PhoneNumberInput value={phone} onChange={setPhone} />
+                <div className="flex items-center gap-2">
+                  <PhoneNumberInput value={phone} onChange={setPhone} />
+                  <Button type="button" variant="outline" size="sm" onClick={handleVerifyPhone} disabled={verificationStatus === 'verifying' || !phone}>
+                    {verificationStatus === 'verifying' ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Verify'}
+                  </Button>
+                  {verificationStatus === 'verified' && <CheckCircle className="h-5 w-5 text-green-500" />}
+                  {verificationStatus === 'failed' && <XCircle className="h-5 w-5 text-destructive" />}
+                </div>
+                {verificationMessage && (
+                  <p className={`text-xs ${verificationStatus === 'failed' ? 'text-destructive' : 'text-muted-foreground'}`}>
+                    {verificationMessage}
+                  </p>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Ensure your number is registered on WhatsApp to receive notifications. Use Indonesian format (e.g., 0812...).
+                </p>
               </div>
             </div>
             <div className="flex items-center gap-2">
