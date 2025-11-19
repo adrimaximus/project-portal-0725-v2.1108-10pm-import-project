@@ -39,19 +39,25 @@ const InteractiveText: React.FC<InteractiveTextProps> = ({ text, members }) => {
       const mentionedUser = members.find(m => m.id === userId);
 
       if (mentionedUser) {
-        // Link to a generic user profile page using ID
+        // Link to a generic user profile page using ID, with theme-neutral styling and subtle background
         parts.push(
-          <Link key={`mention-${startIndex}`} to={`/profile/${mentionedUser.id}`} className="text-blue-500 hover:underline font-medium">
+          <Link 
+            key={`mention-${startIndex}`} 
+            to={`/profile/${mentionedUser.id}`} 
+            className="text-foreground bg-muted/50 hover:bg-muted rounded-sm px-1 py-0.5 font-medium transition-colors"
+          >
             @{displayName}
           </Link>
         );
       } else {
-        parts.push(<span key={`mention-${startIndex}`} className="text-muted-foreground">@{displayName}</span>);
+        // Unlinked mention, with theme-neutral styling and subtle background
+        parts.push(<span key={`mention-${startIndex}`} className="text-muted-foreground bg-muted/30 rounded-sm px-1 py-0.5">@{displayName}</span>);
       }
     } else if (match[4]) { // This means it's a URL
       const url = match[4];
+      // URL link with theme-neutral styling
       parts.push(
-        <a key={`url-${startIndex}`} href={url} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
+        <a key={`url-${startIndex}`} href={url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
           {url}
         </a>
       );
