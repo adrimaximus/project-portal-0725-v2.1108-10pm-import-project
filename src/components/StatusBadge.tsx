@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react';
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useProjectStatuses } from "@/hooks/useProjectStatuses";
-import { getContrastColor } from "@/lib/colors";
+import { getStatusBadgeStyle } from "@/lib/colors";
 import { cn } from "@/lib/utils";
+import { useTheme } from "@/components/theme-provider";
 
 interface StatusBadgeProps {
   status: string;
@@ -15,6 +16,7 @@ interface StatusBadgeProps {
 const StatusBadge = ({ status, onStatusChange, hasOpenTasks, className }: StatusBadgeProps) => {
   const [localStatus, setLocalStatus] = useState(status);
   const { data: statuses = [] } = useProjectStatuses();
+  const { theme } = useTheme();
 
   useEffect(() => {
     setLocalStatus(status);
@@ -26,9 +28,10 @@ const StatusBadge = ({ status, onStatusChange, hasOpenTasks, className }: Status
 
   // Find the color definition from the DB statuses
   const statusDef = statuses.find(s => s.name === localStatus);
-  // Default fallback color if not found in DB
-  const backgroundColor = statusDef?.color || '#94a3b8'; 
-  const textColor = getContrastColor(backgroundColor);
+  // Default fallback color if not found in DB (slate-400)
+  const baseColor = statusDef?.color || '#94a3b8'; 
+  
+  const badgeStyle = getStatusBadgeStyle(baseColor, theme);
 
   const handleStatusChange = (newStatus: string) => {
     setLocalStatus(newStatus);
@@ -37,19 +40,13 @@ const StatusBadge = ({ status, onStatusChange, hasOpenTasks, className }: Status
     }
   };
 
-  // Common badge style
-  const badgeStyle = {
-    backgroundColor,
-    color: textColor,
-  };
-
   if (onStatusChange) {
     return (
       <Select value={localStatus} onValueChange={handleStatusChange}>
         <SelectTrigger className={cn("h-auto p-0 border-0 focus:ring-0 focus:ring-offset-0 w-auto bg-transparent shadow-none", className)}>
           <SelectValue>
             <Badge 
-              className="hover:opacity-90 transition-opacity border-0 font-medium px-2.5 py-0.5"
+              className="hover:opacity-90 transition-opacity border font-medium px-2.5 py-0.5"
               style={badgeStyle}
             >
               {localStatus}
@@ -59,6 +56,7 @@ const StatusBadge = ({ status, onStatusChange, hasOpenTasks, className }: Status
         <SelectContent>
           {statuses.length > 0 ? (
             statuses.map(option => {
+                const optionStyle = getStatusBadgeStyle(option.color, theme);
                 return (
                     <SelectItem 
                         key={option.id} 
@@ -68,7 +66,7 @@ const StatusBadge = ({ status, onStatusChange, hasOpenTasks, className }: Status
                         <div className="flex items-center gap-2">
                         <div 
                             className="w-2 h-2 rounded-full" 
-                            style={{ backgroundColor: option.color }}
+                            style={{ backgroundColor: optionStyle.color }}
                         />
                         {option.name}
                         </div>
@@ -85,7 +83,7 @@ const StatusBadge = ({ status, onStatusChange, hasOpenTasks, className }: Status
 
   return (
     <Badge 
-      className={cn("border-0 font-medium px-2.5 py-0.5", className)}
+      className={cn("border font-medium px-2.5 py-0.5", className)}
       style={badgeStyle}
     >
       {localStatus}

@@ -17,7 +17,8 @@ import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, us
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useQueryClient } from '@tanstack/react-query';
-import { getContrastColor } from "@/lib/colors";
+import { getStatusBadgeStyle } from "@/lib/colors";
+import { useTheme } from "@/components/theme-provider";
 
 // Sortable Row Component
 const SortableTableRow = ({ status, onEdit, onDelete }: { status: ProjectStatusDef, onEdit: (s: ProjectStatusDef) => void, onDelete: (s: ProjectStatusDef) => void }) => {
@@ -29,6 +30,7 @@ const SortableTableRow = ({ status, onEdit, onDelete }: { status: ProjectStatusD
     transition,
     isDragging,
   } = useSortable({ id: status.id });
+  const { theme } = useTheme();
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -38,7 +40,7 @@ const SortableTableRow = ({ status, onEdit, onDelete }: { status: ProjectStatusD
     position: 'relative' as 'relative',
   };
 
-  const textColor = getContrastColor(status.color);
+  const badgeStyle = getStatusBadgeStyle(status.color, theme);
 
   return (
     <TableRow ref={setNodeRef} style={style} className={isDragging ? "bg-muted" : ""}>
@@ -51,8 +53,8 @@ const SortableTableRow = ({ status, onEdit, onDelete }: { status: ProjectStatusD
         <div className="flex items-center gap-2">
           {/* Preview as it appears in the app */}
           <Badge 
-            className="border-0 font-medium px-2.5 py-0.5"
-            style={{ backgroundColor: status.color, color: textColor }}
+            className="border font-medium px-2.5 py-0.5"
+            style={badgeStyle}
           >
             {status.name}
           </Badge>
