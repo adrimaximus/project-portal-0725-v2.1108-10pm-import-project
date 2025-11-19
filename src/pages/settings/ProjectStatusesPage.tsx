@@ -176,9 +176,12 @@ const ProjectStatusesPage = () => {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline" className="font-mono">
-                          {status.color}
-                        </Badge>
+                        <div className="flex items-center gap-2">
+                          <div className="w-4 h-4 rounded-full" style={{ backgroundColor: status.color }} />
+                          <Badge variant="outline" className="font-mono">
+                            {status.color}
+                          </Badge>
+                        </div>
                       </TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>

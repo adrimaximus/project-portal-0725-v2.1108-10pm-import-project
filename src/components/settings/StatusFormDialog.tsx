@@ -3,6 +3,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { HexColorPicker, HexColorInput } from 'react-colorful';
 
 export interface StatusFormValues {
   name: string;
@@ -77,32 +79,47 @@ const StatusFormDialog: React.FC<StatusFormDialogProps> = ({
             </div>
             <div className="grid gap-2">
               <Label htmlFor="color">Color</Label>
-              <div className="flex gap-2 items-center">
-                <Input
-                  id="color"
-                  type="color"
-                  value={color}
-                  onChange={(e) => setColor(e.target.value)}
-                  className="w-12 h-12 p-1 cursor-pointer"
-                />
-                <Input
-                  value={color}
-                  onChange={(e) => setColor(e.target.value)}
-                  placeholder="#000000"
-                  className="flex-1"
-                />
-              </div>
-              <div className="flex gap-1 flex-wrap mt-2">
-                {PRESET_COLORS.map((c) => (
-                  <button
-                    key={c}
-                    type="button"
-                    className={`w-6 h-6 rounded-full border border-gray-200 ${color === c ? 'ring-2 ring-offset-2 ring-black' : ''}`}
-                    style={{ backgroundColor: c }}
-                    onClick={() => setColor(c)}
-                  />
-                ))}
-              </div>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-full justify-start text-left font-normal">
+                    <div className="flex items-center gap-2">
+                      <div
+                        className="h-4 w-4 rounded-full border"
+                        style={{ backgroundColor: color }}
+                      />
+                      <span>{color}</span>
+                    </div>
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <div className="p-4 space-y-4">
+                    <HexColorPicker color={color} onChange={setColor} className="!w-full" />
+                    <div className="flex items-center gap-2">
+                      <Label className="flex-shrink-0">Hex</Label>
+                      <HexColorInput
+                        className="w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                        color={color}
+                        onChange={setColor}
+                        prefixed
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Suggestions</Label>
+                      <div className="flex gap-1 flex-wrap mt-2">
+                        {PRESET_COLORS.map((c) => (
+                          <button
+                            key={c}
+                            type="button"
+                            className={`w-6 h-6 rounded-full border border-gray-200 ${color === c ? 'ring-2 ring-offset-2 ring-black' : ''}`}
+                            style={{ backgroundColor: c }}
+                            onClick={() => setColor(c)}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
           <DialogFooter>
