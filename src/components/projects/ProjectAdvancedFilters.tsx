@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { FilterX, UserCog, Users, ListX } from "lucide-react";
 import { Label } from "@/components/ui/label";
-import { PROJECT_STATUS_OPTIONS } from "@/types";
+import { useProjectStatuses } from "@/hooks/useProjectStatuses";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
 import {
@@ -40,6 +40,7 @@ interface ProjectAdvancedFiltersProps {
 
 const ProjectAdvancedFilters = ({ filters, onAdvancedFiltersChange, allPeople, allOwners }: ProjectAdvancedFiltersProps) => {
   const [open, setOpen] = useState(false);
+  const { data: projectStatuses = [] } = useProjectStatuses();
 
   const handleOwnerToggle = (personId: string) => {
     const currentOwners = filters.ownerIds || [];
@@ -144,10 +145,10 @@ const ProjectAdvancedFilters = ({ filters, onAdvancedFiltersChange, allPeople, a
             <CommandList>
               <CommandEmpty>No status found.</CommandEmpty>
               <CommandGroup>
-                {PROJECT_STATUS_OPTIONS.map((status) => (
-                  <CommandItem key={status.value} value={status.label} onSelect={() => handleStatusToggle(status.value)}>
-                    <Check className={cn("mr-2 h-4 w-4", filters.excludedStatus?.includes(status.value) ? "opacity-100" : "opacity-0")} />
-                    {status.label}
+                {projectStatuses.map((status) => (
+                  <CommandItem key={status.id} value={status.name} onSelect={() => handleStatusToggle(status.name)}>
+                    <Check className={cn("mr-2 h-4 w-4", filters.excludedStatus?.includes(status.name) ? "opacity-100" : "opacity-0")} />
+                    {status.name}
                   </CommandItem>
                 ))}
               </CommandGroup>
