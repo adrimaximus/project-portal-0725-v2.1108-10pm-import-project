@@ -19,6 +19,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Avatar, AvatarImage, AvatarFallback } from "../ui/avatar";
+import { useProjectStatuses } from "@/hooks/useProjectStatuses";
 
 // Extend types to include the new optional company_id field for a robust relationship.
 type LocalPerson = Person & { company_id?: string | null };
@@ -39,6 +40,7 @@ interface ProjectDetailsCardProps {
 const ProjectDetailsCard = ({ project, isEditing, onFieldChange, onStatusChange, hasOpenTasks }: ProjectDetailsCardProps) => {
   const { hasPermission } = useAuth();
   const canViewValue = hasPermission('projects:view_value');
+  const { data: projectStatuses = [] } = useProjectStatuses();
 
   const clientInfo = useMemo(() => {
     return {
@@ -262,15 +264,29 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange, onStatusChange,
                         <SelectValue placeholder="Select a status" />
                       </SelectTrigger>
                       <SelectContent>
-                        {PROJECT_STATUS_OPTIONS.map(option => (
-                          <SelectItem 
-                            key={option.value} 
-                            value={option.value}
-                            disabled={option.value === 'Completed' && hasOpenTasks}
-                          >
-                            <StatusBadge status={option.value} />
-                          </SelectItem>
-                        ))}
+                        {projectStatuses.length > 0 ? (
+                          projectStatuses.map(status => (
+                            <SelectItem 
+                              key={status.id} 
+                              value={status.name}
+                              disabled={status.name === 'Completed' && hasOpenTasks}
+                            >
+                              <div className="flex items-center">
+                                <StatusBadge status={status.name} className="border-0 px-0 bg-transparent text-foreground hover:bg-transparent" />
+                              </div>
+                            </SelectItem>
+                          ))
+                        ) : (
+                          PROJECT_STATUS_OPTIONS.map(option => (
+                            <SelectItem 
+                              key={option.value} 
+                              value={option.value}
+                              disabled={option.value === 'Completed' && hasOpenTasks}
+                            >
+                              {option.label}
+                            </SelectItem>
+                          ))
+                        )}
                       </SelectContent>
                     </Select>
                   ) : (

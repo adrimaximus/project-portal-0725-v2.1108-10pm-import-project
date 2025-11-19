@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 import { toast } from "sonner";
+import { useProjectStatuses } from "@/hooks/useProjectStatuses";
 
 interface ProjectHeaderProps {
   project: Project;
@@ -47,8 +48,10 @@ const ProjectHeader = ({
 }: ProjectHeaderProps) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { data: statuses = [] } = useProjectStatuses();
 
-  const statusStyles = getProjectStatusStyles(project.status);
+  const statusDef = statuses.find(s => s.name === project.status);
+  const statusColor = statusDef?.color || getProjectStatusStyles(project.status).hex;
   const isCompleted = project.status === 'Completed';
 
   const handleCopyLink = () => {
@@ -75,7 +78,7 @@ const ProjectHeader = ({
       </Button>
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
         <div className="flex items-center gap-3 min-w-0 w-full lg:w-auto">
-          <div className="w-1 h-8 flex-shrink-0" style={{ backgroundColor: statusStyles.hex }} />
+          <div className="w-1 h-8 flex-shrink-0" style={{ backgroundColor: statusColor }} />
           {isEditing ? (
             <Input
               value={project.name || ''}
