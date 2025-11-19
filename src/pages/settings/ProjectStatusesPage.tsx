@@ -18,7 +18,7 @@ import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSo
 import { CSS } from '@dnd-kit/utilities';
 import { useQueryClient } from '@tanstack/react-query';
 import { getStatusBadgeStyle } from "@/lib/colors";
-import { useTheme } from "@/components/theme-provider";
+import { useTheme } from "@/contexts/ThemeProvider";
 
 // Sortable Row Component
 const SortableTableRow = ({ status, onEdit, onDelete }: { status: ProjectStatusDef, onEdit: (s: ProjectStatusDef) => void, onDelete: (s: ProjectStatusDef) => void }) => {
@@ -53,7 +53,7 @@ const SortableTableRow = ({ status, onEdit, onDelete }: { status: ProjectStatusD
         <div className="flex items-center gap-2">
           {/* Preview as it appears in the app */}
           <Badge 
-            className="border font-medium px-2.5 py-0.5"
+            className="border-0 font-medium px-2.5 py-0.5"
             style={badgeStyle}
           >
             {status.name}

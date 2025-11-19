@@ -4,7 +4,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useProjectStatuses } from "@/hooks/useProjectStatuses";
 import { getStatusBadgeStyle } from "@/lib/colors";
 import { cn } from "@/lib/utils";
-import { useTheme } from "@/components/theme-provider";
+import { useTheme } from "@/contexts/ThemeProvider";
 
 interface StatusBadgeProps {
   status: string;
