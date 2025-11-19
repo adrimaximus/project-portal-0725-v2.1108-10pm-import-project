@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { MoreHorizontal, Trash2 } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { cn, formatInJakarta, generatePastelColor, getAvatarUrl } from '@/lib/utils';
-import { isSameDay, isBefore, startOfToday, differenceInDays, subDays } from 'date-fns';
+import { isSameDay, isBefore, startOfToday, subDays } from 'date-fns';
 import { Progress } from "../ui/progress";
 import StatusBadge from "../StatusBadge";
 import { useProjectStatuses, ProjectStatusDef } from "@/hooks/useProjectStatuses";
@@ -66,6 +66,8 @@ const DayEntry = ({
             // Find dynamic color from statuses prop
             const statusDef = statuses.find(s => s.name === project.status);
             const borderColor = statusDef?.color || '#94a3b8'; // Default fallback
+            
+            const hasOpenTasks = project.tasks?.some(t => !t.completed) ?? false;
 
             return (
               <div 
@@ -98,7 +100,11 @@ const DayEntry = ({
                   
                   <div className="flex items-center space-x-2 sm:space-x-4 flex-shrink-0 pl-0 sm:pl-2 mt-2 sm:mt-0 w-full sm:w-auto justify-start sm:justify-end">
                     <div className="flex items-center space-x-2">
-                      <StatusBadge status={project.status as any} />
+                      <StatusBadge 
+                        status={project.status as any} 
+                        projectId={project.id} 
+                        hasOpenTasks={hasOpenTasks}
+                      />
                       <div className="flex items-center -space-x-2">
                         {project.assignedTo.slice(0, 3).map((user) => (
                           <Avatar key={user.id} className="h-5 w-5 sm:h-6 sm:w-6 border-2 border-card">

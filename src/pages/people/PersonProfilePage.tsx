@@ -4,14 +4,14 @@ import PortalLayout from '@/components/PortalLayout';
 import { usePerson } from '@/hooks/usePerson';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Briefcase, Cake, Edit, Instagram, Linkedin, Mail, MapPin, MoreVertical, Phone, Twitter, User as UserIcon, Users, Trash2, Loader2, MessageSquare, Landmark } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { formatInJakarta, generatePastelColor, getInitials, getAvatarUrl, formatPhoneNumberForApi } from '@/lib/utils';
 import PeopleFormDialog from '@/components/people/PersonFormDialog';
-import { Person as BasePerson, CustomProperty, User, Collaborator, ProjectStatus } from '@/types';
+import { Person as BasePerson, CustomProperty, Collaborator, ProjectStatus } from '@/types';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import WhatsappIcon from '@/components/icons/WhatsappIcon';
@@ -443,7 +443,7 @@ const PersonProfilePage = () => {
                       <Link key={project.id} to={`/projects/${project.slug}`} className="block p-2 rounded-md hover:bg-muted">
                         <div className="flex justify-between items-center">
                           <p className="font-medium truncate pr-2">{project.name}</p>
-                          <StatusBadge status={project.status as ProjectStatus} />
+                          <StatusBadge status={project.status as ProjectStatus} projectId={project.id} />
                         </div>
                       </Link>
                     ))}

@@ -233,7 +233,7 @@ const CompanyProfilePage = () => {
                       <Briefcase className="h-4 w-4 text-muted-foreground" />
                       <p className="font-medium">{project.name}</p>
                     </div>
-                    <StatusBadge status={project.status as any} />
+                    <StatusBadge status={project.status as any} projectId={project.id} />
                   </Link>
                 ))}
               </CardContent>
