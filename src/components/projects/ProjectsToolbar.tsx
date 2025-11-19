@@ -2,15 +2,13 @@ import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { DatePickerWithRange } from "@/components/ui/date-picker-with-range";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { Search, Table as TableIcon, Kanban, List, LayoutGrid, KanbanSquare, ListChecks, CheckSquare, PlusCircle, Download, RefreshCw, ListPlus, View } from "lucide-react";
+import { Search, List, LayoutGrid, KanbanSquare, ListChecks, CheckSquare, PlusCircle, Download, RefreshCw, ListPlus, View } from "lucide-react";
 import { DateRange } from "react-day-picker";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import ProjectAdvancedFilters, { AdvancedFiltersState } from './ProjectAdvancedFilters';
 import { Separator } from "../ui/separator";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -164,7 +162,7 @@ const ProjectsToolbar = ({
             <div className="flex items-center space-x-2">
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <label htmlFor="hide-completed" className="flex items-center space-x-2 cursor-pointer">
+                  <label htmlFor="hide-completed" className="flex items-center space-x-2 cursor-pointer whitespace-nowrap">
                     <Switch id="hide-completed" checked={hideCompletedTasks} onCheckedChange={onToggleHideCompleted} />
                     <span className="text-sm hidden sm:inline">Hide Done</span>
                   </label>
@@ -182,7 +180,7 @@ const ProjectsToolbar = ({
       <div className="flex-shrink-0 flex items-center gap-2 flex-nowrap justify-end">
         
         {/* Filters, Search, Date Range */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-nowrap flex-shrink-0">
           <ProjectAdvancedFilters
             filters={advancedFilters}
             onFiltersChange={onAdvancedFiltersChange}
@@ -190,7 +188,7 @@ const ProjectsToolbar = ({
             allOwners={allOwners}
           />
           {isSearchOpen ? (
-            <div className="relative flex-1 sm:flex-initial">
+            <div className="relative w-40 sm:w-48 flex-shrink-0">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search..."
@@ -198,7 +196,7 @@ const ProjectsToolbar = ({
                 onChange={(e) => onSearchChange(e.target.value)}
                 onBlur={() => { if (!searchTerm) setIsSearchOpen(false); }}
                 autoFocus
-                className="pl-9 w-full sm:w-48"
+                className="pl-9 w-full"
               />
             </div>
           ) : (
@@ -213,14 +211,16 @@ const ProjectsToolbar = ({
               </Tooltip>
             </TooltipProvider>
           )}
-          <DatePickerWithRange date={dateRange} onDateChange={onDateRangeChange} />
+          <div className="flex-shrink-0">
+            <DatePickerWithRange date={dateRange} onDateChange={onDateRangeChange} />
+          </div>
         </div>
 
         {/* Separator for desktop view */}
         <Separator orientation="vertical" className="hidden sm:block h-8" />
 
         {/* Action Buttons (New Project/Task, Import/Refresh) */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-shrink-0">
           {isTaskView ? (
             <TooltipProvider>
               <Tooltip>
