@@ -2,7 +2,7 @@ import { useState, useRef, forwardRef, useImperativeHandle, useEffect } from 're
 import { User, Comment as CommentType } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
-import { Ticket, Paperclip, X } from "lucide-react";
+import { Ticket, Paperclip, X, UploadCloud } from "lucide-react";
 import { getInitials, generatePastelColor, getAvatarUrl } from "@/lib/utils";
 import { MentionsInput, Mention, SuggestionDataItem } from 'react-mentions';
 import '@/styles/mentions.css';
@@ -10,6 +10,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import InteractiveText from './InteractiveText';
 import SafeLocalStorage from '@/lib/localStorage';
+import { useDropzone } from 'react-dropzone';
 
 interface CommentInputProps {
   onAddCommentOrTicket: (text: string, isTicket: boolean, attachments: File[] | null, mentionedUserIds: string[], replyToId?: string | null) => void;
@@ -76,6 +77,17 @@ const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({ onAddC
     }
   }, [initialValue]);
 
+  const onDrop = (acceptedFiles: File[]) => {
+    setAttachments(prev => [...prev, ...acceptedFiles]);
+  };
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    noClick: true,
+    noKeyboard: true,
+    multiple: true,
+  });
+
   const parseMentions = (text: string): string[] => {
     const mentionRegex = /@\[[^\]]+\]\(([^)]+)\)/g;
     const matches = text.matchAll(mentionRegex);
@@ -130,7 +142,16 @@ const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({ onAddC
           {getInitials(fullName, user.email)}
         </AvatarFallback>
       </Avatar>
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0 flex-1 relative" {...getRootProps()}>
+        <input {...getInputProps()} />
+        
+        {isDragActive && (
+          <div className="absolute inset-0 z-50 flex flex-col items-center justify-center rounded-lg bg-background/90 border-2 border-dashed border-primary backdrop-blur-sm transition-all duration-200">
+            <UploadCloud className="h-10 w-10 text-primary animate-bounce" />
+            <p className="mt-2 text-sm font-semibold text-primary">Drop files to attach</p>
+          </div>
+        )}
+
         {replyTo && (
           <div className="p-2 mb-2 bg-muted rounded-md flex justify-between items-center text-sm">
             <div className="border-l-2 border-primary pl-2 overflow-hidden">
@@ -144,7 +165,7 @@ const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({ onAddC
             </Button>
           </div>
         )}
-        <div className="border rounded-lg focus-within:ring-1 focus-within:ring-ring">
+        <div className="border rounded-lg focus-within:ring-1 focus-within:ring-ring bg-background">
           <MentionsInput
             value={text}
             onChange={(event, newValue) => setText(newValue)}
