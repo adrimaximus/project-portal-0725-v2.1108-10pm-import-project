@@ -32,11 +32,8 @@ export const SortableTableHead = ({
       <Button
         variant="ghost"
         type="button"
-        onClick={(e) => {
-          e.preventDefault();
-          onSort(columnKey);
-        }}
-        className="w-full justify-start px-4 py-3 h-auto hover:bg-muted/50 rounded-none text-left font-medium group"
+        onClick={() => onSort(columnKey)}
+        className="w-full justify-start px-4 py-3 h-auto hover:bg-muted/50 rounded-none text-left font-medium group select-none active:bg-muted"
       >
         <span className="truncate">{children}</span>
         <Icon 
