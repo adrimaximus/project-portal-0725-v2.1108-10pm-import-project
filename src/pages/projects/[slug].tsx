@@ -224,7 +224,13 @@ const ProjectDetailPage = () => {
   const handleToggleTaskCompletion = (task: Task, completed: boolean) => toggleTaskCompletion({ task, completed });
 
   if (isLoading || !projectWithDetails) {
-    return <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+    return (
+      <PortalLayout>
+        <div className="flex items-center justify-center h-full">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </PortalLayout>
+    );
   }
   if (error) {
     return <div className="text-destructive p-4">Error loading project: {error.message}</div>;
