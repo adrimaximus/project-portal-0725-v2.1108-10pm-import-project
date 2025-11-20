@@ -3,12 +3,18 @@ import { Button } from "@/components/ui/button";
 import { ArrowDown, ArrowUp, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+interface SortConfig {
+  key: any;
+  direction: "asc" | "desc";
+}
+
 interface SortableTableHeadProps extends React.ComponentProps<typeof TableHead> {
   children: React.ReactNode;
   onSort: (key: string) => void;
+  columnKey: string;
+  sortConfig?: SortConfig;
   sortKey?: string;
   sortOrder?: "asc" | "desc";
-  columnKey: string;
 }
 
 export const SortableTableHead = ({
@@ -16,13 +22,17 @@ export const SortableTableHead = ({
   onSort,
   sortKey,
   sortOrder,
+  sortConfig,
   columnKey,
   className,
   ...props
 }: SortableTableHeadProps) => {
-  const isActive = sortKey === columnKey;
+  const currentKey = sortConfig ? sortConfig.key : sortKey;
+  const currentDirection = sortConfig ? sortConfig.direction : sortOrder;
+
+  const isActive = currentKey === columnKey;
   const Icon = isActive
-    ? sortOrder === "asc"
+    ? currentDirection === "asc"
       ? ArrowUp
       : ArrowDown
     : ChevronsUpDown;
