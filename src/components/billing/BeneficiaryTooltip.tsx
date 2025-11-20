@@ -33,6 +33,13 @@ export const BeneficiaryTooltip = ({ expense }: BeneficiaryTooltipProps) => {
     }
   };
 
+  const handleTouchMove = () => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+  };
+
   return (
     <TooltipProvider delayDuration={100}>
       <Tooltip open={open} onOpenChange={setOpen}>
@@ -41,6 +48,7 @@ export const BeneficiaryTooltip = ({ expense }: BeneficiaryTooltipProps) => {
             className="cursor-help underline decoration-dotted select-none touch-manipulation"
             onTouchStart={handleTouchStart}
             onTouchEnd={handleTouchEnd}
+            onTouchMove={handleTouchMove}
             onContextMenu={(e) => e.preventDefault()}
             onClick={() => setOpen((prev) => !prev)}
           >

@@ -47,6 +47,13 @@ export const PaymentTermTooltip = ({ term, index, isMultiTerm }: PaymentTermTool
     }
   };
 
+  const handleTouchMove = () => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+  };
+
   return (
     <TooltipProvider delayDuration={100}>
       <Tooltip open={open} onOpenChange={setOpen}>
@@ -58,6 +65,7 @@ export const PaymentTermTooltip = ({ term, index, isMultiTerm }: PaymentTermTool
             )}
             onTouchStart={handleTouchStart}
             onTouchEnd={handleTouchEnd}
+            onTouchMove={handleTouchMove}
             onContextMenu={(e) => e.preventDefault()} // Prevent default context menu on long press
             onClick={() => setOpen((prev) => !prev)} // Allow tap to toggle as well for accessibility
           >
