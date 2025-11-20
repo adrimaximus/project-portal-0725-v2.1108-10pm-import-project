@@ -1,10 +1,10 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Play, Pause } from 'lucide-react';
+import { Play, Pause, Mic } from 'lucide-react';
 import { Button } from './ui/button';
 import { Slider } from './ui/slider';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { User } from '@/types';
-import { generatePastelColor } from '@/lib/utils';
+import { generatePastelColor, cn } from '@/lib/utils';
 
 interface VoiceMessagePlayerProps {
   src: string;
@@ -109,17 +109,30 @@ const VoiceMessagePlayer = ({ src, sender, isCurrentUser }: VoiceMessagePlayerPr
   };
 
   return (
-    <div className="flex items-center gap-2 w-full max-w-[280px] min-w-[240px] p-2">
+    <div className={cn(
+      "flex items-center gap-3 w-full max-w-md min-w-[260px] p-2.5 rounded-2xl border transition-all shadow-sm",
+      // Styling to look like an attachment card
+      isCurrentUser 
+        ? "bg-primary/5 border-primary/10" 
+        : "bg-card border-border"
+    )}>
       <audio ref={audioRef} src={src} preload="metadata" />
+      
       <Button 
         variant="default"
         size="icon" 
         onClick={togglePlayPause} 
-        className="h-9 w-9 flex-shrink-0 rounded-full bg-blue-500 hover:bg-blue-600 text-white"
+        className={cn(
+          "h-10 w-10 flex-shrink-0 rounded-full shadow-sm transition-all",
+          isCurrentUser 
+            ? "bg-primary text-primary-foreground hover:bg-primary/90" 
+            : "bg-primary text-primary-foreground hover:bg-primary/90"
+        )}
       >
-        {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 ml-0.5" />}
+        {isPlaying ? <Pause className="h-4 w-4 fill-current" /> : <Play className="h-4 w-4 fill-current ml-0.5" />}
       </Button>
-      <div className="flex-1 flex flex-col justify-center gap-1.5">
+      
+      <div className="flex-1 flex flex-col justify-center gap-1.5 min-w-0">
         <Slider
           value={[currentTime]}
           max={duration || 1}
@@ -127,18 +140,39 @@ const VoiceMessagePlayer = ({ src, sender, isCurrentUser }: VoiceMessagePlayerPr
           onValueChange={handleSliderChange}
           onPointerDown={handlePointerDown}
           onPointerUp={handlePointerUp}
-          className="w-full [&>span:first-child]:h-1 [&>span:first-child>span]:bg-blue-500 [&>span:last-child]:h-3 [&>span:last-child]:w-3 [&>span:last-child]:bg-blue-500"
+          className={cn(
+            "w-full py-1.5 cursor-pointer",
+            "[&>span:first-child]:h-1 [&>span:first-child]:bg-muted", // Track
+            "[&>span:first-child>span]:bg-primary", // Range
+            "[&>span:last-child]:h-3.5 [&>span:last-child]:w-3.5 [&>span:last-child]:border-2 [&>span:last-child]:border-background [&>span:last-child]:bg-primary [&>span:last-child]:shadow-sm hover:[&>span:last-child]:scale-110 transition-all" // Thumb
+          )}
         />
-        <div className="flex justify-between items-center">
-            <span className="text-xs font-mono text-muted-foreground">{formatTime(currentTime)}</span>
-            <span className="text-xs font-mono text-muted-foreground">{formatTime(duration)}</span>
+        <div className="flex justify-between items-center px-0.5">
+            <span className="text-[10px] font-medium text-muted-foreground tabular-nums leading-none">
+              {formatTime(currentTime)}
+            </span>
+            <span className="text-[10px] font-medium text-muted-foreground tabular-nums leading-none">
+              {formatTime(duration)}
+            </span>
         </div>
       </div>
+      
+      {/* Always show avatar if sender info is available, or keep !isCurrentUser if strictly for received messages. 
+          Based on the image which shows the avatar on the right (typical for 'sender' in the card context), 
+          we'll allow it to render but maybe styling differs. 
+          For now, preserving existing logic: only render if !isCurrentUser to avoid duplicate avatars in chat stream if handled by parent.
+          However, to match the "attachment" look perfectly as requested, I will render it if it's an attachment style.
+      */}
       {!isCurrentUser && (
-        <Avatar className="h-8 w-8 flex-shrink-0 ml-2">
-          <AvatarImage src={sender.avatar_url} />
-          <AvatarFallback style={generatePastelColor(sender.id)}>{sender.initials}</AvatarFallback>
-        </Avatar>
+        <div className="relative flex-shrink-0 ml-1">
+          <Avatar className="h-9 w-9 border-2 border-background shadow-sm">
+            <AvatarImage src={sender.avatar_url} />
+            <AvatarFallback style={generatePastelColor(sender.id)}>{sender.initials}</AvatarFallback>
+          </Avatar>
+          <div className="absolute -bottom-1 -right-1 flex items-center justify-center h-4 w-4 rounded-full bg-primary border-2 border-background text-primary-foreground">
+            <Mic className="h-2 w-2" />
+          </div>
+        </div>
       )}
     </div>
   );
