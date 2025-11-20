@@ -74,11 +74,11 @@ const PersonCard = ({ person, onViewProfile }: PersonCardProps) => {
           )}
         </div>
         {showCompanyLogo && (
-          <div className="absolute -bottom-6 left-4 bg-background p-0.5 rounded-lg shadow-md flex items-center justify-center">
+          <div className="absolute -bottom-3 left-4 bg-background p-0.5 rounded-lg shadow-md flex items-center justify-center">
             <img
               src={person.company_logo_url}
               alt={`${person.company || ''} logo`}
-              className="h-10 w-10 object-contain rounded-md"
+              className="h-5 w-5 object-contain rounded-md"
               loading="lazy"
               onError={() => setLogoError(true)}
             />
