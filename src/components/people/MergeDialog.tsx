@@ -136,7 +136,7 @@ const MergeDialog = ({ open, onOpenChange, person1, person2 }: MergeDialogProps)
         </RadioGroup>
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleMerge} disabled={isMerging || isLoadingPreview}>
+          <Button onClick={handleMerge} disabled={isMerging}>
             {isMerging ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
             Confirm Merge
           </Button>
