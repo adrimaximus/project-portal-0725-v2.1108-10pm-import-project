@@ -46,7 +46,7 @@ const PeopleGridView = ({ people, onEditPerson, onDeletePerson, onViewProfile }:
       {groupedPeople.map(([company, peopleInGroup]) => (
         <div key={company}>
           <h3 className="text-lg font-semibold mb-4 px-2">{company}</h3>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
+          <div className="grid grid-cols-3 lg:grid-cols-6 gap-6">
             {peopleInGroup.map(person => (
               <PersonCard 
                 key={person.id} 
