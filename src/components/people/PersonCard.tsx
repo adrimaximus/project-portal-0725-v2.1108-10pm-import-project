@@ -85,12 +85,12 @@ const PersonCard = ({ person, onViewProfile }: PersonCardProps) => {
           </div>
         )}
       </div>
-      <div className="p-3 border-t bg-background flex-grow flex flex-col rounded-b-2xl">
+      <div className="p-2 sm:p-3 border-t bg-background flex-grow flex flex-col rounded-b-2xl">
         <div className="flex justify-end mb-2">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             {person.social_media?.instagram && (
               <a href={person.social_media.instagram} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-muted-foreground hover:text-primary transition-colors">
-                <Instagram className="h-4 w-4" />
+                <Instagram className="h-3 w-3 sm:h-4 sm:w-4" />
               </a>
             )}
             {emailToDisplay && (
@@ -99,23 +99,23 @@ const PersonCard = ({ person, onViewProfile }: PersonCardProps) => {
                 className="text-muted-foreground hover:text-primary transition-colors"
                 title="Copy email address"
               >
-                <Mail className="h-4 w-4" />
+                <Mail className="h-3 w-3 sm:h-4 sm:w-4" />
               </button>
             )}
             {phoneToDisplay && (
               <a href={`https://wa.me/${formatPhoneNumberForWhatsApp(phoneToDisplay)}`} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-muted-foreground hover:text-primary transition-colors">
-                <WhatsappIcon className="h-4 w-4" />
+                <WhatsappIcon className="h-3 w-3 sm:h-4 sm:w-4" />
               </a>
             )}
           </div>
         </div>
         
         <div className={`min-w-0 ${showCompanyLogo ? 'pt-2' : ''}`}>
-          <h3 className="font-bold text-sm truncate">{person.full_name}</h3>
+          <h3 className="font-bold text-xs sm:text-sm truncate">{person.full_name}</h3>
         </div>
         
         {(person.company || person.job_title) && (
-          <div className="mt-1 flex items-start gap-2 text-xs text-muted-foreground">
+          <div className="mt-1 flex items-start gap-2 text-[10px] sm:text-xs text-muted-foreground">
             <Briefcase className="h-3 w-3 flex-shrink-0 mt-0.5" />
             <p>
               {person.job_title}
