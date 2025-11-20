@@ -110,70 +110,57 @@ const VoiceMessagePlayer = ({ src, sender, isCurrentUser }: VoiceMessagePlayerPr
 
   return (
     <div className={cn(
-      "flex items-center gap-3 w-full max-w-md min-w-[260px] p-2.5 rounded-2xl border transition-all shadow-sm",
-      // Styling to look like an attachment card
-      isCurrentUser 
-        ? "bg-primary/5 border-primary/10" 
-        : "bg-card border-border"
+      "flex items-center gap-3 w-full max-w-md min-w-[280px] p-3 rounded-[2rem] border shadow-sm select-none",
+      // Attachment-like styling: Gray background, soft borders
+      "bg-gray-100 border-gray-200 dark:bg-gray-800 dark:border-gray-700"
     )}>
       <audio ref={audioRef} src={src} preload="metadata" />
       
+      {/* Play Button - Circular White */}
       <Button 
-        variant="default"
+        variant="ghost"
         size="icon" 
         onClick={togglePlayPause} 
         className={cn(
-          "h-10 w-10 flex-shrink-0 rounded-full shadow-sm transition-all",
-          isCurrentUser 
-            ? "bg-primary text-primary-foreground hover:bg-primary/90" 
-            : "bg-primary text-primary-foreground hover:bg-primary/90"
+          "h-10 w-10 flex-shrink-0 rounded-full shadow-sm hover:scale-105 active:scale-95 transition-all",
+          "bg-white text-blue-600 hover:bg-white hover:text-blue-700",
+          "dark:bg-gray-700 dark:text-blue-400 dark:hover:bg-gray-600"
         )}
       >
-        {isPlaying ? <Pause className="h-4 w-4 fill-current" /> : <Play className="h-4 w-4 fill-current ml-0.5" />}
+        {isPlaying ? <Pause className="h-5 w-5 fill-current" /> : <Play className="h-5 w-5 fill-current ml-0.5" />}
       </Button>
       
-      <div className="flex-1 flex flex-col justify-center gap-1.5 min-w-0">
-        <Slider
-          value={[currentTime]}
-          max={duration || 1}
-          step={0.1}
-          onValueChange={handleSliderChange}
-          onPointerDown={handlePointerDown}
-          onPointerUp={handlePointerUp}
-          className={cn(
-            "w-full py-1.5 cursor-pointer",
-            "[&>span:first-child]:h-1 [&>span:first-child]:bg-muted", // Track
-            "[&>span:first-child>span]:bg-primary", // Range
-            "[&>span:last-child]:h-3.5 [&>span:last-child]:w-3.5 [&>span:last-child]:border-2 [&>span:last-child]:border-background [&>span:last-child]:bg-primary [&>span:last-child]:shadow-sm hover:[&>span:last-child]:scale-110 transition-all" // Thumb
-          )}
-        />
-        <div className="flex justify-between items-center px-0.5">
-            <span className="text-[10px] font-medium text-muted-foreground tabular-nums leading-none">
-              {formatTime(currentTime)}
-            </span>
-            <span className="text-[10px] font-medium text-muted-foreground tabular-nums leading-none">
-              {formatTime(duration)}
-            </span>
+      {/* Slider & Time */}
+      <div className="flex-1 flex flex-col justify-center gap-1 min-w-0 mr-1">
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-medium text-muted-foreground tabular-nums w-6">
+            {formatTime(currentTime)}
+          </span>
+          <Slider
+            value={[currentTime]}
+            max={duration || 1}
+            step={0.1}
+            onValueChange={handleSliderChange}
+            onPointerDown={handlePointerDown}
+            onPointerUp={handlePointerUp}
+            className="flex-1 py-1.5 cursor-pointer"
+          />
+          <span className="text-[10px] font-medium text-muted-foreground tabular-nums w-6 text-right">
+            {formatTime(duration)}
+          </span>
         </div>
       </div>
       
-      {/* Always show avatar if sender info is available, or keep !isCurrentUser if strictly for received messages. 
-          Based on the image which shows the avatar on the right (typical for 'sender' in the card context), 
-          we'll allow it to render but maybe styling differs. 
-          For now, preserving existing logic: only render if !isCurrentUser to avoid duplicate avatars in chat stream if handled by parent.
-          However, to match the "attachment" look perfectly as requested, I will render it if it's an attachment style.
-      */}
-      {!isCurrentUser && (
-        <div className="relative flex-shrink-0 ml-1">
-          <Avatar className="h-9 w-9 border-2 border-background shadow-sm">
-            <AvatarImage src={sender.avatar_url} />
-            <AvatarFallback style={generatePastelColor(sender.id)}>{sender.initials}</AvatarFallback>
-          </Avatar>
-          <div className="absolute -bottom-1 -right-1 flex items-center justify-center h-4 w-4 rounded-full bg-primary border-2 border-background text-primary-foreground">
-            <Mic className="h-2 w-2" />
-          </div>
+      {/* Avatar with Mic Badge */}
+      <div className="relative flex-shrink-0">
+        <Avatar className="h-10 w-10 border-2 border-white dark:border-gray-800 shadow-sm">
+          <AvatarImage src={sender.avatar_url} />
+          <AvatarFallback style={generatePastelColor(sender.id)}>{sender.initials}</AvatarFallback>
+        </Avatar>
+        <div className="absolute -bottom-1 -left-1 z-10 flex items-center justify-center h-5 w-5 rounded-full bg-white dark:bg-gray-700 shadow-sm ring-2 ring-gray-100 dark:ring-gray-800">
+          <Mic className="h-3 w-3 text-blue-600 dark:text-blue-400" />
         </div>
-      )}
+      </div>
     </div>
   );
 };
