@@ -4,7 +4,6 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { GitMerge, Users } from 'lucide-react';
 import { DuplicatePair } from './DuplicateContactsCard';
 import { ScrollArea } from '../ui/scroll-area';
-import ReactMarkdown from 'react-markdown';
 
 interface DuplicateSummaryDialogProps {
   open: boolean;
@@ -21,12 +20,9 @@ const DuplicateSummaryDialog = ({ open, onOpenChange, summary, duplicates, onSel
         <DialogHeader>
           <DialogTitle>Duplicate Analysis Complete</DialogTitle>
           <DialogDescription>
-            Our AI agent has analyzed your contacts. Here's the summary and recommended actions.
+            We found {duplicates.length} potential duplicate(s). Review them below.
           </DialogDescription>
         </DialogHeader>
-        <div className="prose prose-sm dark:prose-invert max-w-none">
-          <ReactMarkdown>{summary}</ReactMarkdown>
-        </div>
         <ScrollArea className="h-64 border rounded-md p-2">
           <div className="space-y-2">
             {duplicates.map((pair, index) => (
