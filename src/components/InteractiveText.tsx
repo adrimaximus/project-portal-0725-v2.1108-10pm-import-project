@@ -69,7 +69,7 @@ const InteractiveText: React.FC<InteractiveTextProps> = ({ text, members = [] })
                <Link 
                   key={index} 
                   to={url} 
-                  className="text-current font-bold underline decoration-current/50 underline-offset-2 cursor-pointer transition-opacity hover:opacity-80 break-all"
+                  className="text-current underline decoration-current/50 underline-offset-2 font-medium cursor-pointer transition-opacity hover:opacity-80"
                   onClick={(e) => e.stopPropagation()}
                 >
                   {label}
@@ -84,8 +84,7 @@ const InteractiveText: React.FC<InteractiveTextProps> = ({ text, members = [] })
           if (match) {
             const [, label, url] = match;
             const isInternal = url.startsWith('/');
-            // Menggunakan text-current agar warna mengikuti parent (kontras otomatis benar di light/dark & bubble chat)
-            const classes = "text-current font-bold underline decoration-current/50 underline-offset-2 cursor-pointer transition-opacity hover:opacity-80 break-all";
+            const classes = "text-current underline decoration-current/50 underline-offset-2 font-medium cursor-pointer transition-opacity hover:opacity-80";
 
             if (isInternal) {
               return (
