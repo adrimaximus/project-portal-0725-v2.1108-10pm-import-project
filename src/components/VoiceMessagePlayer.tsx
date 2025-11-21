@@ -110,57 +110,60 @@ const VoiceMessagePlayer = ({ src, sender, isCurrentUser }: VoiceMessagePlayerPr
 
   return (
     <div className={cn(
-      "flex items-center gap-3 w-full max-w-md min-w-[280px] p-3 rounded-[2rem] border shadow-sm select-none",
-      // Attachment-like styling: Gray background, soft borders
-      "bg-gray-100 border-gray-200 dark:bg-gray-800 dark:border-gray-700"
+      "flex items-center gap-3 w-full min-w-[240px] p-2 select-none"
     )}>
       <audio ref={audioRef} src={src} preload="metadata" />
       
-      {/* Play Button - Circular White */}
       <Button 
         variant="ghost"
         size="icon" 
         onClick={togglePlayPause} 
         className={cn(
-          "h-10 w-10 flex-shrink-0 rounded-full shadow-sm hover:scale-105 active:scale-95 transition-all",
-          "bg-white text-blue-600 hover:bg-white hover:text-blue-700",
-          "dark:bg-gray-700 dark:text-blue-400 dark:hover:bg-gray-600"
+          "h-8 w-8 flex-shrink-0 rounded-full shadow-sm transition-all",
+          isCurrentUser 
+            ? "bg-primary-foreground text-primary hover:bg-primary-foreground/90" 
+            : "bg-background text-primary hover:bg-background/90"
         )}
       >
-        {isPlaying ? <Pause className="h-5 w-5 fill-current" /> : <Play className="h-5 w-5 fill-current ml-0.5" />}
+        {isPlaying ? <Pause className="h-4 w-4 fill-current" /> : <Play className="h-4 w-4 fill-current ml-0.5" />}
       </Button>
       
-      {/* Slider & Time */}
-      <div className="flex-1 flex flex-col justify-center gap-1 min-w-0 mr-1">
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] font-medium text-muted-foreground tabular-nums w-6">
-            {formatTime(currentTime)}
-          </span>
-          <Slider
-            value={[currentTime]}
-            max={duration || 1}
-            step={0.1}
-            onValueChange={handleSliderChange}
-            onPointerDown={handlePointerDown}
-            onPointerUp={handlePointerUp}
-            className="flex-1 py-1.5 cursor-pointer"
-          />
-          <span className="text-[10px] font-medium text-muted-foreground tabular-nums w-6 text-right">
-            {formatTime(duration)}
-          </span>
+      <div className="flex-1 flex flex-col justify-center gap-1.5 min-w-0">
+        <Slider
+          value={[currentTime]}
+          max={duration || 1}
+          step={0.1}
+          onValueChange={handleSliderChange}
+          onPointerDown={handlePointerDown}
+          onPointerUp={handlePointerUp}
+          className={cn(
+            "w-full py-1.5 cursor-pointer",
+            // Track, Range, and Thumb colors based on isCurrentUser
+            isCurrentUser 
+              ? "[&>span:first-child]:bg-primary-foreground/30 [&>span:first-child>span]:bg-primary-foreground [&>span:last-child]:border-primary-foreground [&>span:last-child]:bg-primary-foreground" 
+              : "[&>span:first-child]:bg-primary/20 [&>span:first-child>span]:bg-primary [&>span:last-child]:border-primary [&>span:last-child]:bg-primary"
+          )}
+        />
+        <div className={cn(
+            "flex justify-between items-center text-[10px] font-medium tabular-nums leading-none",
+            isCurrentUser ? "text-primary-foreground/80" : "text-muted-foreground"
+        )}>
+            <span>{formatTime(currentTime)}</span>
+            <span>{formatTime(duration)}</span>
         </div>
       </div>
       
-      {/* Avatar with Mic Badge */}
-      <div className="relative flex-shrink-0">
-        <Avatar className="h-10 w-10 border-2 border-white dark:border-gray-800 shadow-sm">
-          <AvatarImage src={sender.avatar_url} />
-          <AvatarFallback style={generatePastelColor(sender.id)}>{sender.initials}</AvatarFallback>
-        </Avatar>
-        <div className="absolute -bottom-1 -left-1 z-10 flex items-center justify-center h-5 w-5 rounded-full bg-white dark:bg-gray-700 shadow-sm ring-2 ring-gray-100 dark:ring-gray-800">
-          <Mic className="h-3 w-3 text-blue-600 dark:text-blue-400" />
+      {!isCurrentUser && (
+        <div className="relative flex-shrink-0 ml-1">
+          <Avatar className="h-8 w-8 border border-background/20 shadow-sm">
+            <AvatarImage src={sender.avatar_url} />
+            <AvatarFallback className="text-[10px]" style={generatePastelColor(sender.id)}>{sender.initials}</AvatarFallback>
+          </Avatar>
+          <div className="absolute -bottom-1 -right-1 flex items-center justify-center h-3.5 w-3.5 rounded-full bg-primary text-primary-foreground text-[8px] ring-2 ring-background">
+            <Mic className="h-2 w-2" />
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };
