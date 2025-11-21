@@ -14,9 +14,9 @@ const InteractiveText: React.FC<InteractiveTextProps> = ({ text, members = [] })
 
   // Regex to match:
   // 1. User Mentions: @[Name](id)
-  // 2. Markdown Links: [Label](url)
-  // Capturing the full match to preserve it during split
-  const regex = /(@?\[[^\]]+\]\([^)]+\))/g;
+  // 2. Resource Mentions (Projects/Tasks/Bills): #[Name](type:id...)
+  // 3. Markdown Links: [Label](url)
+  const regex = /([@#]?\[[^\]]+\]\([^)]+\))/g;
   
   const parts = text.split(regex);
 
@@ -45,14 +45,45 @@ const InteractiveText: React.FC<InteractiveTextProps> = ({ text, members = [] })
           }
         }
 
-        // 2. Markdown Link: [Label](url)
+        // 2. Resource Mention: #[Name](type:data)
+        if (part.startsWith('#[')) {
+          const match = part.match(/^#\[([^\]]+)\]\(([^)]+)\)$/);
+          if (match) {
+            const [, label, info] = match;
+            const [type, ...data] = info.split(':');
+            let url = '#';
+
+            // Construct URL based on type
+            if (type === 'project' && data.length > 0) {
+               // Format: project:slug
+               url = `/projects/${data[0]}`;
+            } else if (type === 'task' && data.length >= 2) {
+               // Format: task:project_slug:task_id
+               url = `/projects/${data[0]}?tab=tasks&task=${data[1]}`;
+            } else if (type === 'bill' && data.length > 0) {
+               // Format: bill:slug
+               url = `/projects/${data[0]}?tab=billing`;
+            }
+            
+            return (
+               <Link 
+                  key={index} 
+                  to={url} 
+                  className="text-current underline decoration-current/50 underline-offset-2 font-medium cursor-pointer transition-opacity hover:opacity-80"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {label}
+                </Link>
+            );
+          }
+        }
+
+        // 3. Markdown Link: [Label](url) - Fallback/Legacy
         if (part.startsWith('[')) {
           const match = part.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
           if (match) {
             const [, label, url] = match;
             const isInternal = url.startsWith('/');
-            // Menggunakan text-current agar warna mengikuti parent (kontras otomatis benar di light/dark & bubble chat)
-            // Decoration menggunakan opacity agar tidak terlalu mencolok tapi tetap terlihat
             const classes = "text-current underline decoration-current/50 underline-offset-2 font-medium cursor-pointer transition-opacity hover:opacity-80";
 
             if (isInternal) {
@@ -82,7 +113,7 @@ const InteractiveText: React.FC<InteractiveTextProps> = ({ text, members = [] })
           }
         }
 
-        // 3. Plain Text
+        // 4. Plain Text
         return <span key={index}>{part}</span>;
       })}
     </>

@@ -102,13 +102,16 @@ const MentionInput = forwardRef<HTMLTextAreaElement, MentionInputProps>(
         mentionText = `@[${user.display}](${user.id}) `;
       } else if (type === 'project') {
         const proj = suggestion as ProjectSuggestion;
-        mentionText = `[${proj.display}](/projects/${proj.slug}) `;
+        // Cleaner shortcode: #[Display](project:slug)
+        mentionText = `#[${proj.display}](project:${proj.slug}) `;
       } else if (type === 'task') {
         const task = suggestion as TaskSuggestion;
-        mentionText = `[${task.display}](/projects/${task.project_slug}?tab=tasks&task=${task.id}) `;
+        // Cleaner shortcode: #[Display](task:project_slug:task_id)
+        mentionText = `#[${task.display}](task:${task.project_slug}:${task.id}) `;
       } else if (type === 'bill') {
         const bill = suggestion as BillSuggestion;
-        mentionText = `[${bill.display}](/projects/${bill.slug}?tab=billing) `;
+        // Cleaner shortcode: #[Display](bill:slug)
+        mentionText = `#[${bill.display}](bill:${bill.slug}) `;
       }
       
       const startIndex = match.index!;
