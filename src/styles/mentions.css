@@ -1,31 +1,32 @@
 .mentions-input {
   width: 100%;
   font-size: 0.875rem; /* text-sm */
-  line-height: 1.25rem;
+  line-height: 1.5;
+  min-height: 80px;
+  background-color: transparent;
+  font-family: inherit;
 }
 
 .mentions-input__control {
-  /* This will be the main textarea */
+  min-height: 80px;
 }
 
 .mentions-input__highlighter {
   padding: 0.75rem; /* p-3 */
-  min-height: 78px; /* approx rows=3 */
-  white-space: pre-wrap;
-  word-wrap: break-word;
+  min-height: 80px;
+  box-sizing: border-box;
 }
 
 .mentions-input__input {
   padding: 0.75rem; /* p-3 */
-  min-height: 78px; /* approx rows=3 */
+  min-height: 80px;
   outline: 0;
   border: 0;
   width: 100%;
   resize: none;
-  font-size: inherit;
-  font-family: inherit;
-  background-color: transparent;
+  box-sizing: border-box;
   color: hsl(var(--foreground));
+  background-color: transparent;
 }
 
 .mentions-input__input::placeholder {
@@ -33,46 +34,34 @@
 }
 
 .mentions-input__suggestions {
-  margin-top: 4px;
   background: hsl(var(--popover)) !important;
-  border-radius: 0.5rem;
   border: 1px solid hsl(var(--border)) !important;
+  border-radius: 0.5rem;
   box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
   font-size: 0.875rem;
-  max-height: 15rem;
+  max-height: 300px;
   overflow-y: auto;
   z-index: 50;
+  min-width: 200px;
 }
 
 .mentions-input__suggestions__list {
   padding: 0.25rem;
 }
 
-/* Clear default item styles as we are using a custom renderer */
 .mentions-input__suggestions__item {
-  background-color: transparent !important;
+  padding: 0 !important;
+  border-radius: 0.25rem;
 }
 
 .mentions-input__suggestions__item--focused {
   background-color: hsl(var(--accent)) !important;
+  color: hsl(var(--accent-foreground));
 }
 
-.mentions-input__mention {
-  background-color: hsl(var(--primary) / 0.1);
-  color: hsl(var(--primary));
-  font-weight: 500;
-  padding: 1px 3px;
-  border-radius: 4px;
-}
-
-/* Custom styles for rich suggestions */
 .mention-suggestion {
-  display: flex;
-  align-items: center;
-  padding: 0.5rem 0.75rem;
-  border-radius: 0.25rem;
+  padding: 0.5rem;
   cursor: pointer;
-  color: hsl(var(--popover-foreground));
 }
 
 .mention-suggestion.focused {
