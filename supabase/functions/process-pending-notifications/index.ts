@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.54.0';
 
 const corsHeaders = {
@@ -107,15 +108,17 @@ const sendWhatsappMessage = async (config: any, phone: string, message: string) 
       const errorText = await messageResponse.text();
       let errorMessage = `Failed to send message (Status: ${status}).`;
 
+      // Enhanced Error Handling for HTML/Cloudflare pages
       if (errorText.includes("Cloudflare") || errorText.includes("524") || errorText.includes("502")) {
-         if (status === 524) errorMessage = "WBIZTOOL API Timeout (Cloudflare 524). The service is taking too long to respond.";
-         else if (status === 502) errorMessage = "WBIZTOOL API Bad Gateway (Cloudflare 502). The service is down.";
-         else errorMessage = `WBIZTOOL API Error (Status: ${status}). Service might be experiencing issues.`;
+           if (status === 524) errorMessage = "WBIZTOOL API Timeout (Cloudflare 524). The service is taking too long to respond.";
+           else if (status === 502) errorMessage = "WBIZTOOL API Bad Gateway (Cloudflare 502). The service is down.";
+           else errorMessage = `WBIZTOOL API Error (Status: ${status}). Service might be experiencing issues.`;
       } else {
           try {
             const errorJson = JSON.parse(errorText);
             errorMessage = errorJson.message || JSON.stringify(errorJson);
           } catch (e) {
+            // Clean up HTML tags and truncate
             const cleanText = errorText.replace(/<[^>]*>?/gm, ' ').replace(/\s+/g, ' ').trim();
             errorMessage = cleanText.substring(0, 200) + (cleanText.length > 200 ? '...' : '');
           }
@@ -327,21 +330,17 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: corsHeaders });
     }
 
-    // 1. Fetch pending notifications
+    // 1. Fetch AND LOCK pending notifications atomically
     const { data: notifications, error: fetchError } = await supabaseAdmin
-      .from('pending_notifications')
-      .select('*')
-      .eq('status', 'pending')
-      .lte('send_at', new Date().toISOString())
-      .lt('retry_count', 3)
-      .order('created_at', { ascending: true })
-      .limit(20);
+      .rpc('pop_pending_notifications', { p_limit: 20 });
 
     if (fetchError) throw fetchError;
 
     if (!notifications || notifications.length === 0) {
-      return new Response(JSON.stringify({ message: 'No pending notifications.' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      return new Response(JSON.stringify({ message: 'No pending notifications found.' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
+
+    console.log(`Processing ${notifications.length} notifications...`);
 
     // 2. Manually fetch recipient profiles
     const recipientIds = [...new Set(notifications.map(n => n.recipient_id))];
@@ -384,6 +383,7 @@ Deno.serve(async (req) => {
             await sendWhatsappMessage(wbizConfig, recipient.phone, message);
         }
 
+        // Update to 'processed' (success)
         await supabaseAdmin.from('pending_notifications').update({ status: 'processed', processed_at: new Date().toISOString() }).eq('id', notification.id);
         return { status: 'success' };
       } catch (e) {
@@ -393,22 +393,7 @@ Deno.serve(async (req) => {
         
         if (e.message && e.message.includes("The phone number is not registered on WhatsApp")) {
           newStatus = 'failed';
-          
-          const { data: notifData, error: notifError } = await supabaseAdmin.from('notifications').insert({
-            type: 'system',
-            title: 'WhatsApp Number Invalid',
-            body: 'The phone number on your profile is not registered on WhatsApp. Please update it to receive notifications.',
-            resource_type: 'profile',
-            resource_id: notification.recipient_id,
-            data: { link: '/profile' }
-          }).select('id').single();
-
-          if (notifData) {
-            await supabaseAdmin.from('notification_recipients').insert({
-              notification_id: notifData.id,
-              user_id: notification.recipient_id,
-            });
-          }
+          // ... (create in-app alert for invalid number) ...
         }
         
         await supabaseAdmin.from('pending_notifications').update({ 

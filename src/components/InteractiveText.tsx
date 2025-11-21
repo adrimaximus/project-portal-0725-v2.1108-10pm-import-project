@@ -14,9 +14,8 @@ const InteractiveText: React.FC<InteractiveTextProps> = ({ text, members = [] })
 
   // Regex to match:
   // 1. User Mentions: @[Name](id)
-  // 2. Resource Mentions (Projects/Tasks/Bills): #[Name](type:id...)
+  // 2. Resource Mentions (Projects/Tasks/Bills): #[Name](type:data)
   // 3. Markdown Links: [Label](url)
-  // Note: We use a capturing group to include the delimiters in the split result
   const regex = /([@#]?\[[^\]]+\]\([^)]+\))/g;
   
   const parts = text.split(regex);
@@ -45,26 +44,22 @@ const InteractiveText: React.FC<InteractiveTextProps> = ({ text, members = [] })
         }
 
         // 2. Resource Mention: #[Name](type:data)
+        // Example: #[Task Title](task:project_slug:task_id)
         const resourceMatch = part.match(/^#\[([^\]]+)\]\(([^)]+)\)$/);
         if (resourceMatch) {
           const [, label, info] = resourceMatch;
-          // Split only on the first few colons to avoid breaking if data contains colons (though UUIDs don't)
-          // task:slug:id
+          // Split only on the first few colons
           const parts = info.split(':');
           const type = parts[0];
           const data = parts.slice(1);
           
           let url = '#';
 
-          // Construct URL based on type
           if (type === 'project' && data.length > 0) {
-             // Format: project:slug
              url = `/projects/${data[0]}`;
           } else if (type === 'task' && data.length >= 2) {
-             // Format: task:project_slug:task_id
              url = `/projects/${data[0]}?tab=tasks&task=${data[1]}`;
           } else if (type === 'bill' && data.length > 0) {
-             // Format: bill:slug
              url = `/projects/${data[0]}?tab=billing`;
           }
           
@@ -80,7 +75,7 @@ const InteractiveText: React.FC<InteractiveTextProps> = ({ text, members = [] })
           );
         }
 
-        // 3. Markdown Link: [Label](url) - Fallback/Legacy
+        // 3. Markdown Link: [Label](url)
         const linkMatch = part.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
         if (linkMatch) {
           const [, label, url] = linkMatch;

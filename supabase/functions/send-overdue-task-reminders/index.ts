@@ -92,24 +92,19 @@ Deno.serve(async (req) => {
     }
 
     if (notificationsToInsert.length > 0) {
+      // Use safe queue RPC instead of raw insert to handle conflicts gracefully
       const { error: insertError } = await supabaseAdmin
-        .from('pending_notifications')
-        .insert(notificationsToInsert);
+        .rpc('queue_pending_notifications', { p_notifications: notificationsToInsert });
       
       if (insertError) {
-        // The unique index will cause an error if there's a conflict. We can ignore it.
-        if (insertError.code !== '23505') { // 23505 is unique_violation
-          throw new Error(`Failed to insert notifications: ${insertError.message}`);
-        } else {
-          console.log("Ignoring duplicate notification insert attempts.");
-        }
+         throw new Error(`Failed to queue notifications: ${insertError.message}`);
       }
     }
 
     return new Response(JSON.stringify({ 
       success: true, 
       processed_tasks: overdueTasks.length, 
-      notifications_created: notificationsToInsert.length,
+      notifications_queued: notificationsToInsert.length,
       skipped_notifications: skippedCount,
     }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
