@@ -11,6 +11,7 @@ DECLARE
   v_has_view_all BOOLEAN;
   v_accessible_project_ids UUID[];
 BEGIN
+  -- Validate sort order
   IF p_order_by IN ('due_date', 'title', 'priority', 'created_at', 'updated_at', 'status', 'kanban_order', 'project_name') THEN
     v_order_by := p_order_by;
   ELSE
@@ -29,25 +30,30 @@ BEGIN
   -- Optimization: Pre-fetch accessible projects into an array if not admin
   IF NOT v_has_view_all THEN
     SELECT ARRAY(
-        SELECT projects.id FROM public.projects WHERE projects.created_by = v_current_user_id
+        SELECT p.id 
+        FROM public.projects p 
+        WHERE p.created_by = v_current_user_id
         UNION
-        SELECT project_members.project_id FROM public.project_members WHERE project_members.user_id = v_current_user_id
+        SELECT pm.project_id 
+        FROM public.project_members pm 
+        WHERE pm.user_id = v_current_user_id
     ) INTO v_accessible_project_ids;
   END IF;
 
   RETURN QUERY
   WITH tasks_base AS (
     SELECT 
-      tsk.*
-    FROM tasks tsk
+      t.id, t.title, t.description, t.completed, t.due_date, t.priority, t.project_id, 
+      t.created_at, t.updated_at, t.status, t.origin_ticket_id, t.kanban_order, t.created_by
+    FROM tasks t
     WHERE
-      (p_project_ids IS NULL OR tsk.project_id = ANY(p_project_ids))
-      AND (p_completed IS NULL OR tsk.completed = p_completed)
-      AND (p_search_term IS NULL OR p_search_term = '' OR tsk.title ILIKE ('%' || p_search_term || '%'))
+      (p_project_ids IS NULL OR t.project_id = ANY(p_project_ids))
+      AND (p_completed IS NULL OR t.completed = p_completed)
+      AND (p_search_term IS NULL OR p_search_term = '' OR t.title ILIKE ('%' || p_search_term || '%'))
       AND (
         v_has_view_all
-        OR tsk.project_id = ANY(v_accessible_project_ids)
-        OR EXISTS (SELECT 1 FROM task_assignees ta WHERE ta.task_id = tsk.id AND ta.user_id = v_current_user_id)
+        OR t.project_id = ANY(v_accessible_project_ids)
+        OR EXISTS (SELECT 1 FROM task_assignees ta WHERE ta.task_id = t.id AND ta.user_id = v_current_user_id)
       )
   ),
   assignee_data AS (
@@ -87,30 +93,37 @@ BEGIN
     GROUP BY tt.task_id
   ),
   project_client_data AS (
-    WITH ranked_clients AS (
-      SELECT
+    -- Use LATERAL JOIN or window function to get the first client efficiently
+    -- Pre-aggregating client names per project to avoid re-calculation for every task in the same project
+    SELECT 
         pp.project_id,
-        cl.full_name,
-        ROW_NUMBER() OVER(PARTITION BY pp.project_id ORDER BY cl.created_at ASC) as rn
-      FROM people_projects pp
-      JOIN people cl ON pp.person_id = cl.id
-      WHERE pp.project_id IN (SELECT DISTINCT tb.project_id FROM tasks_base tb)
+        p.full_name
+    FROM (
+        SELECT DISTINCT project_id FROM tasks_base
+    ) proj_ids
+    JOIN people_projects pp ON pp.project_id = proj_ids.project_id
+    JOIN people p ON pp.person_id = p.id
+    -- This subquery gets the 'first' client based on created_at, similar to previous logic but optimized
+    WHERE p.id = (
+        SELECT pp2.person_id 
+        FROM people_projects pp2 
+        JOIN people p2 ON pp2.person_id = p2.id 
+        WHERE pp2.project_id = proj_ids.project_id 
+        ORDER BY p2.created_at ASC 
+        LIMIT 1
     )
-    SELECT rc.project_id as pcd_project_id, rc.full_name
-    FROM ranked_clients rc
-    WHERE rc.rn = 1
   )
   SELECT
-    task_row.id, task_row.title, task_row.description, task_row.completed, task_row.due_date, task_row.priority, task_row.project_id,
+    t.id, t.title, t.description, t.completed, t.due_date, t.priority, t.project_id,
     pr.name as project_name,
     pr.slug as project_slug,
     pr.status as project_status,
     COALESCE(ad.assignees, '[]'::jsonb) AS "assignedTo",
     CASE
-        WHEN creator.id IS NULL THEN jsonb_build_object('id', task_row.created_by, 'name', 'Deleted User')
+        WHEN creator.id IS NULL THEN jsonb_build_object('id', t.created_by, 'name', 'Deleted User')
         ELSE jsonb_build_object('id', creator.id, 'first_name', creator.first_name, 'last_name', creator.last_name, 'email', creator.email, 'avatar_url', creator.avatar_url)
     END as created_by,
-    task_row.created_at, task_row.updated_at, task_row.status, COALESCE(td.tags, '[]'::jsonb) AS tags, task_row.origin_ticket_id,
+    t.created_at, t.updated_at, t.status, COALESCE(td.tags, '[]'::jsonb) AS tags, t.origin_ticket_id,
     pr.venue as project_venue,
     CASE
         WHEN project_owner_profile.id IS NULL THEN jsonb_build_object('id', pr.created_by, 'name', 'Deleted User')
@@ -124,41 +137,41 @@ BEGIN
         )
     END as project_owner,
     pcd.full_name as project_client,
-    task_row.kanban_order
+    t.kanban_order
   FROM
-    tasks_base task_row
-    JOIN projects pr ON task_row.project_id = pr.id
-    LEFT JOIN assignee_data ad ON task_row.id = ad.task_id
-    LEFT JOIN tag_data td ON task_row.id = td.task_id
-    LEFT JOIN profiles creator ON task_row.created_by = creator.id
+    tasks_base t
+    JOIN projects pr ON t.project_id = pr.id
+    LEFT JOIN assignee_data ad ON t.id = ad.task_id
+    LEFT JOIN tag_data td ON t.id = td.task_id
+    LEFT JOIN profiles creator ON t.created_by = creator.id
     LEFT JOIN profiles project_owner_profile ON pr.created_by = project_owner_profile.id
-    LEFT JOIN project_client_data pcd ON task_row.project_id = pcd.pcd_project_id
+    LEFT JOIN project_client_data pcd ON t.project_id = pcd.project_id
   ORDER BY
-      CASE WHEN v_order_by = 'kanban_order' AND v_order_direction = 'asc' THEN task_row.kanban_order END ASC,
-      CASE WHEN v_order_by = 'kanban_order' AND v_order_direction = 'desc' THEN task_row.kanban_order END DESC,
-      CASE WHEN v_order_by = 'due_date' AND v_order_direction = 'asc' THEN task_row.due_date END ASC NULLS LAST,
-      CASE WHEN v_order_by = 'due_date' AND v_order_direction = 'desc' THEN task_row.due_date END DESC NULLS LAST,
-      CASE WHEN v_order_by = 'title' AND v_order_direction = 'asc' THEN lower(task_row.title) END ASC,
-      CASE WHEN v_order_by = 'title' AND v_order_direction = 'desc' THEN lower(task_row.title) END DESC,
+      CASE WHEN v_order_by = 'kanban_order' AND v_order_direction = 'asc' THEN t.kanban_order END ASC,
+      CASE WHEN v_order_by = 'kanban_order' AND v_order_direction = 'desc' THEN t.kanban_order END DESC,
+      CASE WHEN v_order_by = 'due_date' AND v_order_direction = 'asc' THEN t.due_date END ASC NULLS LAST,
+      CASE WHEN v_order_by = 'due_date' AND v_order_direction = 'desc' THEN t.due_date END DESC NULLS LAST,
+      CASE WHEN v_order_by = 'title' AND v_order_direction = 'asc' THEN lower(t.title) END ASC,
+      CASE WHEN v_order_by = 'title' AND v_order_direction = 'desc' THEN lower(t.title) END DESC,
       CASE WHEN v_order_by = 'project_name' AND v_order_direction = 'asc' THEN lower(pr.name) END ASC,
       CASE WHEN v_order_by = 'project_name' AND v_order_direction = 'desc' THEN lower(pr.name) END DESC,
       CASE WHEN v_order_by = 'priority' AND v_order_direction = 'asc' THEN
-        CASE task_row.priority WHEN 'Low' THEN 1 WHEN 'Normal' THEN 2 WHEN 'High' THEN 3 WHEN 'Urgent' THEN 4 ELSE 0 END
+        CASE t.priority WHEN 'Low' THEN 1 WHEN 'Normal' THEN 2 WHEN 'High' THEN 3 WHEN 'Urgent' THEN 4 ELSE 0 END
       END ASC,
       CASE WHEN v_order_by = 'priority' AND v_order_direction = 'desc' THEN
-        CASE task_row.priority WHEN 'Low' THEN 1 WHEN 'Normal' THEN 2 WHEN 'High' THEN 3 WHEN 'Urgent' THEN 4 ELSE 0 END
+        CASE t.priority WHEN 'Low' THEN 1 WHEN 'Normal' THEN 2 WHEN 'High' THEN 3 WHEN 'Urgent' THEN 4 ELSE 0 END
       END DESC,
-      CASE WHEN v_order_by = 'created_at' AND v_order_direction = 'asc' THEN task_row.created_at END ASC,
-      CASE WHEN v_order_by = 'created_at' AND v_order_direction = 'desc' THEN task_row.created_at END DESC,
-      CASE WHEN v_order_by = 'updated_at' AND v_order_direction = 'asc' THEN task_row.updated_at END ASC,
-      CASE WHEN v_order_by = 'updated_at' AND v_order_direction = 'desc' THEN task_row.updated_at END DESC,
+      CASE WHEN v_order_by = 'created_at' AND v_order_direction = 'asc' THEN t.created_at END ASC,
+      CASE WHEN v_order_by = 'created_at' AND v_order_direction = 'desc' THEN t.created_at END DESC,
+      CASE WHEN v_order_by = 'updated_at' AND v_order_direction = 'asc' THEN t.updated_at END ASC,
+      CASE WHEN v_order_by = 'updated_at' AND v_order_direction = 'desc' THEN t.updated_at END DESC,
       CASE WHEN v_order_by = 'status' AND v_order_direction = 'asc' THEN
-        CASE task_row.status WHEN 'To do' THEN 1 WHEN 'In progress' THEN 2 WHEN 'In review' THEN 3 WHEN 'Done' THEN 4 ELSE 0 END
+        CASE t.status WHEN 'To do' THEN 1 WHEN 'In progress' THEN 2 WHEN 'In review' THEN 3 WHEN 'Done' THEN 4 ELSE 0 END
       END ASC,
       CASE WHEN v_order_by = 'status' AND v_order_direction = 'desc' THEN
-        CASE task_row.status WHEN 'To do' THEN 1 WHEN 'In progress' THEN 2 WHEN 'In review' THEN 3 WHEN 'Done' THEN 4 ELSE 0 END
+        CASE t.status WHEN 'To do' THEN 1 WHEN 'In progress' THEN 2 WHEN 'In review' THEN 3 WHEN 'Done' THEN 4 ELSE 0 END
       END DESC
   LIMIT p_limit
   OFFSET p_offset;
 END;
-$function$
+$function$;
