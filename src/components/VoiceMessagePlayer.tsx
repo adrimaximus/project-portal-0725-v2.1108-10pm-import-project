@@ -114,6 +114,21 @@ const VoiceMessagePlayer = ({ src, sender, isCurrentUser }: VoiceMessagePlayerPr
     )}>
       <audio ref={audioRef} src={src} preload="metadata" />
       
+      <div className="relative flex-shrink-0">
+        <Avatar className="h-9 w-9 border border-white/10 shadow-sm">
+          <AvatarImage src={sender.avatar_url} />
+          <AvatarFallback className="text-[10px]" style={generatePastelColor(sender.id)}>{sender.initials}</AvatarFallback>
+        </Avatar>
+        <div className={cn(
+          "absolute -bottom-1 -right-1 flex items-center justify-center h-3.5 w-3.5 rounded-full text-[8px] ring-2",
+          isCurrentUser 
+            ? "bg-white text-primary ring-primary" 
+            : "bg-primary text-white ring-white"
+        )}>
+          <Mic className="h-2 w-2" />
+        </div>
+      </div>
+
       <Button 
         variant="ghost"
         size="icon" 
@@ -155,18 +170,6 @@ const VoiceMessagePlayer = ({ src, sender, isCurrentUser }: VoiceMessagePlayerPr
             <span>{formatTime(duration)}</span>
         </div>
       </div>
-      
-      {!isCurrentUser && (
-        <div className="relative flex-shrink-0 ml-1">
-          <Avatar className="h-8 w-8 border border-background/20 shadow-sm">
-            <AvatarImage src={sender.avatar_url} />
-            <AvatarFallback className="text-[10px]" style={generatePastelColor(sender.id)}>{sender.initials}</AvatarFallback>
-          </Avatar>
-          <div className="absolute -bottom-1 -right-1 flex items-center justify-center h-3.5 w-3.5 rounded-full bg-primary text-primary-foreground text-[8px] ring-2 ring-background">
-            <Mic className="h-2 w-2" />
-          </div>
-        </div>
-      )}
     </div>
   );
 };
