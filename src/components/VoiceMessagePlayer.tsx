@@ -138,6 +138,9 @@ const VoiceMessagePlayer = ({ src, sender, isCurrentUser }: VoiceMessagePlayerPr
           onPointerUp={handlePointerUp}
           className={cn(
             "w-full py-1.5 cursor-pointer",
+            // Force thumb to be round and remove any square background artifacts
+            "[&>span:last-child]:rounded-full [&>span:last-child]:shadow-sm",
+            
             // Track, Range, and Thumb colors based on isCurrentUser
             isCurrentUser 
               ? "[&>span:first-child]:bg-primary-foreground/30 [&>span:first-child>span]:bg-primary-foreground [&>span:last-child]:border-primary-foreground [&>span:last-child]:bg-primary-foreground" 
