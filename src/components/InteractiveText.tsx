@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { User } from '@/types';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { getInitials } from '@/lib/utils';
@@ -11,42 +12,76 @@ interface InteractiveTextProps {
 const InteractiveText: React.FC<InteractiveTextProps> = ({ text, members = [] }) => {
   if (!text) return null;
 
-  // Pertama, format tautan proyek seperti [Nama Proyek](id) menjadi hanya "Nama Proyek"
-  // Gunakan negative lookbehind `(?<!@)` untuk menghindari pencocokan penyebutan pengguna seperti @[Nama Pengguna](id)
-  const projectLinkRegex = /(?<!@)\[([^\]]+)\]\(([^)]+)\)/g;
-  const textWithProjectsFormatted = text.replace(projectLinkRegex, '$1');
-
-  // Kemudian, tangani penyebutan pengguna
-  const mentionRegex = /@\[([^\]]+)\]\(([^)]+)\)/g;
-  const parts = textWithProjectsFormatted.split(mentionRegex);
+  // Regex to match:
+  // 1. User Mentions: @[Name](id)
+  // 2. Markdown Links: [Label](url)
+  // Capturing the full match to preserve it during split
+  const regex = /(@?\[[^\]]+\]\([^)]+\))/g;
+  
+  const parts = text.split(regex);
 
   return (
     <>
       {parts.map((part, index) => {
-        // `split` dengan grup penangkap menyertakan bagian yang ditangkap dalam array.
-        // Polanya adalah [teks, namaTampilan, idPengguna, teks, ...]
-        if (index % 3 === 1) {
-          const displayName = part;
-          const userId = parts[index + 1];
-          const member = members.find(m => m.id === userId);
-          return (
-            <span key={index} className="bg-primary/10 text-primary font-semibold rounded px-1 py-0.5 inline-flex items-center gap-1">
-              {member && (
-                <Avatar className="h-4 w-4">
-                  <AvatarImage src={member.avatar_url} />
-                  <AvatarFallback className="text-[8px]">{getInitials(member.name || displayName)}</AvatarFallback>
-                </Avatar>
-              )}
-              @{displayName}
-            </span>
-          );
+        if (!part) return null;
+
+        // 1. User Mention: @[Name](id)
+        if (part.startsWith('@[')) {
+          const match = part.match(/^@\[([^\]]+)\]\(([^)]+)\)$/);
+          if (match) {
+            const [, name, id] = match;
+            const member = members.find((m) => m.id === id);
+            return (
+              <span key={index} className="bg-primary/10 text-primary font-semibold rounded px-1 py-0.5 inline-flex items-center gap-1 align-middle text-xs mx-0.5">
+                {member && (
+                  <Avatar className="h-3.5 w-3.5">
+                    <AvatarImage src={member.avatar_url} />
+                    <AvatarFallback className="text-[6px]">{getInitials(member.name || name)}</AvatarFallback>
+                  </Avatar>
+                )}
+                @{name}
+              </span>
+            );
+          }
         }
-        // Ini adalah bagian idPengguna, yang sudah kita gunakan, jadi kita lewati.
-        if (index % 3 === 2) {
-          return null;
+
+        // 2. Markdown Link: [Label](url)
+        if (part.startsWith('[')) {
+          const match = part.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
+          if (match) {
+            const [, label, url] = match;
+            const isInternal = url.startsWith('/');
+            const classes = "text-blue-600 dark:text-blue-400 hover:underline font-medium cursor-pointer";
+
+            if (isInternal) {
+              return (
+                <Link 
+                  key={index} 
+                  to={url} 
+                  className={classes}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {label}
+                </Link>
+              );
+            }
+            return (
+              <a 
+                key={index} 
+                href={url} 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className={classes}
+                onClick={(e) => e.stopPropagation()}
+              >
+                {label}
+              </a>
+            );
+          }
         }
-        // Ini adalah bagian teks biasa.
-        return <React.Fragment key={index}>{part}</React.Fragment>;
+
+        // 3. Plain Text
+        return <span key={index}>{part}</span>;
       })}
     </>
   );
