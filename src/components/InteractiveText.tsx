@@ -51,10 +51,9 @@ const InteractiveText: React.FC<InteractiveTextProps> = ({ text, members = [] })
           if (match) {
             const [, label, url] = match;
             const isInternal = url.startsWith('/');
-            // Menggunakan text-primary untuk mengikuti tema warna aplikasi
-            // text-primary biasanya merujuk pada warna utama/aksen dari tema (misal: ungu, biru tua, dll)
-            // underline decoration-primary/30 memberikan garis bawah yang halus dengan warna tema
-            const classes = "text-primary hover:text-primary/80 underline decoration-primary/30 underline-offset-2 font-medium cursor-pointer transition-colors";
+            // Menggunakan text-current agar warna mengikuti parent (kontras otomatis benar di light/dark & bubble chat)
+            // Decoration menggunakan opacity agar tidak terlalu mencolok tapi tetap terlihat
+            const classes = "text-current underline decoration-current/50 underline-offset-2 font-medium cursor-pointer transition-opacity hover:opacity-80";
 
             if (isInternal) {
               return (
