@@ -3,7 +3,7 @@ import { createClient as createSupabaseClient } from 'https://esm.sh/@supabase/s
 import OpenAI from 'https://esm.sh/openai@4.29.2';
 import Anthropic from 'https://esm.sh/@anthropic-ai/sdk@0.22.0';
 import { createApi } from 'https://esm.sh/unsplash-js@7.0.19';
-import * as pdfjs from 'https://esm.sh/pdfjs-dist@4.4.168';
+import * as pdfjs from 'https://esm.sh/pdfjs-dist@3.11.174';
 import mammoth from 'https://esm.sh/mammoth@1.7.2';
 
 const corsHeaders = {
@@ -130,6 +130,8 @@ CONTEXT:
 const buildContext = async (supabaseClient: any, user: any) => {
   console.log("[DIAGNOSTIC] buildContext: Starting context build.");
   try {
+    // Direct DB query for projects to ensure we get real tasks, not placeholders.
+    // Limiting to 20 recent active projects to save tokens/resources.
     const [
       projectsRes,
       usersRes,
@@ -138,13 +140,23 @@ const buildContext = async (supabaseClient: any, user: any) => {
       articlesRes,
       foldersRes
     ] = await Promise.all([
-      supabaseClient.rpc('get_dashboard_projects', { p_limit: 1000, p_offset: 0 }),
+      supabaseClient
+        .from('projects')
+        .select(`
+          id, name, status, description,
+          tasks ( id, title, completed, status, assignedTo:task_assignees(profiles(first_name, last_name, email)) ),
+          tags:project_tags(tags(name))
+        `)
+        .neq('status', 'Completed')
+        .order('updated_at', { ascending: false })
+        .limit(20),
       supabaseClient.from('profiles').select('id, first_name, last_name, email'),
       supabaseClient.rpc('get_user_goals'),
       supabaseClient.from('tags').select('id, name'),
       supabaseClient.from('kb_articles').select('id, title, slug, folder_id'),
       supabaseClient.from('kb_folders').select('id, name')
     ]);
+    
     console.log("[DIAGNOSTIC] buildContext: All parallel fetches completed.");
 
     if (projectsRes.error) throw new Error(`Failed to fetch project data for analysis: ${projectsRes.error.message}`);
@@ -158,13 +170,17 @@ const buildContext = async (supabaseClient: any, user: any) => {
     const summarizedProjects = projectsRes.data.map((p: any) => ({
         name: p.name,
         status: p.status,
-        tags: (p.tags || []).map((t: any) => t.name),
+        tags: (p.tags || []).map((t: any) => t.tags?.name).filter(Boolean),
         tasks: (p.tasks || []).map((t: any) => ({
             title: t.title,
             completed: t.completed,
-            assignedTo: (t.assignedTo || []).map((a: any) => a.name)
+            assignedTo: (t.assignedTo || []).map((a: any) => {
+              const p = a.profiles;
+              return p ? `${p.first_name || ''} ${p.last_name || ''}`.trim() || p.email : 'Unknown';
+            })
         }))
     }));
+
     const summarizedGoals = goalsRes.data.map((g: any) => ({
         title: g.title,
         type: g.type,
@@ -176,6 +192,7 @@ const buildContext = async (supabaseClient: any, user: any) => {
     const iconList = [ 'Target', 'Flag', 'BookOpen', 'Dumbbell', 'TrendingUp', 'Star', 'Heart', 'Rocket', 'DollarSign', 'FileText', 'ImageIcon', 'Award', 'BarChart', 'Calendar', 'CheckCircle', 'Users', 'Activity', 'Anchor', 'Aperture', 'Bike', 'Briefcase', 'Brush', 'Camera', 'Car', 'ClipboardCheck', 'Cloud', 'Code', 'Coffee', 'Compass', 'Cpu', 'CreditCard', 'Crown', 'Database', 'Diamond', 'Feather', 'Film', 'Flame', 'Flower', 'Gamepad2', 'Gift', 'Globe', 'GraduationCap', 'Headphones', 'Home', 'Key', 'Laptop', 'Leaf', 'Lightbulb', 'Link', 'Map', 'Medal', 'Mic', 'Moon', 'MousePointer', 'Music', 'Paintbrush', 'Palette', 'PenTool', 'Phone', 'PieChart', 'Plane', 'Puzzle', 'Save', 'Scale', 'Scissors', 'Settings', 'Shield', 'Ship', 'ShoppingBag', 'Smile', 'Speaker', 'Sun', 'Sunrise', 'Sunset', 'Sword', 'Tag', 'Trophy', 'Truck', 'Umbrella', 'Video', 'Wallet', 'Watch', 'Wind', 'Wrench', 'Zap' ];
     const summarizedArticles = articlesRes.data.map((a: any) => ({ title: a.title, folder: foldersRes.data.find((f: any) => f.id === a.folder_id)?.name }));
     const summarizedFolders = foldersRes.data.map((f: any) => f.name);
+    
     console.log("[DIAGNOSTIC] buildContext: Data summarization complete.");
 
     return {
@@ -263,9 +280,9 @@ const executeAction = async (actionData: any, context: any) => {
                     p_payment_status: updates.payment_status || project.payment_status,
                     p_payment_due_date: updates.payment_due_date || project.payment_due_date,
                     p_venue: updates.venue || project.venue,
-                    p_members: project.assignedTo.map((m: any) => m.id), // This RPC requires all members, not just changes
-                    p_service_titles: updates.services || project.services,
-                    p_existing_tags: (updates.tags || project.tags || []).map((t: any) => t.id),
+                    p_members: null, // Not updating members here to avoid complexity
+                    p_service_titles: updates.services || null,
+                    p_existing_tags: (updates.tags || []).map((t: any) => t.id).filter(Boolean), // Simplified
                     p_custom_tags: [],
                 });
 
