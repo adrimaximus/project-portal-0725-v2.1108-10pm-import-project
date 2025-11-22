@@ -584,9 +584,12 @@ const PublicationPage = () => {
                                  {headers.map(h => (
                                    <Badge 
                                      key={h} 
-                                     variant="outline" 
-                                     className="cursor-pointer hover:bg-primary/10 hover:text-primary hover:border-primary/30 transition-colors font-mono text-[10px] px-1.5 py-0.5"
-                                     onClick={() => insertVariable(h)}
+                                     variant="secondary" 
+                                     className="cursor-pointer hover:bg-blue-100 text-blue-600 bg-blue-50 border-blue-100 px-2 py-1 font-mono text-xs"
+                                     onMouseDown={(e) => {
+                                       e.preventDefault();
+                                       insertVariable(h);
+                                     }}
                                    >
                                      {`{{${h}}}`}
                                    </Badge>
