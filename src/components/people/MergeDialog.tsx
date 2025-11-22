@@ -32,10 +32,13 @@ const MergeDialog = ({ open, onOpenChange, person1, person2 }: MergeDialogProps)
   const { data: mergedPreview, isLoading: isLoadingPreview } = useQuery({
     queryKey: ['mergePreview', primary.id, secondary.id],
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke('preview-contact-merge', {
+      const { data, error } = await supabase.functions.invoke('ai-handler', {
         body: {
-          primary_person_id: primary.id,
-          secondary_person_id: secondary.id,
+          feature: 'preview-contact-merge',
+          payload: {
+            primary_person_id: primary.id,
+            secondary_person_id: secondary.id,
+          }
         }
       });
       if (error) {

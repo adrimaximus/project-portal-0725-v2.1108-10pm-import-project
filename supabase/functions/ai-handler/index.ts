@@ -14,6 +14,22 @@ const corsHeaders = {
 
 const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
 
+// --- Helper Data ---
+const iconNames = [
+  'Activity', 'Anchor', 'Aperture', 'Award', 'BarChart', 'Bike', 'BookOpen', 'Briefcase', 'Brush', 'Calendar', 'Camera', 'Car', 'CheckCircle', 'ClipboardCheck', 'Cloud', 'Code', 'Coffee', 'Compass', 'Cpu', 'CreditCard', 'Crown', 'Database', 'Diamond', 'DollarSign', 'Dumbbell', 'Feather', 'FileText', 'Film', 'Flag', 'Flame', 'Flower', 'Gamepad2', 'Gift', 'Globe', 'GraduationCap', 'Guitar', 'HardDrive', 'Headphones', 'Heart', 'Home', 'ImageIcon', 'Key', 'Laptop', 'Leaf', 'Lightbulb', 'Link', 'Map', 'Medal', 'Mic', 'Moon', 'MountainSnow', 'MousePointer', 'Music', 'Paintbrush', 'Palette', 'PenTool', 'Phone', 'PieChart', 'Plane', 'Puzzle', 'Rocket', 'Save', 'Scale', 'Scissors', 'Settings', 'Shield', 'Ship', 'ShoppingBag', 'Smile', 'Speaker', 'Sprout', 'Star', 'Sun', 'Sunrise', 'Sunset', 'Sword', 'Tag', 'Target', 'Tent', 'TrainFront', 'TreePine', 'TrendingUp', 'Trophy', 'Truck', 'Umbrella', 'Users', 'Utensils', 'Video', 'Volleyball', 'Wallet', 'Watch', 'Waves', 'Wind', 'Wine', 'Wrench', 'Zap'
+];
+
+const colorThemes = [
+    { name: 'Blue', classes: 'bg-blue-100 text-blue-600' },
+    { name: 'Green', classes: 'bg-green-100 text-green-600' },
+    { name: 'Purple', classes: 'bg-purple-100 text-purple-600' },
+    { name: 'Orange', classes: 'bg-orange-100 text-orange-600' },
+    { name: 'Red', classes: 'bg-red-100 text-red-600' },
+    { name: 'Gray', classes: 'bg-gray-100 text-gray-600' },
+];
+
+// --- System Prompts ---
+
 const getAnalyzeProjectsSystemPrompt = (context: any, userName: string) => `You are an expert project and goal management AI assistant. Your purpose is to execute actions for the user. You will receive a conversation history and context data.
 
 **Conversational Style:**
@@ -173,7 +189,7 @@ const buildContext = async (supabaseClient: any, user: any) => {
     }));
     const userList = usersRes.data.map((u: any) => ({ id: u.id, name: `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email }));
     const serviceList = [ "3D Graphic Design", "Accommodation", "Award Ceremony", "Branding", "Content Creation", "Digital Marketing", "Entertainment", "Event Decoration", "Event Equipment", "Event Gamification", "Exhibition Booth", "Food & Beverage", "Keyvisual Graphic Design", "LED Display", "Lighting System", "Logistics", "Man Power", "Merchandise", "Motiongraphic Video", "Multimedia System", "Payment Advance", "Photo Documentation", "Plaque & Trophy", "Prints", "Professional Security", "Professional video production for commercial ads", "Show Management", "Slido", "Sound System", "Stage Production", "Talent", "Ticket Management System", "Transport", "Venue", "Video Documentation", "VIP Services", "Virtual Events", "Awards System", "Brand Ambassadors", "Electricity & Genset", "Event Consultation", "Workshop" ];
-    const iconList = [ 'Target', 'Flag', 'BookOpen', 'Dumbbell', 'TrendingUp', 'Star', 'Heart', 'Rocket', 'DollarSign', 'FileText', 'ImageIcon', 'Award', 'BarChart', 'Calendar', 'CheckCircle', 'Users', 'Activity', 'Anchor', 'Aperture', 'Bike', 'Briefcase', 'Brush', 'Camera', 'Car', 'ClipboardCheck', 'Cloud', 'Code', 'Coffee', 'Compass', 'Cpu', 'CreditCard', 'Crown', 'Database', 'Diamond', 'Feather', 'Film', 'Flame', 'Flower', 'Gamepad2', 'Gift', 'Globe', 'GraduationCap', 'Headphones', 'Home', 'Key', 'Laptop', 'Leaf', 'Lightbulb', 'Link', 'Map', 'Medal', 'Mic', 'Moon', 'MousePointer', 'Music', 'Paintbrush', 'Palette', 'PenTool', 'Phone', 'PieChart', 'Plane', 'Puzzle', 'Save', 'Scale', 'Scissors', 'Settings', 'Shield', 'Ship', 'ShoppingBag', 'Smile', 'Speaker', 'Sun', 'Sunrise', 'Sunset', 'Sword', 'Tag', 'Trophy', 'Truck', 'Umbrella', 'Video', 'Wallet', 'Watch', 'Wind', 'Wrench', 'Zap' ];
+    const iconList = iconNames;
     const summarizedArticles = articlesRes.data.map((a: any) => ({ title: a.title, folder: foldersRes.data.find((f: any) => f.id === a.folder_id)?.name }));
     const summarizedFolders = foldersRes.data.map((f: any) => f.name);
     console.log("[DIAGNOSTIC] buildContext: Data summarization complete.");
@@ -1341,6 +1357,111 @@ Konteks Kemajuan: ${JSON.stringify(progressContext, null, 2)}`;
     return { result };
 }
 
+async function previewContactMerge(payload: any, context: any) {
+    const { supabaseAdmin, openai, anthropic } = context;
+    const { primary_person_id, secondary_person_id } = payload;
+    if (!primary_person_id || !secondary_person_id) {
+        throw new Error("Primary and secondary person IDs are required.");
+    }
+
+    // Fetch both person records
+    const { data: peopleData, error: peopleError } = await supabaseAdmin
+        .rpc('get_people_with_details')
+        .in('id', [primary_person_id, secondary_person_id]);
+
+    if (peopleError) throw peopleError;
+    if (!peopleData || peopleData.length < 2) throw new Error("Could not find both contacts to merge.");
+
+    const primaryPerson = peopleData.find((p: any) => p.id === primary_person_id);
+    const secondaryPerson = peopleData.find((p: any) => p.id === secondary_person_id);
+
+    const systemPrompt = `You are an intelligent contact merging assistant. Merge two JSON objects representing people into a single consolidated object.
+Rules:
+1. Prioritize data from the primary record.
+2. Incorporate unique data from the secondary record (e.g. combine unique emails/phones).
+3. Do not delete data; if there's a conflict (like different job titles), add the secondary info to the 'notes' field.
+4. Output ONLY the valid JSON object.`;
+
+    const userPrompt = `Merge these two contacts.\n\nPrimary:\n${JSON.stringify(primaryPerson, null, 2)}\n\nSecondary:\n${JSON.stringify(secondaryPerson, null, 2)}`;
+
+    let result;
+    if (anthropic) {
+        const response = await anthropic.messages.create({
+            model: "claude-3-haiku-20240307",
+            messages: [{ role: "user", content: userPrompt }],
+            system: systemPrompt,
+            temperature: 0.2,
+            max_tokens: 2048,
+        });
+        result = response.content[0].text;
+    } else if (openai) {
+        const response = await openai.chat.completions.create({
+            model: "gpt-4-turbo",
+            messages: [
+                { role: "system", content: systemPrompt },
+                { role: "user", content: userPrompt }
+            ],
+            temperature: 0.2,
+            response_format: { type: "json_object" },
+        });
+        result = response.choices[0].message.content;
+    } else {
+        throw new Error("No AI provider configured.");
+    }
+
+    const jsonMatch = result.match(/{[\s\S]*}/);
+    if (!jsonMatch) throw new Error("AI response was not valid JSON.");
+    return JSON.parse(jsonMatch[0]);
+}
+
+async function generateServiceDetails(payload: any, context: any) {
+    const { openai, anthropic } = context;
+    const { title } = payload;
+    if (!title) throw new Error("Title is required");
+
+    const systemPrompt = `Based on the service title provided, generate a JSON object with:
+1. "description": A concise, one-sentence description.
+2. "icon": The most suitable icon name from this list: [${iconNames.join(', ')}].
+Response must be ONLY valid JSON.`;
+
+    const userPrompt = `Service Title: "${title}"`;
+
+    let result;
+    if (anthropic) {
+        const response = await anthropic.messages.create({
+            model: "claude-3-haiku-20240307",
+            messages: [{ role: "user", content: userPrompt }],
+            system: systemPrompt,
+            temperature: 0.3,
+            max_tokens: 200,
+        });
+        result = response.content[0].text;
+    } else if (openai) {
+        const response = await openai.chat.completions.create({
+            model: "gpt-4-turbo",
+            messages: [
+                { role: "system", content: systemPrompt },
+                { role: "user", content: userPrompt }
+            ],
+            temperature: 0.3,
+            response_format: { type: "json_object" },
+        });
+        result = response.choices[0].message.content;
+    } else {
+        throw new Error("No AI provider configured.");
+    }
+
+    const jsonMatch = result.match(/{[\s\S]*}/);
+    if (!jsonMatch) throw new Error("AI response was not valid JSON.");
+    const parsed = JSON.parse(jsonMatch[0]);
+
+    // Add a random color theme
+    const randomColor = colorThemes[Math.floor(Math.random() * colorThemes.length)].classes;
+    parsed.icon_color = randomColor;
+
+    return parsed;
+}
+
 const featureMap: { [key: string]: (payload: any, context: any) => Promise<any> } = {
   'analyze-projects': analyzeProjects,
   'analyze-duplicates': analyzeDuplicates,
@@ -1357,6 +1478,8 @@ const featureMap: { [key: string]: (payload: any, context: any) => Promise<any> 
   'generate-caption': generateCaption,
   'generate-mood-insight': generateMoodInsight,
   'generate-goal-insight': generateGoalInsight,
+  'preview-contact-merge': previewContactMerge,
+  'generate-service-details': generateServiceDetails,
 };
 
 const createSupabaseAdmin = () => {
