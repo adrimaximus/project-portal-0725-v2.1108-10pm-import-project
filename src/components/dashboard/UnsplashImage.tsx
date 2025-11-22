@@ -47,7 +47,7 @@ const UnsplashImage = () => {
             setCaption(data.caption);
           } catch (captionErr: any) {
             console.warn("Failed to generate AI caption, falling back to alt description.", captionErr);
-            setCaption(fetchedPhoto.alt_description);
+            setCaption(fetchedPhoto.alt_description || 'Beautiful image from Unsplash');
           }
         } else {
           setCaption(''); // No description available
