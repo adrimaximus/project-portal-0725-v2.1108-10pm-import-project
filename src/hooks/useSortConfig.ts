@@ -8,23 +8,23 @@ export interface SortConfig<K> {
 }
 
 export const useSortConfig = <K extends string | number | symbol>(
-  initialConfig: SortConfig<K>
+  initialConfig: SortConfig<K> = { key: null, direction: 'asc' }
 ) => {
   const [sortConfig, setSortConfig] = useState<SortConfig<K>>(initialConfig);
 
   const requestSort = useCallback((key: K) => {
-    setSortConfig(prevConfig => {
-      // If clicking the same key
-      if (prevConfig.key === key) {
-        // If currently ascending, go descending
-        if (prevConfig.direction === 'asc') {
-          return { key, direction: 'desc' };
-        }
-        // If currently descending, go ascending (cycle back)
+    setSortConfig((currentConfig) => {
+      // If we're sorting by a new key, start with ascending
+      if (currentConfig.key !== key) {
         return { key, direction: 'asc' };
       }
-      // If clicking a new key, start with ascending
-      return { key, direction: 'asc' };
+
+      // If we're sorting by the same key, just toggle direction
+      // Ascending -> Descending -> Ascending (Loop)
+      return {
+        key,
+        direction: currentConfig.direction === 'asc' ? 'desc' : 'asc',
+      };
     });
   }, []);
 

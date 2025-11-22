@@ -1,7 +1,7 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { MoreVertical, Edit, Download, Paperclip, BellRing } from "lucide-react";
+import { MoreVertical, Edit, Download, Paperclip } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -32,29 +32,36 @@ const getInitials = (name?: string | null) => {
 const BillingTable = ({ invoices, onEdit, sortConfig, handleSort, onStatusChange }: BillingTableProps) => {
   const sortedInvoices = useMemo(() => {
     if (!sortConfig.key) return invoices;
+    
     return [...invoices].sort((a, b) => {
       let aValue: any = a[sortConfig.key!];
       let bValue: any = b[sortConfig.key!];
+      
+      // Custom accessor logic for complex fields
       if (sortConfig.key === 'projectOwner') {
-        aValue = a.projectOwner?.name;
-        bValue = b.projectOwner?.name;
+        aValue = a.projectOwner?.name || '';
+        bValue = b.projectOwner?.name || '';
       } else if (sortConfig.key === 'assignedMembers') {
-        aValue = a.assignedMembers?.find(m => m.role === 'admin')?.name;
-        bValue = b.assignedMembers?.find(m => m.role === 'admin')?.name;
+        aValue = a.assignedMembers?.find(m => m.role === 'admin')?.name || '';
+        bValue = b.assignedMembers?.find(m => m.role === 'admin')?.name || '';
       }
 
+      // Handle null/undefined values always at the end
       if (aValue === null || aValue === undefined) return 1;
       if (bValue === null || bValue === undefined) return -1;
 
       let compareResult = 0;
+      
       if (aValue instanceof Date && bValue instanceof Date) {
         compareResult = aValue.getTime() - bValue.getTime();
       } else if (typeof aValue === 'number' && typeof bValue === 'number') {
         compareResult = aValue - bValue;
       } else {
+        // String comparison
         compareResult = String(aValue).localeCompare(String(bValue), undefined, { numeric: true, sensitivity: 'base' });
       }
 
+      // Apply direction
       return sortConfig.direction === 'asc' ? compareResult : -compareResult;
     });
   }, [invoices, sortConfig]);
