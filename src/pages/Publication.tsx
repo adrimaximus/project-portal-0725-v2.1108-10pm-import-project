@@ -377,7 +377,7 @@ const PublicationPage = () => {
             });
             
             if (failure) {
-                return { ...row, _status: 'failed', _error: typeof failure === 'object' ? failure.error : failure };
+                return { ...row, _status: 'failed', _error: typeof failure === 'object' ? (failure.error || failure.message) : failure };
             }
             
             // If it wasn't in errors but has a valid phone number, mark as sent
@@ -393,7 +393,8 @@ const PublicationPage = () => {
         let errorMessage = "";
         if (result.failed > 0 && result.errors && result.errors.length > 0) {
             const firstError = result.errors[0];
-            errorMessage = ` First error: ${typeof firstError === 'object' ? (firstError.error || JSON.stringify(firstError)) : firstError}`;
+            const errorText = typeof firstError === 'object' ? (firstError.error || firstError.message || JSON.stringify(firstError)) : firstError;
+            errorMessage = ` First error: ${errorText}`;
         }
 
         if (result.failed > 0) {
