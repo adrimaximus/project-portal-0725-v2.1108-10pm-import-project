@@ -188,10 +188,10 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                                     <div className="flex-1 overflow-hidden">
                                       <p className="font-semibold">{message.repliedMessage.senderName}</p>
                                       <div className={cn(
-                                          "text-xs line-clamp-2 opacity-80 prose prose-sm max-w-none",
+                                          "text-xs line-clamp-2 opacity-80 prose prose-sm max-w-none [&_p]:my-0",
                                           isCurrentUser 
-                                              ? "prose-invert prose-p:text-primary-foreground prose-a:text-primary-foreground" 
-                                              : "dark:prose-invert"
+                                            ? "prose dark:prose-invert [--tw-prose-body:#e3e3e3] [--tw-prose-links:#e3e3e3] [--tw-prose-bold:#e3e3e3] [--tw-prose-invert-body:#374151] [--tw-prose-invert-links:#374151] [--tw-prose-invert-bold:#374151]" 
+                                            : "dark:prose-invert"
                                       )}>
                                         {message.repliedMessage.isDeleted ? (
                                           <p className="italic">This message was deleted.</p>
