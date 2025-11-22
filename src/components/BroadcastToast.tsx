@@ -32,7 +32,7 @@ const fetchNotificationWithRetry = async (notificationId: string, attempts = 5, 
     }
     
     if (error) {
-      console.log(`Attempt ${i + 1} failed to fetch notification:`, error.message);
+      console.log(`[BroadcastToast] Attempt ${i + 1} failed to fetch notification:`, error.message);
     }
     
     // Wait before retrying
@@ -64,9 +64,11 @@ export const BroadcastToast = () => {
         const tone = data?.notification_preferences?.tone || 'positive-alert-ding.mp3';
         if (tone && tone !== 'none') {
           audioRef.current = new Audio(`${TONE_BASE_URL}${tone}`);
+          // Preload
+          audioRef.current.load();
         }
       } catch (e) {
-        console.error("Failed to load notification sound preference", e);
+        console.error("[BroadcastToast] Failed to load notification sound preference", e);
       }
     };
     setupAudio();
@@ -76,10 +78,11 @@ export const BroadcastToast = () => {
   useEffect(() => {
     if (!user) return;
 
-    console.log("Setting up BroadcastToast listener for user:", user.id);
+    const channelName = `broadcast-listener:${user.id}`;
+    console.log("[BroadcastToast] Subscribing to channel:", channelName);
 
     const channel = supabase
-      .channel('broadcast-listener-channel')
+      .channel(channelName)
       .on(
         'postgres_changes',
         {
@@ -89,17 +92,20 @@ export const BroadcastToast = () => {
           filter: `user_id=eq.${user.id}`,
         },
         async (payload) => {
-          console.log("BroadcastToast received event:", payload);
+          console.log("[BroadcastToast] Received event:", payload);
           
           // Fetch notification details with retry
           const notifData = await fetchNotificationWithRetry(payload.new.notification_id);
 
           if (notifData && notifData.type === 'broadcast') {
-            console.log("Showing broadcast toast:", notifData);
+            console.log("[BroadcastToast] Displaying broadcast:", notifData);
             
-            // Play sound
+            // Play sound safely
             if (audioRef.current) {
-              audioRef.current.play().catch(e => console.log("Audio play failed", e));
+              const playPromise = audioRef.current.play();
+              if (playPromise !== undefined) {
+                playPromise.catch(e => console.warn("[BroadcastToast] Audio play failed (likely browser policy):", e));
+              }
             }
 
             const link = (notifData.data as any)?.link;
@@ -115,16 +121,16 @@ export const BroadcastToast = () => {
             });
             setIsVisible(true);
           } else {
-            console.log("Notification data not found or not broadcast type", notifData);
+            console.log("[BroadcastToast] Notification data not found or type mismatch:", notifData?.type);
           }
         }
       )
       .subscribe((status) => {
-        console.log("BroadcastToast subscription status:", status);
+        console.log(`[BroadcastToast] Channel status for ${channelName}:`, status);
       });
 
     return () => {
-      console.log("Cleaning up BroadcastToast listener");
+      console.log(`[BroadcastToast] Unsubscribing from ${channelName}`);
       supabase.removeChannel(channel);
     };
   }, [user?.id]);
@@ -134,7 +140,11 @@ export const BroadcastToast = () => {
     if (!activeMessage) return;
 
     const updateTime = () => {
-      setTimeAgo(formatDistanceToNow(new Date(activeMessage.created_at), { addSuffix: true }));
+      try {
+        setTimeAgo(formatDistanceToNow(new Date(activeMessage.created_at), { addSuffix: true }));
+      } catch (e) {
+        setTimeAgo("Just now");
+      }
     };
     
     updateTime(); // Initial update
@@ -151,7 +161,7 @@ export const BroadcastToast = () => {
       await supabase.rpc('update_my_notification_status', {
         notification_id: activeMessage.notification_id,
         is_read: true
-      }).catch(console.error);
+      }).catch(err => console.error("[BroadcastToast] Failed to mark as read:", err));
     }
     
     // Clear message after animation
@@ -176,8 +186,9 @@ export const BroadcastToast = () => {
 
   return (
     <div 
+      data-dyad-broadcast-toast="true"
       className={cn(
-        "fixed bottom-6 right-6 z-[9999] w-full max-w-[380px] transition-all duration-500 ease-in-out transform",
+        "fixed bottom-6 right-6 z-[9999] w-[380px] max-w-[90vw] transition-all duration-500 ease-in-out transform",
         isVisible ? "translate-y-0 opacity-100" : "translate-y-12 opacity-0 pointer-events-none"
       )}
     >
@@ -195,7 +206,7 @@ export const BroadcastToast = () => {
         {/* Content */}
         <div className="flex-1 min-w-0 space-y-1">
           <div className="flex justify-between items-start gap-2">
-            <h4 className="text-sm font-semibold text-foreground leading-tight">
+            <h4 className="text-sm font-semibold text-foreground leading-tight line-clamp-1">
               {activeMessage.title}
             </h4>
             <span className="text-[10px] text-muted-foreground whitespace-nowrap flex-shrink-0 mt-0.5">
