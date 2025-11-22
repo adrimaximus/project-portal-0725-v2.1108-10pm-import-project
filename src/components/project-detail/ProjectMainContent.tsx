@@ -81,6 +81,7 @@ const ProjectMainContent = ({
   const editFileInputRef = useRef<HTMLInputElement>(null);
   
   // Determine users for mentions. Priority: Project Members + Owner
+  // This ensures @all only notifies people relevant to this project
   const projectUsers = useMemo(() => {
       const users: User[] = [...project.assignedTo];
       // Add owner if not already in list
@@ -294,7 +295,7 @@ const ProjectMainContent = ({
             editFileInputRef={editFileInputRef}
             initialMention={initialMention}
             onMentionConsumed={handleMentionConsumed}
-            allUsers={projectUsers}
+            allUsers={projectUsers} // Pass the scoped list of project members
             onGoToReply={handleScrollToMessage}
             highlightedCommentId={highlightedCommentId}
             onHighlightComplete={onCommentHighlightComplete}

@@ -104,6 +104,7 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
     let finalText = text;
 
     // Handle @all expansion for Chat
+    // If user typed "@all", replace it with mentions for everyone in the conversation
     if (finalText.match(/@\[[^\]]+\]\(all\)/)) {
        const members = selectedConversation?.members || [];
        const allMentions = members.map(u => `@[${u.name}](${u.id})`).join(' ');

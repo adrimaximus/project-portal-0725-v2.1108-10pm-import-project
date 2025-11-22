@@ -115,6 +115,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
   const [isAttachmentModalOpen, setIsAttachmentModalOpen] = useState(false);
 
   // Only allow mentioning users assigned to the task
+  // This ensures @all only notifies task assignees
   const taskAssignees = useMemo(() => task.assignedTo || [], [task.assignedTo]);
 
   useEffect(() => {
@@ -529,7 +530,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
               onReply={handleReply}
               onCreateTicketFromComment={handleCreateTicketFromComment}
               onGoToReply={handleScrollToMessage}
-              allUsers={taskAssignees}
+              allUsers={taskAssignees} // Pass scoped users
               highlightedCommentId={highlightedCommentId}
               onHighlightComplete={onHighlightComplete}
             />
@@ -540,7 +541,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
           <CommentInput
             ref={commentInputRef}
             onAddCommentOrTicket={handleAddComment}
-            allUsers={taskAssignees}
+            allUsers={taskAssignees} // Pass scoped users
             replyTo={replyTo}
             onCancelReply={() => setReplyTo(null)}
             storageKey={`comment-draft-task-${task.id}`}
