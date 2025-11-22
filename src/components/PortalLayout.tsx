@@ -4,8 +4,6 @@ import PortalSidebar from "./PortalSidebar";
 import PortalHeader from "./PortalHeader";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
-import { BroadcastToast } from "./BroadcastToast";
-import ImpersonationBanner from "./ImpersonationBanner";
 
 interface PortalLayoutProps {
   children?: ReactNode;
@@ -55,10 +53,6 @@ const PortalLayout = ({ children, summary, noPadding = false, disableMainScroll 
           </main>
         </div>
       </div>
-      
-      {/* Global Components */}
-      <BroadcastToast />
-      <ImpersonationBanner />
     </div>
   );
 };

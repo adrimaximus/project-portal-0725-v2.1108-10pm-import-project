@@ -4,6 +4,8 @@ import LoadingScreen from "./LoadingScreen";
 import React from "react";
 import { ChatProvider } from "@/contexts/ChatContext";
 import { FeaturesProvider } from "@/contexts/FeaturesContext";
+import { BroadcastToast } from "./BroadcastToast";
+import ImpersonationBanner from "./ImpersonationBanner";
 
 const ProtectedRouteLayout = () => {
   const { session, user, isLoading } = useAuth();
@@ -25,6 +27,8 @@ const ProtectedRouteLayout = () => {
     <FeaturesProvider>
       <ChatProvider>
         <Outlet />
+        <BroadcastToast />
+        <ImpersonationBanner />
       </ChatProvider>
     </FeaturesProvider>
   );
