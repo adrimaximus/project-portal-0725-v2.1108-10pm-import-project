@@ -373,7 +373,7 @@ const PublicationPage = () => {
                 </Card>
 
                 {/* Right Column: Preview */}
-                <Card className="h-[800px] flex flex-col shadow-sm overflow-hidden">
+                <Card className="h-[400px] flex flex-col shadow-sm overflow-hidden">
                    <CardHeader className="border-b pb-4">
                       <CardTitle className="text-xl font-semibold">Data Preview</CardTitle>
                       <CardDescription>
