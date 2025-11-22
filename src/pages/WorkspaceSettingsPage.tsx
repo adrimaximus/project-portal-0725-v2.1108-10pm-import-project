@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 const WorkspaceSettingsPage = () => {
   const { features, toggleFeatureStatus, isLoading } = useFeatures();
 
+  // Added 'expense' to the list of features to display
   const workspaceFeatures = [
     'billing', 'chat', 'dashboard', 'goals', 'knowledge-base', 
     'mood-tracker', 'people', 'projects', 'request', 'search', 'integrations', 'tasks', 'expense'
