@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { CheckCircle2, Info, X } from "lucide-react";
+import { CheckCircle2, Megaphone, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -110,7 +110,7 @@ export const BroadcastToast = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user?.id]); // Depend on user.id to avoid unnecessary re-subscriptions
+  }, [user?.id]);
 
   // Update "time ago" text
   useEffect(() => {
@@ -171,7 +171,7 @@ export const BroadcastToast = () => {
         {/* Icon */}
         <div className="flex-shrink-0 pt-1">
           <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-            <Info className="h-5 w-5" />
+            <Megaphone className="h-5 w-5" />
           </div>
         </div>
 

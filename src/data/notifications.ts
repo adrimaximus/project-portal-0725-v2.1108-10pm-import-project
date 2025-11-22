@@ -1,13 +1,38 @@
-import { MessageSquare, AtSign, FolderKanban, Info, Target } from "lucide-react";
+import { 
+  MessageSquare, 
+  AtSign, 
+  FolderKanban, 
+  Info, 
+  Target,
+  ListChecks,
+  UserPlus,
+  BookOpen,
+  TrendingUp,
+  CreditCard,
+  AlertTriangle,
+  Receipt,
+  Megaphone
+} from "lucide-react";
 import { AppNotification } from '@/types';
 
 export const notificationIcons = {
   comment: MessageSquare,
   mention: AtSign,
+  discussion_mention: AtSign,
   project: FolderKanban,
   project_update: FolderKanban,
+  project_status_updated: FolderKanban,
   system: Info,
   goal: Target,
+  goal_invite: Target,
+  goal_progress_update: TrendingUp,
+  task_assignment: ListChecks,
+  task_overdue: AlertTriangle,
+  project_invite: UserPlus,
+  kb_invite: BookOpen,
+  payment_status_updated: CreditCard,
+  billing_reminder: Receipt,
+  broadcast: Megaphone,
 };
 
 const dummyActor1 = {
