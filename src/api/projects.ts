@@ -29,7 +29,8 @@ export const getDashboardProjects = async ({
   timeframe?: 'upcoming' | 'past' | null,
   sortDirection?: 'asc' | 'desc'
 }): Promise<Project[]> => {
-  const { data, error } = await supabase.rpc('get_dashboard_projects', {
+  // Use V2 function to avoid ambiguity with the legacy function signature
+  const { data, error } = await supabase.rpc('get_dashboard_projects_v2', {
     p_limit: limit,
     p_offset: offset,
     p_search_term: searchTerm || null,
