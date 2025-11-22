@@ -51,6 +51,14 @@ Deno.serve(async (req) => {
             if (msg.type === 'image') msgType = 1;
             if (msg.type === 'document') msgType = 2;
 
+            // SAFETY FALLBACK:
+            // If it's a media type but the URL is missing or empty, fallback to text (type 0).
+            // This prevents the "Image Url Can't be null" error from the API.
+            if ((msgType === 1 || msgType === 2) && (!msg.url || typeof msg.url !== 'string' || msg.url.trim() === '')) {
+                console.warn(`[send-whatsapp-blast] Warning: Media message to ${msg.phone} has invalid URL. Fallback to text.`);
+                msgType = 0;
+            }
+
             const payload: any = {
                 client_id: parseInt(clientId, 10),
                 api_key: apiKey,
@@ -61,7 +69,7 @@ Deno.serve(async (req) => {
 
             // Handle text vs caption logic
             if (msgType === 0) {
-                payload.message = msg.message;
+                payload.message = msg.message || msg.caption || ''; // Use caption as message if we fell back
             } else {
                 // For media, use 'url' and 'message' (which acts as caption)
                 payload.url = msg.url;
@@ -103,6 +111,7 @@ Deno.serve(async (req) => {
                       errorMessage = cleanText.substring(0, 200) + (cleanText.length > 200 ? '...' : '');
                     }
                 }
+                console.error(`WBIZTOOL API Error for ${msg.phone}:`, errorMessage);
                 throw new Error(errorMessage);
             }
 
