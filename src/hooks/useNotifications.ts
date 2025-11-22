@@ -77,6 +77,9 @@ export const useNotifications = () => {
           filter: `user_id=eq.${user.id}`,
         },
         async (payload) => {
+          // Invalidate query to show new notification in the list
+          queryClient.invalidateQueries({ queryKey: ['notifications', user.id] });
+
           const { data: profileData, error: profileError } = await supabase
             .from('profiles')
             .select('notification_preferences')
@@ -85,19 +88,23 @@ export const useNotifications = () => {
 
           if (profileError) {
             console.error('Could not fetch latest profile for notification sound.', profileError);
-            queryClient.invalidateQueries({ queryKey: ['notifications', user.id] });
             return;
           }
           
           const userPreferences = profileData.notification_preferences || {};
 
           const newNotificationId = payload.new.notification_id;
-          const { data: notificationData } = await supabase.from('notifications').select('title, body, type, resource_id').eq('id', newNotificationId).single();
+          const { data: notificationData } = await supabase.from('notifications').select('title, body, type, resource_type, resource_id').eq('id', newNotificationId).single();
           
           if (notificationData) {
-            // Skip toast for 'broadcast' type because BroadcastToast.tsx handles it with a specialized UI
-            if (notificationData.type === 'broadcast') {
-              queryClient.invalidateQueries({ queryKey: ['notifications', user.id] });
+            // EXCLUSION LOGIC:
+            // Skip toast and sound for types handled by BroadcastToast.tsx
+            // BroadcastToast handles 'broadcast' AND 'system' types where resource_type is 'system'
+            const isHandledByBroadcastToast = 
+                notificationData.type === 'broadcast' || 
+                (notificationData.type === 'system' && notificationData.resource_type === 'system');
+
+            if (isHandledByBroadcastToast) {
               return;
             }
 
@@ -110,6 +117,7 @@ export const useNotifications = () => {
 
             const toastsEnabled = userPreferences.toast_enabled !== false;
             
+            // Don't show toast if we are currently looking at the chat where the message arrived
             if (toastsEnabled && !isChatActiveAndVisible) {
               toast.info(notificationData.title, {
                 description: notificationData.body,
@@ -126,16 +134,16 @@ export const useNotifications = () => {
             const isNotificationTypeEnabled = userPreferences?.[notificationData.type] !== false;
             const tone = userPreferences?.tone;
 
+            // Only play sound if it's not a broadcast (already handled) and not active chat
             if (isNotificationTypeEnabled && tone && tone !== 'none' && !isChatActiveAndVisible) {
               try {
                 const audio = new Audio(`${TONE_BASE_URL}${tone}`);
-                await audio.play();
+                await audio.play().catch(e => console.warn("Audio play blocked", e));
               } catch (e) {
                 console.error("Error playing notification sound:", e);
               }
             }
           }
-          queryClient.invalidateQueries({ queryKey: ['notifications', user.id] });
         }
       )
       .subscribe();
@@ -154,7 +162,7 @@ export const useNotifications = () => {
       importantTypes.includes(n.type) ||
       (n.type === 'project_update' && (
         n.description.toLowerCase().includes('completed') || 
-        n.description.toLowerCase().includes('kepada anda') // "to you" in Indonesian for assignments/ownership transfers
+        n.description.toLowerCase().includes('kepada anda')
       ))
     );
     return {
