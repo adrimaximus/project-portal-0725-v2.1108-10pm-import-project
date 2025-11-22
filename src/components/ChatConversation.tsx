@@ -191,7 +191,7 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                                       <div className={cn(
                                           "text-xs line-clamp-2 opacity-80 prose prose-sm max-w-none [&_p]:my-0",
                                           isCurrentUser 
-                                            ? "prose dark:prose-invert [--tw-prose-body:#e3e3e3] [--tw-prose-links:#e3e3e3] [--tw-prose-bold:#e3e3e3] [--tw-prose-invert-body:#374151] [--tw-prose-invert-links:#374151] [--tw-prose-invert-bold:#374151]" 
+                                            ? "prose dark:prose-invert [--tw-prose-body:#e3e3e3] [--tw-prose-links:#e3e3e3] [--tw-prose-bold:#e3e3e3] [--tw-prose-invert-body:#374151] [--tw-prose-invert-links:#374151] [--tw-prose-invert-bold:#374151]"
                                             : "dark:prose-invert"
                                       )}>
                                         {message.repliedMessage.isDeleted ? (
