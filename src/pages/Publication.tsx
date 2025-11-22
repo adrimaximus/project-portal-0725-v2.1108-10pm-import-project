@@ -264,9 +264,15 @@ const PublicationPage = () => {
       }
     }
     return (
-      <div className="flex items-center gap-1.5">
-        <div className="h-1.5 w-1.5 rounded-full bg-green-500" />
-        <span className="text-xs text-muted-foreground">Ready to send</span>
+      <div className="flex flex-col">
+        <span className="text-green-600 font-medium text-[10px] flex items-center gap-1">
+            <div className="h-1.5 w-1.5 rounded-full bg-green-500" />
+            Ready to send
+        </span>
+        <span className="text-[10px] text-muted-foreground pl-2.5">
+            {new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+        </span>
+        <span className="text-[9px] text-muted-foreground/70 pl-2.5">Today</span>
       </div>
     );
   };
