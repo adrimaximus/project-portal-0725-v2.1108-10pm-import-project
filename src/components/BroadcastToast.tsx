@@ -1,9 +1,10 @@
 import { useEffect, useState, useRef } from "react";
-import { X, Check, ExternalLink } from "lucide-react";
+import { Check, ExternalLink } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
+import InteractiveText from "./InteractiveText";
 
 interface BroadcastMessage {
   id: string; // notification_recipients id
@@ -137,9 +138,9 @@ export const BroadcastToast = () => {
             {activeMessage.title}
             {activeMessage.link && <ExternalLink className="h-3 w-3 opacity-50 flex-shrink-0" />}
           </h4>
-          <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed line-clamp-3">
-            {activeMessage.body}
-          </p>
+          <div className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed line-clamp-3">
+            <InteractiveText text={activeMessage.body} />
+          </div>
         </div>
 
         <div className="flex flex-col gap-1 shrink-0">

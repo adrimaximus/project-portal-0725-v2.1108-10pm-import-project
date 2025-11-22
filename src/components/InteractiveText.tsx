@@ -33,7 +33,7 @@ const InteractiveText = ({ text, members = [] }: InteractiveTextProps) => {
           const name = mentionMatch[1];
           // Optional: Could link to user profile if needed using ID
           return (
-            <span key={i} className="font-bold hover:underline cursor-pointer">
+            <span key={i} className="font-bold hover:underline cursor-pointer text-primary">
               @{name}
             </span>
           );
@@ -45,8 +45,7 @@ const InteractiveText = ({ text, members = [] }: InteractiveTextProps) => {
           const label = mdLinkMatch[1];
           let url = mdLinkMatch[2];
           
-          // Handle custom 'task:' protocol seen in screenshot
-          // Format seems to be task:project-slug:task-id
+          // Handle custom 'task:' protocol
           if (url.startsWith('task:')) {
              const segments = url.split(':');
              // task:slug:id
@@ -61,7 +60,7 @@ const InteractiveText = ({ text, members = [] }: InteractiveTextProps) => {
           
           if (isInternal) {
             return (
-              <Link key={i} to={url} className="underline hover:opacity-80 break-words">
+              <Link key={i} to={url} className="underline hover:opacity-80 break-words text-primary">
                 {label}
               </Link>
             );
@@ -73,7 +72,7 @@ const InteractiveText = ({ text, members = [] }: InteractiveTextProps) => {
               href={url} 
               target="_blank" 
               rel="noopener noreferrer" 
-              className="underline hover:opacity-80 break-words"
+              className="underline hover:opacity-80 break-words text-primary"
             >
               {label}
             </a>
@@ -88,7 +87,7 @@ const InteractiveText = ({ text, members = [] }: InteractiveTextProps) => {
               href={part} 
               target="_blank" 
               rel="noopener noreferrer" 
-              className="underline hover:opacity-80 break-words"
+              className="underline hover:opacity-80 break-words text-primary"
             >
               {part}
             </a>
@@ -96,7 +95,7 @@ const InteractiveText = ({ text, members = [] }: InteractiveTextProps) => {
         }
 
         // Plain text
-        return <span key={i}>{part}</span>;
+        return <span key={i} className="break-words">{part}</span>;
       })}
     </>
   );
