@@ -14,8 +14,6 @@ const corsHeaders = {
 
 const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
 
-// ... (Keep existing getAnalyzeProjectsSystemPrompt and buildContext functions exactly as they were)
-
 const getAnalyzeProjectsSystemPrompt = (context: any, userName: string) => `You are an expert project and goal management AI assistant. Your purpose is to execute actions for the user. You will receive a conversation history and context data.
 
 **Conversational Style:**
@@ -1205,6 +1203,144 @@ async function generateProjectBrief(payload: any, context: any) {
     return { brief };
 }
 
+async function generateCaption(payload: any, context: any) {
+    const { openai, anthropic } = context;
+    const { altText } = payload;
+    if (!altText) throw new Error("altText is required.");
+
+    const systemPrompt = `You are an AI that generates a short, inspiring, one-line caption for an image. The caption should be suitable for a professional dashboard related to events, marketing, and project management. Respond with ONLY the caption, no extra text or quotes. Keep it under 12 words.`;
+    const userPrompt = `Generate a caption for an image described as: "${altText}"`;
+
+    let caption = "";
+    if (anthropic) {
+        const response = await anthropic.messages.create({
+            model: "claude-3-haiku-20240307",
+            messages: [{ role: "user", content: userPrompt }],
+            system: systemPrompt,
+            temperature: 0.7,
+            max_tokens: 50,
+        });
+        caption = response.content[0].text;
+    } else if (openai) {
+        const response = await openai.chat.completions.create({
+            model: "gpt-3.5-turbo",
+            messages: [
+                { role: "system", content: systemPrompt },
+                { role: "user", content: userPrompt }
+            ],
+            temperature: 0.7,
+            max_tokens: 50,
+        });
+        caption = response.choices[0].message.content;
+    } else {
+        // Fallback
+        caption = altText;
+    }
+    return { caption: caption?.trim().replace(/^"|"$/g, '') };
+}
+
+async function generateMoodInsight(payload: any, context: any) {
+    const { openai, anthropic } = context;
+    const { prompt, userName, conversationHistory } = payload;
+    if (!prompt) throw new Error("Prompt is required.");
+
+    const systemPrompt = `Anda adalah seorang teman AI yang suportif, empatik, dan berwawasan luas. Tujuan Anda adalah untuk terlibat dalam percakapan yang mendukung dengan pengguna tentang suasana hati dan perasaan mereka. Anda akan menerima riwayat percakapan. Tugas Anda adalah memberikan respons berikutnya dalam percakapan tersebut. Pertahankan nada yang positif dan memotivasi. Sapa pengguna dengan nama mereka jika ini adalah awal percakapan. Jaga agar respons tetap sangat ringkas, maksimal 2 kalimat, dan terasa seperti percakapan alami. Jangan mengulangi diri sendiri. Fokus percakapan ini adalah murni pada kesejahteraan emosional. Jangan membahas topik lain seperti proyek, tugas, atau tujuan kerja kecuali jika pengguna secara eksplisit mengungkitnya terlebih dahulu dalam konteks perasaan mereka. Selalu berikan respons dalam Bahasa Indonesia.`;
+
+    const messages = [
+      ...(conversationHistory || []).map((msg: any) => ({
+        role: msg.sender === 'ai' ? 'assistant' : 'user',
+        content: msg.content
+      })),
+      { role: "user", content: prompt }
+    ];
+    
+    if (messages.length > 2 && messages[messages.length-2].role === 'user' && messages[messages.length-2].content === prompt) {
+      messages.splice(messages.length-2, 1);
+    }
+
+    let result;
+    if (anthropic) {
+        const response = await anthropic.messages.create({
+            model: "claude-3-haiku-20240307",
+            messages: messages,
+            system: systemPrompt,
+            temperature: 0.7,
+            max_tokens: 200,
+        });
+        result = response.content[0].text;
+    } else if (openai) {
+        const response = await openai.chat.completions.create({
+            model: "gpt-4-turbo",
+            messages: [{ role: "system", content: systemPrompt }, ...messages.filter(m => m.role !== 'system')],
+            temperature: 0.7,
+            max_tokens: 200,
+        });
+        result = response.choices[0].message.content;
+    } else {
+        throw new Error("No AI provider configured.");
+    }
+
+    return { result };
+}
+
+async function generateGoalInsight(payload: any, context: any) {
+    const { openai, anthropic } = context;
+    const { goal, context: progressContext } = payload;
+    if (!goal || !progressContext) throw new Error("Goal and context are required.");
+
+    const owner = goal.collaborators.find((c: any) => c.id === goal.user_id);
+    const otherCollaborators = goal.collaborators.filter((c: any) => c.id !== goal.user_id);
+
+    const modifiedGoal = {
+      ...goal,
+      owner: owner,
+      collaborators: otherCollaborators,
+    };
+    delete modifiedGoal.user_id;
+
+    const systemPrompt = `Anda adalah seorang pelatih AI yang suportif dan berwawasan luas. Tujuan Anda adalah memberikan saran yang memotivasi dan dapat ditindaklanjuti kepada pengguna berdasarkan kemajuan mereka. Analisis detail tujuan berikut: judul, deskripsi, tipe, tag, pemilik (owner), kolaborator lain (collaborators), dan kemajuan terbaru. Berdasarkan analisis holistik ini, berikan wawasan singkat yang bermanfaat dalam format markdown.
+
+- Pertahankan nada yang positif dan memotivasi.
+- Sapa pengguna secara langsung. Jika ada pemilik (owner), sapa mereka sebagai pemilik tujuan.
+- Jika ada kolaborator lain, Anda bisa menyebutkan mereka dalam konteks kolaborasi.
+- Jika kemajuan baik, berikan pujian dan sarankan cara untuk mempertahankan momentum.
+- Jika kemajuan tertinggal, berikan semangat, bukan kritik. Sarankan langkah-langkah kecil yang dapat dikelola untuk kembali ke jalur yang benar.
+- Jaga agar respons tetap ringkas (2-4 kalimat).
+- Jangan mengulangi data kembali kepada pengguna; interpretasikan data tersebut.
+- PENTING: Selalu berikan respons dalam Bahasa Indonesia.`;
+
+    const userPrompt = `Berikut adalah tujuan saya dan kemajuan terbaru saya. Tolong berikan saya beberapa saran pembinaan.
+Tujuan: ${JSON.stringify(modifiedGoal, null, 2)}
+Konteks Kemajuan: ${JSON.stringify(progressContext, null, 2)}`;
+
+    let result;
+    if (anthropic) {
+        const response = await anthropic.messages.create({
+            model: "claude-3-haiku-20240307",
+            messages: [{ role: "user", content: userPrompt }],
+            system: systemPrompt,
+            temperature: 0.7,
+            max_tokens: 200,
+        });
+        result = response.content[0].text;
+    } else if (openai) {
+        const response = await openai.chat.completions.create({
+            model: "gpt-4-turbo",
+            messages: [
+                { role: "system", content: systemPrompt },
+                { role: "user", content: userPrompt }
+            ],
+            temperature: 0.7,
+            max_tokens: 200,
+        });
+        result = response.choices[0].message.content;
+    } else {
+        throw new Error("No AI provider configured.");
+    }
+
+    return { result };
+}
+
 const featureMap: { [key: string]: (payload: any, context: any) => Promise<any> } = {
   'analyze-projects': analyzeProjects,
   'analyze-duplicates': analyzeDuplicates,
@@ -1218,6 +1354,9 @@ const featureMap: { [key: string]: (payload: any, context: any) => Promise<any> 
   'generate-icon': generateIcon,
   'generate-project-tasks': generateProjectTasks,
   'generate-project-brief': generateProjectBrief,
+  'generate-caption': generateCaption,
+  'generate-mood-insight': generateMoodInsight,
+  'generate-goal-insight': generateGoalInsight,
 };
 
 const createSupabaseAdmin = () => {

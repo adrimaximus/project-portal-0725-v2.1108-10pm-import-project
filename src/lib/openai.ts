@@ -38,8 +38,11 @@ export async function generateAiInsight(
     month?: { name: string; percentage: number; completedCount: number; possibleCount: number; };
   }
 ): Promise<string> {
-  const { data, error } = await supabase.functions.invoke('generate-goal-insight', {
-    body: { goal, context },
+  const { data, error } = await supabase.functions.invoke('ai-handler', {
+    body: { 
+      feature: 'generate-goal-insight',
+      payload: { goal, context }
+    },
   });
 
   if (error) {
