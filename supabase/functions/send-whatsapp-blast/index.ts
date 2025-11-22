@@ -56,10 +56,18 @@ Deno.serve(async (req) => {
                 api_key: apiKey,
                 whatsapp_client: parseInt(whatsappClientId, 10),
                 phone: msg.phone,
-                message: msg.message,
                 msg_type: msgType,
-                url: msg.url || '', 
             };
+
+            // Handle text vs caption logic
+            if (msgType === 0) {
+                payload.message = msg.message;
+            } else {
+                // For media, use 'url' and 'caption' (if API supports caption in message field or separate)
+                // WBIZTOOL documentation usually expects 'url' for file and 'message' acts as caption for media
+                payload.url = msg.url;
+                payload.message = msg.caption || msg.message || ''; // Use caption if available, fallback to message
+            }
 
             // Add scheduling parameters if present
             if (msg.schedule_time) {
@@ -104,7 +112,8 @@ Deno.serve(async (req) => {
         } catch (error) {
             console.error(`Failed to send to ${msg.phone}:`, error);
             results.failed++;
-            results.errors.push({ phone: msg.phone, error: error.message });
+            // Store clean error message for frontend
+            results.errors.push(error.message); 
         }
     }
 
