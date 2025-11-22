@@ -27,7 +27,13 @@ const fetchNotificationWithRetry = async (notificationId: string, attempts = 5, 
       .eq('id', notificationId)
       .single();
 
-    if (!error && data) return data;
+    if (!error && data) {
+      return data;
+    }
+    
+    if (error) {
+      console.log(`Attempt ${i + 1} failed to fetch notification:`, error.message);
+    }
     
     // Wait before retrying
     if (i < attempts - 1) await new Promise(res => setTimeout(res, delay));
@@ -64,38 +70,33 @@ export const BroadcastToast = () => {
       }
     };
     setupAudio();
-  }, [user?.id]); // Only re-run if user ID changes
+  }, [user?.id]);
 
   // Subscribe to notifications
   useEffect(() => {
     if (!user) return;
 
-    console.log("BroadcastToast: Initializing subscription for user", user.id);
+    console.log("Setting up BroadcastToast listener for user:", user.id);
 
     const channel = supabase
-      .channel(`broadcast-toast:${user.id}`)
+      .channel('broadcast-listener-channel')
       .on(
         'postgres_changes',
         {
           event: 'INSERT',
           schema: 'public',
           table: 'notification_recipients',
-          // We rely on RLS to filter events for the current user. 
-          // Adding an explicit filter string can sometimes cause issues if UUID formats vary.
+          filter: `user_id=eq.${user.id}`,
         },
         async (payload) => {
-          console.log("BroadcastToast: Received notification event", payload);
+          console.log("BroadcastToast received event:", payload);
           
-          // Verify the event is for the current user (double check)
-          if (payload.new.user_id !== user.id) {
-            return;
-          }
-
-          // Fetch notification details with retry to handle potential race conditions
+          // Fetch notification details with retry
           const notifData = await fetchNotificationWithRetry(payload.new.notification_id);
 
           if (notifData && notifData.type === 'broadcast') {
-            console.log("BroadcastToast: Displaying broadcast", notifData);
+            console.log("Showing broadcast toast:", notifData);
+            
             // Play sound
             if (audioRef.current) {
               audioRef.current.play().catch(e => console.log("Audio play failed", e));
@@ -113,15 +114,17 @@ export const BroadcastToast = () => {
               created_at: notifData.created_at
             });
             setIsVisible(true);
+          } else {
+            console.log("Notification data not found or not broadcast type", notifData);
           }
         }
       )
       .subscribe((status) => {
-        console.log("BroadcastToast: Subscription status:", status);
+        console.log("BroadcastToast subscription status:", status);
       });
 
     return () => {
-      console.log("BroadcastToast: Cleaning up subscription");
+      console.log("Cleaning up BroadcastToast listener");
       supabase.removeChannel(channel);
     };
   }, [user?.id]);
@@ -174,17 +177,17 @@ export const BroadcastToast = () => {
   return (
     <div 
       className={cn(
-        "fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-[9999] w-[calc(100vw-2rem)] sm:w-[380px] transition-all duration-500 ease-in-out transform",
+        "fixed bottom-6 right-6 z-[9999] w-full max-w-[380px] transition-all duration-500 ease-in-out transform",
         isVisible ? "translate-y-0 opacity-100" : "translate-y-12 opacity-0 pointer-events-none"
       )}
     >
       <div 
-        className="bg-background text-foreground shadow-xl rounded-xl border border-border p-4 flex gap-4 relative cursor-pointer hover:bg-muted/30 transition-colors ring-1 ring-black/5 dark:ring-white/10"
+        className="bg-background text-foreground shadow-2xl rounded-xl border border-border p-4 flex gap-4 relative cursor-pointer hover:bg-muted/30 transition-colors"
         onClick={handleClick}
       >
         {/* Icon */}
         <div className="flex-shrink-0 pt-1">
-          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary animate-pulse">
+          <div className="h-10 w-10 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-600">
             <Megaphone className="h-5 w-5" />
           </div>
         </div>
@@ -192,7 +195,7 @@ export const BroadcastToast = () => {
         {/* Content */}
         <div className="flex-1 min-w-0 space-y-1">
           <div className="flex justify-between items-start gap-2">
-            <h4 className="text-sm font-semibold text-foreground leading-tight pr-6">
+            <h4 className="text-sm font-semibold text-foreground leading-tight">
               {activeMessage.title}
             </h4>
             <span className="text-[10px] text-muted-foreground whitespace-nowrap flex-shrink-0 mt-0.5">
@@ -214,11 +217,11 @@ export const BroadcastToast = () => {
           <X className="h-3 w-3" />
         </button>
         
-        {/* Mark Read Button */}
-        <div className="absolute bottom-4 right-4" title="Mark as read">
+        <div className="absolute bottom-3 right-3">
              <button 
                 onClick={(e) => { e.stopPropagation(); handleDismiss(); }}
-                className="text-green-600 hover:text-green-700 transition-colors bg-green-50 dark:bg-green-900/20 rounded-full p-0.5"
+                className="text-green-600 hover:text-green-700 transition-colors"
+                title="Mark as read"
              >
                  <CheckCircle2 className="h-5 w-5" />
              </button>

@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Collaborator } from '@/types';
 
 interface InteractiveTextProps {
-  text: string;
+  text: string | null | undefined;
   members?: Collaborator[];
 }
 
