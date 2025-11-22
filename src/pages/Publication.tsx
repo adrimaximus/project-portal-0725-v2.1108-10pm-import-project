@@ -710,7 +710,7 @@ const PublicationPage = () => {
                             disabled={!selectedPhoneColumn || data.length === 0 || !templateMessage.trim()}
                             onClick={handleGenerateMessages}
                          >
-                            Create Messages
+                            Send Messages
                          </Button>
                          <span className="text-xs text-muted-foreground">
                             {data.length > 0 ? `${data.length} messages ready` : "Upload data to begin"}
