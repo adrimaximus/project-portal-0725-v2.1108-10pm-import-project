@@ -59,39 +59,59 @@ const BillingTableHead = ({
 
 const BillingTable = ({ invoices, onEdit, sortConfig, handleSort, onStatusChange }: BillingTableProps) => {
   const sortedInvoices = useMemo(() => {
+    // Jika tidak ada key sort, kembalikan list asli
     if (!sortConfig.key) return invoices;
     
+    // Lakukan copy array sebelum sort untuk menghindari mutasi state
     const sorted = [...invoices].sort((a, b) => {
-      let aValue: any = a[sortConfig.key!];
-      let bValue: any = b[sortConfig.key!];
+      let aValue: any;
+      let bValue: any;
       
-      // Custom accessor logic for complex fields
-      if (sortConfig.key === 'projectOwner') {
-        aValue = a.projectOwner?.name || '';
-        bValue = b.projectOwner?.name || '';
-      } else if (sortConfig.key === 'assignedMembers') {
-        aValue = a.assignedMembers?.find(m => m.role === 'admin')?.name || '';
-        bValue = b.assignedMembers?.find(m => m.role === 'admin')?.name || '';
+      // EKSPLISIT HANDLER: Pastikan kita mengambil nilai primitif (string/number) yang benar
+      switch (sortConfig.key) {
+        case 'projectOwner':
+          aValue = a.projectOwner?.name || '';
+          bValue = b.projectOwner?.name || '';
+          break;
+        case 'assignedMembers':
+          // Ambil nama admin pertama untuk sorting
+          aValue = a.assignedMembers?.find(m => m.role === 'admin')?.name || '';
+          bValue = b.assignedMembers?.find(m => m.role === 'admin')?.name || '';
+          break;
+        case 'amount':
+          aValue = a.amount || 0;
+          bValue = b.amount || 0;
+          break;
+        case 'dueDate':
+          aValue = a.dueDate ? new Date(a.dueDate).getTime() : 0;
+          bValue = b.dueDate ? new Date(b.dueDate).getTime() : 0;
+          break;
+        case 'last_billing_reminder_sent_at':
+          aValue = a.last_billing_reminder_sent_at ? new Date(a.last_billing_reminder_sent_at).getTime() : 0;
+          bValue = b.last_billing_reminder_sent_at ? new Date(b.last_billing_reminder_sent_at).getTime() : 0;
+          break;
+        default:
+          // Untuk id, projectName, clientName, status, poNumber
+          // Kita ambil value langsung dari objek
+          aValue = a[sortConfig.key!] || '';
+          bValue = b[sortConfig.key!] || '';
       }
 
       let compareResult = 0;
 
-      // Handle nulls/undefined safely
-      if (aValue === bValue) {
-        compareResult = 0;
-      } else if (aValue === null || aValue === undefined) {
-        compareResult = 1;
-      } else if (bValue === null || bValue === undefined) {
-        compareResult = -1;
-      } else if (aValue instanceof Date && bValue instanceof Date) {
-        compareResult = aValue.getTime() - bValue.getTime();
-      } else if (typeof aValue === 'number' && typeof bValue === 'number') {
+      // Logika perbandingan standar
+      if (typeof aValue === 'number' && typeof bValue === 'number') {
         compareResult = aValue - bValue;
       } else {
-        // String comparison with numeric awareness
-        compareResult = String(aValue).localeCompare(String(bValue), undefined, { numeric: true, sensitivity: 'base' });
+        // Pakai String() untuk jaga-jaga jika ada nilai null lolos
+        const strA = String(aValue).toLowerCase();
+        const strB = String(bValue).toLowerCase();
+        
+        if (strA < strB) compareResult = -1;
+        if (strA > strB) compareResult = 1;
       }
 
+      // Balik hasil jika direction 'desc'
       return sortConfig.direction === 'asc' ? compareResult : -compareResult;
     });
 
