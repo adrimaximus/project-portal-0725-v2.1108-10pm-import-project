@@ -4,7 +4,6 @@ import LoadingScreen from "./LoadingScreen";
 import React from "react";
 import { ChatProvider } from "@/contexts/ChatContext";
 import { FeaturesProvider } from "@/contexts/FeaturesContext";
-import { BroadcastToast } from "./BroadcastToast";
 import { GlobalNotificationListener } from "./GlobalNotificationListener";
 import ImpersonationBanner from "./ImpersonationBanner";
 
@@ -28,7 +27,6 @@ const ProtectedRouteLayout = () => {
     <FeaturesProvider>
       <ChatProvider>
         <Outlet />
-        <BroadcastToast />
         <GlobalNotificationListener />
         <ImpersonationBanner />
       </ChatProvider>
