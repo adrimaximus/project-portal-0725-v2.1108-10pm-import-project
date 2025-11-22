@@ -31,7 +31,6 @@ Deno.serve(async (req) => {
     }
 
     // 1. Get all Google Calendar tokens
-    // Avoid complex joins to prevent 400/500 errors if foreign keys aren't perfect
     const { data: tokens, error: tokenError } = await supabaseAdmin
       .from('google_calendar_tokens')
       .select('*');
@@ -94,8 +93,6 @@ Deno.serve(async (req) => {
             const newTokens = await response.json();
             if (newTokens.error) {
             console.error(`Error refreshing token for user ${user.id}:`, newTokens.error_description);
-            // Optional: Delete invalid token to stop retrying
-            // await supabaseAdmin.from('google_calendar_tokens').delete().eq('user_id', user.id);
             continue; 
             }
 
@@ -138,18 +135,49 @@ Deno.serve(async (req) => {
       }
 
       if (eventsToImport.length > 0) {
-        const newProjectsPayload = eventsToImport.map(event => ({
-          name: event.summary || 'Untitled Event',
-          description: event.description,
-          start_date: event.start?.dateTime || event.start?.date,
-          due_date: event.end?.dateTime || event.end?.date,
-          origin_event_id: event.id,
-          venue: event.location,
-          created_by: user.id,
-          status: 'On Track',
-          payment_status: 'Unpaid',
-          category: 'Event',
-        }));
+        // NEW LOGIC START: Prepare email lookup map for creators and attendees
+        const creatorEmails = eventsToImport.map((e: any) => e.creator?.email).filter(Boolean);
+        const attendeeEmails = eventsToImport.flatMap((e: any) => e.attendees?.map((a: any) => a.email) || []).filter(Boolean);
+        const allEmailsToCheck = [...new Set([...creatorEmails, ...attendeeEmails])];
+        
+        const emailToIdMap = new Map<string, string>();
+
+        if (allEmailsToCheck.length > 0) {
+            const { data: emailProfiles } = await supabaseAdmin
+                .from('profiles')
+                .select('id, email')
+                .in('email', allEmailsToCheck);
+            
+            if (emailProfiles) {
+                emailProfiles.forEach(p => {
+                    if (p.email) emailToIdMap.set(p.email.toLowerCase(), p.id);
+                });
+            }
+        }
+        // NEW LOGIC END
+
+        const newProjectsPayload = eventsToImport.map(event => {
+            // Determine Owner based on Creator
+            const creatorEmail = event.creator?.email?.toLowerCase();
+            let projectOwnerId = user.id; // Default to token owner
+            
+            if (creatorEmail && emailToIdMap.has(creatorEmail)) {
+                projectOwnerId = emailToIdMap.get(creatorEmail)!;
+            }
+
+            return {
+                name: event.summary || 'Untitled Event',
+                description: event.description,
+                start_date: event.start?.dateTime || event.start?.date,
+                due_date: event.end?.dateTime || event.end?.date,
+                origin_event_id: event.id,
+                venue: event.location,
+                created_by: projectOwnerId, // Use the correct owner
+                status: 'On Track',
+                payment_status: 'Unpaid',
+                category: 'Event',
+            };
+        });
 
         const { data: createdProjects, error: projectInsertError } = await supabaseAdmin
           .from('projects')
@@ -161,55 +189,52 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        // Handle Attendees
-        const allAttendeeEmails = [...new Set(eventsToImport.flatMap(event => event.attendees?.map((att: any) => att.email) || []).filter(Boolean))];
-        const emailToIdMap = new Map<string, string>();
-
-        if (allAttendeeEmails.length > 0) {
-          const { data: attendeeProfiles } = await supabaseAdmin
-            .from('profiles')
-            .select('id, email')
-            .in('email', allAttendeeEmails);
-            
-          if (attendeeProfiles) {
-            attendeeProfiles.forEach(p => {
-              if (p.email) emailToIdMap.set(p.email, p.id);
-            });
-          }
-        }
-
         const projectMemberships: { project_id: string; user_id: string; role: string }[] = [];
         if (createdProjects) {
           createdProjects.forEach(project => {
-            // Ensure creator is added as owner if trigger failed (redundancy)
-            if (project.created_by !== user.id) {
-                 // Logic mismatch? created_by IS user.id above.
-                 // But if we support shared calendars later, this might change.
-                 // For now, creator is owner.
-            }
-
             const originalEvent = eventsToImport.find(e => e.id === project.origin_event_id);
+            
+            // Add attendees as members
             if (originalEvent && originalEvent.attendees) {
               originalEvent.attendees.forEach((attendee: any) => {
-                if (attendee.email && emailToIdMap.has(attendee.email)) {
-                  const attendeeUserId = emailToIdMap.get(attendee.email)!;
-                  if (attendeeUserId !== project.created_by && attendeeUserId !== user.id) {
-                    if (!projectMemberships.some(m => m.project_id === project.id && m.user_id === attendeeUserId)) {
-                      projectMemberships.push({
-                        project_id: project.id,
-                        user_id: attendeeUserId,
-                        role: 'member'
-                      });
+                if (attendee.email) {
+                    const emailLower = attendee.email.toLowerCase();
+                    if (emailToIdMap.has(emailLower)) {
+                        const attendeeUserId = emailToIdMap.get(emailLower)!;
+                        // Don't add owner again
+                        if (attendeeUserId !== project.created_by) {
+                            projectMemberships.push({
+                                project_id: project.id,
+                                user_id: attendeeUserId,
+                                role: 'member'
+                            });
+                        }
                     }
-                  }
                 }
               });
+            }
+            
+            // IMPORTANT: If the token owner (the person running the sync) is NOT the project creator (e.g. imported someone else's event),
+            // add them as a member/admin so they can still see the project in their dashboard.
+            if (project.created_by !== user.id) {
+                 projectMemberships.push({
+                    project_id: project.id,
+                    user_id: user.id,
+                    role: 'admin' 
+                });
             }
           });
         }
 
-        if (projectMemberships.length > 0) {
-          await supabaseAdmin.from('project_members').insert(projectMemberships).catch(e => console.error("Member insert error:", e));
+        // Filter unique memberships to prevent conflicts in the array before insert
+        const uniqueMemberships = projectMemberships.filter((value, index, self) =>
+            index === self.findIndex((t) => (
+                t.project_id === value.project_id && t.user_id === value.user_id
+            ))
+        );
+
+        if (uniqueMemberships.length > 0) {
+          await supabaseAdmin.from('project_members').insert(uniqueMemberships).catch(e => console.error("Member insert error:", e));
         }
 
         totalImported += newProjectsPayload.length;
