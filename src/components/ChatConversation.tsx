@@ -191,7 +191,7 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                                       <div className={cn(
                                           "text-xs line-clamp-2 opacity-80 prose prose-sm max-w-none [&_p]:my-0",
                                           isCurrentUser 
-                                            ? "prose-invert" 
+                                            ? "prose dark:prose-invert [--tw-prose-body:theme(colors.primary.foreground)] [--tw-prose-links:theme(colors.primary.foreground)] [--tw-prose-bold:theme(colors.primary.foreground)]"
                                             : "dark:prose-invert"
                                       )}>
                                         {message.repliedMessage.isDeleted ? (
