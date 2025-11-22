@@ -26,6 +26,9 @@ export function SortableTableHead<T extends string | number | symbol>({
   ...props
 }: SortableTableHeadProps<T>) {
   const isActive = sortConfig.key === columnKey;
+  
+  // Ensure direction check is case-insensitive or strict 'asc'
+  const isAsc = sortConfig.direction === 'asc';
 
   return (
     <TableHead {...props} className={cn("p-0", className)}>
@@ -41,7 +44,7 @@ export function SortableTableHead<T extends string | number | symbol>({
         {children}
         <span className="ml-2 flex h-4 w-4 items-center justify-center">
             {isActive ? (
-                sortConfig.direction === 'asc' ? (
+                isAsc ? (
                     <ArrowUp className="h-3 w-3" />
                 ) : (
                     <ArrowDown className="h-3 w-3" />

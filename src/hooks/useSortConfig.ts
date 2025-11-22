@@ -14,12 +14,12 @@ export const useSortConfig = <K extends string | number | symbol>(
 
   const requestSort = useCallback((key: K) => {
     setSortConfig((currentConfig) => {
-      // If we're sorting by a new key, start with ascending
+      // If sorting by a new key, start with ascending
       if (currentConfig.key !== key) {
         return { key, direction: 'asc' };
       }
 
-      // If we're sorting by the same key, just toggle direction
+      // If sorting by the same key, strictly toggle direction
       // Ascending -> Descending -> Ascending (Loop)
       return {
         key,
