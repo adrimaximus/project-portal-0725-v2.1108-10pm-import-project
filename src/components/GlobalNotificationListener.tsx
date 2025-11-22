@@ -125,8 +125,16 @@ export const GlobalNotificationListener = () => {
 
     console.log(`[NOTIF-DEBUG] Initializing listener for user: ${user.id} (${user.email})`);
 
+    // Force cleanup of any existing channels with this name to prevent duplicates
+    const channelName = `global-notifications:${user.id}`;
+    try {
+      supabase.removeChannel(supabase.channel(channelName));
+    } catch (e) {
+      // ignore cleanup error
+    }
+
     const channel = supabase
-      .channel(`global-notifications:${user.id}`)
+      .channel(channelName)
       .on(
         'postgres_changes',
         {
@@ -169,7 +177,7 @@ export const GlobalNotificationListener = () => {
           console.log("[NOTIF-DEBUG] Notification details fetched:", notificationData);
 
           // Fetch user preferences
-          const { data: profileData } = await supabase
+          const { data: profileData, error: profileError } = await supabase
             .from('profiles')
             .select('notification_preferences')
             .eq('id', user.id)
