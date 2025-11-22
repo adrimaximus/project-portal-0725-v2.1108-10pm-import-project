@@ -2,13 +2,24 @@ import { Conversation, Message, Reaction, Collaborator, ChatMessageAttachment } 
 import { getInitials, getAvatarUrl } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 
+const getLastMessageText = (content: string | null, attachmentType: string | null) => {
+  if (content) return content;
+  if (attachmentType) {
+    if (attachmentType.startsWith('image/')) return 'Sent a photo';
+    if (attachmentType.startsWith('video/')) return 'Sent a video';
+    if (attachmentType.startsWith('audio/')) return 'Sent a voice message';
+    return 'Sent an attachment';
+  }
+  return "No messages yet.";
+};
+
 const mapConversationData = (c: any): Omit<Conversation, 'messages'> => ({
   id: c.conversation_id,
   userName: c.conversation_name || 'Chat',
   userAvatar: getAvatarUrl(c.conversation_avatar, c.other_user_id || c.conversation_id),
-  lastMessage: c.last_message_content || "No messages yet.",
+  lastMessage: getLastMessageText(c.last_message_content, c.last_message_attachment_type),
   lastMessageTimestamp: c.last_message_at || new Date(0).toISOString(),
-  unreadCount: 0,
+  unreadCount: c.unread_count || 0,
   isGroup: c.is_group,
   members: (c.participants || []).map((p: any) => ({
     id: p.id, name: p.name, 
@@ -64,6 +75,7 @@ export const fetchMessages = async (conversationId: string): Promise<Message[]> 
       } : null,
       reactions: m.reactions as Reaction[],
       is_deleted: m.is_deleted,
+      is_forwarded: m.is_forwarded,
     };
   });
 };
