@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Info, PlayCircle, UploadCloud, MessageSquare, Bell, FileSpreadsheet, X, Link as LinkIcon, File, CheckCircle2, Loader2, Send, RefreshCw } from "lucide-react";
+import { Info, PlayCircle, UploadCloud, MessageSquare, Bell, FileSpreadsheet, X, Link as LinkIcon, File, CheckCircle2, Loader2, Send, RefreshCw, Radio } from "lucide-react";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
 import { useToast } from "@/components/ui/use-toast";
@@ -701,7 +701,7 @@ const PublicationPage = () => {
              <Card className="max-w-2xl mx-auto">
                 <CardHeader>
                    <CardTitle>Send In-App Notification</CardTitle>
-                   <CardDescription>Send a broadcast notification to all users or specific segments of your user base.</CardDescription>
+                   <CardDescription>Send a notification to the in-app notification center (bell icon) for all users or specific segments.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
                    <div className="space-y-2">
@@ -778,8 +778,8 @@ const PublicationPage = () => {
                 </CardContent>
                 <CardFooter className="flex justify-end border-t pt-6">
                    <Button onClick={handleSendInAppNotification} disabled={isSendingNotif}>
-                      {isSendingNotif ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
-                      Send Broadcast
+                      {isSendingNotif ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Bell className="mr-2 h-4 w-4" />}
+                      Send In-App Broadcast
                    </Button>
                 </CardFooter>
              </Card>
