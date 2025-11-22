@@ -14,6 +14,10 @@ export const GlobalNotificationListener = () => {
   const chatStateRef = useRef({ selectedConversationId, isChatPageActive });
 
   useEffect(() => {
+    console.log("[NOTIF-DEBUG] GlobalNotificationListener mounted.");
+  }, []);
+
+  useEffect(() => {
     chatStateRef.current = { selectedConversationId, isChatPageActive };
   }, [selectedConversationId, isChatPageActive]);
 
@@ -24,6 +28,22 @@ export const GlobalNotificationListener = () => {
     }
 
     console.log(`[NOTIF-DEBUG] Initializing listener for user: ${user.id} (${user.email})`);
+
+    // 🔍 PERMISSION CHECK: Verify we can actually read the table
+    const checkPermissions = async () => {
+      const { count, error } = await supabase
+        .from('notification_recipients')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id);
+      
+      if (error) {
+        console.error("[NOTIF-DEBUG] 🛑 PERMISSION ERROR: Cannot read notification_recipients table.", error);
+        toast.error("Notification Error: Cannot connect to notification service. Please contact admin.");
+      } else {
+        console.log(`[NOTIF-DEBUG] ✅ Permission OK. Found ${count} existing notifications.`);
+      }
+    };
+    checkPermissions();
 
     const channel = supabase
       .channel(`global-notifications:${user.id}`)
@@ -144,6 +164,7 @@ export const GlobalNotificationListener = () => {
          console.log(`[NOTIF-DEBUG] Channel Status: ${status}`);
          if (err) {
              console.error("[NOTIF-DEBUG] Channel Error:", err);
+             toast.error("Notification System Error: Connection failed.");
          }
       });
 

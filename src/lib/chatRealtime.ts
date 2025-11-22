@@ -1,12 +1,4 @@
-import { createClient } from '@supabase/supabase-js'
-
-// Ganti dengan env kamu
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  realtime: { params: { eventsPerSecond: 10 } },
-})
+import { supabase } from '@/integrations/supabase/client';
 
 // =============================
 // 🔥 Hybrid Realtime Chat Engine
