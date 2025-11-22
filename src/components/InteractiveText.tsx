@@ -33,7 +33,7 @@ const InteractiveText = ({ text, members = [] }: InteractiveTextProps) => {
           const name = mentionMatch[1];
           // Optional: Could link to user profile if needed using ID
           return (
-            <span key={i} className="text-blue-500 font-medium">
+            <span key={i} className="font-bold hover:underline cursor-pointer">
               @{name}
             </span>
           );
@@ -61,7 +61,7 @@ const InteractiveText = ({ text, members = [] }: InteractiveTextProps) => {
           
           if (isInternal) {
             return (
-              <Link key={i} to={url} className="text-blue-500 hover:underline break-words">
+              <Link key={i} to={url} className="underline hover:opacity-80 break-words">
                 {label}
               </Link>
             );
@@ -73,7 +73,7 @@ const InteractiveText = ({ text, members = [] }: InteractiveTextProps) => {
               href={url} 
               target="_blank" 
               rel="noopener noreferrer" 
-              className="text-blue-500 hover:underline break-words"
+              className="underline hover:opacity-80 break-words"
             >
               {label}
             </a>
@@ -88,7 +88,7 @@ const InteractiveText = ({ text, members = [] }: InteractiveTextProps) => {
               href={part} 
               target="_blank" 
               rel="noopener noreferrer" 
-              className="text-blue-500 hover:underline break-words"
+              className="underline hover:opacity-80 break-words"
             >
               {part}
             </a>
