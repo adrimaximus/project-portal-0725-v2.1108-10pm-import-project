@@ -115,8 +115,10 @@ const MentionInput = forwardRef<HTMLTextAreaElement, MentionInputProps>(
       if (type === 'user') {
         const user = suggestion as UserSuggestion;
         if (user.id === 'all') {
-            // Expand @all to mention every user in the list
-            mentionText = userSuggestions.map(u => `@[${u.display}](${u.id})`).join(' ') + ' ';
+            // Expand @all to mention every user in the list, excluding 'all' itself and any non-standard IDs
+            // Validating UUID format roughly or just excluding known system IDs
+            const validUsers = userSuggestions.filter(u => u.id !== 'all' && u.id !== 'ai-assistant' && u.id.length > 10);
+            mentionText = validUsers.map(u => `@[${u.display}](${u.id})`).join(' ') + ' ';
         } else {
             mentionText = `@[${user.display}](${user.id}) `;
         }
