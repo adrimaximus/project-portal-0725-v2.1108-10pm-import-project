@@ -3,8 +3,8 @@ import { createClient as createSupabaseClient } from 'https://esm.sh/@supabase/s
 import OpenAI from 'https://esm.sh/openai@4.29.2';
 import Anthropic from 'https://esm.sh/@anthropic-ai/sdk@0.22.0';
 import { createApi } from 'https://esm.sh/unsplash-js@7.0.19';
-import * as pdfjs from 'https://esm.sh/pdfjs-dist@3.11.174';
-import mammoth from 'https://esm.sh/mammoth@1.7.2';
+import * as pdfjs from 'https://esm.sh/pdfjs-dist@3.11.174?target=deno';
+import mammoth from 'https://esm.sh/mammoth@1.7.2?target=deno';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -853,6 +853,19 @@ async function aiMergeContacts(payload: any, context: any) {
   const primaryPerson = peopleData.find((p: any) => p.id === primary_person_id);
   const secondaryPerson = peopleData.find((p: any) => p.id === secondary_person_id);
 
+  const systemPrompt = `You are an intelligent contact merging assistant. Your task is to merge two JSON objects representing two people into a single, consolidated JSON object. Follow these rules carefully:
+  1.  **Primary Record**: The user will designate one record as "primary". You should prioritize data from this record but intelligently incorporate data from the "secondary" record.
+  2.  **No Data Deletion**: Do not discard information from the secondary record. If a field from the secondary record conflicts with the primary (e.g., a different job title), and cannot be combined, add the secondary information to the 'notes' field in a structured way, like "Also worked as: [Job Title] at [Company]".
+  3.  **Field Merging Logic**:
+      *   **user_id**: This is the most important field. If the primary record has a user_id, keep it. If the primary does not but the secondary does, the merged record MUST inherit the user_id from the secondary record. If both have different user_ids, this is a conflict; keep the primary's user_id and add a note like "This contact was merged with another registered user (ID: [secondary_user_id])".
+      *   **full_name, email**: If the merged record has a user_id, these fields should be taken from the record that provided the user_id, as they are managed by the user's profile.
+      *   **avatar_url, company, job_title, department, birthday**: If both records have a value, prefer the primary record's value. Add the secondary record's value to the 'notes' if it's different and seems important (e.g., a different company or job title).
+      *   **contact (emails, phones)**: Combine the arrays, ensuring all unique values are kept. Do not duplicate entries.
+      *   **social_media**: Merge the two JSON objects. If a key exists in both (e.g., 'linkedin'), the primary record's value takes precedence.
+      *   **notes**: Intelligently combine the notes from both records. Do not simply concatenate them. Summarize if possible, remove redundancy, and add a separator like "--- Merged Notes ---" if you are combining distinct blocks of text. Also, add any conflicting information from other fields here.
+  4.  **Output Format**: Your response MUST be ONLY the final, merged JSON object representing the person. Do not include any explanations, markdown formatting, or other text. The JSON should be a valid object that can be parsed directly.`;
+
+
   // Ask AI to merge
   let mergedPersonJSON;
   if (anthropic) {
@@ -924,6 +937,30 @@ async function aiMergeContacts(payload: any, context: any) {
 
 async function articleWriter(payload: any, context: any) {
   const { openai, anthropic, feature } = context;
+  
+  const articleWriterFeaturePrompts: Record<string, any> = {
+    'generate-article-from-title': {
+        system: "You are a helpful writing assistant. Generate a comprehensive, well-structured article based on the title provided. Use HTML format for the content. Include headings, paragraphs, and lists where appropriate.",
+        user: (p: any) => `Write an article with the title: "${p.title}"`,
+        max_tokens: 2000,
+    },
+    'expand-article-text': {
+        system: "You are a writing assistant. Expand on the selected text, adding more detail, examples, and context, while maintaining the tone and style of the surrounding content.",
+        user: (p: any) => `Context: Article Title "${p.title}".\n\nExisting Content Snippet:\n${p.fullContent.substring(0, 500)}...\n\nSelected Text to Expand:\n"${p.selectedText}"\n\nExpand this selected text into a detailed paragraph or section (HTML format).`,
+        max_tokens: 1000,
+    },
+    'improve-article-content': {
+        system: "You are a professional editor. Improve the following article content. Fix grammar, enhance clarity and flow, and ensure a professional tone. Return the improved content in HTML format.",
+        user: (p: any) => `Content to improve:\n${p.content}`,
+        max_tokens: 2000,
+    },
+    'summarize-article-content': {
+        system: "You are a summarization tool. Provide a concise summary of the following text. Return the summary in HTML format (e.g., a paragraph or bullet points).",
+        user: (p: any) => `Text to summarize:\n${p.content}`,
+        max_tokens: 500,
+    }
+  };
+
   const promptConfig = articleWriterFeaturePrompts[feature];
 
   if (!promptConfig) {
