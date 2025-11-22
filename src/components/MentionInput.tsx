@@ -4,7 +4,7 @@ import { Command, CommandInput, CommandList, CommandEmpty, CommandItem, CommandG
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { generatePastelColor, getAvatarUrl } from '@/lib/utils';
-import { Briefcase, ListChecks, CreditCard } from 'lucide-react';
+import { Briefcase, ListChecks, CreditCard, Users } from 'lucide-react';
 
 export interface UserSuggestion {
   id: string;
@@ -58,8 +58,23 @@ const MentionInput = forwardRef<HTMLTextAreaElement, MentionInputProps>(
 
     const { filteredUserSuggestions, filteredProjectSuggestions, filteredTaskSuggestions, filteredBillSuggestions } = useMemo(() => {
         const term = searchTerm.toLowerCase();
+        
+        let users = (userSuggestions || []).filter(s => s.display.toLowerCase().includes(term));
+        
+        // Add "@all" suggestion if matches
+        if ('all'.includes(term) && userSuggestions.length > 0) {
+            const allOption: UserSuggestion = {
+                id: 'all',
+                display: 'all',
+                initials: '@',
+                email: 'Notify everyone in this context',
+                avatar_url: undefined
+            };
+            users = [allOption, ...users];
+        }
+
         return {
-            filteredUserSuggestions: (userSuggestions || []).filter(s => s.display.toLowerCase().includes(term)),
+            filteredUserSuggestions: users,
             filteredProjectSuggestions: (projectSuggestions || []).filter(s => s.display.toLowerCase().includes(term)),
             filteredTaskSuggestions: (taskSuggestions || []).filter(s => s.display.toLowerCase().includes(term)),
             filteredBillSuggestions: (billSuggestions || []).filter(s => s.display.toLowerCase().includes(term)),
@@ -99,7 +114,12 @@ const MentionInput = forwardRef<HTMLTextAreaElement, MentionInputProps>(
       let mentionText = '';
       if (type === 'user') {
         const user = suggestion as UserSuggestion;
-        mentionText = `@[${user.display}](${user.id}) `;
+        if (user.id === 'all') {
+            // Expand @all to mention every user in the list
+            mentionText = userSuggestions.map(u => `@[${u.display}](${u.id})`).join(' ') + ' ';
+        } else {
+            mentionText = `@[${user.display}](${user.id}) `;
+        }
       } else if (type === 'project') {
         const proj = suggestion as ProjectSuggestion;
         mentionText = `[${proj.display}](/projects/${proj.slug}) `;
@@ -172,10 +192,16 @@ const MentionInput = forwardRef<HTMLTextAreaElement, MentionInputProps>(
                       key={suggestion.id}
                       onSelect={() => handleSelect(suggestion, 'user')}
                     >
-                      <Avatar className="h-8 w-8 mr-2">
-                        <AvatarImage src={getAvatarUrl(suggestion.avatar_url, suggestion.id)} />
-                        <AvatarFallback style={generatePastelColor(suggestion.id)}>{suggestion.initials}</AvatarFallback>
-                      </Avatar>
+                      {suggestion.id === 'all' ? (
+                        <div className="flex items-center justify-center h-8 w-8 mr-2 rounded-full bg-primary/10 text-primary">
+                            <Users className="h-4 w-4" />
+                        </div>
+                      ) : (
+                        <Avatar className="h-8 w-8 mr-2">
+                            <AvatarImage src={getAvatarUrl(suggestion.avatar_url, suggestion.id)} />
+                            <AvatarFallback style={generatePastelColor(suggestion.id)}>{suggestion.initials}</AvatarFallback>
+                        </Avatar>
+                      )}
                       <div className="flex flex-col">
                         <span className="font-medium">{suggestion.display}</span>
                         <span className="text-xs text-muted-foreground">{suggestion.email}</span>

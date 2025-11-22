@@ -2,7 +2,7 @@ import { useState, useRef, forwardRef, useImperativeHandle, useEffect } from 're
 import { User, Comment as CommentType } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
-import { Ticket, Paperclip, X } from "lucide-react";
+import { Ticket, Paperclip, X, Users } from "lucide-react";
 import { getInitials, generatePastelColor, getAvatarUrl } from "@/lib/utils";
 import { MentionsInput, Mention, SuggestionDataItem } from 'react-mentions';
 import '@/styles/mentions.css';
@@ -95,8 +95,18 @@ const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({ onAddC
 
   const handleSubmit = () => {
     if (!text.trim() && attachments.length === 0) return;
-    const mentionedUserIds = parseMentions(text);
-    onAddCommentOrTicket(text, isTicket, attachments, mentionedUserIds, replyTo?.id);
+    
+    let finalText = text;
+    
+    // Replace @all with explicit mentions for all users
+    // This ensures backend triggers work correctly by looping through mentioned IDs
+    if (finalText.match(/@\[[^\]]+\]\(all\)/)) {
+        const allMentions = allUsers.map(u => `@[${u.name}](${u.id})`).join(' ');
+        finalText = finalText.replace(/@\[[^\]]+\]\(all\)/g, allMentions);
+    }
+
+    const mentionedUserIds = parseMentions(finalText);
+    onAddCommentOrTicket(finalText, isTicket, attachments, mentionedUserIds, replyTo?.id);
     setText('');
     setIsTicket(false);
     setAttachments([]);
@@ -116,11 +126,21 @@ const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({ onAddC
   
   const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email;
 
-  const mentionData = (allUsers || []).map(member => ({
-    id: member.id,
-    display: member.name,
-    ...member
-  }));
+  const mentionData = [
+    { 
+        id: 'all', 
+        display: 'all', 
+        name: 'Everyone', 
+        email: 'Notify everyone in this context', 
+        initials: '@',
+        avatar_url: undefined 
+    },
+    ...(allUsers || []).map(member => ({
+        id: member.id,
+        display: member.name,
+        ...member
+    }))
+  ];
 
   return (
     <div ref={containerRef} className="flex items-start space-x-4">
@@ -160,12 +180,18 @@ const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({ onAddC
               displayTransform={(id, display) => `@${display}`}
               renderSuggestion={(suggestion: SuggestionDataItem & { avatar_url?: string, initials?: string, email?: string }, search, highlightedDisplay, index, focused) => (
                 <div className={`mention-suggestion ${focused ? 'focused' : ''}`}>
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src={getAvatarUrl(suggestion.avatar_url, suggestion.id as string)} />
-                    <AvatarFallback style={generatePastelColor(suggestion.id as string)}>
-                      {suggestion.initials}
-                    </AvatarFallback>
-                  </Avatar>
+                  {suggestion.id === 'all' ? (
+                    <div className="flex items-center justify-center h-8 w-8 rounded-full bg-primary/10 text-primary">
+                        <Users className="h-4 w-4" />
+                    </div>
+                  ) : (
+                    <Avatar className="h-8 w-8">
+                        <AvatarImage src={getAvatarUrl(suggestion.avatar_url, suggestion.id as string)} />
+                        <AvatarFallback style={generatePastelColor(suggestion.id as string)}>
+                        {suggestion.initials}
+                        </AvatarFallback>
+                    </Avatar>
+                  )}
                   <div className="mention-suggestion-info">
                     <div className="font-medium">{highlightedDisplay}</div>
                     <div className="text-xs text-muted-foreground">{suggestion.email}</div>
