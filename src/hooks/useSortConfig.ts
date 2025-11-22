@@ -14,9 +14,16 @@ export const useSortConfig = <K extends string | number | symbol>(
 
   const requestSort = useCallback((key: K) => {
     setSortConfig(prevConfig => {
-      if (prevConfig.key === key && prevConfig.direction === 'asc') {
-        return { key, direction: 'desc' };
+      // If clicking the same key
+      if (prevConfig.key === key) {
+        // If currently ascending, go descending
+        if (prevConfig.direction === 'asc') {
+          return { key, direction: 'desc' };
+        }
+        // If currently descending, go ascending (cycle back)
+        return { key, direction: 'asc' };
       }
+      // If clicking a new key, start with ascending
       return { key, direction: 'asc' };
     });
   }, []);

@@ -97,7 +97,15 @@ export const useProjectFilters = (projects: Project[]) => {
   };
   
   const requestSort = (key: keyof Project) => {
-    const newDirection = sortConfig.key === key && sortConfig.direction === 'asc' ? 'desc' : 'asc';
+    let newDirection: 'asc' | 'desc' = 'asc';
+    if (sortConfig.key === key) {
+      if (sortConfig.direction === 'asc') {
+        newDirection = 'desc';
+      } else {
+        newDirection = 'asc';
+      }
+    }
+    
     updateSearchParams({
       sortKey: key,
       sortDir: newDirection,
