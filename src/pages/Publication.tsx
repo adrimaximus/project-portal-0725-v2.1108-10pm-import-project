@@ -370,10 +370,14 @@ const PublicationPage = () => {
             const rowPhone = normalizePhone(row[selectedPhoneColumn]);
             
             // Check if this row was in the failed list
-            const failure = result.errors?.find((e: any) => e.phone === rowPhone);
+            const failure = result.errors?.find((e: any) => {
+                // Handle both object and string formats for backward compatibility
+                const errorPhone = typeof e === 'object' ? e.phone : null;
+                return errorPhone === rowPhone;
+            });
             
             if (failure) {
-                return { ...row, _status: 'failed', _error: failure.error };
+                return { ...row, _status: 'failed', _error: typeof failure === 'object' ? failure.error : failure };
             }
             
             // If it wasn't in errors but has a valid phone number, mark as sent
@@ -388,7 +392,8 @@ const PublicationPage = () => {
         // Check for specific error messages in the response
         let errorMessage = "";
         if (result.failed > 0 && result.errors && result.errors.length > 0) {
-            errorMessage = ` First error: ${result.errors[0].error}`;
+            const firstError = result.errors[0];
+            errorMessage = ` First error: ${typeof firstError === 'object' ? (firstError.error || JSON.stringify(firstError)) : firstError}`;
         }
 
         if (result.failed > 0) {

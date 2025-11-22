@@ -63,21 +63,21 @@ Deno.serve(async (req) => {
             if (msgType === 0) {
                 payload.message = msg.message;
             } else {
-                // For media, use 'url' and 'caption' (if API supports caption in message field or separate)
-                // WBIZTOOL documentation usually expects 'url' for file and 'message' acts as caption for media
+                // For media, use 'url' and 'message' (which acts as caption)
                 payload.url = msg.url;
-                payload.message = msg.caption || msg.message || ''; // Use caption if available, fallback to message
+                payload.message = msg.caption || msg.message || ''; 
             }
 
             // Add scheduling parameters if present
             if (msg.schedule_time) {
-                // Ensure format is YYYY-MM-DD HH:mm:ss
                 payload.schedule = msg.schedule_time.replace('T', ' '); 
-                if (msg.schedule_time.length === 16) payload.schedule += ':00'; // Append seconds if missing
+                if (msg.schedule_time.length === 16) payload.schedule += ':00';
             }
             if (msg.timezone) {
                 payload.timezone = msg.timezone;
             }
+
+            console.log(`Sending to ${msg.phone}, Type: ${msgType}, URL: ${payload.url ? 'Present' : 'None'}`);
 
             const response = await fetch("https://wbiztool.com/api/v1/send_msg/", {
                 method: 'POST',
@@ -90,17 +90,15 @@ Deno.serve(async (req) => {
                 const errorText = await response.text();
                 let errorMessage = `Failed to send message (Status: ${status}).`;
     
-                // Enhanced Error Handling for HTML/Cloudflare pages
                 if (errorText.includes("Cloudflare") || errorText.includes("524") || errorText.includes("502")) {
-                     if (status === 524) errorMessage = "WBIZTOOL API Timeout (Cloudflare 524). The service is taking too long to respond.";
-                     else if (status === 502) errorMessage = "WBIZTOOL API Bad Gateway (Cloudflare 502). The service is down.";
-                     else errorMessage = `WBIZTOOL API Error (Status: ${status}). Service might be experiencing issues.`;
+                     if (status === 524) errorMessage = "WBIZTOOL API Timeout (Cloudflare 524).";
+                     else if (status === 502) errorMessage = "WBIZTOOL API Bad Gateway (Cloudflare 502).";
+                     else errorMessage = `WBIZTOOL API Error (Status: ${status}).`;
                 } else {
                     try {
                       const errorJson = JSON.parse(errorText);
                       errorMessage = errorJson.message || JSON.stringify(errorJson);
                     } catch (e) {
-                      // Clean up HTML tags and truncate
                       const cleanText = errorText.replace(/<[^>]*>?/gm, ' ').replace(/\s+/g, ' ').trim();
                       errorMessage = cleanText.substring(0, 200) + (cleanText.length > 200 ? '...' : '');
                     }
@@ -112,8 +110,8 @@ Deno.serve(async (req) => {
         } catch (error) {
             console.error(`Failed to send to ${msg.phone}:`, error);
             results.failed++;
-            // Store clean error message for frontend
-            results.errors.push(error.message); 
+            // Push structured error object
+            results.errors.push({ phone: msg.phone, error: error.message }); 
         }
     }
 
