@@ -30,7 +30,7 @@ export function SortableTableHead({
         variant="ghost"
         type="button"
         onClick={() => onSort(columnKey)}
-        className="h-full w-full justify-start rounded-none px-4 py-2 hover:bg-muted/50 font-medium text-muted-foreground group"
+        className="h-full w-full justify-start rounded-none px-4 py-2 font-medium text-muted-foreground hover:bg-muted/50 hover:text-foreground"
       >
         <span className="truncate mr-2">{children}</span>
         {isSorted ? (
@@ -40,7 +40,7 @@ export function SortableTableHead({
             <ArrowDown className="h-4 w-4 shrink-0 text-foreground" />
           )
         ) : (
-          <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-0 group-hover:opacity-50 transition-opacity" />
+          <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
         )}
       </Button>
     </TableHead>
