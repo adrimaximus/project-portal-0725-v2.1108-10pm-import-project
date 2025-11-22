@@ -50,7 +50,7 @@ const InteractiveText: React.FC<InteractiveTextProps> = ({ text, members }) => {
           <Link 
             key={`mention-${startIndex}`} 
             to={`/users/${mentionedUser.id}`} 
-            className="bg-primary/10 hover:bg-primary/20 rounded-md px-1.5 py-0.5 font-medium transition-colors no-underline"
+            className="bg-primary/10 hover:bg-primary/20 rounded-md px-1.5 py-0.5 font-medium transition-colors no-underline whitespace-nowrap"
           >
             @{displayName}
           </Link>
@@ -59,7 +59,7 @@ const InteractiveText: React.FC<InteractiveTextProps> = ({ text, members }) => {
         parts.push(
             <span 
                 key={`mention-${startIndex}`} 
-                className="opacity-70 bg-primary/5 rounded-md px-1.5 py-0.5 font-medium"
+                className="opacity-70 bg-primary/5 rounded-md px-1.5 py-0.5 font-medium whitespace-nowrap"
             >
                 @{displayName}
             </span>
