@@ -1,64 +1,49 @@
-import { useState, ReactNode } from "react";
-import PortalSidebar from "./PortalSidebar";
+import { useState, useEffect } from "react";
+import { Outlet } from "react-router-dom";
+import Sidebar from "./Sidebar";
+import Topbar from "./Topbar";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
-import PortalHeader from "./PortalHeader";
-import StorageWarning from "./StorageWarning";
-import { usePullToRefresh } from "@/hooks/usePullToRefresh";
-import PullToRefreshIndicator from "./PullToRefreshIndicator";
-import { toast } from "sonner";
-import { useQueryClient } from "@tanstack/react-query";
+import { BroadcastToast } from "./BroadcastToast";
 
-type PortalLayoutProps = {
-  children: ReactNode;
-  summary?: ReactNode;
-  pageHeader?: ReactNode;
-  disableMainScroll?: boolean;
-  noPadding?: boolean;
-};
+const PortalLayout = ({ children }: { children?: React.ReactNode }) => {
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const isMobile = useIsMobile();
 
-export default function PortalLayout({ children, summary, pageHeader, disableMainScroll, noPadding }: PortalLayoutProps) {
-  const [isCollapsed, setIsCollapsed] = useState(false);
-  const queryClient = useQueryClient();
-
-  const handleRefresh = async () => {
-    toast.info("Refreshing data...");
-    await queryClient.invalidateQueries();
-    toast.success("Data refreshed!");
-  };
-
-  const { isRefreshing, pullPosition, handlers, setRef } = usePullToRefresh(handleRefresh);
-
-  const toggleSidebar = () => {
-    setIsCollapsed(!isCollapsed);
-  };
+  // Auto-collapse sidebar on mobile
+  useEffect(() => {
+    if (isMobile) {
+      setSidebarOpen(false);
+    } else {
+      setSidebarOpen(true);
+    }
+  }, [isMobile]);
 
   return (
-    <div className="flex h-screen w-full bg-muted/40">
-      {/* Desktop Sidebar: Hidden on small screens */}
-      <div className="hidden sm:block">
-        <PortalSidebar isCollapsed={isCollapsed} onToggle={toggleSidebar} />
-      </div>
+    <div className="min-h-screen bg-background flex">
+      {/* Sidebar */}
+      <Sidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
 
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <PortalHeader summary={summary} />
-        {pageHeader}
-        <main 
-          ref={setRef}
-          {...handlers}
-          className={cn(
-            "flex-1 min-h-0 relative overscroll-y-contain",
-            !disableMainScroll && "overflow-y-auto",
-            disableMainScroll && "flex flex-col",
-            !noPadding && "p-4 pb-24 md:p-8"
-          )}
-        >
-          <PullToRefreshIndicator isRefreshing={isRefreshing} pullPosition={pullPosition} />
-          {children}
+      {/* Main Content */}
+      <div 
+        className={cn(
+          "flex-1 flex flex-col min-w-0 transition-all duration-300 ease-in-out",
+          sidebarOpen && !isMobile ? "ml-64" : "ml-0"
+        )}
+      >
+        <Topbar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+        
+        <main className="flex-1 p-4 md:p-6 overflow-x-hidden overflow-y-auto">
+          <div className="mx-auto max-w-7xl animate-in fade-in duration-500">
+            {children || <Outlet />}
+          </div>
         </main>
       </div>
-
-      {/* Storage Warning Component */}
-      <StorageWarning />
+      
+      {/* Global Notification System */}
+      <BroadcastToast />
     </div>
   );
-}
+};
+
+export default PortalLayout;

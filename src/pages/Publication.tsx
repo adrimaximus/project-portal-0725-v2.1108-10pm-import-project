@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Info, PlayCircle, UploadCloud, MessageSquare, Bell, FileSpreadsheet, X, Link as LinkIcon, File, CheckCircle2, Loader2, Send, RefreshCw, FlaskConical } from "lucide-react";
+import { Info, PlayCircle, UploadCloud, MessageSquare, Bell, FileSpreadsheet, X, Link as LinkIcon, File, CheckCircle2, Loader2, Send, RefreshCw, FlaskConical, Bot } from "lucide-react";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
@@ -792,8 +792,12 @@ const PublicationPage = () => {
 
                    <div className="space-y-2">
                       <Label>Notification Body</Label>
+                      <div className="bg-muted/30 p-2 rounded-md mb-2 text-xs text-muted-foreground flex gap-2 items-center">
+                         <Bot className="h-3.5 w-3.5 text-blue-500" />
+                         <span>AI Agent Tip: Use <code>{`{{name}}`}</code> to personalize the message for each user.</span>
+                      </div>
                       <Textarea 
-                        placeholder="e.g. The system will be undergoing maintenance on Sunday..." 
+                        placeholder="e.g. Hi {{name}}, the system will be undergoing maintenance..." 
                         value={notifBody}
                         onChange={(e) => setNotifBody(e.target.value)}
                         rows={4}
