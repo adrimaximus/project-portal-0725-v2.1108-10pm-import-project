@@ -611,7 +611,10 @@ const PublicationPage = () => {
                                         key={h} 
                                         variant="secondary" 
                                         className="cursor-pointer hover:bg-blue-100 text-blue-600 bg-blue-50 border-blue-100 px-2 py-1 font-mono text-xs"
-                                        onClick={() => insertUrlVariable(h)}
+                                        onMouseDown={(e) => {
+                                          e.preventDefault();
+                                          insertUrlVariable(h);
+                                        }}
                                       >
                                         {`{{${h}}}`}
                                       </Badge>
@@ -625,6 +628,7 @@ const PublicationPage = () => {
                                       {messageType === 'image' ? 'Image URL' : 'File URL'}
                                   </Label>
                                   <Input 
+                                    type="text"
                                     ref={urlInputRef}
                                     value={mediaUrl} 
                                     onChange={e => setMediaUrl(e.target.value)} 
