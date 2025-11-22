@@ -92,47 +92,74 @@ const PublicationPage = () => {
   };
 
   const handleGoogleSheetImport = async () => {
-    const match = googleSheetUrl.match(/\/d\/([a-zA-Z0-9-_]+)/);
-    if (match && match[1]) {
-      setIsImporting(true);
-      const sheetId = match[1];
-      const exportUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv`;
-      
-      try {
-        // Use Supabase Edge Function as Proxy
-        const { data: csvText, error } = await supabase.functions.invoke('proxy-google-sheet', {
-          body: { url: exportUrl }
-        });
+    let exportUrl = "";
 
-        if (error) throw error;
-
-        Papa.parse(csvText, {
-          header: true,
-          skipEmptyLines: true,
-          complete: (results) => {
-            const parsedData = results.data as any[];
-            if (parsedData.length > 0) {
-              setHeaders(Object.keys(parsedData[0]));
-              setData(parsedData);
-              setFileName("Google Sheet Import");
-              toast({ title: "Import Successful", description: `Imported ${parsedData.length} rows from Google Sheet.` });
-            } else {
-                toast({ title: "Empty Sheet", description: "No data found in the Google Sheet.", variant: "destructive" });
-            }
-          }
-        });
-      } catch (error: any) {
-        console.error("Error fetching Google Sheet:", error);
-        toast({ 
-          title: "Import Failed", 
-          description: "Could not fetch Google Sheet. Ensure it is publicly viewable (Anyone with the link) or check the URL.", 
-          variant: "destructive" 
-        });
-      } finally {
-        setIsImporting(false);
+    // Logic for "Published to the web" URLs (containing /d/e/)
+    if (googleSheetUrl.includes("/d/e/")) {
+      if (googleSheetUrl.includes("/pubhtml")) {
+        exportUrl = googleSheetUrl.replace("/pubhtml", "/pub?output=csv");
+      } else if (googleSheetUrl.includes("/pub")) {
+        const url = new URL(googleSheetUrl);
+        url.searchParams.set("output", "csv");
+        exportUrl = url.toString();
+      } else {
+        exportUrl = `${googleSheetUrl.replace(/\/$/, "")}/pub?output=csv`;
       }
-    } else {
+    } 
+    // Logic for standard Google Sheet URLs (containing /d/SHEET_ID)
+    else {
+      const match = googleSheetUrl.match(/\/d\/([a-zA-Z0-9-_]+)/);
+      if (match && match[1]) {
+        exportUrl = `https://docs.google.com/spreadsheets/d/${match[1]}/export?format=csv`;
+      }
+    }
+
+    if (!exportUrl) {
       toast({ title: "Invalid URL", description: "Please enter a valid Google Sheet URL.", variant: "destructive" });
+      return;
+    }
+
+    setIsImporting(true);
+    
+    try {
+      // Use Supabase Edge Function as Proxy
+      const { data: csvText, error } = await supabase.functions.invoke('proxy-google-sheet', {
+        body: { url: exportUrl }
+      });
+
+      if (error) throw error;
+
+      if (!csvText || typeof csvText !== 'string') {
+        throw new Error("Empty or invalid response from proxy");
+      }
+
+      Papa.parse(csvText, {
+        header: true,
+        skipEmptyLines: true,
+        complete: (results) => {
+          const parsedData = results.data as any[];
+          if (parsedData.length > 0) {
+            setHeaders(Object.keys(parsedData[0]));
+            setData(parsedData);
+            setFileName("Google Sheet Import");
+            toast({ title: "Import Successful", description: `Imported ${parsedData.length} rows from Google Sheet.` });
+          } else {
+              toast({ title: "Empty Sheet", description: "No data found in the Google Sheet.", variant: "destructive" });
+          }
+        },
+        error: (err) => {
+          throw err;
+        }
+      });
+    } catch (error: any) {
+      console.error("Error fetching Google Sheet:", error);
+      toast({ 
+        title: "Import Failed", 
+        description: "Could not fetch Google Sheet. Ensure it is publicly viewable (Anyone with the link) or check the URL.", 
+        variant: "destructive" 
+      });
+    } finally {
+      setIsImporting(false);
     }
   };
 
@@ -293,7 +320,7 @@ const PublicationPage = () => {
                              {/* Google Sheet URL Input */}
                              <div className="flex gap-2">
                                 <Input 
-                                   placeholder="Paste Google Sheet URL (must be public)" 
+                                   placeholder="Paste Google Sheet URL (Public / Published to Web)" 
                                    value={googleSheetUrl}
                                    onChange={(e) => setGoogleSheetUrl(e.target.value)}
                                    className="text-sm"
@@ -408,7 +435,7 @@ const PublicationPage = () => {
                             </div>
                             <h3 className="text-lg font-medium">No Data to Preview</h3>
                             <p className="text-sm text-muted-foreground/60 mt-2 max-w-xs">
-                               Upload a CSV, XLS, or XLSX file to view its contents here. You'll be able to map columns to your message template.
+                               Upload a CSV, XLS, or XLSX file or paste a Google Sheet URL to view its contents here.
                             </p>
                          </div>
                       )}
