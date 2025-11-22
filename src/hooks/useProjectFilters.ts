@@ -97,19 +97,21 @@ export const useProjectFilters = (projects: Project[]) => {
   };
   
   const requestSort = (key: keyof Project) => {
-    let newDirection: 'asc' | 'desc' = 'asc';
     if (sortConfig.key === key) {
       if (sortConfig.direction === 'asc') {
-        newDirection = 'desc';
+        // 2nd click: Descending
+        updateSearchParams({ sortKey: key, sortDir: 'desc' });
       } else {
-        newDirection = 'asc';
+        // 3rd click: Remove sort (Reset to default)
+        const newSearchParams = new URLSearchParams(searchParams);
+        newSearchParams.delete('sortKey');
+        newSearchParams.delete('sortDir');
+        setSearchParams(newSearchParams, { replace: true });
       }
+    } else {
+      // 1st click: Ascending
+      updateSearchParams({ sortKey: key, sortDir: 'asc' });
     }
-    
-    updateSearchParams({
-      sortKey: key,
-      sortDir: newDirection,
-    });
   };
 
   const clearFilters = useCallback(() => {

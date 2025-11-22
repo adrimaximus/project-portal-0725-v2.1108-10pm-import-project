@@ -14,17 +14,18 @@ export const useSortConfig = <K extends string | number | symbol>(
 
   const requestSort = useCallback((key: K) => {
     setSortConfig((currentConfig) => {
-      // If sorting by a new key, start with ascending
+      // 1. Jika klik kolom baru, mulai dengan Ascending
       if (currentConfig.key !== key) {
         return { key, direction: 'asc' };
       }
 
-      // If sorting by the same key, toggle direction
-      // Ascending -> Descending -> Ascending
-      return {
-        key,
-        direction: currentConfig.direction === 'asc' ? 'desc' : 'asc',
-      };
+      // 2. Jika klik kolom yang sama dan sedang Ascending -> ubah ke Descending
+      if (currentConfig.direction === 'asc') {
+        return { key, direction: 'desc' };
+      }
+
+      // 3. Jika klik kolom yang sama dan sedang Descending -> Reset (Matikan sort)
+      return { key: null, direction: 'asc' }; // Kembali ke default
     });
   }, []);
 
