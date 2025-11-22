@@ -10,15 +10,19 @@ import { Skeleton } from "@/components/ui/skeleton";
 const WorkspaceSettingsPage = () => {
   const { features, toggleFeatureStatus, isLoading } = useFeatures();
 
-  // Added 'expense' to the list of features to display
+  // Comprehensive list of features that should be manageable
   const workspaceFeatures = [
-    'billing', 'chat', 'dashboard', 'goals', 'knowledge-base', 
-    'mood-tracker', 'people', 'projects', 'request', 'search', 'integrations', 'tasks', 'expense'
+    'dashboard', 'projects', 'tasks', 'chat', 'goals', 
+    'people', 'billing', 'expense', 'request', 'knowledge-base', 
+    'mood-tracker', 'search', 'integrations'
   ];
 
   const featuresToDisplay = features
     .filter(f => workspaceFeatures.includes(f.id))
-    .sort((a, b) => a.name.localeCompare(b.name));
+    .sort((a, b) => {
+      // Optional: Custom sort order or just alphabetical
+      return a.name.localeCompare(b.name);
+    });
 
   return (
     <PortalLayout>
@@ -48,19 +52,25 @@ const WorkspaceSettingsPage = () => {
               <div className="space-y-4">
                 {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-20 w-full" />)}
               </div>
-            ) : featuresToDisplay.map(feature => (
-              <div key={feature.id} className="flex items-center justify-between rounded-lg border p-4">
-                <div className="space-y-0.5">
-                  <Label htmlFor={`feature-${feature.id}`} className="text-base">{feature.name}</Label>
-                  <p className="text-sm text-muted-foreground">{feature.description}</p>
+            ) : featuresToDisplay.length > 0 ? (
+              featuresToDisplay.map(feature => (
+                <div key={feature.id} className="flex items-center justify-between rounded-lg border p-4">
+                  <div className="space-y-0.5">
+                    <Label htmlFor={`feature-${feature.id}`} className="text-base cursor-pointer">{feature.name}</Label>
+                    <p className="text-sm text-muted-foreground">{feature.description}</p>
+                  </div>
+                  <Switch
+                    id={`feature-${feature.id}`}
+                    checked={feature.is_enabled}
+                    onCheckedChange={() => toggleFeatureStatus(feature.id, feature.is_enabled)}
+                  />
                 </div>
-                <Switch
-                  id={`feature-${feature.id}`}
-                  checked={feature.is_enabled}
-                  onCheckedChange={() => toggleFeatureStatus(feature.id, feature.is_enabled)}
-                />
+              ))
+            ) : (
+              <div className="text-center text-muted-foreground py-8">
+                No features found. Please contact support or check database configuration.
               </div>
-            ))}
+            )}
           </CardContent>
         </Card>
       </div>
