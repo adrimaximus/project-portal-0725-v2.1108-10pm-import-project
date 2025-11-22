@@ -71,8 +71,13 @@ Deno.serve(async (req) => {
             if (msgType === 0) {
                 payload.message = msg.message || msg.caption || ''; // Use caption as message if we fell back
             } else {
-                // For media, use 'url' and 'message' (which acts as caption)
-                payload.url = msg.url;
+                // For media, map 'url' to the correct WBIZTOOL parameter based on documentation
+                if (msgType === 1) {
+                    payload.img_url = msg.url;
+                } else if (msgType === 2) {
+                    payload.file_url = msg.url;
+                }
+                
                 payload.message = msg.caption || msg.message || ''; 
             }
 
@@ -85,7 +90,7 @@ Deno.serve(async (req) => {
                 payload.timezone = msg.timezone;
             }
 
-            console.log(`Sending to ${msg.phone}, Type: ${msgType}, URL: ${payload.url ? 'Present' : 'None'}`);
+            console.log(`Sending to ${msg.phone}, Type: ${msgType}, URL: ${msg.url ? 'Present' : 'None'}`);
 
             const response = await fetch("https://wbiztool.com/api/v1/send_msg/", {
                 method: 'POST',
