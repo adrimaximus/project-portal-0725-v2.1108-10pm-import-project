@@ -1,13 +1,13 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { useCommentManager } from '@/hooks/useCommentManager';
 import { Comment as CommentType, User, Task } from '@/types';
 import CommentInput, { CommentInputHandle } from '../CommentInput';
 import TaskCommentsList from '../project-detail/TaskCommentsList';
-import { useProfiles } from '@/hooks/useProfiles';
 import { toast } from 'sonner';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useTaskModal } from '@/contexts/TaskModalContext';
 import { supabase } from '@/integrations/supabase/client';
+import { useTaskDrawer } from '@/contexts/TaskDrawerContext';
 
 interface TaskCommentsProps {
   taskId: string;
@@ -24,15 +24,18 @@ const TaskComments: React.FC<TaskCommentsProps> = ({ taskId, projectId }) => {
     toggleReaction 
   } = useCommentManager({ scope: { taskId, projectId } });
 
+  const { task } = useTaskDrawer();
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editedText, setEditedText] = useState('');
   const [commentToDelete, setCommentToDelete] = useState<CommentType | null>(null);
   const [newAttachments, setNewAttachments] = useState<File[]>([]);
   const editFileInputRef = useRef<HTMLInputElement>(null);
   const [replyTo, setReplyTo] = useState<CommentType | null>(null);
-  const { data: allUsers = [] } = useProfiles();
   const commentInputRef = useRef<CommentInputHandle>(null);
   const { onOpen: onOpenTaskModal } = useTaskModal();
+
+  // Only allow mentioning users assigned to the task
+  const taskAssignees = useMemo(() => task?.assignedTo || [], [task?.assignedTo]);
 
   const pollForTask = (commentId: string) => {
     let attempts = 0;
@@ -167,13 +170,13 @@ const TaskComments: React.FC<TaskCommentsProps> = ({ taskId, projectId }) => {
         onReply={handleReply}
         onCreateTicketFromComment={handleCreateTicketFromComment}
         onGoToReply={handleGoToReply}
-        allUsers={allUsers}
+        allUsers={taskAssignees}
       />
       <div className="pt-4 border-t">
         <CommentInput
           ref={commentInputRef}
           onAddCommentOrTicket={handleAddComment}
-          allUsers={allUsers}
+          allUsers={taskAssignees}
           replyTo={replyTo}
           onCancelReply={() => setReplyTo(null)}
           storageKey={`comment-draft-task-${taskId}`}
