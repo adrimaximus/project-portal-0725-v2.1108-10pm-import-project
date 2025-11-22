@@ -56,7 +56,8 @@ serve(async (req) => {
     );
 
     const checkAdminPermissions = async () => {
-      const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+      // Use maybeSingle to prevent 500 errors if profile is missing
+      const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle();
       if (!profile || !['admin', 'master admin'].includes(profile.role)) {
         throw new Error("You do not have permission to perform this action.");
       }

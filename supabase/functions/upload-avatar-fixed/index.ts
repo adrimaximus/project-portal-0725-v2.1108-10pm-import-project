@@ -38,8 +38,12 @@ Deno.serve(async (req) => {
       .from('profiles')
       .select('role')
       .eq('id', authUser.id)
-      .single()
+      .maybeSingle()
     if (profileError) throw profileError
+
+    if (!authProfile) {
+        throw new Error('User profile not found.');
+    }
 
     const isAdmin = authProfile.role === 'admin' || authProfile.role === 'master admin'
 
