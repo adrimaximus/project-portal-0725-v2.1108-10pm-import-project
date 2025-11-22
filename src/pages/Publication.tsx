@@ -291,7 +291,7 @@ const PublicationPage = () => {
                            <div className="space-y-3">
                              {/* Drag & Drop Zone */}
                              <div 
-                                className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors ${
+                                className={`border-2 border-dashed rounded-lg p-2 flex items-center justify-center cursor-pointer transition-colors h-10 ${
                                    isDragging ? "border-primary bg-primary/5" : "border-muted hover:bg-muted/50"
                                 }`}
                                 onDragOver={handleDragOver}
@@ -306,12 +306,9 @@ const PublicationPage = () => {
                                    accept=".csv, .xls, .xlsx" 
                                    onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
                                 />
-                                <div className="flex flex-col items-center gap-2">
-                                    <UploadCloud className="h-8 w-8 text-muted-foreground" />
-                                    <div className="space-y-1">
-                                        <p className="text-xs font-medium text-foreground">Click or drag file</p>
-                                        <p className="text-[10px] text-muted-foreground">CSV, XLS, XLSX (max 10MB)</p>
-                                    </div>
+                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                    <UploadCloud className="h-4 w-4" />
+                                    <span>Click or drag CSV, XLS, XLSX</span>
                                 </div>
                              </div>
 
@@ -340,14 +337,12 @@ const PublicationPage = () => {
                              </div>
                            </div>
                          ) : (
-                           <div className="flex items-center justify-between p-3 bg-primary/5 border border-primary/10 rounded-md">
-                              <div className="flex items-center gap-3">
-                                 <div className="bg-primary/10 p-2 rounded">
-                                    <FileSpreadsheet className="h-5 w-5 text-primary" />
-                                 </div>
-                                 <div>
-                                    <p className="text-sm font-medium text-foreground">{fileName}</p>
-                                    <p className="text-xs text-muted-foreground">{data.length} rows loaded</p>
+                           <div className="flex items-center justify-between p-2 bg-primary/5 border border-primary/10 rounded-md h-12">
+                              <div className="flex items-center gap-2 px-2">
+                                 <FileSpreadsheet className="h-4 w-4 text-primary" />
+                                 <div className="flex flex-col">
+                                    <p className="text-sm font-medium text-foreground truncate max-w-[200px]">{fileName}</p>
+                                    <p className="text-[10px] text-muted-foreground leading-none">{data.length} rows</p>
                                  </div>
                               </div>
                               <Button variant="ghost" size="icon" onClick={clearData} className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10">
