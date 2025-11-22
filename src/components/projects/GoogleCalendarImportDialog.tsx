@@ -4,17 +4,17 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2 } from "lucide-react";
+import { Loader2, Sparkles } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { format } from "date-fns";
 import { toast } from "sonner";
-import { Project } from "@/types";
 import { formatInJakarta } from "@/lib/utils";
 import { Separator } from "../ui/separator";
 
 interface CalendarEvent {
   id: string;
   summary: string;
+  description?: string;
   start?: { dateTime?: string; date?: string };
   end?: { dateTime?: string; date?: string };
   calendar?: { id: string; summary: string };
@@ -29,6 +29,7 @@ interface GoogleCalendarImportDialogProps {
 
 export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImporting }: GoogleCalendarImportDialogProps) => {
   const [selectedEvents, setSelectedEvents] = useState<string[]>([]);
+  const [isSmartSelecting, setIsSmartSelecting] = useState(false);
 
   const { data: events = [], isLoading: isLoadingEvents, error } = useQuery<CalendarEvent[]>({
     queryKey: ['googleCalendarEvents'],
@@ -41,10 +42,10 @@ export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImp
     staleTime: 5 * 60 * 1000,
   });
 
-  const { data: projects = [], isLoading: isLoadingProjects } = useQuery<{ origin_event_id: string | null }[]>({
+  const { data: projects = [], isLoading: isLoadingProjects } = useQuery<{ name: string, origin_event_id: string | null }[]>({
     queryKey: ['projectsForGCalImport'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('projects').select('origin_event_id');
+      const { data, error } = await supabase.from('projects').select('name, origin_event_id');
       if (error) throw error;
       return data;
     },
@@ -71,7 +72,6 @@ export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImp
     const groups = filteredEvents.reduce((acc: Record<string, CalendarEvent[]>, event) => {
       const dateVal = event.start?.date || event.start?.dateTime;
       if (!dateVal) {
-        console.warn("Skipping event with no start date:", event);
         return acc;
       }
       const dateStr = dateVal.substring(0, 10);
@@ -81,8 +81,6 @@ export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImp
           acc[dateStr] = [];
         }
         acc[dateStr].push(event);
-      } else {
-        console.warn("Skipping event with invalid date string:", dateStr, event);
       }
 
       return acc;
@@ -106,6 +104,35 @@ export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImp
       setSelectedEvents(filteredEvents.map(e => e.id));
     } else {
       setSelectedEvents([]);
+    }
+  };
+
+  const handleSmartSelect = async () => {
+    if (filteredEvents.length === 0) return;
+    setIsSmartSelecting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('ai-handler', {
+        body: {
+          feature: 'ai-select-calendar-events',
+          payload: {
+            events: filteredEvents,
+            existingProjects: projects.map(p => p.name),
+          }
+        }
+      });
+
+      if (error) throw error;
+      if (data.result && data.result.event_ids_to_import) {
+        setSelectedEvents(data.result.event_ids_to_import);
+        toast.success(`AI selected ${data.result.event_ids_to_import.length} events.`);
+      } else {
+        toast.info("AI didn't find any obvious projects to import.");
+      }
+    } catch (err: any) {
+      console.error("Smart select failed:", err);
+      toast.error("Failed to use Smart Select.", { description: err.message });
+    } finally {
+      setIsSmartSelecting(false);
     }
   };
 
@@ -178,6 +205,16 @@ export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImp
                     Select All ({selectedEvents.length} / {filteredEvents.length})
                   </label>
                 </div>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={handleSmartSelect} 
+                  disabled={isSmartSelecting || filteredEvents.length === 0}
+                  className="h-8 text-xs gap-1"
+                >
+                  {isSmartSelecting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3 text-yellow-500" />}
+                  Smart Select
+                </Button>
               </div>
               <ScrollArea className="flex-grow">
                 <div className="p-4 space-y-4">
