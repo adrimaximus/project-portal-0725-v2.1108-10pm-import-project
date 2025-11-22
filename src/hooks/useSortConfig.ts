@@ -25,7 +25,7 @@ export const useSortConfig = <K extends string | number | symbol>(
       }
 
       // 3. Jika klik kolom yang sama dan sedang Descending -> Reset (Matikan sort)
-      return { key: null, direction: 'asc' }; // Kembali ke default
+      return { key: null, direction: 'asc' }; 
     });
   }, []);
 

@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Project, AdvancedFiltersState } from '@/types';
 import { DateRange } from 'react-day-picker';
@@ -53,8 +53,10 @@ export const useProjectFilters = (projects: Project[]) => {
   const updateSearchParams = useCallback((updates: Record<string, string | string[] | null | boolean>) => {
     const newSearchParams = new URLSearchParams(searchParams);
     Object.entries(updates).forEach(([key, value]) => {
-      newSearchParams.delete(key);
-      if (value !== null && value !== '' && value !== false) {
+      if (value === null || value === '' || value === undefined) {
+        newSearchParams.delete(key);
+      } else {
+        newSearchParams.delete(key); // Clear existing to avoid duplicates if array
         if (Array.isArray(value)) {
           value.forEach(v => newSearchParams.append(key, v));
         } else {
@@ -96,23 +98,26 @@ export const useProjectFilters = (projects: Project[]) => {
     });
   };
   
-  const requestSort = (key: keyof Project) => {
-    if (sortConfig.key === key) {
-      if (sortConfig.direction === 'asc') {
-        // 2nd click: Descending
+  const requestSort = useCallback((key: keyof Project) => {
+    const currentKey = searchParams.get('sortKey');
+    const currentDir = searchParams.get('sortDir');
+
+    if (currentKey === key) {
+      if (currentDir === 'asc') {
+        // 2nd click: Ascending -> Descending
         updateSearchParams({ sortKey: key, sortDir: 'desc' });
       } else {
-        // 3rd click: Remove sort (Reset to default)
+        // 3rd click: Descending -> Reset (Remove params)
         const newSearchParams = new URLSearchParams(searchParams);
         newSearchParams.delete('sortKey');
         newSearchParams.delete('sortDir');
         setSearchParams(newSearchParams, { replace: true });
       }
     } else {
-      // 1st click: Ascending
+      // 1st click (New Column): Start with Ascending
       updateSearchParams({ sortKey: key, sortDir: 'asc' });
     }
-  };
+  }, [searchParams, updateSearchParams, setSearchParams]);
 
   const clearFilters = useCallback(() => {
     const newSearchParams = new URLSearchParams(searchParams);
