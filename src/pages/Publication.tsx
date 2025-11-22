@@ -291,7 +291,7 @@ const PublicationPage = () => {
                            <div className="space-y-3">
                              {/* Drag & Drop Zone */}
                              <div 
-                                className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
+                                className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors ${
                                    isDragging ? "border-primary bg-primary/5" : "border-muted hover:bg-muted/50"
                                 }`}
                                 onDragOver={handleDragOver}
@@ -306,9 +306,13 @@ const PublicationPage = () => {
                                    accept=".csv, .xls, .xlsx" 
                                    onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
                                 />
-                                <UploadCloud className="mx-auto h-10 w-10 text-muted-foreground mb-2" />
-                                <p className="text-sm font-medium text-foreground">Click to upload or drag and drop</p>
-                                <p className="text-xs text-muted-foreground mt-1">CSV, XLS, XLSX (max 10MB)</p>
+                                <div className="flex flex-col items-center gap-2">
+                                    <UploadCloud className="h-8 w-8 text-muted-foreground" />
+                                    <div className="space-y-1">
+                                        <p className="text-xs font-medium text-foreground">Click or drag file</p>
+                                        <p className="text-[10px] text-muted-foreground">CSV, XLS, XLSX (max 10MB)</p>
+                                    </div>
+                                </div>
                              </div>
 
                              <div className="relative">
