@@ -55,11 +55,14 @@ const formatDateSeparator = (timestamp: string) => {
   }
 };
 
-// Helper to clean mentions from text @[Name](id) -> @Name
+// Helper to clean mentions and markdown links for previews
+// @[Name](id) -> @Name
+// [Text](url) -> Text
 const formatTextContent = (text: string | null | undefined) => {
   if (!text) return "";
-  // Regex to match @[Name](id) with optional whitespace
-  return text.replace(/@\[([^\]]+)\]\s*\([^)]+\)/g, '@$1');
+  return text
+    .replace(/@\[([^\]]+)\]\s*\([^)]+\)/g, '@$1')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
 };
 
 export const ChatConversation = ({ messages, members, isLoading, onReply }: ChatConversationProps) => {
@@ -211,6 +214,7 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                                             <span className="truncate">{formatTextContent(message.repliedMessage.content) || message.repliedMessage.attachment.name}</span>
                                           </div>
                                         ) : (
+                                          /* Use formatTextContent here to show simple text in reply preview */
                                           <InteractiveText text={formatTextContent(message.repliedMessage.content)} members={members} />
                                         )}
                                       </div>
@@ -249,7 +253,8 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                                             ? "prose dark:prose-invert [--tw-prose-body:#e3e3e3] [--tw-prose-links:#e3e3e3] [--tw-prose-bold:#e3e3e3] [--tw-prose-invert-body:#374151] [--tw-prose-invert-links:#374151] [--tw-prose-invert-bold:#374151]"
                                             : "dark:prose-invert"
                                         )}>
-                                          <InteractiveText text={formatTextContent(message.text)} members={members} />
+                                          {/* Pass raw text here so InteractiveText can parse links */}
+                                          <InteractiveText text={message.text} members={members} />
                                         </div>
                                       </div>
                                       <div className="flex-shrink-0 self-end flex items-center gap-1">
@@ -289,7 +294,8 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                                             ? "prose dark:prose-invert [--tw-prose-body:#e3e3e3] [--tw-prose-links:#e3e3e3] [--tw-prose-bold:#e3e3e3] [--tw-prose-invert-body:#374151] [--tw-prose-invert-links:#374151] [--tw-prose-invert-bold:#374151]"
                                             : "dark:prose-invert"
                                         )}>
-                                          <InteractiveText text={formatTextContent(message.text)} members={members} />
+                                          {/* Pass raw text here so InteractiveText can parse links */}
+                                          <InteractiveText text={message.text} members={members} />
                                         </div>
                                       )
                                     )}
