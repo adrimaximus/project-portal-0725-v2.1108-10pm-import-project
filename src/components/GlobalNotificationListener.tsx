@@ -243,7 +243,6 @@ export const GlobalNotificationListener = () => {
       .subscribe((status, err) => {
          if (err) {
              console.error("Notification channel error:", err);
-             // Optional: toast.error("Connection lost", { duration: 2000 });
          }
       });
 
