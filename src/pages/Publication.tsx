@@ -13,7 +13,7 @@ import { Info, PlayCircle, UploadCloud, MessageSquare, Bell, FileSpreadsheet, X,
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
 import { useToast } from "@/components/ui/use-toast";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
@@ -397,14 +397,14 @@ const PublicationPage = () => {
                    </CardHeader>
                    <CardContent className="p-0 flex-1 overflow-hidden relative">
                       {data.length > 0 ? (
-                         <ScrollArea className="h-full w-full">
-                            <div className="p-4">
+                         <ScrollArea className="h-full w-full rounded-md">
+                            <div className="w-max min-w-full p-4">
                                <Table>
                                   <TableHeader>
                                      <TableRow className="hover:bg-transparent">
-                                        <TableHead className="w-[50px] font-bold text-black">#</TableHead>
+                                        <TableHead className="w-[50px] font-bold text-foreground">#</TableHead>
                                         {headers.map((header) => (
-                                           <TableHead key={header} className="font-bold text-black min-w-[120px]">
+                                           <TableHead key={header} className="font-bold text-foreground min-w-[120px] whitespace-nowrap">
                                               {header}
                                               {header === selectedPhoneColumn && (
                                                  <Badge variant="secondary" className="ml-2 text-[10px] h-4 px-1">Phone</Badge>
@@ -427,6 +427,7 @@ const PublicationPage = () => {
                                   </TableBody>
                                </Table>
                             </div>
+                            <ScrollBar orientation="horizontal" />
                          </ScrollArea>
                       ) : (
                          <div className="flex flex-col items-center justify-center h-full text-center p-8 text-muted-foreground">
