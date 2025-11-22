@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import PortalLayout from "@/components/PortalLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Info, PlayCircle, UploadCloud, MessageSquare, Bell, FileSpreadsheet, X, Link as LinkIcon, File, CheckCircle2, Loader2 } from "lucide-react";
+import { Info, PlayCircle, UploadCloud, MessageSquare, Bell, FileSpreadsheet, X, Link as LinkIcon, File, CheckCircle2, Loader2, Send } from "lucide-react";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
 import { useToast } from "@/components/ui/use-toast";
@@ -17,9 +17,15 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { useQuery } from "@tanstack/react-query";
+
+// Helper component for multi-select
+import { MultiSelect } from "@/components/ui/multi-select";
 
 const PublicationPage = () => {
   const [activeTab, setActiveTab] = useState("whatsapp");
+  
+  // WhatsApp State
   const [data, setData] = useState<any[]>([]);
   const [headers, setHeaders] = useState<string[]>([]);
   const [fileName, setFileName] = useState<string | null>(null);
@@ -30,27 +36,52 @@ const PublicationPage = () => {
   const [isImporting, setIsImporting] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [isSending, setIsSending] = useState(false);
-  
-  // WBIZTOOL Specific States
   const [messageType, setMessageType] = useState("text");
   const [mediaUrl, setMediaUrl] = useState("");
-
-  // Scheduling States
   const [isScheduled, setIsScheduled] = useState(false);
   const [scheduleMode, setScheduleMode] = useState<"fixed" | "dynamic">("fixed");
   const [fixedScheduleDate, setFixedScheduleDate] = useState("");
   const [fixedTimezone, setFixedTimezone] = useState("UTC");
-  
   const [dynamicDateCol, setDynamicDateCol] = useState("");
   const [dynamicTimeCol, setDynamicTimeCol] = useState("same_as_date");
   const [dynamicTimezoneCol, setDynamicTimezoneCol] = useState("use_default");
   const [dynamicDefaultTimezone, setDynamicDefaultTimezone] = useState("UTC");
   const [dynamicDateFormat, setDynamicDateFormat] = useState("auto");
 
+  // In-App Notification State
+  const [notifTarget, setNotifTarget] = useState<"all" | "role" | "specific">("all");
+  const [notifRole, setNotifRole] = useState("");
+  const [notifUsers, setNotifUsers] = useState<string[]>([]);
+  const [notifTitle, setNotifTitle] = useState("");
+  const [notifBody, setNotifBody] = useState("");
+  const [notifLink, setNotifLink] = useState("");
+  const [isSendingNotif, setIsSendingNotif] = useState(false);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { toast } = useToast();
 
+  // Fetch data for In-App selectors
+  const { data: roles = [] } = useQuery({
+    queryKey: ['roles'],
+    queryFn: async () => {
+      const { data } = await supabase.from('roles').select('name');
+      return data?.map(r => r.name) || [];
+    }
+  });
+
+  const { data: profiles = [] } = useQuery({
+    queryKey: ['profiles_min'],
+    queryFn: async () => {
+      const { data } = await supabase.from('profiles').select('id, first_name, last_name, email');
+      return data?.map(p => ({
+        label: `${p.first_name || ''} ${p.last_name || ''}`.trim() || p.email || 'Unknown',
+        value: p.id
+      })) || [];
+    }
+  });
+
+  // WhatsApp Handlers (Existing)
   const handleFile = (file: File) => {
     setFileName(file.name);
     const fileExtension = file.name.split('.').pop()?.toLowerCase();
@@ -69,7 +100,6 @@ const PublicationPage = () => {
         },
         error: (error) => {
           toast({ title: "Error", description: "Failed to parse CSV file.", variant: "destructive" });
-          console.error(error);
         }
       });
     } else if (['xls', 'xlsx'].includes(fileExtension || '')) {
@@ -93,157 +123,68 @@ const PublicationPage = () => {
     }
   };
 
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-  };
-
-  const handleDragLeave = () => {
-    setIsDragging(false);
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      handleFile(e.dataTransfer.files[0]);
-    }
-  };
+  const handleDragOver = (e: React.DragEvent) => { e.preventDefault(); setIsDragging(true); };
+  const handleDragLeave = () => { setIsDragging(false); };
+  const handleDrop = (e: React.DragEvent) => { e.preventDefault(); setIsDragging(false); if (e.dataTransfer.files && e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); };
 
   const handleGoogleSheetImport = async () => {
     let exportUrl = "";
-
-    // Logic for "Published to the web" URLs (containing /d/e/)
     if (googleSheetUrl.includes("/d/e/")) {
-      if (googleSheetUrl.includes("/pubhtml")) {
-        exportUrl = googleSheetUrl.replace("/pubhtml", "/pub?output=csv");
-      } else if (googleSheetUrl.includes("/pub")) {
-        const url = new URL(googleSheetUrl);
-        url.searchParams.set("output", "csv");
-        exportUrl = url.toString();
-      } else {
-        exportUrl = `${googleSheetUrl.replace(/\/$/, "")}/pub?output=csv`;
-      }
-    } 
-    // Logic for standard Google Sheet URLs (containing /d/SHEET_ID)
-    else {
+      if (googleSheetUrl.includes("/pubhtml")) exportUrl = googleSheetUrl.replace("/pubhtml", "/pub?output=csv");
+      else if (googleSheetUrl.includes("/pub")) { const url = new URL(googleSheetUrl); url.searchParams.set("output", "csv"); exportUrl = url.toString(); }
+      else exportUrl = `${googleSheetUrl.replace(/\/$/, "")}/pub?output=csv`;
+    } else {
       const match = googleSheetUrl.match(/\/d\/([a-zA-Z0-9-_]+)/);
-      if (match && match[1]) {
-        exportUrl = `https://docs.google.com/spreadsheets/d/${match[1]}/export?format=csv`;
-      }
+      if (match && match[1]) exportUrl = `https://docs.google.com/spreadsheets/d/${match[1]}/export?format=csv`;
     }
 
-    if (!exportUrl) {
-      toast({ title: "Invalid URL", description: "Please enter a valid Google Sheet URL.", variant: "destructive" });
-      return;
-    }
+    if (!exportUrl) { toast({ title: "Invalid URL", description: "Please enter a valid Google Sheet URL.", variant: "destructive" }); return; }
 
     setIsImporting(true);
-    
     try {
-      // Use Supabase Edge Function as Proxy
-      const { data: csvText, error } = await supabase.functions.invoke('proxy-google-sheet', {
-        body: { url: exportUrl }
-      });
-
+      const { data: csvText, error } = await supabase.functions.invoke('proxy-google-sheet', { body: { url: exportUrl } });
       if (error) throw error;
-
-      if (!csvText || typeof csvText !== 'string') {
-        throw new Error("Empty or invalid response from proxy");
-      }
+      if (!csvText || typeof csvText !== 'string') throw new Error("Empty or invalid response from proxy");
 
       Papa.parse(csvText, {
         header: true,
         skipEmptyLines: true,
         complete: (results) => {
           const parsedData = results.data as any[];
-          if (parsedData.length > 0) {
-            setHeaders(Object.keys(parsedData[0]));
-            setData(parsedData);
-            setFileName("Google Sheet Import");
-            toast({ title: "Import Successful", description: `Imported ${parsedData.length} rows from Google Sheet.` });
-          } else {
-              toast({ title: "Empty Sheet", description: "No data found in the Google Sheet.", variant: "destructive" });
-          }
+          if (parsedData.length > 0) { setHeaders(Object.keys(parsedData[0])); setData(parsedData); setFileName("Google Sheet Import"); toast({ title: "Import Successful", description: `Imported ${parsedData.length} rows from Google Sheet.` }); }
+          else { toast({ title: "Empty Sheet", description: "No data found in the Google Sheet.", variant: "destructive" }); }
         },
-        error: (err) => {
-          throw err;
-        }
+        error: (err) => { throw err; }
       });
-    } catch (error: any) {
-      console.error("Error fetching Google Sheet:", error);
-      toast({ 
-        title: "Import Failed", 
-        description: "Could not fetch Google Sheet. Ensure it is publicly viewable (Anyone with the link) or check the URL.", 
-        variant: "destructive" 
-      });
-    } finally {
-      setIsImporting(false);
-    }
+    } catch (error: any) { toast({ title: "Import Failed", description: "Could not fetch Google Sheet.", variant: "destructive" }); } finally { setIsImporting(false); }
   };
 
-  const clearData = () => {
-    setData([]);
-    setHeaders([]);
-    setFileName(null);
-    setSelectedPhoneColumn("");
-    setGoogleSheetUrl("");
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
-  };
+  const clearData = () => { setData([]); setHeaders([]); setFileName(null); setSelectedPhoneColumn(""); setGoogleSheetUrl(""); if (fileInputRef.current) fileInputRef.current.value = ""; };
 
   const insertVariable = (header: string) => {
     const variable = `{{${header}}}`;
     const textarea = textareaRef.current;
-    
     if (textarea) {
-      const start = textarea.selectionStart;
-      const end = textarea.selectionEnd;
-      const text = templateMessage;
+      const start = textarea.selectionStart; const end = textarea.selectionEnd; const text = templateMessage;
       const newText = text.substring(0, start) + variable + text.substring(end);
-      
       setTemplateMessage(newText);
-      
-      // Defer focus change to allow state update to render
-      setTimeout(() => {
-        textarea.focus();
-        const newCursorPos = start + variable.length;
-        textarea.setSelectionRange(newCursorPos, newCursorPos);
-      }, 0);
-    } else {
-      setTemplateMessage(prev => prev + variable);
-    }
+      setTimeout(() => { textarea.focus(); const newCursorPos = start + variable.length; textarea.setSelectionRange(newCursorPos, newCursorPos); }, 0);
+    } else { setTemplateMessage(prev => prev + variable); }
   };
 
   const handleGenerateMessages = () => {
-    if (!templateMessage.trim()) {
-        toast({ title: "Missing Template", description: "Please enter a message template.", variant: "destructive" });
-        return;
-    }
-    if (messageType !== 'text' && !mediaUrl.trim()) {
-        toast({ title: "Missing URL", description: "Please enter a direct link for the file/image.", variant: "destructive" });
-        return;
-    }
+    if (!templateMessage.trim()) { toast({ title: "Missing Template", description: "Please enter a message template.", variant: "destructive" }); return; }
+    if (messageType !== 'text' && !mediaUrl.trim()) { toast({ title: "Missing URL", description: "Please enter a direct link for the file/image.", variant: "destructive" }); return; }
     if (isScheduled) {
-        if (scheduleMode === 'fixed' && !fixedScheduleDate) {
-            toast({ title: "Missing Date", description: "Please select a date and time for the schedule.", variant: "destructive" });
-            return;
-        }
-        if (scheduleMode === 'dynamic' && !dynamicDateCol) {
-            toast({ title: "Missing Date Column", description: "Please select a column for scheduling dates.", variant: "destructive" });
-            return;
-        }
+        if (scheduleMode === 'fixed' && !fixedScheduleDate) { toast({ title: "Missing Date", description: "Please select a date and time for the schedule.", variant: "destructive" }); return; }
+        if (scheduleMode === 'dynamic' && !dynamicDateCol) { toast({ title: "Missing Date Column", description: "Please select a column for scheduling dates.", variant: "destructive" }); return; }
     }
     setPreviewOpen(true);
   };
 
   const generatePreviewMessage = (row: any) => {
       let message = templateMessage;
-      headers.forEach(header => {
-          const regex = new RegExp(`{{${header}}}`, 'g');
-          message = message.replace(regex, row[header] || '');
-      });
+      headers.forEach(header => { const regex = new RegExp(`{{${header}}}`, 'g'); message = message.replace(regex, row[header] || ''); });
       return message;
   };
 
@@ -253,60 +194,73 @@ const PublicationPage = () => {
 
     try {
         const messages = data.map(row => {
-            // Basic phone cleaning
             let phone = row[selectedPhoneColumn] ? String(row[selectedPhoneColumn]).replace(/\D/g, '') : '';
             if (phone.startsWith('0')) phone = '62' + phone.substring(1);
             if (phone.startsWith('8')) phone = '62' + phone;
 
-            const messageData: any = {
-                phone,
-                message: generatePreviewMessage(row),
-                type: messageType, // 'text', 'image', 'document'
-                url: mediaUrl,
-            };
-
-            // Handle Schedule Data
+            const messageData: any = { phone, message: generatePreviewMessage(row), type: messageType, url: mediaUrl };
             if (isScheduled) {
                 if (scheduleMode === 'fixed') {
                     messageData.schedule_time = fixedScheduleDate.replace('T', ' ');
                     messageData.timezone = fixedTimezone;
                 } else {
-                    // Dynamic
                     let sched = row[dynamicDateCol] || '';
-                    // Add time if separate column
-                    if (dynamicTimeCol !== 'same_as_date' && row[dynamicTimeCol]) {
-                        sched += ' ' + row[dynamicTimeCol];
-                    }
-                    
-                    messageData.schedule_time = sched.replace('T', ' '); // Ensure simple space separator
-                    
-                    // Timezone
-                    messageData.timezone = dynamicTimezoneCol !== 'use_default' && row[dynamicTimezoneCol] 
-                        ? row[dynamicTimezoneCol] 
-                        : dynamicDefaultTimezone;
+                    if (dynamicTimeCol !== 'same_as_date' && row[dynamicTimeCol]) sched += ' ' + row[dynamicTimeCol];
+                    messageData.schedule_time = sched.replace('T', ' ');
+                    messageData.timezone = dynamicTimezoneCol !== 'use_default' && row[dynamicTimezoneCol] ? row[dynamicTimezoneCol] : dynamicDefaultTimezone;
                 }
             }
-
             return messageData;
-        }).filter(m => m.phone.length > 5); // Filter invalid phones
+        }).filter(m => m.phone.length > 5);
 
-        const { data: result, error } = await supabase.functions.invoke('send-whatsapp-blast', {
-            body: { messages }
-        });
-
+        const { data: result, error } = await supabase.functions.invoke('send-whatsapp-blast', { body: { messages } });
         if (error) throw error;
-
-        toast({ 
-            title: "Blast Completed", 
-            description: `Sent: ${result.success}, Failed: ${result.failed}`, 
-            variant: result.failed > 0 ? "default" : "default"
-        });
+        toast({ title: "Blast Completed", description: `Sent: ${result.success}, Failed: ${result.failed}`, variant: result.failed > 0 ? "default" : "default" });
         setPreviewOpen(false);
+    } catch (error: any) { toast({ title: "Blast Failed", description: error.message, variant: "destructive" }); } finally { setIsSending(false); }
+  };
 
+  // In-App Notification Handler
+  const handleSendInAppNotification = async () => {
+    if (!notifTitle.trim() || !notifBody.trim()) {
+      toast({ title: "Missing Information", description: "Title and Body are required.", variant: "destructive" });
+      return;
+    }
+    
+    let targetValue: any = null;
+    if (notifTarget === 'role') {
+      if (!notifRole) { toast({ title: "Missing Role", description: "Please select a role.", variant: "destructive" }); return; }
+      targetValue = notifRole;
+    } else if (notifTarget === 'specific') {
+      if (notifUsers.length === 0) { toast({ title: "Missing Users", description: "Please select at least one user.", variant: "destructive" }); return; }
+      targetValue = notifUsers;
+    }
+
+    setIsSendingNotif(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('send-app-broadcast', {
+        body: {
+          title: notifTitle,
+          body: notifBody,
+          target: notifTarget,
+          targetValue,
+          link: notifLink,
+        }
+      });
+
+      if (error) throw error;
+      
+      toast({ title: "Broadcast Sent", description: `Successfully sent to ${data.count} user(s).` });
+      
+      // Reset form
+      setNotifTitle("");
+      setNotifBody("");
+      setNotifLink("");
+      setNotifUsers([]);
     } catch (error: any) {
-        toast({ title: "Blast Failed", description: error.message, variant: "destructive" });
+      toast({ title: "Broadcast Failed", description: error.message, variant: "destructive" });
     } finally {
-        setIsSending(false);
+      setIsSendingNotif(false);
     }
   };
 
@@ -735,23 +689,97 @@ const PublicationPage = () => {
              </div>
           </TabsContent>
 
+          {/* In-App Notifications Tab */}
           <TabsContent value="in-app" className="mt-6">
-             <Card>
+             <Card className="max-w-2xl mx-auto">
                 <CardHeader>
                    <CardTitle>Send In-App Notification</CardTitle>
-                   <CardDescription>Send a notification to all users or specific segments.</CardDescription>
+                   <CardDescription>Send a broadcast notification to all users or specific segments of your user base.</CardDescription>
                 </CardHeader>
-                <CardContent>
-                   <div className="flex flex-col items-center justify-center h-64 text-muted-foreground border-2 border-dashed rounded-xl">
-                      <Bell className="h-12 w-12 mb-4 opacity-20" />
-                      <p>Feature coming soon...</p>
+                <CardContent className="space-y-6">
+                   <div className="space-y-2">
+                      <Label>Recipient Target</Label>
+                      <Select value={notifTarget} onValueChange={(v: any) => setNotifTarget(v)}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Users</SelectItem>
+                          <SelectItem value="role">Specific Role</SelectItem>
+                          <SelectItem value="specific">Specific Users</SelectItem>
+                        </SelectContent>
+                      </Select>
                    </div>
+
+                   {notifTarget === 'role' && (
+                     <div className="space-y-2 animate-in slide-in-from-top-1 fade-in duration-300">
+                        <Label>Select Role</Label>
+                        <Select value={notifRole} onValueChange={setNotifRole}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select role" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {roles.map(role => (
+                              <SelectItem key={role} value={role} className="capitalize">{role}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                     </div>
+                   )}
+
+                   {notifTarget === 'specific' && (
+                     <div className="space-y-2 animate-in slide-in-from-top-1 fade-in duration-300">
+                        <Label>Select Users</Label>
+                        <MultiSelect
+                          options={profiles}
+                          value={notifUsers}
+                          onChange={setNotifUsers}
+                          placeholder="Select users..."
+                        />
+                     </div>
+                   )}
+
+                   <div className="space-y-2">
+                      <Label>Notification Title</Label>
+                      <Input 
+                        placeholder="e.g. System Maintenance Alert" 
+                        value={notifTitle}
+                        onChange={(e) => setNotifTitle(e.target.value)}
+                      />
+                   </div>
+
+                   <div className="space-y-2">
+                      <Label>Notification Body</Label>
+                      <Textarea 
+                        placeholder="e.g. The system will be undergoing maintenance on Sunday..." 
+                        value={notifBody}
+                        onChange={(e) => setNotifBody(e.target.value)}
+                        rows={4}
+                      />
+                   </div>
+
+                   <div className="space-y-2">
+                      <Label>Action Link (Optional)</Label>
+                      <Input 
+                        placeholder="e.g. /dashboard or https://..." 
+                        value={notifLink}
+                        onChange={(e) => setNotifLink(e.target.value)}
+                      />
+                      <p className="text-xs text-muted-foreground">User will be redirected here when they click the notification.</p>
+                   </div>
+
                 </CardContent>
+                <CardFooter className="flex justify-end border-t pt-6">
+                   <Button onClick={handleSendInAppNotification} disabled={isSendingNotif}>
+                      {isSendingNotif ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+                      Send Broadcast
+                   </Button>
+                </CardFooter>
              </Card>
           </TabsContent>
         </Tabs>
 
-        {/* Message Preview Dialog */}
+        {/* Message Preview Dialog (WhatsApp) */}
         <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
             <DialogContent className="sm:max-w-[500px]">
                 <DialogHeader>
