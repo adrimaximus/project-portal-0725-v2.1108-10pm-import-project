@@ -5,7 +5,7 @@ import { notificationIcons } from "@/data/notifications";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from 'date-fns';
 import { Link } from "react-router-dom";
-import { Bell, CheckCheck, Loader2, AlertTriangle } from "lucide-react";
+import { Bell, CheckCheck, Loader2, AlertTriangle, CheckCircle, Circle } from "lucide-react";
 import { useNotifications } from "@/hooks/useNotifications";
 import { Skeleton } from "@/components/ui/skeleton";
 import InteractiveText from "@/components/InteractiveText";
@@ -108,18 +108,22 @@ const NotificationsPage = () => {
                       {notification.read ? (
                         <Button
                           variant="ghost"
-                          size="sm"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-primary"
                           onClick={() => markAsUnread(notification.id)}
+                          title="Mark as unread"
                         >
-                          Mark as unread
+                          <CheckCircle className="h-5 w-5 text-primary" />
                         </Button>
                       ) : (
                         <Button
                           variant="ghost"
-                          size="sm"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-primary"
                           onClick={() => markAsRead(notification.id)}
+                          title="Mark as read"
                         >
-                          Mark as read
+                          <Circle className="h-5 w-5" />
                         </Button>
                       )}
                     </div>

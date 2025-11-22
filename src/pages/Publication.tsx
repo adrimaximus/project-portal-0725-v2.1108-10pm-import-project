@@ -252,7 +252,16 @@ const PublicationPage = () => {
 
       if (error) throw error;
       
-      toast.success("Broadcast Sent", { description: `Successfully sent to ${data.count} user(s).` });
+      toast.success("Broadcast Sent", { 
+        description: (
+          <div className="mt-2 p-2 bg-muted/50 rounded-md">
+            <p className="font-semibold">{notifTitle}</p>
+            <p className="text-xs text-muted-foreground line-clamp-3 mt-1">{notifBody}</p>
+            <p className="text-[10px] text-muted-foreground mt-2">Successfully sent to {data.count} user(s).</p>
+          </div>
+        ),
+        duration: 5000,
+      });
       
       // Reset form
       setNotifTitle("");
@@ -291,7 +300,16 @@ const PublicationPage = () => {
 
       if (error) throw error;
       
-      toast.success("Test Sent", { description: "Check your notifications for the test broadcast." });
+      toast.success("Test Broadcast Sent", { 
+        description: (
+          <div className="mt-2 p-2 bg-muted/50 rounded-md">
+            <p className="font-semibold">[TEST] {notifTitle}</p>
+            <p className="text-xs text-muted-foreground line-clamp-3 mt-1">{notifBody}</p>
+            <p className="text-[10px] text-muted-foreground mt-2">Check your notifications.</p>
+          </div>
+        ),
+        duration: 5000,
+      });
     } catch (error: any) {
       toast.error("Test Failed", { description: error.message });
     } finally {
