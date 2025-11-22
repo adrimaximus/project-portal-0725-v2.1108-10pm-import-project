@@ -14,7 +14,7 @@ const WorkspaceSettingsPage = () => {
   const workspaceFeatures = [
     'dashboard', 'projects', 'tasks', 'chat', 'goals', 
     'people', 'billing', 'expense', 'request', 'knowledge-base', 
-    'mood-tracker', 'search', 'integrations'
+    'mood-tracker', 'search', 'integrations', 'publication'
   ];
 
   const featuresToDisplay = features
