@@ -19,7 +19,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
-import InteractiveText from "@/components/InteractiveText"; // Import InteractiveText
+import InteractiveText from "@/components/InteractiveText";
 
 // Helper component for multi-select
 import { MultiSelect } from "@/components/ui/multi-select";
@@ -63,6 +63,7 @@ const PublicationPage = () => {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const notifBodyRef = useRef<HTMLTextAreaElement>(null);
 
   // Fetch data for In-App selectors
   const { data: roles = [] } = useQuery({
@@ -173,6 +174,25 @@ const PublicationPage = () => {
       setTemplateMessage(newText);
       setTimeout(() => { textarea.focus(); const newCursorPos = start + variable.length; textarea.setSelectionRange(newCursorPos, newCursorPos); }, 0);
     } else { setTemplateMessage(prev => prev + variable); }
+  };
+
+  const insertNotifVariable = () => {
+    const variable = "{{name}}";
+    const textarea = notifBodyRef.current;
+    if (textarea) {
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const text = notifBody;
+      const newText = text.substring(0, start) + variable + text.substring(end);
+      setNotifBody(newText);
+      setTimeout(() => {
+        textarea.focus();
+        const newCursorPos = start + variable.length;
+        textarea.setSelectionRange(newCursorPos, newCursorPos);
+      }, 0);
+    } else {
+      setNotifBody(prev => prev + variable);
+    }
   };
 
   const handleGenerateMessages = () => {
@@ -832,11 +852,21 @@ const PublicationPage = () => {
                          </div>
                       </div>
                       <Textarea 
+                        ref={notifBodyRef}
                         placeholder="e.g. Hi {{name}}, the system will be undergoing maintenance..." 
                         value={notifBody}
                         onChange={(e) => setNotifBody(e.target.value)}
                         rows={4}
                       />
+                      <div className="flex justify-start mt-1">
+                         <Badge 
+                            variant="outline" 
+                            className="cursor-pointer hover:bg-primary/10 hover:text-primary hover:border-primary/30 transition-colors font-mono text-[10px] px-1.5 py-0.5 flex items-center gap-1"
+                            onClick={insertNotifVariable}
+                         >
+                            + {`{{name}}`}
+                         </Badge>
+                      </div>
                    </div>
 
                    <div className="space-y-2">
