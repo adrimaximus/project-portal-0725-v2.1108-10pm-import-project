@@ -9,12 +9,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Info, PlayCircle, UploadCloud, MessageSquare, Bell, FileSpreadsheet, X, Link as LinkIcon, File } from "lucide-react";
+import { Info, PlayCircle, UploadCloud, MessageSquare, Bell, FileSpreadsheet, X, Link as LinkIcon, File, CheckCircle2, Loader2 } from "lucide-react";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
 import { useToast } from "@/components/ui/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { supabase } from "@/integrations/supabase/client";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 
 const PublicationPage = () => {
   const [activeTab, setActiveTab] = useState("whatsapp");
@@ -24,6 +26,9 @@ const PublicationPage = () => {
   const [selectedPhoneColumn, setSelectedPhoneColumn] = useState<string>("");
   const [googleSheetUrl, setGoogleSheetUrl] = useState("");
   const [isDragging, setIsDragging] = useState(false);
+  const [templateMessage, setTemplateMessage] = useState("");
+  const [isImporting, setIsImporting] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -86,43 +91,46 @@ const PublicationPage = () => {
     }
   };
 
-  const handleGoogleSheetImport = () => {
-    // Basic Google Sheet URL parser
+  const handleGoogleSheetImport = async () => {
     const match = googleSheetUrl.match(/\/d\/([a-zA-Z0-9-_]+)/);
     if (match && match[1]) {
+      setIsImporting(true);
       const sheetId = match[1];
       const exportUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv`;
       
-      // Note: This fetch might fail due to CORS if not handled by a proxy or backend in a real production env
-      // For this demo, we'll try a direct fetch assuming public access
-      fetch(exportUrl)
-        .then(response => {
-          if (!response.ok) throw new Error("Network response was not ok");
-          return response.text();
-        })
-        .then(csvText => {
-          Papa.parse(csvText, {
-            header: true,
-            skipEmptyLines: true,
-            complete: (results) => {
-              const parsedData = results.data as any[];
-              if (parsedData.length > 0) {
-                setHeaders(Object.keys(parsedData[0]));
-                setData(parsedData);
-                setFileName("Google Sheet Import");
-                toast({ title: "Import Successful", description: `Imported ${parsedData.length} rows from Google Sheet.` });
-              }
-            }
-          });
-        })
-        .catch(error => {
-          console.error("Error fetching Google Sheet:", error);
-          toast({ 
-            title: "Import Failed", 
-            description: "Could not fetch Google Sheet. Make sure it is publicly viewable (Anyone with the link).", 
-            variant: "destructive" 
-          });
+      try {
+        // Use Supabase Edge Function as Proxy
+        const { data: csvText, error } = await supabase.functions.invoke('proxy-google-sheet', {
+          body: { url: exportUrl }
         });
+
+        if (error) throw error;
+
+        Papa.parse(csvText, {
+          header: true,
+          skipEmptyLines: true,
+          complete: (results) => {
+            const parsedData = results.data as any[];
+            if (parsedData.length > 0) {
+              setHeaders(Object.keys(parsedData[0]));
+              setData(parsedData);
+              setFileName("Google Sheet Import");
+              toast({ title: "Import Successful", description: `Imported ${parsedData.length} rows from Google Sheet.` });
+            } else {
+                toast({ title: "Empty Sheet", description: "No data found in the Google Sheet.", variant: "destructive" });
+            }
+          }
+        });
+      } catch (error: any) {
+        console.error("Error fetching Google Sheet:", error);
+        toast({ 
+          title: "Import Failed", 
+          description: "Could not fetch Google Sheet. Ensure it is publicly viewable (Anyone with the link) or check the URL.", 
+          variant: "destructive" 
+        });
+      } finally {
+        setIsImporting(false);
+      }
     } else {
       toast({ title: "Invalid URL", description: "Please enter a valid Google Sheet URL.", variant: "destructive" });
     }
@@ -137,6 +145,23 @@ const PublicationPage = () => {
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
+  };
+
+  const handleGenerateMessages = () => {
+    if (!templateMessage.trim()) {
+        toast({ title: "Missing Template", description: "Please enter a message template.", variant: "destructive" });
+        return;
+    }
+    setPreviewOpen(true);
+  };
+
+  const generatePreviewMessage = (row: any) => {
+      let message = templateMessage;
+      headers.forEach(header => {
+          const regex = new RegExp(`{{${header}}}`, 'g');
+          message = message.replace(regex, row[header] || '');
+      });
+      return message;
   };
 
   return (
@@ -188,6 +213,8 @@ const PublicationPage = () => {
                             id="template" 
                             placeholder="Hi {{name}}, your payment of {{amount}} is due." 
                             className="min-h-[120px] font-mono text-sm"
+                            value={templateMessage}
+                            onChange={(e) => setTemplateMessage(e.target.value)}
                          />
                          <p className="text-xs text-muted-foreground">
                             Use <code className="bg-muted px-1 py-0.5 rounded text-foreground">{"{{column_name}}"}</code> for variables.
@@ -270,9 +297,10 @@ const PublicationPage = () => {
                                    value={googleSheetUrl}
                                    onChange={(e) => setGoogleSheetUrl(e.target.value)}
                                    className="text-sm"
+                                   disabled={isImporting}
                                 />
-                                <Button variant="secondary" onClick={handleGoogleSheetImport} disabled={!googleSheetUrl}>
-                                   <LinkIcon className="h-4 w-4 mr-2" />
+                                <Button variant="secondary" onClick={handleGoogleSheetImport} disabled={!googleSheetUrl || isImporting}>
+                                   {isImporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <LinkIcon className="h-4 w-4 mr-2" />}
                                    Import
                                 </Button>
                              </div>
@@ -316,11 +344,15 @@ const PublicationPage = () => {
                       </div>
 
                       <div className="flex items-center justify-between pt-4">
-                         <Button className="bg-blue-500 hover:bg-blue-600 text-white min-w-[140px]" disabled={!selectedPhoneColumn || data.length === 0}>
+                         <Button 
+                            className="bg-blue-500 hover:bg-blue-600 text-white min-w-[140px]" 
+                            disabled={!selectedPhoneColumn || data.length === 0 || !templateMessage.trim()}
+                            onClick={handleGenerateMessages}
+                         >
                             Create Messages
                          </Button>
                          <span className="text-xs text-muted-foreground">
-                            {data.length > 0 ? `${data.length} messages ready` : "46,072 messages remaining"}
+                            {data.length > 0 ? `${data.length} messages ready` : "Upload data to begin"}
                          </span>
                       </div>
                    </CardContent>
@@ -400,6 +432,39 @@ const PublicationPage = () => {
              </Card>
           </TabsContent>
         </Tabs>
+
+        {/* Message Preview Dialog */}
+        <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+            <DialogContent className="sm:max-w-[500px]">
+                <DialogHeader>
+                    <DialogTitle>Message Preview</DialogTitle>
+                    <DialogDescription>
+                        Previewing the first generated message based on your data.
+                    </DialogDescription>
+                </DialogHeader>
+                {data.length > 0 ? (
+                    <div className="bg-muted/50 p-4 rounded-lg border">
+                        <div className="mb-2">
+                            <Label className="text-xs text-muted-foreground uppercase">To Phone</Label>
+                            <p className="font-mono text-sm">{data[0][selectedPhoneColumn] || "N/A"}</p>
+                        </div>
+                        <div>
+                            <Label className="text-xs text-muted-foreground uppercase">Message</Label>
+                            <p className="text-sm whitespace-pre-wrap mt-1">{generatePreviewMessage(data[0])}</p>
+                        </div>
+                    </div>
+                ) : (
+                    <p>No data to preview.</p>
+                )}
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => setPreviewOpen(false)}>Cancel</Button>
+                    <Button onClick={() => { toast({ title: "Messages Queued", description: `${data.length} messages are being processed.` }); setPreviewOpen(false); }}>
+                        <CheckCircle2 className="mr-2 h-4 w-4" />
+                        Confirm & Send
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
       </div>
     </PortalLayout>
   );
