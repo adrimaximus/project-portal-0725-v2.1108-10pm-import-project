@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Project } from '@/types';
+import { Project, ProjectStatusDef } from '@/types';
 import { useNavigate } from 'react-router-dom';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -9,7 +9,7 @@ import { cn, formatInJakarta, generatePastelColor, getAvatarUrl } from '@/lib/ut
 import { isSameDay, isBefore, startOfToday, subDays } from 'date-fns';
 import { Progress } from "../ui/progress";
 import StatusBadge from "../StatusBadge";
-import { useProjectStatuses, ProjectStatusDef } from "@/hooks/useProjectStatuses";
+import { useProjectStatuses } from "@/hooks/useProjectStatuses";
 
 const ProjectListItem = ({
   project,

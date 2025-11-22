@@ -8,7 +8,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
-import { Project, ProjectStatus } from '@/types';
+import { Project, ProjectStatus, ProjectStatusDef } from '@/types';
 import { Link } from "react-router-dom";
 import { MoreHorizontal, Trash2 } from "lucide-react";
 import { Button } from "../ui/button";
@@ -29,7 +29,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useProjectStatuses, ProjectStatusDef } from "@/hooks/useProjectStatuses";
+import { useProjectStatuses } from "@/hooks/useProjectStatuses";
 
 interface TableViewProps {
   projects: Project[];

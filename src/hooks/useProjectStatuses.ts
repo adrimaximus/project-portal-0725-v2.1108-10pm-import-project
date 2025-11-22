@@ -1,13 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-
-export interface ProjectStatusDef {
-  id: string;
-  name: string;
-  color: string;
-  position: number;
-}
+import { ProjectStatusDef } from '@/types';
 
 export const useProjectStatuses = () => {
   const queryClient = useQueryClient();

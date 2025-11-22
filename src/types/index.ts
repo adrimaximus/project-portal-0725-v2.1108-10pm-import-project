@@ -48,6 +48,13 @@ export const PROJECT_STATUS_OPTIONS = [
 ] as const;
 export type ProjectStatus = string; // Allow any string for dynamic statuses
 
+export interface ProjectStatusDef {
+  id: string;
+  name: string;
+  color: string;
+  position: number;
+}
+
 export const PAYMENT_STATUS_OPTIONS = [
     { value: 'Paid', label: 'Paid' },
     { value: 'Unpaid', label: 'Unpaid' },
