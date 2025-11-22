@@ -1,4 +1,3 @@
-Desc -> Reset) for the generic sort hook.">
 import { useState, useCallback } from 'react';
 
 type SortDirection = 'asc' | 'desc';

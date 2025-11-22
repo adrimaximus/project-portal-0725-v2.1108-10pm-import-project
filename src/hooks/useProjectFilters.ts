@@ -1,4 +1,3 @@
-Desc -> Reset) for project filters.">
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Project, AdvancedFiltersState } from '@/types';
