@@ -12,14 +12,14 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // 1. Authenticate user
+    // 1. Authenticate user (the importer)
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
       { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
     );
-    const { data: { user } } = await supabaseClient.auth.getUser();
-    if (!user) throw new Error("User not authenticated.");
+    const { data: { user: currentUser } } = await supabaseClient.auth.getUser();
+    if (!currentUser) throw new Error("User not authenticated.");
 
     // 2. Get events from request body
     const { eventsToImport } = await req.json();
@@ -33,21 +33,57 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // 4. Prepare project data from events
-    const newProjectsPayload = eventsToImport.map(event => ({
-      name: event.summary || 'Untitled Event',
-      description: event.description,
-      start_date: event.start?.dateTime || event.start?.date,
-      due_date: event.end?.dateTime || event.end?.date,
-      origin_event_id: event.id,
-      venue: event.location,
-      created_by: user.id,
-      status: 'On Track', // Default status
-      payment_status: 'Unpaid', // Default payment status
-      category: 'Event', // Default category
-    }));
+    // 4. PREPARE EMAILS: Collect creator emails AND attendee emails to look them up
+    const creatorEmails = eventsToImport.map((e: any) => e.creator?.email).filter(Boolean);
+    const attendeeEmails = eventsToImport.flatMap((e: any) => e.attendees?.map((a: any) => a.email) || []).filter(Boolean);
+    const allEmailsToCheck = [...new Set([...creatorEmails, ...attendeeEmails])];
 
-    // 5. Insert new projects
+    const emailToIdMap = new Map<string, string>();
+
+    // 5. FETCH USERS: Find IDs for all involved emails
+    if (allEmailsToCheck.length > 0) {
+        // Fetch in batches if necessary, but for typical calendar usage 1 query is usually fine
+        const { data: profiles } = await supabaseAdmin
+            .from('profiles')
+            .select('id, email')
+            .in('email', allEmailsToCheck);
+        
+        if (profiles) {
+            profiles.forEach((p: any) => {
+                if (p.email) emailToIdMap.set(p.email.toLowerCase(), p.id);
+            });
+        }
+    }
+
+    // 6. Prepare project data
+    const newProjectsPayload = eventsToImport.map((event: any) => {
+        const creatorEmail = event.creator?.email?.toLowerCase();
+        
+        // LOGIC UTAMA:
+        // Cek apakah creator event ini ada di database kita?
+        // Jika ada, jadikan dia Owner.
+        // Jika tidak ada, jadikan "currentUser" (yang melakukan import) sebagai Owner.
+        let projectOwnerId = currentUser.id;
+        
+        if (creatorEmail && emailToIdMap.has(creatorEmail)) {
+            projectOwnerId = emailToIdMap.get(creatorEmail)!;
+        }
+
+        return {
+            name: event.summary || 'Untitled Event',
+            description: event.description,
+            start_date: event.start?.dateTime || event.start?.date,
+            due_date: event.end?.dateTime || event.end?.date,
+            origin_event_id: event.id,
+            venue: event.location,
+            created_by: projectOwnerId, // Set owner yang benar
+            status: 'On Track',
+            payment_status: 'Unpaid',
+            category: 'Event',
+        };
+    });
+
+    // 7. Insert new projects
     const { data: createdProjects, error: projectInsertError } = await supabaseAdmin
       .from('projects')
       .insert(newProjectsPayload)
@@ -57,57 +93,60 @@ Deno.serve(async (req) => {
       throw new Error(`Failed to insert projects: ${projectInsertError.message}`);
     }
 
-    // 6. Handle attendees
-    const allAttendeeEmails = [...new Set(eventsToImport.flatMap(event => event.attendees?.map((att: any) => att.email) || []).filter(Boolean))];
-    const emailToIdMap = new Map<string, string>();
-
-    if (allAttendeeEmails.length > 0) {
-      const { data: attendeeProfiles, error: profileError } = await supabaseAdmin
-        .from('profiles')
-        .select('id, email')
-        .in('email', allAttendeeEmails);
-      if (profileError) {
-        console.warn(`Could not fetch attendee profiles:`, profileError.message);
-      } else if (attendeeProfiles) {
-        attendeeProfiles.forEach(p => {
-          if (p.email) emailToIdMap.set(p.email, p.id);
-        });
-      }
-    }
-
+    // 8. Handle members (Attendees)
     const projectMemberships: { project_id: string; user_id: string; role: string }[] = [];
+    
     if (createdProjects) {
-      createdProjects.forEach(project => {
-        // The creator is already added as a member with 'owner' role by a trigger, so we don't need to add them here.
+      createdProjects.forEach((project: any) => {
+        const originalEvent = eventsToImport.find((e: any) => e.id === project.origin_event_id);
         
-        const originalEvent = eventsToImport.find(e => e.id === project.origin_event_id);
         if (originalEvent && originalEvent.attendees) {
           originalEvent.attendees.forEach((attendee: any) => {
-            if (attendee.email && emailToIdMap.has(attendee.email)) {
-              const attendeeUserId = emailToIdMap.get(attendee.email)!;
-              // Don't re-add the project creator
-              if (attendeeUserId !== project.created_by) {
-                // Avoid duplicates if an attendee is in multiple events that create the same project (unlikely but safe)
-                if (!projectMemberships.some(m => m.project_id === project.id && m.user_id === attendeeUserId)) {
-                  projectMemberships.push({
-                    project_id: project.id,
-                    user_id: attendeeUserId,
-                    role: 'member'
-                  });
+            if (attendee.email) {
+                const email = attendee.email.toLowerCase();
+                if (emailToIdMap.has(email)) {
+                    const userId = emailToIdMap.get(email)!;
+                    
+                    // Jangan tambahkan Owner sebagai Member (karena Owner sudah otomatis punya akses)
+                    // Dan hindari duplikasi
+                    if (userId !== project.created_by) {
+                         projectMemberships.push({
+                            project_id: project.id,
+                            user_id: userId,
+                            role: 'member'
+                        });
+                    }
                 }
-              }
             }
           });
+        }
+        
+        // Tambahan: Jika Project Owner BUKAN orang yang melakukan Import,
+        // Maka orang yang melakukan Import harus ditambahkan sebagai ADMIN atau MEMBER agar bisa melihat projectnya.
+        // (Tergantung kebijakan, biasanya Admin/Editor). Kita set 'admin' agar aman.
+        if (project.created_by !== currentUser.id) {
+            projectMemberships.push({
+                project_id: project.id,
+                user_id: currentUser.id,
+                role: 'admin' 
+            });
         }
       });
     }
 
-    if (projectMemberships.length > 0) {
+    // Remove duplicates from membership array (same user in same project)
+    const uniqueMemberships = projectMemberships.filter((value, index, self) =>
+        index === self.findIndex((t) => (
+            t.project_id === value.project_id && t.user_id === value.user_id
+        ))
+    );
+
+    if (uniqueMemberships.length > 0) {
       const { error: memberInsertError } = await supabaseAdmin
         .from('project_members')
-        .insert(projectMemberships);
+        .insert(uniqueMemberships);
+        
       if (memberInsertError) {
-        // Don't throw, just warn, as the main project creation was successful.
         console.warn("Failed to add some members to projects:", memberInsertError.message);
       }
     }
@@ -117,7 +156,7 @@ Deno.serve(async (req) => {
       status: 200,
     });
 
-  } catch (err) {
+  } catch (err: any) {
     console.error("Import Google Calendar Events Error:", err.message);
     return new Response(JSON.stringify({ error: err.message }), {
       status: 500,
