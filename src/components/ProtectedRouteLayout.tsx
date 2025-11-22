@@ -5,6 +5,7 @@ import React from "react";
 import { ChatProvider } from "@/contexts/ChatContext";
 import { FeaturesProvider } from "@/contexts/FeaturesContext";
 import { BroadcastToast } from "./BroadcastToast";
+import { GlobalNotificationListener } from "./GlobalNotificationListener";
 import ImpersonationBanner from "./ImpersonationBanner";
 
 const ProtectedRouteLayout = () => {
@@ -28,6 +29,7 @@ const ProtectedRouteLayout = () => {
       <ChatProvider>
         <Outlet />
         <BroadcastToast />
+        <GlobalNotificationListener />
         <ImpersonationBanner />
       </ChatProvider>
     </FeaturesProvider>

@@ -3,11 +3,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { AppNotification } from '@/types';
 import { toast } from 'sonner';
-import { useEffect, useRef, useMemo } from 'react';
-import { useChatContext } from '@/contexts/ChatContext';
+import { useEffect, useMemo } from 'react';
 
 const NOTIFICATIONS_PER_PAGE = 20;
-const TONE_BASE_URL = `https://quuecudndfztjlxbrvyb.supabase.co/storage/v1/object/public/General/Notification/`;
 
 const fetchNotifications = async (pageParam: number = 0): Promise<AppNotification[]> => {
   const { data, error } = await supabase
@@ -37,13 +35,7 @@ const fetchNotifications = async (pageParam: number = 0): Promise<AppNotificatio
 export const useNotifications = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const { selectedConversationId, isChatPageActive } = useChatContext();
-  const chatStateRef = useRef({ selectedConversationId, isChatPageActive });
-
-  useEffect(() => {
-    chatStateRef.current = { selectedConversationId, isChatPageActive };
-  }, [selectedConversationId, isChatPageActive]);
-
+  
   const queryKey = ['notifications', user?.id];
 
   const {
@@ -63,11 +55,12 @@ export const useNotifications = () => {
     enabled: !!user,
   });
 
+  // Listen for changes to refresh the list, BUT DO NOT trigger toasts/sounds here.
   useEffect(() => {
     if (!user) return;
 
     const channel = supabase
-      .channel(`notifications:${user.id}`)
+      .channel(`notifications-list:${user.id}`)
       .on(
         'postgres_changes',
         {
@@ -76,74 +69,9 @@ export const useNotifications = () => {
           table: 'notification_recipients',
           filter: `user_id=eq.${user.id}`,
         },
-        async (payload) => {
+        async () => {
           // Invalidate query to show new notification in the list
           queryClient.invalidateQueries({ queryKey: ['notifications', user.id] });
-
-          const { data: profileData, error: profileError } = await supabase
-            .from('profiles')
-            .select('notification_preferences')
-            .eq('id', user.id)
-            .single();
-
-          if (profileError) {
-            console.error('Could not fetch latest profile for notification sound.', profileError);
-            return;
-          }
-          
-          const userPreferences = profileData.notification_preferences || {};
-
-          const newNotificationId = payload.new.notification_id;
-          const { data: notificationData } = await supabase.from('notifications').select('title, body, type, resource_type, resource_id').eq('id', newNotificationId).single();
-          
-          if (notificationData) {
-            // EXCLUSION LOGIC:
-            // Skip toast and sound for types handled by BroadcastToast.tsx
-            // BroadcastToast handles 'broadcast' AND 'system' types where resource_type is 'system'
-            const isHandledByBroadcastToast = 
-                notificationData.type === 'broadcast' || 
-                (notificationData.type === 'system' && notificationData.resource_type === 'system');
-
-            if (isHandledByBroadcastToast) {
-              return;
-            }
-
-            const isChatNotification = notificationData.type === 'comment';
-            const conversationIdOfNotification = notificationData.resource_id;
-            
-            const isChatActiveAndVisible = isChatNotification &&
-                                           chatStateRef.current.isChatPageActive &&
-                                           chatStateRef.current.selectedConversationId === conversationIdOfNotification;
-
-            const toastsEnabled = userPreferences.toast_enabled !== false;
-            
-            // Don't show toast if we are currently looking at the chat where the message arrived
-            if (toastsEnabled && !isChatActiveAndVisible) {
-              toast.info(notificationData.title, {
-                description: notificationData.body,
-              });
-            }
-
-            if (Notification.permission === 'granted' && document.hidden) {
-              new Notification(notificationData.title, {
-                body: notificationData.body,
-                icon: "/favicon.ico",
-              });
-            }
-
-            const isNotificationTypeEnabled = userPreferences?.[notificationData.type] !== false;
-            const tone = userPreferences?.tone;
-
-            // Only play sound if it's not a broadcast (already handled) and not active chat
-            if (isNotificationTypeEnabled && tone && tone !== 'none' && !isChatActiveAndVisible) {
-              try {
-                const audio = new Audio(`${TONE_BASE_URL}${tone}`);
-                await audio.play().catch(e => console.warn("Audio play blocked", e));
-              } catch (e) {
-                console.error("Error playing notification sound:", e);
-              }
-            }
-          }
         }
       )
       .subscribe();
