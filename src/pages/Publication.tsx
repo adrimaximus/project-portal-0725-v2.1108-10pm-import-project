@@ -254,10 +254,13 @@ const PublicationPage = () => {
       
       toast.success("Broadcast Sent", { 
         description: (
-          <div className="mt-2 p-2 bg-muted/50 rounded-md">
-            <p className="font-semibold">{notifTitle}</p>
+          <div className="mt-2 w-full p-3 bg-card text-card-foreground border rounded-md shadow-sm">
+            <p className="font-semibold text-sm">{notifTitle}</p>
             <p className="text-xs text-muted-foreground line-clamp-3 mt-1">{notifBody}</p>
-            <p className="text-[10px] text-muted-foreground mt-2">Successfully sent to {data.count} user(s).</p>
+            <p className="text-[10px] text-muted-foreground mt-2 flex items-center gap-1">
+              <CheckCircle2 className="h-3 w-3 text-green-500" />
+              Successfully sent to {data.count} user(s).
+            </p>
           </div>
         ),
         duration: 5000,
@@ -302,10 +305,13 @@ const PublicationPage = () => {
       
       toast.success("Test Broadcast Sent", { 
         description: (
-          <div className="mt-2 p-2 bg-muted/50 rounded-md">
-            <p className="font-semibold">[TEST] {notifTitle}</p>
+          <div className="mt-2 w-full p-3 bg-card text-card-foreground border rounded-md shadow-sm">
+            <p className="font-semibold text-sm"><span className="text-primary mr-1">[TEST]</span>{notifTitle}</p>
             <p className="text-xs text-muted-foreground line-clamp-3 mt-1">{notifBody}</p>
-            <p className="text-[10px] text-muted-foreground mt-2">Check your notifications.</p>
+            <p className="text-[10px] text-muted-foreground mt-2 flex items-center gap-1">
+              <CheckCircle2 className="h-3 w-3 text-green-500" />
+              Check your notifications.
+            </p>
           </div>
         ),
         duration: 5000,
