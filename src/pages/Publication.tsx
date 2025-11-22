@@ -249,8 +249,6 @@ const PublicationPage = () => {
 
   const handleSendMessages = async () => {
     setIsSending(true);
-    // We don't set a toast ID because we want to update it later, but sonner toast() returns an ID.
-    // However, for simplicity we'll just trigger a new toast on success/fail.
     toast({ title: "Sending...", description: "Processing your blast request." });
 
     try {
@@ -258,7 +256,6 @@ const PublicationPage = () => {
             // Basic phone cleaning
             let phone = row[selectedPhoneColumn] ? String(row[selectedPhoneColumn]).replace(/\D/g, '') : '';
             if (phone.startsWith('0')) phone = '62' + phone.substring(1);
-            // Handle if user just put 812...
             if (phone.startsWith('8')) phone = '62' + phone;
 
             const messageData: any = {
@@ -271,15 +268,18 @@ const PublicationPage = () => {
             // Handle Schedule Data
             if (isScheduled) {
                 if (scheduleMode === 'fixed') {
-                    messageData.schedule_time = fixedScheduleDate;
+                    messageData.schedule_time = fixedScheduleDate.replace('T', ' ');
                     messageData.timezone = fixedTimezone;
                 } else {
                     // Dynamic
-                    messageData.schedule_time = row[dynamicDateCol];
+                    let sched = row[dynamicDateCol] || '';
                     // Add time if separate column
                     if (dynamicTimeCol !== 'same_as_date' && row[dynamicTimeCol]) {
-                        messageData.schedule_time += ' ' + row[dynamicTimeCol];
+                        sched += ' ' + row[dynamicTimeCol];
                     }
+                    
+                    messageData.schedule_time = sched.replace('T', ' '); // Ensure simple space separator
+                    
                     // Timezone
                     messageData.timezone = dynamicTimezoneCol !== 'use_default' && row[dynamicTimezoneCol] 
                         ? row[dynamicTimezoneCol] 

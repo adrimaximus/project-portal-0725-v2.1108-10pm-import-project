@@ -43,8 +43,6 @@ Deno.serve(async (req) => {
     const results = { success: 0, failed: 0, errors: [] };
 
     // Process messages
-    // Note: For very large batches (hundreds), this loop might hit execution time limits.
-    // A queue-based approach would be better for scalability, but this works for smaller blasts.
     for (const msg of messages) {
         try {
             // Map message type to WBIZTOOL format
@@ -53,7 +51,7 @@ Deno.serve(async (req) => {
             if (msg.type === 'image') msgType = 1;
             if (msg.type === 'document') msgType = 2;
 
-            const payload = {
+            const payload: any = {
                 client_id: parseInt(clientId, 10),
                 api_key: apiKey,
                 whatsapp_client: parseInt(whatsappClientId, 10),
@@ -62,6 +60,16 @@ Deno.serve(async (req) => {
                 msg_type: msgType,
                 url: msg.url || '', 
             };
+
+            // Add scheduling parameters if present
+            if (msg.schedule_time) {
+                // Ensure format is YYYY-MM-DD HH:mm:ss
+                payload.schedule = msg.schedule_time.replace('T', ' '); 
+                if (msg.schedule_time.length === 16) payload.schedule += ':00'; // Append seconds if missing
+            }
+            if (msg.timezone) {
+                payload.timezone = msg.timezone;
+            }
 
             const response = await fetch("https://wbiztool.com/api/v1/send_msg/", {
                 method: 'POST',
