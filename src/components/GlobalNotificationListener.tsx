@@ -95,18 +95,11 @@ export const GlobalNotificationListener = () => {
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
-    console.log("[NOTIF-DEBUG] GlobalNotificationListener mounted.");
-  }, []);
-
-  useEffect(() => {
     chatStateRef.current = { selectedConversationId, isChatPageActive };
   }, [selectedConversationId, isChatPageActive]);
 
   useEffect(() => {
-    if (!user) {
-      console.warn("[NOTIF-DEBUG] Listener skipped: No user logged in.");
-      return;
-    }
+    if (!user) return;
 
     // Preload audio
     const setupAudio = async () => {
@@ -118,12 +111,10 @@ export const GlobalNotificationListener = () => {
         }
         audioRef.current = new Audio(`${TONE_BASE_URL}${tone}`);
       } catch (e) {
-        console.error("[NOTIF-DEBUG] Audio setup failed:", e);
+        console.error("Audio setup failed:", e);
       }
     };
     setupAudio();
-
-    console.log(`[NOTIF-DEBUG] Initializing listener for user: ${user.id} (${user.email})`);
 
     // Force cleanup of any existing channels with this name to prevent duplicates
     const channelName = `global-notifications:${user.id}`;
@@ -144,10 +135,7 @@ export const GlobalNotificationListener = () => {
           filter: `user_id=eq.${user.id}`,
         },
         async (payload) => {
-          console.log("[NOTIF-DEBUG] 🔔 Realtime event RECEIVED!", payload);
-
           if (!payload.new || !payload.new.notification_id) {
-            console.error("[NOTIF-DEBUG] ❌ Payload missing notification_id", payload);
             return;
           }
 
@@ -170,28 +158,21 @@ export const GlobalNotificationListener = () => {
           }
 
           if (!notificationData) {
-            console.error("[NOTIF-DEBUG] ❌ Notification data is null after retries");
+            console.error("Failed to fetch notification data after retries");
             return;
           }
 
-          console.log("[NOTIF-DEBUG] Notification details fetched:", notificationData);
-
           // Fetch user preferences
-          const { data: profileData, error: profileError } = await supabase
+          const { data: profileData } = await supabase
             .from('profiles')
             .select('notification_preferences')
             .eq('id', user.id)
             .single();
           
-          if (profileError) {
-             console.error("[NOTIF-DEBUG] ⚠️ Error fetching profile preferences:", profileError);
-          }
-
           const userPreferences = profileData?.notification_preferences || {};
           
           // Check global toast enabled (default true)
           if (userPreferences.toast_enabled === false) {
-             console.log("[NOTIF-DEBUG] ⏩ Skipping: User has disabled In-App Toasts globally.");
              return;
           }
 
@@ -204,19 +185,17 @@ export const GlobalNotificationListener = () => {
                                          chatStateRef.current.selectedConversationId === conversationIdOfNotification;
 
           if (isChatActiveAndVisible) {
-             console.log("[NOTIF-DEBUG] ⏩ Skipping: User is currently viewing this chat.");
              return;
           }
 
           // === DISPLAY LOGIC ===
-          console.log("[NOTIF-DEBUG] ✅ CONDITIONS MET. TRIGGERING TOAST.");
 
           // Play Sound
           const typePref = userPreferences?.[notificationData.type];
           const isNotificationTypeEnabled = typeof typePref === 'object' ? typePref.enabled !== false : typePref !== false;
           
           if (isNotificationTypeEnabled) {
-             audioRef.current?.play().catch(e => console.warn("[NOTIF-DEBUG] Audio play blocked:", e));
+             audioRef.current?.play().catch(e => console.warn("Audio play blocked:", e));
           }
 
           // Render correct Toast type
@@ -262,15 +241,13 @@ export const GlobalNotificationListener = () => {
         }
       )
       .subscribe((status, err) => {
-         console.log(`[NOTIF-DEBUG] Channel Status: ${status}`);
          if (err) {
-             console.error("[NOTIF-DEBUG] Channel Error:", err);
-             toast.error("Notification connection lost. Refreshing...", { duration: 3000 });
+             console.error("Notification channel error:", err);
+             // Optional: toast.error("Connection lost", { duration: 2000 });
          }
       });
 
     return () => {
-      console.log("[NOTIF-DEBUG] Cleaning up listener channel");
       supabase.removeChannel(channel);
     };
   }, [user]);
