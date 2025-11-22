@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import PortalLayout from "@/components/PortalLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,10 +8,136 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Info, PlayCircle, UploadCloud, MessageSquare, Bell } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Info, PlayCircle, UploadCloud, MessageSquare, Bell, FileSpreadsheet, X, Link as LinkIcon, File } from "lucide-react";
+import Papa from "papaparse";
+import * as XLSX from "xlsx";
+import { useToast } from "@/components/ui/use-toast";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 const PublicationPage = () => {
   const [activeTab, setActiveTab] = useState("whatsapp");
+  const [data, setData] = useState<any[]>([]);
+  const [headers, setHeaders] = useState<string[]>([]);
+  const [fileName, setFileName] = useState<string | null>(null);
+  const [selectedPhoneColumn, setSelectedPhoneColumn] = useState<string>("");
+  const [googleSheetUrl, setGoogleSheetUrl] = useState("");
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
+
+  const handleFile = (file: File) => {
+    setFileName(file.name);
+    const fileExtension = file.name.split('.').pop()?.toLowerCase();
+
+    if (fileExtension === 'csv') {
+      Papa.parse(file, {
+        header: true,
+        skipEmptyLines: true,
+        complete: (results) => {
+          const parsedData = results.data as any[];
+          if (parsedData.length > 0) {
+            setHeaders(Object.keys(parsedData[0]));
+            setData(parsedData);
+            toast({ title: "File uploaded", description: `Successfully parsed ${parsedData.length} rows.` });
+          }
+        },
+        error: (error) => {
+          toast({ title: "Error", description: "Failed to parse CSV file.", variant: "destructive" });
+          console.error(error);
+        }
+      });
+    } else if (['xls', 'xlsx'].includes(fileExtension || '')) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const data = new Uint8Array(e.target?.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet);
+        
+        if (jsonData.length > 0) {
+          setHeaders(Object.keys(jsonData[0] as object));
+          setData(jsonData);
+          toast({ title: "File uploaded", description: `Successfully parsed ${jsonData.length} rows.` });
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    } else {
+      toast({ title: "Invalid file type", description: "Please upload a CSV, XLS, or XLSX file.", variant: "destructive" });
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleFile(e.dataTransfer.files[0]);
+    }
+  };
+
+  const handleGoogleSheetImport = () => {
+    // Basic Google Sheet URL parser
+    const match = googleSheetUrl.match(/\/d\/([a-zA-Z0-9-_]+)/);
+    if (match && match[1]) {
+      const sheetId = match[1];
+      const exportUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv`;
+      
+      // Note: This fetch might fail due to CORS if not handled by a proxy or backend in a real production env
+      // For this demo, we'll try a direct fetch assuming public access
+      fetch(exportUrl)
+        .then(response => {
+          if (!response.ok) throw new Error("Network response was not ok");
+          return response.text();
+        })
+        .then(csvText => {
+          Papa.parse(csvText, {
+            header: true,
+            skipEmptyLines: true,
+            complete: (results) => {
+              const parsedData = results.data as any[];
+              if (parsedData.length > 0) {
+                setHeaders(Object.keys(parsedData[0]));
+                setData(parsedData);
+                setFileName("Google Sheet Import");
+                toast({ title: "Import Successful", description: `Imported ${parsedData.length} rows from Google Sheet.` });
+              }
+            }
+          });
+        })
+        .catch(error => {
+          console.error("Error fetching Google Sheet:", error);
+          toast({ 
+            title: "Import Failed", 
+            description: "Could not fetch Google Sheet. Make sure it is publicly viewable (Anyone with the link).", 
+            variant: "destructive" 
+          });
+        });
+    } else {
+      toast({ title: "Invalid URL", description: "Please enter a valid Google Sheet URL.", variant: "destructive" });
+    }
+  };
+
+  const clearData = () => {
+    setData([]);
+    setHeaders([]);
+    setFileName(null);
+    setSelectedPhoneColumn("");
+    setGoogleSheetUrl("");
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
 
   return (
     <PortalLayout>
@@ -38,7 +164,7 @@ const PublicationPage = () => {
           <TabsContent value="whatsapp" className="mt-6">
              <div className="grid gap-6 lg:grid-cols-2">
                 {/* Left Column: Form */}
-                <Card>
+                <Card className="h-fit">
                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                       <CardTitle className="text-xl font-semibold">Create Template Messages</CardTitle>
                       <div className="flex gap-2">
@@ -64,7 +190,12 @@ const PublicationPage = () => {
                             className="min-h-[120px] font-mono text-sm"
                          />
                          <p className="text-xs text-muted-foreground">
-                            Use <code className="bg-muted px-1 py-0.5 rounded text-foreground">{"{{column_name}}"}</code> for variables. Available columns will appear after CSV upload.
+                            Use <code className="bg-muted px-1 py-0.5 rounded text-foreground">{"{{column_name}}"}</code> for variables.
+                            {headers.length > 0 ? (
+                               <span className="text-green-600 ml-1">Available: {headers.map(h => `{{${h}}}`).join(", ")}</span>
+                            ) : (
+                               " Available columns will appear after upload."
+                            )}
                          </p>
                       </div>
 
@@ -95,31 +226,88 @@ const PublicationPage = () => {
                          </div>
                       </div>
 
-                      <div className="space-y-2">
-                         <Label>Phone Number Column <span className="text-red-500">*</span></Label>
-                         <Select disabled>
-                            <SelectTrigger className="bg-muted/50 text-muted-foreground">
-                               <SelectValue placeholder="Upload CSV to see columns" />
-                            </SelectTrigger>
-                            <SelectContent>
-                               {/* Options will be populated after upload */}
-                            </SelectContent>
-                         </Select>
-                         <p className="text-xs text-muted-foreground">Select which column contains phone numbers</p>
+                      {/* Import Section */}
+                      <div className="space-y-3">
+                         <Label>Import Data <span className="text-red-500">*</span></Label>
+                         
+                         {!fileName ? (
+                           <div className="space-y-3">
+                             {/* Drag & Drop Zone */}
+                             <div 
+                                className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
+                                   isDragging ? "border-blue-500 bg-blue-50" : "border-gray-200 hover:bg-gray-50"
+                                }`}
+                                onDragOver={handleDragOver}
+                                onDragLeave={handleDragLeave}
+                                onDrop={handleDrop}
+                                onClick={() => fileInputRef.current?.click()}
+                             >
+                                <input 
+                                   type="file" 
+                                   ref={fileInputRef} 
+                                   className="hidden" 
+                                   accept=".csv, .xls, .xlsx" 
+                                   onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
+                                />
+                                <UploadCloud className="mx-auto h-10 w-10 text-muted-foreground mb-2" />
+                                <p className="text-sm font-medium text-gray-700">Click to upload or drag and drop</p>
+                                <p className="text-xs text-muted-foreground mt-1">CSV, XLS, XLSX (max 10MB)</p>
+                             </div>
+
+                             <div className="relative">
+                                <div className="absolute inset-0 flex items-center">
+                                   <span className="w-full border-t" />
+                                </div>
+                                <div className="relative flex justify-center text-xs uppercase">
+                                   <span className="bg-background px-2 text-muted-foreground">Or import from URL</span>
+                                </div>
+                             </div>
+
+                             {/* Google Sheet URL Input */}
+                             <div className="flex gap-2">
+                                <Input 
+                                   placeholder="Paste Google Sheet URL (must be public)" 
+                                   value={googleSheetUrl}
+                                   onChange={(e) => setGoogleSheetUrl(e.target.value)}
+                                   className="text-sm"
+                                />
+                                <Button variant="secondary" onClick={handleGoogleSheetImport} disabled={!googleSheetUrl}>
+                                   <LinkIcon className="h-4 w-4 mr-2" />
+                                   Import
+                                </Button>
+                             </div>
+                           </div>
+                         ) : (
+                           <div className="flex items-center justify-between p-3 bg-blue-50 border border-blue-100 rounded-md">
+                              <div className="flex items-center gap-3">
+                                 <div className="bg-blue-100 p-2 rounded">
+                                    <FileSpreadsheet className="h-5 w-5 text-blue-600" />
+                                 </div>
+                                 <div>
+                                    <p className="text-sm font-medium text-blue-900">{fileName}</p>
+                                    <p className="text-xs text-blue-600">{data.length} rows loaded</p>
+                                 </div>
+                              </div>
+                              <Button variant="ghost" size="icon" onClick={clearData} className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-100">
+                                 <X className="h-4 w-4" />
+                              </Button>
+                           </div>
+                         )}
                       </div>
 
                       <div className="space-y-2">
-                         <Label>Upload CSV File <span className="text-red-500">*</span></Label>
-                         <div className="flex w-full items-center gap-3 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background">
-                            <Button variant="secondary" size="sm" className="h-7 text-xs px-3">Choose File</Button>
-                            <span className="text-muted-foreground text-xs">No file chosen</span>
-                         </div>
-                         <div className="flex gap-2 pt-1 items-center">
-                            <Badge variant="secondary" className="rounded-sm font-normal text-[10px] px-1.5 h-5 bg-purple-100 text-purple-700 hover:bg-purple-100 border-0">CSV</Badge>
-                            <Badge variant="secondary" className="rounded-sm font-normal text-[10px] px-1.5 h-5 bg-green-100 text-green-700 hover:bg-green-100 border-0">XLS</Badge>
-                            <Badge variant="secondary" className="rounded-sm font-normal text-[10px] px-1.5 h-5 bg-green-100 text-green-700 hover:bg-green-100 border-0">XLSX</Badge>
-                            <span className="text-xs text-muted-foreground ml-1">Supported formats: CSV, XLS, XLSX</span>
-                         </div>
+                         <Label>Phone Number Column <span className="text-red-500">*</span></Label>
+                         <Select value={selectedPhoneColumn} onValueChange={setSelectedPhoneColumn} disabled={headers.length === 0}>
+                            <SelectTrigger className={headers.length === 0 ? "bg-muted/50 text-muted-foreground" : ""}>
+                               <SelectValue placeholder={headers.length === 0 ? "Upload file first" : "Select column"} />
+                            </SelectTrigger>
+                            <SelectContent>
+                               {headers.map((header) => (
+                                  <SelectItem key={header} value={header}>{header}</SelectItem>
+                               ))}
+                            </SelectContent>
+                         </Select>
+                         <p className="text-xs text-muted-foreground">Select which column contains phone numbers</p>
                       </div>
 
                       <div className="flex items-center space-x-2 pt-2">
@@ -128,23 +316,70 @@ const PublicationPage = () => {
                       </div>
 
                       <div className="flex items-center justify-between pt-4">
-                         <Button className="bg-blue-500 hover:bg-blue-600 text-white min-w-[140px]">Create Messages</Button>
-                         <span className="text-xs text-muted-foreground">46,072 messages remaining</span>
+                         <Button className="bg-blue-500 hover:bg-blue-600 text-white min-w-[140px]" disabled={!selectedPhoneColumn || data.length === 0}>
+                            Create Messages
+                         </Button>
+                         <span className="text-xs text-muted-foreground">
+                            {data.length > 0 ? `${data.length} messages ready` : "46,072 messages remaining"}
+                         </span>
                       </div>
                    </CardContent>
                 </Card>
 
                 {/* Right Column: Preview */}
-                <Card className="h-full flex flex-col border-dashed shadow-sm">
-                   <CardHeader>
-                      <CardTitle className="text-xl font-semibold">CSV Preview</CardTitle>
+                <Card className="h-[800px] flex flex-col shadow-sm overflow-hidden">
+                   <CardHeader className="border-b pb-4">
+                      <CardTitle className="text-xl font-semibold">Data Preview</CardTitle>
+                      <CardDescription>
+                         {data.length > 0 
+                            ? `Showing first 50 of ${data.length} rows` 
+                            : "Upload a file to see the data preview"}
+                      </CardDescription>
                    </CardHeader>
-                   <CardContent className="flex-1 flex flex-col items-center justify-center min-h-[400px] text-center p-8">
-                      <div className="bg-muted/30 rounded-full p-6 mb-4">
-                        <UploadCloud className="h-12 w-12 text-muted-foreground/40" />
-                      </div>
-                      <h3 className="text-lg font-medium text-muted-foreground">Upload a CSV file to see preview here</h3>
-                      <p className="text-sm text-muted-foreground/60 mt-2">Supported formats: CSV, XLS, XLSX</p>
+                   <CardContent className="p-0 flex-1 overflow-hidden relative">
+                      {data.length > 0 ? (
+                         <ScrollArea className="h-full w-full">
+                            <div className="p-4">
+                               <Table>
+                                  <TableHeader>
+                                     <TableRow className="hover:bg-transparent">
+                                        <TableHead className="w-[50px] font-bold text-black">#</TableHead>
+                                        {headers.map((header) => (
+                                           <TableHead key={header} className="font-bold text-black min-w-[120px]">
+                                              {header}
+                                              {header === selectedPhoneColumn && (
+                                                 <Badge variant="secondary" className="ml-2 text-[10px] h-4 px-1">Phone</Badge>
+                                              )}
+                                           </TableHead>
+                                        ))}
+                                     </TableRow>
+                                  </TableHeader>
+                                  <TableBody>
+                                     {data.slice(0, 50).map((row, rowIndex) => (
+                                        <TableRow key={rowIndex}>
+                                           <TableCell className="font-mono text-xs text-muted-foreground">{rowIndex + 1}</TableCell>
+                                           {headers.map((header) => (
+                                              <TableCell key={`${rowIndex}-${header}`} className="text-sm">
+                                                 {row[header]}
+                                              </TableCell>
+                                           ))}
+                                        </TableRow>
+                                     ))}
+                                  </TableBody>
+                               </Table>
+                            </div>
+                         </ScrollArea>
+                      ) : (
+                         <div className="flex flex-col items-center justify-center h-full text-center p-8 text-muted-foreground">
+                            <div className="bg-muted/30 rounded-full p-6 mb-4">
+                               <File className="h-12 w-12 text-muted-foreground/40" />
+                            </div>
+                            <h3 className="text-lg font-medium">No Data to Preview</h3>
+                            <p className="text-sm text-muted-foreground/60 mt-2 max-w-xs">
+                               Upload a CSV, XLS, or XLSX file to view its contents here. You'll be able to map columns to your message template.
+                            </p>
+                         </div>
+                      )}
                    </CardContent>
                 </Card>
              </div>
