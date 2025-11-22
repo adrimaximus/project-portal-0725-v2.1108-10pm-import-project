@@ -95,6 +95,12 @@ export const useNotifications = () => {
           const { data: notificationData } = await supabase.from('notifications').select('title, body, type, resource_id').eq('id', newNotificationId).single();
           
           if (notificationData) {
+            // Skip toast for 'broadcast' type because BroadcastToast.tsx handles it with a specialized UI
+            if (notificationData.type === 'broadcast') {
+              queryClient.invalidateQueries({ queryKey: ['notifications', user.id] });
+              return;
+            }
+
             const isChatNotification = notificationData.type === 'comment';
             const conversationIdOfNotification = notificationData.resource_id;
             
@@ -126,12 +132,6 @@ export const useNotifications = () => {
                 await audio.play();
               } catch (e) {
                 console.error("Error playing notification sound:", e);
-                if ((e as Error).name === 'NotAllowedError') {
-                  toast.error("Could not play notification sound.", {
-                    description: "Browser security may have blocked it. Please click anywhere on the page to enable sound for notifications.",
-                    duration: 10000,
-                  });
-                }
               }
             }
           }
