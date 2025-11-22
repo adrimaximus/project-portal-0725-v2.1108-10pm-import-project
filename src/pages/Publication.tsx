@@ -63,6 +63,7 @@ const PublicationPage = () => {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const urlInputRef = useRef<HTMLInputElement>(null);
   const notifBodyRef = useRef<HTMLTextAreaElement>(null);
 
   // Fetch data for In-App selectors
@@ -176,6 +177,25 @@ const PublicationPage = () => {
     } else { setTemplateMessage(prev => prev + variable); }
   };
 
+  const insertUrlVariable = (header: string) => {
+    const variable = `{{${header}}}`;
+    const input = urlInputRef.current;
+    if (input) {
+      const start = input.selectionStart || 0;
+      const end = input.selectionEnd || 0;
+      const text = mediaUrl;
+      const newText = text.substring(0, start) + variable + text.substring(end);
+      setMediaUrl(newText);
+      setTimeout(() => {
+        input.focus();
+        const newCursorPos = start + variable.length;
+        input.setSelectionRange(newCursorPos, newCursorPos);
+      }, 0);
+    } else {
+      setMediaUrl(prev => prev + variable);
+    }
+  };
+
   const insertNotifVariable = () => {
     const variable = "{{name}}";
     const textarea = notifBodyRef.current;
@@ -197,7 +217,7 @@ const PublicationPage = () => {
 
   const handleGenerateMessages = () => {
     if (!templateMessage.trim()) { toast.error("Missing Template", { description: "Please enter a message template." }); return; }
-    if (messageType !== 'text' && !mediaUrl.trim()) { toast.error("Missing URL", { description: "Please enter a direct link for the file/image." }); return; }
+    // Media URL is now optional
     if (isScheduled) {
         if (scheduleMode === 'fixed' && !fixedScheduleDate) { toast.error("Missing Date", { description: "Please select a date and time for the schedule." }); return; }
         if (scheduleMode === 'dynamic' && !dynamicDateCol) { toast.error("Missing Date Column", { description: "Please select a column for scheduling dates." }); return; }
@@ -209,6 +229,12 @@ const PublicationPage = () => {
       let message = templateMessage;
       headers.forEach(header => { const regex = new RegExp(`{{${header}}}`, 'g'); message = message.replace(regex, row[header] || ''); });
       return message;
+  };
+
+  const generatePreviewUrl = (row: any) => {
+      let url = mediaUrl;
+      headers.forEach(header => { const regex = new RegExp(`{{${header}}}`, 'g'); url = url.replace(regex, row[header] || ''); });
+      return url;
   };
 
   // Calculate status for preview column
@@ -255,7 +281,22 @@ const PublicationPage = () => {
             if (phone.startsWith('0')) phone = '62' + phone.substring(1);
             if (phone.startsWith('8')) phone = '62' + phone;
 
-            const messageData: any = { phone, message: generatePreviewMessage(row), type: messageType, url: mediaUrl };
+            const finalUrl = generatePreviewUrl(row);
+            // Only include url if it's not empty
+            const messageData: any = { 
+                phone, 
+                message: generatePreviewMessage(row), 
+                type: messageType
+            };
+            
+            if (finalUrl && finalUrl.trim()) {
+                messageData.url = finalUrl;
+            } else if (messageType !== 'text') {
+                // Fallback to text if URL is missing but type is media? 
+                // Usually better to send as text or skip media
+                messageData.type = 'text';
+            }
+
             if (isScheduled) {
                 if (scheduleMode === 'fixed') {
                     messageData.schedule_time = fixedScheduleDate.replace('T', ' ');
@@ -459,11 +500,56 @@ const PublicationPage = () => {
                          </div>
                       </div>
 
+                      {messageType !== 'text' && (
+                          <div className="space-y-4 mt-4 animate-in fade-in slide-in-from-top-2">
+                              {headers.length > 0 && (
+                                <div className="space-y-2">
+                                  <Label className="text-sm text-blue-600 font-medium">
+                                    Available Variables (Click to Insert into {messageType === 'image' ? 'Image' : 'File'} URL)
+                                  </Label>
+                                  <div className="flex flex-wrap gap-1.5">
+                                    {headers.map(h => (
+                                      <Badge 
+                                        key={h} 
+                                        variant="secondary" 
+                                        className="cursor-pointer hover:bg-blue-100 text-blue-600 bg-blue-50 border-blue-100 px-2 py-1 font-mono text-xs"
+                                        onClick={() => insertUrlVariable(h)}
+                                      >
+                                        {`{{${h}}}`}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
+                              <div className="space-y-2">
+                                  <Label className="text-sm font-medium">
+                                      {messageType === 'image' ? 'Image URL' : 'File URL'}
+                                  </Label>
+                                  <Input 
+                                    ref={urlInputRef}
+                                    value={mediaUrl} 
+                                    onChange={e => setMediaUrl(e.target.value)} 
+                                    placeholder={messageType === 'image' ? "https://example.com/image.jpg" : "https://example.com/document.pdf"} 
+                                    className="text-sm"
+                                  />
+                                  <div className="flex gap-2 text-[10px] text-muted-foreground items-center">
+                                    <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 h-5">Static</Badge> 
+                                    <span>{messageType === 'image' ? "https://example.com/image.jpg" : "https://example.com/document.pdf"}</span>
+                                  </div>
+                                  <div className="flex gap-2 text-[10px] text-muted-foreground items-center">
+                                    <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 h-5">Dynamic</Badge> 
+                                    <span>{messageType === 'image' ? "https://example.com/{{image_column}}.jpg" : "https://example.com/{{file_column}}.pdf"} (click variable pills to insert)</span>
+                                  </div>
+                              </div>
+                          </div>
+                      )}
+
                       <div className="grid gap-4 sm:grid-cols-2">
                          <div className="space-y-2">
                             <Label>Message Type</Label>
                             <Select value={messageType} onValueChange={setMessageType}>
-                               <SelectTrigger>
+                               <SelectTrigger className="w-full">
                                   <SelectValue placeholder="Select type" />
                                </SelectTrigger>
                                <SelectContent>
@@ -488,25 +574,6 @@ const PublicationPage = () => {
                             </Select>
                          </div>
                       </div>
-
-                      {messageType !== 'text' && (
-                          <div className="space-y-2 p-3 bg-muted/30 rounded-md border border-dashed">
-                              <Label className="text-xs uppercase text-muted-foreground font-semibold">
-                                  {messageType === 'image' ? 'Image URL (JPG/PNG)' : 'Document URL (PDF/DOC)'} <span className="text-red-500">*</span>
-                              </Label>
-                              <div className="flex gap-2">
-                                  <Input 
-                                    value={mediaUrl} 
-                                    onChange={e => setMediaUrl(e.target.value)} 
-                                    placeholder="https://example.com/file.pdf" 
-                                    className="text-sm"
-                                  />
-                              </div>
-                              <p className="text-[10px] text-muted-foreground">
-                                  Required by WBIZTOOL. Must be a direct, public link.
-                              </p>
-                          </div>
-                      )}
 
                       {/* Import Section */}
                       <div className="space-y-3">
@@ -956,7 +1023,7 @@ const PublicationPage = () => {
                             <div>
                                 <Label className="text-xs text-muted-foreground uppercase">Attachment</Label>
                                 <p className="text-xs text-primary truncate font-mono bg-background p-1 rounded border mt-1">
-                                    {mediaUrl || "No URL provided"}
+                                    {generatePreviewUrl(data[0]) || "No URL provided"}
                                 </p>
                             </div>
                         )}
