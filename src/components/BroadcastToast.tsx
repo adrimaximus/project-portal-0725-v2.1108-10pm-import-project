@@ -70,21 +70,32 @@ export const BroadcastToast = () => {
   useEffect(() => {
     if (!user) return;
 
+    console.log("BroadcastToast: Initializing subscription for user", user.id);
+
     const channel = supabase
-      .channel('broadcast-listener')
+      .channel(`broadcast-toast:${user.id}`)
       .on(
         'postgres_changes',
         {
           event: 'INSERT',
           schema: 'public',
           table: 'notification_recipients',
-          filter: `user_id=eq.${user.id}`, // Explicitly filter for current user
+          // We rely on RLS to filter events for the current user. 
+          // Adding an explicit filter string can sometimes cause issues if UUID formats vary.
         },
         async (payload) => {
+          console.log("BroadcastToast: Received notification event", payload);
+          
+          // Verify the event is for the current user (double check)
+          if (payload.new.user_id !== user.id) {
+            return;
+          }
+
           // Fetch notification details with retry to handle potential race conditions
           const notifData = await fetchNotificationWithRetry(payload.new.notification_id);
 
           if (notifData && notifData.type === 'broadcast') {
+            console.log("BroadcastToast: Displaying broadcast", notifData);
             // Play sound
             if (audioRef.current) {
               audioRef.current.play().catch(e => console.log("Audio play failed", e));
@@ -105,9 +116,12 @@ export const BroadcastToast = () => {
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log("BroadcastToast: Subscription status:", status);
+      });
 
     return () => {
+      console.log("BroadcastToast: Cleaning up subscription");
       supabase.removeChannel(channel);
     };
   }, [user?.id]);
@@ -160,17 +174,17 @@ export const BroadcastToast = () => {
   return (
     <div 
       className={cn(
-        "fixed bottom-6 right-6 z-[9999] w-[380px] transition-all duration-500 ease-in-out transform",
+        "fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-[9999] w-[calc(100vw-2rem)] sm:w-[380px] transition-all duration-500 ease-in-out transform",
         isVisible ? "translate-y-0 opacity-100" : "translate-y-12 opacity-0 pointer-events-none"
       )}
     >
       <div 
-        className="bg-background text-foreground shadow-lg rounded-xl border border-border p-4 flex gap-4 relative cursor-pointer hover:bg-muted/30 transition-colors"
+        className="bg-background text-foreground shadow-xl rounded-xl border border-border p-4 flex gap-4 relative cursor-pointer hover:bg-muted/30 transition-colors ring-1 ring-black/5 dark:ring-white/10"
         onClick={handleClick}
       >
         {/* Icon */}
         <div className="flex-shrink-0 pt-1">
-          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary animate-pulse">
             <Megaphone className="h-5 w-5" />
           </div>
         </div>
@@ -178,7 +192,7 @@ export const BroadcastToast = () => {
         {/* Content */}
         <div className="flex-1 min-w-0 space-y-1">
           <div className="flex justify-between items-start gap-2">
-            <h4 className="text-sm font-semibold text-foreground leading-tight">
+            <h4 className="text-sm font-semibold text-foreground leading-tight pr-6">
               {activeMessage.title}
             </h4>
             <span className="text-[10px] text-muted-foreground whitespace-nowrap flex-shrink-0 mt-0.5">
@@ -191,7 +205,7 @@ export const BroadcastToast = () => {
           </div>
         </div>
 
-        {/* Close/Mark Read Button */}
+        {/* Close Button */}
         <button
           onClick={handleDismiss}
           className="absolute -top-2 -right-2 bg-background border shadow-sm rounded-full p-1 text-muted-foreground hover:text-foreground transition-colors"
@@ -200,11 +214,11 @@ export const BroadcastToast = () => {
           <X className="h-3 w-3" />
         </button>
         
-        <div className="absolute bottom-4 right-4">
+        {/* Mark Read Button */}
+        <div className="absolute bottom-4 right-4" title="Mark as read">
              <button 
                 onClick={(e) => { e.stopPropagation(); handleDismiss(); }}
-                className="text-green-600 hover:text-green-700 transition-colors"
-                title="Mark as read"
+                className="text-green-600 hover:text-green-700 transition-colors bg-green-50 dark:bg-green-900/20 rounded-full p-0.5"
              >
                  <CheckCircle2 className="h-5 w-5" />
              </button>
