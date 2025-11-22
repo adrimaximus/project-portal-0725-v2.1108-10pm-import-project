@@ -55,13 +55,16 @@ const ProjectOverviewTab = ({
     const toastId = toast.loading('Generating project brief with AI...');
 
     try {
-      const { data, error } = await supabase.functions.invoke('generate-brief', {
+      const { data, error } = await supabase.functions.invoke('ai-handler', {
         body: {
-          title: project.name,
-          startDate: project.start_date,
-          dueDate: project.due_date,
-          venue: project.venue,
-          services: project.services,
+          feature: 'generate-project-brief',
+          payload: {
+            title: project.name,
+            startDate: project.start_date,
+            dueDate: project.due_date,
+            venue: project.venue,
+            services: project.services,
+          }
         },
       });
 
