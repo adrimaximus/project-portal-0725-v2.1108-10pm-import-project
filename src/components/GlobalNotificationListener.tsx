@@ -125,12 +125,8 @@ export const GlobalNotificationListener = () => {
 
     console.log(`[NOTIF-DEBUG] Initializing listener for user: ${user.id} (${user.email})`);
 
-    // Force cleanup of any existing channels with this name
-    const channelName = `global-notifications:${user.id}`;
-    supabase.removeChannel(supabase.channel(channelName));
-
     const channel = supabase
-      .channel(channelName)
+      .channel(`global-notifications:${user.id}`)
       .on(
         'postgres_changes',
         {
@@ -149,16 +145,25 @@ export const GlobalNotificationListener = () => {
 
           const newNotificationId = payload.new.notification_id;
 
-          // Fetch notification details
-          const { data: notificationData, error } = await supabase
-            .from('notifications')
-            .select('id, title, body, type, resource_type, resource_id, created_at, data')
-            .eq('id', newNotificationId)
-            .single();
-          
-          if (error || !notificationData) {
-             console.error("[NOTIF-DEBUG] ❌ Error fetching details:", error);
-             return;
+          // Fetch notification details with retry logic for consistency
+          let notificationData = null;
+          for (let i = 0; i < 3; i++) {
+            const { data, error } = await supabase
+              .from('notifications')
+              .select('id, title, body, type, resource_type, resource_id, created_at, data')
+              .eq('id', newNotificationId)
+              .single();
+            
+            if (!error && data) {
+              notificationData = data;
+              break;
+            }
+            await new Promise(r => setTimeout(r, 500)); // Wait 500ms before retry
+          }
+
+          if (!notificationData) {
+            console.error("[NOTIF-DEBUG] ❌ Notification data is null after retries");
+            return;
           }
 
           console.log("[NOTIF-DEBUG] Notification details fetched:", notificationData);
@@ -170,14 +175,19 @@ export const GlobalNotificationListener = () => {
             .eq('id', user.id)
             .single();
           
+          if (profileError) {
+             console.error("[NOTIF-DEBUG] ⚠️ Error fetching profile preferences:", profileError);
+          }
+
           const userPreferences = profileData?.notification_preferences || {};
           
+          // Check global toast enabled (default true)
           if (userPreferences.toast_enabled === false) {
-             console.log("[NOTIF-DEBUG] ⏩ Skipping: User has disabled In-App Toasts.");
+             console.log("[NOTIF-DEBUG] ⏩ Skipping: User has disabled In-App Toasts globally.");
              return;
           }
 
-          // Chat context check
+          // Logic for Chat notifications (don't notify if looking at the specific chat)
           const isChatNotification = notificationData.type === 'comment';
           const conversationIdOfNotification = notificationData.resource_id;
           
@@ -186,9 +196,12 @@ export const GlobalNotificationListener = () => {
                                          chatStateRef.current.selectedConversationId === conversationIdOfNotification;
 
           if (isChatActiveAndVisible) {
-             console.log("[NOTIF-DEBUG] ⏩ Skipping: User is viewing this chat.");
+             console.log("[NOTIF-DEBUG] ⏩ Skipping: User is currently viewing this chat.");
              return;
           }
+
+          // === DISPLAY LOGIC ===
+          console.log("[NOTIF-DEBUG] ✅ CONDITIONS MET. TRIGGERING TOAST.");
 
           // Play Sound
           const typePref = userPreferences?.[notificationData.type];
@@ -198,11 +211,12 @@ export const GlobalNotificationListener = () => {
              audioRef.current?.play().catch(e => console.warn("[NOTIF-DEBUG] Audio play blocked:", e));
           }
 
-          // Show UI
+          // Render correct Toast type
           const isBroadcast = notificationData.type === 'broadcast' || 
                             (notificationData.type === 'system' && notificationData.resource_type === 'system');
 
           if (isBroadcast) {
+            // Persistent Custom Toast for Broadcasts
             toast.custom((t) => (
               <BroadcastNotificationUI
                 t={t}
@@ -224,12 +238,13 @@ export const GlobalNotificationListener = () => {
               position: 'bottom-right',
             });
           } else {
+            // Standard Toast for everything else
             toast.info(notificationData.title, {
               description: notificationData.body,
             });
           }
 
-          // Desktop Notification
+          // Desktop Notification fallback
           if (Notification.permission === 'granted' && document.hidden) {
             new Notification(notificationData.title, {
               body: notificationData.body,
@@ -242,7 +257,7 @@ export const GlobalNotificationListener = () => {
          console.log(`[NOTIF-DEBUG] Channel Status: ${status}`);
          if (err) {
              console.error("[NOTIF-DEBUG] Channel Error:", err);
-             toast.error("Notification connection failed. Please refresh.");
+             toast.error("Notification connection lost. Refreshing...", { duration: 3000 });
          }
       });
 
