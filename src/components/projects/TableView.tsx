@@ -3,13 +3,14 @@ import {
   Table,
   TableBody,
   TableCell,
+  TableHead,
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
 import { Project, ProjectStatus } from '@/types';
 import { Link } from "react-router-dom";
-import { MoreHorizontal, Trash2 } from "lucide-react";
+import { MoreHorizontal, Trash2, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 import { Button } from "../ui/button";
 import {
   DropdownMenu,
@@ -29,7 +30,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useProjectStatuses, ProjectStatusDef } from "@/hooks/useProjectStatuses";
-import { SortableTableHead } from "../ui/SortableTableHead";
 
 interface TableViewProps {
   projects: Project[];
@@ -40,6 +40,34 @@ interface TableViewProps {
   rowRefs: React.MutableRefObject<Map<string, HTMLTableRowElement>>;
   onStatusChange: (projectId: string, newStatus: ProjectStatus) => void;
 }
+
+const ProjectTableHead = ({ 
+  title, 
+  column, 
+  sortConfig, 
+  onSort, 
+  className 
+}: { 
+  title: string; 
+  column: keyof Project; 
+  sortConfig: { key: keyof Project | null; direction: 'asc' | 'desc' }; 
+  onSort: (column: keyof Project) => void;
+  className?: string;
+}) => (
+  <TableHead 
+    className={cn("cursor-pointer hover:bg-muted/50 transition-colors select-none", className)}
+    onClick={() => onSort(column)}
+  >
+    <div className="flex items-center gap-1">
+      {title}
+      {sortConfig.key === column ? (
+        sortConfig.direction === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+      ) : (
+        <ArrowUpDown className="h-3 w-3 opacity-30" />
+      )}
+    </div>
+  </TableHead>
+);
 
 const formatProjectDateRange = (startDateStr: string | null | undefined, dueDateStr: string | null | undefined): string => {
   if (!startDateStr) return '-';
@@ -91,7 +119,6 @@ const formatVenue = (venue: string | null): { name: string; full: string } => {
 
   let fullVenueString = venue;
 
-  // Try to parse as JSON to get a clean full string representation
   try {
     const parsed = JSON.parse(venue);
     if (parsed.name && parsed.address) {
@@ -126,7 +153,6 @@ interface ProjectRowProps {
 const ProjectRow = ({ project, onDeleteProject, rowRefs, onStatusChange, statuses }: ProjectRowProps) => {
   const [currentStatus, setCurrentStatus] = useState<string>(project.status);
 
-  // Sync local state if prop changes (e.g. from refresh)
   useEffect(() => {
     setCurrentStatus(project.status);
   }, [project.status]);
@@ -139,7 +165,6 @@ const ProjectRow = ({ project, onDeleteProject, rowRefs, onStatusChange, statuse
 
   let displayStatus = currentStatus;
   
-  // Logic to check if it should be "Billing Process" automatically based on date
   if (!displayStatus) {
     const now = new Date();
     const dueDate = project.due_date ? new Date(project.due_date) : null;
@@ -150,7 +175,6 @@ const ProjectRow = ({ project, onDeleteProject, rowRefs, onStatusChange, statuse
     }
   }
 
-  // Determine border color based on dynamic status definition
   const statusDef = statuses.find(s => s.name === displayStatus);
   const borderColor = statusDef?.color || getProjectStatusStyles(displayStatus).hex;
 
@@ -232,39 +256,24 @@ const TableView = ({ projects, isLoading, onDeleteProject, sortConfig, requestSo
   const [visiblePastCount, setVisiblePastCount] = useState(15);
   const { data: statuses = [] } = useProjectStatuses();
 
-  const sortedProjects = useMemo(() => {
-    if (sortConfig.key === 'venue') {
-      const sorted = [...projects].sort((a, b) => {
-        const nameA = formatVenue(a.venue).name.toLowerCase();
-        const nameB = formatVenue(b.venue).name.toLowerCase();
-        if (nameA < nameB) return sortConfig.direction === 'asc' ? -1 : 1;
-        if (nameA > nameB) return sortConfig.direction === 'asc' ? 1 : -1;
-        return 0;
-      });
-      return sorted;
-    }
-    // If sort is active, let the parent handle basic sorting (handled by useProjectFilters)
-    // This component just renders what it's given if already sorted
-    return projects;
-  }, [projects, sortConfig]);
-
+  // The parent component (ProjectsPage -> useProjectFilters) handles the actual sorting logic.
+  // This component just renders the sorted list provided via `projects` prop.
   const { upcomingProjects, pastProjects } = useMemo(() => {
-    // If we are explicitly sorting, we don't split by upcoming/past to avoid confusing list jumps
     if (sortConfig.key) {
-      return { upcomingProjects: sortedProjects, pastProjects: [] };
+      return { upcomingProjects: projects, pastProjects: [] };
     }
     const today = startOfToday();
-    const firstPastIndex = sortedProjects.findIndex(p => p.start_date && isBefore(new Date(p.start_date), today));
+    const firstPastIndex = projects.findIndex(p => p.start_date && isBefore(new Date(p.start_date), today));
     
     if (firstPastIndex === -1) {
-      return { upcomingProjects: sortedProjects, pastProjects: [] };
+      return { upcomingProjects: projects, pastProjects: [] };
     }
     
     return {
-      upcomingProjects: sortedProjects.slice(0, firstPastIndex),
-      pastProjects: sortedProjects.slice(firstPastIndex),
+      upcomingProjects: projects.slice(0, firstPastIndex),
+      pastProjects: projects.slice(firstPastIndex),
     };
-  }, [sortedProjects, sortConfig.key]);
+  }, [projects, sortConfig.key]);
 
   const visibleUpcomingProjects = upcomingProjects.slice(0, visibleUpcomingCount);
   const hasMoreUpcoming = upcomingProjects.length > visibleUpcomingCount;
@@ -272,13 +281,8 @@ const TableView = ({ projects, isLoading, onDeleteProject, sortConfig, requestSo
   const visiblePastProjects = pastProjects.slice(0, visiblePastCount);
   const hasMorePast = pastProjects.length > visiblePastCount;
 
-  const handleLoadMoreUpcoming = () => {
-    setVisibleUpcomingCount(upcomingProjects.length);
-  };
-
-  const handleLoadMorePast = () => {
-    setVisiblePastCount(pastProjects.length);
-  };
+  const handleLoadMoreUpcoming = () => setVisibleUpcomingCount(upcomingProjects.length);
+  const handleLoadMorePast = () => setVisiblePastCount(pastProjects.length);
 
   let lastMonthYear: string | null = null;
   const isDateSorted = sortConfig.key === null || sortConfig.key === 'start_date';
@@ -288,12 +292,12 @@ const TableView = ({ projects, isLoading, onDeleteProject, sortConfig, requestSo
       <Table>
         <TableHeader className="sticky top-0 bg-background z-10 shadow-sm">
           <TableRow>
-            <SortableTableHead columnKey="name" onSort={requestSort} sortConfig={sortConfig} className="w-[300px]">Project</SortableTableHead>
-            <SortableTableHead columnKey="status" onSort={requestSort} sortConfig={sortConfig} className="w-[140px]">Status</SortableTableHead>
-            <SortableTableHead columnKey="payment_status" onSort={requestSort} sortConfig={sortConfig} className="w-[120px]">Payment</SortableTableHead>
-            <SortableTableHead columnKey="progress" onSort={requestSort} sortConfig={sortConfig} className="w-[150px]">Progress</SortableTableHead>
-            <SortableTableHead columnKey="start_date" onSort={requestSort} sortConfig={sortConfig} className="w-[180px]">Date</SortableTableHead>
-            <SortableTableHead columnKey="venue" onSort={requestSort} sortConfig={sortConfig} className="w-[200px]">Lokasi</SortableTableHead>
+            <ProjectTableHead title="Project" column="name" onSort={requestSort} sortConfig={sortConfig} className="w-[300px]" />
+            <ProjectTableHead title="Status" column="status" onSort={requestSort} sortConfig={sortConfig} className="w-[140px]" />
+            <ProjectTableHead title="Payment" column="payment_status" onSort={requestSort} sortConfig={sortConfig} className="w-[120px]" />
+            <ProjectTableHead title="Progress" column="progress" onSort={requestSort} sortConfig={sortConfig} className="w-[150px]" />
+            <ProjectTableHead title="Date" column="start_date" onSort={requestSort} sortConfig={sortConfig} className="w-[180px]" />
+            <ProjectTableHead title="Location" column="venue" onSort={requestSort} sortConfig={sortConfig} className="w-[200px]" />
             <TableHead className="w-[50px]"></TableHead>
           </TableRow>
         </TableHeader>

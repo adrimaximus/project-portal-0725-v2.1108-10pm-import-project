@@ -164,41 +164,60 @@ export const useProjectFilters = (projects: Project[]) => {
       return matchesDate && matchesOwner && matchesMember && matchesStatus && matchesSearch;
     });
 
-    const tieBreaker = (a: Project, b: Project) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    // Tie breaker for stable sorting (newest created first)
+    const tieBreaker = (a: Project, b: Project) => {
+        const dateA = new Date(a.created_at).getTime();
+        const dateB = new Date(b.created_at).getTime();
+        return dateB - dateA;
+    };
 
     if (sortConfig.key !== null) {
       sortableItems.sort((a, b) => {
-        const aValue = a[sortConfig.key!];
-        const bValue = b[sortConfig.key!];
+        const key = sortConfig.key!;
+        let aValue: any = a[key];
+        let bValue: any = b[key];
 
-        if (aValue == null && bValue != null) return 1;
-        if (aValue != null && bValue == null) return -1;
-        if (aValue == null && bValue == null) return tieBreaker(a, b);
+        // Handle Venue specific logic (parsing complex strings)
+        if (key === 'venue') {
+             const getVenueName = (val: string | null) => {
+                 if (!val) return '';
+                 try {
+                     const parsed = JSON.parse(val);
+                     return (parsed.name || '').toLowerCase();
+                 } catch {
+                     return val.toLowerCase();
+                 }
+             };
+             aValue = getVenueName(a.venue);
+             bValue = getVenueName(b.venue);
+        }
+
+        // Null handling
+        if (aValue === bValue) return tieBreaker(a, b);
+        if (aValue === null || aValue === undefined) return 1;
+        if (bValue === null || bValue === undefined) return -1;
 
         let compareResult = 0;
-        if (typeof aValue === 'number' && typeof bValue === 'number') {
-          compareResult = aValue - bValue;
-        } else if (aValue instanceof Date && bValue instanceof Date) {
-          compareResult = aValue.getTime() - bValue.getTime();
-        } else if (typeof aValue === 'string' && typeof bValue === 'string') {
-            // Check for ISO date string format
-            const dateA = Date.parse(aValue);
-            const dateB = Date.parse(bValue);
-            
-            if (!isNaN(dateA) && !isNaN(dateB) && aValue.includes('-')) {
-                 compareResult = dateA - dateB;
-            } else {
-                 compareResult = aValue.localeCompare(bValue, undefined, { numeric: true, sensitivity: 'base' });
-            }
-        } else {
-           compareResult = String(aValue).localeCompare(String(bValue), undefined, { numeric: true, sensitivity: 'base' });
+
+        // Date comparison
+        if (key === 'start_date' || key === 'due_date' || key === 'created_at' || key === 'updated_at') {
+             const dateA = new Date(aValue).getTime();
+             const dateB = new Date(bValue).getTime();
+             compareResult = dateA - dateB;
+        } 
+        // Numeric comparison
+        else if (typeof aValue === 'number' && typeof bValue === 'number') {
+             compareResult = aValue - bValue;
+        } 
+        // String comparison
+        else {
+             const strA = String(aValue).toLowerCase();
+             const strB = String(bValue).toLowerCase();
+             if (strA < strB) compareResult = -1;
+             if (strA > strB) compareResult = 1;
         }
 
-        if (compareResult !== 0) {
-          return sortConfig.direction === 'asc' ? compareResult : -compareResult;
-        }
-
-        return tieBreaker(a, b);
+        return sortConfig.direction === 'asc' ? compareResult : -compareResult;
       });
     } else {
       const today = startOfToday();
