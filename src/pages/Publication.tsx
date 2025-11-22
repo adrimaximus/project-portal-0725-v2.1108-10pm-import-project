@@ -267,7 +267,20 @@ const PublicationPage = () => {
                                </SelectContent>
                             </Select>
                          </div>
-                         {/* Removed WhatsApp Account Selection as requested */}
+                         
+                         <div className="space-y-2">
+                            <Label>Phone Number Column <span className="text-red-500">*</span></Label>
+                            <Select value={selectedPhoneColumn} onValueChange={setSelectedPhoneColumn} disabled={headers.length === 0}>
+                               <SelectTrigger className={headers.length === 0 ? "bg-muted/50 text-muted-foreground" : ""}>
+                                  <SelectValue placeholder={headers.length === 0 ? "Upload file first" : "Select column"} />
+                               </SelectTrigger>
+                               <SelectContent>
+                                  {headers.map((header) => (
+                                     <SelectItem key={header} value={header}>{header}</SelectItem>
+                                  ))}
+                               </SelectContent>
+                            </Select>
+                         </div>
                       </div>
 
                       {/* Import Section */}
@@ -338,21 +351,6 @@ const PublicationPage = () => {
                               </Button>
                            </div>
                          )}
-                      </div>
-
-                      <div className="space-y-2">
-                         <Label>Phone Number Column <span className="text-red-500">*</span></Label>
-                         <Select value={selectedPhoneColumn} onValueChange={setSelectedPhoneColumn} disabled={headers.length === 0}>
-                            <SelectTrigger className={headers.length === 0 ? "bg-muted/50 text-muted-foreground" : ""}>
-                               <SelectValue placeholder={headers.length === 0 ? "Upload file first" : "Select column"} />
-                            </SelectTrigger>
-                            <SelectContent>
-                               {headers.map((header) => (
-                                  <SelectItem key={header} value={header}>{header}</SelectItem>
-                               ))}
-                            </SelectContent>
-                         </Select>
-                         <p className="text-xs text-muted-foreground">Select which column contains phone numbers</p>
                       </div>
 
                       <div className="flex items-center space-x-2 pt-2">
