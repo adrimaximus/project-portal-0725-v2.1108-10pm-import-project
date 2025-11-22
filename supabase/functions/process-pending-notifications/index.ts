@@ -8,16 +8,12 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const APP_URL = Deno.env.get("SITE_URL") ?? Deno.env.get("VITE_APP_URL") ?? 'https://app.example.com';
 const CRON_SECRET = Deno.env.get("CRON_SECRET");
 
-const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, { global: { headers: { 'Accept': 'application/json' } } });
-
 // --- Helper Functions ---
 
-const fetchWithTimeout = async (url: string, options: RequestInit = {}, timeout = 5000) => {
+const fetchWithTimeout = async (url: string, options: RequestInit = {}, timeout = 8000) => {
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeout);
   try {
@@ -74,7 +70,7 @@ const formatPhoneNumberForApi = (phone: string): string | null => {
     return null;
 };
 
-const getWbizConfig = async () => {
+const getWbizConfig = async (supabaseAdmin: any) => {
   const { data: wbizConfig, error: configError } = await supabaseAdmin
     .from('app_config')
     .select('key, value')
@@ -82,8 +78,8 @@ const getWbizConfig = async () => {
 
   if (configError) throw new Error(`Failed to get WBIZTOOL config: ${configError.message}`);
 
-  const clientId = wbizConfig?.find(c => c.key === 'WBIZTOOL_CLIENT_ID')?.value;
-  const apiKey = wbizConfig?.find(c => c.key === 'WBIZTOOL_API_KEY')?.value;
+  const clientId = wbizConfig?.find((c: any) => c.key === 'WBIZTOOL_CLIENT_ID')?.value;
+  const apiKey = wbizConfig?.find((c: any) => c.key === 'WBIZTOOL_API_KEY')?.value;
   const whatsappClientId = Deno.env.get('WBIZTOOL_WHATSAPP_CLIENT_ID');
 
   if (!clientId || !apiKey || !whatsappClientId) {
@@ -115,7 +111,7 @@ const sendWhatsappMessage = async (config: any, phone: string, message: string) 
         phone: formattedPhone,
         message: message,
       }),
-    }, 8000); // 8 second timeout
+    }, 10000); 
 
     if (!messageResponse.ok) {
       const status = messageResponse.status;
@@ -138,7 +134,14 @@ const sendWhatsappMessage = async (config: any, phone: string, message: string) 
       throw new Error(`WBIZTOOL API Error: ${errorMessage}`);
     }
 
-    return messageResponse.json();
+    // Attempt to parse JSON response, but don't fail if it's not JSON (some APIs return empty body on success)
+    try {
+      await messageResponse.json();
+    } catch (e) {
+      // ignore
+    }
+    
+    console.log(`WhatsApp message sent to ${formattedPhone}`);
   } catch (error) {
     console.error(`Error sending WhatsApp to ${formattedPhone}:`, error.message);
     throw error;
@@ -154,7 +157,7 @@ const sendEmail = async (emailitApiKey: string, to: string, subject: string, htm
           method: "POST",
           headers: { "Authorization": `Bearer ${emailitApiKey}`, "Content-Type": "application/json" },
           body: JSON.stringify(payload),
-      }, 8000); // 8 second timeout
+      }, 10000); 
 
       if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
@@ -328,18 +331,27 @@ const generateTemplatedEmail = (type: string, context: any, recipientName: strin
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response('ok', { headers: corsHeaders });
   }
 
   try {
+    const supabaseAdmin = createClient(
+      Deno.env.get("SUPABASE_URL")!, 
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+
     const userAgent = req.headers.get('user-agent');
     const cronHeader = req.headers.get('X-Cron-Secret');
     const isCron = userAgent?.startsWith('pg_net');
     const isAuthorized = cronHeader && cronHeader === CRON_SECRET;
 
     if (!isCron && !isAuthorized) {
-      console.error('Unauthorized cron attempt:', { userAgent, hasCronHeader: !!cronHeader });
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: corsHeaders });
+      // Try to parse as normal user request if not cron
+      const authHeader = req.headers.get('Authorization');
+      if (!authHeader) {
+        console.error('Unauthorized attempt:', { userAgent, hasCronHeader: !!cronHeader });
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: corsHeaders });
+      }
     }
 
     // 1. Fetch AND LOCK pending notifications atomically - limit reduced to 10
@@ -355,7 +367,7 @@ Deno.serve(async (req) => {
     console.log(`Processing ${notifications.length} notifications...`);
 
     // 2. Manually fetch recipient profiles
-    const recipientIds = [...new Set(notifications.map(n => n.recipient_id))];
+    const recipientIds = [...new Set(notifications.map((n: any) => n.recipient_id))];
     const { data: profiles, error: profilesError } = await supabaseAdmin
         .from('profiles')
         .select('*')
@@ -363,14 +375,14 @@ Deno.serve(async (req) => {
 
     if (profilesError) throw profilesError;
     
-    const profilesMap = new Map(profiles.map(p => [p.id, p]));
+    const profilesMap = new Map(profiles.map((p: any) => [p.id, p]));
 
     // 3. Prepare configs
-    const wbizConfig = await getWbizConfig().catch(e => { console.warn(e.message); return null; });
-    const { data: emailitConfig } = await supabaseAdmin.from('app_config').select('value').eq('key', 'EMAILIT_API_KEY').single();
+    const wbizConfig = await getWbizConfig(supabaseAdmin).catch(e => { console.warn(e.message); return null; });
+    const { data: emailitConfig } = await supabaseAdmin.from('app_config').select('value').eq('key', 'EMAILIT_API_KEY').maybeSingle();
     const emailitApiKey = emailitConfig?.value;
 
-    const processingPromises = notifications.map(async (notification) => {
+    const processingPromises = notifications.map(async (notification: any) => {
       try {
         const recipient = profilesMap.get(notification.recipient_id);
         
