@@ -3,16 +3,16 @@ import { CheckCircle2, Megaphone, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { cn } from "@/lib/utils";
 import InteractiveText from "./InteractiveText";
 import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
 
 const TONE_BASE_URL = `https://quuecudndfztjlxbrvyb.supabase.co/storage/v1/object/public/General/Notification/`;
 
-// Helper to fetch notification details
+// Helper to fetch notification details with retry
 const fetchNotificationDetails = async (notificationId: string) => {
-  // Retry logic for robustness
+  // Retry logic to handle potential race conditions where the recipient row exists
+  // but the notification row visibility lags slightly due to RLS/replication
   for (let i = 0; i < 3; i++) {
     const { data, error } = await supabase
       .from('notifications')
@@ -21,7 +21,7 @@ const fetchNotificationDetails = async (notificationId: string) => {
       .single();
     
     if (!error && data) return data;
-    await new Promise(r => setTimeout(r, 1000));
+    await new Promise(r => setTimeout(r, 1000)); // Wait 1s before retry
   }
   return null;
 };
@@ -56,7 +56,7 @@ const BroadcastNotificationUI = ({
 
   return (
     <div 
-      className="w-full max-w-md bg-background text-foreground shadow-2xl rounded-xl border border-border p-4 flex gap-4 relative cursor-pointer hover:bg-muted/30 transition-colors group"
+      className="w-full max-w-md bg-background text-foreground shadow-2xl rounded-xl border border-border p-4 flex gap-4 relative cursor-pointer hover:bg-muted/30 transition-colors group pointer-events-auto ring-1 ring-black/5"
       onClick={handleClick}
     >
       {/* Icon */}
@@ -69,7 +69,7 @@ const BroadcastNotificationUI = ({
       {/* Content */}
       <div className="flex-1 min-w-0 space-y-1">
         <div className="flex justify-between items-start gap-2">
-          <h4 className="text-sm font-semibold text-foreground leading-tight line-clamp-2">
+          <h4 className="text-sm font-semibold text-foreground leading-tight line-clamp-2 pr-6">
             {title}
           </h4>
         </div>
@@ -77,7 +77,7 @@ const BroadcastNotificationUI = ({
           <InteractiveText text={body} />
         </div>
         <p className="text-[10px] text-muted-foreground pt-1">
-          {formatDistanceToNow(new Date(timestamp), { addSuffix: true })}
+          {timestamp ? formatDistanceToNow(new Date(timestamp), { addSuffix: true }) : 'Just now'}
         </p>
       </div>
 
@@ -93,7 +93,7 @@ const BroadcastNotificationUI = ({
       <div className="absolute bottom-3 right-3">
         <button 
           onClick={(e) => { e.stopPropagation(); onRead(); onDismiss(); }}
-          className="text-green-600 hover:text-green-700 transition-colors p-1 rounded-full hover:bg-green-50"
+          className="text-green-600 hover:text-green-700 transition-colors p-1.5 rounded-full hover:bg-green-50"
           title="Mark as read"
         >
           <CheckCircle2 className="h-5 w-5" />
@@ -112,12 +112,18 @@ export const BroadcastToast = () => {
     if (!user) return;
     const setupAudio = async () => {
       try {
+        // Default to positive alert if preference fetch fails or is missing
+        let tone = 'positive-alert-ding.mp3';
+        
         const { data } = await supabase.from('profiles').select('notification_preferences').eq('id', user.id).single();
-        const tone = data?.notification_preferences?.tone || 'positive-alert-ding.mp3';
-        if (tone && tone !== 'none') {
-          audioRef.current = new Audio(`${TONE_BASE_URL}${tone}`);
+        if (data?.notification_preferences?.tone && data.notification_preferences.tone !== 'none') {
+          tone = data.notification_preferences.tone;
         }
-      } catch (e) { console.error(e); }
+        
+        audioRef.current = new Audio(`${TONE_BASE_URL}${tone}`);
+      } catch (e) { 
+        console.error("Error setting up notification audio:", e); 
+      }
     };
     setupAudio();
   }, [user?.id]);
@@ -137,18 +143,27 @@ export const BroadcastToast = () => {
           filter: `user_id=eq.${user.id}`,
         },
         async (payload) => {
-          // Check global toast preference
+          // 1. Check global toast preference
           const { data: profile } = await supabase.from('profiles').select('notification_preferences').eq('id', user.id).single();
+          // Default to TRUE if the setting is missing/undefined. Only block if explicitly FALSE.
           if (profile?.notification_preferences?.toast_enabled === false) return;
 
-          // Fetch details
-          const notification = await fetchNotificationDetails(payload.new.notification_id);
+          // 2. Fetch full notification details
+          const notificationId = payload.new.notification_id;
+          const notification = await fetchNotificationDetails(notificationId);
           
-          // Only show for 'broadcast' type OR if explicitly targeted as system broadcast
-          if (notification && (notification.type === 'broadcast' || (notification.type === 'system' && notification.resource_type === 'system'))) {
-            
+          if (!notification) {
+            console.warn("Could not fetch notification details for broadcast.");
+            return;
+          }
+
+          // 3. Check type - explicitly handle 'broadcast'
+          const isBroadcast = notification.type === 'broadcast';
+          const isSystemBroadcast = notification.type === 'system' && notification.resource_type === 'system';
+
+          if (isBroadcast || isSystemBroadcast) {
             // Play sound
-            audioRef.current?.play().catch(() => {});
+            audioRef.current?.play().catch((e) => console.log("Audio play blocked:", e));
 
             // Show custom toast via Sonner
             toast.custom((t) => (
@@ -160,6 +175,8 @@ export const BroadcastToast = () => {
                 timestamp={notification.created_at}
                 onDismiss={() => toast.dismiss(t)}
                 onRead={async () => {
+                  // Optimistically dismiss
+                  toast.dismiss(t);
                   await supabase.rpc('update_my_notification_status', {
                     notification_id: notification.id,
                     is_read: true
@@ -169,7 +186,6 @@ export const BroadcastToast = () => {
             ), {
               duration: Infinity, // Broadcasts stay until dismissed
               position: 'bottom-right',
-              className: 'bg-transparent border-0 shadow-none p-0 pointer-events-auto'
             });
           }
         }
