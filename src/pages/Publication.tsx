@@ -220,11 +220,11 @@ const PublicationPage = () => {
                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                       <CardTitle className="text-xl font-semibold">Create Template Messages</CardTitle>
                       <div className="flex gap-2">
-                         <Button variant="outline" size="sm" className="bg-blue-50 text-blue-600 border-blue-100 hover:bg-blue-100 h-8 text-xs">
+                         <Button variant="outline" size="sm" className="bg-primary/5 text-primary border-primary/10 hover:bg-primary/10 h-8 text-xs">
                             <PlayCircle className="mr-1 h-3.5 w-3.5" />
                             Watch Tutorial
                          </Button>
-                         <Button variant="outline" size="sm" className="bg-blue-50 text-blue-600 border-blue-100 hover:bg-blue-100 h-8 text-xs">
+                         <Button variant="outline" size="sm" className="bg-primary/5 text-primary border-primary/10 hover:bg-primary/10 h-8 text-xs">
                             <Info className="mr-1 h-3.5 w-3.5" />
                             More Info
                          </Button>
@@ -289,7 +289,7 @@ const PublicationPage = () => {
                              {/* Drag & Drop Zone */}
                              <div 
                                 className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
-                                   isDragging ? "border-blue-500 bg-blue-50" : "border-gray-200 hover:bg-gray-50"
+                                   isDragging ? "border-primary bg-primary/5" : "border-muted hover:bg-muted/50"
                                 }`}
                                 onDragOver={handleDragOver}
                                 onDragLeave={handleDragLeave}
@@ -304,7 +304,7 @@ const PublicationPage = () => {
                                    onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
                                 />
                                 <UploadCloud className="mx-auto h-10 w-10 text-muted-foreground mb-2" />
-                                <p className="text-sm font-medium text-gray-700">Click to upload or drag and drop</p>
+                                <p className="text-sm font-medium text-foreground">Click to upload or drag and drop</p>
                                 <p className="text-xs text-muted-foreground mt-1">CSV, XLS, XLSX (max 10MB)</p>
                              </div>
 
@@ -333,17 +333,17 @@ const PublicationPage = () => {
                              </div>
                            </div>
                          ) : (
-                           <div className="flex items-center justify-between p-3 bg-blue-50 border border-blue-100 rounded-md">
+                           <div className="flex items-center justify-between p-3 bg-primary/5 border border-primary/10 rounded-md">
                               <div className="flex items-center gap-3">
-                                 <div className="bg-blue-100 p-2 rounded">
-                                    <FileSpreadsheet className="h-5 w-5 text-blue-600" />
+                                 <div className="bg-primary/10 p-2 rounded">
+                                    <FileSpreadsheet className="h-5 w-5 text-primary" />
                                  </div>
                                  <div>
-                                    <p className="text-sm font-medium text-blue-900">{fileName}</p>
-                                    <p className="text-xs text-blue-600">{data.length} rows loaded</p>
+                                    <p className="text-sm font-medium text-foreground">{fileName}</p>
+                                    <p className="text-xs text-muted-foreground">{data.length} rows loaded</p>
                                  </div>
                               </div>
-                              <Button variant="ghost" size="icon" onClick={clearData} className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-100">
+                              <Button variant="ghost" size="icon" onClick={clearData} className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10">
                                  <X className="h-4 w-4" />
                               </Button>
                            </div>
@@ -372,7 +372,7 @@ const PublicationPage = () => {
 
                       <div className="flex items-center justify-between pt-4">
                          <Button 
-                            className="bg-blue-500 hover:bg-blue-600 text-white min-w-[140px]" 
+                            className="min-w-[140px]" 
                             disabled={!selectedPhoneColumn || data.length === 0 || !templateMessage.trim()}
                             onClick={handleGenerateMessages}
                          >
