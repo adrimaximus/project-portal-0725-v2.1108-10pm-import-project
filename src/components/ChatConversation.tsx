@@ -180,21 +180,24 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                               {message.repliedMessage && message.reply_to_message_id && (
                                 <button 
                                   onClick={() => handleScrollToMessage(message.reply_to_message_id!)}
-                                  className="w-full text-left pt-1 px-1 pb-2 my-1 text-sm bg-black/10 dark:bg-white/10 rounded-md border-l-2 border-primary hover:bg-black/20 dark:hover:bg-white/20 transition-colors"
+                                  className={cn(
+                                    "w-full text-left pt-1 px-2 pb-2 my-1 text-sm rounded-md border-l-2 border-current transition-colors",
+                                    isCurrentUser ? "bg-black/10 hover:bg-black/20 text-primary-foreground" : "bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20"
+                                  )}
                                 >
                                   <div className="flex justify-between items-start">
                                     <div className="flex-1 overflow-hidden">
-                                      <p className="font-semibold">{message.repliedMessage.senderName}</p>
+                                      <p className="font-semibold opacity-90">{message.repliedMessage.senderName}</p>
                                       <div className={cn(
                                           "text-xs line-clamp-2 opacity-80 prose prose-sm max-w-none [&_p]:my-0",
                                           isCurrentUser 
-                                            ? "prose dark:prose-invert [--tw-prose-body:#e3e3e3] [--tw-prose-links:#e3e3e3] [--tw-prose-bold:#e3e3e3] [--tw-prose-invert-body:#374151] [--tw-prose-invert-links:#374151] [--tw-prose-invert-bold:#374151]" 
+                                            ? "prose-invert" 
                                             : "dark:prose-invert"
                                       )}>
                                         {message.repliedMessage.isDeleted ? (
                                           <p className="italic">This message was deleted.</p>
                                         ) : message.repliedMessage.attachment ? (
-                                          <div className="flex items-center gap-1.5 dark:text-[#383838]">
+                                          <div className="flex items-center gap-1.5">
                                             {message.repliedMessage.attachment.type?.startsWith('image/') && <Camera className="h-3 w-3 flex-shrink-0" />}
                                             {message.repliedMessage.attachment.type?.startsWith('audio/') && <Mic className="h-3 w-3 flex-shrink-0" />}
                                             {!message.repliedMessage.attachment.type?.startsWith('image/') && !message.repliedMessage.attachment.type?.startsWith('audio/') && <FileIcon fileType={message.repliedMessage.attachment.type || ''} className="h-3 w-3 flex-shrink-0" />}
@@ -236,7 +239,7 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                                         <div className={cn(
                                           "text-sm whitespace-pre-wrap break-words prose prose-sm max-w-none [&_p]:my-0",
                                           isCurrentUser 
-                                            ? "prose dark:prose-invert [--tw-prose-body:#e3e3e3] [--tw-prose-links:#e3e3e3] [--tw-prose-bold:#e3e3e3] [--tw-prose-invert-body:#374151] [--tw-prose-invert-links:#374151] [--tw-prose-invert-bold:#374151]" 
+                                            ? "prose dark:prose-invert [--tw-prose-body:theme(colors.primary.foreground)] [--tw-prose-links:theme(colors.primary.foreground)] [--tw-prose-bold:theme(colors.primary.foreground)]"
                                             : "dark:prose-invert"
                                         )}>
                                           <InteractiveText text={message.text || ''} members={members} />
@@ -276,7 +279,7 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                                         <div className={cn(
                                           "text-sm whitespace-pre-wrap break-words prose prose-sm max-w-none [&_p]:my-0",
                                           isCurrentUser 
-                                            ? "prose dark:prose-invert [--tw-prose-body:#e3e3e3] [--tw-prose-links:#e3e3e3] [--tw-prose-bold:#e3e3e3] [--tw-prose-invert-body:#374151] [--tw-prose-invert-links:#374151] [--tw-prose-invert-bold:#374151]" 
+                                            ? "prose dark:prose-invert [--tw-prose-body:theme(colors.primary.foreground)] [--tw-prose-links:theme(colors.primary.foreground)] [--tw-prose-bold:theme(colors.primary.foreground)]"
                                             : "dark:prose-invert"
                                         )}>
                                           <InteractiveText text={message.text || ''} members={members} />
