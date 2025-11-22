@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Info, PlayCircle, UploadCloud, MessageSquare, Bell, FileSpreadsheet, X, Link as LinkIcon, File, CheckCircle2, Loader2, Send, RefreshCw, FlaskConical, Bot, Sparkles, Clock } from "lucide-react";
+import { Info, PlayCircle, UploadCloud, MessageSquare, Bell, FileSpreadsheet, X, Link as LinkIcon, File, CheckCircle2, Loader2, Send, RefreshCw, FlaskConical, Bot, Sparkles, Clock, AlertCircle } from "lucide-react";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
@@ -239,6 +239,34 @@ const PublicationPage = () => {
 
   // Calculate status for preview column
   const getPreviewStatus = (row: any) => {
+    // 1. Prioritize explicit status from sending attempt
+    if (row._status === 'failed') {
+        return (
+            <div className="flex flex-col text-red-600">
+                <span className="font-medium text-[10px] flex items-center gap-1">
+                    <div className="h-1.5 w-1.5 rounded-full bg-red-500" />
+                    Failed
+                </span>
+                <span className="text-[9px] truncate max-w-[100px] cursor-help" title={row._error}>{row._error || 'Unknown error'}</span>
+            </div>
+        );
+    }
+    if (row._status === 'sent') {
+        return (
+            <div className="flex flex-col text-green-600">
+                <span className="font-medium text-[10px] flex items-center gap-1">
+                    <div className="h-1.5 w-1.5 rounded-full bg-green-500" />
+                    Sent
+                </span>
+                <span className="text-[9px] text-muted-foreground/70">{new Date().toLocaleTimeString()}</span>
+            </div>
+        );
+    }
+    if (row._status === 'sending') {
+        return <span className="text-blue-600 text-[10px] animate-pulse">Sending...</span>;
+    }
+
+    // 2. If not yet sent, show scheduled status
     if (isScheduled) {
       if (scheduleMode === 'fixed') {
         if (!fixedScheduleDate) return <span className="text-muted-foreground italic">Pending Schedule</span>;
@@ -263,44 +291,60 @@ const PublicationPage = () => {
         );
       }
     }
+
+    // 3. Default state
     return (
       <div className="flex flex-col">
-        <span className="text-green-600 font-medium text-[10px] flex items-center gap-1">
-            <div className="h-1.5 w-1.5 rounded-full bg-green-500" />
-            Ready to send
+        <span className="text-slate-500 font-medium text-[10px] flex items-center gap-1">
+            <div className="h-1.5 w-1.5 rounded-full bg-slate-400" />
+            Draft
         </span>
-        <span className="text-[10px] text-muted-foreground pl-2.5">
-            {new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-        </span>
-        <span className="text-[9px] text-muted-foreground/70 pl-2.5">Today</span>
+        <span className="text-[9px] text-muted-foreground/70">Ready</span>
       </div>
     );
+  };
+
+  const normalizePhone = (p: string | number) => {
+      let phone = String(p).replace(/\D/g, '');
+      if (phone.startsWith('0')) phone = '62' + phone.substring(1);
+      if (phone.startsWith('8')) phone = '62' + phone;
+      return phone;
   };
 
   const handleSendMessages = async () => {
     setIsSending(true);
     toast.info("Sending...", { description: "Processing your blast request." });
 
+    // Optimistically update status to sending
+    setData(prevData => prevData.map(row => ({ ...row, _status: 'sending', _error: undefined })));
+
     try {
         const messages = data.map(row => {
-            let phone = row[selectedPhoneColumn] ? String(row[selectedPhoneColumn]).replace(/\D/g, '') : '';
-            if (phone.startsWith('0')) phone = '62' + phone.substring(1);
-            if (phone.startsWith('8')) phone = '62' + phone;
-
+            let phone = normalizePhone(row[selectedPhoneColumn]);
+            
             const finalUrl = generatePreviewUrl(row);
-            // Only include url if it's not empty
+            const msgContent = generatePreviewMessage(row);
+            
+            // Base message structure
             const messageData: any = { 
                 phone, 
-                message: generatePreviewMessage(row), 
                 type: messageType
             };
             
-            if (finalUrl && finalUrl.trim()) {
-                messageData.url = finalUrl;
-            } else if (messageType !== 'text') {
-                // Fallback to text if URL is missing but type is media? 
-                // Usually better to send as text or skip media
-                messageData.type = 'text';
+            // Handle text vs media logic specifically for WBIZTOOL structure
+            if (messageType === 'text') {
+                messageData.message = msgContent;
+            } else {
+                // For image/document types
+                if (finalUrl && finalUrl.trim()) {
+                    messageData.url = finalUrl;
+                    messageData.caption = msgContent; // WBIZTOOL often requires 'caption' for media
+                    messageData.message = msgContent; // Send both to be safe for the proxy
+                } else {
+                    // Fallback to text if URL is missing/empty
+                    messageData.type = 'text';
+                    messageData.message = msgContent;
+                }
             }
 
             if (isScheduled) {
@@ -318,10 +362,52 @@ const PublicationPage = () => {
         }).filter(m => m.phone.length > 5);
 
         const { data: result, error } = await supabase.functions.invoke('send-whatsapp-blast', { body: { messages } });
+        
         if (error) throw error;
-        toast.success("Blast Completed", { description: `Sent: ${result.success}, Failed: ${result.failed}` });
-        setPreviewOpen(false);
-    } catch (error: any) { toast.error("Blast Failed", { description: error.message }); } finally { setIsSending(false); }
+        
+        // Update data state based on results to show status in table
+        setData(prevData => prevData.map(row => {
+            const rowPhone = normalizePhone(row[selectedPhoneColumn]);
+            
+            // Check if this row was in the failed list
+            const failure = result.errors?.find((e: any) => e.phone === rowPhone);
+            
+            if (failure) {
+                return { ...row, _status: 'failed', _error: failure.error };
+            }
+            
+            // If it wasn't in errors but has a valid phone number, mark as sent
+            // We filtered messages by length > 5 in payload creation
+            if (rowPhone.length > 5) {
+                return { ...row, _status: 'sent', _error: undefined };
+            }
+            
+            return { ...row, _status: undefined }; // Reset if invalid phone
+        }));
+
+        // Check for specific error messages in the response
+        let errorMessage = "";
+        if (result.failed > 0 && result.errors && result.errors.length > 0) {
+            errorMessage = ` First error: ${result.errors[0].error}`;
+        }
+
+        if (result.failed > 0) {
+             toast.warning("Blast Completed with Failures", { 
+                description: `Sent: ${result.success}, Failed: ${result.failed}.${errorMessage}` 
+            });
+        } else {
+            toast.success("Blast Completed", { 
+                description: `Successfully sent ${result.success} messages.` 
+            });
+            setPreviewOpen(false);
+        }
+        
+    } catch (error: any) { 
+        setData(prevData => prevData.map(row => ({ ...row, _status: 'failed', _error: error.message })));
+        toast.error("Blast Failed", { description: error.message || "Unknown error occurred" }); 
+    } finally { 
+        setIsSending(false); 
+    }
   };
 
   // In-App Notification Handler
