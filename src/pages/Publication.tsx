@@ -267,17 +267,7 @@ const PublicationPage = () => {
                                </SelectContent>
                             </Select>
                          </div>
-                         <div className="space-y-2">
-                            <Label>WhatsApp Account</Label>
-                            <Select>
-                               <SelectTrigger>
-                                  <SelectValue placeholder="Select WhatsApp Account" />
-                               </SelectTrigger>
-                               <SelectContent>
-                                  <SelectItem value="primary">Primary Account</SelectItem>
-                               </SelectContent>
-                            </Select>
-                         </div>
+                         {/* Removed WhatsApp Account Selection as requested */}
                       </div>
 
                       {/* Import Section */}
