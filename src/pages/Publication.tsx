@@ -29,6 +29,11 @@ const PublicationPage = () => {
   const [templateMessage, setTemplateMessage] = useState("");
   const [isImporting, setIsImporting] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
+  
+  // WBIZTOOL Specific States
+  const [messageType, setMessageType] = useState("text");
+  const [mediaUrl, setMediaUrl] = useState("");
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { toast } = useToast();
@@ -203,6 +208,10 @@ const PublicationPage = () => {
         toast({ title: "Missing Template", description: "Please enter a message template.", variant: "destructive" });
         return;
     }
+    if (messageType !== 'text' && !mediaUrl.trim()) {
+        toast({ title: "Missing URL", description: "Please enter a direct link for the file/image.", variant: "destructive" });
+        return;
+    }
     setPreviewOpen(true);
   };
 
@@ -284,7 +293,7 @@ const PublicationPage = () => {
                                  ))}
                                </div>
                             ) : (
-                               <span className="text-muted-foreground/60 italic">Available variables will appear after uploading a file.</span>
+                               <span className="text-muted-foreground/60 italic">Available variables will appear after upload.</span>
                             )}
                          </div>
                       </div>
@@ -292,7 +301,7 @@ const PublicationPage = () => {
                       <div className="grid gap-4 sm:grid-cols-2">
                          <div className="space-y-2">
                             <Label>Message Type</Label>
-                            <Select defaultValue="text">
+                            <Select value={messageType} onValueChange={setMessageType}>
                                <SelectTrigger>
                                   <SelectValue placeholder="Select type" />
                                </SelectTrigger>
@@ -318,6 +327,25 @@ const PublicationPage = () => {
                             </Select>
                          </div>
                       </div>
+
+                      {messageType !== 'text' && (
+                          <div className="space-y-2 p-3 bg-muted/30 rounded-md border border-dashed">
+                              <Label className="text-xs uppercase text-muted-foreground font-semibold">
+                                  {messageType === 'image' ? 'Image URL (JPG/PNG)' : 'Document URL (PDF/DOC)'} <span className="text-red-500">*</span>
+                              </Label>
+                              <div className="flex gap-2">
+                                  <Input 
+                                    value={mediaUrl} 
+                                    onChange={e => setMediaUrl(e.target.value)} 
+                                    placeholder="https://example.com/file.pdf" 
+                                    className="text-sm"
+                                  />
+                              </div>
+                              <p className="text-[10px] text-muted-foreground">
+                                  Required by WBIZTOOL. Must be a direct, public link.
+                              </p>
+                          </div>
+                      )}
 
                       {/* Import Section */}
                       <div className="space-y-3">
@@ -498,11 +526,22 @@ const PublicationPage = () => {
                     </DialogDescription>
                 </DialogHeader>
                 {data.length > 0 ? (
-                    <div className="bg-muted/50 p-4 rounded-lg border">
-                        <div className="mb-2">
-                            <Label className="text-xs text-muted-foreground uppercase">To Phone</Label>
-                            <p className="font-mono text-sm">{data[0][selectedPhoneColumn] || "N/A"}</p>
+                    <div className="bg-muted/50 p-4 rounded-lg border space-y-3">
+                        <div className="flex justify-between items-start">
+                             <div className="mb-2">
+                                <Label className="text-xs text-muted-foreground uppercase">To Phone</Label>
+                                <p className="font-mono text-sm">{data[0][selectedPhoneColumn] || "N/A"}</p>
+                             </div>
+                             <Badge variant="outline" className="capitalize">{messageType}</Badge>
                         </div>
+                        {messageType !== 'text' && (
+                            <div>
+                                <Label className="text-xs text-muted-foreground uppercase">Attachment</Label>
+                                <p className="text-xs text-primary truncate font-mono bg-background p-1 rounded border mt-1">
+                                    {mediaUrl || "No URL provided"}
+                                </p>
+                            </div>
+                        )}
                         <div>
                             <Label className="text-xs text-muted-foreground uppercase">Message</Label>
                             <p className="text-sm whitespace-pre-wrap mt-1">{generatePreviewMessage(data[0])}</p>
