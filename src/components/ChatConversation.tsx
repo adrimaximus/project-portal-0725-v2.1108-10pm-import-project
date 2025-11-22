@@ -55,6 +55,13 @@ const formatDateSeparator = (timestamp: string) => {
   }
 };
 
+// Helper to clean mentions from text @[Name](id) -> @Name
+const formatTextContent = (text: string | null | undefined) => {
+  if (!text) return "";
+  // Regex to match @[Name](id) with optional whitespace
+  return text.replace(/@\[([^\]]+)\]\s*\([^)]+\)/g, '@$1');
+};
+
 export const ChatConversation = ({ messages, members, isLoading, onReply }: ChatConversationProps) => {
   const { user: currentUser } = useAuth();
   const { toggleReaction, editingMessage } = useChatContext();
@@ -201,10 +208,10 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                                             {message.repliedMessage.attachment.type?.startsWith('image/') && <Camera className="h-3 w-3 flex-shrink-0" />}
                                             {message.repliedMessage.attachment.type?.startsWith('audio/') && <Mic className="h-3 w-3 flex-shrink-0" />}
                                             {!message.repliedMessage.attachment.type?.startsWith('image/') && !message.repliedMessage.attachment.type?.startsWith('audio/') && <FileIcon fileType={message.repliedMessage.attachment.type || ''} className="h-3 w-3 flex-shrink-0" />}
-                                            <span className="truncate">{message.repliedMessage.content || message.repliedMessage.attachment.name}</span>
+                                            <span className="truncate">{formatTextContent(message.repliedMessage.content) || message.repliedMessage.attachment.name}</span>
                                           </div>
                                         ) : (
-                                          <InteractiveText text={message.repliedMessage.content || ''} members={members} />
+                                          <InteractiveText text={formatTextContent(message.repliedMessage.content)} members={members} />
                                         )}
                                       </div>
                                     </div>
@@ -242,7 +249,7 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                                             ? "prose dark:prose-invert [--tw-prose-body:#e3e3e3] [--tw-prose-links:#e3e3e3] [--tw-prose-bold:#e3e3e3] [--tw-prose-invert-body:#374151] [--tw-prose-invert-links:#374151] [--tw-prose-invert-bold:#374151]"
                                             : "dark:prose-invert"
                                         )}>
-                                          <InteractiveText text={message.text || ''} members={members} />
+                                          <InteractiveText text={formatTextContent(message.text)} members={members} />
                                         </div>
                                       </div>
                                       <div className="flex-shrink-0 self-end flex items-center gap-1">
@@ -282,7 +289,7 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                                             ? "prose dark:prose-invert [--tw-prose-body:#e3e3e3] [--tw-prose-links:#e3e3e3] [--tw-prose-bold:#e3e3e3] [--tw-prose-invert-body:#374151] [--tw-prose-invert-links:#374151] [--tw-prose-invert-bold:#374151]"
                                             : "dark:prose-invert"
                                         )}>
-                                          <InteractiveText text={message.text || ''} members={members} />
+                                          <InteractiveText text={formatTextContent(message.text)} members={members} />
                                         </div>
                                       )
                                     )}
