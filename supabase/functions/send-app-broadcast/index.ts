@@ -17,6 +17,7 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
+    const anthropicKey = Deno.env.get('ANTHROPIC_API_KEY')
     const { title, body, target, targetValue, link } = await req.json()
 
     if (!title || !body) {
@@ -27,21 +28,11 @@ serve(async (req) => {
     let recipientIds: string[] = []
 
     if (target === 'all') {
-      // Fetch all active users
-      const { data: users, error } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('status', 'active')
-      
+      const { data: users, error } = await supabase.from('profiles').select('id').eq('status', 'active')
       if (error) throw error
       recipientIds = users.map(u => u.id)
     } else if (target === 'role') {
-      const { data: users, error } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('status', 'active')
-        .eq('role', targetValue)
-      
+      const { data: users, error } = await supabase.from('profiles').select('id').eq('status', 'active').eq('role', targetValue)
       if (error) throw error
       recipientIds = users.map(u => u.id)
     } else if (target === 'specific') {
@@ -63,58 +54,85 @@ serve(async (req) => {
 
     const profileMap = new Map(profiles?.map(p => [p.id, p]) || [])
 
-    // 3. Process & Send (The AI Agent Logic - Simple Template Replacement)
-    // In a more complex agent, this would use LLMs to generate variations.
-    // Here we perform efficient batch processing.
-
-    const notificationsToInsert = []
+    // 3. Process Messages (AI Personalization)
+    const notificationInserts = []
     const recipientLinks = []
+    const isPersonalized = (body.includes('{{name}}') || title.includes('{{name}}')) && !!anthropicKey
 
-    // Create a base notification record for each user (since body might be unique)
-    // Note: If body is static (no {{name}}), we could optimize to 1 notification + many recipients.
-    // But to support personalization, we create distinct notifications or use the recipient-specific context if the DB supports it.
-    // The current schema supports a shared notification with many recipients.
-    // To do personalization with the CURRENT schema (shared notification), we actually can't easily personalize the *body* stored in `notifications`.
-    // However, for this feature request, the "Toast" is transient. 
-    // BUT, the schema has `notifications` table which implies history.
-    // WORKAROUND: If the body has {{name}}, we must create individual notifications per user.
-    // If not, create one shared notification.
-
-    const isPersonalized = body.includes('{{name}}') || title.includes('{{name}}')
+    // Function to call Anthropic for rewriting
+    const rewriteWithAI = async (templateBody: string, name: string) => {
+      try {
+        const response = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'x-api-key': anthropicKey,
+            'anthropic-version': '2023-06-01',
+            'content-type': 'application/json'
+          },
+          body: JSON.stringify({
+            model: 'claude-3-haiku-20240307',
+            max_tokens: 300,
+            messages: [{
+              role: 'user',
+              content: `Rewrite the following notification message for a user named "${name}". 
+              The original message is: "${templateBody.replace('{{name}}', name)}".
+              Instructions:
+              1. Keep the core meaning exactly the same.
+              2. Make the tone professional yet friendly.
+              3. Add 1-2 relevant emojis to the text.
+              4. Do NOT add any preamble or explanations, just return the rewritten message string.`
+            }]
+          })
+        })
+        const data = await response.json()
+        return data.content?.[0]?.text || templateBody.replace('{{name}}', name)
+      } catch (e) {
+        console.error("AI rewrite failed:", e)
+        return templateBody.replace('{{name}}', name)
+      }
+    }
 
     if (isPersonalized) {
-        // Batch insert individual notifications
-        for (const userId of recipientIds) {
-            const profile = profileMap.get(userId)
-            const name = profile 
-                ? (profile.first_name || profile.email?.split('@')[0] || 'User')
-                : 'User'
-            
-            const personalBody = body.replace(/{{name}}/g, name)
-            const personalTitle = title.replace(/{{name}}/g, name)
+      // Limit AI processing to prevent timeouts/rate limits if sending to ALL
+      // If > 20 users, we fallback to simple replacement to be safe, unless specific target.
+      // For 'specific' target, we always try AI.
+      const useAI = target === 'specific' || recipientIds.length <= 20
 
-            const { data: notif, error: notifError } = await supabase
-                .from('notifications')
-                .insert({
-                    type: 'broadcast',
-                    title: personalTitle,
-                    body: personalBody,
-                    resource_type: 'system',
-                    actor_id: null, // System
-                    data: link ? { link } : {}
-                })
-                .select()
-                .single()
-            
-            if (!notifError && notif) {
-                recipientLinks.push({
-                    notification_id: notif.id,
-                    user_id: userId
-                })
-            }
+      for (const userId of recipientIds) {
+        const profile = profileMap.get(userId)
+        const name = profile 
+            ? (profile.first_name || profile.email?.split('@')[0] || 'User')
+            : 'User'
+        
+        let personalBody = body.replace('{{name}}', name)
+        const personalTitle = title.replace('{{name}}', name)
+
+        if (useAI) {
+           personalBody = await rewriteWithAI(body, name)
         }
+
+        const { data: notif, error: notifError } = await supabase
+            .from('notifications')
+            .insert({
+                type: 'broadcast',
+                title: personalTitle,
+                body: personalBody,
+                resource_type: 'system',
+                actor_id: null,
+                data: link ? { link } : {}
+            })
+            .select()
+            .single()
+        
+        if (!notifError && notif) {
+            recipientLinks.push({
+                notification_id: notif.id,
+                user_id: userId
+            })
+        }
+      }
     } else {
-        // Create one shared notification
+        // Shared notification for non-personalized bulk sends
         const { data: notif, error: notifError } = await supabase
             .from('notifications')
             .insert({
@@ -130,7 +148,6 @@ serve(async (req) => {
 
         if (notifError) throw notifError
 
-        // Link all recipients
         recipientIds.forEach(userId => {
             recipientLinks.push({
                 notification_id: notif.id,
@@ -152,7 +169,7 @@ serve(async (req) => {
       JSON.stringify({ 
         success: true, 
         count: recipientIds.length,
-        mode: isPersonalized ? 'personalized' : 'shared'
+        mode: isPersonalized ? 'ai-personalized' : 'standard'
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
