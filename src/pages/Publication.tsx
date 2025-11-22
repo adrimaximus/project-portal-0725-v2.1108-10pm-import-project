@@ -30,6 +30,7 @@ const PublicationPage = () => {
   const [isImporting, setIsImporting] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { toast } = useToast();
 
   const handleFile = (file: File) => {
@@ -174,6 +175,29 @@ const PublicationPage = () => {
     }
   };
 
+  const insertVariable = (header: string) => {
+    const variable = `{{${header}}}`;
+    const textarea = textareaRef.current;
+    
+    if (textarea) {
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const text = templateMessage;
+      const newText = text.substring(0, start) + variable + text.substring(end);
+      
+      setTemplateMessage(newText);
+      
+      // Defer focus change to allow state update to render
+      setTimeout(() => {
+        textarea.focus();
+        const newCursorPos = start + variable.length;
+        textarea.setSelectionRange(newCursorPos, newCursorPos);
+      }, 0);
+    } else {
+      setTemplateMessage(prev => prev + variable);
+    }
+  };
+
   const handleGenerateMessages = () => {
     if (!templateMessage.trim()) {
         toast({ title: "Missing Template", description: "Please enter a message template.", variant: "destructive" });
@@ -238,19 +262,31 @@ const PublicationPage = () => {
                          </Label>
                          <Textarea 
                             id="template" 
+                            ref={textareaRef}
                             placeholder="Hi {{name}}, your payment of {{amount}} is due." 
                             className="min-h-[120px] font-mono text-sm"
                             value={templateMessage}
                             onChange={(e) => setTemplateMessage(e.target.value)}
                          />
-                         <p className="text-xs text-muted-foreground">
-                            Use <code className="bg-muted px-1 py-0.5 rounded text-foreground">{"{{column_name}}"}</code> for variables.
+                         <div className="text-xs text-muted-foreground">
+                            <p className="mb-1.5">Click to insert variable:</p>
                             {headers.length > 0 ? (
-                               <span className="text-green-600 ml-1">Available: {headers.map(h => `{{${h}}}`).join(", ")}</span>
+                               <div className="flex flex-wrap gap-1.5">
+                                 {headers.map(h => (
+                                   <Badge 
+                                     key={h} 
+                                     variant="outline" 
+                                     className="cursor-pointer hover:bg-primary/10 hover:text-primary hover:border-primary/30 transition-colors font-mono text-[10px] px-1.5 py-0.5"
+                                     onClick={() => insertVariable(h)}
+                                   >
+                                     {`{{${h}}}`}
+                                   </Badge>
+                                 ))}
+                               </div>
                             ) : (
-                               " Available columns will appear after upload."
+                               <span className="text-muted-foreground/60 italic">Available variables will appear after uploading a file.</span>
                             )}
-                         </p>
+                         </div>
                       </div>
 
                       <div className="grid gap-4 sm:grid-cols-2">
