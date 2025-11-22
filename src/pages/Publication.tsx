@@ -35,6 +35,18 @@ const PublicationPage = () => {
   const [messageType, setMessageType] = useState("text");
   const [mediaUrl, setMediaUrl] = useState("");
 
+  // Scheduling States
+  const [isScheduled, setIsScheduled] = useState(false);
+  const [scheduleMode, setScheduleMode] = useState<"fixed" | "dynamic">("fixed");
+  const [fixedScheduleDate, setFixedScheduleDate] = useState("");
+  const [fixedTimezone, setFixedTimezone] = useState("UTC");
+  
+  const [dynamicDateCol, setDynamicDateCol] = useState("");
+  const [dynamicTimeCol, setDynamicTimeCol] = useState("same_as_date");
+  const [dynamicTimezoneCol, setDynamicTimezoneCol] = useState("use_default");
+  const [dynamicDefaultTimezone, setDynamicDefaultTimezone] = useState("UTC");
+  const [dynamicDateFormat, setDynamicDateFormat] = useState("auto");
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { toast } = useToast();
@@ -213,6 +225,16 @@ const PublicationPage = () => {
         toast({ title: "Missing URL", description: "Please enter a direct link for the file/image.", variant: "destructive" });
         return;
     }
+    if (isScheduled) {
+        if (scheduleMode === 'fixed' && !fixedScheduleDate) {
+            toast({ title: "Missing Date", description: "Please select a date and time for the schedule.", variant: "destructive" });
+            return;
+        }
+        if (scheduleMode === 'dynamic' && !dynamicDateCol) {
+            toast({ title: "Missing Date Column", description: "Please select a column for scheduling dates.", variant: "destructive" });
+            return;
+        }
+    }
     setPreviewOpen(true);
   };
 
@@ -239,12 +261,33 @@ const PublicationPage = () => {
             // Handle if user just put 812...
             if (phone.startsWith('8')) phone = '62' + phone;
 
-            return {
+            const messageData: any = {
                 phone,
                 message: generatePreviewMessage(row),
                 type: messageType, // 'text', 'image', 'document'
                 url: mediaUrl,
             };
+
+            // Handle Schedule Data
+            if (isScheduled) {
+                if (scheduleMode === 'fixed') {
+                    messageData.schedule_time = fixedScheduleDate;
+                    messageData.timezone = fixedTimezone;
+                } else {
+                    // Dynamic
+                    messageData.schedule_time = row[dynamicDateCol];
+                    // Add time if separate column
+                    if (dynamicTimeCol !== 'same_as_date' && row[dynamicTimeCol]) {
+                        messageData.schedule_time += ' ' + row[dynamicTimeCol];
+                    }
+                    // Timezone
+                    messageData.timezone = dynamicTimezoneCol !== 'use_default' && row[dynamicTimezoneCol] 
+                        ? row[dynamicTimezoneCol] 
+                        : dynamicDefaultTimezone;
+                }
+            }
+
+            return messageData;
         }).filter(m => m.phone.length > 5); // Filter invalid phones
 
         const { data: result, error } = await supabase.functions.invoke('send-whatsapp-blast', {
@@ -459,9 +502,158 @@ const PublicationPage = () => {
                          )}
                       </div>
 
-                      <div className="flex items-center space-x-2 pt-2">
-                         <Switch id="schedule" />
-                         <Label htmlFor="schedule" className="font-normal cursor-pointer">Schedule Messages (Optional)</Label>
+                      <div className="space-y-4 pt-2">
+                        <div className="flex items-center space-x-2">
+                            <Switch id="schedule" checked={isScheduled} onCheckedChange={setIsScheduled} />
+                            <Label htmlFor="schedule" className="font-medium cursor-pointer">Schedule Messages (Optional)</Label>
+                        </div>
+
+                        {isScheduled && (
+                            <div className="pl-2 space-y-4 border-l-2 border-primary/20 ml-2 animate-in slide-in-from-top-2 fade-in duration-300">
+                                <div className="space-y-2">
+                                    <Label>Scheduling Mode</Label>
+                                    <div className="flex flex-wrap gap-6">
+                                        <div className="flex items-center space-x-2">
+                                            <input 
+                                                type="radio" 
+                                                id="mode-fixed" 
+                                                name="scheduleMode" 
+                                                value="fixed"
+                                                checked={scheduleMode === "fixed"}
+                                                onChange={() => setScheduleMode("fixed")}
+                                                className="text-primary focus:ring-primary h-4 w-4"
+                                            />
+                                            <Label htmlFor="mode-fixed" className="font-normal cursor-pointer text-sm">Fixed Schedule (Same time for all)</Label>
+                                        </div>
+                                        <div className="flex items-center space-x-2">
+                                            <input 
+                                                type="radio" 
+                                                id="mode-dynamic" 
+                                                name="scheduleMode" 
+                                                value="dynamic"
+                                                checked={scheduleMode === "dynamic"}
+                                                onChange={() => setScheduleMode("dynamic")}
+                                                className="text-primary focus:ring-primary h-4 w-4"
+                                            />
+                                            <Label htmlFor="mode-dynamic" className="font-normal cursor-pointer text-sm">Dynamic from CSV (Per-row scheduling)</Label>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {scheduleMode === "fixed" ? (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <Label>Schedule Date & Time</Label>
+                                            <Input 
+                                                type="datetime-local" 
+                                                value={fixedScheduleDate} 
+                                                onChange={(e) => setFixedScheduleDate(e.target.value)}
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label>Timezone</Label>
+                                            <Select value={fixedTimezone} onValueChange={setFixedTimezone}>
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Select timezone" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="UTC">UTC</SelectItem>
+                                                    <SelectItem value="Asia/Jakarta">Asia/Jakarta</SelectItem>
+                                                    <SelectItem value="Asia/Singapore">Asia/Singapore</SelectItem>
+                                                    <SelectItem value="America/New_York">America/New_York</SelectItem>
+                                                    <SelectItem value="Europe/London">Europe/London</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-4">
+                                        <div className="bg-blue-50 text-blue-800 p-3 rounded-md border border-blue-100 flex gap-2 items-start text-sm">
+                                            <Info className="h-4 w-4 mt-0.5 shrink-0 text-blue-600" />
+                                            <div>
+                                                <p className="font-semibold">Dynamic Scheduling from CSV</p>
+                                                <p className="text-xs opacity-90 mt-1">Select CSV columns that contain scheduling information. Each message will be scheduled based on its row data.</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                            <div className="space-y-2">
+                                                <Label className="text-xs">Date Column <span className="text-red-500">*</span></Label>
+                                                <Select value={dynamicDateCol} onValueChange={setDynamicDateCol} disabled={headers.length === 0}>
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Select date column" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {headers.map(h => <SelectItem key={h} value={h}>{h}</SelectItem>)}
+                                                    </SelectContent>
+                                                </Select>
+                                                <p className="text-[10px] text-muted-foreground">Column with date (YYYY-MM-DD or MM/DD/YYYY)</p>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label className="text-xs">Time Column</Label>
+                                                <Select value={dynamicTimeCol} onValueChange={setDynamicTimeCol} disabled={headers.length === 0}>
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Optional - same as date" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="same_as_date">Optional - same as date column</SelectItem>
+                                                        {headers.map(h => <SelectItem key={h} value={h}>{h}</SelectItem>)}
+                                                    </SelectContent>
+                                                </Select>
+                                                <p className="text-[10px] text-muted-foreground">Column with time (HH:MM or HH:MM:SS)</p>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label className="text-xs">Timezone Column</Label>
+                                                <Select value={dynamicTimezoneCol} onValueChange={setDynamicTimezoneCol} disabled={headers.length === 0}>
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Optional - use default" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="use_default">Optional - use default</SelectItem>
+                                                        {headers.map(h => <SelectItem key={h} value={h}>{h}</SelectItem>)}
+                                                    </SelectContent>
+                                                </Select>
+                                                <p className="text-[10px] text-muted-foreground">Column with timezone (UTC, US/Eastern, etc.)</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div className="space-y-2">
+                                                <Label className="text-xs">Default Timezone</Label>
+                                                <Select value={dynamicDefaultTimezone} onValueChange={setDynamicDefaultTimezone}>
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Select timezone" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="UTC">UTC</SelectItem>
+                                                        <SelectItem value="Asia/Jakarta">Asia/Jakarta</SelectItem>
+                                                        <SelectItem value="Asia/Singapore">Asia/Singapore</SelectItem>
+                                                        <SelectItem value="America/New_York">America/New_York</SelectItem>
+                                                        <SelectItem value="Europe/London">Europe/London</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                                <p className="text-[10px] text-muted-foreground">Used when timezone column is empty</p>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label className="text-xs">Date Format</Label>
+                                                <Select value={dynamicDateFormat} onValueChange={setDynamicDateFormat}>
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Auto-detect" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="auto">Auto-detect</SelectItem>
+                                                        <SelectItem value="YYYY-MM-DD">YYYY-MM-DD</SelectItem>
+                                                        <SelectItem value="MM/DD/YYYY">MM/DD/YYYY</SelectItem>
+                                                        <SelectItem value="DD/MM/YYYY">DD/MM/YYYY</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                                <p className="text-[10px] text-muted-foreground">Expected date format in CSV</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
                       </div>
 
                       <div className="flex items-center justify-between pt-4">
@@ -589,6 +781,19 @@ const PublicationPage = () => {
                             <Label className="text-xs text-muted-foreground uppercase">Message</Label>
                             <p className="text-sm whitespace-pre-wrap mt-1">{generatePreviewMessage(data[0])}</p>
                         </div>
+                        {isScheduled && (
+                            <div className="border-t border-dashed pt-2 mt-2">
+                                <Label className="text-xs text-muted-foreground uppercase">Scheduled For</Label>
+                                <p className="font-mono text-xs mt-1 flex items-center text-blue-600">
+                                    <span className="mr-2">🕒</span>
+                                    {scheduleMode === 'fixed' ? (
+                                        `${fixedScheduleDate.replace('T', ' ')} (${fixedTimezone})`
+                                    ) : (
+                                        `Dynamic: ${data[0][dynamicDateCol] || 'N/A'} (${dynamicDefaultTimezone})`
+                                    )}
+                                </p>
+                            </div>
+                        )}
                     </div>
                 ) : (
                     <p>No data to preview.</p>
