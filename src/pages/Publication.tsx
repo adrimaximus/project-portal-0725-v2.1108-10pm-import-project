@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Info, PlayCircle, UploadCloud, MessageSquare, Bell, FileSpreadsheet, X, Link as LinkIcon, File, CheckCircle2, Loader2, Send, RefreshCw, FlaskConical, Bot, Sparkles } from "lucide-react";
+import { Info, PlayCircle, UploadCloud, MessageSquare, Bell, FileSpreadsheet, X, Link as LinkIcon, File, CheckCircle2, Loader2, Send, RefreshCw, FlaskConical, Bot, Sparkles, Clock } from "lucide-react";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
@@ -209,6 +209,40 @@ const PublicationPage = () => {
       let message = templateMessage;
       headers.forEach(header => { const regex = new RegExp(`{{${header}}}`, 'g'); message = message.replace(regex, row[header] || ''); });
       return message;
+  };
+
+  // Calculate status for preview column
+  const getPreviewStatus = (row: any) => {
+    if (isScheduled) {
+      if (scheduleMode === 'fixed') {
+        if (!fixedScheduleDate) return <span className="text-muted-foreground italic">Pending Schedule</span>;
+        const date = new Date(fixedScheduleDate);
+        return (
+          <div className="flex flex-col">
+            <span className="text-blue-600 font-medium text-[10px] flex items-center gap-1"><Clock className="h-3 w-3" /> Scheduled</span>
+            <span className="text-[10px] text-muted-foreground">{date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+            <span className="text-[9px] text-muted-foreground/70">{date.toLocaleDateString()}</span>
+          </div>
+        );
+      } else {
+        // Dynamic
+        const dateVal = row[dynamicDateCol];
+        const timeVal = dynamicTimeCol !== 'same_as_date' ? row[dynamicTimeCol] : '';
+        if (!dateVal) return <span className="text-destructive text-[10px]">Missing Date</span>;
+        return (
+          <div className="flex flex-col">
+            <span className="text-blue-600 font-medium text-[10px] flex items-center gap-1"><Clock className="h-3 w-3" /> Scheduled</span>
+            <span className="text-[10px] text-muted-foreground truncate">{dateVal} {timeVal}</span>
+          </div>
+        );
+      }
+    }
+    return (
+      <div className="flex items-center gap-1.5">
+        <div className="h-1.5 w-1.5 rounded-full bg-green-500" />
+        <span className="text-xs text-muted-foreground">Ready to send</span>
+      </div>
+    );
   };
 
   const handleSendMessages = async () => {
@@ -745,6 +779,9 @@ const PublicationPage = () => {
                                               )}
                                            </TableHead>
                                         ))}
+                                        <TableHead className="sticky right-0 z-20 bg-card shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)] w-[130px] font-bold text-foreground border-l">
+                                            Status
+                                        </TableHead>
                                      </TableRow>
                                   </TableHeader>
                                   <TableBody>
@@ -760,6 +797,9 @@ const PublicationPage = () => {
                                                  {row[header]}
                                               </TableCell>
                                            ))}
+                                           <TableCell className="sticky right-0 z-20 bg-card shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)] text-xs align-top py-2 font-medium border-l">
+                                              {getPreviewStatus(row)}
+                                           </TableCell>
                                         </TableRow>
                                      ))}
                                   </TableBody>
