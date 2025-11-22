@@ -9,7 +9,7 @@ import { Conversation, Message, Collaborator, Reaction, User, Project, Task } fr
 import debounce from 'lodash.debounce';
 import { ForwardMessageDialog } from '@/components/ForwardMessageDialog';
 import { v4 as uuidv4 } from 'uuid';
-import { sendHybridMessage, subscribeToConversation } from '@/lib/chatRealtime';
+import { sendHybridMessage } from '@/lib/chatRealtime';
 
 const TONE_BASE_URL = `https://quuecudndfztjlxbrvyb.supabase.co/storage/v1/object/public/General/Notification/`;
 
@@ -104,23 +104,20 @@ const ChatProviderComponent = ({ children }: { children: ReactNode }) => {
     queryKey: ['userProjectsForMentions', currentUser?.id],
     queryFn: async () => {
       if (!currentUser) return [];
-      // Use direct selection instead of RPC to avoid ambiguity errors
       const { data, error } = await supabase
         .from('projects')
         .select('id, name, slug, payment_status, budget, status, created_by')
-        .not('status', 'eq', 'Deleted') // Assuming 'Deleted' isn't a status but safety check
+        .not('status', 'eq', 'Deleted')
         .order('updated_at', { ascending: false });
         
       if (error) {
         console.error("Error fetching user projects for mentions:", error);
         return [];
       }
-      // Filter in memory for now to ensure we get projects user has access to
-      // (RLS should handle this, but this adds an extra layer for the 'created_by' check if needed)
       return data as unknown as Project[];
     },
     enabled: !!currentUser,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: userTasks = [] } = useQuery<Task[]>({
@@ -135,65 +132,99 @@ const ChatProviderComponent = ({ children }: { children: ReactNode }) => {
       return data;
     },
     enabled: !!currentUser,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 5 * 60 * 1000,
   });
 
   const userBills = useMemo(() => {
     return userProjects.filter(p => p.payment_status && p.budget);
   }, [userProjects]);
 
-  useEffect(() => {
-    if (!currentUser || conversations.length === 0) return;
+  const playSound = async () => {
+    try {
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('notification_preferences')
+        .eq('id', currentUser?.id)
+        .single();
+      
+      const prefs = profileData?.notification_preferences || {};
+      const isCommentEnabled = prefs.comment !== false;
+      const tone = prefs.tone;
 
-    const playSound = async () => {
-      try {
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('notification_preferences')
-          .eq('id', currentUser.id)
-          .single();
-        
-        const prefs = profileData?.notification_preferences || {};
-        const isCommentEnabled = prefs.comment !== false;
-        const tone = prefs.tone;
-
-        if (isCommentEnabled && tone && tone !== 'none') {
-          const audio = new Audio(`${TONE_BASE_URL}${tone}`);
-          await audio.play();
-        }
-      } catch (err) {
-        console.warn("Could not play chat notification sound:", err);
+      if (isCommentEnabled && tone && tone !== 'none') {
+        const audio = new Audio(`${TONE_BASE_URL}${tone}`);
+        await audio.play();
       }
-    };
+    } catch (err) {
+      console.warn("Could not play chat notification sound:", err);
+    }
+  };
 
-    const subscriptions = conversations.map(convo => {
-      return subscribeToConversation({
-        conversationId: convo.id,
-        onNewMessage: (message) => {
-          if (recentlyProcessedIds.current.has(message.id)) {
-            return;
-          }
-          recentlyProcessedIds.current.add(message.id);
-          setTimeout(() => recentlyProcessedIds.current.delete(message.id), 2000);
+  const handleIncomingMessage = (message: any) => {
+    // Deduplicate messages received via broadcast vs DB insert
+    if (recentlyProcessedIds.current.has(message.id)) {
+      return;
+    }
+    recentlyProcessedIds.current.add(message.id);
+    setTimeout(() => recentlyProcessedIds.current.delete(message.id), 2000);
 
-          queryClient.invalidateQueries({ queryKey: ['messages', convo.id] });
-          queryClient.invalidateQueries({ queryKey: ['conversations', currentUser.id] });
+    // If message belongs to active conversation, refresh messages
+    if (selectedConversationIdRef.current === message.conversation_id) {
+       queryClient.invalidateQueries({ queryKey: ['messages', message.conversation_id] });
+    }
 
-          const isFromAnotherUser = message.sender_id !== currentUser.id;
-          const isChatActiveAndVisible = isChatPageActiveRef.current && selectedConversationIdRef.current === convo.id;
+    // Always refresh conversations list to show new last message/timestamp
+    queryClient.invalidateQueries({ queryKey: ['conversations', currentUser?.id] });
 
-          if (isFromAnotherUser && !isChatActiveAndVisible) {
-            playSound();
-            setUnreadConversationIds(prev => new Set(prev).add(convo.id));
-          }
-        },
-      });
-    });
+    const isFromAnotherUser = message.sender_id !== currentUser?.id;
+    const isChatActiveAndVisible = isChatPageActiveRef.current && selectedConversationIdRef.current === message.conversation_id;
+
+    if (isFromAnotherUser && !isChatActiveAndVisible) {
+      playSound();
+      setUnreadConversationIds(prev => new Set(prev).add(message.conversation_id));
+    }
+  };
+
+  // 1. Global subscription for persistent message updates (Background & List updates)
+  // This replaces the individual subscriptions for every conversation
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const channel = supabase.channel(`global-messages-listener:${currentUser.id}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'messages' },
+        (payload) => {
+           handleIncomingMessage(payload.new);
+        }
+      )
+      .subscribe();
 
     return () => {
-      subscriptions.forEach(unsubscribe => unsubscribe());
+      supabase.removeChannel(channel);
     };
-  }, [currentUser, conversations, queryClient]);
+  }, [currentUser, queryClient]);
+
+  // 2. Active Conversation subscription for Broadcast events (Fast/Ephemeral)
+  useEffect(() => {
+    if (!selectedConversationId || selectedConversationId === 'ai-assistant') return;
+
+    const channel = supabase.channel(`conversation:${selectedConversationId}`)
+      .on('broadcast', { event: 'message' }, ({ payload }) => {
+         handleIncomingMessage(payload);
+      })
+      .on('broadcast', { event: 'typing' }, ({ payload }) => {
+         // We can handle typing indicators here later if needed
+         // const userId = payload.userId;
+         // if (userId !== currentUser?.id) setIsSomeoneTyping(true);
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [selectedConversationId, currentUser]);
+
 
   const debouncedSearchMessages = useCallback(
     debounce(async (term: string) => {
