@@ -289,6 +289,11 @@ const PublicationPage = () => {
        return;
     }
 
+    // Determine the name to use for replacement in the toast preview
+    const currentProfile = profiles.find((p: any) => p.value === user.id);
+    const currentName = currentProfile ? currentProfile.label : (user.user_metadata?.full_name || user.email || 'User');
+    const previewBody = notifBody.replace(/{{name}}/gi, currentName);
+
     setIsSendingTestNotif(true);
     try {
       const { error } = await supabase.functions.invoke('send-app-broadcast', {
@@ -307,7 +312,7 @@ const PublicationPage = () => {
         description: (
           <div className="mt-2 w-full p-3 bg-card text-card-foreground border rounded-md shadow-sm">
             <p className="font-semibold text-sm"><span className="text-primary mr-1">[TEST]</span>{notifTitle}</p>
-            <p className="text-xs text-muted-foreground line-clamp-3 mt-1">{notifBody}</p>
+            <p className="text-xs text-muted-foreground line-clamp-3 mt-1">{previewBody}</p>
             <p className="text-[10px] text-muted-foreground mt-2 flex items-center gap-1">
               <CheckCircle2 className="h-3 w-3 text-green-500" />
               Check your notifications.
