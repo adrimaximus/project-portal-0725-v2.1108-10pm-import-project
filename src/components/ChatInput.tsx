@@ -100,7 +100,17 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
 
   const handleSend = async () => {
     if (!text.trim() && !attachmentFile) return;
-    onSendMessage(text, attachmentFile, replyTo?.id);
+
+    let finalText = text;
+
+    // Handle @all expansion for Chat
+    if (finalText.match(/@\[[^\]]+\]\(all\)/)) {
+       const members = selectedConversation?.members || [];
+       const allMentions = members.map(u => `@[${u.name}](${u.id})`).join(' ');
+       finalText = finalText.replace(/@\[[^\]]+\]\(all\)/g, allMentions);
+    }
+
+    onSendMessage(finalText, attachmentFile, replyTo?.id);
     setText("");
     setAttachmentFile(null);
     SafeLocalStorage.removeItem(storageKey);

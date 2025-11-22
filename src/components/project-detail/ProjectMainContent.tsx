@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Project, Task, Reaction, User, Comment as CommentType, UpsertTaskPayload } from "@/types";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ProjectOverviewTab from './ProjectOverviewTab';
@@ -79,7 +79,22 @@ const ProjectMainContent = ({
   const [editedText, setEditedText] = useState('');
   const [newAttachments, setNewAttachments] = useState<File[]>([]);
   const editFileInputRef = useRef<HTMLInputElement>(null);
-  const { data: allUsers = [] } = useProfiles();
+  
+  // Determine users for mentions. Priority: Project Members + Owner
+  const projectUsers = useMemo(() => {
+      const users: User[] = [...project.assignedTo];
+      // Add owner if not already in list
+      if (project.created_by && !users.some(u => u.id === project.created_by.id)) {
+          // Map Owner to User type (Owner is subset, we add missing fields as optional/defaults)
+          users.push({
+              ...project.created_by,
+              first_name: project.created_by.name?.split(' ')[0],
+              last_name: project.created_by.name?.split(' ').slice(1).join(' '),
+              role: 'owner'
+          });
+      }
+      return users;
+  }, [project.assignedTo, project.created_by]);
 
   const handleAddCommentOrTicket = (text: string, isTicket: boolean, attachments: File[] | null, mentionedUserIds: string[]) => {
     addComment.mutate({ text, isTicket, attachments, mentionedUserIds, replyToId: replyTo?.id }, {
@@ -279,7 +294,7 @@ const ProjectMainContent = ({
             editFileInputRef={editFileInputRef}
             initialMention={initialMention}
             onMentionConsumed={handleMentionConsumed}
-            allUsers={allUsers}
+            allUsers={projectUsers}
             onGoToReply={handleScrollToMessage}
             highlightedCommentId={highlightedCommentId}
             onHighlightComplete={onCommentHighlightComplete}

@@ -108,12 +108,14 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
   const [newAttachments, setNewAttachments] = useState<File[]>([]);
   const editFileInputRef = useRef<HTMLInputElement>(null);
   const commentInputRef = useRef<CommentInputHandle>(null);
-  const { data: allUsers = [] } = useProfiles();
   const { onOpen: onOpenTaskModal } = useTaskModal();
   const [replyTo, setReplyTo] = useState<CommentType | null>(null);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editedTitle, setEditedTitle] = useState(task.title);
   const [isAttachmentModalOpen, setIsAttachmentModalOpen] = useState(false);
+
+  // Only allow mentioning users assigned to the task
+  const taskAssignees = useMemo(() => task.assignedTo || [], [task.assignedTo]);
 
   useEffect(() => {
     setEditedTitle(task.title);
@@ -282,7 +284,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
                     )}
                     onClick={() => !task.completed && setIsEditingTitle(true)}
                   >
-                    <InteractiveText text={task.title} members={allUsers} />
+                    <InteractiveText text={task.title} members={taskAssignees} />
                   </div>
                 )}
               </div>
@@ -489,7 +491,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
             <div className="pt-4 border-t">
               <h4 className="font-semibold mb-2">Description</h4>
               <div className="prose prose-sm dark:prose-invert max-w-none break-word">
-                <InteractiveText text={displayedDescription} members={allUsers} />
+                <InteractiveText text={displayedDescription} members={taskAssignees} />
               </div>
               {isLongDescription && (
                 <Button variant="link" size="sm" onClick={() => setShowFullDescription(!showFullDescription)} className="px-0 h-auto">
@@ -527,7 +529,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
               onReply={handleReply}
               onCreateTicketFromComment={handleCreateTicketFromComment}
               onGoToReply={handleScrollToMessage}
-              allUsers={allUsers}
+              allUsers={taskAssignees}
               highlightedCommentId={highlightedCommentId}
               onHighlightComplete={onHighlightComplete}
             />
@@ -538,7 +540,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
           <CommentInput
             ref={commentInputRef}
             onAddCommentOrTicket={handleAddComment}
-            allUsers={allUsers}
+            allUsers={taskAssignees}
             replyTo={replyTo}
             onCancelReply={() => setReplyTo(null)}
             storageKey={`comment-draft-task-${task.id}`}
