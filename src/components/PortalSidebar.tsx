@@ -218,7 +218,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
         'people': 'module:people',
         'knowledge base': 'module:knowledge-base',
         'settings': 'module:settings',
-        'publication': 'module:publication',
+        // 'publication': 'module:publication', // Removed to ensure visibility
     };
     return mapping[itemName.toLowerCase()] || null;
   };
@@ -237,7 +237,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
           'people': 'people',
           'knowledge base': 'knowledge-base',
           'settings': 'settings',
-          'publication': 'publication',
+          // 'publication': 'publication', // Removed to ensure visibility
       };
       return mapping[itemName.toLowerCase()] || null;
   }
