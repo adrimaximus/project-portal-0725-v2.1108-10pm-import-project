@@ -1,7 +1,7 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { MoreVertical, Edit, Download, Paperclip } from "lucide-react";
+import { MoreVertical, Edit, Download, Paperclip, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -10,7 +10,6 @@ import { format, formatDistanceToNow } from "date-fns";
 import { Invoice, PaymentStatus } from "@/types";
 import { useMemo } from "react";
 import PaymentStatusBadge from "./PaymentStatusBadge";
-import { SortableTableHead } from "../ui/SortableTableHead";
 
 interface BillingTableProps {
   invoices: Invoice[];
@@ -29,6 +28,35 @@ const getInitials = (name?: string | null) => {
   return names[0]?.charAt(0).toUpperCase() || '';
 };
 
+// Local helper component for consistent sortable headers
+const BillingTableHead = ({ 
+  title, 
+  column, 
+  sortConfig, 
+  onSort, 
+  className 
+}: { 
+  title: string; 
+  column: keyof Invoice; 
+  sortConfig: { key: keyof Invoice | null; direction: 'asc' | 'desc' }; 
+  onSort: (column: keyof Invoice) => void;
+  className?: string;
+}) => (
+  <TableHead 
+    className={cn("cursor-pointer hover:bg-muted/50 transition-colors select-none", className)}
+    onClick={() => onSort(column)}
+  >
+    <div className="flex items-center gap-1">
+      {title}
+      {sortConfig.key === column ? (
+        sortConfig.direction === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+      ) : (
+        <ArrowUpDown className="h-3 w-3 opacity-30" />
+      )}
+    </div>
+  </TableHead>
+);
+
 const BillingTable = ({ invoices, onEdit, sortConfig, handleSort, onStatusChange }: BillingTableProps) => {
   const sortedInvoices = useMemo(() => {
     if (!sortConfig.key) return invoices;
@@ -46,21 +74,21 @@ const BillingTable = ({ invoices, onEdit, sortConfig, handleSort, onStatusChange
         bValue = b.assignedMembers?.find(m => m.role === 'admin')?.name || '';
       }
 
-      // Ensure we're comparing comparable types or fall back to string
-      // Handle null/undefined - always put at bottom regardless of direction if desired, 
-      // or let direction handle it. Here we put them at the end for simplicity in default sort.
-      if (aValue === bValue) return 0;
-      if (aValue === null || aValue === undefined) return 1;
-      if (bValue === null || bValue === undefined) return -1;
-
       let compareResult = 0;
-      
-      if (aValue instanceof Date && bValue instanceof Date) {
+
+      // Handle nulls/undefined safely
+      if (aValue === bValue) {
+        compareResult = 0;
+      } else if (aValue === null || aValue === undefined) {
+        compareResult = 1;
+      } else if (bValue === null || bValue === undefined) {
+        compareResult = -1;
+      } else if (aValue instanceof Date && bValue instanceof Date) {
         compareResult = aValue.getTime() - bValue.getTime();
       } else if (typeof aValue === 'number' && typeof bValue === 'number') {
         compareResult = aValue - bValue;
       } else {
-        // String comparison with numeric awareness (e.g. "Invoice 2" comes before "Invoice 10")
+        // String comparison with numeric awareness
         compareResult = String(aValue).localeCompare(String(bValue), undefined, { numeric: true, sensitivity: 'base' });
       }
 
@@ -75,16 +103,16 @@ const BillingTable = ({ invoices, onEdit, sortConfig, handleSort, onStatusChange
       <Table>
         <TableHeader className="bg-muted/30">
           <TableRow>
-            <SortableTableHead columnKey="id" onSort={handleSort} sortConfig={sortConfig} className="w-[120px]">Invoice #</SortableTableHead>
-            <SortableTableHead columnKey="projectName" onSort={handleSort} sortConfig={sortConfig}>Project</SortableTableHead>
-            <SortableTableHead columnKey="clientName" onSort={handleSort} sortConfig={sortConfig}>Client</SortableTableHead>
-            <SortableTableHead columnKey="projectOwner" onSort={handleSort} sortConfig={sortConfig}>Owner</SortableTableHead>
-            <SortableTableHead columnKey="assignedMembers" onSort={handleSort} sortConfig={sortConfig}>Admin</SortableTableHead>
-            <SortableTableHead columnKey="status" onSort={handleSort} sortConfig={sortConfig}>Status</SortableTableHead>
-            <SortableTableHead columnKey="poNumber" onSort={handleSort} sortConfig={sortConfig}>PO #</SortableTableHead>
-            <SortableTableHead columnKey="amount" onSort={handleSort} sortConfig={sortConfig}>Amount</SortableTableHead>
-            <SortableTableHead columnKey="dueDate" onSort={handleSort} sortConfig={sortConfig}>Due Date</SortableTableHead>
-            <SortableTableHead columnKey="last_billing_reminder_sent_at" onSort={handleSort} sortConfig={sortConfig}>Reminder</SortableTableHead>
+            <BillingTableHead title="Invoice #" column="id" onSort={handleSort} sortConfig={sortConfig} className="w-[120px]" />
+            <BillingTableHead title="Project" column="projectName" onSort={handleSort} sortConfig={sortConfig} />
+            <BillingTableHead title="Client" column="clientName" onSort={handleSort} sortConfig={sortConfig} />
+            <BillingTableHead title="Owner" column="projectOwner" onSort={handleSort} sortConfig={sortConfig} />
+            <BillingTableHead title="Admin" column="assignedMembers" onSort={handleSort} sortConfig={sortConfig} />
+            <BillingTableHead title="Status" column="status" onSort={handleSort} sortConfig={sortConfig} />
+            <BillingTableHead title="PO #" column="poNumber" onSort={handleSort} sortConfig={sortConfig} />
+            <BillingTableHead title="Amount" column="amount" onSort={handleSort} sortConfig={sortConfig} />
+            <BillingTableHead title="Due Date" column="dueDate" onSort={handleSort} sortConfig={sortConfig} />
+            <BillingTableHead title="Reminder" column="last_billing_reminder_sent_at" onSort={handleSort} sortConfig={sortConfig} />
             <TableHead>Attachment</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
