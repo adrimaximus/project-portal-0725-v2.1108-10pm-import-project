@@ -32,41 +32,31 @@ const MergeDialog = ({ open, onOpenChange, person1, person2 }: MergeDialogProps)
   const { data: mergedPreview, isLoading: isLoadingPreview } = useQuery({
     queryKey: ['mergePreview', primary.id, secondary.id],
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke('ai-handler', {
+      const { data, error } = await supabase.functions.invoke('preview-contact-merge', {
         body: {
-          feature: 'preview-contact-merge',
-          payload: {
-            primary_person_id: primary.id,
-            secondary_person_id: secondary.id,
-          }
+          primary_person_id: primary.id,
+          secondary_person_id: secondary.id,
         }
       });
-      if (error) {
-        console.warn("Preview failed, falling back to UI preview", error);
-        return null;
-      }
+      if (error) throw error;
       return data as Person;
     },
     enabled: open,
-    staleTime: Infinity, 
-    gcTime: 300000, 
-    retry: false
+    staleTime: Infinity, // Don't refetch unless keys change
+    gcTime: 300000, // 5 minutes
   });
 
   const handleMerge = async () => {
     setIsMerging(true);
-    // Menggunakan fungsi database langsung (RPC) alih-alih Edge Function
-    // Ini lebih stabil dan menghindari error timeout/500 dari Edge Function
-    const { error } = await supabase.rpc('merge_contacts', {
-      primary_id: primary.id,
-      secondary_id: secondary.id,
-      merge_reason: 'Manual merge from dialog'
+    const { error } = await supabase.functions.invoke('contact-duplicate-handler', {
+      body: {
+        primary_person_id: primary.id,
+        secondary_person_id: secondary.id,
+      }
     });
-    
     setIsMerging(false);
 
     if (error) {
-      console.error('Merge failed:', error);
       toast.error("Failed to merge contacts.", { description: error.message });
     } else {
       toast.success("Contacts merged successfully!");
@@ -99,8 +89,7 @@ const MergeDialog = ({ open, onOpenChange, person1, person2 }: MergeDialogProps)
   );
 
   const MergedPreviewCard = () => {
-    // Jika preview masih loading, tampilkan skeleton
-    if (isLoadingPreview) {
+    if (isLoadingPreview || !mergedPreview) {
       return (
         <Card className="bg-muted/50">
           <CardHeader className="p-3 flex flex-row items-center gap-2">
@@ -116,22 +105,18 @@ const MergeDialog = ({ open, onOpenChange, person1, person2 }: MergeDialogProps)
         </Card>
       );
     }
-
-    // Gunakan data preview dari AI jika ada, jika tidak gunakan data 'primary' sebagai fallback
-    const displayData = mergedPreview || primary;
-
     return (
       <Card className="bg-muted/50">
         <CardHeader className="p-3 flex flex-row items-center gap-2">
           <BrainCircuit className="h-4 w-4 text-muted-foreground" />
-          <CardTitle className="text-base">Result Preview</CardTitle>
+          <CardTitle className="text-base">AI Merge Preview</CardTitle>
         </CardHeader>
         <CardContent className="p-3 pt-0 space-y-1">
-          <DetailRow label="Name" value={displayData.full_name} />
-          <DetailRow label="Job" value={displayData.job_title} />
-          <DetailRow label="Company" value={displayData.company} />
-          <DetailRow label="Email" value={displayData.contact?.emails?.join(', ')} />
-          <DetailRow label="Phone" value={displayData.contact?.phones?.join(', ')} />
+          <DetailRow label="Name" value={mergedPreview.full_name} />
+          <DetailRow label="Job" value={mergedPreview.job_title} />
+          <DetailRow label="Company" value={mergedPreview.company} />
+          <DetailRow label="Email" value={mergedPreview.contact?.emails?.join(', ')} />
+          <DetailRow label="Phone" value={mergedPreview.contact?.phones?.join(', ')} />
         </CardContent>
       </Card>
     );
@@ -151,7 +136,7 @@ const MergeDialog = ({ open, onOpenChange, person1, person2 }: MergeDialogProps)
         </RadioGroup>
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleMerge} disabled={isMerging}>
+          <Button onClick={handleMerge} disabled={isMerging || isLoadingPreview}>
             {isMerging ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
             Confirm Merge
           </Button>

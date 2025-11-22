@@ -63,12 +63,9 @@ const AiFriendSuggestion: React.FC<AiFriendSuggestionProps> = ({ data, period, u
       const moodSummary = data.length > 0 ? data.map(mood => `${mood.label} (${mood.value} kali)`).join(', ') : 'belum ada data suasana hati yang tercatat';
       const prompt = `Nama saya ${userName}. Selama ${periodInIndonesian} terakhir, ringkasan suasana hati saya adalah: ${moodSummary}. Berdasarkan data ini, berikan saya saran yang membangun.`;
 
-      const { data: insightData, error: insightError } = await supabase.functions.invoke('ai-handler', {
+      const { data: insightData, error: insightError } = await supabase.functions.invoke('generate-mood-insight', {
         headers: { Authorization: `Bearer ${session.access_token}` },
-        body: { 
-          feature: 'generate-mood-insight', 
-          payload: { prompt, userName, conversationHistory: [] }
-        }
+        body: { prompt, userName, conversationHistory: [] }
       });
 
       if (insightError) throw insightError;
@@ -99,15 +96,12 @@ const AiFriendSuggestion: React.FC<AiFriendSuggestionProps> = ({ data, period, u
       if (!session) {
         throw new Error("Not authenticated");
       }
-      const { data: insightData, error: insightError } = await supabase.functions.invoke('ai-handler', {
+      const { data: insightData, error: insightError } = await supabase.functions.invoke('generate-mood-insight', {
         headers: { Authorization: `Bearer ${session.access_token}` },
         body: {
-          feature: 'generate-mood-insight',
-          payload: {
-            prompt: userInput,
-            userName,
-            conversationHistory: newConversation,
-          }
+          prompt: userInput,
+          userName,
+          conversationHistory: newConversation,
         }
       });
       if (insightError) throw insightError;

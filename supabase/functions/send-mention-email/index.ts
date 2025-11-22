@@ -46,11 +46,9 @@ const sendEmail = async (to: string, subject: string, html: string, text: string
       .from('app_config')
       .select('value')
       .eq('key', 'EMAILIT_API_KEY')
-      .maybeSingle();
+      .single();
 
-    if (configError) throw new Error(`Failed to fetch Emailit config: ${configError.message}`);
-
-    if (!config?.value) {
+    if (configError || !config?.value) {
         console.warn("Emailit API key not configured. Skipping email.");
         throw new Error("Emailit API key not configured.");
     }
@@ -93,23 +91,16 @@ Deno.serve(async (req) => {
     }
 
     const [recipientRes, projectRes, mentionerRes, commentRes] = await Promise.all([
-        supabaseAdmin.from('profiles').select('first_name, last_name, email').eq('id', recipient_id).maybeSingle(),
-        supabaseAdmin.from('projects').select('name, slug').eq('id', project_id).maybeSingle(),
-        supabaseAdmin.from('profiles').select('first_name, last_name, email').eq('id', mentioner_id).maybeSingle(),
-        supabaseAdmin.from('comments').select('text').eq('id', comment_id).maybeSingle(),
+        supabaseAdmin.from('profiles').select('first_name, last_name, email').eq('id', recipient_id).single(),
+        supabaseAdmin.from('projects').select('name, slug').eq('id', project_id).single(),
+        supabaseAdmin.from('profiles').select('first_name, last_name, email').eq('id', mentioner_id).single(),
+        supabaseAdmin.from('comments').select('text').eq('id', comment_id).single(),
     ]);
 
-    if (recipientRes.error) throw new Error(`Recipient query error: ${recipientRes.error.message}`);
-    if (!recipientRes.data) throw new Error(`Recipient with ID ${recipient_id} not found`);
-    
-    if (projectRes.error) throw new Error(`Project query error: ${projectRes.error.message}`);
-    if (!projectRes.data) throw new Error(`Project with ID ${project_id} not found`);
-
-    if (mentionerRes.error) throw new Error(`Mentioner query error: ${mentionerRes.error.message}`);
-    if (!mentionerRes.data) throw new Error(`Mentioner with ID ${mentioner_id} not found`);
-
-    if (commentRes.error) throw new Error(`Comment query error: ${commentRes.error.message}`);
-    if (!commentRes.data) throw new Error(`Comment with ID ${comment_id} not found`);
+    if (recipientRes.error) throw new Error(`Recipient not found: ${recipientRes.error.message}`);
+    if (projectRes.error) throw new Error(`Project not found: ${projectRes.error.message}`);
+    if (mentionerRes.error) throw new Error(`Mentioner not found: ${mentionerRes.error.message}`);
+    if (commentRes.error) throw new Error(`Comment not found: ${commentRes.error.message}`);
 
     const recipient = recipientRes.data;
     const projectData = projectRes.data;

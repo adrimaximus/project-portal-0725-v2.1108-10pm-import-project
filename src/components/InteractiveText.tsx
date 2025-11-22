@@ -4,106 +4,118 @@ import { User } from '@/types';
 
 interface InteractiveTextProps {
   text: string;
-  members?: User[];
+  members: User[];
 }
 
-const InteractiveText: React.FC<InteractiveTextProps> = ({ text, members = [] }) => {
+const InteractiveText: React.FC<InteractiveTextProps> = ({ text, members }) => {
   if (!text) return null;
 
-  // Regex to match:
-  // 1. User Mentions: @[Name](id)
-  // 2. Resource Mentions (Projects/Tasks/Bills): #[Name](type:data)
-  // 3. Markdown Links: [Label](url)
-  const regex = /([@#]?\[[^\]]+\]\([^)]+\))/g;
+  // Regex to find mentions: @[Display Name](uuid)
+  const mentionRegex = /@\[([^\]]+)\]\(([^)]+)\)/g;
   
-  const parts = text.split(regex);
+  // Regex to find URLs: http(s)://... 
+  // Uses [^\s]+ to capture the full token initially. We will refine it in the loop.
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
 
-  return (
-    <>
-      {parts.map((part, index) => {
-        if (!part) return null;
+  const parts: React.ReactNode[] = [];
+  let lastIndex = 0;
 
-        // 1. User Mention: @[Name](id)
-        const userMatch = part.match(/^@\[([^\]]+)\]\(([^)]+)\)$/);
-        if (userMatch) {
-          const [, name] = userMatch;
-          return (
-            <span key={index} className="bg-primary/10 text-primary font-semibold rounded px-1 py-0.5 inline-flex items-center gap-1 align-middle text-xs mx-0.5">
-              @{name}
-            </span>
-          );
-        }
+  // Combine regex for mentions and URLs to process in one pass
+  const combinedRegex = new RegExp(`(${mentionRegex.source})|(${urlRegex.source})`, 'g');
 
-        // 2. Resource Mention: #[Name](type:data)
-        // Example: #[Task Title](task:project_slug:task_id)
-        const resourceMatch = part.match(/^#\[([^\]]+)\]\(([^)]+)\)$/);
-        if (resourceMatch) {
-          const [, label, info] = resourceMatch;
-          // Split only on the first few colons
-          const parts = info.split(':');
-          const type = parts[0];
-          const data = parts.slice(1);
-          
-          let url = '#';
+  let match;
+  while ((match = combinedRegex.exec(text)) !== null) {
+    const startIndex = match.index;
+    const endIndex = combinedRegex.lastIndex;
 
-          if (type === 'project' && data.length > 0) {
-             url = `/projects/${data[0]}`;
-          } else if (type === 'task' && data.length >= 2) {
-             url = `/projects/${data[0]}?tab=tasks&task=${data[1]}`;
-          } else if (type === 'bill' && data.length > 0) {
-             url = `/projects/${data[0]}?tab=billing`;
-          }
-          
-          return (
-             <Link 
-                key={index} 
-                to={url} 
-                className="text-primary underline decoration-primary/50 underline-offset-2 font-medium cursor-pointer transition-opacity hover:opacity-80"
-                onClick={(e) => e.stopPropagation()}
-              >
-                {label}
-              </Link>
-          );
-        }
+    // Add preceding plain text
+    if (startIndex > lastIndex) {
+      parts.push(text.substring(lastIndex, startIndex));
+    }
 
-        // 3. Markdown Link: [Label](url)
-        const linkMatch = part.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
-        if (linkMatch) {
-          const [, label, url] = linkMatch;
-          const isInternal = url.startsWith('/');
-          const classes = "text-primary underline decoration-primary/50 underline-offset-2 font-medium cursor-pointer transition-opacity hover:opacity-80";
+    // Check if it's a mention (group 1 is for mention, group 4 is for URL wrapper)
+    // Group indices:
+    // 1: Full mention match
+    // 2: Display Name
+    // 3: UUID
+    // 4: Full URL match wrapper
+    
+    if (match[1]) { // This means it's a mention
+      const displayName = match[2];
+      const userId = match[3];
+      const mentionedUser = members.find(m => m.id === userId);
 
-          if (isInternal) {
-            return (
-              <Link 
-                key={index} 
-                to={url} 
-                className={classes}
-                onClick={(e) => e.stopPropagation()}
-              >
-                {label}
-              </Link>
-            );
-          }
-          return (
-            <a 
-              key={index} 
-              href={url} 
-              target="_blank" 
-              rel="noopener noreferrer" 
-              className={classes}
-              onClick={(e) => e.stopPropagation()}
+      if (mentionedUser) {
+        parts.push(
+          <Link 
+            key={`mention-${startIndex}`} 
+            to={`/users/${mentionedUser.id}`} 
+            className="text-primary bg-primary/10 hover:bg-primary/20 rounded-md px-1.5 py-0.5 font-medium transition-colors no-underline"
+          >
+            @{displayName}
+          </Link>
+        );
+      } else {
+        parts.push(
+            <span 
+                key={`mention-${startIndex}`} 
+                className="text-primary/70 bg-primary/5 rounded-md px-1.5 py-0.5 font-medium"
             >
-              {label}
-            </a>
-          );
-        }
+                @{displayName}
+            </span>
+        );
+      }
+    } else if (match[4]) { // This means it's a URL
+      let url = match[4];
+      let suffix = "";
 
-        // 4. Plain Text
-        return <span key={index}>{part}</span>;
-      })}
-    </>
-  );
+      // Smartly strip trailing punctuation that isn't part of the URL
+      // Iterate backwards to peel off punctuation
+      while (url.length > 0) {
+        const lastChar = url[url.length - 1];
+        
+        // Check for common sentence punctuation
+        if (/[.,;:!?]/.test(lastChar)) {
+          url = url.slice(0, -1);
+          suffix = lastChar + suffix;
+        } 
+        // Special handling for closing parenthesis
+        else if (lastChar === ')') {
+          const openCount = (url.match(/\(/g) || []).length;
+          const closeCount = (url.match(/\)/g) || []).length;
+          
+          // If we have more closing parens than opening, this one is likely a wrapper
+          if (closeCount > openCount) {
+             url = url.slice(0, -1);
+             suffix = lastChar + suffix;
+          } else {
+             // Balanced or more open, so this ')' is probably part of the URL
+             break;
+          }
+        } else {
+          // Valid URL character found at end
+          break;
+        }
+      }
+
+      parts.push(
+        <a key={`url-${startIndex}`} href={url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+          {url}
+        </a>
+      );
+      if (suffix) {
+        parts.push(suffix);
+      }
+    }
+    lastIndex = endIndex;
+  }
+
+  // Add any remaining plain text
+  if (lastIndex < text.length) {
+    parts.push(text.substring(lastIndex));
+  }
+
+  return <>{parts}</>;
 };
 
 export default InteractiveText;

@@ -14,22 +14,6 @@ const corsHeaders = {
 
 const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
 
-// --- Helper Data ---
-const iconNames = [
-  'Activity', 'Anchor', 'Aperture', 'Award', 'BarChart', 'Bike', 'BookOpen', 'Briefcase', 'Brush', 'Calendar', 'Camera', 'Car', 'CheckCircle', 'ClipboardCheck', 'Cloud', 'Code', 'Coffee', 'Compass', 'Cpu', 'CreditCard', 'Crown', 'Database', 'Diamond', 'DollarSign', 'Dumbbell', 'Feather', 'FileText', 'Film', 'Flag', 'Flame', 'Flower', 'Gamepad2', 'Gift', 'Globe', 'GraduationCap', 'Guitar', 'HardDrive', 'Headphones', 'Heart', 'Home', 'ImageIcon', 'Key', 'Laptop', 'Leaf', 'Lightbulb', 'Link', 'Map', 'Medal', 'Mic', 'Moon', 'MountainSnow', 'MousePointer', 'Music', 'Paintbrush', 'Palette', 'PenTool', 'Phone', 'PieChart', 'Plane', 'Puzzle', 'Rocket', 'Save', 'Scale', 'Scissors', 'Settings', 'Shield', 'Ship', 'ShoppingBag', 'Smile', 'Speaker', 'Sprout', 'Star', 'Sun', 'Sunrise', 'Sunset', 'Sword', 'Tag', 'Target', 'Tent', 'TrainFront', 'TreePine', 'TrendingUp', 'Trophy', 'Truck', 'Umbrella', 'Users', 'Utensils', 'Video', 'Volleyball', 'Wallet', 'Watch', 'Waves', 'Wind', 'Wine', 'Wrench', 'Zap'
-];
-
-const colorThemes = [
-    { name: 'Blue', classes: 'bg-blue-100 text-blue-600' },
-    { name: 'Green', classes: 'bg-green-100 text-green-600' },
-    { name: 'Purple', classes: 'bg-purple-100 text-purple-600' },
-    { name: 'Orange', classes: 'bg-orange-100 text-orange-600' },
-    { name: 'Red', classes: 'bg-red-100 text-red-600' },
-    { name: 'Gray', classes: 'bg-gray-100 text-gray-600' },
-];
-
-// --- System Prompts ---
-
 const getAnalyzeProjectsSystemPrompt = (context: any, userName: string) => `You are an expert project and goal management AI assistant. Your purpose is to execute actions for the user. You will receive a conversation history and context data.
 
 **Conversational Style:**
@@ -189,7 +173,7 @@ const buildContext = async (supabaseClient: any, user: any) => {
     }));
     const userList = usersRes.data.map((u: any) => ({ id: u.id, name: `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email }));
     const serviceList = [ "3D Graphic Design", "Accommodation", "Award Ceremony", "Branding", "Content Creation", "Digital Marketing", "Entertainment", "Event Decoration", "Event Equipment", "Event Gamification", "Exhibition Booth", "Food & Beverage", "Keyvisual Graphic Design", "LED Display", "Lighting System", "Logistics", "Man Power", "Merchandise", "Motiongraphic Video", "Multimedia System", "Payment Advance", "Photo Documentation", "Plaque & Trophy", "Prints", "Professional Security", "Professional video production for commercial ads", "Show Management", "Slido", "Sound System", "Stage Production", "Talent", "Ticket Management System", "Transport", "Venue", "Video Documentation", "VIP Services", "Virtual Events", "Awards System", "Brand Ambassadors", "Electricity & Genset", "Event Consultation", "Workshop" ];
-    const iconList = iconNames;
+    const iconList = [ 'Target', 'Flag', 'BookOpen', 'Dumbbell', 'TrendingUp', 'Star', 'Heart', 'Rocket', 'DollarSign', 'FileText', 'ImageIcon', 'Award', 'BarChart', 'Calendar', 'CheckCircle', 'Users', 'Activity', 'Anchor', 'Aperture', 'Bike', 'Briefcase', 'Brush', 'Camera', 'Car', 'ClipboardCheck', 'Cloud', 'Code', 'Coffee', 'Compass', 'Cpu', 'CreditCard', 'Crown', 'Database', 'Diamond', 'Feather', 'Film', 'Flame', 'Flower', 'Gamepad2', 'Gift', 'Globe', 'GraduationCap', 'Headphones', 'Home', 'Key', 'Laptop', 'Leaf', 'Lightbulb', 'Link', 'Map', 'Medal', 'Mic', 'Moon', 'MousePointer', 'Music', 'Paintbrush', 'Palette', 'PenTool', 'Phone', 'PieChart', 'Plane', 'Puzzle', 'Save', 'Scale', 'Scissors', 'Settings', 'Shield', 'Ship', 'ShoppingBag', 'Smile', 'Speaker', 'Sun', 'Sunrise', 'Sunset', 'Sword', 'Tag', 'Trophy', 'Truck', 'Umbrella', 'Video', 'Wallet', 'Watch', 'Wind', 'Wrench', 'Zap' ];
     const summarizedArticles = articlesRes.data.map((a: any) => ({ title: a.title, folder: foldersRes.data.find((f: any) => f.id === a.folder_id)?.name }));
     const summarizedFolders = foldersRes.data.map((f: any) => f.name);
     console.log("[DIAGNOSTIC] buildContext: Data summarization complete.");
@@ -214,8 +198,6 @@ const buildContext = async (supabaseClient: any, user: any) => {
     throw error; // Re-throw to be caught by the main handler
   }
 };
-
-// ... (Keep existing executeAction function)
 
 const executeAction = async (actionData: any, context: any) => {
     console.log("[DIAGNOSTIC] executeAction: Starting action execution for", actionData.action);
@@ -854,19 +836,6 @@ async function aiMergeContacts(payload: any, context: any) {
   const primaryPerson = peopleData.find((p: any) => p.id === primary_person_id);
   const secondaryPerson = peopleData.find((p: any) => p.id === secondary_person_id);
 
-  const systemPrompt = `You are an intelligent contact merging assistant. Your task is to merge two JSON objects representing two people into a single, consolidated JSON object. Follow these rules carefully:
-
-1.  **Primary Record**: The user will designate one record as "primary". You should prioritize data from this record but intelligently incorporate data from the "secondary" record.
-2.  **No Data Deletion**: Do not discard information from the secondary record. If a field from the secondary record conflicts with the primary (e.g., a different job title), and cannot be combined, add the secondary information to the 'notes' field in a structured way, like "Also worked as: [Job Title] at [Company]".
-3.  **Field Merging Logic**:
-    *   **user_id**: This is the most important field. If the primary record has a user_id, keep it. If the primary does not but the secondary does, the merged record MUST inherit the user_id from the secondary record. If both have different user_ids, this is a conflict; keep the primary's user_id and add a note like "This contact was merged with another registered user (ID: [secondary_user_id])".
-    *   **full_name, email**: If the merged record has a user_id, these fields should be taken from the record that provided the user_id, as they are managed by the user's profile.
-    *   **avatar_url, company, job_title, department, birthday**: If both records have a value, prefer the primary record's value. Add the secondary record's value to the 'notes' if it's different and seems important (e.g., a different company or job title).
-    *   **contact (emails, phones)**: Combine the arrays, ensuring all unique values are kept. Do not duplicate entries.
-    *   **social_media**: Merge the two JSON objects. If a key exists in both (e.g., 'linkedin'), the primary record's value takes precedence.
-    *   **notes**: Intelligently combine the notes from both records. Do not simply concatenate them. Summarize if possible, remove redundancy, and add a separator like "--- Merged Notes ---" if you are combining distinct blocks of text. Also, add any conflicting information from other fields here.
-4.  **Output Format**: Your response MUST be ONLY the final, merged JSON object representing the person. Do not include any explanations, markdown formatting, or other text. The JSON should be a valid object that can be parsed directly.`;
-
   // Ask AI to merge
   let mergedPersonJSON;
   if (anthropic) {
@@ -935,30 +904,6 @@ async function aiMergeContacts(payload: any, context: any) {
 
   return { message: "Contacts merged successfully by AI." };
 }
-
-// Feature prompts for article writing
-const articleWriterFeaturePrompts = {
-  'generate-article-from-title': {
-    system: `You are an expert technical writer. Create a comprehensive article in HTML based on the user's title. Use <h2> for headings, <p> for paragraphs, and <ul>/<li> for lists. Do not include <html>, <head>, or <body> tags, just the content.`,
-    user: (payload: any) => `Write an article with the title: "${payload.title}"`,
-    max_tokens: 1500,
-  },
-  'expand-article-text': {
-    system: `You are an expert editor. Your task is to expand on the selected text, adding more detail, examples, and depth, while maintaining the original tone. Return ONLY the expanded HTML content.`,
-    user: (payload: any) => `Context: ${payload.fullContent}\n\nExpand on this specific text: "${payload.selectedText}"`,
-    max_tokens: 1000,
-  },
-  'improve-article-content': {
-    system: `You are an expert editor. Improve the following article content for clarity, flow, and professionalism. Fix grammar and spelling errors. Return the improved HTML content.`,
-    user: (payload: any) => `Improve this content:\n${payload.content}`,
-    max_tokens: 2000,
-  },
-  'summarize-article-content': {
-    system: `You are an expert summarizer. Create a concise summary of the following content in HTML format.`,
-    user: (payload: any) => `Summarize this:\n${payload.content}`,
-    max_tokens: 500,
-  },
-};
 
 async function articleWriter(payload: any, context: any) {
   const { openai, anthropic, feature } = context;
@@ -1106,431 +1051,6 @@ async function generateIcon(payload: any, context: any) {
   return { result: imageUrl };
 }
 
-async function generateProjectTasks(payload: any, context: any) {
-    const { openai, anthropic } = context;
-    const { projectName, venue, services, description, existingTasks } = payload;
-
-    const serviceList = Array.isArray(services) && services.length > 0 ? services.join(', ') : 'Not specified';
-    const existingTasksList = Array.isArray(existingTasks) && existingTasks.length > 0 ? `The following tasks already exist, so do not generate them again: ${existingTasks.join(', ')}.` : '';
-
-    const systemPrompt = `You are an expert project management assistant specializing in brand activation and event execution. Your primary goal is to break down a project into actionable tasks.`;
-
-    const userPrompt = `
-      Focus heavily on the **Project Title** and **Project Description** to understand the core objectives. Use other details as supplementary context.
-
-      **Project Details:**
-      - **Project Title (Primary Focus):** ${projectName}
-      - **Project Description (Primary Focus):** ${description || 'No overview provided.'}
-      - **Event Venue:** ${venue || 'not specified'}
-      - **Services Provided:** ${serviceList}
-
-      ${existingTasksList}
-
-      Based on the information above, generate a JSON array of 5 new, highly specific, concise, and actionable task objects. Each object must have two keys: "title" (a string) and "priority" (a string, which must be one of: "Low", "Normal", "High", "Urgent").
-
-      Return ONLY a valid JSON array of objects. For example: [{"title": "Prepare promotional materials", "priority": "High"}, {"title": "Coordinate with sound system vendor", "priority": "Normal"}]. Do not include any other text, markdown, or explanation.`;
-
-    let result;
-    if (anthropic) {
-        const response = await anthropic.messages.create({
-            model: "claude-3-haiku-20240307",
-            max_tokens: 1024,
-            system: systemPrompt,
-            messages: [{ role: "user", content: userPrompt }],
-        });
-        const responseText = response.content[0].text;
-        const jsonMatch = responseText.match(/\[.*\]/s);
-        if (!jsonMatch) throw new Error("AI response did not contain a valid JSON array.");
-        result = JSON.parse(jsonMatch[0]);
-    } else if (openai) {
-        const response = await openai.chat.completions.create({
-            model: "gpt-4-turbo",
-            messages: [
-                { role: "system", content: systemPrompt },
-                { role: "user", content: userPrompt }
-            ],
-            max_tokens: 1024,
-        });
-        const responseText = response.choices[0].message.content;
-        // OpenAI might wrap in markdown code blocks
-        const cleanText = responseText.replace(/^```json\n|\n```$/g, '');
-        result = JSON.parse(cleanText);
-    } else {
-        throw new Error("No AI provider configured.");
-    }
-
-    if (!Array.isArray(result) || result.length === 0) {
-        throw new Error("AI generated an empty or invalid list of tasks.");
-    }
-
-    return result;
-}
-
-async function generateProjectBrief(payload: any, context: any) {
-    const { openai, anthropic } = context;
-    const { title, startDate, dueDate, venue, services } = payload;
-
-    if (!title) throw new Error('Project title is required.');
-
-    const formattedStartDate = startDate ? new Date(startDate).toLocaleDateString('id-ID', { month: 'long', day: 'numeric', year: 'numeric' }) : 'Belum ditentukan';
-    const formattedDueDate = dueDate ? new Date(dueDate).toLocaleDateString('id-ID', { month: 'long', day: 'numeric', year: 'numeric' }) : 'Belum ditentukan';
-
-    const systemPrompt = `Anda adalah seorang manajer proyek ahli. Tugas Anda adalah membuat brief proyek yang profesional dan komprehensif dalam format HTML. Brief harus terstruktur dengan baik, jelas, dan siap digunakan dalam alat manajemen proyek.`;
-
-    const userPrompt = `
-      **Detail Proyek:**
-      - **Judul:** ${title}
-      - **Tanggal Mulai:** ${formattedStartDate}
-      - **Tanggal Selesai:** ${formattedDueDate}
-      - **Lokasi:** ${venue || 'Belum ditentukan'}
-      - **Layanan yang Dibutuhkan:** ${services && services.length > 0 ? services.join(', ') : 'Belum ditentukan'}
-
-      **Instruksi:**
-      1.  Mulai dengan bagian **Ringkasan Proyek** (menggunakan tag <h2>). Jelaskan secara singkat tujuan dan sasaran proyek.
-      2.  Buat bagian **Lingkup Pekerjaan** (menggunakan tag <h2>). Rincikan layanan yang akan diberikan menggunakan daftar berpoin (tag <ul> dan <li>).
-      3.  Sertakan bagian **Detail Utama** (menggunakan tag <h2>). Cantumkan linimasa dan lokasi menggunakan daftar berpoin.
-      4.  Akhiri dengan bagian **Langkah Selanjutnya** (menggunakan tag <h2>) yang menyarankan tindakan awal seperti rapat kickoff atau penyelarasan tim.
-      5.  Seluruh output harus dalam format HTML yang valid. Jangan sertakan \`\`\`html atau format markdown apa pun. Kembalikan hanya konten HTML mentah.
-    `;
-
-    let brief;
-    if (anthropic) {
-        const response = await anthropic.messages.create({
-            model: "claude-3-haiku-20240307",
-            max_tokens: 1024,
-            system: systemPrompt,
-            messages: [{ role: "user", content: userPrompt }],
-        });
-        brief = response.content[0].text;
-    } else if (openai) {
-        const response = await openai.chat.completions.create({
-            model: "gpt-4-turbo",
-            messages: [
-                { role: "system", content: systemPrompt },
-                { role: "user", content: userPrompt }
-            ],
-            max_tokens: 1024,
-        });
-        brief = response.choices[0].message.content;
-    } else {
-        throw new Error("No AI provider configured.");
-    }
-
-    return { brief };
-}
-
-async function generateCaption(payload: any, context: any) {
-    const { openai, anthropic } = context;
-    const { altText } = payload;
-    if (!altText) throw new Error("altText is required.");
-
-    const systemPrompt = `You are an AI that generates a short, inspiring, one-line caption for an image. The caption should be suitable for a professional dashboard related to events, marketing, and project management. Respond with ONLY the caption, no extra text or quotes. Keep it under 12 words.`;
-    const userPrompt = `Generate a caption for an image described as: "${altText}"`;
-
-    let caption = "";
-    if (anthropic) {
-        const response = await anthropic.messages.create({
-            model: "claude-3-haiku-20240307",
-            messages: [{ role: "user", content: userPrompt }],
-            system: systemPrompt,
-            temperature: 0.7,
-            max_tokens: 50,
-        });
-        caption = response.content[0].text;
-    } else if (openai) {
-        const response = await openai.chat.completions.create({
-            model: "gpt-3.5-turbo",
-            messages: [
-                { role: "system", content: systemPrompt },
-                { role: "user", content: userPrompt }
-            ],
-            temperature: 0.7,
-            max_tokens: 50,
-        });
-        caption = response.choices[0].message.content;
-    } else {
-        // Fallback
-        caption = altText;
-    }
-    return { caption: caption?.trim().replace(/^"|"$/g, '') };
-}
-
-async function generateMoodInsight(payload: any, context: any) {
-    const { openai, anthropic } = context;
-    const { prompt, userName, conversationHistory } = payload;
-    if (!prompt) throw new Error("Prompt is required.");
-
-    const systemPrompt = `Anda adalah seorang teman AI yang suportif, empatik, dan berwawasan luas. Tujuan Anda adalah untuk terlibat dalam percakapan yang mendukung dengan pengguna tentang suasana hati dan perasaan mereka. Anda akan menerima riwayat percakapan. Tugas Anda adalah memberikan respons berikutnya dalam percakapan tersebut. Pertahankan nada yang positif dan memotivasi. Sapa pengguna dengan nama mereka jika ini adalah awal percakapan. Jaga agar respons tetap sangat ringkas, maksimal 2 kalimat, dan terasa seperti percakapan alami. Jangan mengulangi diri sendiri. Fokus percakapan ini adalah murni pada kesejahteraan emosional. Jangan membahas topik lain seperti proyek, tugas, atau tujuan kerja kecuali jika pengguna secara eksplisit mengungkitnya terlebih dahulu dalam konteks perasaan mereka. Selalu berikan respons dalam Bahasa Indonesia.`;
-
-    const messages = [
-      ...(conversationHistory || []).map((msg: any) => ({
-        role: msg.sender === 'ai' ? 'assistant' : 'user',
-        content: msg.content
-      })),
-      { role: "user", content: prompt }
-    ];
-    
-    if (messages.length > 2 && messages[messages.length-2].role === 'user' && messages[messages.length-2].content === prompt) {
-      messages.splice(messages.length-2, 1);
-    }
-
-    let result;
-    if (anthropic) {
-        const response = await anthropic.messages.create({
-            model: "claude-3-haiku-20240307",
-            messages: messages,
-            system: systemPrompt,
-            temperature: 0.7,
-            max_tokens: 200,
-        });
-        result = response.content[0].text;
-    } else if (openai) {
-        const response = await openai.chat.completions.create({
-            model: "gpt-4-turbo",
-            messages: [{ role: "system", content: systemPrompt }, ...messages.filter(m => m.role !== 'system')],
-            temperature: 0.7,
-            max_tokens: 200,
-        });
-        result = response.choices[0].message.content;
-    } else {
-        throw new Error("No AI provider configured.");
-    }
-
-    return { result };
-}
-
-async function generateGoalInsight(payload: any, context: any) {
-    const { openai, anthropic } = context;
-    const { goal, context: progressContext } = payload;
-    if (!goal || !progressContext) throw new Error("Goal and context are required.");
-
-    const owner = goal.collaborators.find((c: any) => c.id === goal.user_id);
-    const otherCollaborators = goal.collaborators.filter((c: any) => c.id !== goal.user_id);
-
-    const modifiedGoal = {
-      ...goal,
-      owner: owner,
-      collaborators: otherCollaborators,
-    };
-    delete modifiedGoal.user_id;
-
-    const systemPrompt = `Anda adalah seorang pelatih AI yang suportif dan berwawasan luas. Tujuan Anda adalah memberikan saran yang memotivasi dan dapat ditindaklanjuti kepada pengguna berdasarkan kemajuan mereka. Analisis detail tujuan berikut: judul, deskripsi, tipe, tag, pemilik (owner), kolaborator lain (collaborators), dan kemajuan terbaru. Berdasarkan analisis holistik ini, berikan wawasan singkat yang bermanfaat dalam format markdown.
-
-- Pertahankan nada yang positif dan memotivasi.
-- Sapa pengguna secara langsung. Jika ada pemilik (owner), sapa mereka sebagai pemilik tujuan.
-- Jika ada kolaborator lain, Anda bisa menyebutkan mereka dalam konteks kolaborasi.
-- Jika kemajuan baik, berikan pujian dan sarankan cara untuk mempertahankan momentum.
-- Jika kemajuan tertinggal, berikan semangat, bukan kritik. Sarankan langkah-langkah kecil yang dapat dikelola untuk kembali ke jalur yang benar.
-- Jaga agar respons tetap ringkas (2-4 kalimat).
-- Jangan mengulangi data kembali kepada pengguna; interpretasikan data tersebut.
-- PENTING: Selalu berikan respons dalam Bahasa Indonesia.`;
-
-    const userPrompt = `Berikut adalah tujuan saya dan kemajuan terbaru saya. Tolong berikan saya beberapa saran pembinaan.
-Tujuan: ${JSON.stringify(modifiedGoal, null, 2)}
-Konteks Kemajuan: ${JSON.stringify(progressContext, null, 2)}`;
-
-    let result;
-    if (anthropic) {
-        const response = await anthropic.messages.create({
-            model: "claude-3-haiku-20240307",
-            messages: [{ role: "user", content: userPrompt }],
-            system: systemPrompt,
-            temperature: 0.7,
-            max_tokens: 200,
-        });
-        result = response.content[0].text;
-    } else if (openai) {
-        const response = await openai.chat.completions.create({
-            model: "gpt-4-turbo",
-            messages: [
-                { role: "system", content: systemPrompt },
-                { role: "user", content: userPrompt }
-            ],
-            temperature: 0.7,
-            max_tokens: 200,
-        });
-        result = response.choices[0].message.content;
-    } else {
-        throw new Error("No AI provider configured.");
-    }
-
-    return { result };
-}
-
-async function previewContactMerge(payload: any, context: any) {
-    const { supabaseAdmin, openai, anthropic } = context;
-    const { primary_person_id, secondary_person_id } = payload;
-    if (!primary_person_id || !secondary_person_id) {
-        throw new Error("Primary and secondary person IDs are required.");
-    }
-
-    // Fetch both person records
-    const { data: peopleData, error: peopleError } = await supabaseAdmin
-        .rpc('get_people_with_details')
-        .in('id', [primary_person_id, secondary_person_id]);
-
-    if (peopleError) throw peopleError;
-    if (!peopleData || peopleData.length < 2) throw new Error("Could not find both contacts to merge.");
-
-    const primaryPerson = peopleData.find((p: any) => p.id === primary_person_id);
-    const secondaryPerson = peopleData.find((p: any) => p.id === secondary_person_id);
-
-    const systemPrompt = `You are an intelligent contact merging assistant. Merge two JSON objects representing people into a single consolidated object.
-Rules:
-1. Prioritize data from the primary record.
-2. Incorporate unique data from the secondary record (e.g. combine unique emails/phones).
-3. Do not delete data; if there's a conflict (like different job titles), add the secondary info to the 'notes' field.
-4. Output ONLY the valid JSON object.`;
-
-    const userPrompt = `Merge these two contacts.\n\nPrimary:\n${JSON.stringify(primaryPerson, null, 2)}\n\nSecondary:\n${JSON.stringify(secondaryPerson, null, 2)}`;
-
-    let result;
-    if (anthropic) {
-        const response = await anthropic.messages.create({
-            model: "claude-3-haiku-20240307",
-            messages: [{ role: "user", content: userPrompt }],
-            system: systemPrompt,
-            temperature: 0.2,
-            max_tokens: 2048,
-        });
-        result = response.content[0].text;
-    } else if (openai) {
-        const response = await openai.chat.completions.create({
-            model: "gpt-4-turbo",
-            messages: [
-                { role: "system", content: systemPrompt },
-                { role: "user", content: userPrompt }
-            ],
-            temperature: 0.2,
-            response_format: { type: "json_object" },
-        });
-        result = response.choices[0].message.content;
-    } else {
-        throw new Error("No AI provider configured.");
-    }
-
-    const jsonMatch = result.match(/{[\s\S]*}/);
-    if (!jsonMatch) throw new Error("AI response was not valid JSON.");
-    return JSON.parse(jsonMatch[0]);
-}
-
-async function generateServiceDetails(payload: any, context: any) {
-    const { openai, anthropic } = context;
-    const { title } = payload;
-    if (!title) throw new Error("Title is required");
-
-    const systemPrompt = `Based on the service title provided, generate a JSON object with:
-1. "description": A concise, one-sentence description.
-2. "icon": The most suitable icon name from this list: [${iconNames.join(', ')}].
-Response must be ONLY valid JSON.`;
-
-    const userPrompt = `Service Title: "${title}"`;
-
-    let result;
-    if (anthropic) {
-        const response = await anthropic.messages.create({
-            model: "claude-3-haiku-20240307",
-            messages: [{ role: "user", content: userPrompt }],
-            system: systemPrompt,
-            temperature: 0.3,
-            max_tokens: 200,
-        });
-        result = response.content[0].text;
-    } else if (openai) {
-        const response = await openai.chat.completions.create({
-            model: "gpt-4-turbo",
-            messages: [
-                { role: "system", content: systemPrompt },
-                { role: "user", content: userPrompt }
-            ],
-            temperature: 0.3,
-            response_format: { type: "json_object" },
-        });
-        result = response.choices[0].message.content;
-    } else {
-        throw new Error("No AI provider configured.");
-    }
-
-    const jsonMatch = result.match(/{[\s\S]*}/);
-    if (!jsonMatch) throw new Error("AI response was not valid JSON.");
-    const parsed = JSON.parse(jsonMatch[0]);
-
-    // Add a random color theme
-    const randomColor = colorThemes[Math.floor(Math.random() * colorThemes.length)].classes;
-    parsed.icon_color = randomColor;
-
-    return parsed;
-}
-
-async function diagnoseProjects(payload: any, context: any) {
-  const { openai, anthropic, userSupabase, supabaseAdmin } = context;
-  
-  const { data: userProjects, error: rpcError } = await userSupabase.rpc('get_dashboard_projects');
-  
-  const diagnostics: any = {};
-  
-  const { data: projectPolicies } = await supabaseAdmin.from('pg_policies').select('policyname').eq('tablename', 'projects');
-  diagnostics.projectsRLS = projectPolicies && projectPolicies.length > 0;
-
-  const { data: memberPolicies } = await supabaseAdmin.from('pg_policies').select('policyname').eq('tablename', 'project_members');
-  diagnostics.projectMembersRLS = memberPolicies && memberPolicies.length > 0;
-
-  diagnostics.rpcReturnsData = !rpcError && userProjects && userProjects.length > 0;
-  diagnostics.projectCount = userProjects ? userProjects.length : 0;
-
-  const { data: projectsWithNullDates, error: nullDateError } = await supabaseAdmin
-      .from('projects')
-      .select('id', { count: 'exact' })
-      .or('start_date.is.null,due_date.is.null')
-      .in('id', userProjects ? userProjects.map((p: any) => p.id) : []);
-  diagnostics.projectsWithNullDates = nullDateError ? 'unknown' : projectsWithNullDates?.length || 0;
-
-  const systemPrompt = `You are an expert Supabase and application support AI. Your goal is to help a user diagnose why their projects might not be showing up in the UI. You will be given a JSON object with diagnostic results. Interpret these results and provide a clear, friendly, and actionable explanation in markdown format.
-
-Here's what the diagnostic keys mean:
-- projectsRLS: boolean - True if Row Level Security is enabled on the 'projects' table. This is critical for security.
-- projectMembersRLS: boolean - True if RLS is enabled on the 'project_members' table. Also critical for security.
-- rpcReturnsData: boolean - True if the function to get projects returns data for this user.
-- projectCount: number - The number of projects the function returned for the user.
-- projectsWithNullDates: number - The number of the user's visible projects that are missing a start or end date, which might affect calendar views.
-
-Based on the results, provide a step-by-step diagnosis.
-- If RLS is off on either table, that's the primary problem. State that there's a critical security misconfiguration and that data cannot be displayed safely. Advise them to contact support immediately.
-- If RLS is on but rpcReturnsData is false (projectCount is 0), it likely means they have no projects or aren't assigned to any. Suggest they create a new project or ask a team member to be added to one.
-- If rpcReturnsData is true but they still report issues, it might be a UI issue or a problem with specific views. If projectsWithNullDates > 0, mention that this could cause them to not appear in calendar/timeline views and suggest editing them to add dates.
-- If all checks pass (RLS is on, data is returned, no null dates), reassure them that the backend seems to be working correctly and the issue might be with a specific filter or view on the page. Suggest they try clearing filters.
-- Keep the tone helpful and reassuring. Address the user directly. Start with "Here's my analysis of your project data connection:".`;
-
-  const userPrompt = JSON.stringify(diagnostics, null, 2);
-
-  let result;
-  if (anthropic) {
-      const response = await anthropic.messages.create({
-          model: "claude-3-haiku-20240307",
-          messages: [{ role: "user", content: userPrompt }],
-          system: systemPrompt,
-          temperature: 0.3,
-          max_tokens: 500,
-      });
-      result = response.content[0].text;
-  } else if (openai) {
-      const response = await openai.chat.completions.create({
-          model: "gpt-4-turbo",
-          messages: [
-              { role: "system", content: systemPrompt },
-              { role: "user", content: userPrompt }
-          ],
-          temperature: 0.3,
-          max_tokens: 500,
-      });
-      result = response.choices[0].message.content;
-  } else {
-      throw new Error("No AI provider configured.");
-  }
-
-  return { result };
-}
-
 const featureMap: { [key: string]: (payload: any, context: any) => Promise<any> } = {
   'analyze-projects': analyzeProjects,
   'analyze-duplicates': analyzeDuplicates,
@@ -1542,14 +1062,6 @@ const featureMap: { [key: string]: (payload: any, context: any) => Promise<any> 
   'suggest-icon': suggestIcon,
   'ai-select-calendar-events': aiSelectCalendarEvents,
   'generate-icon': generateIcon,
-  'generate-project-tasks': generateProjectTasks,
-  'generate-project-brief': generateProjectBrief,
-  'generate-caption': generateCaption,
-  'generate-mood-insight': generateMoodInsight,
-  'generate-goal-insight': generateGoalInsight,
-  'preview-contact-merge': previewContactMerge,
-  'generate-service-details': generateServiceDetails,
-  'diagnose-projects': diagnoseProjects,
 };
 
 const createSupabaseAdmin = () => {
@@ -1564,14 +1076,9 @@ const getOpenAIClient = async (supabaseAdmin: any) => {
     .from('app_config')
     .select('value')
     .eq('key', 'OPENAI_API_KEY')
-    .maybeSingle();
+    .single();
 
-  if (configError) {
-    console.error("Error fetching OpenAI config:", configError);
-    return null;
-  }
-
-  if (!config?.value) {
+  if (configError || !config?.value) {
     return null;
   }
   return new OpenAI({ apiKey: config.value });

@@ -1,6 +1,5 @@
 // @ts-nocheck
-import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.54.0';
+import { createClient } from 'npm:@supabase/supabase-js@2.54.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -8,24 +7,14 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const APP_URL = Deno.env.get("SITE_URL") ?? Deno.env.get("VITE_APP_URL") ?? 'https://app.example.com';
 const CRON_SECRET = Deno.env.get("CRON_SECRET");
 
-// --- Helper Functions ---
+const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, { global: { headers: { 'Accept': 'application/json' } } });
 
-const fetchWithTimeout = async (url: string, options: RequestInit = {}, timeout = 8000) => {
-  const controller = new AbortController();
-  const id = setTimeout(() => controller.abort(), timeout);
-  try {
-    const response = await fetch(url, {
-      ...options,
-      signal: controller.signal,
-    });
-    return response;
-  } finally {
-    clearTimeout(id);
-  }
-};
+// --- Helper Functions ---
 
 const createEmailTemplate = ({ title, mainSubject, recipientName, bodyHtml, buttonText, buttonUrl }: { title: string, mainSubject?: string, recipientName: string, bodyHtml: string, buttonText: string, buttonUrl: string }) => {
   const APP_NAME = "7i Portal";
@@ -70,7 +59,7 @@ const formatPhoneNumberForApi = (phone: string): string | null => {
     return null;
 };
 
-const getWbizConfig = async (supabaseAdmin: any) => {
+const getWbizConfig = async () => {
   const { data: wbizConfig, error: configError } = await supabaseAdmin
     .from('app_config')
     .select('key, value')
@@ -78,8 +67,8 @@ const getWbizConfig = async (supabaseAdmin: any) => {
 
   if (configError) throw new Error(`Failed to get WBIZTOOL config: ${configError.message}`);
 
-  const clientId = wbizConfig?.find((c: any) => c.key === 'WBIZTOOL_CLIENT_ID')?.value;
-  const apiKey = wbizConfig?.find((c: any) => c.key === 'WBIZTOOL_API_KEY')?.value;
+  const clientId = wbizConfig?.find(c => c.key === 'WBIZTOOL_CLIENT_ID')?.value;
+  const apiKey = wbizConfig?.find(c => c.key === 'WBIZTOOL_API_KEY')?.value;
   const whatsappClientId = Deno.env.get('WBIZTOOL_WHATSAPP_CLIENT_ID');
 
   if (!clientId || !apiKey || !whatsappClientId) {
@@ -97,7 +86,7 @@ const sendWhatsappMessage = async (config: any, phone: string, message: string) 
   }
 
   try {
-    const messageResponse = await fetchWithTimeout('https://wbiztool.com/api/v1/send_msg/', {
+    const messageResponse = await fetch('https://wbiztool.com/api/v1/send_msg/', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -111,37 +100,32 @@ const sendWhatsappMessage = async (config: any, phone: string, message: string) 
         phone: formattedPhone,
         message: message,
       }),
-    }, 10000); 
+    });
 
     if (!messageResponse.ok) {
       const status = messageResponse.status;
       const errorText = await messageResponse.text();
       let errorMessage = `Failed to send message (Status: ${status}).`;
 
+      // Enhanced Error Handling for HTML/Cloudflare pages
       if (errorText.includes("Cloudflare") || errorText.includes("524") || errorText.includes("502")) {
-           if (status === 524) errorMessage = "WBIZTOOL API Timeout (Cloudflare 524). The service is taking too long to respond.";
-           else if (status === 502) errorMessage = "WBIZTOOL API Bad Gateway (Cloudflare 502). The service is down.";
-           else errorMessage = `WBIZTOOL API Error (Status: ${status}). Service might be experiencing issues.`;
+         if (status === 524) errorMessage = "WBIZTOOL API Timeout (Cloudflare 524). The service is taking too long to respond.";
+         else if (status === 502) errorMessage = "WBIZTOOL API Bad Gateway (Cloudflare 502). The service is down.";
+         else errorMessage = `WBIZTOOL API Error (Status: ${status}). Service might be experiencing issues.`;
       } else {
           try {
             const errorJson = JSON.parse(errorText);
             errorMessage = errorJson.message || JSON.stringify(errorJson);
           } catch (e) {
+            // Clean up HTML tags and truncate
             const cleanText = errorText.replace(/<[^>]*>?/gm, ' ').replace(/\s+/g, ' ').trim();
             errorMessage = cleanText.substring(0, 200) + (cleanText.length > 200 ? '...' : '');
           }
       }
-      throw new Error(`WBIZTOOL API Error: ${errorMessage}`);
+      throw new Error(errorMessage);
     }
 
-    // Attempt to parse JSON response, but don't fail if it's not JSON (some APIs return empty body on success)
-    try {
-      await messageResponse.json();
-    } catch (e) {
-      // ignore
-    }
-    
-    console.log(`WhatsApp message sent to ${formattedPhone}`);
+    return messageResponse.json();
   } catch (error) {
     console.error(`Error sending WhatsApp to ${formattedPhone}:`, error.message);
     throw error;
@@ -153,11 +137,11 @@ const sendEmail = async (emailitApiKey: string, to: string, subject: string, htm
     const payload = { from: emailFrom, to, subject, html, text };
 
     try {
-      const response = await fetchWithTimeout("https://api.emailit.com/v1/emails", {
+      const response = await fetch("https://api.emailit.com/v1/emails", {
           method: "POST",
           headers: { "Authorization": `Bearer ${emailitApiKey}`, "Content-Type": "application/json" },
           body: JSON.stringify(payload),
-      }, 10000); 
+      });
 
       if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
@@ -243,7 +227,7 @@ const generateTemplatedEmail = (type: string, context: any, recipientName: strin
           ? `${APP_URL}/projects/${context.project_slug}?tab=tasks&task=${context.task_id}`
           : `${APP_URL}/projects/${context.project_slug}?tab=discussion`);
       bodyHtml = `<p><strong>${context.mentioner_name}</strong> mentioned you in a comment:</p>
-                  <blockquote style="border-left:4px solid #0c8e9f;padding-left:1em;margin:1.2em 0;color:#3b4754;background:#f8fafc;border-radius:6px 0 0 6px;">
+                  <blockquote style="border-left:4px solid #ccc;padding-left:1em;margin:1.2em 0;color:#3b4754;background:#f8fafc;border-radius:6px 0 0 6px;">
                       ${context.comment_text.replace(/\n/g, '<br>')}
                   </blockquote>`;
       buttonText = "View Comment";
@@ -331,61 +315,42 @@ const generateTemplatedEmail = (type: string, context: any, recipientName: strin
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const supabaseAdmin = createClient(
-      Deno.env.get("SUPABASE_URL")!, 
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
-
     const userAgent = req.headers.get('user-agent');
     const cronHeader = req.headers.get('X-Cron-Secret');
     const isCron = userAgent?.startsWith('pg_net');
     const isAuthorized = cronHeader && cronHeader === CRON_SECRET;
 
     if (!isCron && !isAuthorized) {
-      // Try to parse as normal user request if not cron
-      const authHeader = req.headers.get('Authorization');
-      if (!authHeader) {
-        console.error('Unauthorized attempt:', { userAgent, hasCronHeader: !!cronHeader });
-        return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: corsHeaders });
-      }
+      console.error('Unauthorized cron attempt:', { userAgent, hasCronHeader: !!cronHeader });
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: corsHeaders });
     }
 
-    // 1. Fetch AND LOCK pending notifications atomically - limit reduced to 10
     const { data: notifications, error: fetchError } = await supabaseAdmin
-      .rpc('pop_pending_notifications', { p_limit: 10 });
+      .from('pending_notifications')
+      .select('*, recipient:profiles(*)')
+      .eq('status', 'pending')
+      .lte('send_at', new Date().toISOString())
+      .lt('retry_count', 3)
+      .order('created_at', { ascending: true })
+      .limit(20);
 
     if (fetchError) throw fetchError;
 
     if (!notifications || notifications.length === 0) {
-      return new Response(JSON.stringify({ message: 'No pending notifications found.' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      return new Response(JSON.stringify({ message: 'No pending notifications.' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    console.log(`Processing ${notifications.length} notifications...`);
-
-    // 2. Manually fetch recipient profiles
-    const recipientIds = [...new Set(notifications.map((n: any) => n.recipient_id))];
-    const { data: profiles, error: profilesError } = await supabaseAdmin
-        .from('profiles')
-        .select('*')
-        .in('id', recipientIds);
-
-    if (profilesError) throw profilesError;
-    
-    const profilesMap = new Map(profiles.map((p: any) => [p.id, p]));
-
-    // 3. Prepare configs
-    const wbizConfig = await getWbizConfig(supabaseAdmin).catch(e => { console.warn(e.message); return null; });
-    const { data: emailitConfig } = await supabaseAdmin.from('app_config').select('value').eq('key', 'EMAILIT_API_KEY').maybeSingle();
+    const wbizConfig = await getWbizConfig().catch(e => { console.warn(e.message); return null; });
+    const { data: emailitConfig } = await supabaseAdmin.from('app_config').select('value').eq('key', 'EMAILIT_API_KEY').single();
     const emailitApiKey = emailitConfig?.value;
 
-    const processingPromises = notifications.map(async (notification: any) => {
+    const processingPromises = notifications.map(async (notification) => {
       try {
-        const recipient = profilesMap.get(notification.recipient_id);
-        
+        const recipient = notification.recipient;
         if (!recipient) {
           await supabaseAdmin.from('pending_notifications').update({ status: 'skipped', error_message: 'Recipient profile not found.', processed_at: new Date().toISOString() }).eq('id', notification.id);
           return { status: 'skipped', reason: 'Recipient not found' };
@@ -407,23 +372,17 @@ Deno.serve(async (req) => {
             await sendWhatsappMessage(wbizConfig, recipient.phone, message);
         }
 
-        // Update to 'processed' (success)
         await supabaseAdmin.from('pending_notifications').update({ status: 'processed', processed_at: new Date().toISOString() }).eq('id', notification.id);
         return { status: 'success' };
       } catch (e) {
         const newRetryCount = (notification.retry_count || 0) + 1;
-        let newStatus = newRetryCount >= 3 ? 'failed' : 'pending';
+        const newStatus = newRetryCount >= 3 ? 'failed' : 'pending';
         console.error(`Failed to process notification ${notification.id} (attempt ${newRetryCount}):`, e.message);
-        
-        if (e.message && e.message.includes("The phone number is not registered on WhatsApp")) {
-          newStatus = 'failed';
-        }
-        
         await supabaseAdmin.from('pending_notifications').update({ 
           status: newStatus, 
           error_message: e.message, 
           processed_at: new Date().toISOString(),
-          retry_count: newStatus === 'failed' ? 3 : newRetryCount,
+          retry_count: newRetryCount,
         }).eq('id', notification.id);
         return { status: 'failed', reason: e.message };
       }

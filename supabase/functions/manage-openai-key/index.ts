@@ -20,11 +20,9 @@ const validateApiKey = async (apiKey) => {
     return true;
   } catch (error) {
     console.error("OpenAI API key validation failed:", error.message);
-    // Handle specific error status if available
     if (error.status === 401) {
         throw new Error("The provided OpenAI API key is invalid or has been revoked.");
     }
-    // Generic fallback
     throw new Error("Could not validate the API key with OpenAI. Please check the key and your OpenAI account status.");
   }
 };
@@ -35,20 +33,14 @@ serve(async (req) => {
   }
 
   try {
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-        // If no auth header is present, return 401 immediately
-        throw new Error("Missing Authorization header.");
-    }
-
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      { global: { headers: { Authorization: authHeader } } }
+      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
     );
 
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) throw new Error("User not authenticated.");
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("User not authenticated.");
 
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -56,8 +48,7 @@ serve(async (req) => {
     );
 
     const checkAdminPermissions = async () => {
-      // Use maybeSingle to prevent 500 errors if profile is missing
-      const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle();
+      const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
       if (!profile || !['admin', 'master admin'].includes(profile.role)) {
         throw new Error("You do not have permission to perform this action.");
       }

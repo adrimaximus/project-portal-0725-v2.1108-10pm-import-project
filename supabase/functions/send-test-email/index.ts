@@ -62,7 +62,7 @@ Deno.serve(async (req) => {
       .from('app_config')
       .select('value')
       .eq('key', 'EMAILIT_API_KEY')
-      .maybeSingle();
+      .single();
 
     if (configError || !config?.value) {
       throw new Error("Emailit API key not configured. Please connect your Emailit account first.");

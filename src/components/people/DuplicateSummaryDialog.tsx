@@ -4,7 +4,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { GitMerge, Users } from 'lucide-react';
 import { DuplicatePair } from './DuplicateContactsCard';
 import { ScrollArea } from '../ui/scroll-area';
-import { Badge } from '@/components/ui/badge';
+import ReactMarkdown from 'react-markdown';
 
 interface DuplicateSummaryDialogProps {
   open: boolean;
@@ -21,40 +21,30 @@ const DuplicateSummaryDialog = ({ open, onOpenChange, summary, duplicates, onSel
         <DialogHeader>
           <DialogTitle>Duplicate Analysis Complete</DialogTitle>
           <DialogDescription>
-            We found {duplicates.length} potential duplicate(s) based on strict matching rules.
+            Our AI agent has analyzed your contacts. Here's the summary and recommended actions.
           </DialogDescription>
         </DialogHeader>
+        <div className="prose prose-sm dark:prose-invert max-w-none">
+          <ReactMarkdown>{summary}</ReactMarkdown>
+        </div>
         <ScrollArea className="h-64 border rounded-md p-2">
           <div className="space-y-2">
-            {duplicates.length === 0 ? (
-              <div className="text-center p-8 text-muted-foreground text-sm">
-                No duplicates found. Your contact list looks clean!
-              </div>
-            ) : (
-              duplicates.map((pair, index) => (
-                <div key={index} className="flex items-center justify-between p-3 rounded-md bg-muted/40 hover:bg-muted/60 transition-colors border">
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-9 w-9 border"><AvatarImage src={pair.person1.avatar_url} /><AvatarFallback><Users className="h-4 w-4" /></AvatarFallback></Avatar>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <p className="font-semibold text-sm">{pair.person1.full_name}</p>
-                        <span className="text-muted-foreground text-xs">&</span>
-                        <p className="font-semibold text-sm">{pair.person2.full_name}</p>
-                      </div>
-                      <div className="flex gap-2 mt-1">
-                        <Badge variant="secondary" className="text-[10px] h-5 font-normal text-muted-foreground">
-                          {pair.match_reason || 'Potential Match'}
-                        </Badge>
-                      </div>
-                    </div>
+            {duplicates.map((pair, index) => (
+              <div key={index} className="flex items-center justify-between p-2 rounded-md bg-muted/50">
+                <div className="flex items-center gap-3">
+                  <Avatar className="h-8 w-8"><AvatarImage src={pair.person1.avatar_url} /><AvatarFallback><Users className="h-4 w-4" /></AvatarFallback></Avatar>
+                  <div>
+                    <p className="font-medium text-sm">{pair.person1.full_name}</p>
+                    <p className="text-xs text-muted-foreground">matches</p>
+                    <p className="font-medium text-sm">{pair.person2.full_name}</p>
                   </div>
-                  <Button size="sm" variant="default" onClick={() => onSelectPair(pair)}>
-                    <GitMerge className="mr-2 h-3.5 w-3.5" />
-                    Review
-                  </Button>
                 </div>
-              ))
-            )}
+                <Button size="sm" variant="outline" onClick={() => onSelectPair(pair)}>
+                  <GitMerge className="mr-2 h-4 w-4" />
+                  Review
+                </Button>
+              </div>
+            ))}
           </div>
         </ScrollArea>
         <DialogFooter>

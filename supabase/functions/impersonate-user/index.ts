@@ -33,7 +33,7 @@ Deno.serve(async (req) => {
       .from('profiles')
       .select('role')
       .eq('id', authUser.id)
-      .maybeSingle();
+      .single();
 
     if (profileError || !profile || profile.role !== 'master admin') {
       throw new Error("Forbidden: You do not have permission to impersonate users.");

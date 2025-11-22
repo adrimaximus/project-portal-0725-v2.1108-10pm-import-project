@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Project, AdvancedFiltersState } from '@/types';
 import { DateRange } from 'react-day-picker';
@@ -53,10 +53,8 @@ export const useProjectFilters = (projects: Project[]) => {
   const updateSearchParams = useCallback((updates: Record<string, string | string[] | null | boolean>) => {
     const newSearchParams = new URLSearchParams(searchParams);
     Object.entries(updates).forEach(([key, value]) => {
-      if (value === null || value === '' || value === undefined) {
-        newSearchParams.delete(key);
-      } else {
-        newSearchParams.delete(key); // Clear existing to avoid duplicates if array
+      newSearchParams.delete(key);
+      if (value !== null && value !== '' && value !== false) {
         if (Array.isArray(value)) {
           value.forEach(v => newSearchParams.append(key, v));
         } else {
@@ -97,27 +95,13 @@ export const useProjectFilters = (projects: Project[]) => {
       to: range?.to ? range.to.toISOString().split('T')[0] : null,
     });
   };
-  
-  const requestSort = useCallback((key: keyof Project) => {
-    const currentKey = searchParams.get('sortKey');
-    const currentDir = searchParams.get('sortDir');
-
-    if (currentKey === key) {
-      if (currentDir === 'asc') {
-        // 2nd click: Ascending -> Descending
-        updateSearchParams({ sortKey: key, sortDir: 'desc' });
-      } else {
-        // 3rd click: Descending -> Reset (Remove params)
-        const newSearchParams = new URLSearchParams(searchParams);
-        newSearchParams.delete('sortKey');
-        newSearchParams.delete('sortDir');
-        setSearchParams(newSearchParams, { replace: true });
-      }
-    } else {
-      // 1st click (New Column): Start with Ascending
-      updateSearchParams({ sortKey: key, sortDir: 'asc' });
-    }
-  }, [searchParams, updateSearchParams, setSearchParams]);
+  const requestSort = (key: keyof Project) => {
+    const newDirection = sortConfig.key === key && sortConfig.direction === 'asc' ? 'desc' : 'asc';
+    updateSearchParams({
+      sortKey: key,
+      sortDir: newDirection,
+    });
+  };
 
   const clearFilters = useCallback(() => {
     const newSearchParams = new URLSearchParams(searchParams);
@@ -171,60 +155,31 @@ export const useProjectFilters = (projects: Project[]) => {
       return matchesDate && matchesOwner && matchesMember && matchesStatus && matchesSearch;
     });
 
-    // Tie breaker for stable sorting (newest created first)
-    const tieBreaker = (a: Project, b: Project) => {
-        const dateA = new Date(a.created_at).getTime();
-        const dateB = new Date(b.created_at).getTime();
-        return dateB - dateA;
-    };
+    const tieBreaker = (a: Project, b: Project) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
 
     if (sortConfig.key !== null) {
       sortableItems.sort((a, b) => {
-        const key = sortConfig.key!;
-        let aValue: any = a[key];
-        let bValue: any = b[key];
+        const aValue = a[sortConfig.key!];
+        const bValue = b[sortConfig.key!];
 
-        // Handle Venue specific logic (parsing complex strings)
-        if (key === 'venue') {
-             const getVenueName = (val: string | null) => {
-                 if (!val) return '';
-                 try {
-                     const parsed = JSON.parse(val);
-                     return (parsed.name || '').toLowerCase();
-                 } catch {
-                     return val.toLowerCase();
-                 }
-             };
-             aValue = getVenueName(a.venue);
-             bValue = getVenueName(b.venue);
-        }
-
-        // Null handling
-        if (aValue === bValue) return tieBreaker(a, b);
-        if (aValue === null || aValue === undefined) return 1;
-        if (bValue === null || bValue === undefined) return -1;
+        if (aValue == null && bValue != null) return 1;
+        if (aValue != null && bValue == null) return -1;
+        if (aValue == null && bValue == null) return tieBreaker(a, b);
 
         let compareResult = 0;
-
-        // Date comparison
-        if (key === 'start_date' || key === 'due_date' || key === 'created_at' || key === 'updated_at') {
-             const dateA = new Date(aValue).getTime();
-             const dateB = new Date(bValue).getTime();
-             compareResult = dateA - dateB;
-        } 
-        // Numeric comparison
-        else if (typeof aValue === 'number' && typeof bValue === 'number') {
-             compareResult = aValue - bValue;
-        } 
-        // String comparison
-        else {
-             const strA = String(aValue).toLowerCase();
-             const strB = String(bValue).toLowerCase();
-             if (strA < strB) compareResult = -1;
-             if (strA > strB) compareResult = 1;
+        if (typeof aValue === 'number' && typeof bValue === 'number') {
+          compareResult = aValue - bValue;
+        } else if (aValue instanceof Date && bValue instanceof Date) {
+          compareResult = aValue.getTime() - bValue.getTime();
+        } else {
+          compareResult = String(aValue).localeCompare(String(bValue), undefined, { numeric: true, sensitivity: 'base' });
         }
 
-        return sortConfig.direction === 'asc' ? compareResult : -compareResult;
+        if (compareResult !== 0) {
+          return sortConfig.direction === 'asc' ? compareResult : -compareResult;
+        }
+
+        return tieBreaker(a, b);
       });
     } else {
       const today = startOfToday();

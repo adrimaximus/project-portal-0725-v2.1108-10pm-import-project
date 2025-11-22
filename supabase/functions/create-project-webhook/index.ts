@@ -50,11 +50,9 @@ Deno.serve(async (req) => {
       .from('profiles')
       .select('id')
       .eq('email', clientEmail)
-      .maybeSingle();
+      .single();
 
-    if (profileError) throw new Error(`Database error finding profile: ${profileError.message}`);
-
-    if (!clientProfile) {
+    if (profileError || !clientProfile) {
       throw new Error(`Client with email "${clientEmail}" not found.`);
     }
 

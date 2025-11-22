@@ -180,17 +180,9 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                                 </div>
                               )}
                               {message.repliedMessage && message.reply_to_message_id && (
-                                <div 
-                                  role="button"
-                                  tabIndex={0}
+                                <button 
                                   onClick={() => handleScrollToMessage(message.reply_to_message_id!)}
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Enter' || e.key === ' ') {
-                                      e.preventDefault();
-                                      handleScrollToMessage(message.reply_to_message_id!);
-                                    }
-                                  }}
-                                  className="w-full text-left pt-1 px-1 pb-2 my-1 text-sm bg-black/10 dark:bg-white/10 rounded-md border-l-2 border-primary hover:bg-black/20 dark:hover:bg-white/20 transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                  className="w-full text-left pt-1 px-1 pb-2 my-1 text-sm bg-black/10 dark:bg-white/10 rounded-md border-l-2 border-primary hover:bg-black/20 dark:hover:bg-white/20 transition-colors"
                                 >
                                   <div className="flex justify-between items-start">
                                     <div className="flex-1 overflow-hidden">
@@ -219,7 +211,7 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                                       <img src={message.repliedMessage.attachment.url} alt="Reply preview" className="h-10 w-10 object-cover rounded-md ml-2 flex-shrink-0" />
                                     )}
                                   </div>
-                                </div>
+                                </button>
                               )}
 
                               {isImageAttachment ? (

@@ -1,60 +1,25 @@
-import React from "react";
 import { TableHead } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { ArrowUp, ArrowDown, ChevronsUpDown } from "lucide-react";
+import { ChevronsUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-interface SortConfig<T> {
-  key: T | null;
-  direction: 'asc' | 'desc';
+interface SortableTableHeadProps<T> extends React.HTMLAttributes<HTMLTableCellElement> {
+  columnKey: keyof T;
+  onSort: (key: keyof T) => void;
+  sortConfig: { key: keyof T | null; direction: 'asc' | 'desc' };
 }
 
-interface SortableTableHeadProps<T> extends React.ThHTMLAttributes<HTMLTableCellElement> {
-  columnKey: T;
-  sortConfig: SortConfig<T>;
-  onSort: (key: T) => void;
-  children: React.ReactNode;
-  className?: string;
-}
-
-export function SortableTableHead<T extends string | number | symbol>({
-  columnKey,
-  sortConfig,
-  onSort,
-  children,
-  className,
-  ...props
-}: SortableTableHeadProps<T>) {
+export const SortableTableHead = <T,>({ children, columnKey, onSort, sortConfig, className, ...props }: SortableTableHeadProps<T>) => {
   const isActive = sortConfig.key === columnKey;
-  const isAsc = sortConfig.direction === 'asc';
+  const isAscending = sortConfig.direction === 'asc';
+  const Icon = isActive ? (isAscending ? ArrowUp : ArrowDown) : ChevronsUpDown;
 
   return (
-    <TableHead {...props} className={cn("p-0", className)}>
-      <Button
-        variant="ghost"
-        type="button"
-        onClick={(e) => {
-          e.preventDefault();
-          onSort(columnKey);
-        }}
-        className={cn(
-          "h-full w-full justify-start px-4 py-2 font-semibold hover:bg-muted/50 rounded-none text-left group",
-          isActive ? "text-foreground" : "text-muted-foreground"
-        )}
-      >
+    <TableHead {...props} className={cn("p-2", className)}>
+      <Button variant="ghost" onClick={() => onSort(columnKey)} className="w-full justify-start px-2 group h-auto py-1">
         {children}
-        <span className="ml-2 flex h-4 w-4 items-center justify-center transition-opacity">
-            {isActive ? (
-                isAsc ? (
-                    <ArrowUp className="h-3 w-3" />
-                ) : (
-                    <ArrowDown className="h-3 w-3" />
-                )
-            ) : (
-                <ChevronsUpDown className="h-3 w-3 opacity-0 group-hover:opacity-50" />
-            )}
-        </span>
+        <Icon className={cn("ml-2 h-4 w-4", !isActive && "text-muted-foreground/50 group-hover:text-muted-foreground")} />
       </Button>
     </TableHead>
   );
-}
+};

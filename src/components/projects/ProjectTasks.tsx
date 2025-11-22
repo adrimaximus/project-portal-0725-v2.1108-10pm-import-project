@@ -228,16 +228,13 @@ const ProjectTasks = ({ project, tasks, projectId, projectSlug, onEditTask, onDe
     setIsSuggesting(true);
     toast.info("Asking AI to suggest tasks...");
     try {
-      const { data, error } = await supabase.functions.invoke('ai-handler', {
+      const { data, error } = await supabase.functions.invoke('generate-tasks', {
         body: {
-          feature: 'generate-project-tasks',
-          payload: {
-            projectName: project.name,
-            venue: project.venue,
-            services: project.services,
-            description: project.description,
-            existingTasks: tasks.map(t => t.title),
-          }
+          projectName: project.name,
+          venue: project.venue,
+          services: project.services,
+          description: project.description,
+          existingTasks: tasks.map(t => t.title),
         }
       });
       if (error) throw error;

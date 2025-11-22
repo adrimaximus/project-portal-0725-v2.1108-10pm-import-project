@@ -80,7 +80,7 @@ serve(async (req) => {
       .from('profiles')
       .select('google_calendar_settings')
       .eq('id', user.id)
-      .maybeSingle();
+      .single();
 
     if (profileError) throw profileError;
 

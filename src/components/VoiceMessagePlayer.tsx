@@ -1,10 +1,10 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Play, Pause, Mic } from 'lucide-react';
+import { Play, Pause } from 'lucide-react';
 import { Button } from './ui/button';
 import { Slider } from './ui/slider';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { User } from '@/types';
-import { generatePastelColor, cn } from '@/lib/utils';
+import { generatePastelColor } from '@/lib/utils';
 
 interface VoiceMessagePlayerProps {
   src: string;
@@ -109,41 +109,17 @@ const VoiceMessagePlayer = ({ src, sender, isCurrentUser }: VoiceMessagePlayerPr
   };
 
   return (
-    <div className={cn(
-      "flex items-center gap-3 w-full min-w-[240px] p-2 select-none"
-    )}>
+    <div className="flex items-center gap-2 w-full max-w-[280px] min-w-[240px] p-2">
       <audio ref={audioRef} src={src} preload="metadata" />
-      
-      <div className="relative flex-shrink-0">
-        <Avatar className="h-9 w-9 border border-white/10 shadow-sm">
-          <AvatarImage src={sender.avatar_url} />
-          <AvatarFallback className="text-[10px]" style={generatePastelColor(sender.id)}>{sender.initials}</AvatarFallback>
-        </Avatar>
-        <div className={cn(
-          "absolute -bottom-1 -right-1 flex items-center justify-center h-3.5 w-3.5 rounded-full text-[8px] ring-2",
-          isCurrentUser 
-            ? "bg-white text-primary ring-primary" 
-            : "bg-primary text-white ring-white"
-        )}>
-          <Mic className="h-2 w-2" />
-        </div>
-      </div>
-
       <Button 
-        variant="ghost"
+        variant="default"
         size="icon" 
         onClick={togglePlayPause} 
-        className={cn(
-          "h-8 w-8 flex-shrink-0 rounded-full shadow-sm transition-all",
-          isCurrentUser 
-            ? "bg-primary-foreground text-primary hover:bg-primary-foreground/90" 
-            : "bg-background text-primary hover:bg-background/90"
-        )}
+        className="h-9 w-9 flex-shrink-0 rounded-full bg-blue-500 hover:bg-blue-600 text-white"
       >
-        {isPlaying ? <Pause className="h-4 w-4 fill-current" /> : <Play className="h-4 w-4 fill-current ml-0.5" />}
+        {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 ml-0.5" />}
       </Button>
-      
-      <div className="flex-1 flex flex-col justify-center gap-1.5 min-w-0">
+      <div className="flex-1 flex flex-col justify-center gap-1.5">
         <Slider
           value={[currentTime]}
           max={duration || 1}
@@ -151,25 +127,19 @@ const VoiceMessagePlayer = ({ src, sender, isCurrentUser }: VoiceMessagePlayerPr
           onValueChange={handleSliderChange}
           onPointerDown={handlePointerDown}
           onPointerUp={handlePointerUp}
-          className={cn(
-            "w-full py-1.5 cursor-pointer",
-            // Force thumb to be round and remove any square background artifacts
-            "[&>span:last-child]:rounded-full [&>span:last-child]:shadow-sm",
-            
-            // Track, Range, and Thumb colors based on isCurrentUser
-            isCurrentUser 
-              ? "[&>span:first-child]:bg-primary-foreground/30 [&>span:first-child>span]:bg-primary-foreground [&>span:last-child]:border-primary-foreground [&>span:last-child]:bg-primary-foreground" 
-              : "[&>span:first-child]:bg-primary/20 [&>span:first-child>span]:bg-primary [&>span:last-child]:border-primary [&>span:last-child]:bg-primary"
-          )}
+          className="w-full [&>span:first-child]:h-1 [&>span:first-child>span]:bg-blue-500 [&>span:last-child]:h-3 [&>span:last-child]:w-3 [&>span:last-child]:bg-blue-500"
         />
-        <div className={cn(
-            "flex justify-between items-center text-[10px] font-medium tabular-nums leading-none",
-            isCurrentUser ? "text-primary-foreground/80" : "text-muted-foreground"
-        )}>
-            <span>{formatTime(currentTime)}</span>
-            <span>{formatTime(duration)}</span>
+        <div className="flex justify-between items-center">
+            <span className="text-xs font-mono text-muted-foreground">{formatTime(currentTime)}</span>
+            <span className="text-xs font-mono text-muted-foreground">{formatTime(duration)}</span>
         </div>
       </div>
+      {!isCurrentUser && (
+        <Avatar className="h-8 w-8 flex-shrink-0 ml-2">
+          <AvatarImage src={sender.avatar_url} />
+          <AvatarFallback style={generatePastelColor(sender.id)}>{sender.initials}</AvatarFallback>
+        </Avatar>
+      )}
     </div>
   );
 };

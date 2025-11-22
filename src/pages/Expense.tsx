@@ -12,9 +12,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { format } from "date-fns";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { getAvatarUrl, generatePastelColor } from "@/lib/utils";
+import { getAvatarUrl, generatePastelColor, cn } from "@/lib/utils";
 import { Link } from "react-router-dom";
+import { Badge } from "@/components/ui/badge";
 import { Expense } from "@/types";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -38,8 +40,12 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import ExpenseKanbanView from "@/components/billing/ExpenseKanbanView";
-import { PaymentTermTooltip } from "@/components/billing/PaymentTermTooltip";
-import { BeneficiaryTooltip } from "@/components/billing/BeneficiaryTooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const ExpensePage = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -113,6 +119,15 @@ const ExpensePage = () => {
     currency: "IDR",
     minimumFractionDigits: 0,
   }).format(amount);
+
+  const getStatusBadgeStyle = (status: string) => {
+    switch (status?.toLowerCase()) {
+      case 'paid': return 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300 border-green-200 dark:border-green-700/50';
+      case 'pending': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300 border-yellow-200 dark:border-yellow-700/50';
+      case 'rejected': return 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300 border-red-200 dark:border-red-700/50';
+      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600';
+    }
+  };
 
   if (isLoading) {
     return (
@@ -222,7 +237,24 @@ const ExpensePage = () => {
                             </div>
                           </TableCell>
                           <TableCell>
-                            <BeneficiaryTooltip expense={expense} />
+                            {expense.account_bank && expense.account_bank.name ? (
+                              <TooltipProvider delayDuration={100}>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span className="cursor-help underline decoration-dotted">{expense.beneficiary}</span>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <div className="flex flex-col gap-0.5 text-xs">
+                                      <p className="font-semibold">{expense.account_bank.name}</p>
+                                      <p className="text-muted-foreground">{expense.account_bank.bank}</p>
+                                      <p className="text-muted-foreground">{expense.account_bank.account}</p>
+                                    </div>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            ) : (
+                              expense.beneficiary
+                            )}
                           </TableCell>
                           <TableCell>
                             <div>
@@ -237,14 +269,49 @@ const ExpensePage = () => {
                           <TableCell className="whitespace-nowrap">
                             {paymentTerms.length > 0 ? (
                               <div className="flex flex-col">
-                                {paymentTerms.map((term: any, index: number) => (
-                                  <PaymentTermTooltip 
-                                    key={index}
-                                    term={term}
-                                    index={index}
-                                    isMultiTerm={paymentTerms.length > 1}
-                                  />
-                                ))}
+                                {paymentTerms.map((term: any, index: number) => {
+                                  const isMultiTerm = paymentTerms.length > 1;
+                                  return (
+                                    <TooltipProvider key={index} delayDuration={100}>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <div className={cn("text-xs w-full", index > 0 && "border-t pt-2 mt-2")}>
+                                            <div className="flex items-center justify-between gap-2">
+                                              <div className="flex items-center gap-2 font-medium">
+                                                {isMultiTerm && (
+                                                  <>
+                                                    <span>Term {index + 1}</span>
+                                                    <span className="text-muted-foreground">|</span>
+                                                  </>
+                                                )}
+                                                <span>{formatCurrency(term.amount || 0)}</span>
+                                              </div>
+                                              <Badge variant="outline" className={cn("border-transparent text-xs whitespace-nowrap", getStatusBadgeStyle(term.status || 'Pending'))}>
+                                                {term.status || 'Pending'}
+                                              </Badge>
+                                            </div>
+                                          </div>
+                                        </TooltipTrigger>
+                                        {(term.request_date || term.release_date) && (
+                                          <TooltipContent>
+                                            <div className="flex flex-col gap-1 text-xs">
+                                              {term.request_date && (
+                                                <p>
+                                                  {term.request_type || 'Due'}: {format(new Date(term.request_date), "dd MMM yyyy")}
+                                                </p>
+                                              )}
+                                              {term.release_date && (
+                                                <p>
+                                                  Scheduled: {format(new Date(term.release_date), "dd MMM yyyy")}
+                                                </p>
+                                              )}
+                                            </div>
+                                          </TooltipContent>
+                                        )}
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                  );
+                                })}
                               </div>
                             ) : (
                               '-'

@@ -84,11 +84,8 @@ const ServiceFormDialog = ({ open, onOpenChange, onSuccess, service }: ServiceFo
     }
     setIsGenerating(true);
     try {
-      const { data, error } = await supabase.functions.invoke('ai-handler', {
-        body: { 
-          feature: 'generate-service-details',
-          payload: { title } 
-        },
+      const { data, error } = await supabase.functions.invoke('generate-service-details', {
+        body: { title },
       });
 
       if (error) throw error;
