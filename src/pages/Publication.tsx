@@ -418,7 +418,11 @@ const PublicationPage = () => {
                                         <TableRow key={rowIndex}>
                                            <TableCell className="font-mono text-xs text-muted-foreground">{rowIndex + 1}</TableCell>
                                            {headers.map((header) => (
-                                              <TableCell key={`${rowIndex}-${header}`} className="text-sm">
+                                              <TableCell 
+                                                key={`${rowIndex}-${header}`} 
+                                                className="text-sm h-10 max-w-[300px] truncate whitespace-nowrap" 
+                                                title={String(row[header] || '')}
+                                              >
                                                  {row[header]}
                                               </TableCell>
                                            ))}
