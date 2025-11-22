@@ -19,6 +19,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
+import InteractiveText from "@/components/InteractiveText"; // Import InteractiveText
 
 // Helper component for multi-select
 import { MultiSelect } from "@/components/ui/multi-select";
@@ -312,7 +313,9 @@ const PublicationPage = () => {
         description: (
           <div className="mt-2 w-full p-3 bg-card text-card-foreground border rounded-md shadow-sm">
             <p className="font-semibold text-sm"><span className="text-primary mr-1">[TEST]</span>{notifTitle}</p>
-            <p className="text-xs text-muted-foreground line-clamp-3 mt-1">{previewBody}</p>
+            <div className="text-xs text-muted-foreground line-clamp-3 mt-1">
+               <InteractiveText text={previewBody} />
+            </div>
             <p className="text-[10px] text-muted-foreground mt-2 flex items-center gap-1">
               <CheckCircle2 className="h-3 w-3 text-green-500" />
               Check your notifications.

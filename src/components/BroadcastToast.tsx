@@ -125,7 +125,7 @@ export const BroadcastToast = () => {
     >
       <div 
         className={cn(
-          "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl rounded-lg p-3 flex gap-3 items-start relative overflow-hidden cursor-pointer group",
+          "bg-card text-card-foreground border border-border shadow-2xl rounded-lg p-3 flex gap-3 items-start relative overflow-hidden cursor-pointer group",
           activeMessage.link && "hover:border-primary/50 transition-colors"
         )}
         onClick={handleClick}
@@ -134,11 +134,11 @@ export const BroadcastToast = () => {
         <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary" />
 
         <div className="flex-1 ml-2 space-y-1 min-w-0">
-          <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100 leading-tight flex items-center gap-2 truncate">
+          <h4 className="text-xs font-bold leading-tight flex items-center gap-2 truncate">
             {activeMessage.title}
             {activeMessage.link && <ExternalLink className="h-3 w-3 opacity-50 flex-shrink-0" />}
           </h4>
-          <div className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed line-clamp-3">
+          <div className="text-[11px] text-muted-foreground leading-relaxed line-clamp-3">
             <InteractiveText text={activeMessage.body} />
           </div>
         </div>
