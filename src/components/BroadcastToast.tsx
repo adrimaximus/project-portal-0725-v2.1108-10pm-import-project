@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { CheckCircle2, ExternalLink, Info } from "lucide-react";
+import { CheckCircle2, Info } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -147,18 +147,17 @@ export const BroadcastToast = () => {
       <div 
         className={cn(
           "bg-background text-foreground border shadow-lg rounded-lg p-4 flex gap-4 items-start relative cursor-pointer hover:bg-muted/40 transition-colors",
-          // Mimic the style in the image: simple clean card
         )}
         onClick={handleClick}
       >
-        {/* Info Icon */}
+        {/* Info Icon (Left) */}
         <div className="flex-shrink-0 mt-0.5">
-          <div className="h-8 w-8 rounded-full border-2 border-muted-foreground/30 flex items-center justify-center text-muted-foreground">
+          <div className="h-8 w-8 rounded-full border-2 border-muted-foreground/30 flex items-center justify-center text-muted-foreground/70">
             <Info className="h-5 w-5" />
           </div>
         </div>
 
-        {/* Content */}
+        {/* Content (Middle) */}
         <div className="flex-1 min-w-0 space-y-1">
           <h4 className="text-base font-bold leading-tight flex items-center gap-2 text-foreground">
             {activeMessage.title}
@@ -171,7 +170,7 @@ export const BroadcastToast = () => {
           </p>
         </div>
 
-        {/* Check Icon (Right Side) */}
+        {/* Check Icon (Right) */}
         <div className="flex-shrink-0 self-start">
           <button
             onClick={handleDismiss}
