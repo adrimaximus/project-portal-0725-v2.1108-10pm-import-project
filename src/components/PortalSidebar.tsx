@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
-import { Bell, Home, Settings, LayoutGrid, MessageSquare, Smile, Target, CreditCard, Link as LinkIcon, LucideIcon, Users, BookOpen, Folder as FolderIcon, ChevronDown } from "lucide-react";
+import { Bell, Home, Settings, LayoutGrid, MessageSquare, Smile, Target, CreditCard, Link as LinkIcon, LucideIcon, Users, BookOpen, Folder as FolderIcon, ChevronDown, Megaphone } from "lucide-react";
 import * as LucideIcons from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Link, useLocation } from "react-router-dom";
@@ -148,11 +148,6 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
       backfillAttempted.current = true; // Attempt only once per session
       const backfill = async () => {
         console.log("No navigation items found for user, attempting to backfill...");
-        // If user has absolutely no items, we can try to backfill using the frontend definition
-        // However, calling the RPC `ensure_user_navigation_items` is safer as it handles updates.
-        // But `ensure` only adds if MISSING. If user has items but missing new ones, we might need to force add.
-        // Let's assume the RPC handles it, or we explicitly insert if the table is empty.
-        
         // If list is empty, insert defaults.
         const itemsToInsert = defaultNavItems.map((item, index) => ({
             user_id: user.id,
@@ -223,6 +218,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
         'people': 'module:people',
         'knowledge base': 'module:knowledge-base',
         'settings': 'module:settings',
+        'publication': 'module:publication',
     };
     return mapping[itemName.toLowerCase()] || null;
   };
@@ -241,6 +237,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
           'people': 'people',
           'knowledge base': 'knowledge-base',
           'settings': 'settings',
+          'publication': 'publication',
       };
       return mapping[itemName.toLowerCase()] || null;
   }
@@ -257,6 +254,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
           { id: 'chat', href: '/chat', label: 'Chat', icon: MessageSquare, badge: hasUnreadChat ? 1 : undefined, folder_id: null },
           { id: 'goals', href: '/goals', label: 'Goals', icon: Target, folder_id: null },
           { id: 'people', href: '/people', label: 'People', icon: Users, folder_id: null },
+          { id: 'publication', href: '/publication', label: 'Publication', icon: Megaphone, folder_id: null },
         ],
         settingsItem: { id: 'settings', href: '/settings', label: 'Settings', icon: Settings, folder_id: null }
       };
@@ -311,6 +309,9 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
         }
         if (itemNameLower === 'mood trackers' && href !== '/mood-tracker') {
             href = '/mood-tracker';
+        }
+        if (itemNameLower === 'publication') {
+            href = '/publication';
         }
 
         if (itemNameLower === 'chat') badge = hasUnreadChat ? 1 : undefined;
