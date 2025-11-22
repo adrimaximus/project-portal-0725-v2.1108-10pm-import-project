@@ -3,8 +3,12 @@ import { createClient as createSupabaseClient } from 'https://esm.sh/@supabase/s
 import OpenAI from 'https://esm.sh/openai@4.29.2';
 import Anthropic from 'https://esm.sh/@anthropic-ai/sdk@0.22.0';
 import { createApi } from 'https://esm.sh/unsplash-js@7.0.19';
-import * as pdfjs from 'https://esm.sh/pdfjs-dist@3.11.174?target=deno';
+// Use jsdelivr for pdfjs to avoid node-canvas dependency issues in Deno
+import { getDocument, GlobalWorkerOptions } from 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.mjs';
 import mammoth from 'https://esm.sh/mammoth@1.7.2?target=deno';
+
+// Configure PDF.js worker
+GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.mjs';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -130,8 +134,6 @@ CONTEXT:
 const buildContext = async (supabaseClient: any, user: any) => {
   console.log("[DIAGNOSTIC] buildContext: Starting context build.");
   try {
-    // Direct DB query for projects to ensure we get real tasks, not placeholders.
-    // Limiting to 20 recent active projects to save tokens/resources.
     const [
       projectsRes,
       usersRes,
@@ -212,7 +214,7 @@ const buildContext = async (supabaseClient: any, user: any) => {
     };
   } catch (error) {
     console.error("[DIAGNOSTIC] buildContext: CRITICAL ERROR during context build:", error);
-    throw error; // Re-throw to be caught by the main handler
+    throw error;
   }
 };
 
@@ -233,7 +235,7 @@ const executeAction = async (actionData: any, context: any) => {
                     p_due_date: due_date,
                     p_venue: venue,
                     p_budget: budget,
-                    p_category: 'General', // Default category for AI-created projects
+                    p_category: 'General',
                 }).single();
 
                 if (projectError) return `I failed to create the project. The database said: ${projectError.message}`;
@@ -280,9 +282,9 @@ const executeAction = async (actionData: any, context: any) => {
                     p_payment_status: updates.payment_status || project.payment_status,
                     p_payment_due_date: updates.payment_due_date || project.payment_due_date,
                     p_venue: updates.venue || project.venue,
-                    p_members: null, // Not updating members here to avoid complexity
+                    p_members: null,
                     p_service_titles: updates.services || null,
-                    p_existing_tags: (updates.tags || []).map((t: any) => t.id).filter(Boolean), // Simplified
+                    p_existing_tags: (updates.tags || []).map((t: any) => t.id).filter(Boolean),
                     p_custom_tags: [],
                 });
 
@@ -629,7 +631,7 @@ async function analyzeProjects(payload: any, context: any) {
       const fileBuffer = await response.arrayBuffer();
 
       if (attachmentType === 'application/pdf') {
-        const pdf = await pdfjs.getDocument(fileBuffer).promise;
+        const pdf = await getDocument(fileBuffer).promise;
         let textContent = '';
         for (let i = 1; i <= pdf.numPages; i++) {
           const page = await pdf.getPage(i);
