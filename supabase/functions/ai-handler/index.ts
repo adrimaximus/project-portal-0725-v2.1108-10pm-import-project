@@ -3,12 +3,8 @@ import { createClient as createSupabaseClient } from 'https://esm.sh/@supabase/s
 import OpenAI from 'https://esm.sh/openai@4.29.2';
 import Anthropic from 'https://esm.sh/@anthropic-ai/sdk@0.22.0';
 import { createApi } from 'https://esm.sh/unsplash-js@7.0.19';
-// Use jsdelivr for pdfjs to avoid node-canvas dependency issues in Deno
-import { getDocument, GlobalWorkerOptions } from 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.mjs';
+// PDF parsing removed due to edge runtime compatibility issues with pdfjs-dist dependencies
 import mammoth from 'https://esm.sh/mammoth@1.7.2?target=deno';
-
-// Configure PDF.js worker
-GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.mjs';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -28,7 +24,7 @@ const getAnalyzeProjectsSystemPrompt = (context: any, userName: string) => `You 
 1.  **STRICT DATE & TIME ADHERENCE:** The current date and time are provided in the context. You MUST use this as your reference for all time-related queries. When a user asks for information within a specific timeframe (e.g., "next two weeks", "last month", "today"), you MUST filter the data provided in the CONTEXT (projects, tasks, goals) to include ONLY items that fall within that specific date range. Do not include data outside the requested timeframe. For example, if the user asks for projects in the "next two weeks", only show projects whose start_date or due_date is within the next 14 days from the current date.
 2.  **ACTION-ORIENTED:** Your primary function is to identify and execute actions based on the user's request.
 3.  **IMAGE ANALYSIS:** If the user provides an image, you can see it. Analyze it and respond to their query about it. For example, if they ask 'what is this?', describe the image. If they ask to 'summarize this screenshot', extract the key information.
-4.  **DOCUMENT ANALYSIS:** If the user uploads a PDF or Word document, its text content will be provided to you. Use this content to answer questions, summarize, or perform actions like creating a project based on a brief.
+4.  **DOCUMENT ANALYSIS:** If the user uploads a Word document (docx), its text content will be provided to you. Use this content to answer questions, summarize, or perform actions. (Note: PDF support is currently unavailable).
 5.  **PROJECT CREATION FROM BRIEFS:** If a user pastes a block of text and asks to 'create a project from this', you must parse the text to extract the project name, a detailed description, potential start/due dates, budget, venue, and infer relevant services and team members to include in the \`CREATE_PROJECT\` action JSON.
 6.  **CONFIRMATION WORKFLOW (FOR SENSITIVE ACTIONS):**
     a.  For sensitive actions like **creating tasks**, **deleting projects**, or **deleting goals**, your FIRST response MUST be a natural language confirmation question.
@@ -623,26 +619,14 @@ async function analyzeProjects(payload: any, context: any) {
   }
 
   let documentContext = '';
-  if (attachmentUrl && (attachmentType === 'application/pdf' || attachmentType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')) {
+  if (attachmentUrl && (attachmentType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')) {
     console.log(`[DIAGNOSTIC] analyzeProjects: Detected document attachment for parsing: ${attachmentType}`);
     try {
       const response = await fetch(attachmentUrl);
       if (!response.ok) throw new Error(`Failed to fetch attachment from storage: ${response.statusText}`);
       const fileBuffer = await response.arrayBuffer();
-
-      if (attachmentType === 'application/pdf') {
-        const pdf = await getDocument(fileBuffer).promise;
-        let textContent = '';
-        for (let i = 1; i <= pdf.numPages; i++) {
-          const page = await pdf.getPage(i);
-          const text = await page.getTextContent();
-          textContent += text.items.map((item: any) => item.str).join(' ') + '\n';
-        }
-        documentContext = textContent;
-      } else if (attachmentType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
-        const { value } = await mammoth.extractRawText({ arrayBuffer: fileBuffer });
-        documentContext = value;
-      }
+      const { value } = await mammoth.extractRawText({ arrayBuffer: fileBuffer });
+      documentContext = value;
       console.log("[DIAGNOSTIC] analyzeProjects: Document parsing successful.");
     } catch (e) {
       console.error("[DIAGNOSTIC] analyzeProjects: CRITICAL ERROR during document parsing:", e);
