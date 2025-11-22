@@ -9,20 +9,22 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Info, PlayCircle, UploadCloud, MessageSquare, Bell, FileSpreadsheet, X, Link as LinkIcon, File, CheckCircle2, Loader2, Send, RefreshCw, Radio } from "lucide-react";
+import { Info, PlayCircle, UploadCloud, MessageSquare, Bell, FileSpreadsheet, X, Link as LinkIcon, File, CheckCircle2, Loader2, Send, RefreshCw, FlaskConical } from "lucide-react";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/contexts/AuthContext";
 
 // Helper component for multi-select
 import { MultiSelect } from "@/components/ui/multi-select";
 
 const PublicationPage = () => {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("whatsapp");
   
   // WhatsApp State
@@ -56,10 +58,10 @@ const PublicationPage = () => {
   const [notifBody, setNotifBody] = useState("");
   const [notifLink, setNotifLink] = useState("");
   const [isSendingNotif, setIsSendingNotif] = useState(false);
+  const [isSendingTestNotif, setIsSendingTestNotif] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const { toast } = useToast();
 
   // Fetch data for In-App selectors
   const { data: roles = [] } = useQuery({
@@ -95,11 +97,11 @@ const PublicationPage = () => {
           if (parsedData.length > 0) {
             setHeaders(Object.keys(parsedData[0]));
             setData(parsedData);
-            toast({ title: "File uploaded", description: `Successfully parsed ${parsedData.length} rows.` });
+            toast.success("File uploaded", { description: `Successfully parsed ${parsedData.length} rows.` });
           }
         },
         error: (error) => {
-          toast({ title: "Error", description: "Failed to parse CSV file.", variant: "destructive" });
+          toast.error("Error", { description: "Failed to parse CSV file." });
         }
       });
     } else if (['xls', 'xlsx'].includes(fileExtension || '')) {
@@ -114,12 +116,12 @@ const PublicationPage = () => {
         if (jsonData.length > 0) {
           setHeaders(Object.keys(jsonData[0] as object));
           setData(jsonData);
-          toast({ title: "File uploaded", description: `Successfully parsed ${jsonData.length} rows.` });
+          toast.success("File uploaded", { description: `Successfully parsed ${jsonData.length} rows.` });
         }
       };
       reader.readAsArrayBuffer(file);
     } else {
-      toast({ title: "Invalid file type", description: "Please upload a CSV, XLS, or XLSX file.", variant: "destructive" });
+      toast.error("Invalid file type", { description: "Please upload a CSV, XLS, or XLSX file." });
     }
   };
 
@@ -138,7 +140,7 @@ const PublicationPage = () => {
       if (match && match[1]) exportUrl = `https://docs.google.com/spreadsheets/d/${match[1]}/export?format=csv`;
     }
 
-    if (!exportUrl) { toast({ title: "Invalid URL", description: "Please enter a valid Google Sheet URL.", variant: "destructive" }); return; }
+    if (!exportUrl) { toast.error("Invalid URL", { description: "Please enter a valid Google Sheet URL." }); return; }
 
     setIsImporting(true);
     try {
@@ -151,12 +153,12 @@ const PublicationPage = () => {
         skipEmptyLines: true,
         complete: (results) => {
           const parsedData = results.data as any[];
-          if (parsedData.length > 0) { setHeaders(Object.keys(parsedData[0])); setData(parsedData); setFileName("Google Sheet Import"); toast({ title: "Import Successful", description: `Imported ${parsedData.length} rows from Google Sheet.` }); }
-          else { toast({ title: "Empty Sheet", description: "No data found in the Google Sheet.", variant: "destructive" }); }
+          if (parsedData.length > 0) { setHeaders(Object.keys(parsedData[0])); setData(parsedData); setFileName("Google Sheet Import"); toast.success("Import Successful", { description: `Imported ${parsedData.length} rows from Google Sheet.` }); }
+          else { toast.error("Empty Sheet", { description: "No data found in the Google Sheet." }); }
         },
         error: (err) => { throw err; }
       });
-    } catch (error: any) { toast({ title: "Import Failed", description: "Could not fetch Google Sheet.", variant: "destructive" }); } finally { setIsImporting(false); }
+    } catch (error: any) { toast.error("Import Failed", { description: "Could not fetch Google Sheet." }); } finally { setIsImporting(false); }
   };
 
   const clearData = () => { setData([]); setHeaders([]); setFileName(null); setSelectedPhoneColumn(""); setGoogleSheetUrl(""); if (fileInputRef.current) fileInputRef.current.value = ""; };
@@ -173,11 +175,11 @@ const PublicationPage = () => {
   };
 
   const handleGenerateMessages = () => {
-    if (!templateMessage.trim()) { toast({ title: "Missing Template", description: "Please enter a message template.", variant: "destructive" }); return; }
-    if (messageType !== 'text' && !mediaUrl.trim()) { toast({ title: "Missing URL", description: "Please enter a direct link for the file/image.", variant: "destructive" }); return; }
+    if (!templateMessage.trim()) { toast.error("Missing Template", { description: "Please enter a message template." }); return; }
+    if (messageType !== 'text' && !mediaUrl.trim()) { toast.error("Missing URL", { description: "Please enter a direct link for the file/image." }); return; }
     if (isScheduled) {
-        if (scheduleMode === 'fixed' && !fixedScheduleDate) { toast({ title: "Missing Date", description: "Please select a date and time for the schedule.", variant: "destructive" }); return; }
-        if (scheduleMode === 'dynamic' && !dynamicDateCol) { toast({ title: "Missing Date Column", description: "Please select a column for scheduling dates.", variant: "destructive" }); return; }
+        if (scheduleMode === 'fixed' && !fixedScheduleDate) { toast.error("Missing Date", { description: "Please select a date and time for the schedule." }); return; }
+        if (scheduleMode === 'dynamic' && !dynamicDateCol) { toast.error("Missing Date Column", { description: "Please select a column for scheduling dates." }); return; }
     }
     setPreviewOpen(true);
   };
@@ -190,7 +192,7 @@ const PublicationPage = () => {
 
   const handleSendMessages = async () => {
     setIsSending(true);
-    toast({ title: "Sending...", description: "Processing your blast request." });
+    toast.info("Sending...", { description: "Processing your blast request." });
 
     try {
         const messages = data.map(row => {
@@ -215,24 +217,24 @@ const PublicationPage = () => {
 
         const { data: result, error } = await supabase.functions.invoke('send-whatsapp-blast', { body: { messages } });
         if (error) throw error;
-        toast({ title: "Blast Completed", description: `Sent: ${result.success}, Failed: ${result.failed}`, variant: result.failed > 0 ? "default" : "default" });
+        toast.success("Blast Completed", { description: `Sent: ${result.success}, Failed: ${result.failed}` });
         setPreviewOpen(false);
-    } catch (error: any) { toast({ title: "Blast Failed", description: error.message, variant: "destructive" }); } finally { setIsSending(false); }
+    } catch (error: any) { toast.error("Blast Failed", { description: error.message }); } finally { setIsSending(false); }
   };
 
   // In-App Notification Handler
   const handleSendInAppNotification = async () => {
     if (!notifTitle.trim() || !notifBody.trim()) {
-      toast({ title: "Missing Information", description: "Title and Body are required.", variant: "destructive" });
+      toast.error("Missing Information", { description: "Title and Body are required." });
       return;
     }
     
     let targetValue: any = null;
     if (notifTarget === 'role') {
-      if (!notifRole) { toast({ title: "Missing Role", description: "Please select a role.", variant: "destructive" }); return; }
+      if (!notifRole) { toast.error("Missing Role", { description: "Please select a role." }); return; }
       targetValue = notifRole;
     } else if (notifTarget === 'specific') {
-      if (notifUsers.length === 0) { toast({ title: "Missing Users", description: "Please select at least one user.", variant: "destructive" }); return; }
+      if (notifUsers.length === 0) { toast.error("Missing Users", { description: "Please select at least one user." }); return; }
       targetValue = notifUsers;
     }
 
@@ -250,7 +252,7 @@ const PublicationPage = () => {
 
       if (error) throw error;
       
-      toast({ title: "Broadcast Sent", description: `Successfully sent to ${data.count} user(s).` });
+      toast.success("Broadcast Sent", { description: `Successfully sent to ${data.count} user(s).` });
       
       // Reset form
       setNotifTitle("");
@@ -258,9 +260,42 @@ const PublicationPage = () => {
       setNotifLink("");
       setNotifUsers([]);
     } catch (error: any) {
-      toast({ title: "Broadcast Failed", description: error.message, variant: "destructive" });
+      toast.error("Broadcast Failed", { description: error.message });
     } finally {
       setIsSendingNotif(false);
+    }
+  };
+
+  const handleSendTestInAppNotification = async () => {
+    if (!notifTitle.trim() || !notifBody.trim()) {
+      toast.error("Missing Information", { description: "Title and Body are required for test." });
+      return;
+    }
+
+    if (!user) {
+       toast.error("Not authenticated");
+       return;
+    }
+
+    setIsSendingTestNotif(true);
+    try {
+      const { error } = await supabase.functions.invoke('send-app-broadcast', {
+        body: {
+          title: `[TEST] ${notifTitle}`,
+          body: notifBody,
+          target: 'specific',
+          targetValue: [user.id],
+          link: notifLink,
+        }
+      });
+
+      if (error) throw error;
+      
+      toast.success("Test Sent", { description: "Check your notifications for the test broadcast." });
+    } catch (error: any) {
+      toast.error("Test Failed", { description: error.message });
+    } finally {
+      setIsSendingTestNotif(false);
     }
   };
 
@@ -435,7 +470,7 @@ const PublicationPage = () => {
                                    disabled={isImporting}
                                 />
                                 <Button variant="secondary" onClick={handleGoogleSheetImport} disabled={!googleSheetUrl || isImporting}>
-                                   {isImporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <LinkIcon className="h-4 w-4 mr-2" />}
+                                   {isImporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
                                    Import
                                 </Button>
                              </div>
@@ -701,7 +736,7 @@ const PublicationPage = () => {
              <Card className="max-w-2xl mx-auto">
                 <CardHeader>
                    <CardTitle>Send In-App Notification</CardTitle>
-                   <CardDescription>Send a notification to the in-app notification center (bell icon) for all users or specific segments.</CardDescription>
+                   <CardDescription>Send a broadcast notification to all users or specific segments of your user base.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
                    <div className="space-y-2">
@@ -776,8 +811,12 @@ const PublicationPage = () => {
                    </div>
 
                 </CardContent>
-                <CardFooter className="flex justify-end border-t pt-6">
-                   <Button onClick={handleSendInAppNotification} disabled={isSendingNotif}>
+                <CardFooter className="flex justify-end gap-2 border-t pt-6">
+                   <Button variant="secondary" onClick={handleSendTestInAppNotification} disabled={isSendingTestNotif || isSendingNotif}>
+                      {isSendingTestNotif ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FlaskConical className="mr-2 h-4 w-4" />}
+                      Send Test to Me
+                   </Button>
+                   <Button onClick={handleSendInAppNotification} disabled={isSendingNotif || isSendingTestNotif}>
                       {isSendingNotif ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Bell className="mr-2 h-4 w-4" />}
                       Send In-App Broadcast
                    </Button>
