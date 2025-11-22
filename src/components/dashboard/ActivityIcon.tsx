@@ -18,6 +18,8 @@ import {
   MapPin,
   UserCog,
   Activity as DefaultActivityIcon,
+  Receipt,
+  Trash2,
 } from 'lucide-react';
 import { ProjectActivity } from '@/hooks/useActivities';
 
@@ -46,6 +48,9 @@ const iconMap: { [key: string]: React.ElementType } = {
   TIMELINE_UPDATED: Calendar,
   VENUE_UPDATED: MapPin,
   OWNERSHIP_TRANSFERRED: UserCog,
+  EXPENSE_ADDED: Receipt,
+  EXPENSE_UPDATED: Receipt,
+  EXPENSE_DELETED: Trash2,
 };
 
 const ActivityIcon = ({ type, className }: ActivityIconProps) => {
