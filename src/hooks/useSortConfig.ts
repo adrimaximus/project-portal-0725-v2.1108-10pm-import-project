@@ -14,16 +14,10 @@ export const useSortConfig = <K extends string | number | symbol>(
 
   const requestSort = useCallback((key: K) => {
     setSortConfig(prevConfig => {
-      // If the key is the same and direction is 'desc', reset the sort
-      if (prevConfig.key === key && prevConfig.direction === 'desc') {
-        return { key: null, direction: 'asc' }; // Reset to no key, default direction asc
-      }
-      
-      let direction: SortDirection = 'asc';
       if (prevConfig.key === key && prevConfig.direction === 'asc') {
-        direction = 'desc';
+        return { key, direction: 'desc' };
       }
-      return { key, direction };
+      return { key, direction: 'asc' };
     });
   }, []);
 

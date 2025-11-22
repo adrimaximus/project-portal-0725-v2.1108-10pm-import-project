@@ -95,19 +95,13 @@ export const useProjectFilters = (projects: Project[]) => {
       to: range?.to ? range.to.toISOString().split('T')[0] : null,
     });
   };
+  
   const requestSort = (key: keyof Project) => {
-    if (sortConfig.key === key && sortConfig.direction === 'desc') {
-      updateSearchParams({
-        sortKey: null,
-        sortDir: null,
-      });
-    } else {
-      const newDirection = sortConfig.key === key && sortConfig.direction === 'asc' ? 'desc' : 'asc';
-      updateSearchParams({
-        sortKey: key,
-        sortDir: newDirection,
-      });
-    }
+    const newDirection = sortConfig.key === key && sortConfig.direction === 'asc' ? 'desc' : 'asc';
+    updateSearchParams({
+      sortKey: key,
+      sortDir: newDirection,
+    });
   };
 
   const clearFilters = useCallback(() => {
