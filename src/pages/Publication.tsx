@@ -262,8 +262,8 @@ const PublicationPage = () => {
                                </SelectTrigger>
                                <SelectContent>
                                   <SelectItem value="text">Text Message</SelectItem>
-                                  <SelectItem value="image">Image Message</SelectItem>
-                                  <SelectItem value="document">Document</SelectItem>
+                                  <SelectItem value="image">Image + Text Message</SelectItem>
+                                  <SelectItem value="document">File + Text Message</SelectItem>
                                </SelectContent>
                             </Select>
                          </div>
