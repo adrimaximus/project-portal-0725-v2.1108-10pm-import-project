@@ -31,12 +31,12 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Fetch OpenAI key from DB config
+    // Use maybeSingle to safely check for config
     const { data: config, error: configError } = await supabaseAdmin
       .from('app_config')
       .select('value')
       .eq('key', 'OPENAI_API_KEY')
-      .single();
+      .maybeSingle();
 
     let openai = null;
     if (!configError && config?.value) {

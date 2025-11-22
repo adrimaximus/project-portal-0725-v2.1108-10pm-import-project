@@ -94,9 +94,14 @@ const sendEmail = async (supabaseAdmin, to: string, subject: string, html: strin
         .from('app_config')
         .select('value')
         .eq('key', 'EMAILIT_API_KEY')
-        .single();
+        .maybeSingle();
 
-    if (configError || !config?.value) {
+    if (configError) {
+        console.error("Error fetching Emailit config:", configError.message);
+        return;
+    }
+
+    if (!config?.value) {
         console.warn("Emailit API key not configured. Skipping email.");
         return;
     }
@@ -135,20 +140,22 @@ serve(async (req) => {
       throw new Error("Missing required fields: user_id, notification_type, title, body.");
     }
 
-    // 1. Fetch user's profile and person record in parallel
+    // 1. Fetch user's profile and person record in parallel using maybeSingle to prevent crashes on missing data
     const [profileRes, personRes] = await Promise.all([
-        supabaseAdmin.from('profiles').select('email, phone, notification_preferences').eq('id', user_id).single(),
-        supabaseAdmin.from('people').select('contact').eq('user_id', user_id).single()
+        supabaseAdmin.from('profiles').select('email, phone, notification_preferences').eq('id', user_id).maybeSingle(),
+        supabaseAdmin.from('people').select('contact').eq('user_id', user_id).maybeSingle()
     ]);
 
-    if (profileRes.error && profileRes.error.code !== 'PGRST116') throw profileRes.error;
+    if (profileRes.error) throw profileRes.error;
     if (personRes.error && personRes.error.code !== 'PGRST116') throw personRes.error;
 
     const profile = profileRes.data;
     const person = personRes.data;
 
     if (!profile) {
-        throw new Error(`User with ID ${user_id} not found.`);
+        console.error(`User with ID ${user_id} not found in profiles.`);
+        // Return success to stop retries if user doesn't exist
+        return new Response(JSON.stringify({ message: `User with ID ${user_id} not found. Notification skipped.` }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
     }
 
     // 2. Determine final contact info using fallback logic
