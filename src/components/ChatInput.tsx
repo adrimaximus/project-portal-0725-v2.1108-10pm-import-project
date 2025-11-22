@@ -13,6 +13,7 @@ import data from '@emoji-mart/data';
 import { useTheme } from "@/contexts/ThemeProvider";
 import InteractiveText from './InteractiveText';
 import SafeLocalStorage from '@/lib/localStorage';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface ChatInputProps {
   onSendMessage: (text: string, attachment: File | null, replyToMessageId?: string | null) => void;
@@ -41,6 +42,7 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
   const lastTypingSentAtRef = useRef<number>(0);
   const { selectedConversation, projectSuggestions, taskSuggestions, billSuggestions } = useChatContext();
   const { theme } = useTheme();
+  const { user: currentUser } = useAuth();
   const mentionsInputRef = useRef<any>(null);
 
   useEffect(() => {
@@ -107,7 +109,13 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
     // If user typed "@all", replace it with mentions for everyone in the conversation
     if (finalText.match(/@\[[^\]]+\]\(all\)/)) {
        const members = selectedConversation?.members || [];
-       const allMentions = members.map(u => `@[${u.name}](${u.id})`).join(' ');
+       // Filter out non-users and self from @all expansion to ensure valid notifications
+       const validMembers = members.filter(m => 
+         m.id !== 'ai-assistant' && 
+         m.id !== 'all' && 
+         m.id !== currentUser?.id
+       );
+       const allMentions = validMembers.map(u => `@[${u.name}](${u.id})`).join(' ');
        finalText = finalText.replace(/@\[[^\]]+\]\(all\)/g, allMentions);
     }
 

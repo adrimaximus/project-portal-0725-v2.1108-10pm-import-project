@@ -25,13 +25,11 @@ const isEmojiOnly = (str: string | null | undefined): boolean => {
   const trimmed = str.trim();
   if (!trimmed) return false;
 
-  // Regex to check for any letters or digits
   const hasAlphanumeric = /[a-zA-Z0-9]/;
   if (hasAlphanumeric.test(trimmed)) {
     return false;
   }
 
-  // Regex to ensure it has at least one emoji character, to avoid matching only punctuation
   const hasEmoji = /\p{Extended_Pictographic}/u;
   return hasEmoji.test(trimmed);
 };
