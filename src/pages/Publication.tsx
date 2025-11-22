@@ -29,6 +29,7 @@ const PublicationPage = () => {
   const [templateMessage, setTemplateMessage] = useState("");
   const [isImporting, setIsImporting] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [isSending, setIsSending] = useState(false);
   
   // WBIZTOOL Specific States
   const [messageType, setMessageType] = useState("text");
@@ -222,6 +223,48 @@ const PublicationPage = () => {
           message = message.replace(regex, row[header] || '');
       });
       return message;
+  };
+
+  const handleSendMessages = async () => {
+    setIsSending(true);
+    // We don't set a toast ID because we want to update it later, but sonner toast() returns an ID.
+    // However, for simplicity we'll just trigger a new toast on success/fail.
+    toast({ title: "Sending...", description: "Processing your blast request." });
+
+    try {
+        const messages = data.map(row => {
+            // Basic phone cleaning
+            let phone = row[selectedPhoneColumn] ? String(row[selectedPhoneColumn]).replace(/\D/g, '') : '';
+            if (phone.startsWith('0')) phone = '62' + phone.substring(1);
+            // Handle if user just put 812...
+            if (phone.startsWith('8')) phone = '62' + phone;
+
+            return {
+                phone,
+                message: generatePreviewMessage(row),
+                type: messageType, // 'text', 'image', 'document'
+                url: mediaUrl,
+            };
+        }).filter(m => m.phone.length > 5); // Filter invalid phones
+
+        const { data: result, error } = await supabase.functions.invoke('send-whatsapp-blast', {
+            body: { messages }
+        });
+
+        if (error) throw error;
+
+        toast({ 
+            title: "Blast Completed", 
+            description: `Sent: ${result.success}, Failed: ${result.failed}`, 
+            variant: result.failed > 0 ? "default" : "default"
+        });
+        setPreviewOpen(false);
+
+    } catch (error: any) {
+        toast({ title: "Blast Failed", description: error.message, variant: "destructive" });
+    } finally {
+        setIsSending(false);
+    }
   };
 
   return (
@@ -551,9 +594,9 @@ const PublicationPage = () => {
                     <p>No data to preview.</p>
                 )}
                 <DialogFooter>
-                    <Button variant="outline" onClick={() => setPreviewOpen(false)}>Cancel</Button>
-                    <Button onClick={() => { toast({ title: "Messages Queued", description: `${data.length} messages are being processed.` }); setPreviewOpen(false); }}>
-                        <CheckCircle2 className="mr-2 h-4 w-4" />
+                    <Button variant="outline" onClick={() => setPreviewOpen(false)} disabled={isSending}>Cancel</Button>
+                    <Button onClick={handleSendMessages} disabled={isSending}>
+                        {isSending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
                         Confirm & Send
                     </Button>
                 </DialogFooter>
