@@ -20,7 +20,7 @@ const getOpenAIClient = async (supabaseAdmin) => {
     .from('app_config')
     .select('value')
     .eq('key', 'OPENAI_API_KEY')
-    .single();
+    .maybeSingle();
 
   if (configError || !config?.value) {
     throw new Error("OpenAI API key is not configured by an administrator.");
