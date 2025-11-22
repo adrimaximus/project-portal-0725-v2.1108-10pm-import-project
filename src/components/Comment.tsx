@@ -14,6 +14,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/t
 import InteractiveText from './InteractiveText';
 import AttachmentViewerModal from './AttachmentViewerModal';
 import MentionsInput from './MentionsInput';
+import MarkdownRenderer from './MarkdownRenderer';
 
 interface CommentProps {
   comment: CommentType;
@@ -166,8 +167,8 @@ const Comment: React.FC<CommentProps> = ({
                   </div>
                 </button>
               )}
-              <div className="prose prose-sm dark:prose-invert max-w-none break-words whitespace-pre-wrap prose-p:my-0 [&_p]:text-justify">
-                <InteractiveText text={comment.text || ''} members={allUsers} />
+              <div className="prose prose-sm dark:prose-invert max-w-none break-words prose-p:my-0 [&_p]:text-justify">
+                <MarkdownRenderer>{comment.text || ''}</MarkdownRenderer>
               </div>
               {attachments.length > 0 && (
                 <div className="mt-2">
