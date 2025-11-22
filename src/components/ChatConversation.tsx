@@ -223,8 +223,8 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                                     {!message.text && (
                                       <div className="absolute bottom-1 right-1 flex items-end">
                                         <div className="flex-shrink-0 self-end flex items-center gap-1 bg-black/40 rounded-full pl-1.5">
-                                          {isEdited && <span className="text-xs text-white/90">Edited</span>}
-                                          <span className="text-xs text-white/90 py-0.5">
+                                          {isEdited && <span className="text-[9px] text-white/90">Edited</span>}
+                                          <span className="text-[9px] text-white/90 py-0.5">
                                             {formatTimestamp(message.timestamp)}
                                           </span>
                                           <ChatMessageActions message={message} isCurrentUser={isCurrentUser} onReply={onReply} className="text-white/90 hover:bg-white/20" />
@@ -233,10 +233,10 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                                     )}
                                   </div>
                                   {message.text && (
-                                    <div className="pt-2 px-1 flex items-end gap-2">
-                                      <div className="min-w-0 flex-grow">
+                                    <div className="pt-2 px-1 flex flex-col items-end gap-0.5">
+                                      <div className="min-w-0 w-full">
                                         <div className={cn(
-                                          "text-sm whitespace-pre-wrap break-all prose prose-sm max-w-none [&_p]:my-0",
+                                          "text-sm whitespace-pre-wrap break-words prose prose-sm max-w-none [&_p]:my-0",
                                           isCurrentUser 
                                             ? "prose dark:prose-invert [--tw-prose-body:#e3e3e3] [--tw-prose-links:#e3e3e3] [--tw-prose-bold:#e3e3e3] [--tw-prose-invert-body:#374151] [--tw-prose-invert-links:#374151] [--tw-prose-invert-bold:#374151]" 
                                             : "dark:prose-invert"
@@ -245,9 +245,9 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                                         </div>
                                       </div>
                                       <div className="flex-shrink-0 self-end flex items-center gap-1">
-                                        {isEdited && <span className={cn("text-xs", isCurrentUser ? "text-primary-foreground/70" : "text-muted-foreground")}>Edited</span>}
+                                        {isEdited && <span className={cn("text-[9px]", isCurrentUser ? "text-primary-foreground/70" : "text-muted-foreground")}>Edited</span>}
                                         <span className={cn(
-                                            "text-xs",
+                                            "text-[9px]",
                                             isCurrentUser ? "text-primary-foreground/70" : "text-muted-foreground"
                                         )}>
                                             {formatTimestamp(message.timestamp)}
@@ -269,14 +269,14 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                                   </div>
                                 </div>
                               ) : (
-                                <div className="flex items-end gap-2">
-                                  <div className="min-w-0 flex-grow">
+                                <div className="flex flex-col items-end gap-0.5">
+                                  <div className="min-w-0 w-full">
                                     {message.text && (
                                       isOnlyEmoji ? (
                                         <div className="text-3xl">{message.text}</div>
                                       ) : (
                                         <div className={cn(
-                                          "text-sm whitespace-pre-wrap break-all prose prose-sm max-w-none [&_p]:my-0",
+                                          "text-sm whitespace-pre-wrap break-words prose prose-sm max-w-none [&_p]:my-0",
                                           isCurrentUser 
                                             ? "prose dark:prose-invert [--tw-prose-body:#e3e3e3] [--tw-prose-links:#e3e3e3] [--tw-prose-bold:#e3e3e3] [--tw-prose-invert-body:#374151] [--tw-prose-invert-links:#374151] [--tw-prose-invert-bold:#374151]" 
                                             : "dark:prose-invert"
@@ -290,9 +290,9 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                                     )}
                                   </div>
                                   <div className="flex-shrink-0 self-end flex items-center gap-1">
-                                      {isEdited && <span className={cn("text-xs", isCurrentUser ? "text-primary-foreground/70" : "text-muted-foreground")}>Edited</span>}
+                                      {isEdited && <span className={cn("text-[9px]", isCurrentUser ? "text-primary-foreground/70" : "text-muted-foreground")}>Edited</span>}
                                       <span className={cn(
-                                          "text-xs",
+                                          "text-[9px]",
                                           isCurrentUser ? "text-primary-foreground/70" : "text-muted-foreground"
                                       )}>
                                           {formatTimestamp(message.timestamp)}
