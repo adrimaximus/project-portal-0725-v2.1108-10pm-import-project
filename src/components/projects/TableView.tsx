@@ -3,7 +3,6 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableHead,
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
@@ -30,6 +29,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useProjectStatuses, ProjectStatusDef } from "@/hooks/useProjectStatuses";
+import { SortableTableHead } from "../ui/SortableTableHead";
 
 interface TableViewProps {
   projects: Project[];
@@ -243,10 +243,13 @@ const TableView = ({ projects, isLoading, onDeleteProject, sortConfig, requestSo
       });
       return sorted;
     }
+    // If sort is active, let the parent handle basic sorting (handled by useProjectFilters)
+    // This component just renders what it's given if already sorted
     return projects;
   }, [projects, sortConfig]);
 
   const { upcomingProjects, pastProjects } = useMemo(() => {
+    // If we are explicitly sorting, we don't split by upcoming/past to avoid confusing list jumps
     if (sortConfig.key) {
       return { upcomingProjects: sortedProjects, pastProjects: [] };
     }
@@ -283,38 +286,14 @@ const TableView = ({ projects, isLoading, onDeleteProject, sortConfig, requestSo
   return (
     <div className="w-full overflow-x-auto">
       <Table>
-        <TableHeader className="sticky top-0 bg-background z-10">
+        <TableHeader className="sticky top-0 bg-background z-10 shadow-sm">
           <TableRow>
-            <TableHead className="w-[300px] p-2">
-              <Button variant="ghost" onClick={() => requestSort('name')} className="w-full justify-start px-2 group">
-                Project
-              </Button>
-            </TableHead>
-            <TableHead className="w-[140px] p-2">
-              <Button variant="ghost" onClick={() => requestSort('status')} className="w-full justify-start px-2 group">
-                Status
-              </Button>
-            </TableHead>
-            <TableHead className="w-[120px] p-2">
-              <Button variant="ghost" onClick={() => requestSort('payment_status')} className="w-full justify-start px-2 group">
-                Payment
-              </Button>
-            </TableHead>
-            <TableHead className="w-[150px] p-2">
-              <Button variant="ghost" onClick={() => requestSort('progress')} className="w-full justify-start px-2 group">
-                Progress
-              </Button>
-            </TableHead>
-            <TableHead className="w-[180px] p-2">
-              <Button variant="ghost" onClick={() => requestSort('start_date')} className="w-full justify-start px-2 group">
-                Date
-              </Button>
-            </TableHead>
-            <TableHead className="w-[200px] p-2">
-              <Button variant="ghost" onClick={() => requestSort('venue')} className="w-full justify-start px-2 group">
-                Lokasi
-              </Button>
-            </TableHead>
+            <SortableTableHead columnKey="name" onSort={requestSort} sortConfig={sortConfig} className="w-[300px]">Project</SortableTableHead>
+            <SortableTableHead columnKey="status" onSort={requestSort} sortConfig={sortConfig} className="w-[140px]">Status</SortableTableHead>
+            <SortableTableHead columnKey="payment_status" onSort={requestSort} sortConfig={sortConfig} className="w-[120px]">Payment</SortableTableHead>
+            <SortableTableHead columnKey="progress" onSort={requestSort} sortConfig={sortConfig} className="w-[150px]">Progress</SortableTableHead>
+            <SortableTableHead columnKey="start_date" onSort={requestSort} sortConfig={sortConfig} className="w-[180px]">Date</SortableTableHead>
+            <SortableTableHead columnKey="venue" onSort={requestSort} sortConfig={sortConfig} className="w-[200px]">Lokasi</SortableTableHead>
             <TableHead className="w-[50px]"></TableHead>
           </TableRow>
         </TableHeader>

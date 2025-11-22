@@ -180,8 +180,18 @@ export const useProjectFilters = (projects: Project[]) => {
           compareResult = aValue - bValue;
         } else if (aValue instanceof Date && bValue instanceof Date) {
           compareResult = aValue.getTime() - bValue.getTime();
+        } else if (typeof aValue === 'string' && typeof bValue === 'string') {
+            // Check for ISO date string format
+            const dateA = Date.parse(aValue);
+            const dateB = Date.parse(bValue);
+            
+            if (!isNaN(dateA) && !isNaN(dateB) && aValue.includes('-')) {
+                 compareResult = dateA - dateB;
+            } else {
+                 compareResult = aValue.localeCompare(bValue, undefined, { numeric: true, sensitivity: 'base' });
+            }
         } else {
-          compareResult = String(aValue).localeCompare(String(bValue), undefined, { numeric: true, sensitivity: 'base' });
+           compareResult = String(aValue).localeCompare(String(bValue), undefined, { numeric: true, sensitivity: 'base' });
         }
 
         if (compareResult !== 0) {

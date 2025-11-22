@@ -61,7 +61,7 @@ export const usePeopleData = ({ searchTerm, tagIds, companyIds }: { searchTerm: 
 
   const sortedPeople = useMemo(() => {
     let sortableItems = [...people];
-    if (sortConfig.key !== null && sortConfig.key !== 'kanban_order' && sortConfig.key !== 'updated_at') {
+    if (sortConfig.key !== null && sortConfig.key !== 'kanban_order') {
       sortableItems.sort((a, b) => {
         const aValue = a[sortConfig.key!];
         const bValue = b[sortConfig.key!];
@@ -69,7 +69,17 @@ export const usePeopleData = ({ searchTerm, tagIds, companyIds }: { searchTerm: 
         if (aValue === null || aValue === undefined) return 1;
         if (bValue === null || bValue === undefined) return -1;
         
-        const compareResult = String(aValue).localeCompare(String(bValue));
+        let compareResult = 0;
+
+        // Check if it looks like a date string (ISO format)
+        const dateA = Date.parse(String(aValue));
+        const dateB = Date.parse(String(bValue));
+
+        if (!isNaN(dateA) && !isNaN(dateB) && String(aValue).includes('-')) {
+             compareResult = dateA - dateB;
+        } else {
+             compareResult = String(aValue).localeCompare(String(bValue), undefined, { numeric: true, sensitivity: 'base' });
+        }
 
         return sortConfig.direction === 'asc' ? compareResult : -compareResult;
       });
