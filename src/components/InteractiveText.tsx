@@ -1,8 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { User } from '@/types';
-import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-import { getInitials } from '@/lib/utils';
 
 interface InteractiveTextProps {
   text: string;
@@ -28,16 +26,9 @@ const InteractiveText: React.FC<InteractiveTextProps> = ({ text, members = [] })
         // 1. User Mention: @[Name](id)
         const userMatch = part.match(/^@\[([^\]]+)\]\(([^)]+)\)$/);
         if (userMatch) {
-          const [, name, id] = userMatch;
-          const member = members.find((m) => m.id === id);
+          const [, name] = userMatch;
           return (
             <span key={index} className="bg-primary/10 text-primary font-semibold rounded px-1 py-0.5 inline-flex items-center gap-1 align-middle text-xs mx-0.5">
-              {member && (
-                <Avatar className="h-3.5 w-3.5">
-                  <AvatarImage src={member.avatar_url} />
-                  <AvatarFallback className="text-[6px]">{getInitials(member.name || name)}</AvatarFallback>
-                </Avatar>
-              )}
               @{name}
             </span>
           );
