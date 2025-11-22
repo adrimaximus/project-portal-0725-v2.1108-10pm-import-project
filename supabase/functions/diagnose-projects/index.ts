@@ -46,13 +46,18 @@ Deno.serve(async (req) => {
       .in('id', userProjects ? userProjects.map(p => p.id) : []);
     diagnostics.projectsWithNullDates = nullDateError ? 'unknown' : projectsWithNullDates?.length || 0;
 
+    // Use maybeSingle to prevent error if key is missing
     const { data: config, error: configError } = await supabaseAdmin
       .from('app_config')
       .select('value')
       .eq('key', 'OPENAI_API_KEY')
-      .single();
+      .maybeSingle();
 
-    if (configError || !config?.value) {
+    if (configError) {
+        throw new Error(`Error fetching config: ${configError.message}`);
+    }
+
+    if (!config?.value) {
       throw new Error("OpenAI API key is not configured by an administrator.");
     }
     const openai = new OpenAI({ apiKey: config.value });

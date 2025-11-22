@@ -15,9 +15,14 @@ const getOpenAIClient = async (supabaseAdmin: any) => {
     .from('app_config')
     .select('value')
     .eq('key', 'OPENAI_API_KEY')
-    .single();
+    .maybeSingle();
 
-  if (configError || !config?.value) {
+  if (configError) {
+    console.error("Error fetching OpenAI config:", configError);
+    return null;
+  }
+
+  if (!config?.value) {
     return null;
   }
   return new OpenAI({ apiKey: config.value });
