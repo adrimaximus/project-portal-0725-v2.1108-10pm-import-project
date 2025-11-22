@@ -404,7 +404,7 @@ const PublicationPage = () => {
                                      <TableRow className="hover:bg-transparent">
                                         <TableHead className="w-[50px] font-bold text-foreground">#</TableHead>
                                         {headers.map((header) => (
-                                           <TableHead key={header} className="font-bold text-foreground min-w-[120px] whitespace-nowrap">
+                                           <TableHead key={header} className="font-bold text-foreground min-w-[80px]">
                                               {header}
                                               {header === selectedPhoneColumn && (
                                                  <Badge variant="secondary" className="ml-2 text-[10px] h-4 px-1">Phone</Badge>
@@ -420,7 +420,7 @@ const PublicationPage = () => {
                                            {headers.map((header) => (
                                               <TableCell 
                                                 key={`${rowIndex}-${header}`} 
-                                                className="text-sm h-10 max-w-[300px] truncate whitespace-nowrap" 
+                                                className="text-sm max-w-[200px] break-words align-top py-2" 
                                                 title={String(row[header] || '')}
                                               >
                                                  {row[header]}
