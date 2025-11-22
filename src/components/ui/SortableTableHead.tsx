@@ -1,60 +1,51 @@
-import { TableHead } from "@/components/ui/table";
+"use client";
+
 import { Button } from "@/components/ui/button";
-import { ArrowDown, ArrowUp, ChevronsUpDown } from "lucide-react";
+import { TableHead } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
+import { ArrowDown, ArrowUp, ChevronsUpDown } from "lucide-react";
 
-interface SortConfig {
-  key: any;
-  direction: "asc" | "desc";
-}
-
-interface SortableTableHeadProps extends React.ComponentProps<typeof TableHead> {
+interface SortableTableHeadProps extends React.ThHTMLAttributes<HTMLTableCellElement> {
   children: React.ReactNode;
   onSort: (key: string) => void;
+  sortKey?: string | null;
+  sortDirection?: 'asc' | 'desc' | null;
   columnKey: string;
-  sortConfig?: SortConfig;
-  sortKey?: string;
-  sortOrder?: "asc" | "desc";
 }
 
-export const SortableTableHead = ({
+export function SortableTableHead({
   children,
   onSort,
   sortKey,
-  sortOrder,
-  sortConfig,
+  sortDirection,
   columnKey,
   className,
   ...props
-}: SortableTableHeadProps) => {
-  const currentKey = sortConfig ? sortConfig.key : sortKey;
-  const currentDirection = sortConfig ? sortConfig.direction : sortOrder;
-
-  const isActive = currentKey === columnKey;
-  const Icon = isActive
-    ? currentDirection === "asc"
-      ? ArrowUp
-      : ArrowDown
-    : ChevronsUpDown;
+}: SortableTableHeadProps) {
+  const isSorted = sortKey === columnKey;
 
   return (
     <TableHead {...props} className={cn("p-0", className)}>
       <Button
         variant="ghost"
         type="button"
-        onClick={() => onSort(columnKey)}
-        className="w-full justify-start px-4 py-3 h-auto hover:bg-muted/50 rounded-none text-left font-medium group select-none active:bg-muted"
+        onClick={(e) => {
+          e.preventDefault();
+          onSort(columnKey);
+        }}
+        className="h-full w-full justify-start rounded-none px-4 py-2 hover:bg-muted/50 font-medium text-muted-foreground group"
       >
         <span className="truncate">{children}</span>
-        <Icon 
-          className={cn(
-            "ml-2 h-4 w-4 flex-shrink-0 transition-opacity", 
-            !isActive && "text-muted-foreground/40 opacity-50 group-hover:opacity-100"
-          )} 
-        />
+        {isSorted && sortDirection === "asc" && (
+          <ArrowUp className="ml-2 h-4 w-4 shrink-0 text-foreground" />
+        )}
+        {isSorted && sortDirection === "desc" && (
+          <ArrowDown className="ml-2 h-4 w-4 shrink-0 text-foreground" />
+        )}
+        {(!isSorted || !sortDirection) && (
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-0 group-hover:opacity-50 transition-opacity" />
+        )}
       </Button>
     </TableHead>
   );
-};
-
-export default SortableTableHead;
+}
