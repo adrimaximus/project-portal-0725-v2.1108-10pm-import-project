@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.54.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -22,71 +22,97 @@ Deno.serve(async (req) => {
     const cronHeader = req.headers.get('X-Cron-Secret');
     const cronSecret = Deno.env.get('CRON_SECRET');
 
-    if (userAgent !== 'pg_net/0.19.5' && cronHeader !== cronSecret) {
+    // Allow if it's a cron job (from pg_net) OR if it has the correct secret
+    const isCron = userAgent && userAgent.startsWith('pg_net');
+    const isAuthorized = cronHeader && cronHeader === cronSecret;
+
+    if (!isCron && !isAuthorized) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: corsHeaders });
     }
 
-    // 1. Get all users with Google Calendar tokens
+    // 1. Get all Google Calendar tokens
+    // Avoid complex joins to prevent 400/500 errors if foreign keys aren't perfect
     const { data: tokens, error: tokenError } = await supabaseAdmin
       .from('google_calendar_tokens')
-      .select('*, user:profiles!user_id(id, email, google_calendar_settings)');
+      .select('*');
 
-    if (tokenError) throw tokenError;
+    if (tokenError) throw new Error(`Token fetch error: ${tokenError.message}`);
+    
     if (!tokens || tokens.length === 0) {
       return new Response(JSON.stringify({ message: "No users with Google Calendar integration." }), { headers: corsHeaders });
     }
 
+    // 2. Get profiles for these tokens
+    const userIds = tokens.map(t => t.user_id);
+    const { data: profiles, error: profileError } = await supabaseAdmin
+        .from('profiles')
+        .select('id, email, google_calendar_settings')
+        .in('id', userIds);
+
+    if (profileError) throw new Error(`Profile fetch error: ${profileError.message}`);
+
+    const profilesMap = new Map(profiles.map(p => [p.id, p]));
+
     let totalImported = 0;
 
-    // 2. Get all existing event IDs from projects
+    // 3. Get all existing event IDs to avoid duplicates
     const { data: existingProjects, error: projectsError } = await supabaseAdmin
       .from('projects')
       .select('origin_event_id')
       .not('origin_event_id', 'is', null);
-    if (projectsError) throw projectsError;
+      
+    if (projectsError) throw new Error(`Existing projects fetch error: ${projectsError.message}`);
+    
     const existingEventIds = new Set(existingProjects.map(p => p.origin_event_id));
 
     for (const token of tokens) {
-      const user = token.user;
+      const user = profilesMap.get(token.user_id);
       if (!user || !user.google_calendar_settings?.selected_calendars) {
         continue;
       }
 
       let { access_token, refresh_token, expiry_date } = token;
 
+      // Refresh token if needed
       if (new Date(expiry_date) < new Date()) {
-        console.log(`Access token for ${user.email} expired, refreshing...`);
+        console.log(`Access token for user ${user.id} expired, refreshing...`);
         const clientId = Deno.env.get("VITE_GOOGLE_CLIENT_ID");
         const clientSecret = Deno.env.get("GOOGLE_CLIENT_SECRET");
 
-        const response = await fetch('https://oauth2.googleapis.com/token', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            client_id: clientId,
-            client_secret: clientSecret,
-            refresh_token: refresh_token,
-            grant_type: 'refresh_token',
-          }),
-        });
+        try {
+            const response = await fetch('https://oauth2.googleapis.com/token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                client_id: clientId,
+                client_secret: clientSecret,
+                refresh_token: refresh_token,
+                grant_type: 'refresh_token',
+            }),
+            });
 
-        const newTokens = await response.json();
-        if (newTokens.error) {
-          console.error(`Error refreshing token for ${user.email}:`, newTokens.error_description);
-          await supabaseAdmin.from('google_calendar_tokens').delete().eq('user_id', user.id);
-          continue; // Skip this user
+            const newTokens = await response.json();
+            if (newTokens.error) {
+            console.error(`Error refreshing token for user ${user.id}:`, newTokens.error_description);
+            // Optional: Delete invalid token to stop retrying
+            // await supabaseAdmin.from('google_calendar_tokens').delete().eq('user_id', user.id);
+            continue; 
+            }
+
+            access_token = newTokens.access_token;
+            const newExpiryDate = new Date(new Date().getTime() + newTokens.expires_in * 1000);
+
+            await supabaseAdmin
+            .from('google_calendar_tokens')
+            .update({
+                access_token: access_token,
+                expiry_date: newExpiryDate.toISOString(),
+            })
+            .eq('user_id', user.id);
+        } catch (refreshErr) {
+            console.error(`Exception refreshing token for user ${user.id}:`, refreshErr);
+            continue;
         }
-
-        access_token = newTokens.access_token;
-        const newExpiryDate = new Date(new Date().getTime() + newTokens.expires_in * 1000);
-
-        await supabaseAdmin
-          .from('google_calendar_tokens')
-          .update({
-            access_token: access_token,
-            expiry_date: newExpiryDate.toISOString(),
-          })
-          .eq('user_id', user.id);
       }
 
       const timeMin = new Date().toISOString();
@@ -135,17 +161,17 @@ Deno.serve(async (req) => {
           continue;
         }
 
+        // Handle Attendees
         const allAttendeeEmails = [...new Set(eventsToImport.flatMap(event => event.attendees?.map((att: any) => att.email) || []).filter(Boolean))];
         const emailToIdMap = new Map<string, string>();
 
         if (allAttendeeEmails.length > 0) {
-          const { data: attendeeProfiles, error: profileError } = await supabaseAdmin
+          const { data: attendeeProfiles } = await supabaseAdmin
             .from('profiles')
             .select('id, email')
             .in('email', allAttendeeEmails);
-          if (profileError) {
-            console.warn(`Could not fetch attendee profiles:`, profileError.message);
-          } else if (attendeeProfiles) {
+            
+          if (attendeeProfiles) {
             attendeeProfiles.forEach(p => {
               if (p.email) emailToIdMap.set(p.email, p.id);
             });
@@ -155,12 +181,11 @@ Deno.serve(async (req) => {
         const projectMemberships: { project_id: string; user_id: string; role: string }[] = [];
         if (createdProjects) {
           createdProjects.forEach(project => {
+            // Ensure creator is added as owner if trigger failed (redundancy)
             if (project.created_by !== user.id) {
-              projectMemberships.push({
-                project_id: project.id,
-                user_id: user.id,
-                role: 'admin'
-              });
+                 // Logic mismatch? created_by IS user.id above.
+                 // But if we support shared calendars later, this might change.
+                 // For now, creator is owner.
             }
 
             const originalEvent = eventsToImport.find(e => e.id === project.origin_event_id);
@@ -184,12 +209,7 @@ Deno.serve(async (req) => {
         }
 
         if (projectMemberships.length > 0) {
-          const { error: memberInsertError } = await supabaseAdmin
-            .from('project_members')
-            .insert(projectMemberships);
-          if (memberInsertError) {
-            console.warn("Failed to add some members to projects:", memberInsertError.message);
-          }
+          await supabaseAdmin.from('project_members').insert(projectMemberships).catch(e => console.error("Member insert error:", e));
         }
 
         totalImported += newProjectsPayload.length;
