@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Info, PlayCircle, UploadCloud, MessageSquare, Bell, FileSpreadsheet, X, Link as LinkIcon, File, CheckCircle2, Loader2, Send } from "lucide-react";
+import { Info, PlayCircle, UploadCloud, MessageSquare, Bell, FileSpreadsheet, X, Link as LinkIcon, File, CheckCircle2, Loader2, Send, RefreshCw } from "lucide-react";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
 import { useToast } from "@/components/ui/use-toast";
@@ -449,9 +449,16 @@ const PublicationPage = () => {
                                     <p className="text-[10px] text-muted-foreground leading-none">{data.length} rows</p>
                                  </div>
                               </div>
-                              <Button variant="ghost" size="icon" onClick={clearData} className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10">
-                                 <X className="h-4 w-4" />
-                              </Button>
+                              <div className="flex items-center gap-1">
+                                  {fileName === "Google Sheet Import" && (
+                                      <Button variant="ghost" size="icon" onClick={handleGoogleSheetImport} disabled={isImporting} className="h-8 w-8 text-muted-foreground hover:text-primary">
+                                          {isImporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                                      </Button>
+                                  )}
+                                  <Button variant="ghost" size="icon" onClick={clearData} className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10">
+                                     <X className="h-4 w-4" />
+                                  </Button>
+                              </div>
                            </div>
                          )}
                       </div>
