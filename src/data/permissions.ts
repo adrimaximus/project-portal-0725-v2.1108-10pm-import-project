@@ -13,6 +13,7 @@ export const PERMISSIONS = [
       { id: 'module:billing', label: 'Billing', description: 'Access the Billing module.' },
       { id: 'module:expense', label: 'Expense', description: 'Access the Expense module.' },
       { id: 'module:people', label: 'People', description: 'Access the People module.' },
+      { id: 'module:publication', label: 'Publication', description: 'Access the Publication module.' },
       { id: 'module:knowledge-base', label: 'Knowledge Base', description: 'Access the Knowledge Base module.' },
       { id: 'module:settings', label: 'Settings', description: 'Access the Settings module.' },
     ],

@@ -88,6 +88,13 @@ export const initialFeatures: Feature[] = [
     path: '/notifications',
   },
   {
+    id: 'publication',
+    name: 'Publication',
+    description: 'Manage app notifications and send WhatsApp blasts.',
+    status: 'enabled',
+    path: '/publication',
+  },
+  {
     id: 'profile',
     name: 'Profile',
     description: 'Manage your personal information and settings.',

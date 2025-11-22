@@ -9,6 +9,7 @@ export const defaultNavItems = [
   { name: 'Billing', url: '/billing', icon: 'CreditCard', folder_id: null },
   { name: 'Expense', url: '/expense', icon: 'Receipt', folder_id: null },
   { name: 'People', url: '/people', icon: 'Users', folder_id: null },
+  { name: 'Publication', url: '/publication', icon: 'Megaphone', folder_id: null },
   { name: 'Knowledge Base', url: '/knowledge-base', icon: 'Book', folder_id: null },
   { name: 'Settings', url: '/settings', icon: 'Settings', folder_id: null },
 ];

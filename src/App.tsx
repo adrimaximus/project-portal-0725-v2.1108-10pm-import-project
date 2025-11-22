@@ -62,6 +62,7 @@ import GlobalTaskDrawer from "./components/GlobalTaskDrawer";
 import TaskRedirectPage from "./pages/TaskRedirectPage";
 import BankAccountsPage from "./pages/BankAccountsPage";
 import ExpensePropertiesPage from "./pages/ExpensePropertiesPage";
+import PublicationPage from "./pages/Publication";
 
 function App() {
   return (
@@ -124,6 +125,7 @@ function App() {
               <Route path="/settings/notifications" element={<NotificationSettingsPage />} />
               <Route path="/settings/bank-accounts" element={<BankAccountsPage />} />
               <Route path="/settings/expense-properties" element={<ExpensePropertiesPage />} />
+              <Route path="/publication" element={<PublicationPage />} />
               <Route path="/custom/:slug" element={<CustomPage />} />
               <Route path="/multipage/:slug" element={<MultiEmbedPage />} />
               <Route path="/multipage/:slug/:itemSlug" element={<MultiEmbedItemPage />} />
