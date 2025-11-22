@@ -64,7 +64,7 @@ const PublicationPage = () => {
                             className="min-h-[120px] font-mono text-sm"
                          />
                          <p className="text-xs text-muted-foreground">
-                            Use <code className="bg-muted px-1 py-0.5 rounded text-foreground">{{column_name}}</code> for variables. Available columns will appear after CSV upload.
+                            Use <code className="bg-muted px-1 py-0.5 rounded text-foreground">{"{{column_name}}"}</code> for variables. Available columns will appear after CSV upload.
                          </p>
                       </div>
 
