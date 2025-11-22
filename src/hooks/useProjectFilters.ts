@@ -1,3 +1,4 @@
+Desc -> Reset) for project filters.">
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Project, AdvancedFiltersState } from '@/types';
@@ -96,11 +97,18 @@ export const useProjectFilters = (projects: Project[]) => {
     });
   };
   const requestSort = (key: keyof Project) => {
-    const newDirection = sortConfig.key === key && sortConfig.direction === 'asc' ? 'desc' : 'asc';
-    updateSearchParams({
-      sortKey: key,
-      sortDir: newDirection,
-    });
+    if (sortConfig.key === key && sortConfig.direction === 'desc') {
+      updateSearchParams({
+        sortKey: null,
+        sortDir: null,
+      });
+    } else {
+      const newDirection = sortConfig.key === key && sortConfig.direction === 'asc' ? 'desc' : 'asc';
+      updateSearchParams({
+        sortKey: key,
+        sortDir: newDirection,
+      });
+    }
   };
 
   const clearFilters = useCallback(() => {
