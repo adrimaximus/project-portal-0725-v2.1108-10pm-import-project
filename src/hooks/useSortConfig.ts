@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 
-type SortDirection = 'asc' | 'desc';
+export type SortDirection = 'asc' | 'desc';
 
 export interface SortConfig<K> {
   key: K | null;
@@ -19,8 +19,8 @@ export const useSortConfig = <K extends string | number | symbol>(
         return { key, direction: 'asc' };
       }
 
-      // If sorting by the same key, strictly toggle direction
-      // Ascending -> Descending -> Ascending (Loop)
+      // If sorting by the same key, toggle direction
+      // Ascending -> Descending -> Ascending
       return {
         key,
         direction: currentConfig.direction === 'asc' ? 'desc' : 'asc',

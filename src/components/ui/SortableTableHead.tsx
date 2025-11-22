@@ -26,8 +26,6 @@ export function SortableTableHead<T extends string | number | symbol>({
   ...props
 }: SortableTableHeadProps<T>) {
   const isActive = sortConfig.key === columnKey;
-  
-  // Ensure direction check is case-insensitive or strict 'asc'
   const isAsc = sortConfig.direction === 'asc';
 
   return (
@@ -35,14 +33,17 @@ export function SortableTableHead<T extends string | number | symbol>({
       <Button
         variant="ghost"
         type="button"
-        onClick={() => onSort(columnKey)}
+        onClick={(e) => {
+          e.preventDefault();
+          onSort(columnKey);
+        }}
         className={cn(
-          "h-full w-full justify-start px-4 py-2 font-semibold hover:bg-muted/50 rounded-none text-left",
+          "h-full w-full justify-start px-4 py-2 font-semibold hover:bg-muted/50 rounded-none text-left group",
           isActive ? "text-foreground" : "text-muted-foreground"
         )}
       >
         {children}
-        <span className="ml-2 flex h-4 w-4 items-center justify-center">
+        <span className="ml-2 flex h-4 w-4 items-center justify-center transition-opacity">
             {isActive ? (
                 isAsc ? (
                     <ArrowUp className="h-3 w-3" />
@@ -50,7 +51,7 @@ export function SortableTableHead<T extends string | number | symbol>({
                     <ArrowDown className="h-3 w-3" />
                 )
             ) : (
-                <ChevronsUpDown className="h-3 w-3 opacity-50" />
+                <ChevronsUpDown className="h-3 w-3 opacity-0 group-hover:opacity-50" />
             )}
         </span>
       </Button>
