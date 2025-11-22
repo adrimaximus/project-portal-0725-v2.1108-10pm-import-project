@@ -17,6 +17,8 @@ import { useChatContext } from "@/contexts/ChatContext";
 import { useUnreadTasks } from "@/hooks/useUnreadTasks";
 import { getDashboardProjects } from "@/api/projects";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useFeatures } from "@/contexts/FeaturesContext";
+import { defaultNavItems } from "@/lib/defaultNavItems";
 
 type PortalSidebarProps = { isCollapsed: boolean; onToggle: () => void; };
 type NavItem = { id: string; href: string; label: string; icon: LucideIcon; badge?: number; folder_id: string | null; };
@@ -121,6 +123,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
   const { hasImportantUnread } = useNotifications();
   const { unreadConversationIds } = useChatContext();
   const { unreadTaskIds } = useUnreadTasks();
+  const { isFeatureEnabled } = useFeatures();
   const queryClient = useQueryClient();
   const backfillAttempted = useRef(false);
   const isMobile = useIsMobile();
@@ -145,13 +148,34 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
       backfillAttempted.current = true; // Attempt only once per session
       const backfill = async () => {
         console.log("No navigation items found for user, attempting to backfill...");
-        const { error } = await supabase.rpc('ensure_user_navigation_items', { p_user_id: user.id });
+        // If user has absolutely no items, we can try to backfill using the frontend definition
+        // However, calling the RPC `ensure_user_navigation_items` is safer as it handles updates.
+        // But `ensure` only adds if MISSING. If user has items but missing new ones, we might need to force add.
+        // Let's assume the RPC handles it, or we explicitly insert if the table is empty.
+        
+        // If list is empty, insert defaults.
+        const itemsToInsert = defaultNavItems.map((item, index) => ({
+            user_id: user.id,
+            name: item.name,
+            url: item.url,
+            icon: item.icon,
+            position: index,
+            is_enabled: true,
+            is_deletable: false,
+            is_editable: false,
+            type: 'url_embed',
+            folder_id: null,
+        }));
+        
+        const { error } = await supabase.from('user_navigation_items').insert(itemsToInsert);
+
         if (error) {
-          toast.error("Could not set up default navigation.", { description: error.message });
+            // If error (e.g. duplicate key if race condition), try the safe RPC
+            await supabase.rpc('ensure_user_navigation_items', { p_user_id: user.id });
         } else {
-          toast.info("Setting up your navigation menu...");
-          refetch();
+            toast.info("Setting up your navigation menu...");
         }
+        refetch();
       };
       backfill();
     }
@@ -203,6 +227,24 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
     return mapping[itemName.toLowerCase()] || null;
   };
 
+  const navItemToFeatureId = (itemName: string): string | null => {
+      const mapping: { [key: string]: string } = {
+          'dashboard': 'dashboard',
+          'projects': 'projects',
+          'tasks': 'tasks',
+          'requests': 'request',
+          'chat': 'chat',
+          'mood trackers': 'mood-tracker',
+          'goals': 'goals',
+          'billing': 'billing',
+          'expense': 'expense',
+          'people': 'people',
+          'knowledge base': 'knowledge-base',
+          'settings': 'settings',
+      };
+      return mapping[itemName.toLowerCase()] || null;
+  }
+
   const { navItems, settingsItem } = useMemo(() => {
     const hasUnreadChat = unreadConversationIds.size > 0;
 
@@ -224,6 +266,13 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
       .filter(item => item.is_enabled)
       .filter(item => {
         if (item.is_deletable === false) {
+          // 1. Check Global Feature Flag
+          const featureId = navItemToFeatureId(item.name);
+          if (featureId && !isFeatureEnabled(featureId)) {
+              return false;
+          }
+
+          // 2. Check User Permission
           const permissionId = navItemToPermissionId(item.name);
           return permissionId ? hasPermission(permissionId) : true;
         }
@@ -282,7 +331,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
     const otherItems = allItems.filter(item => item.href !== '/settings');
 
     return { navItems: otherItems, settingsItem: settings };
-  }, [customNavItems, hasImportantUnread, navItemsError, foldersError, hasPermission, unreadConversationIds, unreadTaskIds]);
+  }, [customNavItems, hasImportantUnread, navItemsError, foldersError, hasPermission, unreadConversationIds, unreadTaskIds, isFeatureEnabled]);
 
   const topLevelItems = useMemo(() => navItems.filter(item => !item.folder_id), [navItems]);
 
