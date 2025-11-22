@@ -13,10 +13,13 @@ const InteractiveText = ({ text, members = [] }: InteractiveTextProps) => {
   // Regex logic:
   // 1. Mentions: @[Name](id)
   // 2. Markdown Links: [Text](url)
-  // 3. Raw URLs: http://... or https://...
-  // 4. Newlines
+  // 3. Bold: **text**
+  // 4. Italic: *text*
+  // 5. Raw URLs: http://... or https://...
+  // 6. Newlines
   
-  const parts = text.split(/(@\[[^\]]+\]\s*\([^)]+\)|\[[^\]]+\]\([^)]+\)|https?:\/\/[^\s]+|\n)/g);
+  // Complex regex to split by all these tokens while keeping delimiters
+  const parts = text.split(/(@\[[^\]]+\]\s*\([^)]+\)|\[[^\]]+\]\([^)]+\)|\*\*[^*]+\*\*|\*[^*]+\*|https?:\/\/[^\s]+|\n)/g);
 
   return (
     <>
@@ -27,11 +30,22 @@ const InteractiveText = ({ text, members = [] }: InteractiveTextProps) => {
           return <br key={i} />;
         }
 
+        // Bold: **text**
+        const boldMatch = part.match(/^\*\*([^*]+)\*\*$/);
+        if (boldMatch) {
+          return <strong key={i} className="font-bold">{boldMatch[1]}</strong>;
+        }
+
+        // Italic: *text*
+        const italicMatch = part.match(/^\*([^*]+)\*$/);
+        if (italicMatch) {
+          return <em key={i} className="italic">{italicMatch[1]}</em>;
+        }
+
         // Mention: @[Name](id)
         const mentionMatch = part.match(/^@\[([^\]]+)\]\s*\(([^)]+)\)$/);
         if (mentionMatch) {
           const name = mentionMatch[1];
-          // Optional: Could link to user profile if needed using ID
           return (
             <span key={i} className="font-bold hover:underline cursor-pointer text-primary">
               @{name}
@@ -48,7 +62,6 @@ const InteractiveText = ({ text, members = [] }: InteractiveTextProps) => {
           // Handle custom 'task:' protocol
           if (url.startsWith('task:')) {
              const segments = url.split(':');
-             // task:slug:id
              if (segments.length >= 3) {
                  const slug = segments[1];
                  const taskId = segments[2];

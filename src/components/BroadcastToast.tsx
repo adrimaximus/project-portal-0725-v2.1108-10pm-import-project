@@ -49,7 +49,7 @@ export const BroadcastToast = () => {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [timeAgo, setTimeAgo] = useState("Just now");
 
-  // Load notification sound preference
+  // Load notification sound preference and check enabled state
   useEffect(() => {
     if (!user) return;
 
@@ -64,8 +64,6 @@ export const BroadcastToast = () => {
         const tone = data?.notification_preferences?.tone || 'positive-alert-ding.mp3';
         if (tone && tone !== 'none') {
           audioRef.current = new Audio(`${TONE_BASE_URL}${tone}`);
-          // Preload
-          audioRef.current.load();
         }
       } catch (e) {
         console.error("[BroadcastToast] Failed to load notification sound preference", e);
@@ -94,6 +92,19 @@ export const BroadcastToast = () => {
         async (payload) => {
           console.log("[BroadcastToast] Received event:", payload);
           
+          // Check global toast preference first
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('notification_preferences')
+            .eq('id', user.id)
+            .single();
+          
+          const prefs = profile?.notification_preferences || {};
+          if (prefs.toast_enabled === false) {
+            console.log("[BroadcastToast] Toasts are disabled in user settings. Skipping.");
+            return;
+          }
+
           // Fetch notification details with retry
           const notifData = await fetchNotificationWithRetry(payload.new.notification_id);
 
@@ -188,7 +199,7 @@ export const BroadcastToast = () => {
     <div 
       data-dyad-broadcast-toast="true"
       className={cn(
-        "fixed bottom-6 right-6 z-[9999] w-[380px] max-w-[90vw] transition-all duration-500 ease-in-out transform",
+        "fixed bottom-6 right-6 z-[9999] w-full max-w-[380px] transition-all duration-500 ease-in-out transform",
         isVisible ? "translate-y-0 opacity-100" : "translate-y-12 opacity-0 pointer-events-none"
       )}
     >
