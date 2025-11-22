@@ -17,6 +17,20 @@ const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, { gl
 
 // --- Helper Functions ---
 
+const fetchWithTimeout = async (url: string, options: RequestInit = {}, timeout = 5000) => {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeout);
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+    return response;
+  } finally {
+    clearTimeout(id);
+  }
+};
+
 const createEmailTemplate = ({ title, mainSubject, recipientName, bodyHtml, buttonText, buttonUrl }: { title: string, mainSubject?: string, recipientName: string, bodyHtml: string, buttonText: string, buttonUrl: string }) => {
   const APP_NAME = "7i Portal";
   const LOGO_URL = "https://quuecudndfztjlxbrvyb.supabase.co/storage/v1/object/public/General/logo.png";
@@ -87,7 +101,7 @@ const sendWhatsappMessage = async (config: any, phone: string, message: string) 
   }
 
   try {
-    const messageResponse = await fetch('https://wbiztool.com/api/v1/send_msg/', {
+    const messageResponse = await fetchWithTimeout('https://wbiztool.com/api/v1/send_msg/', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -101,14 +115,13 @@ const sendWhatsappMessage = async (config: any, phone: string, message: string) 
         phone: formattedPhone,
         message: message,
       }),
-    });
+    }, 8000); // 8 second timeout
 
     if (!messageResponse.ok) {
       const status = messageResponse.status;
       const errorText = await messageResponse.text();
       let errorMessage = `Failed to send message (Status: ${status}).`;
 
-      // Enhanced Error Handling for HTML/Cloudflare pages
       if (errorText.includes("Cloudflare") || errorText.includes("524") || errorText.includes("502")) {
            if (status === 524) errorMessage = "WBIZTOOL API Timeout (Cloudflare 524). The service is taking too long to respond.";
            else if (status === 502) errorMessage = "WBIZTOOL API Bad Gateway (Cloudflare 502). The service is down.";
@@ -118,7 +131,6 @@ const sendWhatsappMessage = async (config: any, phone: string, message: string) 
             const errorJson = JSON.parse(errorText);
             errorMessage = errorJson.message || JSON.stringify(errorJson);
           } catch (e) {
-            // Clean up HTML tags and truncate
             const cleanText = errorText.replace(/<[^>]*>?/gm, ' ').replace(/\s+/g, ' ').trim();
             errorMessage = cleanText.substring(0, 200) + (cleanText.length > 200 ? '...' : '');
           }
@@ -138,11 +150,11 @@ const sendEmail = async (emailitApiKey: string, to: string, subject: string, htm
     const payload = { from: emailFrom, to, subject, html, text };
 
     try {
-      const response = await fetch("https://api.emailit.com/v1/emails", {
+      const response = await fetchWithTimeout("https://api.emailit.com/v1/emails", {
           method: "POST",
           headers: { "Authorization": `Bearer ${emailitApiKey}`, "Content-Type": "application/json" },
           body: JSON.stringify(payload),
-      });
+      }, 8000); // 8 second timeout
 
       if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
@@ -228,7 +240,7 @@ const generateTemplatedEmail = (type: string, context: any, recipientName: strin
           ? `${APP_URL}/projects/${context.project_slug}?tab=tasks&task=${context.task_id}`
           : `${APP_URL}/projects/${context.project_slug}?tab=discussion`);
       bodyHtml = `<p><strong>${context.mentioner_name}</strong> mentioned you in a comment:</p>
-                  <blockquote style="border-left:4px solid #ccc;padding-left:1em;margin:1.2em 0;color:#3b4754;background:#f8fafc;border-radius:6px 0 0 6px;">
+                  <blockquote style="border-left:4px solid #0c8e9f;padding-left:1em;margin:1.2em 0;color:#3b4754;background:#f8fafc;border-radius:6px 0 0 6px;">
                       ${context.comment_text.replace(/\n/g, '<br>')}
                   </blockquote>`;
       buttonText = "View Comment";
@@ -330,9 +342,9 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: corsHeaders });
     }
 
-    // 1. Fetch AND LOCK pending notifications atomically
+    // 1. Fetch AND LOCK pending notifications atomically - limit reduced to 10
     const { data: notifications, error: fetchError } = await supabaseAdmin
-      .rpc('pop_pending_notifications', { p_limit: 20 });
+      .rpc('pop_pending_notifications', { p_limit: 10 });
 
     if (fetchError) throw fetchError;
 
@@ -393,7 +405,6 @@ Deno.serve(async (req) => {
         
         if (e.message && e.message.includes("The phone number is not registered on WhatsApp")) {
           newStatus = 'failed';
-          // ... (create in-app alert for invalid number) ...
         }
         
         await supabaseAdmin.from('pending_notifications').update({ 
