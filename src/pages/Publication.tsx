@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
 import PortalLayout from "@/components/PortalLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -440,7 +440,6 @@ const PublicationPage = () => {
   };
 
   const getRowTriggerTimeDisplay = (row: any) => {
-      // Priority to calculation for consistency between preview and actual value
       if (isScheduled) {
           if (scheduleMode === 'fixed') return <span className="text-[10px] text-muted-foreground">{fixedScheduleDate ? new Date(fixedScheduleDate).toLocaleString() : '-'}</span>;
           
@@ -471,6 +470,13 @@ const PublicationPage = () => {
       if (phone.startsWith('8')) phone = '62' + phone;
       return phone;
   };
+
+  const duplicatesCount = useMemo(() => {
+    if (!selectedPhoneColumn) return 0;
+    const phones = data.map(row => normalizePhone(row[selectedPhoneColumn]));
+    const uniquePhones = new Set(phones);
+    return phones.length - uniquePhones.size;
+  }, [data, selectedPhoneColumn]);
 
   const handleSendMessages = async () => {
     setIsSending(true);
@@ -1117,6 +1123,11 @@ const PublicationPage = () => {
                              {data.length > 0 
                                 ? `Showing first 50 of ${data.length} rows` 
                                 : "Upload a file to see the data preview"}
+                             {duplicatesCount > 0 && (
+                                <span className="ml-2 text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full text-xs font-medium">
+                                   {duplicatesCount} duplicate(s) found
+                                </span>
+                             )}
                           </CardDescription>
                       </div>
                       {data.length > 0 && (
@@ -1386,6 +1397,11 @@ const PublicationPage = () => {
                     <DialogTitle>Message Preview</DialogTitle>
                     <DialogDescription>
                         Previewing the first generated message based on your data.
+                        {duplicatesCount > 0 && (
+                            <span className="block mt-1 text-amber-600 text-xs font-medium">
+                                Note: {duplicatesCount} duplicate messages will be skipped automatically.
+                            </span>
+                        )}
                     </DialogDescription>
                 </DialogHeader>
                 {data.length > 0 ? (
