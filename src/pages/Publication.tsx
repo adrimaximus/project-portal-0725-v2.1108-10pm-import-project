@@ -447,8 +447,19 @@ const PublicationPage = () => {
       
       if (isScheduled) {
           if (scheduleMode === 'fixed') return <span className="text-[10px] text-muted-foreground">{fixedScheduleDate ? new Date(fixedScheduleDate).toLocaleString() : '-'}</span>;
+          
           const dateVal = row[dynamicDateCol] || '';
-          const timeVal = dynamicTimeCol !== 'same_as_date' ? (row[dynamicTimeCol] || '') : '';
+          let timeVal = dynamicTimeCol !== 'same_as_date' ? (row[dynamicTimeCol] || '') : '';
+          
+          // Attempt to format time to HH:mm for consistent display
+          if (timeVal) {
+             // Check if time is like '4:05' or '16:5' and pad it to '04:05' or '16:05'
+             const timeParts = timeVal.match(/^(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?$/);
+             if (timeParts) {
+                 timeVal = `${timeParts[1].padStart(2, '0')}:${timeParts[2].padStart(2, '0')}`;
+             }
+          }
+
           const displayTime = `${dateVal} ${timeVal}`.trim();
           return <span className="text-[10px] text-muted-foreground">{displayTime || '-'}</span>;
       }
@@ -658,6 +669,62 @@ const PublicationPage = () => {
       toast.error("Test Failed", { description: error.message });
     } finally {
       setIsSendingTestNotif(false);
+    }
+  };
+
+  // In-App Notification Handler
+  const handleSendInAppNotification = async () => {
+    if (!notifTitle.trim() || !notifBody.trim()) {
+      toast.error("Missing Information", { description: "Title and Body are required." });
+      return;
+    }
+    
+    let targetValue: any = null;
+    if (notifTarget === 'role') {
+      if (!notifRole) { toast.error("Missing Role", { description: "Please select a role." }); return; }
+      targetValue = notifRole;
+    } else if (notifTarget === 'specific') {
+      if (notifUsers.length === 0) { toast.error("Missing Users", { description: "Please select at least one user." }); return; }
+      targetValue = notifUsers;
+    }
+
+    setIsSendingNotif(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('send-app-broadcast', {
+        body: {
+          title: notifTitle,
+          body: notifBody,
+          target: notifTarget,
+          targetValue,
+          link: notifLink,
+        }
+      });
+
+      if (error) throw error;
+      
+      toast.success("Broadcast Sent", { 
+        description: (
+          <div className="mt-2 w-full p-3 bg-card text-card-foreground border rounded-md shadow-sm">
+            <p className="font-semibold text-sm">{notifTitle}</p>
+            <p className="text-xs text-muted-foreground line-clamp-3 mt-1">{notifBody}</p>
+            <p className="text-[10px] text-muted-foreground mt-2 flex items-center gap-1">
+              <CheckCircle2 className="h-3 w-3 text-green-500" />
+              Successfully sent to {data.count} user(s).
+            </p>
+          </div>
+        ),
+        duration: 5000,
+      });
+      
+      // Reset form
+      setNotifTitle("");
+      setNotifBody("");
+      setNotifLink("");
+      setNotifUsers([]);
+    } catch (error: any) {
+      toast.error("Broadcast Failed", { description: error.message });
+    } finally {
+      setIsSendingNotif(false);
     }
   };
 
@@ -1154,7 +1221,7 @@ const PublicationPage = () => {
                                         <TableRow key={rowIndex}>
                                            <TableCell className="font-mono text-xs text-muted-foreground">{rowIndex + 1}</TableCell>
                                            {headers.filter(h => h !== 'Status' && h !== 'Trigger time').map((header) => {
-                                              // Determine input type based on header name
+                                              // Determine input type based on header name or settings
                                               const lowerHeader = header.toLowerCase();
                                               let inputType = "text";
                                               
