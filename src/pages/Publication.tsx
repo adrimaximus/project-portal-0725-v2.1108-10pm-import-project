@@ -48,10 +48,7 @@ const PublicationPage = () => {
   const [fixedTimezone, setFixedTimezone] = useState("UTC");
   const [dynamicDateCol, setDynamicDateCol] = useState("");
   const [dynamicTimeCol, setDynamicTimeCol] = useState("same_as_date");
-  const [dynamicTimezoneCol, setDynamicTimezoneCol] = useState("use_default");
-  const [dynamicDefaultTimezone, setDynamicDefaultTimezone] = useState("UTC");
-  const [dynamicDateFormat, setDynamicDateFormat] = useState("auto");
-
+  
   // AI Rewrite State
   const [aiInstructions, setAiInstructions] = useState("");
   const [isRewriting, setIsRewriting] = useState(false);
@@ -443,6 +440,7 @@ const PublicationPage = () => {
   };
 
   const getRowTriggerTimeDisplay = (row: any) => {
+      // Priority to calculation for consistency between preview and actual value
       if (isScheduled) {
           if (scheduleMode === 'fixed') return <span className="text-[10px] text-muted-foreground">{fixedScheduleDate ? new Date(fixedScheduleDate).toLocaleString() : '-'}</span>;
           
@@ -513,41 +511,32 @@ const PublicationPage = () => {
                     let rawDate = row[dynamicDateCol] || '';
                     let rawTime = dynamicTimeCol !== 'same_as_date' ? (row[dynamicTimeCol] || '') : '';
                     
-                    let datePartForJs = rawDate; 
-
-                    if (dynamicDateFormat === 'DD/MM/YYYY') {
-                        const parts = rawDate.match(/(\d+)/g);
-                        if (parts && parts.length >= 3) datePartForJs = `${parts[1]}/${parts[0]}/${parts[2]}`;
-                    } else if (dynamicDateFormat === 'MM/DD/YYYY') {
-                        const parts = rawDate.match(/(\d+)/g);
-                        if (parts && parts.length >= 3) datePartForJs = `${parts[0]}/${parts[1]}/${parts[2]}`;
-                    } else if (dynamicDateFormat === 'YYYY-MM-DD') {
-                        datePartForJs = rawDate.replace(/-/g, '/');
-                    } 
-
-                    const combinedDateTimeStr = `${datePartForJs} ${rawTime}`.trim();
-                    const dateObj = new Date(combinedDateTimeStr);
-                    
-                    let formattedScheduleTime = combinedDateTimeStr;
-
-                    if (!isNaN(dateObj.getTime())) {
-                        const yyyy = dateObj.getFullYear();
-                        const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
-                        const dd = String(dateObj.getDate()).padStart(2, '0');
-                        const hh = String(dateObj.getHours()).padStart(2, '0');
-                        const min = String(dateObj.getMinutes()).padStart(2, '0');
-                        const ss = String(dateObj.getSeconds()).padStart(2, '0');
-                        formattedScheduleTime = `${yyyy}-${mm}-${dd} ${hh}:${min}:${ss}`;
-                    }
-
-                    messageData.schedule_time = formattedScheduleTime;
-                    messageData.timezone = dynamicTimezoneCol !== 'use_default' && row[dynamicTimezoneCol] ? row[dynamicTimezoneCol] : dynamicDefaultTimezone;
+                    // Simple concatenation for dynamic, relying on WBIZTOOL parsing or standard format
+                    const combinedDateTimeStr = `${rawDate} ${rawTime}`.trim();
+                    messageData.schedule_time = combinedDateTimeStr;
+                    // Timezone removed from UI input, defaulting to empty or fixed timezone if needed logic added later
+                    // messageData.timezone = fixedTimezone; // Optional: use fixed timezone as fallback if needed
                 }
             }
             return messageData;
         }).filter(m => m.phone.length > 5);
 
-        const { data: result, error } = await supabase.functions.invoke('send-whatsapp-blast', { body: { messages } });
+        // Deduplicate messages based on phone and content/url to avoid spam
+        const uniqueMessages = [];
+        const seen = new Set();
+        for (const msg of messages) {
+            const key = `${msg.phone}-${msg.message}-${msg.url || ''}`;
+            if (!seen.has(key)) {
+                seen.add(key);
+                uniqueMessages.push(msg);
+            }
+        }
+
+        if (uniqueMessages.length < messages.length) {
+            console.log(`Filtered out ${messages.length - uniqueMessages.length} duplicates.`);
+        }
+
+        const { data: result, error } = await supabase.functions.invoke('send-whatsapp-blast', { body: { messages: uniqueMessages } });
         
         if (error) throw error;
         
@@ -559,7 +548,7 @@ const PublicationPage = () => {
                 if (scheduleMode === 'fixed') {
                     newTriggerTime = fixedScheduleDate.replace('T', ' ');
                 } else {
-                    const sentMsg = messages.find((m: any) => m.phone === rowPhone);
+                    const sentMsg = uniqueMessages.find((m: any) => m.phone === rowPhone);
                     newTriggerTime = sentMsg?.schedule_time || `${row[dynamicDateCol]} ${row[dynamicTimeCol] || ''}`;
                 }
             } else {
@@ -1098,25 +1087,6 @@ const PublicationPage = () => {
                                                 <p className="text-[10px] text-muted-foreground">Column with time (HH:MM or HH:MM:SS)</p>
                                             </div>
                                         </div>
-
-                                        <div className="grid grid-cols-1 gap-4">
-                                            <div className="space-y-2">
-                                                <Label className="text-xs">Default Timezone</Label>
-                                                <Select value={dynamicDefaultTimezone} onValueChange={setDynamicDefaultTimezone}>
-                                                    <SelectTrigger>
-                                                        <SelectValue placeholder="Select timezone" />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="UTC">UTC</SelectItem>
-                                                        <SelectItem value="Asia/Jakarta">Asia/Jakarta</SelectItem>
-                                                        <SelectItem value="Asia/Singapore">Asia/Singapore</SelectItem>
-                                                        <SelectItem value="America/New_York">America/New_York</SelectItem>
-                                                        <SelectItem value="Europe/London">Europe/London</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                                <p className="text-[10px] text-muted-foreground">Used when timezone column is empty</p>
-                                            </div>
-                                        </div>
                                     </div>
                                 )}
                             </div>
@@ -1447,7 +1417,7 @@ const PublicationPage = () => {
                                     {scheduleMode === 'fixed' ? (
                                         `${fixedScheduleDate.replace('T', ' ')} (${fixedTimezone})`
                                     ) : (
-                                        `Dynamic: ${data[0][dynamicDateCol] || 'N/A'} ${dynamicTimeCol !== 'same_as_date' ? (data[0][dynamicTimeCol] || '') : ''} (${dynamicDefaultTimezone})`
+                                        `Dynamic: ${data[0][dynamicDateCol] || 'N/A'} ${dynamicTimeCol !== 'same_as_date' ? (data[0][dynamicTimeCol] || '') : ''}`
                                     )}
                                 </p>
                             </div>

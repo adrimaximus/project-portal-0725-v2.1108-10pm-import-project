@@ -329,14 +329,9 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: corsHeaders });
     }
 
+    // USE RPC instead of select to prevent race conditions
     const { data: notifications, error: fetchError } = await supabaseAdmin
-      .from('pending_notifications')
-      .select('*, recipient:profiles(*)')
-      .eq('status', 'pending')
-      .lte('send_at', new Date().toISOString())
-      .lt('retry_count', 3)
-      .order('created_at', { ascending: true })
-      .limit(20);
+      .rpc('pop_pending_notifications', { p_limit: 20 });
 
     if (fetchError) throw fetchError;
 
@@ -344,11 +339,27 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ message: 'No pending notifications.' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
+    // Need to fetch recipient profiles manually since RPC returns raw table rows
+    const recipientIds = [...new Set(notifications.map((n: any) => n.recipient_id))];
+    const { data: profiles, error: profilesError } = await supabaseAdmin
+      .from('profiles')
+      .select('*') // fetch all fields needed
+      .in('id', recipientIds);
+    
+    if (profilesError) throw profilesError;
+    const profileMap = new Map(profiles.map((p: any) => [p.id, p]));
+
+    // Attach recipient to notification object to match existing logic structure
+    const notificationsWithRecipients = notifications.map((n: any) => ({
+        ...n,
+        recipient: profileMap.get(n.recipient_id)
+    }));
+
     const wbizConfig = await getWbizConfig().catch(e => { console.warn(e.message); return null; });
     const { data: emailitConfig } = await supabaseAdmin.from('app_config').select('value').eq('key', 'EMAILIT_API_KEY').single();
     const emailitApiKey = emailitConfig?.value;
 
-    const processingPromises = notifications.map(async (notification) => {
+    const processingPromises = notificationsWithRecipients.map(async (notification) => {
       try {
         const recipient = notification.recipient;
         if (!recipient) {
