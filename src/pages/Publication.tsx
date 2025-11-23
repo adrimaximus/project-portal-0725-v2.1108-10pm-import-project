@@ -264,6 +264,14 @@ const PublicationPage = () => {
       return url;
   };
 
+  const handleCellEdit = (rowIndex: number, column: string, value: string) => {
+    setData(prevData => {
+      const newData = [...prevData];
+      newData[rowIndex] = { ...newData[rowIndex], [column]: value };
+      return newData;
+    });
+  };
+
   // Helper to get display values for Status and Trigger time columns
   const getPreviewStatus = (row: any) => {
     // 1. Prioritize explicit status from sending attempt
@@ -1091,10 +1099,13 @@ const PublicationPage = () => {
                                            {headers.map((header) => (
                                               <TableCell 
                                                 key={`${rowIndex}-${header}`} 
-                                                className="text-sm max-w-[200px] break-words align-top py-2" 
-                                                title={String(row[header] || '')}
+                                                className="p-0 min-w-[100px] align-top border-b border-muted/50" 
                                               >
-                                                 {row[header]}
+                                                  <Input
+                                                    className="h-10 rounded-none border-0 border-b border-transparent bg-transparent px-3 py-2 text-sm shadow-none focus-visible:ring-0 focus-visible:border-primary focus-visible:bg-muted/20 hover:bg-muted/20 transition-colors"
+                                                    value={row[header] || ''}
+                                                    onChange={(e) => handleCellEdit(rowIndex, header, e.target.value)}
+                                                />
                                               </TableCell>
                                            ))}
                                            <TableCell className="sticky right-[140px] z-20 bg-card shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)] text-xs align-top py-2 font-medium border-l">
