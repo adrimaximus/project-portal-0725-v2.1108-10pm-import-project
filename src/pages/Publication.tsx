@@ -252,6 +252,27 @@ const PublicationPage = () => {
         );
     }
     if (row._status === 'sent') {
+        if (isScheduled) {
+            let displayTime = "";
+            if (scheduleMode === 'fixed') {
+                displayTime = fixedScheduleDate ? new Date(fixedScheduleDate).toLocaleString() : "Pending";
+            } else {
+                const dateVal = row[dynamicDateCol] || '';
+                const timeVal = dynamicTimeCol !== 'same_as_date' ? row[dynamicTimeCol] || '' : '';
+                displayTime = `${dateVal} ${timeVal}`.trim();
+            }
+
+            return (
+                <div className="flex flex-col text-blue-600">
+                    <span className="font-medium text-[10px] flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        Scheduled
+                    </span>
+                    <span className="text-[9px] text-muted-foreground/70">{displayTime}</span>
+                </div>
+            );
+        }
+
         return (
             <div className="flex flex-col text-green-600">
                 <span className="font-medium text-[10px] flex items-center gap-1">
