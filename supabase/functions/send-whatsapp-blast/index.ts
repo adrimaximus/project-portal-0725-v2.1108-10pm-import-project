@@ -18,6 +18,28 @@ Deno.serve(async (req) => {
         throw new Error("Invalid payload: 'messages' array is required.");
     }
 
+    // --- DEDUPLICATION LOGIC ---
+    // Ensure we don't send duplicates to the same phone number with the same content in this batch
+    const uniqueMessages = [];
+    const seen = new Set();
+    
+    for (const msg of messages) {
+        // Create a unique key based on phone and content (message/caption/url)
+        const contentKey = msg.message || msg.caption || '';
+        const urlKey = msg.url || '';
+        const uniqueKey = `${msg.phone}-${contentKey}-${urlKey}`;
+        
+        if (!seen.has(uniqueKey)) {
+            seen.add(uniqueKey);
+            uniqueMessages.push(msg);
+        }
+    }
+
+    if (uniqueMessages.length < messages.length) {
+        console.log(`[Backend Deduplication] Removed ${messages.length - uniqueMessages.length} duplicate messages from batch.`);
+    }
+    // ---------------------------
+
     // Initialize Supabase Admin client
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -43,7 +65,7 @@ Deno.serve(async (req) => {
     const results = { success: 0, failed: 0, errors: [] };
 
     // Process messages
-    for (const msg of messages) {
+    for (const msg of uniqueMessages) {
         try {
             // Map message type to WBIZTOOL format
             // 0: Text, 1: Image, 2: Document
@@ -90,7 +112,7 @@ Deno.serve(async (req) => {
                 payload.timezone = msg.timezone;
             }
 
-            console.log(`Sending to ${msg.phone}, Type: ${msgType}, URL: ${msg.url ? 'Present' : 'None'}`);
+            console.log(`Sending to ${msg.phone}, Type: ${msgType}`);
 
             const response = await fetch("https://wbiztool.com/api/v1/send_msg/", {
                 method: 'POST',
