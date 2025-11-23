@@ -604,6 +604,114 @@ const PublicationPage = () => {
     }
   };
 
+  // In-App Notification Handler
+  const handleSendInAppNotification = async () => {
+    if (!notifTitle.trim() || !notifBody.trim()) {
+      toast.error("Missing Information", { description: "Title and Body are required." });
+      return;
+    }
+    
+    let targetValue: any = null;
+    if (notifTarget === 'role') {
+      if (!notifRole) { toast.error("Missing Role", { description: "Please select a role." }); return; }
+      targetValue = notifRole;
+    } else if (notifTarget === 'specific') {
+      if (notifUsers.length === 0) { toast.error("Missing Users", { description: "Please select at least one user." }); return; }
+      targetValue = notifUsers;
+    }
+
+    setIsSendingNotif(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('send-app-broadcast', {
+        body: {
+          title: notifTitle,
+          body: notifBody,
+          target: notifTarget,
+          targetValue,
+          link: notifLink,
+        }
+      });
+
+      if (error) throw error;
+      
+      toast.success("Broadcast Sent", { 
+        description: (
+          <div className="mt-2 w-full p-3 bg-card text-card-foreground border rounded-md shadow-sm">
+            <p className="font-semibold text-sm">{notifTitle}</p>
+            <p className="text-xs text-muted-foreground line-clamp-3 mt-1">{notifBody}</p>
+            <p className="text-[10px] text-muted-foreground mt-2 flex items-center gap-1">
+              <CheckCircle2 className="h-3 w-3 text-green-500" />
+              Successfully sent to {data.count} user(s).
+            </p>
+          </div>
+        ),
+        duration: 5000,
+      });
+      
+      // Reset form
+      setNotifTitle("");
+      setNotifBody("");
+      setNotifLink("");
+      setNotifUsers([]);
+    } catch (error: any) {
+      toast.error("Broadcast Failed", { description: error.message });
+    } finally {
+      setIsSendingNotif(false);
+    }
+  };
+
+  const handleSendTestInAppNotification = async () => {
+    if (!notifTitle.trim() || !notifBody.trim()) {
+      toast.error("Missing Information", { description: "Title and Body are required for test." });
+      return;
+    }
+
+    if (!user) {
+       toast.error("Not authenticated");
+       return;
+    }
+
+    // Determine the name to use for replacement in the toast preview
+    const currentProfile = profiles.find((p: any) => p.value === user.id);
+    const currentName = currentProfile ? currentProfile.label : (user.user_metadata?.full_name || user.email || 'User');
+    const previewBody = notifBody.replace(/{{name}}/gi, currentName);
+
+    setIsSendingTestNotif(true);
+    try {
+      const { error } = await supabase.functions.invoke('send-app-broadcast', {
+        body: {
+          title: `[TEST] ${notifTitle}`,
+          body: notifBody,
+          target: 'specific',
+          targetValue: [user.id],
+          link: notifLink,
+        }
+      });
+
+      if (error) throw error;
+      
+      toast.success("Test Broadcast Sent", { 
+        description: (
+          <div className="mt-2 w-full p-3 bg-card text-card-foreground border rounded-md shadow-sm">
+            <p className="font-semibold text-sm"><span className="text-primary mr-1">[TEST]</span>{notifTitle}</p>
+            <div className="text-xs text-muted-foreground line-clamp-3 mt-1">
+               <InteractiveText text={previewBody} />
+            </div>
+            <p className="text-[10px] text-muted-foreground mt-2 flex items-center gap-1">
+              <CheckCircle2 className="h-3 w-3 text-green-500" />
+              Check your notifications.
+            </p>
+          </div>
+        ),
+        duration: 5000,
+      });
+    } catch (error: any) {
+      toast.error("Test Failed", { description: error.message });
+    } finally {
+      setIsSendingTestNotif(false);
+    }
+  };
+
   return (
     <PortalLayout>
       <div className="space-y-6">
