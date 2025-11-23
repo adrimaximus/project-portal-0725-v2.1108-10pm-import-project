@@ -604,62 +604,6 @@ const PublicationPage = () => {
     }
   };
 
-  // In-App Notification Handler
-  const handleSendInAppNotification = async () => {
-    if (!notifTitle.trim() || !notifBody.trim()) {
-      toast.error("Missing Information", { description: "Title and Body are required." });
-      return;
-    }
-    
-    let targetValue: any = null;
-    if (notifTarget === 'role') {
-      if (!notifRole) { toast.error("Missing Role", { description: "Please select a role." }); return; }
-      targetValue = notifRole;
-    } else if (notifTarget === 'specific') {
-      if (notifUsers.length === 0) { toast.error("Missing Users", { description: "Please select at least one user." }); return; }
-      targetValue = notifUsers;
-    }
-
-    setIsSendingNotif(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('send-app-broadcast', {
-        body: {
-          title: notifTitle,
-          body: notifBody,
-          target: notifTarget,
-          targetValue,
-          link: notifLink,
-        }
-      });
-
-      if (error) throw error;
-      
-      toast.success("Broadcast Sent", { 
-        description: (
-          <div className="mt-2 w-full p-3 bg-card text-card-foreground border rounded-md shadow-sm">
-            <p className="font-semibold text-sm">{notifTitle}</p>
-            <p className="text-xs text-muted-foreground line-clamp-3 mt-1">{notifBody}</p>
-            <p className="text-[10px] text-muted-foreground mt-2 flex items-center gap-1">
-              <CheckCircle2 className="h-3 w-3 text-green-500" />
-              Successfully sent to {data.count} user(s).
-            </p>
-          </div>
-        ),
-        duration: 5000,
-      });
-      
-      // Reset form
-      setNotifTitle("");
-      setNotifBody("");
-      setNotifLink("");
-      setNotifUsers([]);
-    } catch (error: any) {
-      toast.error("Broadcast Failed", { description: error.message });
-    } finally {
-      setIsSendingNotif(false);
-    }
-  };
-
   const handleSendTestInAppNotification = async () => {
     if (!notifTitle.trim() || !notifBody.trim()) {
       toast.error("Missing Information", { description: "Title and Body are required for test." });
@@ -1205,17 +1149,27 @@ const PublicationPage = () => {
                                         <TableRow key={rowIndex}>
                                            <TableCell className="font-mono text-xs text-muted-foreground">{rowIndex + 1}</TableCell>
                                            {headers.filter(h => h !== 'Status' && h !== 'Trigger time').map((header) => {
-                                              // Determine input type based on header name
+                                              // Determine input type based on header name or settings
                                               const lowerHeader = header.toLowerCase();
                                               let inputType = "text";
-                                              if (lowerHeader.includes('date') && lowerHeader.includes('time')) {
-                                                  inputType = "datetime-local";
-                                              } else if (lowerHeader.includes('schedule')) {
-                                                  inputType = "datetime-local";
-                                              } else if (lowerHeader.includes('date') || lowerHeader.includes('tgl') || lowerHeader.includes('dob')) {
-                                                  inputType = "date";
-                                              } else if (lowerHeader.includes('time') || lowerHeader.includes('jam') || lowerHeader.includes('pukul')) {
-                                                  inputType = "time";
+                                              
+                                              // Force date/time types if these columns are selected for dynamic scheduling
+                                              if (isScheduled && scheduleMode === 'dynamic') {
+                                                  if (header === dynamicDateCol) inputType = "date";
+                                                  else if (header === dynamicTimeCol) inputType = "time";
+                                              }
+                                              
+                                              // Only apply heuristic if not explicitly set by dynamic schedule settings
+                                              if (inputType === "text") {
+                                                  if (lowerHeader.includes('date') && lowerHeader.includes('time')) {
+                                                      inputType = "datetime-local";
+                                                  } else if (lowerHeader.includes('schedule')) {
+                                                      inputType = "datetime-local";
+                                                  } else if (lowerHeader.includes('date') || lowerHeader.includes('tgl') || lowerHeader.includes('dob')) {
+                                                      inputType = "date";
+                                                  } else if (lowerHeader.includes('time') || lowerHeader.includes('jam') || lowerHeader.includes('pukul')) {
+                                                      inputType = "time";
+                                                  }
                                               }
 
                                               // Helper to format values for specific inputs
@@ -1225,7 +1179,10 @@ const PublicationPage = () => {
                                                   if (valStr === '') return '';
 
                                                   if (inputType === 'date') {
+                                                      // Ensure YYYY-MM-DD for input[type=date]
                                                       if (/^\d{4}-\d{2}-\d{2}$/.test(valStr)) return valStr;
+                                                      
+                                                      // Try to parse other formats
                                                       const d = new Date(valStr);
                                                       if (!isNaN(d.getTime())) return d.toISOString().split('T')[0];
                                                   }
