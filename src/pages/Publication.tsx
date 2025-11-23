@@ -265,18 +265,90 @@ const PublicationPage = () => {
   };
 
   // Helper to get display values for Status and Trigger time columns
-  const getRowStatusDisplay = (row: any) => {
-      if (row['Status']) {
-          const status = row['Status'];
-          if (status === 'Sent') return <Badge className="bg-green-500 hover:bg-green-600 h-5 text-[10px]">Sent</Badge>;
-          if (status === 'Scheduled') return <Badge className="bg-blue-500 hover:bg-blue-600 h-5 text-[10px]">Scheduled</Badge>;
-          if (status.startsWith('Failed')) return <Badge variant="destructive" className="h-5 text-[10px]" title={status}>Failed</Badge>;
-          return <Badge variant="outline" className="h-5 text-[10px]">{status}</Badge>;
+  const getPreviewStatus = (row: any) => {
+    // 1. Prioritize explicit status from sending attempt
+    if (row._status === 'failed') {
+        return (
+            <div className="flex flex-col text-red-600">
+                <span className="font-medium text-[10px] flex items-center gap-1">
+                    <div className="h-1.5 w-1.5 rounded-full bg-red-500" />
+                    Failed
+                </span>
+                <span className="text-[9px] truncate max-w-[100px] cursor-help" title={row._error}>{row._error || 'Unknown error'}</span>
+            </div>
+        );
+    }
+    if (row._status === 'sent') {
+        if (isScheduled) {
+            let displayTime = "";
+            if (scheduleMode === 'fixed') {
+                displayTime = fixedScheduleDate ? new Date(fixedScheduleDate).toLocaleString() : "Pending";
+            } else {
+                // For dynamic, show the specific parsed trigger time for this row if available
+                displayTime = row['Trigger time'] || "Scheduled";
+            }
+
+            return (
+                <div className="flex flex-col text-blue-600">
+                    <span className="font-medium text-[10px] flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        Scheduled
+                    </span>
+                    <span className="text-[9px] text-muted-foreground/70">{displayTime}</span>
+                </div>
+            );
+        }
+
+        return (
+            <div className="flex flex-col text-green-600">
+                <span className="font-medium text-[10px] flex items-center gap-1">
+                    <div className="h-1.5 w-1.5 rounded-full bg-green-500" />
+                    Sent
+                </span>
+                <span className="text-[9px] text-muted-foreground/70">{new Date().toLocaleTimeString()}</span>
+            </div>
+        );
+    }
+    if (row._status === 'sending') {
+        return <span className="text-blue-600 text-[10px] animate-pulse">Sending...</span>;
+    }
+
+    // 2. If not yet sent, show scheduled status
+    if (isScheduled) {
+      if (scheduleMode === 'fixed') {
+        if (!fixedScheduleDate) return <span className="text-muted-foreground italic">Pending Schedule</span>;
+        const date = new Date(fixedScheduleDate);
+        return (
+          <div className="flex flex-col">
+            <span className="text-blue-600 font-medium text-[10px] flex items-center gap-1"><Clock className="h-3 w-3" /> Scheduled</span>
+            <span className="text-[10px] text-muted-foreground">{date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+            <span className="text-[9px] text-muted-foreground/70">{date.toLocaleDateString()}</span>
+          </div>
+        );
+      } else {
+        // Dynamic
+        const dateVal = row[dynamicDateCol];
+        const timeVal = dynamicTimeCol !== 'same_as_date' ? row[dynamicTimeCol] : '';
+        if (!dateVal) return <span className="text-destructive text-[10px]">Missing Date</span>;
+        return (
+          <div className="flex flex-col">
+            <span className="text-blue-600 font-medium text-[10px] flex items-center gap-1"><Clock className="h-3 w-3" /> Scheduled</span>
+            <span className="text-[10px] text-muted-foreground truncate">{dateVal} {timeVal}</span>
+          </div>
+        );
       }
-      
-      // Fallback to preview logic if no explicit Status column data yet
-      if (row._status === 'sending') return <span className="text-blue-600 text-[10px] animate-pulse">Sending...</span>;
-      return <Badge variant="outline" className="text-muted-foreground border-dashed h-5 text-[10px]">Ready</Badge>;
+    }
+
+    // 3. Default state
+    return (
+      <div className="flex flex-col">
+        <span className="text-slate-500 font-medium text-[10px] flex items-center gap-1">
+            <div className="h-1.5 w-1.5 rounded-full bg-slate-400" />
+            Draft
+        </span>
+        <span className="text-[9px] text-muted-foreground/70">Ready</span>
+      </div>
+    );
   };
 
   const getRowTriggerTimeDisplay = (row: any) => {
@@ -339,24 +411,41 @@ const PublicationPage = () => {
                     messageData.timezone = fixedTimezone;
                 } else {
                     let rawDate = row[dynamicDateCol] || '';
-                    let datePart = rawDate;
+                    let rawTime = dynamicTimeCol !== 'same_as_date' ? (row[dynamicTimeCol] || '') : '';
                     
-                    // Apply simple date formatting if dynamic format is selected and rawDate is clean
-                    if (dynamicDateFormat !== 'auto' && dynamicDateFormat !== 'YYYY-MM-DD' && rawDate) {
-                        // Extract digits to handle potential delimiters like -, /, .
+                    // Robust Date Parsing
+                    let datePartForJs = rawDate; // Default to raw
+
+                    // Helper to normalize date string for JS Date constructor (MM/DD/YYYY or YYYY/MM/DD preferred for local time)
+                    if (dynamicDateFormat === 'DD/MM/YYYY') {
                         const parts = rawDate.match(/(\d+)/g);
-                        if (parts && parts.length >= 3) {
-                            if (dynamicDateFormat === 'DD/MM/YYYY') {
-                                datePart = `${parts[2]}-${parts[1]}-${parts[0]}`;
-                            } else if (dynamicDateFormat === 'MM/DD/YYYY') {
-                                datePart = `${parts[2]}-${parts[0]}-${parts[1]}`;
-                            }
-                        }
+                        if (parts && parts.length >= 3) datePartForJs = `${parts[1]}/${parts[0]}/${parts[2]}`;
+                    } else if (dynamicDateFormat === 'MM/DD/YYYY') {
+                        const parts = rawDate.match(/(\d+)/g);
+                        if (parts && parts.length >= 3) datePartForJs = `${parts[0]}/${parts[1]}/${parts[2]}`;
+                    } else if (dynamicDateFormat === 'YYYY-MM-DD') {
+                        // Replace dashes with slashes to prevent JS treating it as UTC ISO
+                        datePartForJs = rawDate.replace(/-/g, '/');
+                    } 
+                    // 'auto' leaves it as is, hoping JS understands (e.g. "11/23/2025")
+
+                    const combinedDateTimeStr = `${datePartForJs} ${rawTime}`.trim();
+                    const dateObj = new Date(combinedDateTimeStr);
+                    
+                    let formattedScheduleTime = combinedDateTimeStr;
+
+                    if (!isNaN(dateObj.getTime())) {
+                        // Format to YYYY-MM-DD HH:mm:ss for API
+                        const yyyy = dateObj.getFullYear();
+                        const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+                        const dd = String(dateObj.getDate()).padStart(2, '0');
+                        const hh = String(dateObj.getHours()).padStart(2, '0');
+                        const min = String(dateObj.getMinutes()).padStart(2, '0');
+                        const ss = String(dateObj.getSeconds()).padStart(2, '0');
+                        formattedScheduleTime = `${yyyy}-${mm}-${dd} ${hh}:${min}:${ss}`;
                     }
 
-                    let sched = datePart;
-                    if (dynamicTimeCol !== 'same_as_date' && row[dynamicTimeCol]) sched += ' ' + row[dynamicTimeCol];
-                    messageData.schedule_time = sched.replace('T', ' ');
+                    messageData.schedule_time = formattedScheduleTime;
                     messageData.timezone = dynamicTimezoneCol !== 'use_default' && row[dynamicTimezoneCol] ? row[dynamicTimezoneCol] : dynamicDefaultTimezone;
                 }
             }
@@ -370,15 +459,16 @@ const PublicationPage = () => {
         // Update data state based on results to show status in table
         setData(prevData => prevData.map(row => {
             const rowPhone = normalizePhone(row[selectedPhoneColumn]);
-            let newStatus = "";
             let newTriggerTime = "";
 
-            // Determine trigger time string
+            // Determine trigger time string for display (reuse logic for consistency)
             if (isScheduled) {
                 if (scheduleMode === 'fixed') {
                     newTriggerTime = fixedScheduleDate.replace('T', ' ');
                 } else {
-                    newTriggerTime = `${row[dynamicDateCol] || ''} ${row[dynamicTimeCol] !== 'same_as_date' ? (row[dynamicTimeCol] || '') : ''}`.trim();
+                    // Try to find the messageData we just created to get the formatted time
+                    const sentMsg = messages.find((m: any) => m.phone === rowPhone);
+                    newTriggerTime = sentMsg?.schedule_time || `${row[dynamicDateCol]} ${row[dynamicTimeCol] || ''}`;
                 }
             } else {
                 newTriggerTime = new Date().toLocaleString();
@@ -386,7 +476,6 @@ const PublicationPage = () => {
             
             // Check if this row was in the failed list
             const failure = result.errors?.find((e: any) => {
-                // Handle both object and string formats for backward compatibility
                 const errorPhone = typeof e === 'object' ? e.phone : null;
                 return errorPhone === rowPhone;
             });
@@ -398,11 +487,11 @@ const PublicationPage = () => {
                     _status: 'failed', 
                     _error: errorMsg,
                     'Status': 'Failed',
-                    'Trigger time': newTriggerTime // Keep intention time even if failed? Or 'N/A'
+                    'Trigger time': newTriggerTime
                 };
             }
             
-            // If it wasn't in errors but has a valid phone number, mark as sent/scheduled
+            // If it wasn't in errors but has a valid phone number
             if (rowPhone.length > 5) {
                 return { 
                     ...row, 
@@ -413,7 +502,7 @@ const PublicationPage = () => {
                 };
             }
             
-            return { ...row, _status: undefined }; // Reset if invalid phone
+            return { ...row, _status: undefined }; 
         }));
 
         // Check for specific error messages in the response
@@ -1009,7 +1098,7 @@ const PublicationPage = () => {
                                               </TableCell>
                                            ))}
                                            <TableCell className="sticky right-[140px] z-20 bg-card shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)] text-xs align-top py-2 font-medium border-l">
-                                              {getRowStatusDisplay(row)}
+                                              {getPreviewStatus(row)}
                                            </TableCell>
                                            <TableCell className="sticky right-0 z-20 bg-card text-xs align-top py-2 font-medium border-l">
                                               {getRowTriggerTimeDisplay(row)}
