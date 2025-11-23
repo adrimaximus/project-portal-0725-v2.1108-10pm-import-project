@@ -1070,7 +1070,7 @@ const PublicationPage = () => {
                                             </div>
                                         </div>
 
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             <div className="space-y-2">
                                                 <Label className="text-xs">Date Column <span className="text-red-500">*</span></Label>
                                                 <Select value={dynamicDateCol} onValueChange={setDynamicDateCol} disabled={headers.length === 0}>
@@ -1096,22 +1096,9 @@ const PublicationPage = () => {
                                                 </Select>
                                                 <p className="text-[10px] text-muted-foreground">Column with time (HH:MM or HH:MM:SS)</p>
                                             </div>
-                                            <div className="space-y-2">
-                                                <Label className="text-xs">Timezone Column</Label>
-                                                <Select value={dynamicTimezoneCol} onValueChange={setDynamicTimezoneCol} disabled={headers.length === 0}>
-                                                    <SelectTrigger>
-                                                        <SelectValue placeholder="Optional - use default" />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="use_default">Optional - use default</SelectItem>
-                                                        {headers.filter(h => h !== 'Status' && h !== 'Trigger time').map(h => <SelectItem key={h} value={h}>{h}</SelectItem>)}
-                                                    </SelectContent>
-                                                </Select>
-                                                <p className="text-[10px] text-muted-foreground">Column with timezone (UTC, US/Eastern, etc.)</p>
-                                            </div>
                                         </div>
 
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="grid grid-cols-1 gap-4">
                                             <div className="space-y-2">
                                                 <Label className="text-xs">Default Timezone</Label>
                                                 <Select value={dynamicDefaultTimezone} onValueChange={setDynamicDefaultTimezone}>
@@ -1127,21 +1114,6 @@ const PublicationPage = () => {
                                                     </SelectContent>
                                                 </Select>
                                                 <p className="text-[10px] text-muted-foreground">Used when timezone column is empty</p>
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label className="text-xs">Date Format</Label>
-                                                <Select value={dynamicDateFormat} onValueChange={setDynamicDateFormat}>
-                                                    <SelectTrigger>
-                                                        <SelectValue placeholder="Auto-detect" />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="auto">Auto-detect</SelectItem>
-                                                        <SelectItem value="YYYY-MM-DD">YYYY-MM-DD</SelectItem>
-                                                        <SelectItem value="MM/DD/YYYY">MM/DD/YYYY</SelectItem>
-                                                        <SelectItem value="DD/MM/YYYY">DD/MM/YYYY</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                                <p className="text-[10px] text-muted-foreground">Expected date format in CSV</p>
                                             </div>
                                         </div>
                                     </div>
