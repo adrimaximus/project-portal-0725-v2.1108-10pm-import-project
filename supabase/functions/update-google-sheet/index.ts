@@ -17,7 +17,15 @@ serve(async (req) => {
     if (!serviceAccountStr) {
       throw new Error("GOOGLE_SERVICE_ACCOUNT secret is not set")
     }
-    const serviceAccount = JSON.parse(serviceAccountStr)
+
+    let serviceAccount;
+    try {
+      serviceAccount = JSON.parse(serviceAccountStr)
+    } catch (e) {
+      console.error("JSON Parse Error for GOOGLE_SERVICE_ACCOUNT:", e.message);
+      console.error("Secret string start:", serviceAccountStr.substring(0, 20));
+      throw new Error("Invalid JSON in GOOGLE_SERVICE_ACCOUNT secret. Please ensure it is the raw JSON content from the Google Service Account key file.");
+    }
 
     // 2. Parse Request
     const { spreadsheetId, data } = await req.json()
