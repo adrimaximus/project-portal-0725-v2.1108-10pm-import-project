@@ -633,7 +633,7 @@ const PublicationPage = () => {
 
     // Determine the name to use for replacement in the toast preview
     const currentProfile = profiles.find((p: any) => p.value === user.id);
-    const currentName = currentProfile ? currentProfile.label : (user.user_metadata?.full_name || user.email || 'User');
+    const currentName = currentProfile ? currentProfile.label : (user.name || user.email || 'User');
     const previewBody = notifBody.replace(/{{name}}/gi, currentName);
 
     setIsSendingTestNotif(true);

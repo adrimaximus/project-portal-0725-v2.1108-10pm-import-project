@@ -83,7 +83,7 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ children, className
             );
           },
           
-          pre: ({node, ...props}) => <div {...props} />, // Wrapper for code blocks, handled above by 'code'
+          pre: ({node, ...props}) => <div {...(props as any)} />, 
           
           img: ({node, ...props}) => (
             <img 
