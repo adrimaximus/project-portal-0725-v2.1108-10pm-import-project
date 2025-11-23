@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Info, PlayCircle, UploadCloud, MessageSquare, Bell, FileSpreadsheet, X, Link as LinkIcon, File, CheckCircle2, Loader2, Send, RefreshCw, FlaskConical, Bot, Sparkles, Clock, AlertCircle } from "lucide-react";
+import { Info, PlayCircle, UploadCloud, MessageSquare, Bell, FileSpreadsheet, X, Link as LinkIcon, File, CheckCircle2, Loader2, Send, RefreshCw, FlaskConical, Bot, Sparkles, Clock, AlertCircle, Download } from "lucide-react";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
@@ -166,6 +166,33 @@ const PublicationPage = () => {
 
   const clearData = () => { setData([]); setHeaders([]); setFileName(null); setSelectedPhoneColumn(""); setGoogleSheetUrl(""); if (fileInputRef.current) fileInputRef.current.value = ""; };
 
+  const handleExportData = () => {
+    if (data.length === 0) {
+        toast.error("No data to export");
+        return;
+    }
+    
+    // Create a new array with Status and Trigger time columns at the end if they exist in the data
+    // Or just export the data as is, since we are updating it in state
+    const exportData = data.map(row => {
+        // Create a new object with headers first
+        const newRow: any = {};
+        headers.forEach(h => newRow[h] = row[h]);
+        
+        // Add our custom status columns if they have been set
+        if (row['Status']) newRow['Status'] = row['Status'];
+        if (row['Trigger time']) newRow['Trigger time'] = row['Trigger time'];
+        
+        return newRow;
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Results");
+    XLSX.writeFile(workbook, `Publication_Result_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    toast.success("Data Exported", { description: "Excel file downloaded successfully." });
+  };
+
   const insertVariable = (header: string) => {
     const variable = `{{${header}}}`;
     const textarea = textareaRef.current;
@@ -237,92 +264,30 @@ const PublicationPage = () => {
       return url;
   };
 
-  // Calculate status for preview column
-  const getPreviewStatus = (row: any) => {
-    // 1. Prioritize explicit status from sending attempt
-    if (row._status === 'failed') {
-        return (
-            <div className="flex flex-col text-red-600">
-                <span className="font-medium text-[10px] flex items-center gap-1">
-                    <div className="h-1.5 w-1.5 rounded-full bg-red-500" />
-                    Failed
-                </span>
-                <span className="text-[9px] truncate max-w-[100px] cursor-help" title={row._error}>{row._error || 'Unknown error'}</span>
-            </div>
-        );
-    }
-    if (row._status === 'sent') {
-        if (isScheduled) {
-            let displayTime = "";
-            if (scheduleMode === 'fixed') {
-                displayTime = fixedScheduleDate ? new Date(fixedScheduleDate).toLocaleString() : "Pending";
-            } else {
-                const dateVal = row[dynamicDateCol] || '';
-                const timeVal = dynamicTimeCol !== 'same_as_date' ? row[dynamicTimeCol] || '' : '';
-                displayTime = `${dateVal} ${timeVal}`.trim();
-            }
-
-            return (
-                <div className="flex flex-col text-blue-600">
-                    <span className="font-medium text-[10px] flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        Scheduled
-                    </span>
-                    <span className="text-[9px] text-muted-foreground/70">{displayTime}</span>
-                </div>
-            );
-        }
-
-        return (
-            <div className="flex flex-col text-green-600">
-                <span className="font-medium text-[10px] flex items-center gap-1">
-                    <div className="h-1.5 w-1.5 rounded-full bg-green-500" />
-                    Sent
-                </span>
-                <span className="text-[9px] text-muted-foreground/70">{new Date().toLocaleTimeString()}</span>
-            </div>
-        );
-    }
-    if (row._status === 'sending') {
-        return <span className="text-blue-600 text-[10px] animate-pulse">Sending...</span>;
-    }
-
-    // 2. If not yet sent, show scheduled status
-    if (isScheduled) {
-      if (scheduleMode === 'fixed') {
-        if (!fixedScheduleDate) return <span className="text-muted-foreground italic">Pending Schedule</span>;
-        const date = new Date(fixedScheduleDate);
-        return (
-          <div className="flex flex-col">
-            <span className="text-blue-600 font-medium text-[10px] flex items-center gap-1"><Clock className="h-3 w-3" /> Scheduled</span>
-            <span className="text-[10px] text-muted-foreground">{date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
-            <span className="text-[9px] text-muted-foreground/70">{date.toLocaleDateString()}</span>
-          </div>
-        );
-      } else {
-        // Dynamic
-        const dateVal = row[dynamicDateCol];
-        const timeVal = dynamicTimeCol !== 'same_as_date' ? row[dynamicTimeCol] : '';
-        if (!dateVal) return <span className="text-destructive text-[10px]">Missing Date</span>;
-        return (
-          <div className="flex flex-col">
-            <span className="text-blue-600 font-medium text-[10px] flex items-center gap-1"><Clock className="h-3 w-3" /> Scheduled</span>
-            <span className="text-[10px] text-muted-foreground truncate">{dateVal} {timeVal}</span>
-          </div>
-        );
+  // Helper to get display values for Status and Trigger time columns
+  const getRowStatusDisplay = (row: any) => {
+      if (row['Status']) {
+          const status = row['Status'];
+          if (status === 'Sent') return <Badge className="bg-green-500 hover:bg-green-600 h-5 text-[10px]">Sent</Badge>;
+          if (status === 'Scheduled') return <Badge className="bg-blue-500 hover:bg-blue-600 h-5 text-[10px]">Scheduled</Badge>;
+          if (status.startsWith('Failed')) return <Badge variant="destructive" className="h-5 text-[10px]" title={status}>Failed</Badge>;
+          return <Badge variant="outline" className="h-5 text-[10px]">{status}</Badge>;
       }
-    }
+      
+      // Fallback to preview logic if no explicit Status column data yet
+      if (row._status === 'sending') return <span className="text-blue-600 text-[10px] animate-pulse">Sending...</span>;
+      return <Badge variant="outline" className="text-muted-foreground border-dashed h-5 text-[10px]">Ready</Badge>;
+  };
 
-    // 3. Default state
-    return (
-      <div className="flex flex-col">
-        <span className="text-slate-500 font-medium text-[10px] flex items-center gap-1">
-            <div className="h-1.5 w-1.5 rounded-full bg-slate-400" />
-            Draft
-        </span>
-        <span className="text-[9px] text-muted-foreground/70">Ready</span>
-      </div>
-    );
+  const getRowTriggerTimeDisplay = (row: any) => {
+      if (row['Trigger time']) return <span className="text-[10px] font-mono">{row['Trigger time']}</span>;
+      
+      // Preview logic
+      if (isScheduled) {
+          if (scheduleMode === 'fixed') return <span className="text-[10px] text-muted-foreground">{fixedScheduleDate ? new Date(fixedScheduleDate).toLocaleString() : '-'}</span>;
+          return <span className="text-[10px] text-muted-foreground">{row[dynamicDateCol] || '-'} {row[dynamicTimeCol] !== 'same_as_date' ? row[dynamicTimeCol] : ''}</span>;
+      }
+      return <span className="text-[10px] text-muted-foreground">Immediate</span>;
   };
 
   const normalizePhone = (p: string | number) => {
@@ -405,6 +370,19 @@ const PublicationPage = () => {
         // Update data state based on results to show status in table
         setData(prevData => prevData.map(row => {
             const rowPhone = normalizePhone(row[selectedPhoneColumn]);
+            let newStatus = "";
+            let newTriggerTime = "";
+
+            // Determine trigger time string
+            if (isScheduled) {
+                if (scheduleMode === 'fixed') {
+                    newTriggerTime = fixedScheduleDate.replace('T', ' ');
+                } else {
+                    newTriggerTime = `${row[dynamicDateCol] || ''} ${row[dynamicTimeCol] !== 'same_as_date' ? (row[dynamicTimeCol] || '') : ''}`.trim();
+                }
+            } else {
+                newTriggerTime = new Date().toLocaleString();
+            }
             
             // Check if this row was in the failed list
             const failure = result.errors?.find((e: any) => {
@@ -414,13 +392,25 @@ const PublicationPage = () => {
             });
             
             if (failure) {
-                return { ...row, _status: 'failed', _error: typeof failure === 'object' ? (failure.error || failure.message) : failure };
+                const errorMsg = typeof failure === 'object' ? (failure.error || failure.message) : failure;
+                return { 
+                    ...row, 
+                    _status: 'failed', 
+                    _error: errorMsg,
+                    'Status': 'Failed',
+                    'Trigger time': newTriggerTime // Keep intention time even if failed? Or 'N/A'
+                };
             }
             
-            // If it wasn't in errors but has a valid phone number, mark as sent
-            // We filtered messages by length > 5 in payload creation
+            // If it wasn't in errors but has a valid phone number, mark as sent/scheduled
             if (rowPhone.length > 5) {
-                return { ...row, _status: 'sent', _error: undefined };
+                return { 
+                    ...row, 
+                    _status: 'sent', 
+                    _error: undefined,
+                    'Status': isScheduled ? 'Scheduled' : 'Sent',
+                    'Trigger time': newTriggerTime
+                };
             }
             
             return { ...row, _status: undefined }; // Reset if invalid phone
@@ -446,7 +436,7 @@ const PublicationPage = () => {
         }
         
     } catch (error: any) { 
-        setData(prevData => prevData.map(row => ({ ...row, _status: 'failed', _error: error.message })));
+        setData(prevData => prevData.map(row => ({ ...row, _status: 'failed', _error: error.message, 'Status': 'Error', 'Trigger time': 'N/A' })));
         toast.error("Blast Failed", { description: error.message || "Unknown error occurred" }); 
     } finally { 
         setIsSending(false); 
@@ -964,13 +954,21 @@ const PublicationPage = () => {
 
                 {/* Right Column: Preview */}
                 <Card className="h-[400px] flex flex-col shadow-sm overflow-hidden">
-                   <CardHeader className="border-b pb-4">
-                      <CardTitle className="text-xl font-semibold">Data Preview</CardTitle>
-                      <CardDescription>
-                         {data.length > 0 
-                            ? `Showing first 50 of ${data.length} rows` 
-                            : "Upload a file to see the data preview"}
-                      </CardDescription>
+                   <CardHeader className="border-b pb-4 flex flex-row items-center justify-between space-y-0">
+                      <div>
+                          <CardTitle className="text-xl font-semibold">Data Preview</CardTitle>
+                          <CardDescription>
+                             {data.length > 0 
+                                ? `Showing first 50 of ${data.length} rows` 
+                                : "Upload a file to see the data preview"}
+                          </CardDescription>
+                      </div>
+                      {data.some(r => r.Status || r._status) && (
+                          <Button variant="outline" size="sm" onClick={handleExportData} className="h-8">
+                              <Download className="h-3.5 w-3.5 mr-1" />
+                              Export Data
+                          </Button>
+                      )}
                    </CardHeader>
                    <CardContent className="p-0 flex-1 overflow-hidden relative">
                       {data.length > 0 ? (
@@ -988,8 +986,12 @@ const PublicationPage = () => {
                                               )}
                                            </TableHead>
                                         ))}
-                                        <TableHead className="sticky right-0 z-20 bg-card shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)] w-[130px] font-bold text-foreground border-l">
+                                        {/* New Columns */}
+                                        <TableHead className="sticky right-[140px] z-20 bg-card shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)] w-[140px] font-bold text-foreground border-l">
                                             Status
+                                        </TableHead>
+                                        <TableHead className="sticky right-0 z-20 bg-card w-[140px] font-bold text-foreground border-l">
+                                            Trigger Time
                                         </TableHead>
                                      </TableRow>
                                   </TableHeader>
@@ -1006,8 +1008,11 @@ const PublicationPage = () => {
                                                  {row[header]}
                                               </TableCell>
                                            ))}
-                                           <TableCell className="sticky right-0 z-20 bg-card shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)] text-xs align-top py-2 font-medium border-l">
-                                              {getPreviewStatus(row)}
+                                           <TableCell className="sticky right-[140px] z-20 bg-card shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)] text-xs align-top py-2 font-medium border-l">
+                                              {getRowStatusDisplay(row)}
+                                           </TableCell>
+                                           <TableCell className="sticky right-0 z-20 bg-card text-xs align-top py-2 font-medium border-l">
+                                              {getRowTriggerTimeDisplay(row)}
                                            </TableCell>
                                         </TableRow>
                                      ))}
