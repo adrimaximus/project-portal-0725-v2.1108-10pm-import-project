@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Info, PlayCircle, UploadCloud, MessageSquare, Bell, FileSpreadsheet, X, Link as LinkIcon, File, CheckCircle2, Loader2, Send, RefreshCw, FlaskConical, Bot, Sparkles, Clock, AlertCircle, Download, Save } from "lucide-react";
+import { Info, PlayCircle, UploadCloud, MessageSquare, Bell, FileSpreadsheet, X, Link as LinkIcon, File, CheckCircle2, Loader2, Send, RefreshCw, FlaskConical, Bot, Sparkles, Clock, AlertCircle, Download, Save, Wand2 } from "lucide-react";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
@@ -51,6 +51,11 @@ const PublicationPage = () => {
   const [dynamicTimezoneCol, setDynamicTimezoneCol] = useState("use_default");
   const [dynamicDefaultTimezone, setDynamicDefaultTimezone] = useState("UTC");
   const [dynamicDateFormat, setDynamicDateFormat] = useState("auto");
+
+  // AI Rewrite State
+  const [aiInstructions, setAiInstructions] = useState("");
+  const [isRewriting, setIsRewriting] = useState(false);
+  const [showAiPanel, setShowAiPanel] = useState(false);
 
   // In-App Notification State
   const [notifTarget, setNotifTarget] = useState<"all" | "role" | "specific">("all");
@@ -174,14 +179,10 @@ const PublicationPage = () => {
     }
     
     const exportData = data.map(row => {
-        // Create a new object with headers first, excluding special columns to move them to the end
         const newRow: any = {};
         headers.filter(h => h !== 'Status' && h !== 'Trigger time').forEach(h => newRow[h] = row[h]);
-        
-        // Add our custom status columns if they have been set, strictly at the end
         if (row['Status']) newRow['Status'] = row['Status'];
         if (row['Trigger time']) newRow['Trigger time'] = row['Trigger time'];
-        
         return newRow;
     });
 
@@ -198,7 +199,6 @@ const PublicationPage = () => {
         return;
     }
 
-    // Extract Spreadsheet ID
     const match = googleSheetUrl.match(/\/d\/([a-zA-Z0-9-_]+)/);
     const spreadsheetId = match ? match[1] : null;
 
@@ -209,13 +209,10 @@ const PublicationPage = () => {
 
     setIsUpdatingSheet(true);
     try {
-        // Prepare data payload ensuring Status and Trigger time columns exist
         const updateData = data.map(row => {
             const newRow: any = {};
-            // 1. Add original headers, filtering out Status/Trigger time if they exist to avoid duplication/reordering
             headers.filter(h => h !== 'Status' && h !== 'Trigger time').forEach(h => newRow[h] = row[h]);
             
-            // 2. Add Status Column (Use existing or calculate default)
             let statusVal = row['Status'];
             if (!statusVal) {
                 if (row._status === 'failed') statusVal = 'Failed';
@@ -225,7 +222,6 @@ const PublicationPage = () => {
             }
             newRow['Status'] = statusVal;
 
-            // 3. Add Trigger Time Column (Use existing or calculate default)
             let timeVal = row['Trigger time'];
             if (!timeVal) {
                 if (isScheduled) {
@@ -312,9 +308,30 @@ const PublicationPage = () => {
     }
   };
 
+  const handleAiRewrite = async () => {
+    if (!templateMessage) return toast.error("Please enter a draft message first");
+    setIsRewriting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('ai-rewrite', {
+        body: { 
+          text: templateMessage, 
+          instructions: aiInstructions + " Use WhatsApp formatting (markdown) like *bold*, _italic_, ~strike~, and emojis. Keep variables like {{name}} intact.",
+          context: "WhatsApp Blast Message"
+        }
+      });
+      if (error) throw error;
+      setTemplateMessage(data.rewrittenText);
+      toast.success("Template rewritten!", { description: "The message has been updated with AI improvements." });
+      setShowAiPanel(false);
+    } catch (e: any) {
+      toast.error("AI Rewrite failed", { description: e.message });
+    } finally {
+      setIsRewriting(false);
+    }
+  };
+
   const handleGenerateMessages = () => {
     if (!templateMessage.trim()) { toast.error("Missing Template", { description: "Please enter a message template." }); return; }
-    // Media URL is now optional
     if (isScheduled) {
         if (scheduleMode === 'fixed' && !fixedScheduleDate) { toast.error("Missing Date", { description: "Please select a date and time for the schedule." }); return; }
         if (scheduleMode === 'dynamic' && !dynamicDateCol) { toast.error("Missing Date Column", { description: "Please select a column for scheduling dates." }); return; }
@@ -342,9 +359,7 @@ const PublicationPage = () => {
     });
   };
 
-  // Helper to get display values for Status and Trigger time columns
   const getPreviewStatus = (row: any) => {
-    // 1. Prioritize explicit status from sending attempt
     if (row._status === 'failed') {
         return (
             <div className="flex flex-col text-red-600">
@@ -362,7 +377,6 @@ const PublicationPage = () => {
             if (scheduleMode === 'fixed') {
                 displayTime = fixedScheduleDate ? new Date(fixedScheduleDate).toLocaleString() : "Pending";
             } else {
-                // For dynamic, show the specific parsed trigger time for this row if available
                 displayTime = row['Trigger time'] || "Scheduled";
             }
 
@@ -391,7 +405,6 @@ const PublicationPage = () => {
         return <span className="text-blue-600 text-[10px] animate-pulse">Sending...</span>;
     }
 
-    // 2. If not yet sent, show scheduled status
     if (isScheduled) {
       if (scheduleMode === 'fixed') {
         if (!fixedScheduleDate) return <span className="text-muted-foreground italic">Pending Schedule</span>;
@@ -404,7 +417,6 @@ const PublicationPage = () => {
           </div>
         );
       } else {
-        // Dynamic
         const dateVal = row[dynamicDateCol];
         const timeVal = dynamicTimeCol !== 'same_as_date' ? row[dynamicTimeCol] : '';
         if (!dateVal) return <span className="text-destructive text-[10px]">Missing Date</span>;
@@ -417,7 +429,6 @@ const PublicationPage = () => {
       }
     }
 
-    // 3. Default state
     return (
       <div className="flex flex-col">
         <span className="text-slate-500 font-medium text-[10px] flex items-center gap-1">
@@ -432,7 +443,6 @@ const PublicationPage = () => {
   const getRowTriggerTimeDisplay = (row: any) => {
       if (row['Trigger time']) return <span className="text-[10px] font-mono">{row['Trigger time']}</span>;
       
-      // Preview logic
       if (isScheduled) {
           if (scheduleMode === 'fixed') return <span className="text-[10px] text-muted-foreground">{fixedScheduleDate ? new Date(fixedScheduleDate).toLocaleString() : '-'}</span>;
           return <span className="text-[10px] text-muted-foreground">{row[dynamicDateCol] || '-'} {row[dynamicTimeCol] !== 'same_as_date' ? row[dynamicTimeCol] : ''}</span>;
@@ -451,7 +461,6 @@ const PublicationPage = () => {
     setIsSending(true);
     toast.info("Sending...", { description: "Processing your blast request." });
 
-    // Optimistically update status to sending
     setData(prevData => prevData.map(row => ({ ...row, _status: 'sending', _error: undefined })));
 
     try {
@@ -461,23 +470,19 @@ const PublicationPage = () => {
             const finalUrl = generatePreviewUrl(row);
             const msgContent = generatePreviewMessage(row);
             
-            // Base message structure
             const messageData: any = { 
                 phone, 
                 type: messageType
             };
             
-            // Handle text vs media logic specifically for WBIZTOOL structure
             if (messageType === 'text') {
                 messageData.message = msgContent;
             } else {
-                // For image/document types
                 if (finalUrl && finalUrl.trim()) {
                     messageData.url = finalUrl;
-                    messageData.caption = msgContent; // WBIZTOOL often requires 'caption' for media
-                    messageData.message = msgContent; // Send both to be safe for the proxy
+                    messageData.caption = msgContent; 
+                    messageData.message = msgContent; 
                 } else {
-                    // Fallback to text if URL is missing/empty
                     messageData.type = 'text';
                     messageData.message = msgContent;
                 }
@@ -491,10 +496,8 @@ const PublicationPage = () => {
                     let rawDate = row[dynamicDateCol] || '';
                     let rawTime = dynamicTimeCol !== 'same_as_date' ? (row[dynamicTimeCol] || '') : '';
                     
-                    // Robust Date Parsing
-                    let datePartForJs = rawDate; // Default to raw
+                    let datePartForJs = rawDate; 
 
-                    // Helper to normalize date string for JS Date constructor (MM/DD/YYYY or YYYY/MM/DD preferred for local time)
                     if (dynamicDateFormat === 'DD/MM/YYYY') {
                         const parts = rawDate.match(/(\d+)/g);
                         if (parts && parts.length >= 3) datePartForJs = `${parts[1]}/${parts[0]}/${parts[2]}`;
@@ -502,10 +505,8 @@ const PublicationPage = () => {
                         const parts = rawDate.match(/(\d+)/g);
                         if (parts && parts.length >= 3) datePartForJs = `${parts[0]}/${parts[1]}/${parts[2]}`;
                     } else if (dynamicDateFormat === 'YYYY-MM-DD') {
-                        // Replace dashes with slashes to prevent JS treating it as UTC ISO
                         datePartForJs = rawDate.replace(/-/g, '/');
                     } 
-                    // 'auto' leaves it as is, hoping JS understands (e.g. "11/23/2025")
 
                     const combinedDateTimeStr = `${datePartForJs} ${rawTime}`.trim();
                     const dateObj = new Date(combinedDateTimeStr);
@@ -513,7 +514,6 @@ const PublicationPage = () => {
                     let formattedScheduleTime = combinedDateTimeStr;
 
                     if (!isNaN(dateObj.getTime())) {
-                        // Format to YYYY-MM-DD HH:mm:ss for API
                         const yyyy = dateObj.getFullYear();
                         const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
                         const dd = String(dateObj.getDate()).padStart(2, '0');
@@ -534,17 +534,14 @@ const PublicationPage = () => {
         
         if (error) throw error;
         
-        // Update data state based on results to show status in table
         setData(prevData => prevData.map(row => {
             const rowPhone = normalizePhone(row[selectedPhoneColumn]);
             let newTriggerTime = "";
 
-            // Determine trigger time string for display (reuse logic for consistency)
             if (isScheduled) {
                 if (scheduleMode === 'fixed') {
                     newTriggerTime = fixedScheduleDate.replace('T', ' ');
                 } else {
-                    // Try to find the messageData we just created to get the formatted time
                     const sentMsg = messages.find((m: any) => m.phone === rowPhone);
                     newTriggerTime = sentMsg?.schedule_time || `${row[dynamicDateCol]} ${row[dynamicTimeCol] || ''}`;
                 }
@@ -552,7 +549,6 @@ const PublicationPage = () => {
                 newTriggerTime = new Date().toLocaleString();
             }
             
-            // Check if this row was in the failed list
             const failure = result.errors?.find((e: any) => {
                 const errorPhone = typeof e === 'object' ? e.phone : null;
                 return errorPhone === rowPhone;
@@ -569,7 +565,6 @@ const PublicationPage = () => {
                 };
             }
             
-            // If it wasn't in errors but has a valid phone number
             if (rowPhone.length > 5) {
                 return { 
                     ...row, 
@@ -583,7 +578,6 @@ const PublicationPage = () => {
             return { ...row, _status: undefined }; 
         }));
 
-        // Check for specific error messages in the response
         let errorMessage = "";
         if (result.failed > 0 && result.errors && result.errors.length > 0) {
             const firstError = result.errors[0];
@@ -607,114 +601,6 @@ const PublicationPage = () => {
         toast.error("Blast Failed", { description: error.message || "Unknown error occurred" }); 
     } finally { 
         setIsSending(false); 
-    }
-  };
-
-  // In-App Notification Handler
-  const handleSendInAppNotification = async () => {
-    if (!notifTitle.trim() || !notifBody.trim()) {
-      toast.error("Missing Information", { description: "Title and Body are required." });
-      return;
-    }
-    
-    let targetValue: any = null;
-    if (notifTarget === 'role') {
-      if (!notifRole) { toast.error("Missing Role", { description: "Please select a role." }); return; }
-      targetValue = notifRole;
-    } else if (notifTarget === 'specific') {
-      if (notifUsers.length === 0) { toast.error("Missing Users", { description: "Please select at least one user." }); return; }
-      targetValue = notifUsers;
-    }
-
-    setIsSendingNotif(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('send-app-broadcast', {
-        body: {
-          title: notifTitle,
-          body: notifBody,
-          target: notifTarget,
-          targetValue,
-          link: notifLink,
-        }
-      });
-
-      if (error) throw error;
-      
-      toast.success("Broadcast Sent", { 
-        description: (
-          <div className="mt-2 w-full p-3 bg-card text-card-foreground border rounded-md shadow-sm">
-            <p className="font-semibold text-sm">{notifTitle}</p>
-            <p className="text-xs text-muted-foreground line-clamp-3 mt-1">{notifBody}</p>
-            <p className="text-[10px] text-muted-foreground mt-2 flex items-center gap-1">
-              <CheckCircle2 className="h-3 w-3 text-green-500" />
-              Successfully sent to {data.count} user(s).
-            </p>
-          </div>
-        ),
-        duration: 5000,
-      });
-      
-      // Reset form
-      setNotifTitle("");
-      setNotifBody("");
-      setNotifLink("");
-      setNotifUsers([]);
-    } catch (error: any) {
-      toast.error("Broadcast Failed", { description: error.message });
-    } finally {
-      setIsSendingNotif(false);
-    }
-  };
-
-  const handleSendTestInAppNotification = async () => {
-    if (!notifTitle.trim() || !notifBody.trim()) {
-      toast.error("Missing Information", { description: "Title and Body are required for test." });
-      return;
-    }
-
-    if (!user) {
-       toast.error("Not authenticated");
-       return;
-    }
-
-    // Determine the name to use for replacement in the toast preview
-    const currentProfile = profiles.find((p: any) => p.value === user.id);
-    const currentName = currentProfile ? currentProfile.label : (user.user_metadata?.full_name || user.email || 'User');
-    const previewBody = notifBody.replace(/{{name}}/gi, currentName);
-
-    setIsSendingTestNotif(true);
-    try {
-      const { error } = await supabase.functions.invoke('send-app-broadcast', {
-        body: {
-          title: `[TEST] ${notifTitle}`,
-          body: notifBody,
-          target: 'specific',
-          targetValue: [user.id],
-          link: notifLink,
-        }
-      });
-
-      if (error) throw error;
-      
-      toast.success("Test Broadcast Sent", { 
-        description: (
-          <div className="mt-2 w-full p-3 bg-card text-card-foreground border rounded-md shadow-sm">
-            <p className="font-semibold text-sm"><span className="text-primary mr-1">[TEST]</span>{notifTitle}</p>
-            <div className="text-xs text-muted-foreground line-clamp-3 mt-1">
-               <InteractiveText text={previewBody} />
-            </div>
-            <p className="text-[10px] text-muted-foreground mt-2 flex items-center gap-1">
-              <CheckCircle2 className="h-3 w-3 text-green-500" />
-              Check your notifications.
-            </p>
-          </div>
-        ),
-        duration: 5000,
-      });
-    } catch (error: any) {
-      toast.error("Test Failed", { description: error.message });
-    } finally {
-      setIsSendingTestNotif(false);
     }
   };
 
@@ -760,9 +646,45 @@ const PublicationPage = () => {
                    <CardContent className="space-y-6 pt-6">
                       {/* Message Template */}
                       <div className="space-y-2">
-                         <Label htmlFor="template" className="text-sm font-medium">
-                            Message Template <span className="text-red-500">*</span>
-                         </Label>
+                         <div className="flex justify-between items-center">
+                            <Label htmlFor="template" className="text-sm font-medium">
+                               Message Template <span className="text-red-500">*</span>
+                            </Label>
+                            <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="h-6 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                onClick={() => setShowAiPanel(!showAiPanel)}
+                            >
+                                <Wand2 className="w-3 h-3 mr-1" />
+                                {showAiPanel ? "Close AI" : "AI Rewrite"}
+                            </Button>
+                         </div>
+
+                         {showAiPanel && (
+                            <div className="bg-blue-50/50 border border-blue-100 rounded-md p-3 mb-2 space-y-3 animate-in slide-in-from-top-2 fade-in duration-200">
+                               <div className="space-y-1">
+                                  <Label className="text-xs font-medium text-blue-800 flex items-center gap-1">
+                                    <Sparkles className="w-3 h-3 text-blue-500" />
+                                    AI Instructions (Optional)
+                                  </Label>
+                                  <Input 
+                                     className="h-8 text-xs bg-white placeholder:text-muted-foreground/60" 
+                                     placeholder="e.g. Make it professional, use more emojis, format with bold..." 
+                                     value={aiInstructions}
+                                     onChange={e => setAiInstructions(e.target.value)}
+                                  />
+                                  <p className="text-[10px] text-blue-600/80">The AI will rewrite your template using WhatsApp markdown and emojis while keeping variables intact.</p>
+                               </div>
+                               <div className="flex justify-end">
+                                  <Button size="sm" className="h-7 text-xs bg-blue-600 hover:bg-blue-700" onClick={handleAiRewrite} disabled={isRewriting || !templateMessage}>
+                                     {isRewriting ? <Loader2 className="w-3 h-3 animate-spin mr-1"/> : <Bot className="w-3 h-3 mr-1"/>}
+                                     Rewrite Template
+                                  </Button>
+                                </div>
+                            </div>
+                         )}
+
                          <Textarea 
                             id="template" 
                             ref={textareaRef}
