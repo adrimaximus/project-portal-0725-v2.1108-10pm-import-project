@@ -352,7 +352,23 @@ const PublicationPage = () => {
                     messageData.schedule_time = fixedScheduleDate.replace('T', ' ');
                     messageData.timezone = fixedTimezone;
                 } else {
-                    let sched = row[dynamicDateCol] || '';
+                    let rawDate = row[dynamicDateCol] || '';
+                    let datePart = rawDate;
+                    
+                    // Apply simple date formatting if dynamic format is selected and rawDate is clean
+                    if (dynamicDateFormat !== 'auto' && dynamicDateFormat !== 'YYYY-MM-DD' && rawDate) {
+                        // Extract digits to handle potential delimiters like -, /, .
+                        const parts = rawDate.match(/(\d+)/g);
+                        if (parts && parts.length >= 3) {
+                            if (dynamicDateFormat === 'DD/MM/YYYY') {
+                                datePart = `${parts[2]}-${parts[1]}-${parts[0]}`;
+                            } else if (dynamicDateFormat === 'MM/DD/YYYY') {
+                                datePart = `${parts[2]}-${parts[0]}-${parts[1]}`;
+                            }
+                        }
+                    }
+
+                    let sched = datePart;
                     if (dynamicTimeCol !== 'same_as_date' && row[dynamicTimeCol]) sched += ' ' + row[dynamicTimeCol];
                     messageData.schedule_time = sched.replace('T', ' ');
                     messageData.timezone = dynamicTimezoneCol !== 'use_default' && row[dynamicTimezoneCol] ? row[dynamicTimezoneCol] : dynamicDefaultTimezone;
