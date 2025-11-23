@@ -22,9 +22,8 @@ serve(async (req) => {
     try {
       serviceAccount = JSON.parse(serviceAccountStr)
     } catch (e) {
-      console.error("JSON Parse Error for GOOGLE_SERVICE_ACCOUNT:", e.message);
-      console.error("Secret string start:", serviceAccountStr.substring(0, 20));
-      throw new Error("Invalid JSON in GOOGLE_SERVICE_ACCOUNT secret. Please ensure it is the raw JSON content from the Google Service Account key file.");
+      console.error("JSON Parse Error:", e.message);
+      throw new Error("Invalid JSON in GOOGLE_SERVICE_ACCOUNT secret.");
     }
 
     // 2. Parse Request
@@ -38,9 +37,7 @@ serve(async (req) => {
     const accessToken = await getGoogleAccessToken(serviceAccount)
 
     // 4. Prepare Data for Sheets API
-    // We assume the first row objects keys represent the desired headers order
-    // or we can collect all unique keys. For simplicity and consistency with preview,
-    // we use the keys of the first object.
+    // Use keys from the first object as headers
     const headers = Object.keys(data[0])
     const values = [headers] // First row is headers
 
@@ -52,11 +49,11 @@ serve(async (req) => {
       values.push(rowValues)
     })
 
-    // 5. Get the Sheet Name (Title) of the first sheet to update correct range
+    // 5. Get the Sheet Name (Title) of the first sheet
     const sheetTitle = await getFirstSheetTitle(spreadsheetId, accessToken)
     const updateRange = `'${sheetTitle}'!A1`
 
-    // 6. Update the Sheet (Overwrite content)
+    // 6. Update the Sheet
     const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${updateRange}?valueInputOption=USER_ENTERED`
     
     const res = await fetch(url, {
@@ -76,7 +73,12 @@ serve(async (req) => {
 
     if (!res.ok) {
       console.error("Google Sheets API Error:", resJson)
-      throw new Error(resJson.error?.message || "Failed to update sheet")
+      const errorMessage = resJson.error?.message || "Failed to update sheet";
+      // Give a specific hint for permission errors
+      if (res.status === 403) {
+         throw new Error(`Permission denied. Please share the Google Sheet with: ${serviceAccount.client_email}`);
+      }
+      throw new Error(errorMessage)
     }
 
     return new Response(JSON.stringify({ success: true, updatedCells: resJson.updatedCells }), {
@@ -98,7 +100,10 @@ async function getGoogleAccessToken(serviceAccount: any) {
   const iat = Math.floor(Date.now() / 1000);
   const exp = iat + 3600; // 1 hour
 
-  const privateKey = await jose.importPKCS8(serviceAccount.private_key, 'RS256');
+  // Handle private key formatting issues (replace literal \n with actual newlines)
+  const privateKeyStr = serviceAccount.private_key.replace(/\\n/g, '\n');
+
+  const privateKey = await jose.importPKCS8(privateKeyStr, 'RS256');
 
   const jwt = await new jose.SignJWT({
     iss: serviceAccount.client_email,
@@ -136,7 +141,11 @@ async function getFirstSheetTitle(spreadsheetId: string, accessToken: string) {
   })
   
   if (!res.ok) {
-    throw new Error("Failed to fetch spreadsheet metadata")
+    const err = await res.json()
+    if (res.status === 403) {
+        throw new Error("Permission denied. Did you share the sheet with the service account email?");
+    }
+    throw new Error(err.error?.message || "Failed to fetch spreadsheet metadata")
   }
 
   const data = await res.json()
