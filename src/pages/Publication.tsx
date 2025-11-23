@@ -1105,7 +1105,7 @@ const PublicationPage = () => {
                                 : "Upload a file to see the data preview"}
                           </CardDescription>
                       </div>
-                      {data.some(r => r.Status || r._status) && (
+                      {data.length > 0 && (
                           <div className="flex gap-2">
                               {googleSheetUrl && (
                                   <Button variant="outline" size="sm" onClick={handleUpdateSheet} disabled={isUpdatingSheet} className="h-8">
