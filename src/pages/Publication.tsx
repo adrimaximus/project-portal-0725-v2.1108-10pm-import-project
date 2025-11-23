@@ -377,7 +377,9 @@ const PublicationPage = () => {
             if (scheduleMode === 'fixed') {
                 displayTime = fixedScheduleDate ? new Date(fixedScheduleDate).toLocaleString() : "Pending";
             } else {
-                displayTime = row['Trigger time'] || "Scheduled";
+                const dateVal = row[dynamicDateCol] || '';
+                const timePart = dynamicTimeCol !== 'same_as_date' ? (row[dynamicTimeCol] || '') : '';
+                displayTime = `${dateVal} ${timePart}`.trim();
             }
 
             return (
@@ -445,7 +447,10 @@ const PublicationPage = () => {
       
       if (isScheduled) {
           if (scheduleMode === 'fixed') return <span className="text-[10px] text-muted-foreground">{fixedScheduleDate ? new Date(fixedScheduleDate).toLocaleString() : '-'}</span>;
-          return <span className="text-[10px] text-muted-foreground">{row[dynamicDateCol] || '-'} {row[dynamicTimeCol] !== 'same_as_date' ? row[dynamicTimeCol] : ''}</span>;
+          const dateVal = row[dynamicDateCol] || '';
+          const timeVal = dynamicTimeCol !== 'same_as_date' ? (row[dynamicTimeCol] || '') : '';
+          const displayTime = `${dateVal} ${timeVal}`.trim();
+          return <span className="text-[10px] text-muted-foreground">{displayTime || '-'}</span>;
       }
       return <span className="text-[10px] text-muted-foreground">Immediate</span>;
   };
@@ -1149,7 +1154,7 @@ const PublicationPage = () => {
                                         <TableRow key={rowIndex}>
                                            <TableCell className="font-mono text-xs text-muted-foreground">{rowIndex + 1}</TableCell>
                                            {headers.filter(h => h !== 'Status' && h !== 'Trigger time').map((header) => {
-                                              // Determine input type based on header name or settings
+                                              // Determine input type based on header name
                                               const lowerHeader = header.toLowerCase();
                                               let inputType = "text";
                                               
@@ -1402,7 +1407,7 @@ const PublicationPage = () => {
                                     {scheduleMode === 'fixed' ? (
                                         `${fixedScheduleDate.replace('T', ' ')} (${fixedTimezone})`
                                     ) : (
-                                        `Dynamic: ${data[0][dynamicDateCol] || 'N/A'} (${dynamicDefaultTimezone})`
+                                        `Dynamic: ${data[0][dynamicDateCol] || 'N/A'} ${dynamicTimeCol !== 'same_as_date' ? (data[0][dynamicTimeCol] || '') : ''} (${dynamicDefaultTimezone})`
                                     )}
                                 </p>
                             </div>
