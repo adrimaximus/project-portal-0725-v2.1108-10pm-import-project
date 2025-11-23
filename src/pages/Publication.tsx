@@ -174,7 +174,7 @@ const PublicationPage = () => {
     }
     
     const exportData = data.map(row => {
-        // Create a new object with headers first, excluding special columns
+        // Create a new object with headers first, excluding special columns to move them to the end
         const newRow: any = {};
         headers.filter(h => h !== 'Status' && h !== 'Trigger time').forEach(h => newRow[h] = row[h]);
         
@@ -212,7 +212,7 @@ const PublicationPage = () => {
         // Prepare data payload ensuring Status and Trigger time columns exist
         const updateData = data.map(row => {
             const newRow: any = {};
-            // 1. Add original headers, filtering out Status/Trigger time if they exist to avoid duplication/reordering
+            // 1. Add original headers, excluding Status and Trigger time to prevent duplication and ensure they are last
             headers.filter(h => h !== 'Status' && h !== 'Trigger time').forEach(h => newRow[h] = row[h]);
             
             // 2. Add Status Column (Use existing or calculate default)
