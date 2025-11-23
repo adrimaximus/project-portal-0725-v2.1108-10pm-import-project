@@ -173,8 +173,6 @@ const PublicationPage = () => {
         return;
     }
     
-    // Create a new array with Status and Trigger time columns at the end if they exist in the data
-    // Or just export the data as is, since we are updating it in state
     const exportData = data.map(row => {
         // Create a new object with headers first
         const newRow: any = {};
@@ -211,12 +209,39 @@ const PublicationPage = () => {
 
     setIsUpdatingSheet(true);
     try {
-        // Prepare data payload similar to export
+        // Prepare data payload ensuring Status and Trigger time columns exist
         const updateData = data.map(row => {
             const newRow: any = {};
+            // 1. Add original headers
             headers.forEach(h => newRow[h] = row[h]);
-            if (row['Status']) newRow['Status'] = row['Status'];
-            if (row['Trigger time']) newRow['Trigger time'] = row['Trigger time'];
+            
+            // 2. Add Status Column (Use existing or calculate default)
+            let statusVal = row['Status'];
+            if (!statusVal) {
+                if (row._status === 'failed') statusVal = 'Failed';
+                else if (row._status === 'sent') statusVal = isScheduled ? 'Scheduled' : 'Sent';
+                else if (row._status === 'sending') statusVal = 'Sending';
+                else statusVal = 'Draft';
+            }
+            newRow['Status'] = statusVal;
+
+            // 3. Add Trigger Time Column (Use existing or calculate default)
+            let timeVal = row['Trigger time'];
+            if (!timeVal) {
+                if (isScheduled) {
+                    if (scheduleMode === 'fixed') {
+                        timeVal = fixedScheduleDate ? fixedScheduleDate.replace('T', ' ') : '';
+                    } else {
+                        const dateVal = row[dynamicDateCol] || '';
+                        const timePart = dynamicTimeCol !== 'same_as_date' ? (row[dynamicTimeCol] || '') : '';
+                        timeVal = `${dateVal} ${timePart}`.trim();
+                    }
+                } else {
+                    timeVal = 'Immediate';
+                }
+            }
+            newRow['Trigger time'] = timeVal;
+
             return newRow;
         });
 
@@ -1181,7 +1206,7 @@ const PublicationPage = () => {
                                                       // Parse attempts
                                                       const d = new Date(`1970-01-01 ${valStr}`);
                                                       if (!isNaN(d.getTime())) {
-                                                          return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+                                                           return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
                                                       }
                                                   }
                                                   if (inputType === 'datetime-local') {
