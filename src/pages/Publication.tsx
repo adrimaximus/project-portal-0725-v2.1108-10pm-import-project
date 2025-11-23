@@ -1132,7 +1132,7 @@ const PublicationPage = () => {
                     </DialogDescription>
                 </DialogHeader>
                 {data.length > 0 ? (
-                    <div className="bg-muted/50 p-4 rounded-lg border space-y-3">
+                    <div className="bg-muted/50 p-4 rounded-lg border space-y-3 max-h-[400px] overflow-y-auto">
                         <div className="flex justify-between items-start">
                              <div className="mb-2">
                                 <Label className="text-xs text-muted-foreground uppercase">To Phone</Label>
