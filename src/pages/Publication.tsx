@@ -212,7 +212,7 @@ const PublicationPage = () => {
         // Prepare data payload ensuring Status and Trigger time columns exist
         const updateData = data.map(row => {
             const newRow: any = {};
-            // 1. Add original headers, excluding Status and Trigger time to prevent duplication and ensure they are last
+            // 1. Add original headers, filtering out Status/Trigger time if they exist to avoid duplication/reordering
             headers.filter(h => h !== 'Status' && h !== 'Trigger time').forEach(h => newRow[h] = row[h]);
             
             // 2. Add Status Column (Use existing or calculate default)
@@ -775,7 +775,7 @@ const PublicationPage = () => {
                             <p className="mb-1.5">Click to insert variable:</p>
                             {headers.length > 0 ? (
                                <div className="flex flex-wrap gap-1.5">
-                                 {headers.map(h => (
+                                 {headers.filter(h => h !== 'Status' && h !== 'Trigger time').map(h => (
                                    <Badge 
                                      key={h} 
                                      variant="secondary" 
@@ -803,7 +803,7 @@ const PublicationPage = () => {
                                     Available Variables (Click to Insert into {messageType === 'image' ? 'Image' : 'File'} URL)
                                   </Label>
                                   <div className="flex flex-wrap gap-1.5">
-                                    {headers.map(h => (
+                                    {headers.filter(h => h !== 'Status' && h !== 'Trigger time').map(h => (
                                       <Badge 
                                         key={h} 
                                         variant="secondary" 
@@ -866,7 +866,7 @@ const PublicationPage = () => {
                                   <SelectValue placeholder={headers.length === 0 ? "Upload file first" : "Select column"} />
                                </SelectTrigger>
                                <SelectContent>
-                                  {headers.map((header) => (
+                                  {headers.filter(h => h !== 'Status' && h !== 'Trigger time').map((header) => (
                                      <SelectItem key={header} value={header}>{header}</SelectItem>
                                   ))}
                                </SelectContent>
@@ -1032,7 +1032,7 @@ const PublicationPage = () => {
                                                         <SelectValue placeholder="Select date column" />
                                                     </SelectTrigger>
                                                     <SelectContent>
-                                                        {headers.map(h => <SelectItem key={h} value={h}>{h}</SelectItem>)}
+                                                        {headers.filter(h => h !== 'Status' && h !== 'Trigger time').map(h => <SelectItem key={h} value={h}>{h}</SelectItem>)}
                                                     </SelectContent>
                                                 </Select>
                                                 <p className="text-[10px] text-muted-foreground">Column with date (YYYY-MM-DD or MM/DD/YYYY)</p>
@@ -1045,7 +1045,7 @@ const PublicationPage = () => {
                                                     </SelectTrigger>
                                                     <SelectContent>
                                                         <SelectItem value="same_as_date">Optional - same as date column</SelectItem>
-                                                        {headers.map(h => <SelectItem key={h} value={h}>{h}</SelectItem>)}
+                                                        {headers.filter(h => h !== 'Status' && h !== 'Trigger time').map(h => <SelectItem key={h} value={h}>{h}</SelectItem>)}
                                                     </SelectContent>
                                                 </Select>
                                                 <p className="text-[10px] text-muted-foreground">Column with time (HH:MM or HH:MM:SS)</p>
@@ -1058,7 +1058,7 @@ const PublicationPage = () => {
                                                     </SelectTrigger>
                                                     <SelectContent>
                                                         <SelectItem value="use_default">Optional - use default</SelectItem>
-                                                        {headers.map(h => <SelectItem key={h} value={h}>{h}</SelectItem>)}
+                                                        {headers.filter(h => h !== 'Status' && h !== 'Trigger time').map(h => <SelectItem key={h} value={h}>{h}</SelectItem>)}
                                                     </SelectContent>
                                                 </Select>
                                                 <p className="text-[10px] text-muted-foreground">Column with timezone (UTC, US/Eastern, etc.)</p>
@@ -1153,7 +1153,7 @@ const PublicationPage = () => {
                                   <TableHeader>
                                      <TableRow className="hover:bg-transparent">
                                         <TableHead className="w-[50px] font-bold text-foreground">#</TableHead>
-                                        {headers.map((header) => (
+                                        {headers.filter(h => h !== 'Status' && h !== 'Trigger time').map((header) => (
                                            <TableHead key={header} className="font-bold text-foreground min-w-[80px]">
                                               {header}
                                               {header === selectedPhoneColumn && (
@@ -1174,7 +1174,7 @@ const PublicationPage = () => {
                                      {data.slice(0, 50).map((row, rowIndex) => (
                                         <TableRow key={rowIndex}>
                                            <TableCell className="font-mono text-xs text-muted-foreground">{rowIndex + 1}</TableCell>
-                                           {headers.map((header) => {
+                                           {headers.filter(h => h !== 'Status' && h !== 'Trigger time').map((header) => {
                                               // Determine input type based on header name
                                               const lowerHeader = header.toLowerCase();
                                               let inputType = "text";
