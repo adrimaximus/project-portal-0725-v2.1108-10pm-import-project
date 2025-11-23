@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Info, PlayCircle, UploadCloud, MessageSquare, Bell, FileSpreadsheet, X, Link as LinkIcon, File, CheckCircle2, Loader2, Send, RefreshCw, FlaskConical, Bot, Sparkles, Clock, AlertCircle, Download } from "lucide-react";
+import { Info, PlayCircle, UploadCloud, MessageSquare, Bell, FileSpreadsheet, X, Link as LinkIcon, File, CheckCircle2, Loader2, Send, RefreshCw, FlaskConical, Bot, Sparkles, Clock, AlertCircle, Download, Save } from "lucide-react";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
@@ -39,6 +39,7 @@ const PublicationPage = () => {
   const [isImporting, setIsImporting] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [isUpdatingSheet, setIsUpdatingSheet] = useState(false);
   const [messageType, setMessageType] = useState("text");
   const [mediaUrl, setMediaUrl] = useState("");
   const [isScheduled, setIsScheduled] = useState(false);
@@ -191,6 +192,50 @@ const PublicationPage = () => {
     XLSX.utils.book_append_sheet(workbook, worksheet, "Results");
     XLSX.writeFile(workbook, `Publication_Result_${new Date().toISOString().slice(0, 10)}.xlsx`);
     toast.success("Data Exported", { description: "Excel file downloaded successfully." });
+  };
+
+  const handleUpdateSheet = async () => {
+    if (!googleSheetUrl) {
+        toast.error("No Google Sheet URL", { description: "This feature only works when data is imported from a Google Sheet." });
+        return;
+    }
+
+    // Extract Spreadsheet ID
+    const match = googleSheetUrl.match(/\/d\/([a-zA-Z0-9-_]+)/);
+    const spreadsheetId = match ? match[1] : null;
+
+    if (!spreadsheetId) {
+        toast.error("Invalid URL", { description: "Could not extract Spreadsheet ID." });
+        return;
+    }
+
+    setIsUpdatingSheet(true);
+    try {
+        // Prepare data payload similar to export
+        const updateData = data.map(row => {
+            const newRow: any = {};
+            headers.forEach(h => newRow[h] = row[h]);
+            if (row['Status']) newRow['Status'] = row['Status'];
+            if (row['Trigger time']) newRow['Trigger time'] = row['Trigger time'];
+            return newRow;
+        });
+
+        const { error } = await supabase.functions.invoke('update-google-sheet', {
+            body: {
+                spreadsheetId,
+                data: updateData,
+            }
+        });
+
+        if (error) throw error;
+
+        toast.success("Sheet Updated", { description: "Data successfully synced to Google Sheet." });
+    } catch (error: any) {
+        console.error(error);
+        toast.error("Update Failed", { description: error.message || "Failed to update Google Sheet." });
+    } finally {
+        setIsUpdatingSheet(false);
+    }
   };
 
   const insertVariable = (header: string) => {
@@ -1061,10 +1106,18 @@ const PublicationPage = () => {
                           </CardDescription>
                       </div>
                       {data.some(r => r.Status || r._status) && (
-                          <Button variant="outline" size="sm" onClick={handleExportData} className="h-8">
-                              <Download className="h-3.5 w-3.5 mr-1" />
-                              Export Data
-                          </Button>
+                          <div className="flex gap-2">
+                              {googleSheetUrl && (
+                                  <Button variant="outline" size="sm" onClick={handleUpdateSheet} disabled={isUpdatingSheet} className="h-8">
+                                      {isUpdatingSheet ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <UploadCloud className="h-3.5 w-3.5 mr-1" />}
+                                      Update Sheet
+                                  </Button>
+                              )}
+                              <Button variant="outline" size="sm" onClick={handleExportData} className="h-8">
+                                  <Download className="h-3.5 w-3.5 mr-1" />
+                                  Export Data
+                              </Button>
+                          </div>
                       )}
                    </CardHeader>
                    <CardContent className="p-0 flex-1 overflow-hidden relative">
