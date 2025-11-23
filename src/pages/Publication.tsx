@@ -443,8 +443,6 @@ const PublicationPage = () => {
   };
 
   const getRowTriggerTimeDisplay = (row: any) => {
-      if (row['Trigger time']) return <span className="text-[10px] font-mono">{row['Trigger time']}</span>;
-      
       if (isScheduled) {
           if (scheduleMode === 'fixed') return <span className="text-[10px] text-muted-foreground">{fixedScheduleDate ? new Date(fixedScheduleDate).toLocaleString() : '-'}</span>;
           
@@ -454,7 +452,7 @@ const PublicationPage = () => {
           // Attempt to format time to HH:mm for consistent display
           if (timeVal) {
              // Check if time is like '4:05' or '16:5' and pad it to '04:05' or '16:05'
-             const timeParts = timeVal.match(/^(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?$/);
+             const timeParts = String(timeVal).match(/^(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?$/);
              if (timeParts) {
                  timeVal = `${timeParts[1].padStart(2, '0')}:${timeParts[2].padStart(2, '0')}`;
              }
@@ -463,6 +461,9 @@ const PublicationPage = () => {
           const displayTime = `${dateVal} ${timeVal}`.trim();
           return <span className="text-[10px] text-muted-foreground">{displayTime || '-'}</span>;
       }
+      
+      if (row['Trigger time']) return <span className="text-[10px] font-mono">{row['Trigger time']}</span>;
+      
       return <span className="text-[10px] text-muted-foreground">Immediate</span>;
   };
 
