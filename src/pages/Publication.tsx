@@ -1096,18 +1096,69 @@ const PublicationPage = () => {
                                      {data.slice(0, 50).map((row, rowIndex) => (
                                         <TableRow key={rowIndex}>
                                            <TableCell className="font-mono text-xs text-muted-foreground">{rowIndex + 1}</TableCell>
-                                           {headers.map((header) => (
-                                              <TableCell 
-                                                key={`${rowIndex}-${header}`} 
-                                                className="p-0 min-w-[100px] align-top border-b border-muted/50" 
-                                              >
-                                                  <Input
-                                                    className="h-10 rounded-none border-0 border-b border-transparent bg-transparent px-3 py-2 text-sm shadow-none focus-visible:ring-0 focus-visible:border-primary focus-visible:bg-muted/20 hover:bg-muted/20 transition-colors"
-                                                    value={row[header] || ''}
-                                                    onChange={(e) => handleCellEdit(rowIndex, header, e.target.value)}
-                                                />
-                                              </TableCell>
-                                           ))}
+                                           {headers.map((header) => {
+                                              // Determine input type based on header name
+                                              const lowerHeader = header.toLowerCase();
+                                              let inputType = "text";
+                                              if (lowerHeader.includes('date') && lowerHeader.includes('time')) {
+                                                  inputType = "datetime-local";
+                                              } else if (lowerHeader.includes('schedule')) {
+                                                  inputType = "datetime-local";
+                                              } else if (lowerHeader.includes('date') || lowerHeader.includes('tgl') || lowerHeader.includes('dob')) {
+                                                  inputType = "date";
+                                              } else if (lowerHeader.includes('time') || lowerHeader.includes('jam') || lowerHeader.includes('pukul')) {
+                                                  inputType = "time";
+                                              }
+
+                                              // Helper to format values for specific inputs
+                                              const getSafeValue = (val: any) => {
+                                                  if (val === null || val === undefined) return '';
+                                                  const valStr = String(val).trim();
+                                                  if (valStr === '') return '';
+
+                                                  if (inputType === 'date') {
+                                                      if (/^\d{4}-\d{2}-\d{2}$/.test(valStr)) return valStr;
+                                                      const d = new Date(valStr);
+                                                      if (!isNaN(d.getTime())) return d.toISOString().split('T')[0];
+                                                  }
+                                                  if (inputType === 'time') {
+                                                      if (/^\d{2}:\d{2}$/.test(valStr)) return valStr;
+                                                      // Check if it's formatted like 13:00:00
+                                                      if (/^\d{2}:\d{2}:\d{2}$/.test(valStr)) return valStr.substring(0, 5);
+                                                      // Parse attempts
+                                                      const d = new Date(`1970-01-01 ${valStr}`);
+                                                      if (!isNaN(d.getTime())) {
+                                                          return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+                                                      }
+                                                  }
+                                                  if (inputType === 'datetime-local') {
+                                                       // HTML datetime-local expects YYYY-MM-DDTHH:mm
+                                                       // If it's already close (YYYY-MM-DD HH:mm:ss), replace space with T
+                                                       if (/^\d{4}-\d{2}-\d{2}.\d{2}:\d{2}/.test(valStr)) return valStr.replace(' ', 'T').substring(0, 16);
+                                                       
+                                                       const d = new Date(valStr);
+                                                       if (!isNaN(d.getTime())) {
+                                                           const offset = d.getTimezoneOffset() * 60000;
+                                                           return (new Date(d.getTime() - offset)).toISOString().slice(0, 16);
+                                                       }
+                                                  }
+                                                  return valStr;
+                                              };
+
+                                              return (
+                                                  <TableCell 
+                                                    key={`${rowIndex}-${header}`} 
+                                                    className="p-0 min-w-[100px] align-top border-b border-muted/50" 
+                                                  >
+                                                      <Input
+                                                        type={inputType}
+                                                        className="h-10 rounded-none border-0 border-b border-transparent bg-transparent px-3 py-2 text-sm shadow-none focus-visible:ring-0 focus-visible:border-primary focus-visible:bg-muted/20 hover:bg-muted/20 transition-colors"
+                                                        value={getSafeValue(row[header])}
+                                                        onChange={(e) => handleCellEdit(rowIndex, header, e.target.value)}
+                                                    />
+                                                  </TableCell>
+                                               );
+                                           })}
                                            <TableCell className="sticky right-[140px] z-20 bg-card shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)] text-xs align-top py-2 font-medium border-l">
                                               {getPreviewStatus(row)}
                                            </TableCell>
