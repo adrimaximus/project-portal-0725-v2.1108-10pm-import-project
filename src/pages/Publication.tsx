@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Info, PlayCircle, UploadCloud, MessageSquare, Bell, FileSpreadsheet, X, Link as LinkIcon, File, CheckCircle2, Loader2, Send, RefreshCw, FlaskConical, Bot, Sparkles, Clock, AlertCircle, Download, Save, Wand2, Scaling, Trash2 } from "lucide-react";
+import { Info, PlayCircle, UploadCloud, MessageSquare, Bell, FileSpreadsheet, X, Link as LinkIcon, File, CheckCircle2, Loader2, Send, RefreshCw, FlaskConical, Bot, Sparkles, Clock, AlertCircle, Download, Save, Wand2, Scaling, Trash2, FolderOpen } from "lucide-react";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
@@ -17,7 +17,7 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import InteractiveText from "@/components/InteractiveText";
 
@@ -89,6 +89,7 @@ const processImportedData = (rows: any[], headers: string[]) => {
 
 const PublicationPage = () => {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("whatsapp");
   
   // WhatsApp State
@@ -112,6 +113,11 @@ const PublicationPage = () => {
   const [dynamicDateCol, setDynamicDateCol] = useState("");
   const [dynamicTimeCol, setDynamicTimeCol] = useState("same_as_date");
   
+  // Campaign State
+  const [saveCampaignOpen, setSaveCampaignOpen] = useState(false);
+  const [newCampaignName, setNewCampaignName] = useState("");
+  const [selectedCampaign, setSelectedCampaign] = useState<string | null>(null);
+
   // Table View State
   const [colWidths, setColWidths] = useState<Record<string, number>>({});
   const [resizingCol, setResizingCol] = useState<{ header: string; startX: number; startWidth: number } | null>(null);
@@ -197,6 +203,19 @@ const PublicationPage = () => {
         label: `${p.first_name || ''} ${p.last_name || ''}`.trim() || p.email || 'Unknown',
         value: p.id
       })) || [];
+    }
+  });
+
+  // Fetch saved campaigns
+  const { data: savedCampaigns = [], isLoading: isLoadingCampaigns } = useQuery({
+    queryKey: ['publication_campaigns'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('publication_campaigns')
+        .select('*')
+        .order('updated_at', { ascending: false });
+      if (error) throw error;
+      return data || [];
     }
   });
 
@@ -308,6 +327,68 @@ const PublicationPage = () => {
         error: (err) => { throw err; }
       });
     } catch (error: any) { toast.error("Import Failed", { description: "Could not fetch Google Sheet." }); } finally { setIsImporting(false); }
+  };
+
+  const handleSaveCampaign = async () => {
+    if (!newCampaignName.trim()) {
+      toast.error("Name required", { description: "Please enter a name for the campaign." });
+      return;
+    }
+    if (!googleSheetUrl) {
+      toast.error("URL required", { description: "No Google Sheet URL to save." });
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('publication_campaigns')
+        .insert({
+          user_id: user?.id,
+          name: newCampaignName,
+          sheet_url: googleSheetUrl
+        });
+
+      if (error) throw error;
+
+      toast.success("Campaign Saved", { description: `"${newCampaignName}" has been saved to your campaigns.` });
+      setSaveCampaignOpen(false);
+      setNewCampaignName("");
+      queryClient.invalidateQueries({ queryKey: ['publication_campaigns'] });
+    } catch (error: any) {
+      toast.error("Save Failed", { description: error.message });
+    }
+  };
+
+  const handleDeleteCampaign = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!confirm("Are you sure you want to delete this campaign?")) return;
+
+    try {
+      const { error } = await supabase
+        .from('publication_campaigns')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      toast.success("Campaign Deleted");
+      if (selectedCampaign === id) {
+        setSelectedCampaign(null);
+        setGoogleSheetUrl("");
+      }
+      queryClient.invalidateQueries({ queryKey: ['publication_campaigns'] });
+    } catch (error: any) {
+      toast.error("Delete Failed", { description: error.message });
+    }
+  };
+
+  const handleLoadCampaign = (id: string) => {
+    const campaign = savedCampaigns.find(c => c.id === id);
+    if (campaign) {
+      setGoogleSheetUrl(campaign.sheet_url);
+      setSelectedCampaign(id);
+      // Optionally auto-import here if desired, but manual import gives user control
+    }
   };
 
   const clearData = () => { setData([]); setHeaders([]); setFileName(null); setSelectedPhoneColumn(""); setGoogleSheetUrl(""); if (fileInputRef.current) fileInputRef.current.value = ""; };
@@ -1130,7 +1211,48 @@ const PublicationPage = () => {
 
                       {/* Import Section */}
                       <div className="space-y-3">
-                         <Label>Import Data <span className="text-red-500">*</span></Label>
+                         <div className="flex justify-between items-center">
+                            <Label>Import Data <span className="text-red-500">*</span></Label>
+                            
+                            {/* Saved Campaigns Dropdown */}
+                            <div className="w-[200px]">
+                              <Select 
+                                value={selectedCampaign || ""} 
+                                onValueChange={handleLoadCampaign}
+                                disabled={isLoadingCampaigns || savedCampaigns.length === 0}
+                              >
+                                <SelectTrigger className="h-7 text-xs">
+                                  <FolderOpen className="h-3.5 w-3.5 mr-2" />
+                                  <SelectValue placeholder="Load Saved Campaign" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {savedCampaigns.map((campaign: any) => (
+                                    <div key={campaign.id} className="flex items-center justify-between w-full px-2 py-1.5 hover:bg-accent cursor-pointer group">
+                                      <span 
+                                        className="text-sm flex-1"
+                                        onClick={() => handleLoadCampaign(campaign.id)}
+                                      >
+                                        {campaign.name}
+                                      </span>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-5 w-5 p-0 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                                        onClick={(e) => handleDeleteCampaign(campaign.id, e)}
+                                      >
+                                        <Trash2 className="h-3 w-3" />
+                                      </Button>
+                                    </div>
+                                  ))}
+                                  {savedCampaigns.length === 0 && (
+                                    <div className="p-2 text-xs text-muted-foreground text-center">
+                                      No saved campaigns
+                                    </div>
+                                  )}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                         </div>
                          
                          {!fileName ? (
                            <div className="space-y-3">
@@ -1175,6 +1297,15 @@ const PublicationPage = () => {
                                    className="text-sm"
                                    disabled={isImporting}
                                 />
+                                <Button 
+                                  variant="outline" 
+                                  size="icon" 
+                                  onClick={() => setSaveCampaignOpen(true)}
+                                  disabled={!googleSheetUrl}
+                                  title="Save as Campaign"
+                                >
+                                  <Save className="h-4 w-4" />
+                                </Button>
                                 <Button variant="secondary" onClick={handleGoogleSheetImport} disabled={!googleSheetUrl || isImporting}>
                                    {isImporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
                                    Import
@@ -1327,7 +1458,7 @@ const PublicationPage = () => {
                 </Card>
 
                 {/* Right Column: Preview */}
-                <Card className="h-[400px] flex flex-col shadow-sm overflow-hidden relative">
+                <Card className="h-[400px] flex flex-col shadow-sm overflow-hidden">
                    <CardHeader className="border-b pb-4 flex flex-row items-center justify-between space-y-0">
                       <div>
                           <CardTitle className="text-xl font-semibold">Data Preview</CardTitle>
@@ -1672,6 +1803,41 @@ const PublicationPage = () => {
                     </Button>
                 </DialogFooter>
             </DialogContent>
+        </Dialog>
+
+        {/* Save Campaign Dialog */}
+        <Dialog open={saveCampaignOpen} onOpenChange={setSaveCampaignOpen}>
+          <DialogContent className="sm:max-w-[400px]">
+            <DialogHeader>
+              <DialogTitle>Save Campaign</DialogTitle>
+              <DialogDescription>
+                Save this Google Sheet URL as a campaign for easy access later.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="campaign-name">Campaign Name</Label>
+                <Input
+                  id="campaign-name"
+                  placeholder="e.g. Monthly Newsletter"
+                  value={newCampaignName}
+                  onChange={(e) => setNewCampaignName(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Sheet URL</Label>
+                <Input
+                  value={googleSheetUrl}
+                  disabled
+                  className="bg-muted"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setSaveCampaignOpen(false)}>Cancel</Button>
+              <Button onClick={handleSaveCampaign} disabled={!newCampaignName.trim()}>Save Campaign</Button>
+            </DialogFooter>
+          </DialogContent>
         </Dialog>
       </div>
     </PortalLayout>
