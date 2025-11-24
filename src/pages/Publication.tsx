@@ -166,6 +166,7 @@ const PublicationPage = () => {
   const [dynamicTimeCol, setDynamicTimeCol] = useState("same_as_date");
   const [rowRange, setRowRange] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+  const [showDuplicatesOnly, setShowDuplicatesOnly] = useState(false);
   
   // Resend Confirmation State
   const [confirmResendOpen, setConfirmResendOpen] = useState(false);
@@ -302,6 +303,7 @@ const PublicationPage = () => {
             if (likelyPhoneCol) setSelectedPhoneColumn(likelyPhoneCol);
 
             toast.success("File uploaded", { description: `Successfully parsed ${parsedData.length} rows.` });
+            setShowDuplicatesOnly(false);
           }
         },
         error: (error) => {
@@ -330,6 +332,7 @@ const PublicationPage = () => {
           if (likelyPhoneCol) setSelectedPhoneColumn(likelyPhoneCol);
 
           toast.success("File uploaded", { description: `Successfully parsed ${jsonData.length} rows.` });
+          setShowDuplicatesOnly(false);
         }
       };
       reader.readAsArrayBuffer(file);
@@ -379,7 +382,8 @@ const PublicationPage = () => {
               );
               if (likelyPhoneCol) setSelectedPhoneColumn(likelyPhoneCol);
 
-              toast.success("Import Successful", { description: `Imported ${parsedData.length} rows from Google Sheet.` }); 
+              toast.success("Import Successful", { description: `Imported ${parsedData.length} rows from Google Sheet.` });
+              setShowDuplicatesOnly(false);
           }
           else { toast.error("Empty Sheet", { description: "No data found in the Google Sheet." }); }
         },
@@ -450,7 +454,11 @@ const PublicationPage = () => {
     }
   };
 
-  const clearData = () => { setData([]); setHeaders([]); setFileName(null); setSelectedPhoneColumn(""); setGoogleSheetUrl(""); setSearchTerm(""); if (fileInputRef.current) fileInputRef.current.value = ""; };
+  const clearData = () => { 
+      setData([]); setHeaders([]); setFileName(null); setSelectedPhoneColumn(""); setGoogleSheetUrl(""); setSearchTerm(""); 
+      setShowDuplicatesOnly(false);
+      if (fileInputRef.current) fileInputRef.current.value = ""; 
+  };
 
   const handleExportData = () => {
     if (data.length === 0) {
@@ -1118,14 +1126,24 @@ const PublicationPage = () => {
 
   const filteredData = useMemo(() => {
     const processed = data.map((row, index) => ({ ...row, _originalIndex: index }));
-    if (!searchTerm) return processed;
+    
+    let result = processed;
+
+    if (showDuplicatesOnly && selectedPhoneColumn) {
+       result = result.filter(row => {
+           const phone = normalizePhone(row[selectedPhoneColumn]);
+           return duplicatePhones.has(phone);
+       });
+    }
+
+    if (!searchTerm) return result;
     const lowerTerm = searchTerm.toLowerCase();
-    return processed.filter(row => 
+    return result.filter(row => 
       headers.some(h => 
         h !== 'Status' && h !== 'Trigger time' && String(row[h] || "").toLowerCase().includes(lowerTerm)
       )
     );
-  }, [data, searchTerm, headers]);
+  }, [data, searchTerm, headers, showDuplicatesOnly, selectedPhoneColumn, duplicatePhones]);
 
   return (
     <PortalLayout>
@@ -1594,8 +1612,18 @@ const PublicationPage = () => {
                                 ? `Showing all ${data.length} rows` 
                                 : "Upload a file to see the data preview"}
                              {duplicatesCount > 0 && (
-                                <span className="ml-2 text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full text-xs font-medium">
+                                <span 
+                                  className={cn(
+                                    "ml-2 px-2 py-0.5 rounded-full text-xs font-medium cursor-pointer transition-colors select-none",
+                                    showDuplicatesOnly 
+                                      ? "bg-amber-500 text-white shadow-sm" 
+                                      : "text-amber-600 bg-amber-100 hover:bg-amber-200"
+                                  )}
+                                  onClick={() => setShowDuplicatesOnly(!showDuplicatesOnly)}
+                                  title={showDuplicatesOnly ? "Show all rows" : "Show only duplicates"}
+                                >
                                    {duplicatesCount} duplicate(s) found
+                                   {showDuplicatesOnly && " (Showing)"}
                                 </span>
                              )}
                           </CardDescription>
