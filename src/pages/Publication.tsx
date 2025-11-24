@@ -1538,17 +1538,17 @@ const PublicationPage = () => {
 
                       <div className="space-y-4 pt-2">
                         <div className="space-y-2">
-                            <Label className="text-xs">Row Range to Send (Optional)</Label>
+                            <Label className="text-xs">Rows to Send (Optional)</Label>
                             <div className="flex gap-2 items-center">
                                 <ListFilter className="h-4 w-4 text-muted-foreground" />
                                 <Input 
-                                    placeholder="e.g. 1-50, 60, 75-100" 
+                                    placeholder="e.g. 5, 10-20, 25" 
                                     value={rowRange} 
                                     onChange={(e) => setRowRange(e.target.value)} 
                                     className="text-sm"
                                 />
                             </div>
-                            <p className="text-[10px] text-muted-foreground">Leave empty to send to all rows. Use numbers (1) and ranges (1-10) separated by commas.</p>
+                            <p className="text-[10px] text-muted-foreground">Leave empty to send to all rows. Enter specific row numbers (e.g. 5, 10) or ranges (e.g. 1-50), separated by commas.</p>
                         </div>
 
                         <div className="flex items-center space-x-2 border-t border-dashed pt-3">
