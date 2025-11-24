@@ -127,7 +127,7 @@ const VoiceMessagePlayer = ({ src, sender, isCurrentUser }: VoiceMessagePlayerPr
           onValueChange={handleSliderChange}
           onPointerDown={handlePointerDown}
           onPointerUp={handlePointerUp}
-          className="w-full cursor-pointer [&>span:first-child]:h-1 [&>span:first-child>span]:bg-blue-500 [&>span:last-child]:h-3 [&>span:last-child]:w-3 [&>span:last-child]:bg-white [&>span:last-child]:border-2 [&>span:last-child]:border-blue-500"
+          className="w-full cursor-pointer [&>span:first-child]:h-1 [&>span:first-child>span]:bg-blue-500 [&>span:last-child]:h-3 [&>span:last-child]:w-3 [&>span:last-child]:bg-white [&>span:last-child]:border-2 [&>span:last-child]:border-blue-500 [&>span:last-child]:z-10 [&>span:last-child]:relative"
         />
         <div className="flex justify-between items-center">
             <span className="text-xs font-mono opacity-80">{formatTime(currentTime)}</span>
