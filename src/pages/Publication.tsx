@@ -1154,7 +1154,7 @@ const PublicationPage = () => {
                                      <TableRow className="hover:bg-transparent">
                                         <TableHead className="w-[50px] font-bold text-foreground">#</TableHead>
                                         {headers.filter(h => h !== 'Status' && h !== 'Trigger time').map((header) => (
-                                           <TableHead key={header} className="font-bold text-foreground min-w-[80px]">
+                                           <TableHead key={header} className="font-bold text-foreground min-w-[200px] h-12">
                                               {header}
                                               {header === selectedPhoneColumn && (
                                                  <Badge variant="secondary" className="ml-2 text-[10px] h-4 px-1">Phone</Badge>
@@ -1239,11 +1239,11 @@ const PublicationPage = () => {
                                               return (
                                                   <TableCell 
                                                     key={`${rowIndex}-${header}`} 
-                                                    className="p-0 min-w-[100px] align-top border-b border-muted/50" 
+                                                    className="p-0 min-w-[200px] align-top border-b border-muted/50" 
                                                   >
                                                       <Input
                                                         type={inputType}
-                                                        className="h-10 rounded-none border-0 border-b border-transparent bg-transparent px-3 py-2 text-sm shadow-none focus-visible:ring-0 focus-visible:border-primary focus-visible:bg-muted/20 hover:bg-muted/20 transition-colors"
+                                                        className="h-12 rounded-none border-0 border-b border-transparent bg-transparent px-3 py-2 text-sm shadow-none focus-visible:ring-0 focus-visible:border-primary focus-visible:bg-muted/20 hover:bg-muted/20 transition-colors"
                                                         value={getSafeValue(row[header])}
                                                         onChange={(e) => handleCellEdit(rowIndex, header, e.target.value)}
                                                     />
