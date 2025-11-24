@@ -581,20 +581,17 @@ const PublicationPage = () => {
       return <span className="text-[10px] text-muted-foreground">Immediate</span>;
   };
 
-  const normalizePhone = (p: string | number) => {
-      let phone = String(p).replace(/\D/g, '');
-      if (phone.startsWith('0')) phone = '62' + phone.substring(1);
-      if (phone.startsWith('8')) phone = '62' + phone;
-      return phone;
-  };
+  const duplicatesCount = useMemo(() => {
+    if (!selectedPhoneColumn) return 0;
+    const phones = data.map(row => normalizePhone(row[selectedPhoneColumn]));
+    const uniquePhones = new Set(phones);
+    return phones.length - uniquePhones.size;
+  }, [data, selectedPhoneColumn]);
 
-  // Enhanced duplicate detection that returns duplicate phone numbers
-  const { duplicatePhones, duplicatesCount } = useMemo(() => {
-    if (!selectedPhoneColumn) return { duplicatePhones: new Set<string>(), duplicatesCount: 0 };
-    
+  const duplicatePhones = useMemo(() => {
+    if (!selectedPhoneColumn) return new Set<string>();
     const phones = data.map(row => normalizePhone(row[selectedPhoneColumn]));
     const counts = new Map<string, number>();
-    let dupCount = 0;
 
     phones.forEach(phone => {
         if (phone) {
@@ -606,11 +603,9 @@ const PublicationPage = () => {
     counts.forEach((count, phone) => {
         if (count > 1) {
             duplicates.add(phone);
-            dupCount += (count - 1);
         }
     });
-
-    return { duplicatePhones: duplicates, duplicatesCount: dupCount };
+    return duplicates;
   }, [data, selectedPhoneColumn]);
 
   const handleSendMessages = async () => {
