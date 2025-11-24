@@ -47,6 +47,46 @@ const CellTextarea = ({ value, onChange, className, ...props }: any) => {
   );
 };
 
+// Helper functions moved outside component to avoid redeclaration issues and ensure consistency
+const normalizePhone = (p: string | number) => {
+  // Convert to string
+  let phone = String(p);
+  
+  // Remove ALL non-numeric characters (including =, +, spaces, -, etc.)
+  // This handles input like "=+62 855-7805-194" -> "628557805194"
+  phone = phone.replace(/\D/g, ''); 
+  
+  // Apply prefix rules
+  if (phone.startsWith('0')) {
+      phone = '62' + phone.substring(1); // Replace leading 0 with 62 (08xx -> 628xx)
+  } else if (phone.startsWith('8')) {
+      phone = '62' + phone; // Add 62 if starts with 8 (8xx -> 628xx)
+  }
+  // If starts with 62, it remains as is (62xx -> 62xx)
+  
+  return phone;
+};
+
+const processImportedData = (rows: any[], headers: string[]) => {
+  const phoneKeywords = ['phone', 'mobile', 'wa', 'whatsapp', 'telp', 'hp', 'nomor', 'contact'];
+  const phoneColumns = headers.filter(h => 
+      phoneKeywords.some(keyword => h.toLowerCase().includes(keyword))
+  );
+
+  // If no obvious phone columns, return as is
+  if (phoneColumns.length === 0) return rows;
+
+  return rows.map(row => {
+      const newRow = { ...row };
+      phoneColumns.forEach(col => {
+          if (newRow[col] !== undefined && newRow[col] !== null) {
+              newRow[col] = normalizePhone(newRow[col]);
+          }
+      });
+      return newRow;
+  });
+};
+
 const PublicationPage = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("whatsapp");
@@ -142,37 +182,6 @@ const PublicationPage = () => {
       })) || [];
     }
   });
-
-  const normalizePhone = (p: string | number) => {
-      let phone = String(p).replace(/\D/g, ''); // Remove all non-numeric
-      if (phone.startsWith('0')) {
-          phone = '62' + phone.substring(1); // Replace leading 0 with 62
-      } else if (phone.startsWith('8')) {
-          phone = '62' + phone; // Add 62 if starts with 8
-      }
-      // If starts with 62, it remains as is
-      return phone;
-  };
-
-  const processImportedData = (rows: any[], headers: string[]) => {
-    const phoneKeywords = ['phone', 'mobile', 'wa', 'whatsapp', 'telp', 'hp', 'nomor', 'contact'];
-    const phoneColumns = headers.filter(h => 
-        phoneKeywords.some(keyword => h.toLowerCase().includes(keyword))
-    );
-
-    // If no obvious phone columns, return as is
-    if (phoneColumns.length === 0) return rows;
-
-    return rows.map(row => {
-        const newRow = { ...row };
-        phoneColumns.forEach(col => {
-            if (newRow[col]) {
-                newRow[col] = normalizePhone(newRow[col]);
-            }
-        });
-        return newRow;
-    });
-  };
 
   // WhatsApp Handlers (Existing)
   const handleFile = (file: File) => {
