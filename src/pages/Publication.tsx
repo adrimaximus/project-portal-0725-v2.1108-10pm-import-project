@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Info, PlayCircle, UploadCloud, MessageSquare, Bell, FileSpreadsheet, X, Link as LinkIcon, File, CheckCircle2, Loader2, Send, RefreshCw, FlaskConical, Bot, Sparkles, Clock, AlertCircle, Download, Save, Wand2, Scaling, Trash2, FolderOpen } from "lucide-react";
+import { Info, PlayCircle, UploadCloud, MessageSquare, Bell, FileSpreadsheet, X, Link as LinkIcon, File, CheckCircle2, Loader2, Send, RefreshCw, FlaskConical, Bot, Sparkles, Clock, AlertCircle, Download, Save, Wand2, Scaling, Trash2, FolderOpen, ListFilter } from "lucide-react";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
@@ -17,6 +17,16 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import InteractiveText from "@/components/InteractiveText";
@@ -89,6 +99,46 @@ const processImportedData = (rows: any[], headers: string[]) => {
   });
 };
 
+// Helper to parse range string like "1-50, 60" into 0-based indices
+const getIndicesFromRange = (range: string, totalRows: number): number[] => {
+  if (!range.trim()) {
+    // If empty, return all indices
+    return Array.from({ length: totalRows }, (_, i) => i);
+  }
+
+  const indices = new Set<number>();
+  const parts = range.split(',');
+
+  parts.forEach(part => {
+    const trimmed = part.trim();
+    if (trimmed.includes('-')) {
+      const [startStr, endStr] = trimmed.split('-');
+      const start = parseInt(startStr);
+      const end = parseInt(endStr);
+      
+      if (!isNaN(start) && !isNaN(end)) {
+        // User inputs 1-based, convert to 0-based
+        const min = Math.max(0, Math.min(start, end) - 1);
+        const max = Math.min(totalRows - 1, Math.max(start, end) - 1);
+        
+        for (let i = min; i <= max; i++) {
+          indices.add(i);
+        }
+      }
+    } else {
+      const idx = parseInt(trimmed);
+      if (!isNaN(idx)) {
+        const i = idx - 1;
+        if (i >= 0 && i < totalRows) {
+          indices.add(i);
+        }
+      }
+    }
+  });
+
+  return Array.from(indices).sort((a, b) => a - b);
+};
+
 const PublicationPage = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -114,6 +164,12 @@ const PublicationPage = () => {
   const [fixedTimezone, setFixedTimezone] = useState("UTC");
   const [dynamicDateCol, setDynamicDateCol] = useState("");
   const [dynamicTimeCol, setDynamicTimeCol] = useState("same_as_date");
+  const [rowRange, setRowRange] = useState("");
+  
+  // Resend Confirmation State
+  const [confirmResendOpen, setConfirmResendOpen] = useState(false);
+  const [duplicateRows, setDuplicateRows] = useState<number[]>([]);
+  const [pendingRangeIndices, setPendingRangeIndices] = useState<number[]>([]);
   
   // Campaign State
   const [saveCampaignOpen, setSaveCampaignOpen] = useState(false);
@@ -764,14 +820,18 @@ const PublicationPage = () => {
     return duplicates;
   }, [data, selectedPhoneColumn]);
 
-  const handleSendMessages = async () => {
+  const processSending = async (indices: number[]) => {
     setIsSending(true);
-    toast.info("Sending...", { description: "Processing your blast request." });
+    toast.info("Sending...", { description: `Processing ${indices.length} messages request.` });
 
-    setData(prevData => prevData.map(row => ({ ...row, _status: 'sending', _error: undefined })));
+    // Update status for these rows
+    setData(prevData => prevData.map((row, i) => 
+      indices.includes(i) ? { ...row, _status: 'sending', _error: undefined } : row
+    ));
 
     try {
-        const messages = data.map(row => {
+        const messages = indices.map(i => {
+            const row = data[i];
             let phone = normalizePhone(row[selectedPhoneColumn]);
             
             const finalUrl = generatePreviewUrl(row);
@@ -779,7 +839,9 @@ const PublicationPage = () => {
             
             const messageData: any = { 
                 phone, 
-                type: messageType
+                type: messageType,
+                // Pass original index to identify it later if needed, though currently we rely on phone
+                _originalIndex: i 
             };
             
             if (messageType === 'text') {
@@ -802,19 +864,15 @@ const PublicationPage = () => {
                 } else {
                     let rawDate = row[dynamicDateCol] || '';
                     let rawTime = dynamicTimeCol !== 'same_as_date' ? (row[dynamicTimeCol] || '') : '';
-                    
-                    // Simple concatenation for dynamic, relying on WBIZTOOL parsing or standard format
                     const combinedDateTimeStr = `${rawDate} ${rawTime}`.trim();
                     messageData.schedule_time = combinedDateTimeStr;
-                    // Timezone removed from UI input, defaulting to empty or fixed timezone if needed logic added later
-                    // messageData.timezone = fixedTimezone; // Optional: use fixed timezone as fallback if needed
                 }
             }
             return messageData;
         }).filter(m => m.phone.length > 5);
 
-        // Deduplicate messages based on phone and content/url to avoid spam
-        const uniqueMessages = [];
+        // Deduplicate
+        const uniqueMessages: any[] = [];
         const seen = new Set();
         for (const msg of messages) {
             const key = `${msg.phone}-${msg.message}-${msg.url || ''}`;
@@ -825,14 +883,17 @@ const PublicationPage = () => {
         }
 
         if (uniqueMessages.length < messages.length) {
-            console.log(`Filtered out ${messages.length - uniqueMessages.length} duplicates.`);
+            console.log(`Filtered out ${messages.length - uniqueMessages.length} duplicates in the batch.`);
         }
 
         const { data: result, error } = await supabase.functions.invoke('send-whatsapp-blast', { body: { messages: uniqueMessages } });
         
         if (error) throw error;
         
-        setData(prevData => prevData.map(row => {
+        setData(prevData => prevData.map((row, i) => {
+            // Only update rows that were part of this batch
+            if (!indices.includes(i)) return row;
+
             const rowPhone = normalizePhone(row[selectedPhoneColumn]);
             let newTriggerTime = "";
 
@@ -895,11 +956,46 @@ const PublicationPage = () => {
         }
         
     } catch (error: any) { 
-        setData(prevData => prevData.map(row => ({ ...row, _status: 'failed', _error: error.message, 'Status': 'Error', 'Trigger time': 'N/A' })));
+        // Mark filtered rows as failed
+        setData(prevData => prevData.map((row, i) => 
+            indices.includes(i) ? { ...row, _status: 'failed', _error: error.message, 'Status': 'Error', 'Trigger time': 'N/A' } : row
+        ));
         toast.error("Blast Failed", { description: error.message || "Unknown error occurred" }); 
     } finally { 
         setIsSending(false); 
     }
+  };
+
+  const handleSendMessages = async () => {
+    // 1. Determine indices to send
+    const indices = getIndicesFromRange(rowRange, data.length);
+    
+    if (indices.length === 0) {
+        toast.error("No Rows Selected", { description: "The selected range matches no rows." });
+        return;
+    }
+
+    // 2. Check for previously sent in this session
+    const previouslySentIndices = indices.filter(i => {
+        const row = data[i];
+        // Check if it looks "sent" or "scheduled"
+        return row._status === 'sent' || row['Status'] === 'Sent' || row['Status'] === 'Scheduled';
+    });
+
+    if (previouslySentIndices.length > 0) {
+        setDuplicateRows(previouslySentIndices);
+        setPendingRangeIndices(indices);
+        setConfirmResendOpen(true);
+        return;
+    }
+
+    // 3. If no duplicates, send immediately
+    await processSending(indices);
+  };
+
+  const handleConfirmResend = async () => {
+    setConfirmResendOpen(false);
+    await processSending(pendingRangeIndices);
   };
 
   const handleSendTestInAppNotification = async () => {
@@ -1341,7 +1437,21 @@ const PublicationPage = () => {
                       </div>
 
                       <div className="space-y-4 pt-2">
-                        <div className="flex items-center space-x-2">
+                        <div className="space-y-2">
+                            <Label className="text-xs">Row Range to Send (Optional)</Label>
+                            <div className="flex gap-2 items-center">
+                                <ListFilter className="h-4 w-4 text-muted-foreground" />
+                                <Input 
+                                    placeholder="e.g. 1-50, 60, 75-100" 
+                                    value={rowRange} 
+                                    onChange={(e) => setRowRange(e.target.value)} 
+                                    className="text-sm"
+                                />
+                            </div>
+                            <p className="text-[10px] text-muted-foreground">Leave empty to send to all rows. Use numbers (1) and ranges (1-10) separated by commas.</p>
+                        </div>
+
+                        <div className="flex items-center space-x-2 border-t border-dashed pt-3">
                             <Switch id="schedule" checked={isScheduled} onCheckedChange={setIsScheduled} />
                             <Label htmlFor="schedule" className="font-medium cursor-pointer">Schedule Messages (Optional)</Label>
                         </div>
@@ -1754,19 +1864,30 @@ const PublicationPage = () => {
                 <DialogHeader>
                     <DialogTitle>Message Preview</DialogTitle>
                     <DialogDescription>
-                        Previewing the first generated message based on your data.
+                        Previewing based on your settings.
                         {duplicatesCount > 0 && (
                             <span className="block mt-1 text-amber-600 text-xs font-medium">
-                                Note: {duplicatesCount} duplicate messages will be skipped automatically.
+                                Note: {duplicatesCount} duplicate phone numbers will be skipped automatically.
                             </span>
                         )}
                     </DialogDescription>
                 </DialogHeader>
                 {data.length > 0 ? (
                     <div className="bg-muted/50 p-4 rounded-lg border space-y-3 max-h-[400px] overflow-y-auto">
+                        {/* Display info about range */}
+                        {rowRange && (
+                            <div className="bg-blue-50 border border-blue-100 text-blue-700 px-3 py-2 rounded text-xs flex items-start gap-2">
+                                <ListFilter className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                                <span>
+                                    Sending restricted to rows: <strong>{rowRange}</strong>. 
+                                    Only rows within this range will be processed.
+                                </span>
+                            </div>
+                        )}
+
                         <div className="flex justify-between items-start">
                              <div className="mb-2">
-                                <Label className="text-xs text-muted-foreground uppercase">To Phone</Label>
+                                <Label className="text-xs text-muted-foreground uppercase">To Phone (First Record)</Label>
                                 <p className="font-mono text-sm">{data[0][selectedPhoneColumn] || "N/A"}</p>
                              </div>
                              <Badge variant="outline" className="capitalize">{messageType}</Badge>
@@ -1809,6 +1930,32 @@ const PublicationPage = () => {
                 </DialogFooter>
             </DialogContent>
         </Dialog>
+
+        {/* Resend Confirmation Dialog */}
+        <AlertDialog open={confirmResendOpen} onOpenChange={setConfirmResendOpen}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Resend Confirmation</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        <div className="space-y-3">
+                            <p>
+                                The following rows have already been marked as <strong>Sent</strong> or <strong>Scheduled</strong>:
+                            </p>
+                            <div className="max-h-[150px] overflow-y-auto p-2 bg-muted rounded border text-xs font-mono">
+                                {duplicateRows.map(i => `Row ${i + 1}`).join(', ')}
+                            </div>
+                            <p>
+                                Do you want to resend messages to these rows?
+                            </p>
+                        </div>
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel onClick={() => setConfirmResendOpen(false)}>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleConfirmResend}>Yes, Resend All</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
 
         {/* Save Campaign Dialog */}
         <Dialog open={saveCampaignOpen} onOpenChange={setSaveCampaignOpen}>
