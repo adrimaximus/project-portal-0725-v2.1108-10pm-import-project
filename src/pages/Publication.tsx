@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo } from "react";
+import { useState, useRef, useMemo, useEffect } from "react";
 import PortalLayout from "@/components/PortalLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Info, PlayCircle, UploadCloud, MessageSquare, Bell, FileSpreadsheet, X, Link as LinkIcon, File, CheckCircle2, Loader2, Send, RefreshCw, FlaskConical, Bot, Sparkles, Clock, AlertCircle, Download, Save, Wand2 } from "lucide-react";
+import { Info, PlayCircle, UploadCloud, MessageSquare, Bell, FileSpreadsheet, X, Link as LinkIcon, File, CheckCircle2, Loader2, Send, RefreshCw, FlaskConical, Bot, Sparkles, Clock, AlertCircle, Download, Save, Wand2, Scaling } from "lucide-react";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
@@ -49,6 +49,11 @@ const PublicationPage = () => {
   const [dynamicDateCol, setDynamicDateCol] = useState("");
   const [dynamicTimeCol, setDynamicTimeCol] = useState("same_as_date");
   
+  // Table View State
+  const [colWidths, setColWidths] = useState<Record<string, number>>({});
+  const [resizingCol, setResizingCol] = useState<{ header: string; startX: number; startWidth: number } | null>(null);
+  const [rowDensity, setRowDensity] = useState<"compact" | "normal" | "spacious">("spacious");
+
   // AI Rewrite State
   const [aiInstructions, setAiInstructions] = useState("");
   const [isRewriting, setIsRewriting] = useState(false);
@@ -68,6 +73,32 @@ const PublicationPage = () => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const urlInputRef = useRef<HTMLInputElement>(null);
   const notifBodyRef = useRef<HTMLTextAreaElement>(null);
+
+  // Resize effect
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!resizingCol) return;
+      const diff = e.clientX - resizingCol.startX;
+      const newWidth = Math.max(100, resizingCol.startWidth + diff);
+      setColWidths(prev => ({ ...prev, [resizingCol.header]: newWidth }));
+    };
+
+    const handleMouseUp = () => {
+      setResizingCol(null);
+      document.body.style.cursor = 'default';
+    };
+
+    if (resizingCol) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'col-resize';
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [resizingCol]);
 
   // Fetch data for In-App selectors
   const { data: roles = [] } = useQuery({
@@ -361,7 +392,7 @@ const PublicationPage = () => {
         return (
             <div className="flex flex-col text-red-600">
                 <span className="font-medium text-[10px] flex items-center gap-1">
-                    <div className="h-1.5 w-1.5 rounded-full bg-red-500" />
+                    <div className="h-1.5 w-1.5 rounded-full bg-red-50" />
                     Failed
                 </span>
                 <span className="text-[9px] truncate max-w-[100px] cursor-help" title={row._error}>{row._error || 'Unknown error'}</span>
@@ -721,6 +752,15 @@ const PublicationPage = () => {
       toast.error("Broadcast Failed", { description: error.message });
     } finally {
       setIsSendingNotif(false);
+    }
+  };
+
+  const getRowHeightClass = () => {
+    switch(rowDensity) {
+      case "compact": return "h-8 text-xs";
+      case "normal": return "h-10 text-sm";
+      case "spacious": return "h-12 text-sm";
+      default: return "h-12 text-sm";
     }
   };
 
@@ -1132,6 +1172,17 @@ const PublicationPage = () => {
                       </div>
                       {data.length > 0 && (
                           <div className="flex gap-2">
+                              <Select value={rowDensity} onValueChange={(v: any) => setRowDensity(v)}>
+                                <SelectTrigger className="w-[120px] h-8 text-xs">
+                                  <Scaling className="w-3.5 h-3.5 mr-2" />
+                                  <SelectValue placeholder="Density" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="compact">Compact</SelectItem>
+                                  <SelectItem value="normal">Normal</SelectItem>
+                                  <SelectItem value="spacious">Spacious</SelectItem>
+                                </SelectContent>
+                              </Select>
                               {googleSheetUrl && (
                                   <Button variant="outline" size="sm" onClick={handleUpdateSheet} disabled={isUpdatingSheet} className="h-8">
                                       {isUpdatingSheet ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <UploadCloud className="h-3.5 w-3.5 mr-1" />}
@@ -1154,11 +1205,24 @@ const PublicationPage = () => {
                                      <TableRow className="hover:bg-transparent">
                                         <TableHead className="w-[50px] font-bold text-foreground">#</TableHead>
                                         {headers.filter(h => h !== 'Status' && h !== 'Trigger time').map((header) => (
-                                           <TableHead key={header} className="font-bold text-foreground min-w-[200px] h-12">
-                                              {header}
-                                              {header === selectedPhoneColumn && (
-                                                 <Badge variant="secondary" className="ml-2 text-[10px] h-4 px-1">Phone</Badge>
-                                              )}
+                                           <TableHead 
+                                              key={header} 
+                                              className="font-bold text-foreground relative group select-none"
+                                              style={{ width: colWidths[header] || 200, minWidth: colWidths[header] || 200 }}
+                                           >
+                                              <div className="flex items-center justify-between h-full">
+                                                 <span className="truncate">{header}</span>
+                                                 {header === selectedPhoneColumn && (
+                                                    <Badge variant="secondary" className="ml-2 text-[10px] h-4 px-1 shrink-0">Phone</Badge>
+                                                 )}
+                                              </div>
+                                              <div 
+                                                className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-primary/50 active:bg-primary z-10"
+                                                onMouseDown={(e) => {
+                                                  e.preventDefault();
+                                                  setResizingCol({ header, startX: e.clientX, startWidth: colWidths[header] || 200 });
+                                                }}
+                                              />
                                            </TableHead>
                                         ))}
                                         {/* New Columns */}
@@ -1243,7 +1307,7 @@ const PublicationPage = () => {
                                                   >
                                                       <Input
                                                         type={inputType}
-                                                        className="h-12 rounded-none border-0 border-b border-transparent bg-transparent px-3 py-2 text-sm shadow-none focus-visible:ring-0 focus-visible:border-primary focus-visible:bg-muted/20 hover:bg-muted/20 transition-colors"
+                                                        className={`rounded-none border-0 border-b border-transparent bg-transparent px-3 py-2 shadow-none focus-visible:ring-0 focus-visible:border-primary focus-visible:bg-muted/20 hover:bg-muted/20 transition-colors ${getRowHeightClass()}`}
                                                         value={getSafeValue(row[header])}
                                                         onChange={(e) => handleCellEdit(rowIndex, header, e.target.value)}
                                                     />
