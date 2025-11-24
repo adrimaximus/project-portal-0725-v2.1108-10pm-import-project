@@ -115,7 +115,7 @@ const VoiceMessagePlayer = ({ src, sender, isCurrentUser }: VoiceMessagePlayerPr
         variant="default"
         size="icon" 
         onClick={togglePlayPause} 
-        className="h-9 w-9 flex-shrink-0 rounded-full bg-blue-500 hover:bg-blue-600 text-white"
+        className="h-9 w-9 flex-shrink-0 rounded-full bg-blue-500 hover:bg-blue-600 text-white border-none shadow-sm"
       >
         {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 ml-0.5" />}
       </Button>
@@ -127,24 +127,22 @@ const VoiceMessagePlayer = ({ src, sender, isCurrentUser }: VoiceMessagePlayerPr
           onValueChange={handleSliderChange}
           onPointerDown={handlePointerDown}
           onPointerUp={handlePointerUp}
-          className="w-full [&>span:first-child]:h-1 [&>span:first-child>span]:bg-blue-500 [&>span:last-child]:h-3 [&>span:last-child]:w-3 [&>span:last-child]:bg-blue-500"
+          className="w-full cursor-pointer [&>span:first-child]:h-1 [&>span:first-child>span]:bg-blue-500 [&>span:last-child]:h-3 [&>span:last-child]:w-3 [&>span:last-child]:bg-white [&>span:last-child]:border-2 [&>span:last-child]:border-blue-500"
         />
         <div className="flex justify-between items-center">
-            <span className="text-xs font-mono text-muted-foreground">{formatTime(currentTime)}</span>
-            <span className="text-xs font-mono text-muted-foreground">{formatTime(duration)}</span>
+            <span className="text-xs font-mono opacity-80">{formatTime(currentTime)}</span>
+            <span className="text-xs font-mono opacity-80">{formatTime(duration)}</span>
         </div>
       </div>
-      {!isCurrentUser && (
-        <div className="relative ml-2 flex-shrink-0">
-            <Avatar className="h-8 w-8">
-                <AvatarImage src={sender.avatar_url} />
-                <AvatarFallback style={generatePastelColor(sender.id)}>{sender.initials}</AvatarFallback>
-            </Avatar>
-            <div className="absolute -bottom-1 -right-1 bg-background rounded-full p-[2px] border border-background shadow-sm">
-                <Mic className="h-3 w-3 text-muted-foreground" />
-            </div>
-        </div>
-      )}
+      <div className="relative ml-2 flex-shrink-0">
+          <Avatar className="h-8 w-8">
+              <AvatarImage src={sender.avatar_url} />
+              <AvatarFallback style={generatePastelColor(sender.id)}>{sender.initials}</AvatarFallback>
+          </Avatar>
+          <div className="absolute -bottom-1 -right-1 bg-background rounded-full p-[2px] border border-background shadow-sm">
+              <Mic className="h-3 w-3 text-muted-foreground" />
+          </div>
+      </div>
     </div>
   );
 };
