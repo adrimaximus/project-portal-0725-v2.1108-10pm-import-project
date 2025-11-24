@@ -1163,7 +1163,7 @@ const PublicationPage = () => {
                                         ))}
                                         {/* New Columns */}
                                         <TableHead className="sticky right-[140px] z-20 bg-card shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)] w-[140px] font-bold text-foreground border-l">
-                                            Status
+                                            Status Sending
                                         </TableHead>
                                         <TableHead className="sticky right-0 z-20 bg-card w-[140px] font-bold text-foreground border-l">
                                             Trigger Time
