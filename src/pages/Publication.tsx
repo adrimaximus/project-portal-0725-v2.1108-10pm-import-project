@@ -24,6 +24,8 @@ import InteractiveText from "@/components/InteractiveText";
 // Helper component for multi-select
 import { MultiSelect } from "@/components/ui/multi-select";
 
+const STORAGE_KEY_PREFIX = 'publication_table_';
+
 const PublicationPage = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("whatsapp");
@@ -73,6 +75,28 @@ const PublicationPage = () => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const urlInputRef = useRef<HTMLInputElement>(null);
   const notifBodyRef = useRef<HTMLTextAreaElement>(null);
+
+  // Load settings from local storage
+  useEffect(() => {
+    const savedWidths = localStorage.getItem(`${STORAGE_KEY_PREFIX}widths`);
+    const savedDensity = localStorage.getItem(`${STORAGE_KEY_PREFIX}density`);
+    
+    if (savedWidths) {
+        try { setColWidths(JSON.parse(savedWidths)); } catch (e) { console.error("Failed to parse saved col widths", e); }
+    }
+    if (savedDensity) {
+        setRowDensity(savedDensity as any);
+    }
+  }, []);
+
+  // Save settings when changed
+  useEffect(() => {
+    localStorage.setItem(`${STORAGE_KEY_PREFIX}widths`, JSON.stringify(colWidths));
+  }, [colWidths]);
+
+  useEffect(() => {
+    localStorage.setItem(`${STORAGE_KEY_PREFIX}density`, rowDensity);
+  }, [rowDensity]);
 
   // Resize effect
   useEffect(() => {
@@ -1200,7 +1224,7 @@ const PublicationPage = () => {
                       {data.length > 0 ? (
                          <ScrollArea className="h-full w-full rounded-md">
                             <div className="w-max min-w-full p-4">
-                               <Table>
+                               <Table style={{ tableLayout: 'fixed' }}>
                                   <TableHeader>
                                      <TableRow className="hover:bg-transparent">
                                         <TableHead className="w-[50px] font-bold text-foreground">#</TableHead>
@@ -1210,7 +1234,7 @@ const PublicationPage = () => {
                                               className="font-bold text-foreground relative group select-none"
                                               style={{ width: colWidths[header] || 200, minWidth: colWidths[header] || 200 }}
                                            >
-                                              <div className="flex items-center justify-between h-full">
+                                              <div className="flex items-center justify-between h-full w-full">
                                                  <span className="truncate">{header}</span>
                                                  {header === selectedPhoneColumn && (
                                                     <Badge variant="secondary" className="ml-2 text-[10px] h-4 px-1 shrink-0">Phone</Badge>
@@ -1299,11 +1323,14 @@ const PublicationPage = () => {
                                                   }
                                                   return valStr;
                                               };
+                                              
+                                              const widthStyle = { width: colWidths[header] || 200, minWidth: colWidths[header] || 200, maxWidth: colWidths[header] || 200 };
 
                                               return (
                                                   <TableCell 
                                                     key={`${rowIndex}-${header}`} 
-                                                    className="p-0 min-w-[200px] align-top border-b border-muted/50" 
+                                                    className="p-0 align-top border-b border-muted/50" 
+                                                    style={widthStyle}
                                                   >
                                                       <Input
                                                         type={inputType}
