@@ -821,25 +821,18 @@ const PublicationPage = () => {
     return duplicates;
   }, [data, selectedPhoneColumn]);
 
-  const filteredData = useMemo(() => {
-    const processed = data.map((row, index) => ({ ...row, _originalIndex: index }));
-    if (!searchTerm) return processed;
-    const lowerTerm = searchTerm.toLowerCase();
-    return processed.filter(row => 
-      headers.some(h => 
-        h !== 'Status' && h !== 'Trigger time' && String(row[h] || "").toLowerCase().includes(lowerTerm)
-      )
-    );
-  }, [data, searchTerm, headers]);
-
-  const handleSendMessages = async () => {
+  const processSending = async (indices: number[]) => {
     setIsSending(true);
-    toast.info("Sending...", { description: "Processing your blast request." });
+    toast.info("Sending...", { description: `Processing ${indices.length} messages request.` });
 
-    setData(prevData => prevData.map(row => ({ ...row, _status: 'sending', _error: undefined })));
+    // Update status for these rows
+    setData(prevData => prevData.map((row, i) => 
+      indices.includes(i) ? { ...row, _status: 'sending', _error: undefined } : row
+    ));
 
     try {
-        const messages = data.map(row => {
+        const messages = indices.map(i => {
+            const row = data[i];
             let phone = normalizePhone(row[selectedPhoneColumn]);
             
             const finalUrl = generatePreviewUrl(row);
@@ -847,7 +840,9 @@ const PublicationPage = () => {
             
             const messageData: any = { 
                 phone, 
-                type: messageType
+                type: messageType,
+                // Pass original index to identify it later if needed, though currently we rely on phone
+                _originalIndex: i 
             };
             
             if (messageType === 'text') {
@@ -870,19 +865,15 @@ const PublicationPage = () => {
                 } else {
                     let rawDate = row[dynamicDateCol] || '';
                     let rawTime = dynamicTimeCol !== 'same_as_date' ? (row[dynamicTimeCol] || '') : '';
-                    
-                    // Simple concatenation for dynamic, relying on WBIZTOOL parsing or standard format
                     const combinedDateTimeStr = `${rawDate} ${rawTime}`.trim();
                     messageData.schedule_time = combinedDateTimeStr;
-                    // Timezone removed from UI input, defaulting to empty or fixed timezone if needed logic added later
-                    // messageData.timezone = fixedTimezone; // Optional: use fixed timezone as fallback if needed
                 }
             }
             return messageData;
         }).filter(m => m.phone.length > 5);
 
-        // Deduplicate messages based on phone and content/url to avoid spam
-        const uniqueMessages = [];
+        // Deduplicate
+        const uniqueMessages: any[] = [];
         const seen = new Set();
         for (const msg of messages) {
             const key = `${msg.phone}-${msg.message}-${msg.url || ''}`;
@@ -893,14 +884,17 @@ const PublicationPage = () => {
         }
 
         if (uniqueMessages.length < messages.length) {
-            console.log(`Filtered out ${messages.length - uniqueMessages.length} duplicates.`);
+            console.log(`Filtered out ${messages.length - uniqueMessages.length} duplicates in the batch.`);
         }
 
         const { data: result, error } = await supabase.functions.invoke('send-whatsapp-blast', { body: { messages: uniqueMessages } });
         
         if (error) throw error;
         
-        setData(prevData => prevData.map(row => {
+        setData(prevData => prevData.map((row, i) => {
+            // Only update rows that were part of this batch
+            if (!indices.includes(i)) return row;
+
             const rowPhone = normalizePhone(row[selectedPhoneColumn]);
             let newTriggerTime = "";
 
@@ -963,11 +957,46 @@ const PublicationPage = () => {
         }
         
     } catch (error: any) { 
-        setData(prevData => prevData.map(row => ({ ...row, _status: 'failed', _error: error.message, 'Status': 'Error', 'Trigger time': 'N/A' })));
+        // Mark filtered rows as failed
+        setData(prevData => prevData.map((row, i) => 
+            indices.includes(i) ? { ...row, _status: 'failed', _error: error.message, 'Status': 'Error', 'Trigger time': 'N/A' } : row
+        ));
         toast.error("Blast Failed", { description: error.message || "Unknown error occurred" }); 
     } finally { 
         setIsSending(false); 
     }
+  };
+
+  const handleSendMessages = async () => {
+    // 1. Determine indices to send
+    const indices = getIndicesFromRange(rowRange, data.length);
+    
+    if (indices.length === 0) {
+        toast.error("No Rows Selected", { description: "The selected range matches no rows." });
+        return;
+    }
+
+    // 2. Check for previously sent in this session
+    const previouslySentIndices = indices.filter(i => {
+        const row = data[i];
+        // Check if it looks "sent" or "scheduled"
+        return row._status === 'sent' || row['Status'] === 'Sent' || row['Status'] === 'Scheduled';
+    });
+
+    if (previouslySentIndices.length > 0) {
+        setDuplicateRows(previouslySentIndices);
+        setPendingRangeIndices(indices);
+        setConfirmResendOpen(true);
+        return;
+    }
+
+    // 3. If no duplicates, send immediately
+    await processSending(indices);
+  };
+
+  const handleConfirmResend = async () => {
+    setConfirmResendOpen(false);
+    await processSending(pendingRangeIndices);
   };
 
   const handleSendTestInAppNotification = async () => {
@@ -1086,6 +1115,17 @@ const PublicationPage = () => {
       default: return "min-h-12 py-3 text-sm";
     }
   };
+
+  const filteredData = useMemo(() => {
+    const processed = data.map((row, index) => ({ ...row, _originalIndex: index }));
+    if (!searchTerm) return processed;
+    const lowerTerm = searchTerm.toLowerCase();
+    return processed.filter(row => 
+      headers.some(h => 
+        h !== 'Status' && h !== 'Trigger time' && String(row[h] || "").toLowerCase().includes(lowerTerm)
+      )
+    );
+  }, [data, searchTerm, headers]);
 
   return (
     <PortalLayout>
@@ -1587,11 +1627,13 @@ const PublicationPage = () => {
                                 </Select>
                                 {googleSheetUrl && (
                                     <Button variant="outline" size="sm" onClick={handleUpdateSheet} disabled={isUpdatingSheet} className="h-8 px-2">
-                                        {isUpdatingSheet ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <UploadCloud className="h-3.5 w-3.5" />}
+                                        {isUpdatingSheet ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <UploadCloud className="h-3.5 w-3.5 mr-1" />}
+                                        Update Sheet
                                     </Button>
                                 )}
                                 <Button variant="outline" size="sm" onClick={handleExportData} className="h-8 px-2">
-                                    <Download className="h-3.5 w-3.5" />
+                                    <Download className="h-3.5 w-3.5 mr-1" />
+                                    Export Data
                                 </Button>
                               </>
                           )}
