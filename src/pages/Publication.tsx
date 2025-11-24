@@ -32,6 +32,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import InteractiveText from "@/components/InteractiveText";
 import { PublicationCampaign } from "@/types";
 import { formatDistanceToNow } from "date-fns";
+import { cn } from "@/lib/utils";
 
 // Helper component for multi-select
 import { MultiSelect } from "@/components/ui/multi-select";
