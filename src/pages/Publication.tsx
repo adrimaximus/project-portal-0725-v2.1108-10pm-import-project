@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Info, PlayCircle, UploadCloud, MessageSquare, Bell, FileSpreadsheet, X, Link as LinkIcon, File, CheckCircle2, Loader2, Send, RefreshCw, FlaskConical, Bot, Sparkles, Clock, AlertCircle, Download, Save, Wand2, Scaling, Trash2, FolderOpen, ListFilter } from "lucide-react";
+import { Info, PlayCircle, UploadCloud, MessageSquare, Bell, FileSpreadsheet, X, Link as LinkIcon, File, CheckCircle2, Loader2, Send, RefreshCw, FlaskConical, Bot, Sparkles, Clock, AlertCircle, Download, Save, Wand2, Scaling, Trash2, FolderOpen, ListFilter, Search } from "lucide-react";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
@@ -165,6 +165,7 @@ const PublicationPage = () => {
   const [dynamicDateCol, setDynamicDateCol] = useState("");
   const [dynamicTimeCol, setDynamicTimeCol] = useState("same_as_date");
   const [rowRange, setRowRange] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
   
   // Resend Confirmation State
   const [confirmResendOpen, setConfirmResendOpen] = useState(false);
@@ -449,7 +450,7 @@ const PublicationPage = () => {
     }
   };
 
-  const clearData = () => { setData([]); setHeaders([]); setFileName(null); setSelectedPhoneColumn(""); setGoogleSheetUrl(""); if (fileInputRef.current) fileInputRef.current.value = ""; };
+  const clearData = () => { setData([]); setHeaders([]); setFileName(null); setSelectedPhoneColumn(""); setGoogleSheetUrl(""); setSearchTerm(""); if (fileInputRef.current) fileInputRef.current.value = ""; };
 
   const handleExportData = () => {
     if (data.length === 0) {
@@ -820,18 +821,25 @@ const PublicationPage = () => {
     return duplicates;
   }, [data, selectedPhoneColumn]);
 
-  const processSending = async (indices: number[]) => {
-    setIsSending(true);
-    toast.info("Sending...", { description: `Processing ${indices.length} messages request.` });
+  const filteredData = useMemo(() => {
+    const processed = data.map((row, index) => ({ ...row, _originalIndex: index }));
+    if (!searchTerm) return processed;
+    const lowerTerm = searchTerm.toLowerCase();
+    return processed.filter(row => 
+      headers.some(h => 
+        h !== 'Status' && h !== 'Trigger time' && String(row[h] || "").toLowerCase().includes(lowerTerm)
+      )
+    );
+  }, [data, searchTerm, headers]);
 
-    // Update status for these rows
-    setData(prevData => prevData.map((row, i) => 
-      indices.includes(i) ? { ...row, _status: 'sending', _error: undefined } : row
-    ));
+  const handleSendMessages = async () => {
+    setIsSending(true);
+    toast.info("Sending...", { description: "Processing your blast request." });
+
+    setData(prevData => prevData.map(row => ({ ...row, _status: 'sending', _error: undefined })));
 
     try {
-        const messages = indices.map(i => {
-            const row = data[i];
+        const messages = data.map(row => {
             let phone = normalizePhone(row[selectedPhoneColumn]);
             
             const finalUrl = generatePreviewUrl(row);
@@ -839,9 +847,7 @@ const PublicationPage = () => {
             
             const messageData: any = { 
                 phone, 
-                type: messageType,
-                // Pass original index to identify it later if needed, though currently we rely on phone
-                _originalIndex: i 
+                type: messageType
             };
             
             if (messageType === 'text') {
@@ -864,15 +870,19 @@ const PublicationPage = () => {
                 } else {
                     let rawDate = row[dynamicDateCol] || '';
                     let rawTime = dynamicTimeCol !== 'same_as_date' ? (row[dynamicTimeCol] || '') : '';
+                    
+                    // Simple concatenation for dynamic, relying on WBIZTOOL parsing or standard format
                     const combinedDateTimeStr = `${rawDate} ${rawTime}`.trim();
                     messageData.schedule_time = combinedDateTimeStr;
+                    // Timezone removed from UI input, defaulting to empty or fixed timezone if needed logic added later
+                    // messageData.timezone = fixedTimezone; // Optional: use fixed timezone as fallback if needed
                 }
             }
             return messageData;
         }).filter(m => m.phone.length > 5);
 
-        // Deduplicate
-        const uniqueMessages: any[] = [];
+        // Deduplicate messages based on phone and content/url to avoid spam
+        const uniqueMessages = [];
         const seen = new Set();
         for (const msg of messages) {
             const key = `${msg.phone}-${msg.message}-${msg.url || ''}`;
@@ -883,17 +893,14 @@ const PublicationPage = () => {
         }
 
         if (uniqueMessages.length < messages.length) {
-            console.log(`Filtered out ${messages.length - uniqueMessages.length} duplicates in the batch.`);
+            console.log(`Filtered out ${messages.length - uniqueMessages.length} duplicates.`);
         }
 
         const { data: result, error } = await supabase.functions.invoke('send-whatsapp-blast', { body: { messages: uniqueMessages } });
         
         if (error) throw error;
         
-        setData(prevData => prevData.map((row, i) => {
-            // Only update rows that were part of this batch
-            if (!indices.includes(i)) return row;
-
+        setData(prevData => prevData.map(row => {
             const rowPhone = normalizePhone(row[selectedPhoneColumn]);
             let newTriggerTime = "";
 
@@ -956,46 +963,11 @@ const PublicationPage = () => {
         }
         
     } catch (error: any) { 
-        // Mark filtered rows as failed
-        setData(prevData => prevData.map((row, i) => 
-            indices.includes(i) ? { ...row, _status: 'failed', _error: error.message, 'Status': 'Error', 'Trigger time': 'N/A' } : row
-        ));
+        setData(prevData => prevData.map(row => ({ ...row, _status: 'failed', _error: error.message, 'Status': 'Error', 'Trigger time': 'N/A' })));
         toast.error("Blast Failed", { description: error.message || "Unknown error occurred" }); 
     } finally { 
         setIsSending(false); 
     }
-  };
-
-  const handleSendMessages = async () => {
-    // 1. Determine indices to send
-    const indices = getIndicesFromRange(rowRange, data.length);
-    
-    if (indices.length === 0) {
-        toast.error("No Rows Selected", { description: "The selected range matches no rows." });
-        return;
-    }
-
-    // 2. Check for previously sent in this session
-    const previouslySentIndices = indices.filter(i => {
-        const row = data[i];
-        // Check if it looks "sent" or "scheduled"
-        return row._status === 'sent' || row['Status'] === 'Sent' || row['Status'] === 'Scheduled';
-    });
-
-    if (previouslySentIndices.length > 0) {
-        setDuplicateRows(previouslySentIndices);
-        setPendingRangeIndices(indices);
-        setConfirmResendOpen(true);
-        return;
-    }
-
-    // 3. If no duplicates, send immediately
-    await processSending(indices);
-  };
-
-  const handleConfirmResend = async () => {
-    setConfirmResendOpen(false);
-    await processSending(pendingRangeIndices);
   };
 
   const handleSendTestInAppNotification = async () => {
@@ -1588,31 +1560,42 @@ const PublicationPage = () => {
                              )}
                           </CardDescription>
                       </div>
-                      {data.length > 0 && (
-                          <div className="flex gap-2">
-                              <Select value={rowDensity} onValueChange={(v: any) => setRowDensity(v)}>
-                                <SelectTrigger className="w-[120px] h-8 text-xs">
-                                  <Scaling className="w-3.5 h-3.5 mr-2" />
-                                  <SelectValue placeholder="Density" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="compact">Compact</SelectItem>
-                                  <SelectItem value="normal">Normal</SelectItem>
-                                  <SelectItem value="spacious">Spacious</SelectItem>
-                                </SelectContent>
-                              </Select>
-                              {googleSheetUrl && (
-                                  <Button variant="outline" size="sm" onClick={handleUpdateSheet} disabled={isUpdatingSheet} className="h-8">
-                                      {isUpdatingSheet ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <UploadCloud className="h-3.5 w-3.5 mr-1" />}
-                                      Update Sheet
-                                  </Button>
-                              )}
-                              <Button variant="outline" size="sm" onClick={handleExportData} className="h-8">
-                                  <Download className="h-3.5 w-3.5 mr-1" />
-                                  Export Data
-                              </Button>
-                          </div>
-                      )}
+                      <div className="flex gap-2 items-center">
+                          {data.length > 0 && (
+                            <div className="relative mr-2">
+                                <Search className="absolute left-2 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+                                <Input
+                                  placeholder="Search data..."
+                                  value={searchTerm}
+                                  onChange={(e) => setSearchTerm(e.target.value)}
+                                  className="pl-8 h-8 text-xs w-[150px] lg:w-[180px]"
+                                />
+                            </div>
+                          )}
+                          {data.length > 0 && (
+                              <>
+                                <Select value={rowDensity} onValueChange={(v: any) => setRowDensity(v)}>
+                                  <SelectTrigger className="w-[100px] h-8 text-xs">
+                                    <Scaling className="w-3.5 h-3.5 mr-2" />
+                                    <SelectValue placeholder="Density" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="compact">Compact</SelectItem>
+                                    <SelectItem value="normal">Normal</SelectItem>
+                                    <SelectItem value="spacious">Spacious</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                                {googleSheetUrl && (
+                                    <Button variant="outline" size="sm" onClick={handleUpdateSheet} disabled={isUpdatingSheet} className="h-8 px-2">
+                                        {isUpdatingSheet ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <UploadCloud className="h-3.5 w-3.5" />}
+                                    </Button>
+                                )}
+                                <Button variant="outline" size="sm" onClick={handleExportData} className="h-8 px-2">
+                                    <Download className="h-3.5 w-3.5" />
+                                </Button>
+                              </>
+                          )}
+                      </div>
                    </CardHeader>
                    <CardContent className="p-0 flex-1 overflow-hidden relative">
                       {data.length > 0 ? (
@@ -1655,7 +1638,8 @@ const PublicationPage = () => {
                                      </TableRow>
                                   </TableHeader>
                                   <TableBody>
-                                     {data.map((row, rowIndex) => {
+                                     {filteredData.map((row, displayIndex) => {
+                                        const rowIndex = row._originalIndex;
                                         const rowPhone = normalizePhone(row[selectedPhoneColumn]);
                                         const isDuplicate = duplicatePhones.has(rowPhone);
                                         
@@ -1673,16 +1657,18 @@ const PublicationPage = () => {
                                               };
 
                                               const isPhoneColumn = header === selectedPhoneColumn;
+                                              const cellValue = getSafeValue(row[header]);
+                                              const isMatch = searchTerm && cellValue.toLowerCase().includes(searchTerm.toLowerCase());
 
                                               return (
                                                   <TableCell 
                                                     key={`${rowIndex}-${header}`} 
-                                                    className={`p-0 align-top border-b border-muted/50 ${isPhoneColumn && isDuplicate ? "bg-amber-100/50" : ""}`}
+                                                    className={`p-0 align-top border-b border-muted/50 ${isPhoneColumn && isDuplicate ? "bg-amber-100/50" : ""} ${isMatch ? "bg-yellow-100/50 dark:bg-yellow-900/20" : ""}`}
                                                     style={{ width: colWidths[header] || 200, minWidth: colWidths[header] || 200 }}
                                                   >
                                                       <CellTextarea
                                                         className={`rounded-none border-0 border-b border-transparent bg-transparent px-3 py-2 shadow-none focus-visible:ring-0 focus-visible:border-primary focus-visible:bg-muted/20 hover:bg-muted/20 transition-colors resize-none overflow-hidden ${getRowHeightClass()}`}
-                                                        value={getSafeValue(row[header])}
+                                                        value={cellValue}
                                                         onChange={(e: any) => handleCellEdit(rowIndex, header, e.target.value)}
                                                     />
                                                   </TableCell>
