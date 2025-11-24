@@ -907,6 +907,17 @@ const PublicationPage = () => {
   // Get the row to use for preview (first one in the selected range)
   const previewRow = data.length > 0 && previewIndices.length > 0 ? data[previewIndices[0]] : null;
 
+  const targetPhoneList = useMemo(() => {
+    if (!previewIndices.length || !selectedPhoneColumn || !data.length) return "No phones";
+    
+    if (previewIndices.length <= 5) {
+        return previewIndices.map(i => data[i][selectedPhoneColumn]).filter(Boolean).join(', ');
+    }
+    
+    const firstFive = previewIndices.slice(0, 5).map(i => data[i][selectedPhoneColumn]).filter(Boolean);
+    return `${firstFive.join(', ')} and ${previewIndices.length - 5} others`;
+  }, [previewIndices, selectedPhoneColumn, data]);
+
   const processSending = async (indices: number[]) => {
     setIsSending(true);
     toast.info("Sending...", { description: `Processing ${indices.length} messages request.` });
@@ -2032,8 +2043,9 @@ const PublicationPage = () => {
 
                         <div className="flex justify-between items-start">
                              <div className="mb-2">
-                                <Label className="text-xs text-muted-foreground uppercase">To Phone ({rowRange ? `Row ${previewIndices[0] + 1}` : 'First Record'})</Label>
+                                <Label className="text-xs text-muted-foreground uppercase">To Phone {rowRange ? `(Row ${previewIndices[0] + 1})` : '(First Record)'}</Label>
                                 <p className="font-mono text-sm">{previewRow ? (previewRow[selectedPhoneColumn] || "N/A") : "N/A"}</p>
+                                {rowRange && <p className="text-[10px] text-muted-foreground mt-1">List: {targetPhoneList}</p>}
                              </div>
                              <Badge variant="outline" className="capitalize">{messageType}</Badge>
                         </div>
