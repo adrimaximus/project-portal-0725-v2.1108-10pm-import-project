@@ -24,6 +24,29 @@ import InteractiveText from "@/components/InteractiveText";
 // Helper component for multi-select
 import { MultiSelect } from "@/components/ui/multi-select";
 
+// Helper component for auto-sizing cell textarea
+const CellTextarea = ({ value, onChange, className, ...props }: any) => {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+      textareaRef.current.style.height = textareaRef.current.scrollHeight + "px";
+    }
+  }, [value]);
+
+  return (
+    <Textarea
+      ref={textareaRef}
+      value={value}
+      onChange={onChange}
+      className={className}
+      rows={1}
+      {...props}
+    />
+  );
+};
+
 const PublicationPage = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("whatsapp");
@@ -757,10 +780,10 @@ const PublicationPage = () => {
 
   const getRowHeightClass = () => {
     switch(rowDensity) {
-      case "compact": return "h-8 text-xs";
-      case "normal": return "h-10 text-sm";
-      case "spacious": return "h-12 text-sm";
-      default: return "h-12 text-sm";
+      case "compact": return "min-h-8 py-1 text-xs";
+      case "normal": return "min-h-10 py-2 text-sm";
+      case "spacious": return "min-h-12 py-3 text-sm";
+      default: return "min-h-12 py-3 text-sm";
     }
   };
 
@@ -1207,13 +1230,13 @@ const PublicationPage = () => {
                                         {headers.filter(h => h !== 'Status' && h !== 'Trigger time').map((header) => (
                                            <TableHead 
                                               key={header} 
-                                              className="font-bold text-foreground relative group select-none"
+                                              className="font-bold text-foreground relative group select-none whitespace-normal break-words align-top py-2"
                                               style={{ width: colWidths[header] || 200, minWidth: colWidths[header] || 200 }}
                                            >
-                                              <div className="flex items-center justify-between h-full">
-                                                 <span className="truncate">{header}</span>
+                                              <div className="flex items-start justify-between h-full">
+                                                 <span>{header}</span>
                                                  {header === selectedPhoneColumn && (
-                                                    <Badge variant="secondary" className="ml-2 text-[10px] h-4 px-1 shrink-0">Phone</Badge>
+                                                    <Badge variant="secondary" className="ml-2 text-[10px] h-4 px-1 shrink-0 mt-0.5">Phone</Badge>
                                                  )}
                                               </div>
                                               <div 
@@ -1237,79 +1260,23 @@ const PublicationPage = () => {
                                   <TableBody>
                                      {data.slice(0, 50).map((row, rowIndex) => (
                                         <TableRow key={rowIndex}>
-                                           <TableCell className="font-mono text-xs text-muted-foreground">{rowIndex + 1}</TableCell>
+                                           <TableCell className="font-mono text-xs text-muted-foreground align-top py-2">{rowIndex + 1}</TableCell>
                                            {headers.filter(h => h !== 'Status' && h !== 'Trigger time').map((header) => {
-                                              // Determine input type based on header name or settings
-                                              const lowerHeader = header.toLowerCase();
-                                              let inputType = "text";
-                                              
-                                              // Force date/time types if these columns are selected for dynamic scheduling
-                                              if (isScheduled && scheduleMode === 'dynamic') {
-                                                  if (header === dynamicDateCol) inputType = "date";
-                                                  else if (header === dynamicTimeCol) inputType = "time";
-                                              }
-                                              
-                                              // Only apply heuristic if not explicitly set by dynamic schedule settings
-                                              if (inputType === "text") {
-                                                  if (lowerHeader.includes('date') && lowerHeader.includes('time')) {
-                                                      inputType = "datetime-local";
-                                                  } else if (lowerHeader.includes('schedule')) {
-                                                      inputType = "datetime-local";
-                                                  } else if (lowerHeader.includes('date') || lowerHeader.includes('tgl') || lowerHeader.includes('dob')) {
-                                                      inputType = "date";
-                                                  } else if (lowerHeader.includes('time') || lowerHeader.includes('jam') || lowerHeader.includes('pukul')) {
-                                                      inputType = "time";
-                                                  }
-                                              }
-
-                                              // Helper to format values for specific inputs
                                               const getSafeValue = (val: any) => {
                                                   if (val === null || val === undefined) return '';
-                                                  const valStr = String(val).trim();
-                                                  if (valStr === '') return '';
-
-                                                  if (inputType === 'date') {
-                                                      // Ensure YYYY-MM-DD for input[type=date]
-                                                      if (/^\d{4}-\d{2}-\d{2}$/.test(valStr)) return valStr;
-                                                      
-                                                      // Try to parse other formats
-                                                      const d = new Date(valStr);
-                                                      if (!isNaN(d.getTime())) return d.toISOString().split('T')[0];
-                                                  }
-                                                  if (inputType === 'time') {
-                                                      if (/^\d{2}:\d{2}$/.test(valStr)) return valStr;
-                                                      // Check if it's formatted like 13:00:00
-                                                      if (/^\d{2}:\d{2}:\d{2}$/.test(valStr)) return valStr.substring(0, 5);
-                                                      // Parse attempts
-                                                      const d = new Date(`1970-01-01 ${valStr}`);
-                                                      if (!isNaN(d.getTime())) {
-                                                           return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-                                                      }
-                                                  }
-                                                  if (inputType === 'datetime-local') {
-                                                       // HTML datetime-local expects YYYY-MM-DDTHH:mm
-                                                       // If it's already close (YYYY-MM-DD HH:mm:ss), replace space with T
-                                                       if (/^\d{4}-\d{2}-\d{2}.\d{2}:\d{2}/.test(valStr)) return valStr.replace(' ', 'T').substring(0, 16);
-                                                       
-                                                       const d = new Date(valStr);
-                                                       if (!isNaN(d.getTime())) {
-                                                           const offset = d.getTimezoneOffset() * 60000;
-                                                           return (new Date(d.getTime() - offset)).toISOString().slice(0, 16);
-                                                       }
-                                                  }
-                                                  return valStr;
+                                                  return String(val).trim();
                                               };
 
                                               return (
                                                   <TableCell 
                                                     key={`${rowIndex}-${header}`} 
-                                                    className="p-0 min-w-[200px] align-top border-b border-muted/50" 
+                                                    className="p-0 align-top border-b border-muted/50"
+                                                    style={{ width: colWidths[header] || 200, minWidth: colWidths[header] || 200 }}
                                                   >
-                                                      <Input
-                                                        type={inputType}
-                                                        className={`rounded-none border-0 border-b border-transparent bg-transparent px-3 py-2 shadow-none focus-visible:ring-0 focus-visible:border-primary focus-visible:bg-muted/20 hover:bg-muted/20 transition-colors ${getRowHeightClass()}`}
+                                                      <CellTextarea
+                                                        className={`rounded-none border-0 border-b border-transparent bg-transparent px-3 py-2 shadow-none focus-visible:ring-0 focus-visible:border-primary focus-visible:bg-muted/20 hover:bg-muted/20 transition-colors resize-none overflow-hidden ${getRowHeightClass()}`}
                                                         value={getSafeValue(row[header])}
-                                                        onChange={(e) => handleCellEdit(rowIndex, header, e.target.value)}
+                                                        onChange={(e: any) => handleCellEdit(rowIndex, header, e.target.value)}
                                                     />
                                                   </TableCell>
                                                );
