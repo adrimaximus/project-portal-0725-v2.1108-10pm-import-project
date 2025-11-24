@@ -899,6 +899,14 @@ const PublicationPage = () => {
     return duplicates;
   }, [data, selectedPhoneColumn]);
 
+  // Calculate preview indices based on selection
+  const previewIndices = useMemo(() => {
+    return getIndicesFromRange(rowRange, data.length);
+  }, [rowRange, data.length]);
+
+  // Get the row to use for preview (first one in the selected range)
+  const previewRow = data.length > 0 && previewIndices.length > 0 ? data[previewIndices[0]] : null;
+
   const processSending = async (indices: number[]) => {
     setIsSending(true);
     toast.info("Sending...", { description: `Processing ${indices.length} messages request.` });
@@ -2024,8 +2032,8 @@ const PublicationPage = () => {
 
                         <div className="flex justify-between items-start">
                              <div className="mb-2">
-                                <Label className="text-xs text-muted-foreground uppercase">To Phone (First Record)</Label>
-                                <p className="font-mono text-sm">{data[0][selectedPhoneColumn] || "N/A"}</p>
+                                <Label className="text-xs text-muted-foreground uppercase">To Phone ({rowRange ? `Row ${previewIndices[0] + 1}` : 'First Record'})</Label>
+                                <p className="font-mono text-sm">{previewRow ? (previewRow[selectedPhoneColumn] || "N/A") : "N/A"}</p>
                              </div>
                              <Badge variant="outline" className="capitalize">{messageType}</Badge>
                         </div>
@@ -2033,15 +2041,15 @@ const PublicationPage = () => {
                             <div>
                                 <Label className="text-xs text-muted-foreground uppercase">Attachment</Label>
                                 <p className="text-xs text-primary truncate font-mono bg-background p-1 rounded border mt-1">
-                                    {generatePreviewUrl(data[0]) || "No URL provided"}
+                                    {previewRow ? (generatePreviewUrl(previewRow) || "No URL provided") : "No data"}
                                 </p>
                             </div>
                         )}
                         <div>
                             <Label className="text-xs text-muted-foreground uppercase">Message</Label>
-                            <p className="text-sm whitespace-pre-wrap mt-1">{generatePreviewMessage(data[0])}</p>
+                            <p className="text-sm whitespace-pre-wrap mt-1">{previewRow ? generatePreviewMessage(previewRow) : "No data to preview"}</p>
                         </div>
-                        {isScheduled && (
+                        {isScheduled && previewRow && (
                             <div className="border-t border-dashed pt-2 mt-2">
                                 <Label className="text-xs text-muted-foreground uppercase">Scheduled For</Label>
                                 <p className="font-mono text-xs mt-1 flex items-center text-blue-600">
@@ -2049,7 +2057,7 @@ const PublicationPage = () => {
                                     {scheduleMode === 'fixed' ? (
                                         `${fixedScheduleDate.replace('T', ' ')} (${fixedTimezone})`
                                     ) : (
-                                        `Dynamic: ${data[0][dynamicDateCol] || 'N/A'} ${dynamicTimeCol !== 'same_as_date' ? (data[0][dynamicTimeCol] || '') : ''}`
+                                        `Dynamic: ${previewRow[dynamicDateCol] || 'N/A'} ${dynamicTimeCol !== 'same_as_date' ? (previewRow[dynamicTimeCol] || '') : ''}`
                                     )}
                                 </p>
                             </div>
