@@ -145,14 +145,37 @@ const PublicationPage = () => {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("whatsapp");
   
-  // WhatsApp State
-  const [data, setData] = useState<any[]>([]);
-  const [headers, setHeaders] = useState<string[]>([]);
-  const [fileName, setFileName] = useState<string | null>(null);
-  const [selectedPhoneColumn, setSelectedPhoneColumn] = useState<string>("");
-  const [googleSheetUrl, setGoogleSheetUrl] = useState("");
+  // WhatsApp State - Initialized from localStorage
+  const [data, setData] = useState<any[]>(() => {
+    try {
+      const saved = localStorage.getItem("publication_data");
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      console.error("Failed to load data from local storage", e);
+      return [];
+    }
+  });
+  const [headers, setHeaders] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem("publication_headers");
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+  const [fileName, setFileName] = useState<string | null>(() => {
+    return localStorage.getItem("publication_fileName") || null;
+  });
+  const [selectedPhoneColumn, setSelectedPhoneColumn] = useState<string>(() => {
+    return localStorage.getItem("publication_phoneColumn") || "";
+  });
+  const [googleSheetUrl, setGoogleSheetUrl] = useState(() => {
+    return localStorage.getItem("publication_googleSheetUrl") || "";
+  });
   const [isDragging, setIsDragging] = useState(false);
-  const [templateMessage, setTemplateMessage] = useState("");
+  const [templateMessage, setTemplateMessage] = useState(() => {
+    return localStorage.getItem("publication_templateMessage") || "";
+  });
   const [isImporting, setIsImporting] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [isSending, setIsSending] = useState(false);
@@ -213,6 +236,37 @@ const PublicationPage = () => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const urlInputRef = useRef<HTMLInputElement>(null);
   const notifBodyRef = useRef<HTMLTextAreaElement>(null);
+
+  // Effects to persist state to local storage
+  useEffect(() => {
+    try {
+      localStorage.setItem("publication_data", JSON.stringify(data));
+    } catch (e) {
+      console.error("Failed to save data to local storage (quota exceeded?)", e);
+      // Optionally warn user if data is too large
+    }
+  }, [data]);
+
+  useEffect(() => {
+    localStorage.setItem("publication_headers", JSON.stringify(headers));
+  }, [headers]);
+
+  useEffect(() => {
+    if (fileName) localStorage.setItem("publication_fileName", fileName);
+    else localStorage.removeItem("publication_fileName");
+  }, [fileName]);
+
+  useEffect(() => {
+    localStorage.setItem("publication_phoneColumn", selectedPhoneColumn);
+  }, [selectedPhoneColumn]);
+
+  useEffect(() => {
+    localStorage.setItem("publication_googleSheetUrl", googleSheetUrl);
+  }, [googleSheetUrl]);
+
+  useEffect(() => {
+    localStorage.setItem("publication_templateMessage", templateMessage);
+  }, [templateMessage]);
 
   // Resize effect
   useEffect(() => {
