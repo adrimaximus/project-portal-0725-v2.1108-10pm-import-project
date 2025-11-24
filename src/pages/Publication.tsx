@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Info, PlayCircle, UploadCloud, MessageSquare, Bell, FileSpreadsheet, X, Link as LinkIcon, File, CheckCircle2, Loader2, Send, RefreshCw, FlaskConical, Bot, Sparkles, Clock, AlertCircle, Download, Save, Wand2, Scaling } from "lucide-react";
+import { Info, PlayCircle, UploadCloud, MessageSquare, Bell, FileSpreadsheet, X, Link as LinkIcon, File, CheckCircle2, Loader2, Send, RefreshCw, FlaskConical, Bot, Sparkles, Clock, AlertCircle, Download, Save, Wand2, Scaling, Trash2 } from "lucide-react";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
@@ -117,6 +117,16 @@ const PublicationPage = () => {
   const [resizingCol, setResizingCol] = useState<{ header: string; startX: number; startWidth: number } | null>(null);
   const [rowDensity, setRowDensity] = useState<"compact" | "normal" | "spacious">("spacious");
 
+  // Context Menu State
+  const [contextMenu, setContextMenu] = useState<{
+    visible: boolean;
+    x: number;
+    y: number;
+    type: 'row' | 'header';
+    targetIndex?: number;
+    targetHeader?: string;
+  } | null>(null);
+
   // AI Rewrite State
   const [aiInstructions, setAiInstructions] = useState("");
   const [isRewriting, setIsRewriting] = useState(false);
@@ -162,6 +172,13 @@ const PublicationPage = () => {
       document.removeEventListener('mouseup', handleMouseUp);
     };
   }, [resizingCol]);
+
+  // Close context menu on click outside
+  useEffect(() => {
+    const handleClick = () => setContextMenu(null);
+    document.addEventListener('click', handleClick);
+    return () => document.removeEventListener('click', handleClick);
+  }, []);
 
   // Fetch data for In-App selectors
   const { data: roles = [] } = useQuery({
@@ -480,6 +497,53 @@ const PublicationPage = () => {
       newData[rowIndex] = { ...newData[rowIndex], [column]: value };
       return newData;
     });
+  };
+
+  const handleRowContextMenu = (e: React.MouseEvent, rowIndex: number) => {
+    e.preventDefault();
+    setContextMenu({
+      visible: true,
+      x: e.clientX,
+      y: e.clientY,
+      type: 'row',
+      targetIndex: rowIndex
+    });
+  };
+
+  const handleHeaderContextMenu = (e: React.MouseEvent, header: string) => {
+    e.preventDefault();
+    setContextMenu({
+      visible: true,
+      x: e.clientX,
+      y: e.clientY,
+      type: 'header',
+      targetHeader: header
+    });
+  };
+
+  const handleDeleteRow = () => {
+    if (contextMenu?.type === 'row' && contextMenu.targetIndex !== undefined) {
+      const newData = [...data];
+      newData.splice(contextMenu.targetIndex, 1);
+      setData(newData);
+      toast.success("Row deleted");
+    }
+    setContextMenu(null);
+  };
+
+  const handleDeleteColumn = () => {
+    if (contextMenu?.type === 'header' && contextMenu.targetHeader) {
+      const newHeaders = headers.filter(h => h !== contextMenu.targetHeader);
+      setHeaders(newHeaders);
+      
+      // Also update selected phone column if it was deleted
+      if (selectedPhoneColumn === contextMenu.targetHeader) {
+        setSelectedPhoneColumn("");
+      }
+      
+      toast.success(`Column "${contextMenu.targetHeader}" deleted`);
+    }
+    setContextMenu(null);
   };
 
   const getPreviewStatus = (row: any) => {
@@ -1263,7 +1327,7 @@ const PublicationPage = () => {
                 </Card>
 
                 {/* Right Column: Preview */}
-                <Card className="h-[400px] flex flex-col shadow-sm overflow-hidden">
+                <Card className="h-[400px] flex flex-col shadow-sm overflow-hidden relative">
                    <CardHeader className="border-b pb-4 flex flex-row items-center justify-between space-y-0">
                       <div>
                           <CardTitle className="text-xl font-semibold">Data Preview</CardTitle>
@@ -1315,8 +1379,9 @@ const PublicationPage = () => {
                                         {headers.filter(h => h !== 'Status' && h !== 'Trigger time').map((header) => (
                                            <TableHead 
                                               key={header} 
-                                              className="font-bold text-foreground relative group select-none whitespace-normal break-words align-top py-2"
+                                              className="font-bold text-foreground relative group select-none whitespace-normal break-words align-top py-2 cursor-context-menu"
                                               style={{ width: colWidths[header] || 200, minWidth: colWidths[header] || 200 }}
+                                              onContextMenu={(e) => handleHeaderContextMenu(e, header)}
                                            >
                                               <div className="flex items-start justify-between h-full">
                                                  <span>{header}</span>
@@ -1328,6 +1393,7 @@ const PublicationPage = () => {
                                                 className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-primary/50 active:bg-primary z-10"
                                                 onMouseDown={(e) => {
                                                   e.preventDefault();
+                                                  e.stopPropagation();
                                                   setResizingCol({ header, startX: e.clientX, startWidth: colWidths[header] || 200 });
                                                 }}
                                               />
@@ -1348,7 +1414,11 @@ const PublicationPage = () => {
                                         const isDuplicate = duplicatePhones.has(rowPhone);
                                         
                                         return (
-                                        <TableRow key={rowIndex} className={isDuplicate ? "bg-amber-50/50 hover:bg-amber-100/50" : "hover:bg-transparent"}>
+                                        <TableRow 
+                                          key={rowIndex} 
+                                          className={isDuplicate ? "bg-amber-50/50 hover:bg-amber-100/50 cursor-context-menu" : "hover:bg-transparent cursor-context-menu"}
+                                          onContextMenu={(e) => handleRowContextMenu(e, rowIndex)}
+                                        >
                                            <TableCell className="font-mono text-xs text-muted-foreground align-top py-2">{rowIndex + 1}</TableCell>
                                            {headers.filter(h => h !== 'Status' && h !== 'Trigger time').map((header) => {
                                               const getSafeValue = (val: any) => {
@@ -1395,6 +1465,36 @@ const PublicationPage = () => {
                                Upload a CSV, XLS, or XLSX file or paste a Google Sheet URL to view its contents here.
                             </p>
                          </div>
+                      )}
+                      {/* Custom Context Menu */}
+                      {contextMenu?.visible && (
+                        <div 
+                          className="fixed z-50 w-48 bg-popover text-popover-foreground border rounded-md shadow-md p-1"
+                          style={{ top: contextMenu.y, left: contextMenu.x }}
+                        >
+                          {contextMenu.type === 'row' && (
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10" 
+                              onClick={handleDeleteRow}
+                            >
+                              <Trash2 className="w-4 h-4 mr-2" />
+                              Delete Row
+                            </Button>
+                          )}
+                          {contextMenu.type === 'header' && (
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10" 
+                              onClick={handleDeleteColumn}
+                            >
+                              <Trash2 className="w-4 h-4 mr-2" />
+                              Delete Column
+                            </Button>
+                          )}
+                        </div>
                       )}
                    </CardContent>
                 </Card>
