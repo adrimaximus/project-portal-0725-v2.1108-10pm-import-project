@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Info, PlayCircle, UploadCloud, MessageSquare, Bell, FileSpreadsheet, X, Link as LinkIcon, File, CheckCircle2, Loader2, Send, RefreshCw, FlaskConical, Bot, Sparkles, Clock, AlertCircle, Download, Save, Wand2, Scaling, Trash2, FolderOpen, ListFilter, Search } from "lucide-react";
+import { Info, PlayCircle, UploadCloud, MessageSquare, Bell, FileSpreadsheet, X, Link as LinkIcon, File, CheckCircle2, Loader2, Send, RefreshCw, FlaskConical, Bot, Sparkles, Clock, AlertCircle, Download, Save, Wand2, Scaling, Trash2, FolderOpen, ListFilter, Search, Plus } from "lucide-react";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
@@ -722,6 +722,21 @@ const PublicationPage = () => {
       type: 'header',
       targetHeader: header
     });
+  };
+
+  const handleAddRow = () => {
+    if (contextMenu?.type === 'row' && contextMenu.targetIndex !== undefined) {
+        const newRow: any = {};
+        headers.forEach(h => newRow[h] = '');
+        
+        setData(prevData => {
+            const newData = [...prevData];
+            newData.splice(contextMenu.targetIndex! + 1, 0, newRow); // Add after the clicked row
+            return newData;
+        });
+        toast.success("Row added");
+    }
+    setContextMenu(null);
   };
 
   const handleDeleteRow = () => {
@@ -1830,15 +1845,26 @@ const PublicationPage = () => {
                           style={{ top: contextMenu.y, left: contextMenu.x }}
                         >
                           {contextMenu.type === 'row' && (
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10" 
-                              onClick={handleDeleteRow}
-                            >
-                              <Trash2 className="w-4 h-4 mr-2" />
-                              Delete Row
-                            </Button>
+                            <>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="w-full justify-start" 
+                                onClick={handleAddRow}
+                              >
+                                <Plus className="w-4 h-4 mr-2" />
+                                Add Row Below
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10" 
+                                onClick={handleDeleteRow}
+                              >
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                Delete Row
+                              </Button>
+                            </>
                           )}
                           {contextMenu.type === 'header' && (
                             <Button 
