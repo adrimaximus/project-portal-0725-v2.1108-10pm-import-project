@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Play, Pause } from 'lucide-react';
+import { Play, Pause, Mic } from 'lucide-react';
 import { Button } from './ui/button';
 import { Slider } from './ui/slider';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
@@ -135,10 +135,15 @@ const VoiceMessagePlayer = ({ src, sender, isCurrentUser }: VoiceMessagePlayerPr
         </div>
       </div>
       {!isCurrentUser && (
-        <Avatar className="h-8 w-8 flex-shrink-0 ml-2">
-          <AvatarImage src={sender.avatar_url} />
-          <AvatarFallback style={generatePastelColor(sender.id)}>{sender.initials}</AvatarFallback>
-        </Avatar>
+        <div className="relative ml-2 flex-shrink-0">
+            <Avatar className="h-8 w-8">
+                <AvatarImage src={sender.avatar_url} />
+                <AvatarFallback style={generatePastelColor(sender.id)}>{sender.initials}</AvatarFallback>
+            </Avatar>
+            <div className="absolute -bottom-1 -right-1 bg-background rounded-full p-[2px] border border-background shadow-sm">
+                <Mic className="h-3 w-3 text-muted-foreground" />
+            </div>
+        </div>
       )}
     </div>
   );
