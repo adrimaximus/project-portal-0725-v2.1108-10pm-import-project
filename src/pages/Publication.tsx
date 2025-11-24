@@ -20,6 +20,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import InteractiveText from "@/components/InteractiveText";
+import { PublicationCampaign } from "@/types";
+import { formatDistanceToNow } from "date-fns";
 
 // Helper component for multi-select
 import { MultiSelect } from "@/components/ui/multi-select";
@@ -207,7 +209,7 @@ const PublicationPage = () => {
   });
 
   // Fetch saved campaigns
-  const { data: savedCampaigns = [], isLoading: isLoadingCampaigns } = useQuery({
+  const { data: savedCampaigns = [], isLoading: isLoadingCampaigns } = useQuery<PublicationCampaign[]>({
     queryKey: ['publication_campaigns'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -1226,18 +1228,21 @@ const PublicationPage = () => {
                                   <SelectValue placeholder="Load Saved Campaign" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  {savedCampaigns.map((campaign: any) => (
+                                  {savedCampaigns.map((campaign) => (
                                     <div key={campaign.id} className="flex items-center justify-between w-full px-2 py-1.5 hover:bg-accent cursor-pointer group">
-                                      <span 
-                                        className="text-sm flex-1"
+                                      <div 
+                                        className="flex flex-col flex-1 cursor-pointer"
                                         onClick={() => handleLoadCampaign(campaign.id)}
                                       >
-                                        {campaign.name}
-                                      </span>
+                                        <span className="text-sm font-medium">{campaign.name}</span>
+                                        <span className="text-[10px] text-muted-foreground">
+                                          Updated: {formatDistanceToNow(new Date(campaign.updated_at), { addSuffix: true })}
+                                        </span>
+                                      </div>
                                       <Button
                                         variant="ghost"
                                         size="sm"
-                                        className="h-5 w-5 p-0 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                                        className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity ml-2"
                                         onClick={(e) => handleDeleteCampaign(campaign.id, e)}
                                       >
                                         <Trash2 className="h-3 w-3" />

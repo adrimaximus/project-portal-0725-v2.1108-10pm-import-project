@@ -537,3 +537,12 @@ export interface AdvancedFiltersState {
   memberIds: string[];
   excludedStatus: string[];
 }
+
+export interface PublicationCampaign {
+  id: string;
+  user_id: string;
+  name: string;
+  sheet_url: string;
+  created_at: string;
+  updated_at: string;
+}
