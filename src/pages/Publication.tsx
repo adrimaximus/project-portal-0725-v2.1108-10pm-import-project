@@ -1269,7 +1269,7 @@ const PublicationPage = () => {
                           <CardTitle className="text-xl font-semibold">Data Preview</CardTitle>
                           <CardDescription>
                              {data.length > 0 
-                                ? `Showing first 50 of ${data.length} rows` 
+                                ? `Showing all ${data.length} rows` 
                                 : "Upload a file to see the data preview"}
                              {duplicatesCount > 0 && (
                                 <span className="ml-2 text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full text-xs font-medium">
@@ -1343,7 +1343,7 @@ const PublicationPage = () => {
                                      </TableRow>
                                   </TableHeader>
                                   <TableBody>
-                                     {data.slice(0, 50).map((row, rowIndex) => {
+                                     {data.map((row, rowIndex) => {
                                         const rowPhone = normalizePhone(row[selectedPhoneColumn]);
                                         const isDuplicate = duplicatePhones.has(rowPhone);
                                         
@@ -1356,10 +1356,12 @@ const PublicationPage = () => {
                                                   return String(val).trim();
                                               };
 
+                                              const isPhoneColumn = header === selectedPhoneColumn;
+
                                               return (
                                                   <TableCell 
                                                     key={`${rowIndex}-${header}`} 
-                                                    className="p-0 align-top border-b border-muted/50"
+                                                    className={`p-0 align-top border-b border-muted/50 ${isPhoneColumn && isDuplicate ? "bg-amber-100/50" : ""}`}
                                                     style={{ width: colWidths[header] || 200, minWidth: colWidths[header] || 200 }}
                                                   >
                                                       <CellTextarea
