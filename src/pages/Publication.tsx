@@ -581,11 +581,36 @@ const PublicationPage = () => {
       return <span className="text-[10px] text-muted-foreground">Immediate</span>;
   };
 
-  const duplicatesCount = useMemo(() => {
-    if (!selectedPhoneColumn) return 0;
+  const normalizePhone = (p: string | number) => {
+      let phone = String(p).replace(/\D/g, '');
+      if (phone.startsWith('0')) phone = '62' + phone.substring(1);
+      if (phone.startsWith('8')) phone = '62' + phone;
+      return phone;
+  };
+
+  // Enhanced duplicate detection that returns duplicate phone numbers
+  const { duplicatePhones, duplicatesCount } = useMemo(() => {
+    if (!selectedPhoneColumn) return { duplicatePhones: new Set<string>(), duplicatesCount: 0 };
+    
     const phones = data.map(row => normalizePhone(row[selectedPhoneColumn]));
-    const uniquePhones = new Set(phones);
-    return phones.length - uniquePhones.size;
+    const counts = new Map<string, number>();
+    let dupCount = 0;
+
+    phones.forEach(phone => {
+        if (phone) {
+            counts.set(phone, (counts.get(phone) || 0) + 1);
+        }
+    });
+
+    const duplicates = new Set<string>();
+    counts.forEach((count, phone) => {
+        if (count > 1) {
+            duplicates.add(phone);
+            dupCount += (count - 1);
+        }
+    });
+
+    return { duplicatePhones: duplicates, duplicatesCount: dupCount };
   }, [data, selectedPhoneColumn]);
 
   const handleSendMessages = async () => {
@@ -1314,8 +1339,12 @@ const PublicationPage = () => {
                                      </TableRow>
                                   </TableHeader>
                                   <TableBody>
-                                     {data.slice(0, 50).map((row, rowIndex) => (
-                                        <TableRow key={rowIndex}>
+                                     {data.slice(0, 50).map((row, rowIndex) => {
+                                        const rowPhone = normalizePhone(row[selectedPhoneColumn]);
+                                        const isDuplicate = duplicatePhones.has(rowPhone);
+                                        
+                                        return (
+                                        <TableRow key={rowIndex} className={isDuplicate ? "bg-amber-50/50 hover:bg-amber-100/50" : "hover:bg-transparent"}>
                                            <TableCell className="font-mono text-xs text-muted-foreground align-top py-2">{rowIndex + 1}</TableCell>
                                            {headers.filter(h => h !== 'Status' && h !== 'Trigger time').map((header) => {
                                               const getSafeValue = (val: any) => {
@@ -1344,7 +1373,7 @@ const PublicationPage = () => {
                                               {getRowTriggerTimeDisplay(row)}
                                            </TableCell>
                                         </TableRow>
-                                     ))}
+                                     )})}
                                   </TableBody>
                                </Table>
                             </div>
