@@ -2043,7 +2043,7 @@ const PublicationPage = () => {
 
                         <div className="flex justify-between items-start">
                              <div className="mb-2">
-                                <Label className="text-xs text-muted-foreground uppercase">To Phone {rowRange ? `(Row ${previewIndices[0] + 1})` : '(First Record)'}</Label>
+                                <Label className="text-xs text-muted-foreground uppercase">To Phone ({rowRange ? `Row ${previewIndices[0] + 1}` : 'First Record'})</Label>
                                 <p className="font-mono text-sm">{previewRow ? (previewRow[selectedPhoneColumn] || "N/A") : "N/A"}</p>
                                 {rowRange && <p className="text-[10px] text-muted-foreground mt-1">List: {targetPhoneList}</p>}
                              </div>
@@ -2096,10 +2096,10 @@ const PublicationPage = () => {
                     <AlertDialogDescription>
                         <div className="space-y-3">
                             <p>
-                                The following rows have already been marked as <strong>Sent</strong> or <strong>Scheduled</strong>:
+                                The following number(s) have already been marked as <strong>Sent</strong> or <strong>Scheduled</strong>:
                             </p>
                             <div className="max-h-[150px] overflow-y-auto p-2 bg-muted rounded border text-xs font-mono">
-                                {duplicateRows.map(i => `Row ${i + 1}`).join(', ')}
+                                {duplicateRows.map(i => data[i][selectedPhoneColumn] || `Row ${i + 1}`).join(', ')}
                             </div>
                             <p>
                                 Do you want to resend messages to these rows?
