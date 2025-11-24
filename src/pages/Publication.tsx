@@ -143,6 +143,37 @@ const PublicationPage = () => {
     }
   });
 
+  const normalizePhone = (p: string | number) => {
+      let phone = String(p).replace(/\D/g, ''); // Remove all non-numeric
+      if (phone.startsWith('0')) {
+          phone = '62' + phone.substring(1); // Replace leading 0 with 62
+      } else if (phone.startsWith('8')) {
+          phone = '62' + phone; // Add 62 if starts with 8
+      }
+      // If starts with 62, it remains as is
+      return phone;
+  };
+
+  const processImportedData = (rows: any[], headers: string[]) => {
+    const phoneKeywords = ['phone', 'mobile', 'wa', 'whatsapp', 'telp', 'hp', 'nomor', 'contact'];
+    const phoneColumns = headers.filter(h => 
+        phoneKeywords.some(keyword => h.toLowerCase().includes(keyword))
+    );
+
+    // If no obvious phone columns, return as is
+    if (phoneColumns.length === 0) return rows;
+
+    return rows.map(row => {
+        const newRow = { ...row };
+        phoneColumns.forEach(col => {
+            if (newRow[col]) {
+                newRow[col] = normalizePhone(newRow[col]);
+            }
+        });
+        return newRow;
+    });
+  };
+
   // WhatsApp Handlers (Existing)
   const handleFile = (file: File) => {
     setFileName(file.name);
@@ -155,8 +186,17 @@ const PublicationPage = () => {
         complete: (results) => {
           const parsedData = results.data as any[];
           if (parsedData.length > 0) {
-            setHeaders(Object.keys(parsedData[0]));
-            setData(parsedData);
+            const headers = Object.keys(parsedData[0]);
+            const normalizedData = processImportedData(parsedData, headers);
+            setHeaders(headers);
+            setData(normalizedData);
+            
+            // Auto-select phone column if possible
+            const likelyPhoneCol = headers.find(h => 
+                ['phone', 'mobile', 'wa', 'whatsapp', 'telp', 'hp'].some(k => h.toLowerCase().includes(k))
+            );
+            if (likelyPhoneCol) setSelectedPhoneColumn(likelyPhoneCol);
+
             toast.success("File uploaded", { description: `Successfully parsed ${parsedData.length} rows.` });
           }
         },
@@ -174,8 +214,17 @@ const PublicationPage = () => {
         const jsonData = XLSX.utils.sheet_to_json(worksheet);
         
         if (jsonData.length > 0) {
-          setHeaders(Object.keys(jsonData[0] as object));
-          setData(jsonData);
+          const headers = Object.keys(jsonData[0] as object);
+          const normalizedData = processImportedData(jsonData, headers);
+          setHeaders(headers);
+          setData(normalizedData);
+
+          // Auto-select phone column if possible
+          const likelyPhoneCol = headers.find(h => 
+            ['phone', 'mobile', 'wa', 'whatsapp', 'telp', 'hp'].some(k => h.toLowerCase().includes(k))
+          );
+          if (likelyPhoneCol) setSelectedPhoneColumn(likelyPhoneCol);
+
           toast.success("File uploaded", { description: `Successfully parsed ${jsonData.length} rows.` });
         }
       };
@@ -213,7 +262,21 @@ const PublicationPage = () => {
         skipEmptyLines: true,
         complete: (results) => {
           const parsedData = results.data as any[];
-          if (parsedData.length > 0) { setHeaders(Object.keys(parsedData[0])); setData(parsedData); setFileName("Google Sheet Import"); toast.success("Import Successful", { description: `Imported ${parsedData.length} rows from Google Sheet.` }); }
+          if (parsedData.length > 0) { 
+              const headers = Object.keys(parsedData[0]);
+              const normalizedData = processImportedData(parsedData, headers);
+              setHeaders(headers); 
+              setData(normalizedData); 
+              setFileName("Google Sheet Import"); 
+
+              // Auto-select phone column if possible
+              const likelyPhoneCol = headers.find(h => 
+                ['phone', 'mobile', 'wa', 'whatsapp', 'telp', 'hp'].some(k => h.toLowerCase().includes(k))
+              );
+              if (likelyPhoneCol) setSelectedPhoneColumn(likelyPhoneCol);
+
+              toast.success("Import Successful", { description: `Imported ${parsedData.length} rows from Google Sheet.` }); 
+          }
           else { toast.error("Empty Sheet", { description: "No data found in the Google Sheet." }); }
         },
         error: (err) => { throw err; }
@@ -516,13 +579,6 @@ const PublicationPage = () => {
       if (row['Trigger time']) return <span className="text-[10px] font-mono">{row['Trigger time']}</span>;
       
       return <span className="text-[10px] text-muted-foreground">Immediate</span>;
-  };
-
-  const normalizePhone = (p: string | number) => {
-      let phone = String(p).replace(/\D/g, '');
-      if (phone.startsWith('0')) phone = '62' + phone.substring(1);
-      if (phone.startsWith('8')) phone = '62' + phone;
-      return phone;
   };
 
   const duplicatesCount = useMemo(() => {
