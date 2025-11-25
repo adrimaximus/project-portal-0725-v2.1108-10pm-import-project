@@ -33,6 +33,7 @@ import GoogleCalendarIntegrationPage from "./pages/integrations/GoogleCalendarIn
 import WbiztoolPage from "./pages/integrations/WbiztoolPage";
 import OpenAiIntegrationPage from "./pages/integrations/OpenAiIntegrationPage";
 import EmailitPage from "./pages/integrations/EmailitPage";
+import WhatsAppOfficialPage from "./pages/integrations/WhatsAppOfficialPage";
 import WorkspaceSettingsPage from "./pages/WorkspaceSettingsPage";
 import StorageSettingsPage from "./pages/StorageSettingsPage";
 import PropertiesSettingsPage from "./pages/PropertiesSettingsPage";
@@ -114,6 +115,7 @@ function App() {
               <Route path="/settings/integrations/wbiztool" element={<WbiztoolPage />} />
               <Route path="/settings/integrations/openai" element={<OpenAiIntegrationPage />} />
               <Route path="/settings/integrations/emailit" element={<EmailitPage />} />
+              <Route path="/settings/integrations/whatsapp-official" element={<WhatsAppOfficialPage />} />
               <Route path="/settings/workspace" element={<WorkspaceSettingsPage />} />
               <Route path="/settings/storage" element={<StorageSettingsPage />} />
               <Route path="/settings/properties" element={<PropertiesSettingsPage />} />
