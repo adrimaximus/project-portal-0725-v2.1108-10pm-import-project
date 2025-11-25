@@ -28,14 +28,18 @@ Deno.serve(async (req) => {
     );
 
     if (req.method === 'POST') {
-      const { clientId, apiKey } = await req.json()
-      if (!clientId || !apiKey) throw new Error('Client ID and API Key are required.')
+      const { clientId, apiKey, whatsappClientId } = await req.json()
+      
+      if (!clientId || !apiKey || !whatsappClientId) {
+        throw new Error('Client ID, API Key, and WhatsApp Client ID are required.')
+      }
 
       const { error: upsertError } = await supabaseAdmin
         .from('app_config')
         .upsert([
             { key: 'WBIZTOOL_CLIENT_ID', value: clientId },
-            { key: 'WBIZTOOL_API_KEY', value: apiKey }
+            { key: 'WBIZTOOL_API_KEY', value: apiKey },
+            { key: 'WBIZTOOL_WHATSAPP_CLIENT_ID', value: whatsappClientId }
         ], { onConflict: 'key' });
 
       if (upsertError) throw upsertError
@@ -50,7 +54,7 @@ Deno.serve(async (req) => {
       const { error } = await supabaseAdmin
         .from('app_config')
         .delete()
-        .in('key', ['WBIZTOOL_CLIENT_ID', 'WBIZTOOL_API_KEY']);
+        .in('key', ['WBIZTOOL_CLIENT_ID', 'WBIZTOOL_API_KEY', 'WBIZTOOL_WHATSAPP_CLIENT_ID']);
       
       if (error) throw error
 
@@ -64,14 +68,15 @@ Deno.serve(async (req) => {
       const { data: creds, error } = await supabaseAdmin
         .from('app_config')
         .select('key')
-        .in('key', ['WBIZTOOL_CLIENT_ID', 'WBIZTOOL_API_KEY']);
+        .in('key', ['WBIZTOOL_CLIENT_ID', 'WBIZTOOL_API_KEY', 'WBIZTOOL_WHATSAPP_CLIENT_ID']);
 
       if (error) throw error;
 
       const hasClientId = creds?.some(c => c.key === 'WBIZTOOL_CLIENT_ID');
       const hasApiKey = creds?.some(c => c.key === 'WBIZTOOL_API_KEY');
+      const hasWhatsappId = creds?.some(c => c.key === 'WBIZTOOL_WHATSAPP_CLIENT_ID');
 
-      return new Response(JSON.stringify({ connected: hasClientId && hasApiKey }), {
+      return new Response(JSON.stringify({ connected: hasClientId && hasApiKey && hasWhatsappId }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,
       });

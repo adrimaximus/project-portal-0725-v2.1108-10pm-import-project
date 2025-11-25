@@ -23,18 +23,18 @@ Deno.serve(async (req) => {
     const { data: creds, error: credsError } = await supabaseAdmin
       .from('app_config')
       .select('key, value')
-      .in('key', ['WBIZTOOL_CLIENT_ID', 'WBIZTOOL_API_KEY']);
+      .in('key', ['WBIZTOOL_CLIENT_ID', 'WBIZTOOL_API_KEY', 'WBIZTOOL_WHATSAPP_CLIENT_ID']);
 
-    if (credsError || !creds || creds.length < 2) {
+    if (credsError || !creds) {
       throw new Error('WBIZTOOL credentials not found in app_config.');
     }
 
     const clientId = creds.find(c => c.key === 'WBIZTOOL_CLIENT_ID')?.value;
     const apiKey = creds.find(c => c.key === 'WBIZTOOL_API_KEY')?.value;
-    const whatsappClientId = Deno.env.get('WBIZTOOL_WHATSAPP_CLIENT_ID');
+    const whatsappClientId = creds.find(c => c.key === 'WBIZTOOL_WHATSAPP_CLIENT_ID')?.value;
 
     if (!clientId || !apiKey || !whatsappClientId) {
-      throw new Error("WBIZTOOL credentials missing or invalid.");
+      throw new Error("WBIZTOOL credentials missing or invalid. Please check settings.");
     }
 
     const messageResponse = await fetch('https://wbiztool.com/api/v1/send_msg/', {
