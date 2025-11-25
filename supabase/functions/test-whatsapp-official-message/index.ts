@@ -64,9 +64,22 @@ Deno.serve(async (req) => {
 
     if (!response.ok) {
         console.error("Meta API Error Response:", JSON.stringify(data));
-        // Extract the specific error message from Meta if available
-        const metaError = data.error?.message || 'Unknown Meta API error';
-        throw new Error(`Meta API Error: ${metaError}`);
+        
+        const errorObj = data.error || {};
+        const message = errorObj.message || 'Unknown Meta API error';
+        const type = errorObj.type || '';
+        const code = errorObj.code || '';
+        const fbtrace_id = errorObj.fbtrace_id || '';
+        
+        // Construct a detailed error message
+        let detailedError = `Meta API Error ${code}: ${message}`;
+        if (type) detailedError += ` (${type})`;
+        
+        // Add specific hints for common errors
+        if (code === 190) detailedError += " - Access Token may have expired.";
+        if (code === 131030) detailedError += " - Recipient phone number is not a valid WhatsApp user.";
+        
+        throw new Error(detailedError);
     }
 
     return new Response(JSON.stringify({ message: 'Message sent successfully.', data }), {

@@ -12,6 +12,40 @@ import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 
+const getErrorMessage = async (error: any): Promise<string> => {
+  let description = "An unknown error occurred. Please check the console.";
+  let rawErrorText: string | null = null;
+
+  if (error.context && typeof error.context.text === 'function') {
+    rawErrorText = await error.context.text().catch(() => null);
+  } else if (error.message) {
+    rawErrorText = error.message;
+  }
+
+  if (rawErrorText) {
+    // Check for HTML response first (often indicates function crash/timeout)
+    if (rawErrorText.trim().startsWith('<') || rawErrorText.includes('<html>')) {
+      return "The server returned an unexpected error. Please try again later.";
+    }
+    
+    // Try to parse as JSON
+    try {
+      const errorBody = JSON.parse(rawErrorText);
+      description = errorBody.error || errorBody.message || rawErrorText;
+    } catch (e) {
+      // Not JSON, use the raw text
+      description = rawErrorText;
+    }
+  }
+
+  // Clean up prefixes from backend
+  if (description.startsWith('Meta API Error:')) {
+    return description; // Keep full meta error
+  }
+  
+  return description;
+};
+
 const WhatsAppOfficialPage = () => {
   const [phoneId, setPhoneId] = useState("");
   const [businessAccountId, setBusinessAccountId] = useState("");
@@ -71,7 +105,8 @@ const WhatsAppOfficialPage = () => {
       toast.success("Successfully saved credentials!");
       setIsConnected(true);
     } catch (error: any) {
-      toast.error("Failed to save credentials", { description: error.message });
+      const description = await getErrorMessage(error);
+      toast.error("Failed to save credentials", { description });
     } finally {
       setIsLoading(false);
     }
@@ -91,7 +126,8 @@ const WhatsAppOfficialPage = () => {
       setAppId("");
       setAccessToken("");
     } catch (error: any) {
-      toast.error("Failed to disconnect", { description: error.message });
+      const description = await getErrorMessage(error);
+      toast.error("Failed to disconnect", { description });
     } finally {
       setIsLoading(false);
     }
@@ -116,27 +152,15 @@ const WhatsAppOfficialPage = () => {
         body: { phone: normalizedPhone, message: testMessage },
       });
       
-      if (error) {
-        let errorMessage = error.message;
-        if (error.context && typeof error.context.json === 'function') {
-            try {
-                const body = await error.context.json();
-                if (body && body.error) {
-                    errorMessage = body.error;
-                }
-            } catch (e) {
-                // ignore
-            }
-        }
-        throw new Error(errorMessage);
-      }
+      if (error) throw error;
+      if (data && data.error) throw new Error(data.error);
 
       toast.success("Test message sent successfully!", { description: "Check your WhatsApp." });
       setTestMessage("");
     } catch (error: any) {
       console.error("Test message error:", error);
-      let desc = error.message || "An unknown error occurred.";
-      toast.error("Failed to send test message", { description: desc });
+      const description = await getErrorMessage(error);
+      toast.error("Failed to send test message", { description });
     } finally {
       setIsSendingTest(false);
     }
