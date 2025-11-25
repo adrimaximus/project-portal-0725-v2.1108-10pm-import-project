@@ -33,14 +33,31 @@ Deno.serve(async (req) => {
       }),
     });
 
-    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+        const status = response.status;
+        const errorText = await response.text();
+        let errorMessage = `Failed to send email (Status: ${status}).`;
+        
+        try {
+            const errorJson = JSON.parse(errorText);
+            errorMessage = errorJson.message || errorJson.error || JSON.stringify(errorJson);
+        } catch (e) {
+             const cleanText = errorText.replace(/<[^>]*>?/gm, ' ').replace(/\s+/g, ' ').trim();
+             errorMessage = cleanText.substring(0, 200) + (cleanText.length > 200 ? '...' : '');
+        }
+        
+        throw new Error(`Emailit API Error: ${errorMessage}`);
+    }
+
+    const data = await response.json();
     
-    return new Response(JSON.stringify({ ok: response.ok, data }), { 
-      status: response.status, 
+    return new Response(JSON.stringify({ ok: true, data }), { 
+      status: 200, 
       headers: { ...corsHeaders, "Content-Type": "application/json" } 
     });
 
   } catch (e) {
+    console.error("Send Email Error:", e.message);
     return new Response(JSON.stringify({ ok: false, error: e.message }), {
       status: 400,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

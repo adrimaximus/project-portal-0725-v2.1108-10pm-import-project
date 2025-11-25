@@ -68,7 +68,7 @@ Deno.serve(async (req) => {
           // Try to parse JSON error from WBIZTOOL
           try {
             const errorJson = JSON.parse(errorText);
-            // Sometimes the message is nested or under different keys
+            // WBIZTOOL errors can be in different formats
             errorMessage = errorJson.message || errorJson.error || errorJson.detail || JSON.stringify(errorJson);
           } catch (e) {
             // If not JSON, clean up HTML tags if present (fallback)
