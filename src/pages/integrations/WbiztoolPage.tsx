@@ -74,6 +74,7 @@ const getErrorMessage = async (error: any): Promise<string> => {
 const WbiztoolPage = () => {
   const [clientId, setClientId] = useState("");
   const [apiKey, setApiKey] = useState("");
+  const [whatsappClientId, setWhatsappClientId] = useState("");
   const [isConnected, setIsConnected] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [testPhone, setTestPhone] = useState("");
@@ -99,20 +100,21 @@ const WbiztoolPage = () => {
   }, [checkConnectionStatus]);
 
   const handleConnect = async () => {
-    if (!clientId || !apiKey) {
-      toast.error("Please enter both your API Client ID and API Key.");
+    if (!clientId || !apiKey || !whatsappClientId) {
+      toast.error("Please fill in all fields: API Client ID, API Key, and WhatsApp Client ID.");
       return;
     }
     setIsLoading(true);
     try {
       const { error } = await supabase.functions.invoke('manage-wbiztool-credentials', {
-        body: { clientId, apiKey },
+        body: { clientId, apiKey, whatsappClientId },
       });
       if (error) throw error;
       toast.success("Successfully connected to WBIZTOOL!");
       setIsConnected(true);
       setClientId("");
       setApiKey("");
+      setWhatsappClientId("");
     } catch (error: any) {
       const description = await getErrorMessage(error);
       toast.error("Failed to connect", { description });
@@ -201,7 +203,7 @@ const WbiztoolPage = () => {
         <Card>
           <CardHeader>
             <CardTitle>Connect to WBIZTOOL</CardTitle>
-            <CardDescription>Enter your WBIZTOOL API Client ID and API key to activate the integration.</CardDescription>
+            <CardDescription>Enter your WBIZTOOL credentials to activate the integration.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
@@ -226,6 +228,20 @@ const WbiztoolPage = () => {
                   disabled={isConnected || isLoading}
                 />
             </div>
+            <div className="space-y-2">
+                <Label htmlFor="whatsapp-client-id">WhatsApp Client ID (Device)</Label>
+                <div className="text-[10px] text-muted-foreground mb-1">
+                  The 4-digit ID for your WhatsApp number from the WBIZTOOL dashboard (e.g., 4162).
+                </div>
+                <Input 
+                  id="whatsapp-client-id" 
+                  type="text" 
+                  placeholder={isConnected ? "••••" : "Enter WhatsApp Device ID"}
+                  value={whatsappClientId}
+                  onChange={(e) => setWhatsappClientId(e.target.value)}
+                  disabled={isConnected || isLoading}
+                />
+            </div>
           </CardContent>
           <CardFooter className="flex justify-end">
             {isConnected ? (
@@ -234,7 +250,7 @@ const WbiztoolPage = () => {
                 Disconnect
               </Button>
             ) : (
-              <Button onClick={handleConnect} disabled={!clientId || !apiKey || isLoading}>
+              <Button onClick={handleConnect} disabled={!clientId || !apiKey || !whatsappClientId || isLoading}>
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Save and Connect
               </Button>
