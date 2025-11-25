@@ -46,14 +46,22 @@ const WhatsAppOfficialPage = () => {
   }, [checkConnectionStatus]);
 
   const handleConnect = async () => {
-    if (!phoneId || !accessToken) {
+    const cleanPhoneId = phoneId.trim();
+    const cleanAccountId = businessAccountId.trim();
+    const cleanToken = accessToken.trim();
+
+    if (!cleanPhoneId || !cleanToken) {
       toast.error("Phone Number ID and Access Token are required.");
       return;
     }
     setIsLoading(true);
     try {
       const { error } = await supabase.functions.invoke('manage-whatsapp-official-credentials', {
-        body: { phoneId, businessAccountId, accessToken },
+        body: { 
+            phoneId: cleanPhoneId, 
+            businessAccountId: cleanAccountId, 
+            accessToken: cleanToken 
+        },
       });
       if (error) throw error;
       toast.success("Successfully saved credentials!");
@@ -106,12 +114,22 @@ const WhatsAppOfficialPage = () => {
       toast.success("Test message sent successfully!", { description: "Check your WhatsApp." });
       setTestMessage("");
     } catch (error: any) {
-      let desc = error.message;
-      // Try to parse nested JSON error from edge function if possible
-      try {
-        const json = JSON.parse(error.message);
-        if (json.error && json.error.message) desc = json.error.message;
-      } catch (e) { /* ignore */ }
+      console.error("Test message error:", error);
+      let desc = error.message || "An unknown error occurred.";
+      
+      // Attempt to parse JSON if the message looks like JSON
+      if (typeof desc === 'string' && desc.trim().startsWith('{')) {
+          try {
+            const json = JSON.parse(desc);
+            if (json.error && json.error.message) {
+                desc = json.error.message;
+            } else if (json.message) {
+                desc = json.message;
+            }
+          } catch (e) { 
+            // If parsing fails, desc remains the original string
+          }
+      }
       
       toast.error("Failed to send test message", { description: desc });
     } finally {
