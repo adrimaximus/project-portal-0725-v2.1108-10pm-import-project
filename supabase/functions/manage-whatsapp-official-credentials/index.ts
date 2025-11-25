@@ -22,41 +22,34 @@ Deno.serve(async (req) => {
     const { data: { user } } = await supabaseClient.auth.getUser()
     if (!user) throw new Error('User not found')
 
-    // Check admin permissions
-    const { data: profile } = await supabaseClient.from('profiles').select('role').eq('id', user.id).single();
-    if (!profile || !['admin', 'master admin'].includes(profile.role)) {
-        throw new Error("Unauthorized");
-    }
-
     const supabaseAdmin = createClient(
         Deno.env.get('SUPABASE_URL') ?? '',
         Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
     if (req.method === 'POST') {
-      const { phoneId, businessAccountId, accessToken } = await req.json()
+      const { phoneId, businessAccountId, appId, accessToken } = await req.json()
 
       if (!phoneId || !accessToken) {
         throw new Error('Phone ID and Access Token are required.')
       }
 
-      // Trim inputs to avoid whitespace issues
+      // Sanitize
       const cleanPhoneId = String(phoneId).trim();
       const cleanToken = String(accessToken).trim();
       const cleanAccountId = businessAccountId ? String(businessAccountId).trim() : null;
+      const cleanAppId = appId ? String(appId).trim() : null;
 
-      const upserts = [
+      const updates = [
           { key: 'META_PHONE_ID', value: cleanPhoneId },
           { key: 'META_ACCESS_TOKEN', value: cleanToken }
       ];
-      
-      if (cleanAccountId) {
-          upserts.push({ key: 'META_BUSINESS_ACCOUNT_ID', value: cleanAccountId });
-      }
+      if (cleanAccountId) updates.push({ key: 'META_BUSINESS_ACCOUNT_ID', value: cleanAccountId });
+      if (cleanAppId) updates.push({ key: 'META_APP_ID', value: cleanAppId });
 
       const { error: upsertError } = await supabaseAdmin
         .from('app_config')
-        .upsert(upserts, { onConflict: 'key' });
+        .upsert(updates, { onConflict: 'key' });
 
       if (upsertError) throw upsertError
 
@@ -70,7 +63,7 @@ Deno.serve(async (req) => {
       const { error } = await supabaseAdmin
         .from('app_config')
         .delete()
-        .in('key', ['META_PHONE_ID', 'META_ACCESS_TOKEN', 'META_BUSINESS_ACCOUNT_ID']);
+        .in('key', ['META_PHONE_ID', 'META_BUSINESS_ACCOUNT_ID', 'META_APP_ID', 'META_ACCESS_TOKEN']);
       
       if (error) throw error
 
@@ -84,19 +77,20 @@ Deno.serve(async (req) => {
       const { data: creds, error } = await supabaseAdmin
         .from('app_config')
         .select('key, value')
-        .in('key', ['META_PHONE_ID', 'META_ACCESS_TOKEN', 'META_BUSINESS_ACCOUNT_ID']);
+        .in('key', ['META_PHONE_ID', 'META_BUSINESS_ACCOUNT_ID', 'META_APP_ID', 'META_ACCESS_TOKEN']);
 
       if (error) throw error;
 
-      const hasPhoneId = creds?.some(c => c.key === 'META_PHONE_ID');
-      const hasToken = creds?.some(c => c.key === 'META_ACCESS_TOKEN');
-      const businessId = creds?.find(c => c.key === 'META_BUSINESS_ACCOUNT_ID')?.value || '';
-      const phoneId = creds?.find(c => c.key === 'META_PHONE_ID')?.value || '';
+      const phoneIdObj = creds?.find(c => c.key === 'META_PHONE_ID');
+      const accountIdObj = creds?.find(c => c.key === 'META_BUSINESS_ACCOUNT_ID');
+      const appIdObj = creds?.find(c => c.key === 'META_APP_ID');
+      const tokenObj = creds?.find(c => c.key === 'META_ACCESS_TOKEN');
 
       return new Response(JSON.stringify({ 
-          connected: hasPhoneId && hasToken,
-          businessAccountId: businessId,
-          phoneId: phoneId
+          connected: !!(phoneIdObj && tokenObj),
+          phoneId: phoneIdObj?.value || '',
+          businessAccountId: accountIdObj?.value || '',
+          appId: appIdObj?.value || ''
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,

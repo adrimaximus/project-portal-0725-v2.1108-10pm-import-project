@@ -15,6 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 const WhatsAppOfficialPage = () => {
   const [phoneId, setPhoneId] = useState("");
   const [businessAccountId, setBusinessAccountId] = useState("");
+  const [appId, setAppId] = useState("");
   const [accessToken, setAccessToken] = useState("");
   const [isConnected, setIsConnected] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -31,7 +32,8 @@ const WhatsAppOfficialPage = () => {
       if (data.connected) {
           if (data.phoneId) setPhoneId(data.phoneId);
           if (data.businessAccountId) setBusinessAccountId(data.businessAccountId);
-          // We don't set access token for security visual reasons, or can set a dummy one
+          if (data.appId) setAppId(data.appId);
+          // We don't set access token for security visual reasons
       }
     } catch (error: any) {
       console.error("Failed to check WhatsApp connection status:", error.message);
@@ -48,6 +50,7 @@ const WhatsAppOfficialPage = () => {
   const handleConnect = async () => {
     const cleanPhoneId = phoneId.trim();
     const cleanAccountId = businessAccountId.trim();
+    const cleanAppId = appId.trim();
     const cleanToken = accessToken.trim();
 
     if (!cleanPhoneId || !cleanToken) {
@@ -60,6 +63,7 @@ const WhatsAppOfficialPage = () => {
         body: { 
             phoneId: cleanPhoneId, 
             businessAccountId: cleanAccountId, 
+            appId: cleanAppId,
             accessToken: cleanToken 
         },
       });
@@ -84,6 +88,7 @@ const WhatsAppOfficialPage = () => {
       setIsConnected(false);
       setPhoneId("");
       setBusinessAccountId("");
+      setAppId("");
       setAccessToken("");
     } catch (error: any) {
       toast.error("Failed to disconnect", { description: error.message });
@@ -112,7 +117,6 @@ const WhatsAppOfficialPage = () => {
       });
       
       if (error) {
-        // Try to extract JSON error message from the response body if available
         let errorMessage = error.message;
         if (error.context && typeof error.context.json === 'function') {
             try {
@@ -121,7 +125,7 @@ const WhatsAppOfficialPage = () => {
                     errorMessage = body.error;
                 }
             } catch (e) {
-                // Failed to parse JSON body, stick with original message
+                // ignore
             }
         }
         throw new Error(errorMessage);
@@ -132,7 +136,6 @@ const WhatsAppOfficialPage = () => {
     } catch (error: any) {
       console.error("Test message error:", error);
       let desc = error.message || "An unknown error occurred.";
-      
       toast.error("Failed to send test message", { description: desc });
     } finally {
       setIsSendingTest(false);
@@ -172,6 +175,18 @@ const WhatsAppOfficialPage = () => {
             <CardDescription>Enter your Meta app credentials. Ensure your token has 'whatsapp_business_messaging' permission.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div className="space-y-2">
+                <Label htmlFor="app-id">App ID</Label>
+                <Input 
+                  id="app-id" 
+                  type="text" 
+                  placeholder="e.g. 572325101927165"
+                  value={appId}
+                  onChange={(e) => setAppId(e.target.value)}
+                  disabled={isLoading}
+                />
+                <p className="text-[10px] text-muted-foreground">Optional, for your reference.</p>
+            </div>
             <div className="space-y-2">
                 <Label htmlFor="phone-id">Phone Number ID</Label>
                 <Input 
