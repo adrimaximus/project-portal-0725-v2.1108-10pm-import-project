@@ -43,8 +43,12 @@ Deno.serve(async (req) => {
       throw new Error("Incomplete WhatsApp configuration. Missing Phone ID or Access Token.");
     }
 
+    // Normalize phone number just in case (remove + and non-digits)
+    // Meta requires country code without +
+    const cleanPhone = phone.replace(/\D/g, '');
+
     // Call Meta API
-    console.log(`Attempting to send message to ${phone} via Phone ID ${phoneId}`);
+    console.log(`Attempting to send message to ${cleanPhone} via Phone ID ${phoneId}`);
     
     const response = await fetch(`https://graph.facebook.com/v21.0/${phoneId}/messages`, {
         method: 'POST',
@@ -54,7 +58,7 @@ Deno.serve(async (req) => {
         },
         body: JSON.stringify({
             messaging_product: "whatsapp",
-            to: phone,
+            to: cleanPhone,
             type: "text",
             text: { body: message }
         }),
@@ -69,7 +73,6 @@ Deno.serve(async (req) => {
         const message = errorObj.message || 'Unknown Meta API error';
         const type = errorObj.type || '';
         const code = errorObj.code || '';
-        const fbtrace_id = errorObj.fbtrace_id || '';
         
         // Construct a detailed error message
         let detailedError = `Meta API Error ${code}: ${message}`;
@@ -81,6 +84,7 @@ Deno.serve(async (req) => {
         if (code === 131000) detailedError += " - Something went wrong with the request structure.";
         if (code === 131026) detailedError += " - Message failed to send (Policy violation or spam detection).";
         if (code === 100) detailedError += " - Invalid parameter. Check Phone ID.";
+        if (code === 131009) detailedError += " - Parameter value is invalid. Check if the phone number format is correct (e.g., 62812...).";
 
         throw new Error(detailedError);
     }
@@ -92,7 +96,6 @@ Deno.serve(async (req) => {
 
   } catch (error) {
     console.error("Function Error:", error.message);
-    // Return flat error structure
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 400,
