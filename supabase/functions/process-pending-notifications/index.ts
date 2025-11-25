@@ -136,14 +136,20 @@ Deno.serve(async (req) => {
                 await supabaseAdmin.from('pending_notifications').update({ status: 'completed', sent_at: new Date() }).eq('id', notification.id);
                 results.push({ id: notification.id, status: 'sent' });
             } else {
-                const errData = await response.text();
-                console.error(`Failed to send notification ${notification.id}:`, errData);
+                const errData = await response.json().catch(() => null);
                 
-                let errorMsg = `Provider Error: ${errData.substring(0, 200)}`;
-                try {
-                    const jsonError = JSON.parse(errData);
-                    if (jsonError.error?.message) errorMsg = jsonError.error.message;
-                } catch (e) {}
+                let errorMsg = 'Unknown error';
+                if (errData && errData.error) {
+                   // Parsing Meta API Error
+                   const { message, code, type } = errData.error;
+                   errorMsg = `Meta API Error ${code}: ${message} (${type})`;
+                } else {
+                   // Parsing WBIZTOOL or generic fetch error
+                   const rawText = await response.text();
+                   errorMsg = `Provider Error: ${rawText.substring(0, 200)}`;
+                }
+
+                console.error(`Failed to send notification ${notification.id}:`, errorMsg);
 
                 await supabaseAdmin.from('pending_notifications').update({ 
                     status: 'failed', 
