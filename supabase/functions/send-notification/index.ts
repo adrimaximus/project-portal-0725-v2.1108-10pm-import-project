@@ -68,8 +68,13 @@ const sendWhatsappMessage = async (supabaseAdmin, phone: string, message: string
         });
 
         if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(`Meta API Error: ${JSON.stringify(errorData)}`);
+            const data = await response.json().catch(() => ({}));
+            const errorObj = data.error || {};
+            const errorMessage = errorObj.message || 'Unknown Meta API error';
+            const code = errorObj.code || '';
+            const type = errorObj.type || '';
+            
+            throw new Error(`Meta API Error ${code}: ${errorMessage} (${type})`);
         }
         return; // Success
     }

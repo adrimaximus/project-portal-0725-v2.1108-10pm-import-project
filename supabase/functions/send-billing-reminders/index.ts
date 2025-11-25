@@ -144,8 +144,12 @@ Deno.serve(async (req) => {
                 }),
             });
             if (!response.ok) {
-                const err = await response.json().catch(() => ({}));
-                throw new Error(`Meta API Error: ${JSON.stringify(err)}`);
+                const data = await response.json().catch(() => ({}));
+                const errorObj = data.error || {};
+                const message = errorObj.message || 'Unknown Meta API error';
+                const code = errorObj.code || '';
+                
+                throw new Error(`Meta API Error ${code}: ${message}`);
             }
           } else {
             const response = await fetch('https://wbiztool.com/api/v1/send_msg/', {

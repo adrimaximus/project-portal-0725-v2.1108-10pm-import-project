@@ -116,8 +116,13 @@ Deno.serve(async (req) => {
                 });
 
                 if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({}));
-                    throw new Error(errorData.error?.message || `Meta API Error ${response.status}`);
+                    const data = await response.json().catch(() => ({}));
+                    const errorObj = data.error || {};
+                    const message = errorObj.message || 'Unknown Meta API error';
+                    const type = errorObj.type || '';
+                    const code = errorObj.code || '';
+                    
+                    throw new Error(`Meta API Error ${code}: ${message} (${type})`);
                 }
 
             } else {
