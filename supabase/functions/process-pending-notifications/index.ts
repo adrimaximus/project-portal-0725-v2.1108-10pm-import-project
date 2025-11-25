@@ -38,6 +38,8 @@ const constructMessage = (type: string, context: any): string => {
              return `Billing Reminder for *${context.project_name}*.\n\nThe invoice is overdue by ${context.days_overdue} days. Please follow up.`;
         case 'task_overdue':
              return `Task Overdue: *${context.task_title}* in *${context.project_name}*.\n\nPlease check your tasks.`;
+        case 'goal_progress_update':
+             return `Goal Progress: *${context.goal_title}*\n\n${context.updater_name} logged value: ${context.value_logged}.\n\nView goal: ${siteUrl}/goals/${context.goal_slug}`;
         default:
             return `You have a new notification from 7i Portal.`;
     }
@@ -136,17 +138,22 @@ Deno.serve(async (req) => {
                 await supabaseAdmin.from('pending_notifications').update({ status: 'completed', sent_at: new Date() }).eq('id', notification.id);
                 results.push({ id: notification.id, status: 'sent' });
             } else {
-                const errData = await response.json().catch(() => null);
-                
+                const errorText = await response.text();
                 let errorMsg = 'Unknown error';
-                if (errData && errData.error) {
-                   // Parsing Meta API Error
-                   const { message, code, type } = errData.error;
-                   errorMsg = `Meta API Error ${code}: ${message} (${type})`;
-                } else {
-                   // Parsing WBIZTOOL or generic fetch error
-                   const rawText = await response.text();
-                   errorMsg = `Provider Error: ${rawText.substring(0, 200)}`;
+                
+                try {
+                    const errData = JSON.parse(errorText);
+                    if (useMeta && errData.error) {
+                       // Parsing Meta API Error
+                       const { message, code, type } = errData.error;
+                       errorMsg = `Meta API Error ${code}: ${message} (${type})`;
+                    } else {
+                       // Parsing WBIZTOOL Error
+                       errorMsg = errData.message || errData.error || JSON.stringify(errData);
+                    }
+                } catch (e) {
+                    // Parsing HTML/Text Error (e.g., Cloudflare)
+                    errorMsg = `Provider Error (${response.status}): ${errorText.substring(0, 200)}`;
                 }
 
                 console.error(`Failed to send notification ${notification.id}:`, errorMsg);
