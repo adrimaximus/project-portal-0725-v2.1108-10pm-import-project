@@ -99,12 +99,14 @@ Deno.serve(async (req) => {
       const diffTime = dueDate.getTime() - today.getTime();
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
 
+      // Notify on specific days before/on due date: 7 days before, 3 days before, 1 day before, and ON the day (0)
       const shouldSend = [7, 3, 1, 0].includes(diffDays);
 
       if (!shouldSend) continue;
 
       let statusContext = '';
       if (diffDays === 0) statusContext = 'Jatuh tempo HARI INI';
+      else if (diffDays < 0) statusContext = `Telah jatuh tempo ${Math.abs(diffDays)} hari yang lalu`;
       else statusContext = `Akan jatuh tempo dalam ${diffDays} hari`;
 
       const recipients = new Set<string>([project.created_by]);
@@ -115,6 +117,7 @@ Deno.serve(async (req) => {
         if (!profile || !profile.phone) continue;
         
         const prefs = profile.notification_preferences;
+        // If preferences exist and billing_reminder is explicitly set to false, skip. Default is true.
         if (prefs && prefs.billing_reminder === false) continue;
 
         const formattedPhone = formatPhoneNumberForApi(profile.phone);

@@ -78,7 +78,10 @@ Deno.serve(async (req) => {
         // Add specific hints for common errors
         if (code === 190) detailedError += " - Access Token may have expired.";
         if (code === 131030) detailedError += " - Recipient phone number is not a valid WhatsApp user.";
-        
+        if (code === 131000) detailedError += " - Something went wrong with the request structure.";
+        if (code === 131026) detailedError += " - Message failed to send (Policy violation or spam detection).";
+        if (code === 100) detailedError += " - Invalid parameter. Check Phone ID.";
+
         throw new Error(detailedError);
     }
 

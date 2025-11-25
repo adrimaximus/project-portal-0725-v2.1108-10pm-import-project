@@ -119,10 +119,9 @@ Deno.serve(async (req) => {
                     const data = await response.json().catch(() => ({}));
                     const errorObj = data.error || {};
                     const message = errorObj.message || 'Unknown Meta API error';
-                    const type = errorObj.type || '';
                     const code = errorObj.code || '';
                     
-                    throw new Error(`Meta API Error ${code}: ${message} (${type})`);
+                    throw new Error(`Meta API Error ${code}: ${message}`);
                 }
 
             } else {
@@ -161,7 +160,17 @@ Deno.serve(async (req) => {
                 });
 
                 if (!response.ok) {
-                    throw new Error(`WBIZTOOL API Error: ${response.statusText}`);
+                    const status = response.status;
+                    const errorText = await response.text();
+                    let errorMsg = `WBIZTOOL Error ${status}`;
+                    
+                    try {
+                        const jsonErr = JSON.parse(errorText);
+                        errorMsg += `: ${jsonErr.message || jsonErr.error || JSON.stringify(jsonErr)}`;
+                    } catch(e) {
+                        errorMsg += `: ${errorText.substring(0, 100)}`;
+                    }
+                    throw new Error(errorMsg);
                 }
             }
 
