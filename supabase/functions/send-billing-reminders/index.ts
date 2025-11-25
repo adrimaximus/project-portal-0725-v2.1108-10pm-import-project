@@ -13,19 +13,14 @@ const formatMentions = (text: string | null | undefined): string => {
   return text.replace(/@\[([^\]]+)\]\(([^)]+)\)/g, '@$1');
 };
 
-const getSystemPrompt = () => `Anda adalah asisten keuangan yang profesional, sopan, dan proaktif. Tugas Anda adalah membuat pesan pengingat WhatsApp tentang invoice yang telah jatuh tempo.
+const getSystemPrompt = () => `Anda adalah asisten keuangan yang profesional, sopan, dan proaktif. Tugas Anda adalah membuat pesan pengingat WhatsApp tentang invoice yang akan segera jatuh tempo atau baru saja jatuh tempo.
 
 **Aturan Penting:**
-1.  **Nada Berdasarkan Urgensi:** Sesuaikan nada pesan Anda berdasarkan jumlah hari keterlambatan yang diberikan dalam konteks.
-    *   **Sedikit Mendesak (1-7 hari):** Gunakan bahasa yang ramah dan bersifat pengingat lembut.
-    *   **Cukup Mendesak (8-30 hari):** Gunakan bahasa yang lebih tegas namun tetap sopan, menekankan perlunya perhatian.
-    *   **Sangat Mendesak (>30 hari):** Gunakan bahasa yang jelas dan lugas, mendesak untuk segera ditindaklanjuti dan diselesaikan, sambil tetap menjaga profesionalisme.
-2.  **Sertakan Semua Detail:** Pastikan pesan Anda mencakup nama proyek, nomor invoice, dan jumlah hari keterlambatan.
-3.  **Format:** Gunakan format tebal WhatsApp (*kata*) untuk detail penting seperti nama proyek dan jumlah hari.
-4.  **Profesional dan Sopan:** Jaga agar bahasa tetap sopan dan profesional dalam segala situasi.
-5.  **Singkat dan Jelas:** Buat pesan yang langsung ke intinya.
-6.  **Sertakan URL:** Selalu sertakan URL yang diberikan di akhir pesan. Ini adalah satu-satunya URL yang harus ada di pesan. Jangan menambah teks lain setelah URL.
-7.  **Variasi:** Jangan gunakan kalimat yang sama persis setiap saat.`;
+1.  **Nada:** Gunakan bahasa yang ramah, sopan, dan mengingatkan. Jangan terdengar menuduh.
+2.  **Detail:** Sertakan nama proyek, nomor invoice, dan tanggal jatuh tempo.
+3.  **Format:** Gunakan format tebal WhatsApp (*kata*) untuk detail penting.
+4.  **Singkat:** Buat pesan yang langsung ke intinya.
+5.  **URL:** Sertakan URL yang diberikan di akhir pesan.`;
 
 const getFullName = (profile: any) => `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email;
 
@@ -58,30 +53,34 @@ Deno.serve(async (req) => {
       { global: { headers: { 'Accept': 'application/json' } } }
     );
 
-    console.log("[send-overdue-reminders] Job started.");
+    console.log("[send-billing-reminders] Job started.");
 
-    const { data: overdueProjects, error: projectsError } = await supabaseAdmin
+    // Find projects with invoices pending/unpaid/overdue that might need reminders
+    // This logic simplifies to finding anything not 'Paid', 'Cancelled', 'Bid Lost'
+    const { data: projects, error: projectsError } = await supabaseAdmin
       .from('projects')
-      .select('id, name, slug, invoice_number, payment_due_date, created_by')
-      .eq('payment_status', 'Overdue');
+      .select('id, name, slug, invoice_number, payment_due_date, payment_status, created_by')
+      .not('payment_status', 'in', '("Paid","Cancelled","Bid Lost")')
+      .not('payment_due_date', 'is', null);
 
     if (projectsError) throw projectsError;
 
-    if (!overdueProjects || overdueProjects.length === 0) {
-      return new Response(JSON.stringify({ message: "No overdue invoices." }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    if (!projects || projects.length === 0) {
+      return new Response(JSON.stringify({ message: "No active invoices to check." }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
     
     // Fetch users and configs
-    const projectIds = overdueProjects.map(p => p.id);
+    const projectIds = projects.map(p => p.id);
     const { data: projectAdmins } = await supabaseAdmin.from('project_members').select('project_id, user_id').in('project_id', projectIds).eq('role', 'admin');
+    
     const userIdsToFetch = new Set<string>();
-    overdueProjects.forEach(p => userIdsToFetch.add(p.created_by));
+    projects.forEach(p => userIdsToFetch.add(p.created_by));
     projectAdmins?.forEach(m => userIdsToFetch.add(m.user_id));
 
-    const { data: profiles } = await supabaseAdmin.from('profiles').select('id, first_name, last_name, email, phone').in('id', Array.from(userIdsToFetch));
+    const { data: profiles } = await supabaseAdmin.from('profiles').select('id, first_name, last_name, email, phone, notification_preferences').in('id', Array.from(userIdsToFetch));
     const profileMap = new Map(profiles?.map(p => [p.id, p]));
 
-    // Fetch Messaging Config
+    // Fetch Messaging Config (Meta & WBIZTOOL)
     const { data: config } = await supabaseAdmin.from('app_config').select('key, value').in('key', ['WBIZTOOL_CLIENT_ID', 'WBIZTOOL_API_KEY', 'WBIZTOOL_WHATSAPP_CLIENT_ID', 'META_PHONE_ID', 'META_ACCESS_TOKEN']);
     
     const metaPhoneId = config?.find(c => c.key === 'META_PHONE_ID')?.value;
@@ -92,34 +91,57 @@ Deno.serve(async (req) => {
 
     const useMeta = metaPhoneId && metaAccessToken;
     if (!useMeta && (!wbizClientId || !wbizApiKey || !wbizWhatsappClientId)) {
-        throw new Error("No valid WhatsApp configuration found.");
+        throw new Error("No valid WhatsApp configuration found (Meta or WBIZTOOL).");
     }
 
     let successCount = 0;
 
-    for (const project of overdueProjects) {
-      const recipients = new Set<string>([project.created_by]);
-      projectAdmins?.filter(m => m.project_id === project.id).forEach(m => recipients.add(m.user_id));
-
+    for (const project of projects) {
       const dueDate = new Date(project.payment_due_date);
       const today = new Date();
-      const overdueDays = Math.max(0, Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 3600 * 24)));
-      let urgency = overdueDays > 30 ? 'sangat mendesak' : overdueDays > 7 ? 'cukup mendesak' : 'sedikit mendesak';
+      
+      // Calculate difference in days
+      const diffTime = dueDate.getTime() - today.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+
+      // Only send reminders for specific conditions:
+      // 1. Exactly 7 days before due (Upcoming)
+      // 2. Exactly 3 days before due (Upcoming)
+      // 3. Exactly 1 day before due (Upcoming)
+      // 4. On due date (Due Today)
+      const shouldSend = [7, 3, 1, 0].includes(diffDays);
+
+      if (!shouldSend) continue;
+
+      let statusContext = '';
+      if (diffDays === 0) statusContext = 'Jatuh tempo HARI INI';
+      else statusContext = `Akan jatuh tempo dalam ${diffDays} hari`;
+
+      const recipients = new Set<string>([project.created_by]);
+      projectAdmins?.filter(m => m.project_id === project.id).forEach(m => recipients.add(m.user_id));
 
       for (const userId of recipients) {
         const profile = profileMap.get(userId);
         if (!profile || !profile.phone) continue;
         
+        // Check user preference for billing reminders
+        const prefs = profile.notification_preferences;
+        if (prefs && prefs.billing_reminder === false) continue; // Basic check, can be more granular
+
         const formattedPhone = formatPhoneNumberForApi(profile.phone);
         if (!formattedPhone) continue;
 
         const recipientName = getFullName(profile);
-        const userPrompt = `**Konteks:**\n- **Penerima:** ${recipientName}\n- **Proyek:** ${formatMentions(project.name)}\n- **Invoice:** ${project.invoice_number || 'N/A'}\n- **Terlambat:** ${overdueDays} hari\n- **Urgensi:** ${urgency}\n- **URL:** ${Deno.env.get("SITE_URL") ?? "https://7inked.ahensi.xyz"}/billing\n\nBuat pesan pengingat.`;
+        const userPrompt = `**Konteks:**\n- **Penerima:** ${recipientName}\n- **Proyek:** ${formatMentions(project.name)}\n- **Invoice:** ${project.invoice_number || 'N/A'}\n- **Status Waktu:** ${statusContext}\n- **Tanggal Jatuh Tempo:** ${dueDate.toLocaleDateString('id-ID')}\n- **URL:** ${Deno.env.get("SITE_URL") ?? "https://7inked.ahensi.xyz"}/billing\n\nBuat pesan pengingat pembayaran yang ramah.`;
 
         try {
-          const anthropic = new Anthropic({ apiKey: Deno.env.get('ANTHROPIC_API_KEY') });
-          const aiResponse = await anthropic.messages.create({ model: "claude-3-haiku-20240307", max_tokens: 200, system: getSystemPrompt(), messages: [{ role: "user", content: userPrompt }] });
-          const aiMessage = aiResponse.content[0].text;
+          let aiMessage = `Halo ${recipientName}, ini pengingat ramah bahwa pembayaran untuk proyek *${project.name}* (${project.invoice_number || 'Invoice'}) ${statusContext}. Mohon cek di dashboard: ${Deno.env.get("SITE_URL") ?? "https://7inked.ahensi.xyz"}/billing`;
+          
+          if (Deno.env.get('ANTHROPIC_API_KEY')) {
+              const anthropic = new Anthropic({ apiKey: Deno.env.get('ANTHROPIC_API_KEY') });
+              const aiResponse = await anthropic.messages.create({ model: "claude-3-haiku-20240307", max_tokens: 200, system: getSystemPrompt(), messages: [{ role: "user", content: userPrompt }] });
+              aiMessage = aiResponse.content[0].text;
+          }
 
           if (useMeta) {
             await fetch(`https://graph.facebook.com/v21.0/${metaPhoneId}/messages`, {
@@ -140,13 +162,14 @@ Deno.serve(async (req) => {
             });
           }
           successCount++;
+          console.log(`[send-billing-reminders] Sent reminder for project ${project.id} to ${profile.email}.`);
         } catch (e) {
           console.error(`Failed to send reminder to ${profile.email}:`, e.message);
         }
       }
     }
 
-    return new Response(JSON.stringify({ success: true, count: successCount }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ success: true, sent_notifications: successCount }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
   } catch (error) {
     return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
