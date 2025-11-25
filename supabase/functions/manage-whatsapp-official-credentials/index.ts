@@ -40,13 +40,18 @@ Deno.serve(async (req) => {
         throw new Error('Phone ID and Access Token are required.')
       }
 
+      // Trim inputs to avoid whitespace issues
+      const cleanPhoneId = String(phoneId).trim();
+      const cleanToken = String(accessToken).trim();
+      const cleanAccountId = businessAccountId ? String(businessAccountId).trim() : null;
+
       const upserts = [
-          { key: 'META_PHONE_ID', value: phoneId },
-          { key: 'META_ACCESS_TOKEN', value: accessToken }
+          { key: 'META_PHONE_ID', value: cleanPhoneId },
+          { key: 'META_ACCESS_TOKEN', value: cleanToken }
       ];
       
-      if (businessAccountId) {
-          upserts.push({ key: 'META_BUSINESS_ACCOUNT_ID', value: businessAccountId });
+      if (cleanAccountId) {
+          upserts.push({ key: 'META_BUSINESS_ACCOUNT_ID', value: cleanAccountId });
       }
 
       const { error: upsertError } = await supabaseAdmin

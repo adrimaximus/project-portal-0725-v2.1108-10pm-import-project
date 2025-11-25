@@ -110,26 +110,28 @@ const WhatsAppOfficialPage = () => {
       const { data, error } = await supabase.functions.invoke('test-whatsapp-official-message', {
         body: { phone: normalizedPhone, message: testMessage },
       });
-      if (error) throw error;
+      
+      if (error) {
+        // Try to extract JSON error message from the response body if available
+        let errorMessage = error.message;
+        if (error.context && typeof error.context.json === 'function') {
+            try {
+                const body = await error.context.json();
+                if (body && body.error) {
+                    errorMessage = body.error;
+                }
+            } catch (e) {
+                // Failed to parse JSON body, stick with original message
+            }
+        }
+        throw new Error(errorMessage);
+      }
+
       toast.success("Test message sent successfully!", { description: "Check your WhatsApp." });
       setTestMessage("");
     } catch (error: any) {
       console.error("Test message error:", error);
       let desc = error.message || "An unknown error occurred.";
-      
-      // Attempt to parse JSON if the message looks like JSON
-      if (typeof desc === 'string' && desc.trim().startsWith('{')) {
-          try {
-            const json = JSON.parse(desc);
-            if (json.error && json.error.message) {
-                desc = json.error.message;
-            } else if (json.message) {
-                desc = json.message;
-            }
-          } catch (e) { 
-            // If parsing fails, desc remains the original string
-          }
-      }
       
       toast.error("Failed to send test message", { description: desc });
     } finally {
@@ -167,7 +169,7 @@ const WhatsAppOfficialPage = () => {
         <Card>
           <CardHeader>
             <CardTitle>API Configuration</CardTitle>
-            <CardDescription>Enter your Meta app credentials.</CardDescription>
+            <CardDescription>Enter your Meta app credentials. Ensure your token has 'whatsapp_business_messaging' permission.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
@@ -202,7 +204,7 @@ const WhatsAppOfficialPage = () => {
                   onChange={(e) => setAccessToken(e.target.value)}
                   disabled={isLoading}
                 />
-                <p className="text-[10px] text-muted-foreground">Use a Permanent Access Token for production.</p>
+                <p className="text-[10px] text-muted-foreground">Use a System User Permanent Token for production reliability.</p>
             </div>
           </CardContent>
           <CardFooter className="flex justify-end gap-2">
@@ -220,7 +222,7 @@ const WhatsAppOfficialPage = () => {
           <Card>
             <CardHeader>
               <CardTitle>Send a Test Message</CardTitle>
-              <CardDescription>Verify your configuration.</CardDescription>
+              <CardDescription>Verify your configuration. The recipient number must be verified in your Meta App if you are in Sandbox mode.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">

@@ -64,7 +64,9 @@ Deno.serve(async (req) => {
 
     if (!response.ok) {
         console.error("Meta API Error Response:", JSON.stringify(data));
-        throw new Error(`Meta API Error: ${data.error?.message || 'Unknown error'}`);
+        // Extract the specific error message from Meta if available
+        const metaError = data.error?.message || 'Unknown Meta API error';
+        throw new Error(`Meta API Error: ${metaError}`);
     }
 
     return new Response(JSON.stringify({ message: 'Message sent successfully.', data }), {
@@ -74,7 +76,8 @@ Deno.serve(async (req) => {
 
   } catch (error) {
     console.error("Function Error:", error.message);
-    return new Response(JSON.stringify({ error: { message: error.message } }), {
+    // Return flat error structure
+    return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 400,
     })
