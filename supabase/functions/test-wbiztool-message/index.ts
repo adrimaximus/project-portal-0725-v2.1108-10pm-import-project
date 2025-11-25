@@ -37,6 +37,7 @@ Deno.serve(async (req) => {
       throw new Error("WBIZTOOL credentials missing or invalid. Please check settings.");
     }
 
+    // Call WBIZTOOL API
     const messageResponse = await fetch('https://wbiztool.com/api/v1/send_msg/', {
       method: 'POST',
       headers: {
@@ -58,15 +59,19 @@ Deno.serve(async (req) => {
       const errorText = await messageResponse.text();
       let errorMessage = `Failed to send message (Status: ${status}).`;
 
+      // Handle Cloudflare or Proxy errors
       if (errorText.includes("Cloudflare") || errorText.includes("524") || errorText.includes("502")) {
          if (status === 524) errorMessage = "WBIZTOOL API Timeout (Cloudflare 524). The service is taking too long to respond.";
          else if (status === 502) errorMessage = "WBIZTOOL API Bad Gateway (Cloudflare 502). The service is down.";
          else errorMessage = `WBIZTOOL API Error (Status: ${status}). Service might be experiencing issues.`;
       } else {
+          // Try to parse JSON error from WBIZTOOL
           try {
             const errorJson = JSON.parse(errorText);
-            errorMessage = errorJson.message || JSON.stringify(errorJson);
+            // Sometimes the message is nested or under different keys
+            errorMessage = errorJson.message || errorJson.error || errorJson.detail || JSON.stringify(errorJson);
           } catch (e) {
+            // If not JSON, clean up HTML tags if present (fallback)
             const cleanText = errorText.replace(/<[^>]*>?/gm, ' ').replace(/\s+/g, ' ').trim();
             errorMessage = cleanText.substring(0, 200) + (cleanText.length > 200 ? '...' : '');
           }
@@ -74,14 +79,15 @@ Deno.serve(async (req) => {
       throw new Error(`WBIZTOOL API Error: ${errorMessage}`);
     }
 
-    await messageResponse.json()
+    const result = await messageResponse.json();
 
-    return new Response(JSON.stringify({ message: 'Message queued successfully by WBIZTOOL.' }), {
+    return new Response(JSON.stringify({ message: 'Message queued successfully by WBIZTOOL.', data: result }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     })
 
   } catch (error) {
+    console.error("WBIZTOOL Test Error:", error.message);
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 400,
