@@ -59,23 +59,31 @@ const formatPhoneNumberForApi = (phone: string): string | null => {
     return null;
 };
 
-const getWbizConfig = async () => {
-  const { data: wbizConfig, error: configError } = await supabaseAdmin
+const getMessagingConfig = async () => {
+  const { data: config, error: configError } = await supabaseAdmin
     .from('app_config')
     .select('key, value')
-    .in('key', ['WBIZTOOL_CLIENT_ID', 'WBIZTOOL_API_KEY']);
+    .in('key', ['WBIZTOOL_CLIENT_ID', 'WBIZTOOL_API_KEY', 'META_PHONE_ID', 'META_ACCESS_TOKEN']);
 
-  if (configError) throw new Error(`Failed to get WBIZTOOL config: ${configError.message}`);
+  if (configError) throw new Error(`Failed to get config: ${configError.message}`);
 
-  const clientId = wbizConfig?.find(c => c.key === 'WBIZTOOL_CLIENT_ID')?.value;
-  const apiKey = wbizConfig?.find(c => c.key === 'WBIZTOOL_API_KEY')?.value;
-  const whatsappClientId = Deno.env.get('WBIZTOOL_WHATSAPP_CLIENT_ID');
+  const metaPhoneId = config?.find(c => c.key === 'META_PHONE_ID')?.value;
+  const metaAccessToken = config?.find(c => c.key === 'META_ACCESS_TOKEN')?.value;
+  
+  const wbizClientId = config?.find(c => c.key === 'WBIZTOOL_CLIENT_ID')?.value;
+  const wbizApiKey = config?.find(c => c.key === 'WBIZTOOL_API_KEY')?.value;
+  const wbizWhatsappClientId = Deno.env.get('WBIZTOOL_WHATSAPP_CLIENT_ID');
 
-  if (!clientId || !apiKey || !whatsappClientId) {
-    throw new Error("WBIZTOOL credentials not fully configured. Check app_config and environment variables.");
+  // Prefer Meta (Official) if available
+  if (metaPhoneId && metaAccessToken) {
+      return { type: 'meta', phoneId: metaPhoneId, accessToken: metaAccessToken };
+  }
+
+  if (wbizClientId && wbizApiKey && wbizWhatsappClientId) {
+    return { type: 'wbiztool', clientId: wbizClientId, apiKey: wbizApiKey, whatsappClientId: wbizWhatsappClientId };
   }
   
-  return { clientId, apiKey, whatsappClientId };
+  throw new Error("No WhatsApp credentials configured (Meta or WBIZTOOL).");
 };
 
 const sendWhatsappMessage = async (config: any, phone: string, message: string) => {
@@ -86,46 +94,60 @@ const sendWhatsappMessage = async (config: any, phone: string, message: string) 
   }
 
   try {
-    const messageResponse = await fetch('https://wbiztool.com/api/v1/send_msg/', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Client-ID': config.clientId,
-        'X-Api-Key': config.apiKey,
-      },
-      body: JSON.stringify({
-        client_id: parseInt(config.clientId, 10),
-        api_key: config.apiKey,
-        whatsapp_client: parseInt(config.whatsappClientId, 10),
-        phone: formattedPhone,
-        message: message,
-      }),
-    });
+    if (config.type === 'meta') {
+        const response = await fetch(`https://graph.facebook.com/v21.0/${config.phoneId}/messages`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${config.accessToken}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                messaging_product: "whatsapp",
+                to: formattedPhone,
+                type: "text",
+                text: { body: message }
+            }),
+        });
 
-    if (!messageResponse.ok) {
-      const status = messageResponse.status;
-      const errorText = await messageResponse.text();
-      let errorMessage = `Failed to send message (Status: ${status}).`;
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(`Meta API Error: ${JSON.stringify(errorData)}`);
+        }
+        return await response.json();
+    } else {
+        // Fallback to WBIZTOOL
+        const messageResponse = await fetch('https://wbiztool.com/api/v1/send_msg/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Client-ID': config.clientId,
+                'X-Api-Key': config.apiKey,
+            },
+            body: JSON.stringify({
+                client_id: parseInt(config.clientId, 10),
+                api_key: config.apiKey,
+                whatsapp_client: parseInt(config.whatsappClientId, 10),
+                phone: formattedPhone,
+                message: message,
+            }),
+        });
 
-      // Enhanced Error Handling for HTML/Cloudflare pages
-      if (errorText.includes("Cloudflare") || errorText.includes("524") || errorText.includes("502")) {
-         if (status === 524) errorMessage = "WBIZTOOL API Timeout (Cloudflare 524). The service is taking too long to respond.";
-         else if (status === 502) errorMessage = "WBIZTOOL API Bad Gateway (Cloudflare 502). The service is down.";
-         else errorMessage = `WBIZTOOL API Error (Status: ${status}). Service might be experiencing issues.`;
-      } else {
-          try {
-            const errorJson = JSON.parse(errorText);
-            errorMessage = errorJson.message || JSON.stringify(errorJson);
-          } catch (e) {
-            // Clean up HTML tags and truncate
-            const cleanText = errorText.replace(/<[^>]*>?/gm, ' ').replace(/\s+/g, ' ').trim();
-            errorMessage = cleanText.substring(0, 200) + (cleanText.length > 200 ? '...' : '');
-          }
-      }
-      throw new Error(errorMessage);
+        if (!messageResponse.ok) {
+             const status = messageResponse.status;
+             const errorText = await messageResponse.text();
+             let errorMessage = `WBIZTOOL Error (${status})`;
+             
+             if (errorText.includes("Cloudflare")) errorMessage = `WBIZTOOL API Timeout/Error (Cloudflare ${status})`;
+             else {
+                 try {
+                    const errorJson = JSON.parse(errorText);
+                    errorMessage = errorJson.message || JSON.stringify(errorJson);
+                 } catch { errorMessage = errorText.substring(0, 200); }
+             }
+             throw new Error(errorMessage);
+        }
+        return await messageResponse.json();
     }
-
-    return messageResponse.json();
   } catch (error) {
     console.error(`Error sending WhatsApp to ${formattedPhone}:`, error.message);
     throw error;
@@ -355,7 +377,9 @@ Deno.serve(async (req) => {
         recipient: profileMap.get(n.recipient_id)
     }));
 
-    const wbizConfig = await getWbizConfig().catch(e => { console.warn(e.message); return null; });
+    // Dynamically get configuration (Meta or WBIZ)
+    const messageConfig = await getMessagingConfig().catch(e => { console.warn(e.message); return null; });
+    
     const { data: emailitConfig } = await supabaseAdmin.from('app_config').select('value').eq('key', 'EMAILIT_API_KEY').single();
     const emailitApiKey = emailitConfig?.value;
 
@@ -376,11 +400,11 @@ Deno.serve(async (req) => {
             const { subject, html, text } = generateTemplatedEmail(notification.notification_type, notification.context_data, recipientName);
             await sendEmail(emailitApiKey, recipient.email, subject, html, text);
         } else { // WhatsApp
-            if (!wbizConfig || !recipient.phone) {
+            if (!messageConfig || !recipient.phone) {
                 return { status: 'skipped', reason: 'No phone or WhatsApp config' };
             }
             const message = generateTemplatedMessage(notification.notification_type, notification.context_data, recipientName);
-            await sendWhatsappMessage(wbizConfig, recipient.phone, message);
+            await sendWhatsappMessage(messageConfig, recipient.phone, message);
         }
 
         await supabaseAdmin.from('pending_notifications').update({ status: 'processed', processed_at: new Date().toISOString() }).eq('id', notification.id);

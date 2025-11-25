@@ -1,12 +1,16 @@
 // @ts-nocheck
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.54.0';
 import Anthropic from 'https://esm.sh/@anthropic-ai/sdk@0.22.0';
-import OpenAI from 'https://esm.sh/openai@4.29.2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
+};
+
+const formatMentions = (text: string | null | undefined): string => {
+  if (!text) return '';
+  return text.replace(/@\[([^\]]+)\]\(([^)]+)\)/g, '@$1');
 };
 
 const getSystemPrompt = () => `Anda adalah asisten keuangan yang profesional, sopan, dan proaktif. Tugas Anda adalah membuat pesan pengingat WhatsApp tentang invoice yang telah jatuh tempo.
@@ -24,6 +28,15 @@ const getSystemPrompt = () => `Anda adalah asisten keuangan yang profesional, so
 7.  **Variasi:** Jangan gunakan kalimat yang sama persis setiap saat.`;
 
 const getFullName = (profile: any) => `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email;
+
+const formatPhoneNumberForApi = (phone: string): string | null => {
+    if (!phone) return null;
+    let cleaned = phone.trim().replace(/\D/g, '');
+    if (cleaned.startsWith('0')) return '62' + cleaned.substring(1);
+    if (cleaned.startsWith('62')) return cleaned;
+    if (cleaned.length > 8 && cleaned.startsWith('8')) return '62' + cleaned;
+    return null;
+};
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -45,111 +58,97 @@ Deno.serve(async (req) => {
       { global: { headers: { 'Accept': 'application/json' } } }
     );
 
-    console.log("[send-overdue-reminders] Job started. Fetching projects.");
+    console.log("[send-overdue-reminders] Job started.");
 
-    const { data: projects, error: projectsError } = await supabaseAdmin
+    const { data: overdueProjects, error: projectsError } = await supabaseAdmin
       .from('projects')
-      .select('id, name, slug, invoice_number, payment_due_date, payment_status, created_by')
-      .in('payment_status', ['Proposed', 'Overdue', 'Pending', 'In Process'])
-      .not('payment_due_date', 'is', null);
+      .select('id, name, slug, invoice_number, payment_due_date, created_by')
+      .eq('payment_status', 'Overdue');
 
     if (projectsError) throw projectsError;
 
-    if (!projects || projects.length === 0) {
-      console.log("[send-overdue-reminders] No relevant invoices found.");
-      return new Response(JSON.stringify({ message: "No relevant invoices to process." }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    if (!overdueProjects || overdueProjects.length === 0) {
+      return new Response(JSON.stringify({ message: "No overdue invoices." }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
     
-    console.log(`[send-overdue-reminders] Found ${projects.length} relevant invoices.`);
-
-    const projectIds = projects.map(p => p.id);
-    const { data: projectAdmins, error: adminsError } = await supabaseAdmin
-      .from('project_members')
-      .select('project_id, user_id')
-      .in('project_id', projectIds)
-      .eq('role', 'admin');
-    if (adminsError) throw adminsError;
-
+    // Fetch users and configs
+    const projectIds = overdueProjects.map(p => p.id);
+    const { data: projectAdmins } = await supabaseAdmin.from('project_members').select('project_id, user_id').in('project_id', projectIds).eq('role', 'admin');
     const userIdsToFetch = new Set<string>();
-    projects.forEach(p => userIdsToFetch.add(p.created_by));
-    projectAdmins.forEach(m => userIdsToFetch.add(m.user_id));
+    overdueProjects.forEach(p => userIdsToFetch.add(p.created_by));
+    projectAdmins?.forEach(m => userIdsToFetch.add(m.user_id));
 
-    const { data: profiles, error: profilesError } = await supabaseAdmin
-      .from('profiles')
-      .select('id, first_name, last_name, email, phone, notification_preferences')
-      .in('id', Array.from(userIdsToFetch));
-    if (profilesError) throw profilesError;
-    const profileMap = new Map(profiles.map(p => [p.id, p]));
+    const { data: profiles } = await supabaseAdmin.from('profiles').select('id, first_name, last_name, email, phone').in('id', Array.from(userIdsToFetch));
+    const profileMap = new Map(profiles?.map(p => [p.id, p]));
 
-    let successCount = 0, failureCount = 0, skippedCount = 0;
+    // Fetch Messaging Config
+    const { data: config } = await supabaseAdmin.from('app_config').select('key, value').in('key', ['WBIZTOOL_CLIENT_ID', 'WBIZTOOL_API_KEY', 'WBIZTOOL_WHATSAPP_CLIENT_ID', 'META_PHONE_ID', 'META_ACCESS_TOKEN']);
+    
+    const metaPhoneId = config?.find(c => c.key === 'META_PHONE_ID')?.value;
+    const metaAccessToken = config?.find(c => c.key === 'META_ACCESS_TOKEN')?.value;
+    const wbizClientId = config?.find(c => c.key === 'WBIZTOOL_CLIENT_ID')?.value;
+    const wbizApiKey = config?.find(c => c.key === 'WBIZTOOL_API_KEY')?.value;
+    const wbizWhatsappClientId = config?.find(c => c.key === 'WBIZTOOL_WHATSAPP_CLIENT_ID')?.value;
 
-    for (const project of projects) {
-      const recipients = new Set<string>([project.created_by, ...projectAdmins.filter(m => m.project_id === project.id).map(m => m.user_id)]);
+    const useMeta = metaPhoneId && metaAccessToken;
+    if (!useMeta && (!wbizClientId || !wbizApiKey || !wbizWhatsappClientId)) {
+        throw new Error("No valid WhatsApp configuration found.");
+    }
+
+    let successCount = 0;
+
+    for (const project of overdueProjects) {
+      const recipients = new Set<string>([project.created_by]);
+      projectAdmins?.filter(m => m.project_id === project.id).forEach(m => recipients.add(m.user_id));
+
       const dueDate = new Date(project.payment_due_date);
       const today = new Date();
-      const overdueDays = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 3600 * 24));
-
-      let reminderType: string | null = null;
-      if (overdueDays === 0) reminderType = 'due_date';
-      else if (overdueDays === 3) reminderType = 'overdue_3_days';
-      else if (overdueDays > 3 && (overdueDays - 3) % 7 === 0) reminderType = 'overdue_weekly';
-
-      if (!reminderType) continue;
-
-      const { data: existingLog } = await supabaseAdmin
-        .from('billing_reminders_log')
-        .select('id')
-        .eq('project_id', project.id)
-        .eq('days_overdue_at_sending', overdueDays)
-        .limit(1).maybeSingle();
-
-      if (existingLog) continue;
+      const overdueDays = Math.max(0, Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 3600 * 24)));
+      let urgency = overdueDays > 30 ? 'sangat mendesak' : overdueDays > 7 ? 'cukup mendesak' : 'sedikit mendesak';
 
       for (const userId of recipients) {
         const profile = profileMap.get(userId);
-        if (!profile) continue;
+        if (!profile || !profile.phone) continue;
+        
+        const formattedPhone = formatPhoneNumberForApi(profile.phone);
+        if (!formattedPhone) continue;
 
-        const prefs = profile.notification_preferences || {};
-        const billingPrefs = prefs['billing_reminder'];
-        const isEnabled = (typeof billingPrefs === 'object' && billingPrefs !== null) ? billingPrefs.enabled !== false && billingPrefs.whatsapp !== false : billingPrefs !== false;
-        const statusesToNotify = (typeof billingPrefs === 'object' && billingPrefs?.statuses) ? billingPrefs.statuses : ['Overdue'];
+        const recipientName = getFullName(profile);
+        const userPrompt = `**Konteks:**\n- **Penerima:** ${recipientName}\n- **Proyek:** ${formatMentions(project.name)}\n- **Invoice:** ${project.invoice_number || 'N/A'}\n- **Terlambat:** ${overdueDays} hari\n- **Urgensi:** ${urgency}\n- **URL:** ${Deno.env.get("SITE_URL") ?? "https://7inked.ahensi.xyz"}/billing\n\nBuat pesan pengingat.`;
 
-        if (isEnabled && statusesToNotify.includes(project.payment_status)) {
-          const { error: insertError } = await supabaseAdmin
-            .from('pending_notifications')
-            .insert({
-                recipient_id: userId,
-                send_at: new Date(),
-                notification_type: 'billing_reminder',
-                context_data: {
-                    project_id: project.id,
-                    project_name: project.name,
-                    days_overdue: overdueDays,
-                }
+        try {
+          const anthropic = new Anthropic({ apiKey: Deno.env.get('ANTHROPIC_API_KEY') });
+          const aiResponse = await anthropic.messages.create({ model: "claude-3-haiku-20240307", max_tokens: 200, system: getSystemPrompt(), messages: [{ role: "user", content: userPrompt }] });
+          const aiMessage = aiResponse.content[0].text;
+
+          if (useMeta) {
+            await fetch(`https://graph.facebook.com/v21.0/${metaPhoneId}/messages`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${metaAccessToken}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    messaging_product: "whatsapp",
+                    to: formattedPhone,
+                    type: "text",
+                    text: { body: aiMessage }
+                }),
             });
-          if (insertError) {
-            console.error(`Failed to insert notification for project ${project.id} to user ${userId}:`, insertError.message);
-            failureCount++;
           } else {
-            successCount++;
+            await fetch('https://wbiztool.com/api/v1/send_msg/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-Client-ID': wbizClientId, 'X-Api-Key': wbizApiKey },
+                body: JSON.stringify({ client_id: wbizClientId, api_key: wbizApiKey, whatsapp_client: wbizWhatsappClientId, phone: formattedPhone, message: aiMessage }),
+            });
           }
-        } else {
-          skippedCount++;
+          successCount++;
+        } catch (e) {
+          console.error(`Failed to send reminder to ${profile.email}:`, e.message);
         }
-      }
-
-      if (successCount > 0) {
-        const { error: logInsertError } = await supabaseAdmin
-          .from('billing_reminders_log')
-          .insert({ project_id: project.id, reminder_type: reminderType, days_overdue_at_sending: overdueDays });
-        if (logInsertError) console.error(`Failed to log reminder for project ${project.id}:`, logInsertError.message);
       }
     }
 
-    return new Response(JSON.stringify({ success: true, processed_invoices: projects.length, sent_notifications: successCount, skipped_notifications: skippedCount, failed_notifications: failureCount }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ success: true, count: successCount }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
   } catch (error) {
-    console.error('[send-overdue-reminders] Top-level function error:', error.message);
     return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
 });
