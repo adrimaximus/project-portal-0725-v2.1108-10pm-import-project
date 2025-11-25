@@ -3,7 +3,7 @@ import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbP
 import { Link } from "react-router-dom";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { GitBranch, Mail } from "lucide-react";
+import { GitBranch, Mail, MessageSquare } from "lucide-react";
 import React from "react";
 
 const IntegrationItem = ({ name, description, icon, path, noBg = false, disabled = false }: { name: string, description: string, icon: React.ReactNode, path: string, noBg?: boolean, disabled?: boolean }) => (
@@ -91,6 +91,12 @@ const IntegrationsPage = () => {
                 description="Connect your WBIZTOOL account for business automation." 
                 path="/settings/integrations/wbiztool"
                 icon={<GitBranch className="h-5 w-5" />}
+            />
+            <IntegrationItem 
+                name="WhatsApp Official" 
+                description="Connect directly to Meta WhatsApp Cloud API." 
+                path="/settings/integrations/whatsapp-official"
+                icon={<MessageSquare className="h-5 w-5" />}
             />
             <IntegrationItem 
                 name="Emailit" 
