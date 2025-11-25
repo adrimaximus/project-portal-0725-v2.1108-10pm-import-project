@@ -101,8 +101,10 @@ Deno.serve(async (req) => {
     const wbizApiKey = config?.find(c => c.key === 'WBIZTOOL_API_KEY')?.value;
     const wbizWhatsappClientId = config?.find(c => c.key === 'WBIZTOOL_WHATSAPP_CLIENT_ID')?.value;
 
-    const useMeta = metaPhoneId && metaAccessToken;
-    if (!useMeta && (!wbizClientId || !wbizApiKey || !wbizWhatsappClientId)) {
+    const useMeta = !!(metaPhoneId && metaAccessToken);
+    const useWbiz = !!(wbizClientId && wbizApiKey && wbizWhatsappClientId);
+
+    if (!useMeta && !useWbiz) {
         throw new Error("No valid WhatsApp configuration found (Meta or WBIZTOOL).");
     }
 
@@ -156,40 +158,72 @@ Buat pesan pengingat yang sopan dan profesional sesuai dengan tingkat urgensi ya
              aiMessage = `Halo ${recipientName}, invoice untuk proyek *${project.name}* telah jatuh tempo selama ${overdueDays} hari. Mohon segera lakukan pembayaran. Terima kasih.`;
           }
 
+          let sent = false;
+          let lastError = '';
+
+          // 1. Try Meta
           if (useMeta) {
-            const response = await fetch(`https://graph.facebook.com/v21.0/${metaPhoneId}/messages`, {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${metaAccessToken}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    messaging_product: "whatsapp",
-                    to: formattedPhone,
-                    type: "text",
-                    text: { body: aiMessage }
-                }),
-            });
-            if (!response.ok) {
-                const data = await response.json().catch(() => ({}));
-                const errorObj = data.error || {};
-                const message = errorObj.message || 'Unknown Meta API error';
-                const code = errorObj.code || '';
-                
-                throw new Error(`Meta API Error ${code}: ${message}`);
-            }
-          } else {
-            const response = await fetch('https://wbiztool.com/api/v1/send_msg/', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-Client-ID': wbizClientId, 'X-Api-Key': wbizApiKey },
-                body: JSON.stringify({ 
-                  client_id: wbizClientId,
-                  api_key: wbizApiKey,
-                  whatsapp_client: wbizWhatsappClientId,
-                  phone: formattedPhone, 
-                  message: aiMessage,
-                }),
-            });
-            if (!response.ok) throw new Error(`WBIZTOOL API Error: ${response.statusText}`);
+              try {
+                const response = await fetch(`https://graph.facebook.com/v21.0/${metaPhoneId}/messages`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${metaAccessToken}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        messaging_product: "whatsapp",
+                        to: formattedPhone,
+                        type: "text",
+                        text: { body: aiMessage }
+                    }),
+                });
+
+                if (response.ok) {
+                    sent = true;
+                } else {
+                    const data = await response.json().catch(() => ({}));
+                    const errorObj = data.error || {};
+                    lastError = `Meta Error: ${errorObj.message}`;
+                    console.warn(`Meta send failed for ${formattedPhone}:`, lastError);
+                }
+              } catch (e) {
+                lastError = `Meta Exception: ${e.message}`;
+                console.warn(`Meta exception for ${formattedPhone}:`, e);
+              }
           }
-          successCount++;
+
+          // 2. Fallback to WBIZTOOL
+          if (!sent && useWbiz) {
+              try {
+                  console.log(`Falling back to WBIZTOOL for ${formattedPhone}...`);
+                  const response = await fetch('https://wbiztool.com/api/v1/send_msg/', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json', 'X-Client-ID': wbizClientId, 'X-Api-Key': wbizApiKey },
+                      body: JSON.stringify({ 
+                        client_id: wbizClientId,
+                        api_key: wbizApiKey,
+                        whatsapp_client: wbizWhatsappClientId,
+                        phone: formattedPhone, 
+                        message: aiMessage,
+                      }),
+                  });
+                  if (response.ok) {
+                      sent = true;
+                  } else {
+                      const errorText = await response.text();
+                      lastError += ` | WBIZTOOL Error: ${response.statusText}`;
+                      console.warn(`WBIZTOOL send failed for ${formattedPhone}:`, errorText);
+                  }
+              } catch (e) {
+                  lastError += ` | WBIZTOOL Exception: ${e.message}`;
+                  console.warn(`WBIZTOOL exception for ${formattedPhone}:`, e);
+              }
+          }
+
+          if (sent) {
+              successCount++;
+              console.log(`[send-overdue-reminders] Sent reminder for project ${project.id} to ${profile.email}.`);
+          } else {
+              throw new Error(lastError || "All providers failed");
+          }
+
         } catch (error) {
           failureCount++;
           console.error(`[send-overdue-reminders] Failed to send reminder for project ${project.id} to ${profile.email}:`, error.message);

@@ -59,13 +59,17 @@ Deno.serve(async (req) => {
     const results = { success: 0, failed: 0, errors: [] };
 
     const useMeta = !!(metaPhoneId && metaAccessToken);
+    const useWbiz = !!(wbizClientId && wbizApiKey && wbizWhatsappClientId);
 
-    if (!useMeta && (!wbizClientId || !wbizApiKey || !wbizWhatsappClientId)) {
+    if (!useMeta && !useWbiz) {
         throw new Error("No valid WhatsApp credentials configured (Meta or WBIZTOOL).");
     }
 
     // Process messages
     for (const msg of uniqueMessages) {
+        let sent = false;
+        let lastError = '';
+        
         try {
             let formattedPhone = msg.phone;
             // Ensure clean number for API
@@ -73,108 +77,131 @@ Deno.serve(async (req) => {
             if (formattedPhone.startsWith('0')) formattedPhone = '62' + formattedPhone.substring(1);
             if (formattedPhone.startsWith('8')) formattedPhone = '62' + formattedPhone;
 
+            // 1. Try Meta (Official API) First
             if (useMeta) {
-                // --- META OFFICIAL API ---
-                let payload;
-                
-                if (msg.type === 'text' || (!msg.type)) {
-                    payload = {
-                        messaging_product: "whatsapp",
-                        to: formattedPhone,
-                        type: "text",
-                        text: { body: msg.message || msg.caption }
-                    };
-                } else if (msg.type === 'image') {
-                     payload = {
-                        messaging_product: "whatsapp",
-                        to: formattedPhone,
-                        type: "image",
-                        image: { 
-                            link: msg.url,
-                            caption: msg.caption || msg.message
-                        }
-                    };
-                } else if (msg.type === 'document') {
-                     payload = {
-                        messaging_product: "whatsapp",
-                        to: formattedPhone,
-                        type: "document",
-                        document: { 
-                            link: msg.url,
-                            caption: msg.caption || msg.message
-                        }
-                    };
-                }
-
-                const response = await fetch(`https://graph.facebook.com/v21.0/${metaPhoneId}/messages`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${metaAccessToken}`,
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(payload),
-                });
-
-                if (!response.ok) {
-                    const data = await response.json().catch(() => ({}));
-                    const errorObj = data.error || {};
-                    const message = errorObj.message || 'Unknown Meta API error';
-                    const code = errorObj.code || '';
+                try {
+                    let payload;
                     
-                    throw new Error(`Meta API Error ${code}: ${message}`);
-                }
-
-            } else {
-                // --- WBIZTOOL API ---
-                let msgType = 0;
-                if (msg.type === 'image') msgType = 1;
-                if (msg.type === 'document') msgType = 2;
-
-                if ((msgType === 1 || msgType === 2) && (!msg.url || typeof msg.url !== 'string' || msg.url.trim() === '')) {
-                    msgType = 0; // Fallback to text
-                }
-
-                const payload = {
-                    client_id: parseInt(wbizClientId, 10),
-                    api_key: wbizApiKey,
-                    whatsapp_client: parseInt(wbizWhatsappClientId, 10),
-                    phone: formattedPhone,
-                    msg_type: msgType,
-                    message: msgType === 0 ? (msg.message || msg.caption || '') : (msg.caption || msg.message || ''),
-                };
-
-                if (msgType === 1) payload.img_url = msg.url;
-                else if (msgType === 2) payload.file_url = msg.url;
-
-                // Scheduling params
-                if (msg.schedule_time) {
-                    payload.schedule = msg.schedule_time.replace('T', ' '); 
-                    if (msg.schedule_time.length === 16) payload.schedule += ':00';
-                }
-                if (msg.timezone) payload.timezone = msg.timezone;
-
-                const response = await fetch("https://wbiztool.com/api/v1/send_msg/", {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-Client-ID': wbizClientId, 'X-Api-Key': wbizApiKey },
-                    body: JSON.stringify(payload),
-                });
-
-                if (!response.ok) {
-                    const status = response.status;
-                    const errorText = await response.text();
-                    let errorMsg = `WBIZTOOL Error ${status}`;
-                    
-                    try {
-                        const jsonErr = JSON.parse(errorText);
-                        errorMsg += `: ${jsonErr.message || jsonErr.error || JSON.stringify(jsonErr)}`;
-                    } catch(e) {
-                        errorMsg += `: ${errorText.substring(0, 100)}`;
+                    if (msg.type === 'text' || (!msg.type)) {
+                        payload = {
+                            messaging_product: "whatsapp",
+                            to: formattedPhone,
+                            type: "text",
+                            text: { body: msg.message || msg.caption }
+                        };
+                    } else if (msg.type === 'image') {
+                        payload = {
+                            messaging_product: "whatsapp",
+                            to: formattedPhone,
+                            type: "image",
+                            image: { 
+                                link: msg.url,
+                                caption: msg.caption || msg.message
+                            }
+                        };
+                    } else if (msg.type === 'document') {
+                        payload = {
+                            messaging_product: "whatsapp",
+                            to: formattedPhone,
+                            type: "document",
+                            document: { 
+                                link: msg.url,
+                                caption: msg.caption || msg.message
+                            }
+                        };
                     }
-                    throw new Error(errorMsg);
+
+                    const response = await fetch(`https://graph.facebook.com/v21.0/${metaPhoneId}/messages`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${metaAccessToken}`,
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(payload),
+                    });
+
+                    if (response.ok) {
+                        sent = true;
+                    } else {
+                        const data = await response.json().catch(() => ({}));
+                        const errorObj = data.error || {};
+                        const message = errorObj.message || 'Unknown Meta API error';
+                        const code = errorObj.code || '';
+                        
+                        lastError = `Meta Error ${code}: ${message}`;
+                        console.warn(`Meta send failed: ${lastError}`);
+                    }
+                } catch (e) {
+                    lastError = `Meta Exception: ${e.message}`;
+                    console.warn(`Meta exception:`, e);
                 }
             }
 
-            results.success++;
+            // 2. Fallback to WBIZTOOL
+            if (!sent && useWbiz) {
+                try {
+                    let msgType = 0;
+                    if (msg.type === 'image') msgType = 1;
+                    if (msg.type === 'document') msgType = 2;
+
+                    if ((msgType === 1 || msgType === 2) && (!msg.url || typeof msg.url !== 'string' || msg.url.trim() === '')) {
+                        msgType = 0; // Fallback to text
+                    }
+
+                    const payload = {
+                        client_id: parseInt(wbizClientId, 10),
+                        api_key: wbizApiKey,
+                        whatsapp_client: parseInt(wbizWhatsappClientId, 10),
+                        phone: formattedPhone,
+                        msg_type: msgType,
+                        message: msgType === 0 ? (msg.message || msg.caption || '') : (msg.caption || msg.message || ''),
+                    };
+
+                    if (msgType === 1) payload.img_url = msg.url;
+                    else if (msgType === 2) payload.file_url = msg.url;
+
+                    // Scheduling params
+                    if (msg.schedule_time) {
+                        payload.schedule = msg.schedule_time.replace('T', ' '); 
+                        if (msg.schedule_time.length === 16) payload.schedule += ':00';
+                    }
+                    if (msg.timezone) payload.timezone = msg.timezone;
+
+                    const response = await fetch("https://wbiztool.com/api/v1/send_msg/", {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-Client-ID': wbizClientId, 'X-Api-Key': wbizApiKey },
+                        body: JSON.stringify(payload),
+                    });
+
+                    if (response.ok) {
+                        sent = true;
+                    } else {
+                        const status = response.status;
+                        const errorText = await response.text();
+                        let errorMsg = `WBIZTOOL Error ${status}`;
+                        
+                        try {
+                            const jsonErr = JSON.parse(errorText);
+                            errorMsg += `: ${jsonErr.message || jsonErr.error || JSON.stringify(jsonErr)}`;
+                        } catch(e) {
+                            errorMsg += `: ${errorText.substring(0, 100)}`;
+                        }
+                        lastError += ` | ${errorMsg}`;
+                        console.warn(`WBIZTOOL send failed: ${errorMsg}`);
+                    }
+                } catch (e) {
+                    lastError += ` | WBIZTOOL Exception: ${e.message}`;
+                    console.warn(`WBIZTOOL exception:`, e);
+                }
+            }
+
+            if (sent) {
+                results.success++;
+            } else {
+                results.failed++;
+                results.errors.push({ phone: msg.phone, error: lastError || "All providers failed" });
+            }
+
         } catch (error) {
             console.error(`Failed to send to ${msg.phone}:`, error);
             results.failed++;
