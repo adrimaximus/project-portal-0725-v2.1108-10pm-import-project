@@ -38,6 +38,8 @@ Deno.serve(async (req) => {
     }
 
     // Call WBIZTOOL API
+    console.log(`Sending test message to ${phone} via WBIZTOOL (Device ${whatsappClientId})`);
+
     const messageResponse = await fetch('https://wbiztool.com/api/v1/send_msg/', {
       method: 'POST',
       headers: {
