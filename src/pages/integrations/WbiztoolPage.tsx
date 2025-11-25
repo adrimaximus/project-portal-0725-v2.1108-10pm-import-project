@@ -9,8 +9,9 @@ import { toast } from "sonner";
 import React, { useState, useEffect, useCallback } from "react";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2 } from "lucide-react";
+import { Loader2, RefreshCw } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const getErrorMessage = async (error: any): Promise<string> => {
   let description = "An unknown error occurred. Please check the console.";
@@ -80,6 +81,40 @@ const WbiztoolPage = () => {
   const [testPhone, setTestPhone] = useState("");
   const [testMessage, setTestMessage] = useState("");
   const [isSendingTest, setIsSendingTest] = useState(false);
+  
+  // New state for devices
+  const [devices, setDevices] = useState<any[]>([]);
+  const [isLoadingDevices, setIsLoadingDevices] = useState(false);
+
+  const fetchDevices = useCallback(async (cId: string, k: string) => {
+    setIsLoadingDevices(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('manage-wbiztool-credentials', {
+        body: { 
+          action: 'fetch_devices',
+          clientId: cId,
+          apiKey: k 
+        }
+      });
+      
+      if (error) throw error;
+      
+      if (Array.isArray(data.devices)) {
+        setDevices(data.devices);
+        toast.success("Devices loaded", { description: `Found ${data.devices.length} WhatsApp device(s).` });
+      } else {
+        // Fallback if API structure is different or empty
+        setDevices([]);
+        toast.info("No devices found", { description: "Check your WBIZTOOL dashboard to ensure you have active WhatsApp clients." });
+      }
+    } catch (error: any) {
+      console.error("Failed to fetch devices:", error);
+      const description = await getErrorMessage(error);
+      toast.error("Failed to load devices", { description });
+    } finally {
+      setIsLoadingDevices(false);
+    }
+  }, []);
 
   const checkConnectionStatus = useCallback(async () => {
     setIsLoading(true);
@@ -87,13 +122,22 @@ const WbiztoolPage = () => {
       const { data, error } = await supabase.functions.invoke('manage-wbiztool-credentials', { method: 'GET' });
       if (error) throw error;
       setIsConnected(data.connected);
+      
+      if (data.connected) {
+        // Set the saved ID so it shows in the dropdown
+        if (data.whatsappClientId) {
+            setWhatsappClientId(data.whatsappClientId);
+        }
+        // Automatically fetch devices if connected to populate the list
+        fetchDevices("", ""); // Backend will use stored credentials
+      }
     } catch (error: any) {
       console.error("Failed to check WBIZTOOL connection status:", error.message);
       setIsConnected(false);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [fetchDevices]);
 
   useEffect(() => {
     checkConnectionStatus();
@@ -112,9 +156,7 @@ const WbiztoolPage = () => {
       if (error) throw error;
       toast.success("Successfully connected to WBIZTOOL!");
       setIsConnected(true);
-      setClientId("");
-      setApiKey("");
-      setWhatsappClientId("");
+      // We keep the values in state so the UI doesn't flicker empty
     } catch (error: any) {
       const description = await getErrorMessage(error);
       toast.error("Failed to connect", { description });
@@ -132,6 +174,10 @@ const WbiztoolPage = () => {
       if (error) throw error;
       toast.info("Disconnected from WBIZTOOL.");
       setIsConnected(false);
+      setClientId("");
+      setApiKey("");
+      setWhatsappClientId("");
+      setDevices([]);
     } catch (error: any) {
       const description = await getErrorMessage(error);
       toast.error("Failed to disconnect", { description });
@@ -229,26 +275,77 @@ const WbiztoolPage = () => {
                 />
             </div>
             <div className="space-y-2">
-                <Label htmlFor="whatsapp-client-id">WhatsApp Client ID (Device)</Label>
-                <div className="text-[10px] text-muted-foreground mb-1">
-                  The 4-digit ID for your WhatsApp number from the WBIZTOOL dashboard (e.g., 4162).
+                <div className="flex items-center justify-between">
+                    <Label htmlFor="whatsapp-client-id">WhatsApp Number (Device)</Label>
+                    {(!isConnected && clientId && apiKey) && (
+                        <Button 
+                            variant="link" 
+                            className="h-auto p-0 text-xs" 
+                            onClick={() => fetchDevices(clientId, apiKey)}
+                            disabled={isLoadingDevices}
+                        >
+                            {isLoadingDevices ? <Loader2 className="h-3 w-3 animate-spin mr-1"/> : <RefreshCw className="h-3 w-3 mr-1"/>}
+                            Load WhatsApp Numbers
+                        </Button>
+                    )}
                 </div>
-                <Input 
-                  id="whatsapp-client-id" 
-                  type="text" 
-                  placeholder={isConnected ? "••••" : "Enter WhatsApp Device ID"}
-                  value={whatsappClientId}
-                  onChange={(e) => setWhatsappClientId(e.target.value)}
-                  disabled={isConnected || isLoading}
-                />
+                <div className="text-[10px] text-muted-foreground mb-1">
+                  Select the WhatsApp number you want to use for sending messages.
+                </div>
+                
+                {devices.length > 0 || isConnected ? (
+                    <Select 
+                        value={whatsappClientId} 
+                        onValueChange={setWhatsappClientId}
+                        disabled={isLoading}
+                    >
+                        <SelectTrigger>
+                            <SelectValue placeholder="Select a WhatsApp Number" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {devices.map((device: any) => (
+                                <SelectItem key={device.id} value={String(device.id)}>
+                                    {device.phone || device.name || `Device ${device.id}`} 
+                                    {device.status ? ` (${device.status})` : ''}
+                                </SelectItem>
+                            ))}
+                            {/* Handle case where stored ID isn't in fetched list yet */}
+                            {isConnected && whatsappClientId && !devices.find(d => String(d.id) === String(whatsappClientId)) && (
+                                <SelectItem value={whatsappClientId}>
+                                    Saved Device ({whatsappClientId})
+                                </SelectItem>
+                            )}
+                        </SelectContent>
+                    </Select>
+                ) : (
+                    <div className="relative">
+                        <Input 
+                          id="whatsapp-client-id" 
+                          type="text" 
+                          placeholder="Enter Device ID (e.g., 4162) or click Load"
+                          value={whatsappClientId}
+                          onChange={(e) => setWhatsappClientId(e.target.value)}
+                          disabled={isConnected || isLoading}
+                        />
+                    </div>
+                )}
             </div>
           </CardContent>
           <CardFooter className="flex justify-end">
             {isConnected ? (
-              <Button variant="destructive" onClick={handleDisconnect} disabled={isLoading}>
-                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Disconnect
-              </Button>
+              <div className="flex gap-2">
+                  <Button variant="outline" onClick={() => {
+                      setIsConnected(false);
+                      setClientId(""); // Clear to force re-entry if they want to change accounts
+                      setApiKey("");
+                  }}>
+                      Edit Settings
+                  </Button>
+                  <Button variant="destructive" onClick={handleDisconnect} disabled={isLoading}>
+                    {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Disconnect
+                  </Button>
+              </div>
             ) : (
               <Button onClick={handleConnect} disabled={!clientId || !apiKey || !whatsappClientId || isLoading}>
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

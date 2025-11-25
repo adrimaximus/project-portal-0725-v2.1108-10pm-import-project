@@ -27,9 +27,53 @@ Deno.serve(async (req) => {
         Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
+    // Handle POST requests
     if (req.method === 'POST') {
-      const { clientId, apiKey, whatsappClientId } = await req.json()
-      
+      const { action, clientId, apiKey, whatsappClientId } = await req.json()
+
+      // Action: Fetch Devices (WhatsApp Clients)
+      if (action === 'fetch_devices') {
+        let targetClientId = clientId;
+        let targetApiKey = apiKey;
+
+        // If credentials not provided in body, try to fetch from DB
+        if (!targetClientId || !targetApiKey) {
+            const { data: creds } = await supabaseAdmin
+                .from('app_config')
+                .select('key, value')
+                .in('key', ['WBIZTOOL_CLIENT_ID', 'WBIZTOOL_API_KEY']);
+            
+            targetClientId = creds?.find(c => c.key === 'WBIZTOOL_CLIENT_ID')?.value;
+            targetApiKey = creds?.find(c => c.key === 'WBIZTOOL_API_KEY')?.value;
+        }
+
+        if (!targetClientId || !targetApiKey) {
+            throw new Error('Credentials missing. Please enter Client ID and API Key first.');
+        }
+
+        // Call WBIZTOOL API to list clients
+        const response = await fetch('https://wbiztool.com/api/v1/whatsapp_clients/', {
+            method: 'GET',
+            headers: {
+                'X-Client-ID': targetClientId,
+                'X-Api-Key': targetApiKey,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`WBIZTOOL API Error: ${response.statusText} - ${errorText}`);
+        }
+
+        const devices = await response.json();
+        return new Response(JSON.stringify({ devices }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 200,
+        });
+      }
+
+      // Default Action: Save Credentials
       if (!clientId || !apiKey || !whatsappClientId) {
         throw new Error('Client ID, API Key, and WhatsApp Client ID are required.')
       }
@@ -50,6 +94,7 @@ Deno.serve(async (req) => {
       })
     }
 
+    // Handle DELETE request
     if (req.method === 'DELETE') {
       const { error } = await supabaseAdmin
         .from('app_config')
@@ -64,19 +109,23 @@ Deno.serve(async (req) => {
       })
     }
 
+    // Handle GET request (Check status)
     if (req.method === 'GET') {
       const { data: creds, error } = await supabaseAdmin
         .from('app_config')
-        .select('key')
+        .select('key, value')
         .in('key', ['WBIZTOOL_CLIENT_ID', 'WBIZTOOL_API_KEY', 'WBIZTOOL_WHATSAPP_CLIENT_ID']);
 
       if (error) throw error;
 
       const hasClientId = creds?.some(c => c.key === 'WBIZTOOL_CLIENT_ID');
       const hasApiKey = creds?.some(c => c.key === 'WBIZTOOL_API_KEY');
-      const hasWhatsappId = creds?.some(c => c.key === 'WBIZTOOL_WHATSAPP_CLIENT_ID');
+      const whatsappClientIdObj = creds?.find(c => c.key === 'WBIZTOOL_WHATSAPP_CLIENT_ID');
 
-      return new Response(JSON.stringify({ connected: hasClientId && hasApiKey && hasWhatsappId }), {
+      return new Response(JSON.stringify({ 
+          connected: hasClientId && hasApiKey && !!whatsappClientIdObj,
+          whatsappClientId: whatsappClientIdObj?.value || ''
+      }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,
       });
