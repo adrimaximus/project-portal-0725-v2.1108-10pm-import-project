@@ -29,6 +29,15 @@ const getSystemPrompt = () => `Anda adalah asisten keuangan yang profesional, so
 
 const getFullName = (profile: any) => `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email;
 
+const formatPhoneNumberForApi = (phone: string): string | null => {
+    if (!phone) return null;
+    let cleaned = phone.trim().replace(/\D/g, '');
+    if (cleaned.startsWith('0')) return '62' + cleaned.substring(1);
+    if (cleaned.startsWith('62')) return cleaned;
+    if (cleaned.length > 8 && cleaned.startsWith('8')) return '62' + cleaned;
+    return null;
+};
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -59,12 +68,9 @@ Deno.serve(async (req) => {
     if (projectsError) throw projectsError;
 
     if (!overdueProjects || overdueProjects.length === 0) {
-      console.log("[send-overdue-reminders] No overdue invoices found.");
       return new Response(JSON.stringify({ message: "No overdue invoices to process." }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
     
-    console.log(`[send-overdue-reminders] Found ${overdueProjects.length} overdue invoices.`);
-
     const projectIds = overdueProjects.map(p => p.id);
 
     const { data: projectAdmins, error: adminsError } = await supabaseAdmin
@@ -86,6 +92,19 @@ Deno.serve(async (req) => {
 
     if (profilesError) throw profilesError;
     const profileMap = new Map(profiles.map(p => [p.id, p]));
+
+    const { data: config } = await supabaseAdmin.from('app_config').select('key, value').in('key', ['WBIZTOOL_CLIENT_ID', 'WBIZTOOL_API_KEY', 'WBIZTOOL_WHATSAPP_CLIENT_ID', 'META_PHONE_ID', 'META_ACCESS_TOKEN']);
+    
+    const metaPhoneId = config?.find(c => c.key === 'META_PHONE_ID')?.value;
+    const metaAccessToken = config?.find(c => c.key === 'META_ACCESS_TOKEN')?.value;
+    const wbizClientId = config?.find(c => c.key === 'WBIZTOOL_CLIENT_ID')?.value;
+    const wbizApiKey = config?.find(c => c.key === 'WBIZTOOL_API_KEY')?.value;
+    const wbizWhatsappClientId = config?.find(c => c.key === 'WBIZTOOL_WHATSAPP_CLIENT_ID')?.value;
+
+    const useMeta = metaPhoneId && metaAccessToken;
+    if (!useMeta && (!wbizClientId || !wbizApiKey || !wbizWhatsappClientId)) {
+        throw new Error("No valid WhatsApp configuration found (Meta or WBIZTOOL).");
+    }
 
     let successCount = 0;
     let failureCount = 0;
@@ -110,13 +129,12 @@ Deno.serve(async (req) => {
 
       for (const userId of recipients) {
         const profile = profileMap.get(userId);
-        if (!profile || !profile.phone) {
-          console.warn(`[send-overdue-reminders] No phone for ${profile?.email || userId}. Skipping.`);
-          continue;
-        }
+        if (!profile || !profile.phone) continue;
+
+        const formattedPhone = formatPhoneNumberForApi(profile.phone);
+        if (!formattedPhone) continue;
 
         const recipientName = getFullName(profile);
-
         const userPrompt = `**Konteks:**
 - **Jenis:** Pengingat Invoice Jatuh Tempo
 - **Penerima:** ${recipientName}
@@ -129,57 +147,45 @@ Deno.serve(async (req) => {
 Buat pesan pengingat yang sopan dan profesional sesuai dengan tingkat urgensi yang diberikan.`;
 
         try {
-          const anthropic = new Anthropic({ apiKey: Deno.env.get('ANTHROPIC_API_KEY') });
-          const aiResponse = await anthropic.messages.create({ model: "claude-3-haiku-20240307", max_tokens: 200, system: getSystemPrompt(), messages: [{ role: "user", content: userPrompt }] });
-          const aiMessage = aiResponse.content[0].text;
+          let aiMessage = "";
+          if (Deno.env.get('ANTHROPIC_API_KEY')) {
+             const anthropic = new Anthropic({ apiKey: Deno.env.get('ANTHROPIC_API_KEY') });
+             const aiResponse = await anthropic.messages.create({ model: "claude-3-haiku-20240307", max_tokens: 200, system: getSystemPrompt(), messages: [{ role: "user", content: userPrompt }] });
+             aiMessage = aiResponse.content[0].text;
+          } else {
+             aiMessage = `Halo ${recipientName}, invoice untuk proyek *${project.name}* telah jatuh tempo selama ${overdueDays} hari. Mohon segera lakukan pembayaran. Terima kasih.`;
+          }
 
-          const { data: wbizConfig } = await supabaseAdmin
-             .from('app_config')
-             .select('key, value')
-             .in('key', ['WBIZTOOL_CLIENT_ID', 'WBIZTOOL_API_KEY', 'WBIZTOOL_WHATSAPP_CLIENT_ID']);
-
-          const clientId = wbizConfig?.find(c => c.key === 'WBIZTOOL_CLIENT_ID')?.value;
-          const apiKey = wbizConfig?.find(c => c.key === 'WBIZTOOL_API_KEY')?.value;
-          const whatsappClientId = wbizConfig?.find(c => c.key === 'WBIZTOOL_WHATSAPP_CLIENT_ID')?.value;
-
-          if (!clientId || !apiKey || !whatsappClientId) throw new Error("WBIZTOOL credentials not fully configured.");
-
-          const wbizResponse = await fetch('https://wbiztool.com/api/v1/send_msg/', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-Client-ID': clientId, 'X-Api-Key': apiKey },
-            body: JSON.stringify({ 
-              client_id: clientId,
-              api_key: apiKey,
-              whatsapp_client: whatsappClientId,
-              phone: profile.phone, 
-              message: aiMessage,
-            }),
-          });
-
-          if (!wbizResponse.ok) {
-            const status = wbizResponse.status;
-            const errorText = await wbizResponse.text();
-            let errorMessage = `Failed to send message (Status: ${status}).`;
-
-            // Enhanced Error Handling for HTML/Cloudflare pages
-            if (errorText.includes("Cloudflare") || errorText.includes("524") || errorText.includes("502")) {
-                 if (status === 524) errorMessage = "WBIZTOOL API Timeout (Cloudflare 524). The service is taking too long to respond.";
-                 else if (status === 502) errorMessage = "WBIZTOOL API Bad Gateway (Cloudflare 502). The service is down.";
-                 else errorMessage = `WBIZTOOL API Error (Status: ${status}). Service might be experiencing issues.`;
-            } else {
-                try {
-                  const errorJson = JSON.parse(errorText);
-                  errorMessage = errorJson.message || JSON.stringify(errorJson);
-                } catch (e) {
-                  // Clean up HTML tags and truncate
-                  const cleanText = errorText.replace(/<[^>]*>?/gm, ' ').replace(/\s+/g, ' ').trim();
-                  errorMessage = cleanText.substring(0, 200) + (cleanText.length > 200 ? '...' : '');
-                }
+          if (useMeta) {
+            const response = await fetch(`https://graph.facebook.com/v21.0/${metaPhoneId}/messages`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${metaAccessToken}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    messaging_product: "whatsapp",
+                    to: formattedPhone,
+                    type: "text",
+                    text: { body: aiMessage }
+                }),
+            });
+            if (!response.ok) {
+                const err = await response.json().catch(() => ({}));
+                throw new Error(`Meta API Error: ${JSON.stringify(err)}`);
             }
-            throw new Error(errorMessage);
+          } else {
+            const response = await fetch('https://wbiztool.com/api/v1/send_msg/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-Client-ID': wbizClientId, 'X-Api-Key': wbizApiKey },
+                body: JSON.stringify({ 
+                  client_id: wbizClientId,
+                  api_key: wbizApiKey,
+                  whatsapp_client: wbizWhatsappClientId,
+                  phone: formattedPhone, 
+                  message: aiMessage,
+                }),
+            });
+            if (!response.ok) throw new Error(`WBIZTOOL API Error: ${response.statusText}`);
           }
           successCount++;
-          console.log(`[send-overdue-reminders] Sent reminder for project ${project.id} to ${profile.email}.`);
         } catch (error) {
           failureCount++;
           console.error(`[send-overdue-reminders] Failed to send reminder for project ${project.id} to ${profile.email}:`, error.message);

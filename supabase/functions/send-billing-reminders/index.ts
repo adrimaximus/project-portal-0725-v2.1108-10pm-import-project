@@ -55,8 +55,6 @@ Deno.serve(async (req) => {
 
     console.log("[send-billing-reminders] Job started.");
 
-    // Find projects with invoices pending/unpaid/overdue that might need reminders
-    // This logic simplifies to finding anything not 'Paid', 'Cancelled', 'Bid Lost'
     const { data: projects, error: projectsError } = await supabaseAdmin
       .from('projects')
       .select('id, name, slug, invoice_number, payment_due_date, payment_status, created_by')
@@ -69,7 +67,6 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ message: "No active invoices to check." }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
     
-    // Fetch users and configs
     const projectIds = projects.map(p => p.id);
     const { data: projectAdmins } = await supabaseAdmin.from('project_members').select('project_id, user_id').in('project_id', projectIds).eq('role', 'admin');
     
@@ -80,7 +77,6 @@ Deno.serve(async (req) => {
     const { data: profiles } = await supabaseAdmin.from('profiles').select('id, first_name, last_name, email, phone, notification_preferences').in('id', Array.from(userIdsToFetch));
     const profileMap = new Map(profiles?.map(p => [p.id, p]));
 
-    // Fetch Messaging Config (Meta & WBIZTOOL)
     const { data: config } = await supabaseAdmin.from('app_config').select('key, value').in('key', ['WBIZTOOL_CLIENT_ID', 'WBIZTOOL_API_KEY', 'WBIZTOOL_WHATSAPP_CLIENT_ID', 'META_PHONE_ID', 'META_ACCESS_TOKEN']);
     
     const metaPhoneId = config?.find(c => c.key === 'META_PHONE_ID')?.value;
@@ -100,15 +96,9 @@ Deno.serve(async (req) => {
       const dueDate = new Date(project.payment_due_date);
       const today = new Date();
       
-      // Calculate difference in days
       const diffTime = dueDate.getTime() - today.getTime();
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
 
-      // Only send reminders for specific conditions:
-      // 1. Exactly 7 days before due (Upcoming)
-      // 2. Exactly 3 days before due (Upcoming)
-      // 3. Exactly 1 day before due (Upcoming)
-      // 4. On due date (Due Today)
       const shouldSend = [7, 3, 1, 0].includes(diffDays);
 
       if (!shouldSend) continue;
@@ -124,9 +114,8 @@ Deno.serve(async (req) => {
         const profile = profileMap.get(userId);
         if (!profile || !profile.phone) continue;
         
-        // Check user preference for billing reminders
         const prefs = profile.notification_preferences;
-        if (prefs && prefs.billing_reminder === false) continue; // Basic check, can be more granular
+        if (prefs && prefs.billing_reminder === false) continue;
 
         const formattedPhone = formatPhoneNumberForApi(profile.phone);
         if (!formattedPhone) continue;
@@ -144,7 +133,7 @@ Deno.serve(async (req) => {
           }
 
           if (useMeta) {
-            await fetch(`https://graph.facebook.com/v21.0/${metaPhoneId}/messages`, {
+            const response = await fetch(`https://graph.facebook.com/v21.0/${metaPhoneId}/messages`, {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${metaAccessToken}`, 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -154,12 +143,17 @@ Deno.serve(async (req) => {
                     text: { body: aiMessage }
                 }),
             });
+            if (!response.ok) {
+                const err = await response.json().catch(() => ({}));
+                throw new Error(`Meta API Error: ${JSON.stringify(err)}`);
+            }
           } else {
-            await fetch('https://wbiztool.com/api/v1/send_msg/', {
+            const response = await fetch('https://wbiztool.com/api/v1/send_msg/', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-Client-ID': wbizClientId, 'X-Api-Key': wbizApiKey },
                 body: JSON.stringify({ client_id: wbizClientId, api_key: wbizApiKey, whatsapp_client: wbizWhatsappClientId, phone: formattedPhone, message: aiMessage }),
             });
+            if (!response.ok) throw new Error(`WBIZTOOL API Error: ${response.statusText}`);
           }
           successCount++;
           console.log(`[send-billing-reminders] Sent reminder for project ${project.id} to ${profile.email}.`);
