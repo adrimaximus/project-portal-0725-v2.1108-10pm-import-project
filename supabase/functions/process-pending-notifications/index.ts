@@ -111,66 +111,84 @@ Deno.serve(async (req) => {
             }
 
             const messageText = constructMessage(notification.notification_type, notification.context_data);
+            
+            let sent = false;
+            let lastError = '';
 
-            let response;
+            // --- STRATEGY: Try Meta First ---
             if (useMeta) {
-                // Send via Meta
-                response = await fetch(`https://graph.facebook.com/v21.0/${metaPhoneId}/messages`, {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${metaAccessToken}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        messaging_product: "whatsapp",
-                        to: formattedPhone,
-                        type: "text",
-                        text: { body: messageText }
-                    }),
-                });
-            } else {
-                // Send via WBIZTOOL
-                response = await fetch('https://wbiztool.com/api/v1/send_msg/', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-Client-ID': wbizClientId, 'X-Api-Key': wbizApiKey },
-                    body: JSON.stringify({ client_id: wbizClientId, api_key: wbizApiKey, whatsapp_client: wbizWhatsappClientId, phone: formattedPhone, message: messageText }),
-                });
+                try {
+                    console.log(`Trying Meta for ${formattedPhone}...`);
+                    const response = await fetch(`https://graph.facebook.com/v21.0/${metaPhoneId}/messages`, {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${metaAccessToken}`, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            messaging_product: "whatsapp",
+                            to: formattedPhone,
+                            type: "text",
+                            text: { body: messageText }
+                        }),
+                    });
+
+                    if (response.ok) {
+                        sent = true;
+                    } else {
+                        const errorText = await response.text();
+                        let errorMsg = 'Unknown Meta Error';
+                        try {
+                            const errData = JSON.parse(errorText);
+                            errorMsg = errData.error?.message || errorText;
+                        } catch (e) { errorMsg = errorText; }
+                        
+                        lastError = `Meta Failed: ${errorMsg}`;
+                        console.warn(`Meta send failed for ${formattedPhone}: ${errorMsg}`);
+                    }
+                } catch (e) {
+                    lastError = `Meta Exception: ${e.message}`;
+                    console.warn(`Meta exception for ${formattedPhone}:`, e);
+                }
             }
 
-            if (response.ok) {
+            // --- FALLBACK: Try WBIZTOOL if Meta Failed or Not Configured ---
+            if (!sent && useWbiz) {
+                try {
+                    console.log(`Trying WBIZTOOL fallback for ${formattedPhone}...`);
+                    const response = await fetch('https://wbiztool.com/api/v1/send_msg/', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-Client-ID': wbizClientId, 'X-Api-Key': wbizApiKey },
+                        body: JSON.stringify({ client_id: wbizClientId, api_key: wbizApiKey, whatsapp_client: wbizWhatsappClientId, phone: formattedPhone, message: messageText }),
+                    });
+
+                    if (response.ok) {
+                        sent = true;
+                    } else {
+                        const errorText = await response.text();
+                        lastError += ` | WBIZTOOL Failed: ${errorText.substring(0, 100)}`;
+                    }
+                } catch (e) {
+                    lastError += ` | WBIZTOOL Exception: ${e.message}`;
+                }
+            }
+
+            if (sent) {
                 await supabaseAdmin.from('pending_notifications').update({ status: 'completed', sent_at: new Date() }).eq('id', notification.id);
                 results.push({ id: notification.id, status: 'sent' });
             } else {
-                const errorText = await response.text();
-                let errorMsg = 'Unknown error';
-                
-                try {
-                    const errData = JSON.parse(errorText);
-                    if (useMeta && errData.error) {
-                       // Parsing Meta API Error
-                       const { message, code, type } = errData.error;
-                       errorMsg = `Meta API Error ${code}: ${message} (${type})`;
-                    } else {
-                       // Parsing WBIZTOOL Error
-                       errorMsg = errData.message || errData.error || JSON.stringify(errData);
-                    }
-                } catch (e) {
-                    // Parsing HTML/Text Error (e.g., Cloudflare)
-                    errorMsg = `Provider Error (${response.status}): ${errorText.substring(0, 200)}`;
-                }
-
-                console.error(`Failed to send notification ${notification.id}:`, errorMsg);
-
+                // If both failed (or one failed and other not configured)
+                console.error(`All providers failed for notification ${notification.id}: ${lastError}`);
                 await supabaseAdmin.from('pending_notifications').update({ 
                     status: 'failed', 
-                    error_message: errorMsg,
+                    error_message: lastError || 'No providers available or all failed',
                     retry_count: notification.retry_count + 1 
                 }).eq('id', notification.id);
-                results.push({ id: notification.id, status: 'failed' });
+                results.push({ id: notification.id, status: 'failed', error: lastError });
             }
 
         } catch (e) {
             console.error(`Exception processing notification ${notification.id}:`, e);
             await supabaseAdmin.from('pending_notifications').update({ 
                 status: 'failed', 
-                error_message: e.message,
+                error_message: `Critical Error: ${e.message}`,
                 retry_count: notification.retry_count + 1 
             }).eq('id', notification.id);
         }
