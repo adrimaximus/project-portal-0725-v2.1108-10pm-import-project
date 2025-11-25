@@ -60,11 +60,12 @@ Deno.serve(async (req) => {
       .select('key, value')
       .in('key', ['WBIZTOOL_CLIENT_ID', 'WBIZTOOL_API_KEY', 'WBIZTOOL_WHATSAPP_CLIENT_ID', 'META_PHONE_ID', 'META_ACCESS_TOKEN']);
     
-    const metaPhoneId = config?.find(c => c.key === 'META_PHONE_ID')?.value;
-    const metaAccessToken = config?.find(c => c.key === 'META_ACCESS_TOKEN')?.value;
-    const wbizClientId = config?.find(c => c.key === 'WBIZTOOL_CLIENT_ID')?.value;
-    const wbizApiKey = config?.find(c => c.key === 'WBIZTOOL_API_KEY')?.value;
-    const wbizWhatsappClientId = config?.find(c => c.key === 'WBIZTOOL_WHATSAPP_CLIENT_ID')?.value;
+    // Sanitize credentials
+    const metaPhoneId = config?.find(c => c.key === 'META_PHONE_ID')?.value?.trim();
+    const metaAccessToken = config?.find(c => c.key === 'META_ACCESS_TOKEN')?.value?.trim();
+    const wbizClientId = config?.find(c => c.key === 'WBIZTOOL_CLIENT_ID')?.value?.trim();
+    const wbizApiKey = config?.find(c => c.key === 'WBIZTOOL_API_KEY')?.value?.trim();
+    const wbizWhatsappClientId = config?.find(c => c.key === 'WBIZTOOL_WHATSAPP_CLIENT_ID')?.value?.trim();
 
     const useMeta = !!(metaPhoneId && metaAccessToken);
     const useWbiz = !!(wbizClientId && wbizApiKey && wbizWhatsappClientId);
@@ -75,7 +76,6 @@ Deno.serve(async (req) => {
     }
 
     // 2. Fetch pending notifications
-    // We call the SQL function `pop_pending_notifications` to atomically get and lock rows
     const { data: notifications, error: popError } = await supabaseAdmin.rpc('pop_pending_notifications', { p_limit: 10 });
 
     if (popError) throw popError;
@@ -88,10 +88,8 @@ Deno.serve(async (req) => {
     // 3. Process each notification
     for (const notification of notifications) {
         try {
-            // Check if it's an email type (suffixed with _email)
+            // Check if it's an email type
             if (notification.notification_type.endsWith('_email')) {
-                // Email logic skipped for now, mark as processed or implement Emailit later
-                // For now we just mark as success to clear queue
                 await supabaseAdmin.from('pending_notifications').update({ status: 'completed', sent_at: new Date() }).eq('id', notification.id);
                 continue;
             }
@@ -140,9 +138,16 @@ Deno.serve(async (req) => {
             } else {
                 const errData = await response.text();
                 console.error(`Failed to send notification ${notification.id}:`, errData);
+                
+                let errorMsg = `Provider Error: ${errData.substring(0, 200)}`;
+                try {
+                    const jsonError = JSON.parse(errData);
+                    if (jsonError.error?.message) errorMsg = jsonError.error.message;
+                } catch (e) {}
+
                 await supabaseAdmin.from('pending_notifications').update({ 
                     status: 'failed', 
-                    error_message: `Provider Error: ${errData.substring(0, 200)}`,
+                    error_message: errorMsg,
                     retry_count: notification.retry_count + 1 
                 }).eq('id', notification.id);
                 results.push({ id: notification.id, status: 'failed' });

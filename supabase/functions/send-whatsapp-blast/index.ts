@@ -32,10 +32,6 @@ Deno.serve(async (req) => {
             uniqueMessages.push(msg);
         }
     }
-
-    if (uniqueMessages.length < messages.length) {
-        console.log(`[Backend Deduplication] Removed ${messages.length - uniqueMessages.length} duplicate messages.`);
-    }
     // ---------------------------
 
     // Initialize Supabase Admin client
@@ -44,7 +40,7 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Get Credentials for both providers
+    // Get Credentials
     const { data: config, error: configError } = await supabaseAdmin
         .from('app_config')
         .select('key, value')
@@ -52,20 +48,20 @@ Deno.serve(async (req) => {
 
     if (configError) throw new Error(`Failed to get config: ${configError.message}`);
 
-    const metaPhoneId = config?.find(c => c.key === 'META_PHONE_ID')?.value;
-    const metaAccessToken = config?.find(c => c.key === 'META_ACCESS_TOKEN')?.value;
+    // Sanitize credentials
+    const metaPhoneId = config?.find(c => c.key === 'META_PHONE_ID')?.value?.trim();
+    const metaAccessToken = config?.find(c => c.key === 'META_ACCESS_TOKEN')?.value?.trim();
     
-    const wbizClientId = config?.find(c => c.key === 'WBIZTOOL_CLIENT_ID')?.value;
-    const wbizApiKey = config?.find(c => c.key === 'WBIZTOOL_API_KEY')?.value;
-    const wbizWhatsappClientId = config?.find(c => c.key === 'WBIZTOOL_WHATSAPP_CLIENT_ID')?.value;
+    const wbizClientId = config?.find(c => c.key === 'WBIZTOOL_CLIENT_ID')?.value?.trim();
+    const wbizApiKey = config?.find(c => c.key === 'WBIZTOOL_API_KEY')?.value?.trim();
+    const wbizWhatsappClientId = config?.find(c => c.key === 'WBIZTOOL_WHATSAPP_CLIENT_ID')?.value?.trim();
 
     const results = { success: 0, failed: 0, errors: [] };
 
-    // Prefer Meta (Official) if available
-    const useMeta = metaPhoneId && metaAccessToken;
+    const useMeta = !!(metaPhoneId && metaAccessToken);
 
     if (!useMeta && (!wbizClientId || !wbizApiKey || !wbizWhatsappClientId)) {
-        throw new Error("No WhatsApp credentials configured (Meta or WBIZTOOL).");
+        throw new Error("No valid WhatsApp credentials configured (Meta or WBIZTOOL).");
     }
 
     // Process messages
@@ -121,7 +117,7 @@ Deno.serve(async (req) => {
 
                 if (!response.ok) {
                     const errorData = await response.json().catch(() => ({}));
-                    throw new Error(`Meta API Error: ${JSON.stringify(errorData)}`);
+                    throw new Error(errorData.error?.message || `Meta API Error ${response.status}`);
                 }
 
             } else {
@@ -146,7 +142,7 @@ Deno.serve(async (req) => {
                 if (msgType === 1) payload.img_url = msg.url;
                 else if (msgType === 2) payload.file_url = msg.url;
 
-                // Scheduling params if any
+                // Scheduling params
                 if (msg.schedule_time) {
                     payload.schedule = msg.schedule_time.replace('T', ' '); 
                     if (msg.schedule_time.length === 16) payload.schedule += ':00';
