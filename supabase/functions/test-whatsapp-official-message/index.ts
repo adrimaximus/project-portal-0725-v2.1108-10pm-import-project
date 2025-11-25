@@ -20,20 +20,32 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
+    // Fetch credentials
     const { data: creds, error: credsError } = await supabaseAdmin
       .from('app_config')
       .select('key, value')
       .in('key', ['META_PHONE_ID', 'META_ACCESS_TOKEN']);
 
-    if (credsError || !creds) throw new Error('Credentials not found.');
+    if (credsError) {
+        console.error("Database error fetching credentials:", credsError);
+        throw new Error('Database error fetching credentials.');
+    }
+
+    if (!creds || creds.length === 0) {
+        console.error("No credentials found in app_config.");
+        throw new Error('No WhatsApp configuration found. Please save your credentials first.');
+    }
 
     const phoneId = creds.find(c => c.key === 'META_PHONE_ID')?.value;
     const accessToken = creds.find(c => c.key === 'META_ACCESS_TOKEN')?.value;
 
     if (!phoneId || !accessToken) {
-      throw new Error("WhatsApp Official credentials missing.");
+      throw new Error("Incomplete WhatsApp configuration. Missing Phone ID or Access Token.");
     }
 
+    // Call Meta API
+    console.log(`Attempting to send message to ${phone} via Phone ID ${phoneId}`);
+    
     const response = await fetch(`https://graph.facebook.com/v21.0/${phoneId}/messages`, {
         method: 'POST',
         headers: {
@@ -51,7 +63,8 @@ Deno.serve(async (req) => {
     const data = await response.json();
 
     if (!response.ok) {
-        throw new Error(`Meta API Error: ${JSON.stringify(data)}`);
+        console.error("Meta API Error Response:", JSON.stringify(data));
+        throw new Error(`Meta API Error: ${data.error?.message || 'Unknown error'}`);
     }
 
     return new Response(JSON.stringify({ message: 'Message sent successfully.', data }), {
@@ -60,7 +73,8 @@ Deno.serve(async (req) => {
     })
 
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+    console.error("Function Error:", error.message);
+    return new Response(JSON.stringify({ error: { message: error.message } }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 400,
     })
