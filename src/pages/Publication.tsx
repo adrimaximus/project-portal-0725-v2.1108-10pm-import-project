@@ -1,4 +1,3 @@
-30s pause).">
 import { useState, useRef, useMemo, useEffect } from "react";
 import PortalLayout from "@/components/PortalLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -1486,7 +1485,7 @@ const PublicationPage = () => {
                                      onChange={e => setAiInstructions(e.target.value)}
                                   />
                                   <p className="text-[10px] text-blue-600/80">The AI will rewrite your template using WhatsApp markdown and emojis while keeping variables intact.</p>
-                               </div>
+                                </div>
                                <div className="flex justify-end">
                                   <Button size="sm" className="h-7 text-xs bg-blue-600 hover:bg-blue-700" onClick={handleAiRewrite} disabled={isRewriting || !templateMessage}>
                                      {isRewriting ? <Loader2 className="w-3 h-3 animate-spin mr-1"/> : <Bot className="w-3 h-3 mr-1"/>}
