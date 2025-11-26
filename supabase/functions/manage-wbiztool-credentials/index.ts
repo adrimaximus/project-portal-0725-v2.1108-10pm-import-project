@@ -22,10 +22,23 @@ serve(async (req) => {
       
       // Case 1: Fetch Devices from WBIZTOOL
       if (body.action === 'fetch_devices') {
-        const { clientId, apiKey } = body;
+        let { clientId, apiKey } = body;
+        
+        // If credentials not provided in body (e.g. auto-fetch on load), try to get from DB
+        if (!clientId || !apiKey) {
+            const { data: creds } = await supabaseAdmin
+                .from('app_config')
+                .select('key, value')
+                .in('key', ['WBIZTOOL_CLIENT_ID', 'WBIZTOOL_API_KEY']);
+            
+            if (creds) {
+                clientId = clientId || creds.find(c => c.key === 'WBIZTOOL_CLIENT_ID')?.value;
+                apiKey = apiKey || creds.find(c => c.key === 'WBIZTOOL_API_KEY')?.value;
+            }
+        }
         
         if (!clientId || !apiKey) {
-            throw new Error('Client ID and API Key are required');
+            throw new Error('Client ID and API Key are required (not found in request or database)');
         }
 
         // Construct URL with query parameters
