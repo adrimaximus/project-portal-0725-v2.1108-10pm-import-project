@@ -1,21 +1,16 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, Link, useLocation } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from "@/components/ui/button";
 import { 
   BarChart, Users, ListChecks, ArrowRight, BrainCircuit, Check, 
   Sparkles, Globe, Smartphone, Palette, Search, Wrench, 
   CreditCard, MessageSquare, BookOpen, Bell, Shield, Zap,
-  LayoutGrid, Target, Megaphone, Receipt, Database
+  LayoutGrid, Target, Megaphone, Receipt
 } from 'lucide-react';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
-import { supabase } from "@/integrations/supabase/client";
-import { getIconComponent } from "@/data/icons";
-import { Badge } from "@/components/ui/badge";
-import { Service } from "@/types";
-import { Input } from "@/components/ui/input";
 
 // Dashboard Preview Component with enhanced styling
 const DashboardPreview = () => (
@@ -124,11 +119,7 @@ const FeatureBentoCard = ({ feature, className }: { feature: any, className?: st
 const LandingPage = () => {
   const { session, isLoading } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
-  const [services, setServices] = useState<Service[]>([]);
-  const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([]);
-  const [isServicesLoading, setIsServicesLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedService, setSelectedService] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isLoading && session) {
@@ -136,71 +127,18 @@ const LandingPage = () => {
     }
   }, [session, isLoading, navigate]);
 
-  useEffect(() => {
-    const fetchServices = async () => {
-      setIsServicesLoading(true);
-      const { data, error } = await supabase
-        .from('services')
-        .select('*')
-        .order('is_featured', { ascending: false })
-        .order('title');
-        
-      if (!error && data) {
-        setServices(data as Service[]);
-      }
-      setIsServicesLoading(false);
-    };
-    fetchServices();
-  }, []);
-
-  const handleServiceSelect = (service: Service) => {
-    const isEndToEnd = service.title.toLowerCase().includes('end to end');
-    
-    setSelectedServiceIds(prev => {
-      // Check if clicking on an already selected item
-      if (prev.includes(service.id)) {
-        return prev.filter(id => id !== service.id);
-      }
-
-      // If clicking End to End, it clears everything else
-      if (isEndToEnd) {
-        return [service.id];
-      }
-
-      // If clicking a normal service, ensure End to End is NOT selected
-      // First find the ID of any End to End service if it exists
-      const endToEndService = services.find(s => s.title.toLowerCase().includes('end to end'));
-      const endToEndId = endToEndService?.id;
-      
-      let newSelection = [...prev];
-      
-      // If End to End was selected, remove it
-      if (endToEndId && newSelection.includes(endToEndId)) {
-        newSelection = newSelection.filter(id => id !== endToEndId);
-      }
-
-      return [...newSelection, service.id];
-    });
-  };
-
-  const handleContinue = () => {
-    if (selectedServiceIds.length > 0) {
-      // Preserve existing query params (e.g. UTM tags) and add services
-      const params = new URLSearchParams(location.search);
-      params.set('services', selectedServiceIds.join(','));
-      // Redirect directly to Request page instead of login
-      navigate(`/request?${params.toString()}`);
-    }
-  };
-
-  const filteredServices = services.filter(service => 
-    service.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    service.description?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
   if (isLoading) {
     return <LoadingSpinner />;
   }
+
+  const services = [
+    { id: 'web', label: 'Web Development', icon: Globe },
+    { id: 'mobile', label: 'Mobile App', icon: Smartphone },
+    { id: 'design', label: 'UI/UX Design', icon: Palette },
+    { id: 'seo', label: 'SEO Optimization', icon: Search },
+    { id: 'consulting', label: 'Consulting', icon: Users },
+    { id: 'maintenance', label: 'Maintenance', icon: Wrench },
+  ];
 
   const allFeatures = [
     {
@@ -348,109 +286,71 @@ const LandingPage = () => {
         {/* Request Service Segment */}
         <section id="request-service" className="py-24 relative border-t border-white/5 bg-black/20">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-            <div className="max-w-3xl mx-auto mb-10">
-              <h2 className="text-3xl md:text-4xl font-bold mb-4">Project Support Request</h2>
-              <p className="text-slate-400 mb-8">Select the services you need for your project. You can select multiple services.</p>
-              
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-                <Input
-                  type="text"
-                  placeholder="Search support options..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-[#13151C] border-white/10 text-slate-200 placeholder:text-slate-600 pl-10 h-12 rounded-lg focus:ring-purple-500/50 focus:border-purple-500/50"
-                />
-              </div>
+            <div className="max-w-3xl mx-auto text-center mb-16">
+              <h2 className="text-3xl md:text-4xl font-bold mb-4">What do you need today?</h2>
+              <p className="text-slate-400">Jumpstart your project request instantly.</p>
             </div>
 
-            {isServicesLoading ? (
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 max-w-6xl mx-auto mb-12">
-                {[...Array(6)].map((_, i) => (
-                  <div key={i} className="h-48 bg-white/5 rounded-xl animate-pulse border border-white/5"></div>
-                ))}
-              </div>
-            ) : services.length === 0 ? (
-              // State: Database is empty (or fetch failed)
-              <div className="text-center py-16 mb-12 border border-dashed border-white/10 rounded-xl bg-white/5 max-w-2xl mx-auto">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-white/5 mb-4">
-                  <Database className="w-8 h-8 text-slate-500" />
-                </div>
-                <h3 className="text-xl font-medium text-slate-300 mb-2">No services configured</h3>
-                <p className="text-slate-500 max-w-md mx-auto">
-                   There are no services available at the moment.
-                </p>
-              </div>
-            ) : filteredServices.length === 0 ? (
-              // State: Search returned no results
-              <div className="text-center py-16 mb-12 border border-dashed border-white/10 rounded-xl bg-white/5 max-w-2xl mx-auto">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-white/5 mb-4">
-                  <Search className="w-8 h-8 text-slate-500" />
-                </div>
-                <h3 className="text-xl font-medium text-slate-300 mb-2">No matching services</h3>
-                <p className="text-slate-500 max-w-md mx-auto">
-                  We couldn't find any services matching "{searchQuery}". Try different keywords.
-                </p>
-              </div>
-            ) : (
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 max-w-6xl mx-auto mb-12">
-                {filteredServices.map((service) => {
-                  const Icon = getIconComponent(service.icon);
-                  const isSelected = selectedServiceIds.includes(service.id);
-                  const textColorClass = service.icon_color?.split(' ').find(c => c.startsWith('text-'));
-
-                  return (
-                    <div
-                      key={service.id}
-                      onClick={() => handleServiceSelect(service)}
-                      className={cn(
-                        "cursor-pointer group relative p-6 rounded-xl border transition-all duration-300 flex flex-col items-start justify-between gap-6 h-full min-h-[200px]",
-                        isSelected 
-                          ? "bg-purple-900/20 border-purple-500/50 shadow-[0_0_20px_rgba(168,85,247,0.15)]" 
-                          : "bg-[#13151C] border-white/5 hover:border-white/10 hover:bg-[#1A1D26] hover:-translate-y-1"
-                      )}
-                    >
-                      <div className="w-full flex justify-between items-start">
-                        <div className={cn(
-                          "p-3 rounded-lg transition-colors duration-300 flex items-center justify-center w-12 h-12",
-                          service.icon_color ? service.icon_color : "bg-white/10 text-white"
-                        )}>
-                          <Icon className={cn("w-6 h-6", textColorClass)} />
-                        </div>
-                        {service.is_featured && (
-                          <Badge className="bg-green-500 text-black hover:bg-green-600 font-semibold px-2.5">
-                            Featured
-                          </Badge>
-                        )}
-                      </div>
-                      
-                      <div className="w-full">
-                        <h3 className={cn(
-                          "text-lg font-bold mb-2 leading-tight",
-                          isSelected ? "text-white" : "text-slate-200"
-                        )}>
-                          {service.title}
-                        </h3>
-                        <p className={cn(
-                          "text-sm leading-relaxed line-clamp-3",
-                          isSelected ? "text-slate-300" : "text-slate-400"
-                        )}>
-                          {service.description}
-                        </p>
-                      </div>
-
-                      {isSelected && (
-                        <div className="absolute top-6 right-6">
-                          <div className="bg-purple-500 text-white rounded-full p-1 shadow-lg ring-2 ring-[#0B0D14]">
-                              <Check className="w-3 h-3" />
-                          </div>
-                        </div>
-                      )}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 max-w-5xl mx-auto mb-12">
+              {services.map((service) => {
+                const Icon = service.icon;
+                const isSelected = selectedService === service.id;
+                return (
+                  <div
+                    key={service.id}
+                    onClick={() => setSelectedService(service.id)}
+                    className={cn(
+                      "cursor-pointer group relative p-4 rounded-2xl border transition-all duration-300 flex flex-col items-center justify-center gap-4 h-36",
+                      isSelected 
+                        ? "bg-purple-600/20 border-purple-500/50 shadow-[0_0_20px_rgba(147,51,234,0.2)]" 
+                        : "bg-[#13151C] border-white/5 hover:border-white/10 hover:bg-[#1A1D26] hover:-translate-y-1"
+                    )}
+                  >
+                    <div className={cn(
+                      "p-3.5 rounded-xl transition-colors duration-300",
+                      isSelected ? "bg-purple-600 text-white" : "bg-white/5 text-slate-400 group-hover:text-white group-hover:bg-white/10"
+                    )}>
+                      <Icon className="w-6 h-6" />
                     </div>
-                  );
-                })}
-              </div>
-            )}
+                    <span className={cn(
+                      "text-sm font-medium text-center leading-tight",
+                      isSelected ? "text-white" : "text-slate-400 group-hover:text-slate-200"
+                    )}>
+                      {service.label}
+                    </span>
+                    {isSelected && (
+                      <div className="absolute top-3 right-3 animate-in zoom-in duration-200">
+                        <div className="bg-purple-600 rounded-full p-0.5">
+                            <Check className="w-3 h-3 text-white" />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="text-center">
+              <Button 
+                size="lg" 
+                className={cn(
+                  "rounded-full px-12 h-14 text-base font-semibold transition-all duration-500 shadow-lg",
+                  selectedService 
+                    ? "bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white opacity-100 translate-y-0" 
+                    : "bg-white/5 text-slate-500 border border-white/5 cursor-not-allowed opacity-50"
+                )}
+                disabled={!selectedService}
+                asChild={!!selectedService}
+              >
+                {selectedService ? (
+                  <Link to={`/login?service=${selectedService}`}>
+                    Continue Request <ArrowRight className="ml-2 h-5 w-5" />
+                  </Link>
+                ) : (
+                  <span>Select a Service</span>
+                )}
+              </Button>
+            </div>
           </div>
         </section>
 
@@ -492,33 +392,7 @@ const LandingPage = () => {
         </section>
       </main>
 
-      {/* Sticky Service Summary Footer */}
-      {selectedServiceIds.length > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 bg-[#0B0D14]/90 backdrop-blur-lg shadow-2xl animate-in slide-in-from-bottom duration-300">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between gap-4">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 overflow-hidden">
-              <span className="text-sm text-slate-400 font-medium whitespace-nowrap">
-                {selectedServiceIds.length} {selectedServiceIds.length === 1 ? 'Service' : 'Services'} Selected
-              </span>
-              <div className="flex flex-wrap gap-2 max-h-16 overflow-y-auto">
-                {services.filter(s => selectedServiceIds.includes(s.id)).map(s => (
-                  <div key={s.id} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/10 border border-white/5 text-xs text-slate-200">
-                    <span>{s.title}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <Button 
-              onClick={handleContinue}
-              className="bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg px-6 sm:px-8 h-10 sm:h-12 transition-colors shadow-lg shadow-green-900/20 flex-shrink-0"
-            >
-              Continue <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-      )}
-
-      <footer className="bg-[#0B0D14] border-t border-white/5 mb-[72px] sm:mb-0">
+      <footer className="bg-[#0B0D14] border-t border-white/5">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-3">

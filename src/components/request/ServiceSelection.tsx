@@ -1,7 +1,7 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import { Search, Inbox, Database } from "lucide-react";
+import { Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -15,7 +15,7 @@ interface ServiceSelectionProps {
   onSearchTermChange: (term: string) => void;
   selectedServices: Service[];
   onServiceSelect: (service: Service) => void;
-  preSelectIds?: string | null; // Comma separated IDs
+  preSelectId?: string | null;
 }
 
 const ServiceSelection = ({
@@ -23,52 +23,52 @@ const ServiceSelection = ({
   onSearchTermChange,
   selectedServices,
   onServiceSelect,
-  preSelectIds
+  preSelectId
 }: ServiceSelectionProps) => {
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
-  const preSelectProcessed = useRef(false);
+  const [hasHandledPreSelect, setHasHandledPreSelect] = useState(false);
 
   useEffect(() => {
     const fetchServices = async () => {
       setLoading(true);
-      // Using a simplified query to ensure stability for public access
-      const { data, error } = await supabase
-        .from('services')
-        .select('*')
-        .order('title');
-      
+      const { data, error } = await supabase.from('services').select('*').order('is_featured', { ascending: false }).order('title');
       if (error) {
-        console.error("Error fetching services:", error);
-        toast.error('Failed to load services. Please refresh the page.');
+        toast.error('Failed to load services.');
+        console.error(error);
       } else {
-        // Sort by is_featured manually to avoid potential SQL ordering issues if column is tricky
-        const sorted = (data as Service[]).sort((a, b) => {
-          if (a.is_featured === b.is_featured) return 0;
-          return a.is_featured ? -1 : 1;
-        });
-        setServices(sorted);
+        setServices(data as Service[]);
       }
       setLoading(false);
     };
     fetchServices();
   }, []);
 
-  // Handle pre-selection from URL param (IDs)
+  // Handle pre-selection from URL param
   useEffect(() => {
-    if (!loading && services.length > 0 && preSelectIds && !preSelectProcessed.current && selectedServices.length === 0) {
-      const idsToSelect = preSelectIds.split(',').map(id => id.trim());
-      
-      // Filter valid services
-      const servicesToSelect = services.filter(s => idsToSelect.includes(s.id));
-      
-      servicesToSelect.forEach(service => {
-         onServiceSelect(service);
-      });
+    if (!loading && services.length > 0 && preSelectId && !hasHandledPreSelect && selectedServices.length === 0) {
+      const keywords = {
+        'web': ['web', 'website', 'development'],
+        'mobile': ['mobile', 'app', 'ios', 'android'],
+        'design': ['design', 'ui', 'ux', 'creative'],
+        'seo': ['seo', 'search', 'optimization'],
+        'consulting': ['consult', 'advice', 'strategy'],
+        'maintenance': ['maintenance', 'support'],
+      };
 
-      preSelectProcessed.current = true;
+      const targetKeywords = keywords[preSelectId as keyof typeof keywords] || [preSelectId];
+      
+      const matchedService = services.find(s => 
+        targetKeywords.some(k => s.title.toLowerCase().includes(k))
+      );
+
+      if (matchedService) {
+        onServiceSelect(matchedService);
+        // Optionally scroll to it?
+      }
+      setHasHandledPreSelect(true);
     }
-  }, [loading, services, preSelectIds, selectedServices.length, onServiceSelect]);
+  }, [loading, services, preSelectId, hasHandledPreSelect, selectedServices.length, onServiceSelect]);
 
   const filteredServices = services.filter(
     (service) =>
@@ -77,7 +77,7 @@ const ServiceSelection = ({
   );
 
   const isSelected = (service: Service) => {
-    return selectedServices.some((s) => s.id === service.id);
+    return selectedServices.some((s) => s.title === service.title);
   };
 
   if (loading) {
@@ -94,86 +94,56 @@ const ServiceSelection = ({
   }
 
   return (
-    <div className="space-y-6 pb-40">
-      <div className="space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight">
-          Project Support Request
-        </h1>
-        <p className="text-muted-foreground text-lg">
-          Select the services you need for your project to get started.
-        </p>
-      </div>
-      
+    <div className="space-y-4 pb-40">
+      <h1 className="text-2xl font-bold tracking-tight">
+        Project Support Request
+      </h1>
+      <p className="text-muted-foreground">
+        Select the services you need for your project. You can select
+        multiple services.
+      </p>
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
           placeholder="Search support options..."
-          className="pl-10 h-12 text-base"
+          className="pl-9"
           value={searchTerm}
           onChange={(e) => onSearchTermChange(e.target.value)}
         />
       </div>
 
-      {services.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 text-center border-2 border-dashed rounded-xl bg-muted/30">
-          <div className="bg-muted/50 p-4 rounded-full mb-4">
-            <Database className="h-8 w-8 text-muted-foreground" />
-          </div>
-          <h3 className="text-lg font-semibold">No services available</h3>
-          <p className="text-muted-foreground max-w-sm mt-2">
-             There are currently no services configured. Please check back later.
-          </p>
-        </div>
-      ) : filteredServices.length > 0 ? (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {filteredServices.map((service) => {
-            const Icon = getIconComponent(service.icon);
-            const selected = isSelected(service);
-            
-            return (
-              <Card
-                key={service.id}
-                className={cn(
-                  "cursor-pointer h-full flex flex-col border transition-all duration-200",
-                  selected 
-                    ? "bg-primary/5 border-primary shadow-[0_0_0_1px_hsl(var(--primary))] shadow-primary/20" 
-                    : "hover:border-primary/50 hover:shadow-sm"
-                )}
-                onClick={() => onServiceSelect(service)}
-              >
-                <CardContent className="p-5 flex flex-col items-start gap-4 flex-grow">
-                  <div className="flex justify-between items-start w-full">
-                    <div
-                      className={cn("p-2.5 rounded-xl transition-colors", service.icon_color)}
-                    >
-                      <Icon className="h-6 w-6" />
-                    </div>
-                    {service.is_featured && (
-                      <Badge variant="secondary" className="font-medium">Featured</Badge>
-                    )}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {filteredServices.map((service) => {
+          const Icon = getIconComponent(service.icon);
+          return (
+            <Card
+              key={service.title}
+              className={cn(
+                "hover:bg-muted/50 transition-colors cursor-pointer h-full flex flex-col",
+                isSelected(service) && "ring-2 ring-primary"
+              )}
+              onClick={() => onServiceSelect(service)}
+            >
+              <CardContent className="p-4 flex flex-col items-start gap-4 flex-grow">
+                <div className="flex justify-between items-start w-full">
+                  <div
+                    className={cn("p-2 rounded-lg", service.icon_color)}
+                  >
+                    <Icon className="h-6 w-6" />
                   </div>
-                  <div className="flex-grow space-y-2">
-                    <h3 className={cn("font-semibold text-lg leading-tight", selected && "text-primary")}>{service.title}</h3>
-                    <p className="text-sm text-muted-foreground leading-relaxed">
-                      {service.description}
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      ) : (
-        <div className="flex flex-col items-center justify-center py-16 text-center border-2 border-dashed rounded-xl bg-muted/30">
-          <div className="bg-muted/50 p-4 rounded-full mb-4">
-            <Inbox className="h-8 w-8 text-muted-foreground" />
-          </div>
-          <h3 className="text-lg font-semibold">No matching services</h3>
-          <p className="text-muted-foreground max-w-sm mt-2">
-            We couldn't find any services matching "{searchTerm}". Try searching for something else.
-          </p>
-        </div>
-      )}
+                  {service.is_featured && <Badge>Featured</Badge>}
+                </div>
+                <div className="flex-grow">
+                  <h3 className="font-semibold">{service.title}</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {service.description}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
     </div>
   );
 };
