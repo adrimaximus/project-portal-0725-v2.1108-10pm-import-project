@@ -139,11 +139,15 @@ const LandingPage = () => {
   useEffect(() => {
     const fetchServices = async () => {
       setIsServicesLoading(true);
+      // Simplified query to reduce potential errors if 'is_featured' column is missing or has issues
       const { data, error } = await supabase
         .from('services')
         .select('*')
-        .order('is_featured', { ascending: false })
         .order('title');
+        
+      if (error) {
+        console.error("Error fetching services:", error);
+      }
         
       if (!error && data) {
         setServices(data as Service[]);
@@ -370,14 +374,14 @@ const LandingPage = () => {
                 ))}
               </div>
             ) : services.length === 0 ? (
-              // State: Database is empty
+              // State: Database is empty (or fetch failed)
               <div className="text-center py-16 mb-12 border border-dashed border-white/10 rounded-xl bg-white/5 max-w-2xl mx-auto">
                 <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-white/5 mb-4">
                   <Database className="w-8 h-8 text-slate-500" />
                 </div>
-                <h3 className="text-xl font-medium text-slate-300 mb-2">No services configured</h3>
+                <h3 className="text-xl font-medium text-slate-300 mb-2">No services available</h3>
                 <p className="text-slate-500 max-w-md mx-auto">
-                  It seems there are no services in the database. Please add services from the admin settings.
+                  Our services are currently being updated. Please check back later or contact support.
                 </p>
               </div>
             ) : filteredServices.length === 0 ? (
