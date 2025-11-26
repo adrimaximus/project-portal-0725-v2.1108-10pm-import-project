@@ -13,7 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Mail, Loader2, Package, ArrowLeft } from "lucide-react";
+import { Mail, Loader2, ArrowLeft } from "lucide-react";
 
 const ForgotPasswordPage = () => {
   const [email, setEmail] = useState("");
@@ -39,60 +39,74 @@ const ForgotPasswordPage = () => {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-900 bg-cover bg-center" style={{backgroundImage: "url('https://images.unsplash.com/photo-1554147090-e1221a04a025?q=80&w=2940&auto=format&fit=crop')"}}>
-      <Card className="w-full max-w-sm bg-black/50 backdrop-blur-md border-gray-700 text-white">
-        <CardHeader className="text-center">
-          <div className="flex flex-col justify-center items-center gap-2 mb-2">
-            <Package className="h-8 w-8 text-white" />
-            <CardTitle className="text-2xl">Forgot Password</CardTitle>
-          </div>
-          <CardDescription className="text-gray-400">
-            {submitted
-              ? "Check your inbox for the reset link."
-              : "Enter your email and we'll send you a link to reset your password."}
-          </CardDescription>
-        </CardHeader>
-        {submitted ? (
-          <CardContent>
-            <div className="text-center p-4 bg-green-500/20 rounded-lg">
-              <p>A password reset link has been sent to <strong>{email}</strong>. Please check your email to continue.</p>
-            </div>
-          </CardContent>
-        ) : (
-          <form onSubmit={handleSubmit}>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="name@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    disabled={loading}
-                    className="pl-10 h-12 bg-gray-800/50 border-gray-700 text-white focus:ring-primary"
-                  />
+    <div className="flex items-center justify-center min-h-screen bg-[#0B0D14] text-slate-200 relative overflow-hidden p-4 font-sans">
+      {/* Fixed Background Gradients */}
+      <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-purple-900/10 blur-[120px]"></div>
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-blue-900/10 blur-[120px]"></div>
+        <div className="absolute top-[20%] right-[10%] w-[20%] h-[20%] rounded-full bg-pink-900/05 blur-[100px]"></div>
+      </div>
+
+      <div className="w-full max-w-md">
+        <div className="mb-8 text-center">
+            <Link to="/" className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-purple-600/20 to-blue-600/20 border border-white/10 mb-4 hover:border-purple-500/50 transition-all">
+                <img src="https://quuecudndfztjlxbrvyb.supabase.co/storage/v1/object/public/General/logo.png" alt="7i Portal Logo" className="h-6 w-6 object-contain" />
+            </Link>
+            <h1 className="text-2xl font-bold text-white mb-2">Recovery</h1>
+            <p className="text-slate-400 text-sm">We'll help you get back in.</p>
+        </div>
+
+        <Card className="bg-[#13151C]/50 backdrop-blur-xl border border-white/5 shadow-2xl rounded-3xl overflow-hidden">
+            <CardHeader className="text-center space-y-2 pb-6">
+            <CardTitle className="text-xl font-semibold text-white">Forgot Password</CardTitle>
+            <CardDescription className="text-slate-400">
+                {submitted
+                ? "Check your inbox for the reset link."
+                : "Enter your email and we'll send you a link to reset your password."}
+            </CardDescription>
+            </CardHeader>
+            {submitted ? (
+            <CardContent className="pb-8">
+                <div className="text-center p-4 bg-green-500/10 border border-green-500/20 rounded-xl text-green-400">
+                <p className="text-sm">A password reset link has been sent to <strong className="text-green-300">{email}</strong>. Please check your email to continue.</p>
                 </div>
-              </div>
             </CardContent>
-            <CardFooter className="flex flex-col gap-4">
-              <Button type="submit" className="w-full h-12 text-base" disabled={loading}>
-                {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : "Send Reset Link"}
-              </Button>
-            </CardFooter>
-          </form>
-        )}
-        <CardFooter>
-            <Button variant="link" asChild className="text-gray-400 hover:text-white w-full">
-                <Link to="/login">
-                    <ArrowLeft className="mr-2 h-4 w-4" /> Back to Login
-                </Link>
-            </Button>
-        </CardFooter>
-      </Card>
+            ) : (
+            <form onSubmit={handleSubmit}>
+                <CardContent className="space-y-4 pb-6">
+                <div className="space-y-2">
+                    <Label htmlFor="email" className="text-slate-300 text-xs uppercase tracking-wider font-medium">Email Address</Label>
+                    <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
+                    <Input
+                        id="email"
+                        type="email"
+                        placeholder="name@example.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                        disabled={loading}
+                        className="pl-10 h-12 bg-[#1A1D26] border-white/5 text-white placeholder:text-slate-600 focus:border-purple-500/50 focus:ring-purple-500/20 rounded-xl"
+                    />
+                    </div>
+                </div>
+                </CardContent>
+                <CardFooter className="flex flex-col gap-4 pb-8">
+                <Button type="submit" className="w-full h-12 text-base bg-white text-black hover:bg-slate-200 rounded-xl font-medium transition-all" disabled={loading}>
+                    {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : "Send Reset Link"}
+                </Button>
+                </CardFooter>
+            </form>
+            )}
+            <div className="border-t border-white/5 bg-[#0B0D14]/30 p-4 text-center">
+                <Button variant="link" asChild className="text-slate-400 hover:text-white text-sm">
+                    <Link to="/login" className="flex items-center gap-2">
+                        <ArrowLeft className="h-4 w-4" /> Back to Login
+                    </Link>
+                </Button>
+            </div>
+        </Card>
+      </div>
     </div>
   );
 };
