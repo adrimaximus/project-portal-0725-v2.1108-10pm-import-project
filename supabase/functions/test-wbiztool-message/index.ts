@@ -1,111 +1,93 @@
-// @ts-nocheck
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts"
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-Deno.serve(async (req) => {
+serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
 
   try {
-    const { phone, message, type } = await req.json() // type: 'system' | 'publication'
-    if (!phone || !message) throw new Error('Phone number and message are required.')
+    const { phone, message, type } = await req.json()
+    
+    if (!phone || !message) {
+        throw new Error('Phone and message are required');
+    }
 
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
+    )
 
+    // Get Credentials
     const { data: creds, error: credsError } = await supabaseAdmin
       .from('app_config')
       .select('key, value')
-      .in('key', ['WBIZTOOL_CLIENT_ID', 'WBIZTOOL_API_KEY', 'WBIZTOOL_WHATSAPP_CLIENT_ID', 'WBIZTOOL_PUBLICATION_CLIENT_ID']);
+      .in('key', ['WBIZTOOL_CLIENT_ID', 'WBIZTOOL_API_KEY', 'WBIZTOOL_WHATSAPP_CLIENT_ID', 'WBIZTOOL_PUBLICATION_CLIENT_ID'])
 
-    if (credsError || !creds) {
-      throw new Error('WBIZTOOL credentials not found in app_config.');
-    }
+    if (credsError) throw credsError;
 
-    const clientId = creds.find(c => c.key === 'WBIZTOOL_CLIENT_ID')?.value;
-    const apiKey = creds.find(c => c.key === 'WBIZTOOL_API_KEY')?.value;
-    const systemId = creds.find(c => c.key === 'WBIZTOOL_WHATSAPP_CLIENT_ID')?.value;
-    const publicationId = creds.find(c => c.key === 'WBIZTOOL_PUBLICATION_CLIENT_ID')?.value;
-
-    if (!clientId || !apiKey) {
-      throw new Error("WBIZTOOL Client ID or API Key is missing.");
-    }
-
-    // Determine which ID to use
-    let whatsappClientId = systemId; // Default to system
-    let idType = "System";
-
-    if (type === 'publication') {
-        if (!publicationId) throw new Error("Publication WhatsApp ID is not configured.");
-        whatsappClientId = publicationId;
-        idType = "Publication";
-    } else {
-        if (!systemId) throw new Error("System WhatsApp ID is not configured.");
-    }
-
-    // Call WBIZTOOL API
-    console.log(`Sending test message to ${phone} via WBIZTOOL (${idType} Device: ${whatsappClientId})`);
-
-    const messageResponse = await fetch('https://wbiztool.com/api/v1/send_msg/', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Client-ID': clientId,
-        'X-Api-Key': apiKey,
-      },
-      body: JSON.stringify({
-        client_id: parseInt(clientId, 10),
-        api_key: apiKey,
-        whatsapp_client: parseInt(whatsappClientId, 10),
-        phone,
-        message,
-      }),
-    })
+    const clientId = creds.find(c => c.key === 'WBIZTOOL_CLIENT_ID')?.value
+    const apiKey = creds.find(c => c.key === 'WBIZTOOL_API_KEY')?.value
     
-    if (!messageResponse.ok) {
-      const status = messageResponse.status;
-      const errorText = await messageResponse.text();
-      let errorMessage = `Failed to send message (Status: ${status}).`;
-
-      // Handle Cloudflare or Proxy errors
-      if (errorText.includes("Cloudflare") || errorText.includes("524") || errorText.includes("502")) {
-         if (status === 524) errorMessage = "WBIZTOOL API Timeout (Cloudflare 524). The service is taking too long to respond.";
-         else if (status === 502) errorMessage = "WBIZTOOL API Bad Gateway (Cloudflare 502). The service is down.";
-         else errorMessage = `WBIZTOOL API Error (Status: ${status}). Service might be experiencing issues.`;
-      } else {
-          // Try to parse JSON error from WBIZTOOL
-          try {
-            const errorJson = JSON.parse(errorText);
-            // WBIZTOOL errors can be in different formats
-            errorMessage = errorJson.message || errorJson.error || errorJson.detail || JSON.stringify(errorJson);
-          } catch (e) {
-            // If not JSON, clean up HTML tags if present (fallback)
-            const cleanText = errorText.replace(/<[^>]*>?/gm, ' ').replace(/\s+/g, ' ').trim();
-            errorMessage = cleanText.substring(0, 200) + (cleanText.length > 200 ? '...' : '');
-          }
-      }
-      throw new Error(`WBIZTOOL API Error: ${errorMessage}`);
+    // Use publication ID if type is publication, otherwise default/system ID
+    let whatsappClientId = creds.find(c => c.key === 'WBIZTOOL_WHATSAPP_CLIENT_ID')?.value;
+    if (type === 'publication') {
+        whatsappClientId = creds.find(c => c.key === 'WBIZTOOL_PUBLICATION_CLIENT_ID')?.value;
     }
 
-    const result = await messageResponse.json();
+    if (!clientId || !apiKey || !whatsappClientId) {
+        throw new Error('WBIZTOOL credentials not fully configured.');
+    }
 
-    return new Response(JSON.stringify({ message: `Message queued successfully using ${idType} Device (${whatsappClientId}).`, data: result }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 200,
-    })
+    // Send Message
+    // Endpoint without trailing slash
+    const endpoint = 'https://wbiztool.com/api/v1/send_msg';
+    
+    const payload = {
+        client_id: clientId,
+        api_key: apiKey,
+        whatsapp_client: whatsappClientId,
+        phone: phone,
+        msg: message
+    };
+
+    const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    });
+
+    const text = await response.text();
+    
+    if (!response.ok || text.trim().startsWith('<')) {
+        let errMsg = `Provider Error (${response.status})`;
+        if (text.includes('404')) errMsg = 'Provider Endpoint Not Found (404)';
+        throw new Error(errMsg);
+    }
+
+    try {
+        const data = JSON.parse(text);
+        if (data.status === 1 || data.success) {
+            return new Response(JSON.stringify({ success: true, message: 'Message sent successfully' }), { 
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+            });
+        } else {
+            throw new Error(data.msg || data.message || 'Unknown provider error');
+        }
+    } catch (e) {
+        if (e.message.includes('Unknown provider error')) throw e;
+        throw new Error('Failed to parse provider response');
+    }
 
   } catch (error) {
-    console.error("WBIZTOOL Test Error:", error.message);
-    return new Response(JSON.stringify({ error: error.message }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 400,
+    return new Response(JSON.stringify({ error: error.message }), { 
+        status: 400, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
     })
   }
 })
