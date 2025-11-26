@@ -15,12 +15,11 @@ const formatPhoneNumberForApi = (phone: string): string | null => {
     return null;
 };
 
-const constructWhatsAppMessage = (type: string, context: any): string => {
+const constructMessage = (type: string, context: any): string => {
     const siteUrl = Deno.env.get("SITE_URL") ?? "https://7inked.ahensi.xyz";
     const projectLink = context.project_slug ? `${siteUrl}/projects/${context.project_slug}` : siteUrl;
-    const cleanType = type.replace('_email', '');
     
-    switch (cleanType) {
+    switch (type) {
         case 'discussion_mention':
             return `You were mentioned by *${context.mentioner_name}* in *${context.project_name}*:\n\n"${context.comment_text}"\n\nView here: ${projectLink}`;
         case 'task_assignment':
@@ -49,12 +48,13 @@ const constructWhatsAppMessage = (type: string, context: any): string => {
 const constructEmailContent = (type: string, context: any) => {
     const siteUrl = Deno.env.get("SITE_URL") ?? "https://7inked.ahensi.xyz";
     const projectLink = context.project_slug ? `${siteUrl}/projects/${context.project_slug}` : siteUrl;
-    const cleanType = type.replace('_email', '');
+    // Clean type is removed here because we want to handle the raw type logic in the main loop
+    const baseType = type.replace('_email', '');
 
     let subject = "New Notification";
     let htmlBody = "";
 
-    switch (cleanType) {
+    switch (baseType) {
         case 'discussion_mention':
             subject = `You were mentioned in ${context.project_name}`;
             htmlBody = `<p><strong>${context.mentioner_name}</strong> mentioned you in a comment:</p>
@@ -91,11 +91,10 @@ const sendEmail = async (supabaseAdmin, to, subject, html) => {
         .from('app_config')
         .select('value')
         .eq('key', 'EMAILIT_API_KEY')
-        .single();
+        .maybeSingle();
 
     if (!config?.value) {
-        console.warn("Emailit API key not found.");
-        return false;
+        throw new Error("Emailit API key not configured.");
     }
 
     const emailFrom = Deno.env.get("EMAIL_FROM") ?? "7i Portal <no-reply@mail.ahensi.com>";
@@ -132,12 +131,13 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // 1. Fetch Config (Meta & WBIZTOOL) once
+    // 1. Get Config (Meta & WBIZTOOL)
     const { data: config } = await supabaseAdmin
       .from('app_config')
       .select('key, value')
       .in('key', ['WBIZTOOL_CLIENT_ID', 'WBIZTOOL_API_KEY', 'WBIZTOOL_WHATSAPP_CLIENT_ID', 'META_PHONE_ID', 'META_ACCESS_TOKEN']);
     
+    // Sanitize credentials
     const metaPhoneId = config?.find(c => c.key === 'META_PHONE_ID')?.value?.trim();
     const metaAccessToken = config?.find(c => c.key === 'META_ACCESS_TOKEN')?.value?.trim();
     const wbizClientId = config?.find(c => c.key === 'WBIZTOOL_CLIENT_ID')?.value?.trim();
@@ -165,7 +165,7 @@ Deno.serve(async (req) => {
                 const { data: recipient } = await supabaseAdmin.from('profiles').select('email').eq('id', notification.recipient_id).single();
                 
                 if (!recipient?.email) {
-                    await supabaseAdmin.from('pending_notifications').update({ status: 'failed', error_message: 'No email address' }).eq('id', notification.id);
+                    await supabaseAdmin.from('pending_notifications').update({ status: 'failed', error_message: 'No email address linked to profile' }).eq('id', notification.id);
                     continue;
                 }
 
@@ -182,29 +182,41 @@ Deno.serve(async (req) => {
                         error_message: e.message,
                         retry_count: notification.retry_count + 1 
                     }).eq('id', notification.id);
+                    results.push({ id: notification.id, status: 'failed_email', error: e.message });
                 }
-                continue;
+                continue; // Ensure we don't process as WhatsApp
             }
 
             // --- WHATSAPP HANDLING ---
+            if (!useMeta && !useWbiz) {
+                await supabaseAdmin.from('pending_notifications').update({ 
+                    status: 'failed', 
+                    error_message: 'No WhatsApp provider configured',
+                }).eq('id', notification.id);
+                results.push({ id: notification.id, status: 'failed', error: 'No provider' });
+                continue;
+            }
+
+            // Get recipient phone
             const { data: recipient } = await supabaseAdmin.from('profiles').select('phone').eq('id', notification.recipient_id).single();
             
             if (!recipient?.phone) {
-                await supabaseAdmin.from('pending_notifications').update({ status: 'failed', error_message: 'No phone number' }).eq('id', notification.id);
+                await supabaseAdmin.from('pending_notifications').update({ status: 'failed', error_message: 'No phone number linked to profile' }).eq('id', notification.id);
                 continue;
             }
 
             const formattedPhone = formatPhoneNumberForApi(recipient.phone);
             if (!formattedPhone) {
-                await supabaseAdmin.from('pending_notifications').update({ status: 'failed', error_message: 'Invalid phone number' }).eq('id', notification.id);
+                await supabaseAdmin.from('pending_notifications').update({ status: 'failed', error_message: `Invalid phone number format: ${recipient.phone}` }).eq('id', notification.id);
                 continue;
             }
 
-            const messageText = constructWhatsAppMessage(notification.notification_type, notification.context_data);
+            const messageText = constructMessage(notification.notification_type, notification.context_data);
             
             let sent = false;
             let lastError = '';
 
+            // --- STRATEGY: Try Meta First ---
             if (useMeta) {
                 try {
                     const response = await fetch(`https://graph.facebook.com/v21.0/${metaPhoneId}/messages`, {
@@ -218,20 +230,25 @@ Deno.serve(async (req) => {
                         }),
                     });
 
+                    const respData = await response.json();
+
                     if (response.ok) {
                         sent = true;
                     } else {
-                        const text = await response.text();
-                        lastError = `Meta Failed: ${text}`;
-                        console.warn(lastError);
+                        const errorMsg = respData.error?.message || JSON.stringify(respData);
+                        lastError = `Meta Failed: ${errorMsg}`;
+                        console.warn(`Meta send failed for ${formattedPhone}: ${errorMsg}`);
                     }
                 } catch (e) {
                     lastError = `Meta Exception: ${e.message}`;
+                    console.warn(`Meta exception for ${formattedPhone}:`, e);
                 }
             }
 
+            // --- FALLBACK: Try WBIZTOOL if Meta Failed or Not Configured ---
             if (!sent && useWbiz) {
                 try {
+                    console.log(`Trying WBIZTOOL fallback for ${formattedPhone}...`);
                     const response = await fetch('https://wbiztool.com/api/v1/send_msg/', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', 'X-Client-ID': wbizClientId, 'X-Api-Key': wbizApiKey },
@@ -241,21 +258,24 @@ Deno.serve(async (req) => {
                     if (response.ok) {
                         sent = true;
                     } else {
-                        const text = await response.text();
-                        lastError += ` | WBIZ Failed: ${text}`;
+                        const errorText = await response.text();
+                        lastError += ` | WBIZTOOL Failed: ${errorText.substring(0, 100)}`;
                     }
                 } catch (e) {
-                    lastError += ` | WBIZ Exception: ${e.message}`;
+                    lastError += ` | WBIZTOOL Exception: ${e.message}`;
                 }
+            } else if (!sent && !useWbiz) {
+                lastError += " | WBIZTOOL not configured for fallback";
             }
 
             if (sent) {
                 await supabaseAdmin.from('pending_notifications').update({ status: 'completed', processed_at: new Date() }).eq('id', notification.id);
-                results.push({ id: notification.id, status: 'sent_whatsapp' });
+                results.push({ id: notification.id, status: 'sent' });
             } else {
+                console.error(`All providers failed for notification ${notification.id}: ${lastError}`);
                 await supabaseAdmin.from('pending_notifications').update({ 
                     status: 'failed', 
-                    error_message: lastError || 'No providers configured',
+                    error_message: lastError || 'Unknown error',
                     retry_count: notification.retry_count + 1 
                 }).eq('id', notification.id);
                 results.push({ id: notification.id, status: 'failed', error: lastError });
