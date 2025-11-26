@@ -153,6 +153,7 @@ Buat pesan pengingat yang sopan dan profesional sesuai dengan tingkat urgensi ya
               whatsapp_client: whatsappClientId,
               phone: profile.phone, 
               message: aiMessage,
+              msg_type: 0, // Added required parameter
             }),
           });
 

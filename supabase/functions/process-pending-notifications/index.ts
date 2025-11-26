@@ -63,13 +63,13 @@ const getWbizConfig = async () => {
   const { data: wbizConfig, error: configError } = await supabaseAdmin
     .from('app_config')
     .select('key, value')
-    .in('key', ['WBIZTOOL_CLIENT_ID', 'WBIZTOOL_API_KEY']);
+    .in('key', ['WBIZTOOL_CLIENT_ID', 'WBIZTOOL_API_KEY', 'WBIZTOOL_WHATSAPP_CLIENT_ID']);
 
   if (configError) throw new Error(`Failed to get WBIZTOOL config: ${configError.message}`);
 
   const clientId = wbizConfig?.find(c => c.key === 'WBIZTOOL_CLIENT_ID')?.value;
   const apiKey = wbizConfig?.find(c => c.key === 'WBIZTOOL_API_KEY')?.value;
-  const whatsappClientId = Deno.env.get('WBIZTOOL_WHATSAPP_CLIENT_ID');
+  const whatsappClientId = wbizConfig?.find(c => c.key === 'WBIZTOOL_WHATSAPP_CLIENT_ID')?.value;
 
   if (!clientId || !apiKey || !whatsappClientId) {
     throw new Error("WBIZTOOL credentials not fully configured. Check app_config and environment variables.");
@@ -99,6 +99,7 @@ const sendWhatsappMessage = async (config: any, phone: string, message: string) 
         whatsapp_client: parseInt(config.whatsappClientId, 10),
         phone: formattedPhone,
         message: message,
+        msg_type: 0, // Added required parameter
       }),
     });
 

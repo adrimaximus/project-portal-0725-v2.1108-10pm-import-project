@@ -55,6 +55,7 @@ const sendWhatsappMessage = async (supabaseAdmin, phone: string, message: string
         whatsapp_client: parseInt(whatsappClientId, 10),
         phone: formattedPhone,
         message: message,
+        msg_type: 0, // Added required parameter
     };
 
     const response = await fetch("https://wbiztool.com/api/v1/send_msg/", {
