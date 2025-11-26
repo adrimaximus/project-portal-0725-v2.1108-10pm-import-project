@@ -41,15 +41,15 @@ serve(async (req) => {
 
     // Function to send a single message
     const sendMessage = async (msg: any) => {
-      // REMOVED trailing slashes
+      // ADDED trailing slashes which are often required by WBIZTOOL
       const endpoint = msg.type === 'text' 
-        ? 'https://wbiztool.com/api/v1/send_msg' 
-        : 'https://wbiztool.com/api/v1/send_media';
+        ? 'https://wbiztool.com/api/v1/send_msg/' 
+        : 'https://wbiztool.com/api/v1/send_media/';
       
       const payload: any = {
-        client_id: clientId,
+        client_id: parseInt(clientId, 10),
         api_key: apiKey,
-        whatsapp_client: whatsappClientId,
+        whatsapp_client: parseInt(whatsappClientId, 10),
         phone: msg.phone,
       };
 

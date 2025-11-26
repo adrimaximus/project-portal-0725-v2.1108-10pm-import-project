@@ -45,13 +45,13 @@ serve(async (req) => {
     }
 
     // Send Message
-    // Endpoint without trailing slash
-    const endpoint = 'https://wbiztool.com/api/v1/send_msg';
+    // Endpoint WITH trailing slash
+    const endpoint = 'https://wbiztool.com/api/v1/send_msg/';
     
     const payload = {
-        client_id: clientId,
+        client_id: parseInt(clientId, 10),
         api_key: apiKey,
-        whatsapp_client: whatsappClientId,
+        whatsapp_client: parseInt(whatsappClientId, 10),
         phone: phone,
         msg: message
     };

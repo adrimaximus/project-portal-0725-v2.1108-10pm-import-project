@@ -29,8 +29,8 @@ serve(async (req) => {
         }
 
         // Construct URL with query parameters
-        // IMPORTANT: No trailing slash
-        const url = new URL('https://wbiztool.com/api/v1/whatsapp_clients');
+        // IMPORTANT: Added trailing slash which is often required by WBIZTOOL
+        const url = new URL('https://wbiztool.com/api/v1/whatsapp_clients/');
         url.searchParams.append('client_id', clientId);
         url.searchParams.append('api_key', apiKey);
 
@@ -46,7 +46,7 @@ serve(async (req) => {
             console.error('WBIZTOOL API Error:', text);
             let errorMsg = `WBIZTOOL API Error: HTTP ${response.status}`;
             
-            if (text.includes('404')) errorMsg = 'WBIZTOOL API Endpoint Not Found (404). URL structure might be incorrect.';
+            if (text.includes('404')) errorMsg = 'WBIZTOOL API Endpoint Not Found (404). Check URL slash.';
             if (text.includes('Invalid API Key')) errorMsg = 'Invalid WBIZTOOL API Credentials.';
             
             throw new Error(errorMsg);
