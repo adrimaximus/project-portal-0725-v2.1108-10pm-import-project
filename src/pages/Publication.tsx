@@ -1,3 +1,4 @@
+30s pause).">
 import { useState, useRef, useMemo, useEffect } from "react";
 import PortalLayout from "@/components/PortalLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -934,6 +935,7 @@ const PublicationPage = () => {
 
         let sentCount = 0;
         let failedCount = 0;
+        let processedInBatch = 0;
 
         for (const i of indices) {
             const row = data[i];
@@ -1020,6 +1022,7 @@ const PublicationPage = () => {
 
                 // Success Update
                 sentCount++;
+                processedInBatch++;
                 const newTriggerTime = isScheduled ? (messageData.schedule_time || "Scheduled") : new Date().toLocaleString();
                 
                 setData(prevData => prevData.map((r, idx) => 
@@ -1033,14 +1036,21 @@ const PublicationPage = () => {
                     } : r
                 ));
 
-                // Rate Limiting Delay (Anti-Spam)
-                // Random delay between 10-20 seconds as requested
-                // To stay strictly under 50/hour (72s avg), we might need more delay, but we adhere to 10-20s per request.
-                const delayMs = Math.floor(Math.random() * (20000 - 10000 + 1) + 10000);
-                await wait(delayMs);
+                // --- BATCH DELAY LOGIC ---
+                if (processedInBatch >= 20) {
+                    toast.info("Cooling Down", { description: "Pausing for 30s after sending 20 messages..." });
+                    await wait(30000); // 30 seconds pause
+                    processedInBatch = 0; // Reset counter
+                } else {
+                    // Standard Random Rate Limiting Delay (10-20 seconds)
+                    const delayMs = Math.floor(Math.random() * (20000 - 10000 + 1) + 10000);
+                    await wait(delayMs);
+                }
 
             } catch (err: any) {
                 failedCount++;
+                processedInBatch++; // Still count attempt towards batch
+                
                 setData(prevData => prevData.map((r, idx) => 
                     idx === i ? { 
                         ...r, 
@@ -1050,8 +1060,15 @@ const PublicationPage = () => {
                         'Trigger time': 'N/A' 
                     } : r
                 ));
-                // Shorter delay on error
-                await wait(5000);
+                
+                // Apply batch delay even on error if threshold reached
+                if (processedInBatch >= 20) {
+                    toast.info("Cooling Down", { description: "Pausing for 30s after 20 attempts..." });
+                    await wait(30000);
+                    processedInBatch = 0;
+                } else {
+                    await wait(5000); // Short delay on error
+                }
             }
         }
 
@@ -1450,7 +1467,7 @@ const PublicationPage = () => {
                                 <ul className="list-disc list-inside pl-1 opacity-90">
                                     <li><strong>Smart Variation:</strong> AI rewrites each message uniquely to prevent block detection.</li>
                                     <li><strong>Core Agenda Lock:</strong> Dates, Times, Links, and Company Identity are strictly preserved.</li>
-                                    <li><strong>Safe Timing:</strong> Random delay (10-20s) applied between messages.</li>
+                                    <li><strong>Safe Timing:</strong> 10-20s random delay, plus 30s pause every 20 messages.</li>
                                 </ul>
                             </div>
                          )}
