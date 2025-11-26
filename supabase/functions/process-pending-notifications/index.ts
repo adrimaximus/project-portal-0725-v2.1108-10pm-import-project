@@ -1,3 +1,4 @@
+'processed_at' to resolve 400 error">
 // @ts-nocheck
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.54.0'
 
@@ -92,7 +93,8 @@ Deno.serve(async (req) => {
         try {
             // Check if it's an email type
             if (notification.notification_type.endsWith('_email')) {
-                await supabaseAdmin.from('pending_notifications').update({ status: 'completed', sent_at: new Date() }).eq('id', notification.id);
+                // FIX: Changed sent_at to processed_at to match table schema
+                await supabaseAdmin.from('pending_notifications').update({ status: 'completed', processed_at: new Date() }).eq('id', notification.id);
                 continue;
             }
 
@@ -171,7 +173,8 @@ Deno.serve(async (req) => {
             }
 
             if (sent) {
-                await supabaseAdmin.from('pending_notifications').update({ status: 'completed', sent_at: new Date() }).eq('id', notification.id);
+                // FIX: Changed sent_at to processed_at to match table schema
+                await supabaseAdmin.from('pending_notifications').update({ status: 'completed', processed_at: new Date() }).eq('id', notification.id);
                 results.push({ id: notification.id, status: 'sent' });
             } else {
                 // If both failed (or one failed and other not configured)
