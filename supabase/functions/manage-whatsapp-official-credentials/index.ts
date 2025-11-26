@@ -7,6 +7,36 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS, DELETE',
 }
 
+// Helper to validate token with Meta
+async function validateMetaCredentials(phoneId: string, accessToken: string) {
+  try {
+    // Fetch phone number details. This requires 'whatsapp_business_messaging' or 'whatsapp_business_management' permission
+    const response = await fetch(`https://graph.facebook.com/v21.0/${phoneId}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    const data = await response.json();
+    
+    if (!response.ok) {
+      const msg = data.error?.message || 'Unknown Meta Error';
+      return { valid: false, error: msg };
+    }
+
+    // Check if the ID returned matches (or at least we got a valid JSON object representing the phone)
+    if (data.id === phoneId) {
+        return { valid: true };
+    }
+    
+    return { valid: false, error: 'Token valid but Phone ID mismatch or insufficient permissions.' };
+  } catch (e) {
+    return { valid: false, error: e.message };
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -40,6 +70,12 @@ Deno.serve(async (req) => {
       const cleanAccountId = businessAccountId ? String(businessAccountId).trim() : null;
       const cleanAppId = appId ? String(appId).trim() : null;
 
+      // Validate before saving
+      const validation = await validateMetaCredentials(cleanPhoneId, cleanToken);
+      if (!validation.valid) {
+          throw new Error(`Meta Validation Failed: ${validation.error}`);
+      }
+
       const updates = [
           { key: 'META_PHONE_ID', value: cleanPhoneId },
           { key: 'META_ACCESS_TOKEN', value: cleanToken }
@@ -53,7 +89,7 @@ Deno.serve(async (req) => {
 
       if (upsertError) throw upsertError
 
-      return new Response(JSON.stringify({ connected: true }), {
+      return new Response(JSON.stringify({ connected: true, message: 'Credentials validated and saved.' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,
       })
@@ -86,8 +122,22 @@ Deno.serve(async (req) => {
       const appIdObj = creds?.find(c => c.key === 'META_APP_ID');
       const tokenObj = creds?.find(c => c.key === 'META_ACCESS_TOKEN');
 
+      let isConnected = !!(phoneIdObj && tokenObj);
+      let validationError = null;
+
+      // Optional: Perform a lightweight check on GET to update status if token expired in background
+      // We only do this if it looks connected to verify it's STILL connected
+      if (isConnected) {
+          const validation = await validateMetaCredentials(phoneIdObj.value, tokenObj.value);
+          if (!validation.valid) {
+              isConnected = false;
+              validationError = validation.error; // Pass this to UI to show "Expired"
+          }
+      }
+
       return new Response(JSON.stringify({ 
-          connected: !!(phoneIdObj && tokenObj),
+          connected: isConnected,
+          validationError, // UI can use this to show a warning
           phoneId: phoneIdObj?.value || '',
           businessAccountId: accountIdObj?.value || '',
           appId: appIdObj?.value || ''
