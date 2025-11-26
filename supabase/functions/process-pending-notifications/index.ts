@@ -249,7 +249,8 @@ Deno.serve(async (req) => {
             if (!sent && useWbiz) {
                 try {
                     console.log(`Trying WBIZTOOL fallback for ${formattedPhone}...`);
-                    const response = await fetch('https://wbiztool.com/api/v1/send_msg/', {
+                    // REMOVED trailing slash
+                    const response = await fetch('https://wbiztool.com/api/v1/send_msg', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', 'X-Client-ID': wbizClientId, 'X-Api-Key': wbizApiKey },
                         body: JSON.stringify({ client_id: wbizClientId, api_key: wbizApiKey, whatsapp_client: wbizWhatsappClientId, phone: formattedPhone, message: messageText }),

@@ -68,30 +68,18 @@ Deno.serve(async (req) => {
     if (projectsError) throw projectsError;
 
     if (!overdueProjects || overdueProjects.length === 0) {
-      return new Response(JSON.stringify({ message: "No overdue invoices to process." }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      return new Response(JSON.stringify({ message: "No active invoices to check." }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
     
     const projectIds = overdueProjects.map(p => p.id);
-
-    const { data: projectAdmins, error: adminsError } = await supabaseAdmin
-      .from('project_members')
-      .select('project_id, user_id')
-      .in('project_id', projectIds)
-      .eq('role', 'admin');
-
-    if (adminsError) throw adminsError;
-
+    const { data: projectAdmins } = await supabaseAdmin.from('project_members').select('project_id, user_id').in('project_id', projectIds).eq('role', 'admin');
+    
     const userIdsToFetch = new Set<string>();
     overdueProjects.forEach(p => userIdsToFetch.add(p.created_by));
-    projectAdmins.forEach(m => userIdsToFetch.add(m.user_id));
+    projectAdmins?.forEach(m => userIdsToFetch.add(m.user_id));
 
-    const { data: profiles, error: profilesError } = await supabaseAdmin
-      .from('profiles')
-      .select('id, first_name, last_name, email, phone')
-      .in('id', Array.from(userIdsToFetch));
-
-    if (profilesError) throw profilesError;
-    const profileMap = new Map(profiles.map(p => [p.id, p]));
+    const { data: profiles } = await supabaseAdmin.from('profiles').select('id, first_name, last_name, email, phone, notification_preferences').in('id', Array.from(userIdsToFetch));
+    const profileMap = new Map(profiles?.map(p => [p.id, p]));
 
     const { data: config } = await supabaseAdmin.from('app_config').select('key, value').in('key', ['WBIZTOOL_CLIENT_ID', 'WBIZTOOL_API_KEY', 'WBIZTOOL_WHATSAPP_CLIENT_ID', 'META_PHONE_ID', 'META_ACCESS_TOKEN']);
     
@@ -101,10 +89,8 @@ Deno.serve(async (req) => {
     const wbizApiKey = config?.find(c => c.key === 'WBIZTOOL_API_KEY')?.value;
     const wbizWhatsappClientId = config?.find(c => c.key === 'WBIZTOOL_WHATSAPP_CLIENT_ID')?.value;
 
-    const useMeta = !!(metaPhoneId && metaAccessToken);
-    const useWbiz = !!(wbizClientId && wbizApiKey && wbizWhatsappClientId);
-
-    if (!useMeta && !useWbiz) {
+    const useMeta = metaPhoneId && metaAccessToken;
+    if (!useMeta && (!wbizClientId || !wbizApiKey || !wbizWhatsappClientId)) {
         throw new Error("No valid WhatsApp configuration found (Meta or WBIZTOOL).");
     }
 
@@ -132,21 +118,16 @@ Deno.serve(async (req) => {
       for (const userId of recipients) {
         const profile = profileMap.get(userId);
         if (!profile || !profile.phone) continue;
+        
+        const prefs = profile.notification_preferences;
+        // If preferences exist and billing_reminder is explicitly set to false, skip. Default is true.
+        if (prefs && prefs.billing_reminder === false) continue;
 
         const formattedPhone = formatPhoneNumberForApi(profile.phone);
         if (!formattedPhone) continue;
 
         const recipientName = getFullName(profile);
-        const userPrompt = `**Konteks:**
-- **Jenis:** Pengingat Invoice Jatuh Tempo
-- **Penerima:** ${recipientName}
-- **Proyek:** ${formatMentions(project.name)}
-- **Nomor Invoice:** ${project.invoice_number || 'N/A'}
-- **Jumlah Hari Terlambat:** ${overdueDays} hari
-- **Tingkat Urgensi:** ${urgency}
-- **URL:** ${Deno.env.get("SITE_URL") ?? "https://7inked.ahensi.xyz"}/billing
-
-Buat pesan pengingat yang sopan dan profesional sesuai dengan tingkat urgensi yang diberikan.`;
+        const userPrompt = `**Konteks:**\n- **Jenis:** Pengingat Invoice Jatuh Tempo\n- **Penerima:** ${recipientName}\n- **Proyek:** ${formatMentions(project.name)}\n- **Nomor Invoice:** ${project.invoice_number || 'N/A'}\n- **Jumlah Hari Terlambat:** ${overdueDays} hari\n- **Tingkat Urgensi:** ${urgency}\n- **URL:** ${Deno.env.get("SITE_URL") ?? "https://7inked.ahensi.xyz"}/billing\n\nBuat pesan pengingat yang sopan dan profesional sesuai dengan tingkat urgensi yang diberikan.`;
 
         try {
           let aiMessage = "";
@@ -193,7 +174,7 @@ Buat pesan pengingat yang sopan dan profesional sesuai dengan tingkat urgensi ya
           if (!sent && useWbiz) {
               try {
                   console.log(`Falling back to WBIZTOOL for ${formattedPhone}...`);
-                  const response = await fetch('https://wbiztool.com/api/v1/send_msg/', {
+                  const response = await fetch('https://wbiztool.com/api/v1/send_msg', { // REMOVED trailing slash
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json', 'X-Client-ID': wbizClientId, 'X-Api-Key': wbizApiKey },
                       body: JSON.stringify({ 

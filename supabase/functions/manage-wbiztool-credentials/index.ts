@@ -29,8 +29,8 @@ serve(async (req) => {
         }
 
         // Construct URL with query parameters
-        // IMPORTANT: Added trailing slash which is often required by WBIZTOOL
-        const url = new URL('https://wbiztool.com/api/v1/whatsapp_clients/');
+        // IMPORTANT: REMOVED trailing slash
+        const url = new URL('https://wbiztool.com/api/v1/whatsapp_clients');
         url.searchParams.append('client_id', clientId);
         url.searchParams.append('api_key', apiKey);
 
