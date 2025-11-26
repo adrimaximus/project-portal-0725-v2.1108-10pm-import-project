@@ -24,22 +24,17 @@ const getErrorMessage = async (error: any): Promise<string> => {
   }
 
   if (rawErrorText) {
-    // Check for HTML response first
     if (rawErrorText.trim().startsWith('<') || rawErrorText.includes('<html>') || rawErrorText.includes('window.dataLayer')) {
       return "The server returned an unexpected error. This might be a temporary issue with the service. Please try again later.";
     }
-    
-    // Try to parse as JSON
     try {
       const errorBody = JSON.parse(rawErrorText);
       description = errorBody.error || errorBody.message || rawErrorText;
     } catch (e) {
-      // Not JSON, use the raw text
       description = rawErrorText;
     }
   }
 
-  // Clean up common error patterns from edge functions
   const prefixes = ['WBIZTOOL unexpected error:', 'WBIZTOOL API Error:', 'WBIZTOOL API Error (devices):', 'WBIZTOOL API Error (messages):'];
   for (const prefix of prefixes) {
     if (description.startsWith(prefix)) {
@@ -47,7 +42,6 @@ const getErrorMessage = async (error: any): Promise<string> => {
     }
   }
 
-  // Provide user-friendly messages for specific technical errors
   if (description.includes('404 Page Not Found')) {
     return "Could not reach the WBIZTOOL API. The service might be down or the API endpoint has changed. Please contact support if the issue persists.";
   }
@@ -61,7 +55,6 @@ const getErrorMessage = async (error: any): Promise<string> => {
       return "WBIZTOOL integration is not fully configured on the server. The 'WBIZTOOL_WHATSAPP_CLIENT_ID' might be missing.";
   }
 
-  // A simple HTML stripper for any leftover tags
   description = description.replace(/<[^>]*>?/gm, ' ').replace(/\s+/g, ' ').trim();
   
   if (!description) {
@@ -75,14 +68,14 @@ const getErrorMessage = async (error: any): Promise<string> => {
 const WbiztoolPage = () => {
   const [clientId, setClientId] = useState("");
   const [apiKey, setApiKey] = useState("");
-  const [whatsappClientId, setWhatsappClientId] = useState("");
+  const [whatsappClientId, setWhatsappClientId] = useState(""); // For System Notifications
+  const [publicationClientId, setPublicationClientId] = useState(""); // For Publication Blasts
   const [isConnected, setIsConnected] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [testPhone, setTestPhone] = useState("");
   const [testMessage, setTestMessage] = useState("");
   const [isSendingTest, setIsSendingTest] = useState(false);
   
-  // New state for devices
   const [devices, setDevices] = useState<any[]>([]);
   const [isLoadingDevices, setIsLoadingDevices] = useState(false);
 
@@ -103,7 +96,6 @@ const WbiztoolPage = () => {
         setDevices(data.devices);
         toast.success("Devices loaded", { description: `Found ${data.devices.length} WhatsApp device(s).` });
       } else {
-        // Fallback if API structure is different or empty
         setDevices([]);
         toast.info("No devices found", { description: "Check your WBIZTOOL dashboard to ensure you have active WhatsApp clients." });
       }
@@ -124,10 +116,9 @@ const WbiztoolPage = () => {
       setIsConnected(data.connected);
       
       if (data.connected) {
-        // Set the saved ID so it shows in the dropdown
-        if (data.whatsappClientId) {
-            setWhatsappClientId(data.whatsappClientId);
-        }
+        if (data.whatsappClientId) setWhatsappClientId(data.whatsappClientId);
+        if (data.publicationClientId) setPublicationClientId(data.publicationClientId);
+        
         // Automatically fetch devices if connected to populate the list
         fetchDevices("", ""); // Backend will use stored credentials
       }
@@ -145,18 +136,17 @@ const WbiztoolPage = () => {
 
   const handleConnect = async () => {
     if (!clientId || !apiKey || !whatsappClientId) {
-      toast.error("Please fill in all fields: API Client ID, API Key, and WhatsApp Client ID.");
+      toast.error("Please fill in all required fields.");
       return;
     }
     setIsLoading(true);
     try {
       const { error } = await supabase.functions.invoke('manage-wbiztool-credentials', {
-        body: { clientId, apiKey, whatsappClientId },
+        body: { clientId, apiKey, whatsappClientId, publicationClientId },
       });
       if (error) throw error;
       toast.success("Successfully connected to WBIZTOOL!");
       setIsConnected(true);
-      // We keep the values in state so the UI doesn't flicker empty
     } catch (error: any) {
       const description = await getErrorMessage(error);
       toast.error("Failed to connect", { description });
@@ -177,6 +167,7 @@ const WbiztoolPage = () => {
       setClientId("");
       setApiKey("");
       setWhatsappClientId("");
+      setPublicationClientId("");
       setDevices([]);
     } catch (error: any) {
       const description = await getErrorMessage(error);
@@ -192,12 +183,10 @@ const WbiztoolPage = () => {
       return;
     }
 
-    // Normalize phone number for Indonesian format
-    let normalizedPhone = testPhone.replace(/\D/g, ''); // Remove all non-digit characters
+    let normalizedPhone = testPhone.replace(/\D/g, '');
     if (normalizedPhone.startsWith('0')) {
       normalizedPhone = '62' + normalizedPhone.substring(1);
     } else if (normalizedPhone.startsWith('8')) {
-      // Handles cases where user types 812... instead of 0812...
       normalizedPhone = '62' + normalizedPhone;
     }
 
@@ -274,70 +263,108 @@ const WbiztoolPage = () => {
                   disabled={isConnected || isLoading}
                 />
             </div>
-            <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                    <Label htmlFor="whatsapp-client-id">WhatsApp Number (Device)</Label>
-                    {(!isConnected && clientId && apiKey) && (
-                        <Button 
-                            variant="link" 
-                            className="h-auto p-0 text-xs" 
-                            onClick={() => fetchDevices(clientId, apiKey)}
-                            disabled={isLoadingDevices}
-                        >
-                            {isLoadingDevices ? <Loader2 className="h-3 w-3 animate-spin mr-1"/> : <RefreshCw className="h-3 w-3 mr-1"/>}
-                            Load WhatsApp Numbers
-                        </Button>
-                    )}
-                </div>
-                <div className="text-[10px] text-muted-foreground mb-1">
-                  Select the WhatsApp number you want to use for sending messages.
-                </div>
-                
-                {devices.length > 0 || isConnected ? (
-                    <Select 
-                        value={whatsappClientId} 
-                        onValueChange={setWhatsappClientId}
-                        disabled={isLoading}
+            
+            <div className="flex items-center justify-end">
+                {(!isConnected && clientId && apiKey) && (
+                    <Button 
+                        variant="link" 
+                        className="h-auto p-0 text-xs" 
+                        onClick={() => fetchDevices(clientId, apiKey)}
+                        disabled={isLoadingDevices}
                     >
-                        <SelectTrigger>
-                            <SelectValue placeholder="Select a WhatsApp Number" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {devices.map((device: any) => (
-                                <SelectItem key={device.id} value={String(device.id)}>
-                                    {device.phone || device.name || `Device ${device.id}`} 
-                                    {device.status ? ` (${device.status})` : ''}
-                                </SelectItem>
-                            ))}
-                            {/* Handle case where stored ID isn't in fetched list yet */}
-                            {isConnected && whatsappClientId && !devices.find(d => String(d.id) === String(whatsappClientId)) && (
-                                <SelectItem value={whatsappClientId}>
-                                    Saved Device ({whatsappClientId})
-                                </SelectItem>
-                            )}
-                        </SelectContent>
-                    </Select>
-                ) : (
-                    <div className="relative">
+                        {isLoadingDevices ? <Loader2 className="h-3 w-3 animate-spin mr-1"/> : <RefreshCw className="h-3 w-3 mr-1"/>}
+                        Load WhatsApp Numbers
+                    </Button>
+                )}
+            </div>
+
+            <div className="space-y-4 border rounded-md p-4 bg-muted/20">
+                <div className="space-y-2">
+                    <Label htmlFor="whatsapp-client-id">System Notification Number (Required)</Label>
+                    <p className="text-[10px] text-muted-foreground">Used for system alerts like OTPs, mentions, and task reminders.</p>
+                    
+                    {devices.length > 0 || isConnected ? (
+                        <Select 
+                            value={whatsappClientId} 
+                            onValueChange={setWhatsappClientId}
+                            disabled={isLoading}
+                        >
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select Device for Notifications" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {devices.map((device: any) => (
+                                    <SelectItem key={device.id} value={String(device.id)}>
+                                        {device.phone || device.name || `Device ${device.id}`} 
+                                        {device.status ? ` (${device.status})` : ''}
+                                    </SelectItem>
+                                ))}
+                                {isConnected && whatsappClientId && !devices.find(d => String(d.id) === String(whatsappClientId)) && (
+                                    <SelectItem value={whatsappClientId}>
+                                        Saved Device ({whatsappClientId})
+                                    </SelectItem>
+                                )}
+                            </SelectContent>
+                        </Select>
+                    ) : (
                         <Input 
                           id="whatsapp-client-id" 
                           type="text" 
-                          placeholder="Enter Device ID (e.g., 4162) or click Load"
+                          placeholder="Enter Device ID (e.g., 4162)"
                           value={whatsappClientId}
                           onChange={(e) => setWhatsappClientId(e.target.value)}
                           disabled={isConnected || isLoading}
                         />
-                    </div>
-                )}
+                    )}
+                </div>
+
+                <div className="space-y-2">
+                    <Label htmlFor="publication-client-id">Publication Blast Number (Optional)</Label>
+                    <p className="text-[10px] text-muted-foreground">Used exclusively for mass messaging and campaigns in the Publication page.</p>
+                    
+                    {devices.length > 0 || isConnected ? (
+                        <Select 
+                            value={publicationClientId} 
+                            onValueChange={setPublicationClientId}
+                            disabled={isLoading}
+                        >
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select Device for Blasts (Default: Same as System)" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {devices.map((device: any) => (
+                                    <SelectItem key={device.id} value={String(device.id)}>
+                                        {device.phone || device.name || `Device ${device.id}`} 
+                                        {device.status ? ` (${device.status})` : ''}
+                                    </SelectItem>
+                                ))}
+                                {isConnected && publicationClientId && !devices.find(d => String(d.id) === String(publicationClientId)) && (
+                                    <SelectItem value={publicationClientId}>
+                                        Saved Device ({publicationClientId})
+                                    </SelectItem>
+                                )}
+                            </SelectContent>
+                        </Select>
+                    ) : (
+                        <Input 
+                          id="publication-client-id" 
+                          type="text" 
+                          placeholder="Enter Device ID (Optional)"
+                          value={publicationClientId}
+                          onChange={(e) => setPublicationClientId(e.target.value)}
+                          disabled={isConnected || isLoading}
+                        />
+                    )}
+                </div>
             </div>
+
           </CardContent>
           <CardFooter className="flex justify-end">
             {isConnected ? (
               <div className="flex gap-2">
                   <Button variant="outline" onClick={() => {
                       setIsConnected(false);
-                      setClientId(""); // Clear to force re-entry if they want to change accounts
-                      setApiKey("");
+                      // Don't clear IDs so user can edit them
                   }}>
                       Edit Settings
                   </Button>
@@ -359,7 +386,7 @@ const WbiztoolPage = () => {
           <Card>
             <CardHeader>
               <CardTitle>Send a Test Message</CardTitle>
-              <CardDescription>Verify your connection by sending a test message to a WhatsApp number.</CardDescription>
+              <CardDescription>Verify your connection by sending a test message (Uses System Notification Number).</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
