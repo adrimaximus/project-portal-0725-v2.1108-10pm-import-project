@@ -92,7 +92,6 @@ Deno.serve(async (req) => {
         try {
             // Check if it's an email type
             if (notification.notification_type.endsWith('_email')) {
-                // FIX: Changed sent_at to processed_at to match table schema
                 await supabaseAdmin.from('pending_notifications').update({ status: 'completed', processed_at: new Date() }).eq('id', notification.id);
                 continue;
             }
@@ -172,11 +171,9 @@ Deno.serve(async (req) => {
             }
 
             if (sent) {
-                // FIX: Changed sent_at to processed_at to match table schema
                 await supabaseAdmin.from('pending_notifications').update({ status: 'completed', processed_at: new Date() }).eq('id', notification.id);
                 results.push({ id: notification.id, status: 'sent' });
             } else {
-                // If both failed (or one failed and other not configured)
                 console.error(`All providers failed for notification ${notification.id}: ${lastError}`);
                 await supabaseAdmin.from('pending_notifications').update({ 
                     status: 'failed', 
