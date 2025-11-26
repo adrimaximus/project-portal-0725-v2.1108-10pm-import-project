@@ -127,19 +127,28 @@ const LoginPage = () => {
   const handleGoogleLogin = async () => {
     setGoogleLoading(true);
     try {
+      // Construct absolute URL for redirect
+      const origin = window.location.origin;
+      const searchParams = window.location.search;
+      const redirectUrl = `${origin}/auth/callback${searchParams}`;
+      
+      console.log("Attempting Google Login with redirect:", redirectUrl);
+
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback${window.location.search}`,
+          redirectTo: redirectUrl,
         },
       });
+      
       if (error) {
-        toast.error(error.message);
+        console.error("Google Login Error:", error);
+        toast.error(`Google login failed: ${error.message}`);
         setGoogleLoading(false);
       }
     } catch (error: any) {
       toast.error("An unexpected error occurred with Google sign-in.");
-      console.error("Google login error:", error);
+      console.error("Google login exception:", error);
       setGoogleLoading(false);
     }
   };
