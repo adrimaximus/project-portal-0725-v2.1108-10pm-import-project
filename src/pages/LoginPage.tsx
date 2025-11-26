@@ -173,9 +173,13 @@ const LoginPage = () => {
           
           <div className="relative z-10 flex items-center gap-2 text-sm text-slate-400 mt-8">
              <div className="flex -space-x-2">
-                {[1,2,3].map(i => (
-                    <div key={i} className="w-8 h-8 rounded-full border-2 border-[#13151C] bg-slate-700 flex items-center justify-center text-[10px] text-white/50">
-                        <UserIcon className="w-4 h-4" />
+                {[1, 2, 3, 4, 5].map((i) => (
+                    <div key={i} className="w-8 h-8 rounded-full border-2 border-[#13151C] overflow-hidden">
+                        <img 
+                            src={`https://i.pravatar.cc/150?u=${i + 20}`} 
+                            alt={`User ${i}`}
+                            className="w-full h-full object-cover"
+                        />
                     </div>
                 ))}
              </div>
