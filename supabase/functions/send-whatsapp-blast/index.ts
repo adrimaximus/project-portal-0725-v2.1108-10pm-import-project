@@ -41,9 +41,10 @@ serve(async (req) => {
 
     // Function to send a single message
     const sendMessage = async (msg: any) => {
+      // Added trailing slashes to endpoints to prevent 404s
       const endpoint = msg.type === 'text' 
-        ? 'https://wbiztool.com/api/v1/send_msg' 
-        : 'https://wbiztool.com/api/v1/send_media';
+        ? 'https://wbiztool.com/api/v1/send_msg/' 
+        : 'https://wbiztool.com/api/v1/send_media/';
       
       const payload: any = {
         client_id: clientId,
@@ -74,7 +75,15 @@ serve(async (req) => {
 
         if (!response.ok) {
           const text = await response.text();
-          throw new Error(`HTTP ${response.status}: ${text}`);
+          // Try to parse JSON or clean up HTML error
+          try {
+             const json = JSON.parse(text);
+             throw new Error(json.message || json.msg || json.error || `HTTP ${response.status}`);
+          } catch (e) {
+             // If HTML or plain text, strip HTML tags and truncate
+             const cleanText = text.replace(/<[^>]*>?/gm, '').substring(0, 150); 
+             throw new Error(`HTTP ${response.status}: ${cleanText.trim() || 'Unknown Error'}`);
+          }
         }
 
         const data = await response.json();
@@ -102,9 +111,9 @@ serve(async (req) => {
 
     // If everything failed, return a global error flag to help frontend debugging
     if (successCount === 0 && failureCount > 0) {
-        // Check if it's a common auth error
+        // Check if it's a common auth error or 404
         const firstError = errors[0].error;
-        if (firstError.includes("Invalid Client") || firstError.includes("credential")) {
+        if (firstError.includes("Invalid Client") || firstError.includes("credential") || firstError.includes("HTTP")) {
              return new Response(JSON.stringify({ 
                 success: false, 
                 error: `Provider Error: ${firstError}`,
