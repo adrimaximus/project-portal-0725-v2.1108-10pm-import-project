@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Info, PlayCircle, UploadCloud, MessageSquare, Bell, FileSpreadsheet, X, Link as LinkIcon, File, CheckCircle2, Loader2, Send, RefreshCw, FlaskConical, Bot, Sparkles, Clock, AlertCircle, Download, Save, Wand2, Scaling, Trash2, FolderOpen, ListFilter, Search, Plus, Crown, ShieldCheck } from "lucide-react";
+import { Info, PlayCircle, UploadCloud, MessageSquare, Bell, FileSpreadsheet, X, Link as LinkIcon, File, CheckCircle2, Loader2, Send, RefreshCw, FlaskConical, Bot, Sparkles, Clock, AlertCircle, Download, Save, Wand2, Scaling, Trash2, FolderOpen, ListFilter, Search, Plus } from "lucide-react";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
@@ -36,9 +36,6 @@ import { cn } from "@/lib/utils";
 
 // Helper component for multi-select
 import { MultiSelect } from "@/components/ui/multi-select";
-
-// Helper for delay
-const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 // Helper component for auto-sizing cell textarea
 const CellTextarea = ({ value, onChange, className, ...props }: any) => {
@@ -194,7 +191,6 @@ const PublicationPage = () => {
   const [rowRange, setRowRange] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [showDuplicatesOnly, setShowDuplicatesOnly] = useState(false);
-  const [vipMode, setVipMode] = useState(false);
   
   // Resend Confirmation State
   const [confirmResendOpen, setConfirmResendOpen] = useState(false);
@@ -481,10 +477,8 @@ const PublicationPage = () => {
     }
   };
 
-  const handleDeleteCampaign = async (id: string, e: React.MouseEvent | React.PointerEvent) => {
-    e.stopPropagation(); // Prevent SelectItem from being selected
-    e.preventDefault(); // Prevent default behavior
-    
+  const handleDeleteCampaign = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
     if (!confirm("Are you sure you want to delete this campaign?")) return;
 
     try {
@@ -926,168 +920,6 @@ const PublicationPage = () => {
 
   const processSending = async (indices: number[]) => {
     setIsSending(true);
-    setPreviewOpen(false); // Close preview dialog immediately to show progress
-    
-    // Determine mode based on switch
-    if (vipMode) {
-        toast.info("Starting VIP Anti-Spam Blast", { 
-            description: "Messages will be sent sequentially (< 50/hour) with AI-generated unique variations to ensure safety." 
-        });
-
-        let sentCount = 0;
-        let failedCount = 0;
-        let processedInBatch = 0;
-
-        for (const i of indices) {
-            const row = data[i];
-            let phone = normalizePhone(row[selectedPhoneColumn]);
-            
-            if (!phone || phone.length <= 5) continue;
-
-            // Update UI to show "Sending..."
-            setData(prevData => prevData.map((r, idx) => 
-                idx === i ? { ...r, _status: 'sending' } : r
-            ));
-
-            try {
-                const baseMessage = generatePreviewMessage(row);
-                const finalUrl = generatePreviewUrl(row);
-                let finalMessage = baseMessage;
-
-                // AI Variation Generation with Anti-Spam Rules
-                try {
-                    // Clean the message of variable placeholders for the AI context if needed, 
-                    // but here we use the fully populated baseMessage so the AI sees the real content.
-                    // We instruct AI to KEEP the core data.
-                    const { data: aiData, error: aiError } = await supabase.functions.invoke('ai-rewrite', {
-                        body: { 
-                            text: baseMessage, 
-                            instructions: "Rewrite this message to make it unique to avoid spam filters. \n" +
-                                          "CRITICAL RULES:\n" +
-                                          "1. DO NOT change any dates, times, numbers, amounts, or URL links. These are the Core Agenda.\n" +
-                                          "2. Maintain the Company Identity/Sender context found in the message.\n" +
-                                          "3. Change the sentence structure, greeting, and closing phrase slightly.\n" +
-                                          "4. Tone: Professional, elegant, and polite (VIP hospitality).\n" +
-                                          "5. Output only the message text, nothing else.",
-                            context: "VIP Guest Notification (Anti-Spam Mode)"
-                        }
-                    });
-                    if (!aiError && aiData?.rewrittenText) {
-                        finalMessage = aiData.rewrittenText;
-                    }
-                } catch (err) {
-                    console.warn("AI Variation failed, using base message", err);
-                }
-
-                // Construct Message Payload
-                const messageData: any = { 
-                    phone, 
-                    type: messageType,
-                    message: finalMessage 
-                };
-
-                if (messageType !== 'text') {
-                    if (finalUrl && finalUrl.trim()) {
-                        messageData.url = finalUrl;
-                        messageData.caption = finalMessage; 
-                        messageData.message = finalMessage; // Fallback
-                    } else {
-                        messageData.type = 'text'; // Fallback to text if no URL
-                    }
-                }
-
-                // Handle Scheduling (same logic as batch)
-                if (isScheduled) {
-                    if (scheduleMode === 'fixed') {
-                        messageData.schedule_time = fixedScheduleDate.replace('T', ' ');
-                        messageData.timezone = fixedTimezone;
-                    } else {
-                        let rawDate = row[dynamicDateCol] || '';
-                        let rawTime = dynamicTimeCol !== 'same_as_date' ? (row[dynamicTimeCol] || '') : '';
-                        const combinedDateTimeStr = `${rawDate} ${rawTime}`.trim();
-                        messageData.schedule_time = combinedDateTimeStr;
-                    }
-                }
-
-                // Send single message via existing function (using it as a single-item batch)
-                const { data: result, error } = await supabase.functions.invoke('send-whatsapp-blast', { 
-                    body: { messages: [messageData] } 
-                });
-
-                if (error) throw error;
-
-                // Check global result error (even if HTTP 200)
-                if (!result) throw new Error("Empty response from server");
-                if (result.error) throw new Error(result.error);
-
-                // Check specific message failure
-                if (result.failed > 0) {
-                    const firstError = result.errors?.[0];
-                    const errorMsg = typeof firstError === 'object' ? (firstError.error || firstError.message) : (firstError || "Unknown failure from provider");
-                    throw new Error(errorMsg);
-                }
-
-                // Success Update
-                sentCount++;
-                processedInBatch++;
-                const newTriggerTime = isScheduled ? (messageData.schedule_time || "Scheduled") : new Date().toLocaleString();
-                
-                setData(prevData => prevData.map((r, idx) => 
-                    idx === i ? { 
-                        ...r, 
-                        _status: 'sent', 
-                        _error: undefined,
-                        'Status': isScheduled ? 'Scheduled' : 'Sent',
-                        'Trigger time': newTriggerTime,
-                        'Message Body': finalMessage // Optional: save the varied message
-                    } : r
-                ));
-
-                // --- BATCH DELAY LOGIC ---
-                if (processedInBatch >= 20) {
-                    toast.info("Cooling Down", { description: "Pausing for 30s after sending 20 messages..." });
-                    await wait(30000); // 30 seconds pause
-                    processedInBatch = 0; // Reset counter
-                } else {
-                    // Standard Random Rate Limiting Delay (10-20 seconds)
-                    const delayMs = Math.floor(Math.random() * (20000 - 10000 + 1) + 10000);
-                    await wait(delayMs);
-                }
-
-            } catch (err: any) {
-                console.error("VIP Send Error:", err);
-                failedCount++;
-                processedInBatch++; // Still count attempt towards batch
-                
-                setData(prevData => prevData.map((r, idx) => 
-                    idx === i ? { 
-                        ...r, 
-                        _status: 'failed', 
-                        _error: err.message,
-                        'Status': 'Error',
-                        'Trigger time': 'N/A' 
-                    } : r
-                ));
-                
-                // Apply batch delay even on error if threshold reached
-                if (processedInBatch >= 20) {
-                    toast.info("Cooling Down", { description: "Pausing for 30s after 20 attempts..." });
-                    await wait(30000);
-                    processedInBatch = 0;
-                } else {
-                    await wait(5000); // Short delay on error
-                }
-            }
-        }
-
-        toast.success("VIP Blast Completed", { 
-            description: `Processed ${indices.length} contacts. Sent: ${sentCount}, Failed: ${failedCount}` 
-        });
-        setIsSending(false);
-        return;
-    }
-
-    // Regular Bulk Mode (Fast)
     toast.info("Sending...", { description: `Processing ${indices.length} messages request.` });
 
     // Update status for these rows
@@ -1154,15 +986,7 @@ const PublicationPage = () => {
 
         const { data: result, error } = await supabase.functions.invoke('send-whatsapp-blast', { body: { messages: uniqueMessages } });
         
-        console.log("Blast Result:", result); // Debugging log
-
         if (error) throw error;
-        if (!result) throw new Error("Server returned empty response");
-        
-        // Handle global API errors (e.g. Invalid Client ID) returning 200 OK
-        if (result.success === false && result.error) {
-            throw new Error(result.error);
-        }
         
         setData(prevData => prevData.map((row, i) => {
             // Only update rows that were part of this batch
@@ -1226,15 +1050,15 @@ const PublicationPage = () => {
             toast.success("Blast Completed", { 
                 description: `Successfully sent ${result.success} messages.` 
             });
+            setPreviewOpen(false);
         }
         
     } catch (error: any) { 
-        console.error("Blast Error:", error);
         // Mark filtered rows as failed
         setData(prevData => prevData.map((row, i) => 
             indices.includes(i) ? { ...row, _status: 'failed', _error: error.message, 'Status': 'Error', 'Trigger time': 'N/A' } : row
         ));
-        toast.error("Blast Failed", { description: error.message || "Check console for details." }); 
+        toast.error("Blast Failed", { description: error.message || "Unknown error occurred" }); 
     } finally { 
         setIsSending(false); 
     }
@@ -1456,38 +1280,16 @@ const PublicationPage = () => {
                             <Label htmlFor="template" className="text-sm font-medium">
                                Message Template <span className="text-red-500">*</span>
                             </Label>
-                            <div className="flex gap-2">
-                                <div className="flex items-center gap-2 mr-2">
-                                    <Switch id="vip-mode" checked={vipMode} onCheckedChange={setVipMode} />
-                                    <Label htmlFor="vip-mode" className="text-xs font-medium cursor-pointer flex items-center gap-1 text-amber-600">
-                                        <Crown className="w-3 h-3" /> VIP Mode
-                                    </Label>
-                                </div>
-                                <Button 
-                                    variant="ghost" 
-                                    size="sm" 
-                                    className="h-6 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                                    onClick={() => setShowAiPanel(!showAiPanel)}
-                                >
-                                    <Wand2 className="w-3 h-3 mr-1" />
-                                    {showAiPanel ? "Close AI" : "AI Rewrite"}
-                                </Button>
-                            </div>
+                            <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="h-6 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                onClick={() => setShowAiPanel(!showAiPanel)}
+                            >
+                                <Wand2 className="w-3 h-3 mr-1" />
+                                {showAiPanel ? "Close AI" : "AI Rewrite"}
+                            </Button>
                          </div>
-
-                         {vipMode && (
-                            <div className="bg-amber-50 border border-amber-100 rounded-md p-2 text-[10px] text-amber-800 animate-in fade-in slide-in-from-top-1 space-y-1">
-                                <div className="flex items-center gap-1 font-semibold">
-                                    <ShieldCheck className="w-3 h-3" /> 
-                                    <span>Anti-Spam Conceptual Active</span>
-                                </div>
-                                <ul className="list-disc list-inside pl-1 opacity-90">
-                                    <li><strong>Smart Variation:</strong> AI rewrites each message uniquely to prevent block detection.</li>
-                                    <li><strong>Core Agenda Lock:</strong> Dates, Times, Links, and Company Identity are strictly preserved.</li>
-                                    <li><strong>Safe Timing:</strong> 10-20s random delay, plus 30s pause every 20 messages.</li>
-                                </ul>
-                            </div>
-                         )}
 
                          {showAiPanel && (
                             <div className="bg-blue-50/50 border border-blue-100 rounded-md p-3 mb-2 space-y-3 animate-in slide-in-from-top-2 fade-in duration-200">
@@ -1503,7 +1305,7 @@ const PublicationPage = () => {
                                      onChange={e => setAiInstructions(e.target.value)}
                                   />
                                   <p className="text-[10px] text-blue-600/80">The AI will rewrite your template using WhatsApp markdown and emojis while keeping variables intact.</p>
-                                </div>
+                               </div>
                                <div className="flex justify-end">
                                   <Button size="sm" className="h-7 text-xs bg-blue-600 hover:bg-blue-700" onClick={handleAiRewrite} disabled={isRewriting || !templateMessage}>
                                      {isRewriting ? <Loader2 className="w-3 h-3 animate-spin mr-1"/> : <Bot className="w-3 h-3 mr-1"/>}
@@ -1642,28 +1444,25 @@ const PublicationPage = () => {
                                 </SelectTrigger>
                                 <SelectContent>
                                   {savedCampaigns.map((campaign) => (
-                                    <SelectItem 
-                                        key={campaign.id} 
-                                        value={campaign.id}
-                                        className="cursor-pointer group"
-                                    >
-                                        <div className="flex items-center justify-between w-full min-w-[180px]">
-                                            <div className="flex flex-col text-left mr-2">
-                                                <span className="text-sm font-medium">{campaign.name}</span>
-                                                <span className="text-[10px] text-muted-foreground">
-                                                  Updated: {formatDistanceToNow(new Date(campaign.updated_at), { addSuffix: true })}
-                                                </span>
-                                            </div>
-                                            <div
-                                                role="button"
-                                                className="h-6 w-6 flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded opacity-0 group-hover:opacity-100 transition-opacity"
-                                                onClick={(e) => handleDeleteCampaign(campaign.id, e)}
-                                                onPointerDown={(e) => e.stopPropagation()} // Prevent SelectItem selection logic
-                                            >
-                                                <Trash2 className="h-3.5 w-3.5" />
-                                            </div>
-                                        </div>
-                                    </SelectItem>
+                                    <div key={campaign.id} className="flex items-center justify-between w-full px-2 py-1.5 hover:bg-accent cursor-pointer group">
+                                      <div 
+                                        className="flex flex-col flex-1 cursor-pointer"
+                                        onClick={() => handleLoadCampaign(campaign.id)}
+                                      >
+                                        <span className="text-sm font-medium">{campaign.name}</span>
+                                        <span className="text-[10px] text-muted-foreground">
+                                          Updated: {formatDistanceToNow(new Date(campaign.updated_at), { addSuffix: true })}
+                                        </span>
+                                      </div>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity ml-2"
+                                        onClick={(e) => handleDeleteCampaign(campaign.id, e)}
+                                      >
+                                        <Trash2 className="h-3 w-3" />
+                                      </Button>
+                                    </div>
                                   ))}
                                   {savedCampaigns.length === 0 && (
                                     <div className="p-2 text-xs text-muted-foreground text-center">
@@ -2227,11 +2026,6 @@ const PublicationPage = () => {
                                 Note: {duplicatesCount} duplicate phone numbers will be skipped automatically.
                             </span>
                         )}
-                        {vipMode && (
-                            <span className="block mt-1 text-blue-600 text-xs font-medium flex items-center gap-1">
-                                <Crown className="w-3 h-3" /> VIP Mode Active: Sending will be slower with AI variations.
-                            </span>
-                        )}
                     </DialogDescription>
                 </DialogHeader>
                 {data.length > 0 ? (
@@ -2266,11 +2060,6 @@ const PublicationPage = () => {
                         <div>
                             <Label className="text-xs text-muted-foreground uppercase">Message</Label>
                             <p className="text-sm whitespace-pre-wrap mt-1">{previewRow ? generatePreviewMessage(previewRow) : "No data to preview"}</p>
-                            {vipMode && (
-                                <div className="mt-2 text-[10px] text-muted-foreground italic bg-white p-1.5 rounded border">
-                                    Note: In VIP Mode, this message will be slightly rewritten by AI for each recipient to ensure uniqueness.
-                                </div>
-                            )}
                         </div>
                         {isScheduled && previewRow && (
                             <div className="border-t border-dashed pt-2 mt-2">

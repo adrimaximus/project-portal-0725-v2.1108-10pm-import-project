@@ -8,7 +8,7 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
-// Helper to format phone numbers
+// Helper to format phone numbers for WBIZTOOL
 const formatPhoneNumberForApi = (phone: string): string | null => {
     if (!phone) return null;
     let cleaned = phone.trim().replace(/\D/g, '');
@@ -21,28 +21,27 @@ const formatPhoneNumberForApi = (phone: string): string | null => {
     if (cleaned.length > 8 && cleaned.startsWith('8')) {
       return '62' + cleaned;
     }
+    // Return null if it's not a recognizable Indonesian format
     return null;
 };
 
-// Helper to send WhatsApp message with Fallback
+// Helper to send WhatsApp message
 const sendWhatsappMessage = async (supabaseAdmin, phone: string, message: string) => {
-    // Fetch all potential credentials
-    const { data: config, error: configError } = await supabaseAdmin
+    const { data: wbizConfig, error: configError } = await supabaseAdmin
         .from('app_config')
         .select('key, value')
-        .in('key', [
-            'WBIZTOOL_CLIENT_ID', 'WBIZTOOL_API_KEY', 'WBIZTOOL_WHATSAPP_CLIENT_ID',
-            'META_PHONE_ID', 'META_ACCESS_TOKEN'
-        ]);
+        .in('key', ['WBIZTOOL_CLIENT_ID', 'WBIZTOOL_API_KEY', 'WBIZTOOL_WHATSAPP_CLIENT_ID']);
 
-    if (configError) throw new Error(`Failed to get config: ${configError.message}`);
+    if (configError) throw new Error(`Failed to get WBIZTOOL config: ${configError.message}`);
 
-    const metaPhoneId = config?.find(c => c.key === 'META_PHONE_ID')?.value;
-    const metaAccessToken = config?.find(c => c.key === 'META_ACCESS_TOKEN')?.value;
+    const clientId = wbizConfig?.find(c => c.key === 'WBIZTOOL_CLIENT_ID')?.value;
+    const apiKey = wbizConfig?.find(c => c.key === 'WBIZTOOL_API_KEY')?.value;
+    const whatsappClientId = wbizConfig?.find(c => c.key === 'WBIZTOOL_WHATSAPP_CLIENT_ID')?.value;
 
-    const wbizClientId = config?.find(c => c.key === 'WBIZTOOL_CLIENT_ID')?.value;
-    const wbizApiKey = config?.find(c => c.key === 'WBIZTOOL_API_KEY')?.value;
-    const wbizWhatsappClientId = config?.find(c => c.key === 'WBIZTOOL_WHATSAPP_CLIENT_ID')?.value;
+    if (!clientId || !apiKey || !whatsappClientId) {
+        console.warn("WBIZTOOL credentials not fully configured. Skipping WhatsApp message.");
+        return;
+    }
 
     const formattedPhone = formatPhoneNumberForApi(phone);
     if (!formattedPhone) {
@@ -50,92 +49,43 @@ const sendWhatsappMessage = async (supabaseAdmin, phone: string, message: string
         return;
     }
 
-    let sent = false;
-    let lastError = '';
+    const payload = {
+        client_id: parseInt(clientId, 10),
+        api_key: apiKey,
+        whatsapp_client: parseInt(whatsappClientId, 10),
+        phone: formattedPhone,
+        message: message,
+    };
 
-    // 1. Try Meta (Official API) First
-    if (metaPhoneId && metaAccessToken) {
-        console.log(`Attempting Meta send to ${formattedPhone}...`);
-        try {
-            const response = await fetch(`https://graph.facebook.com/v21.0/${metaPhoneId}/messages`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${metaAccessToken}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    messaging_product: "whatsapp",
-                    to: formattedPhone,
-                    type: "text",
-                    text: { body: message }
-                }),
-            });
+    const response = await fetch("https://wbiztool.com/api/v1/send_msg/", {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Client-ID': clientId, 'X-Api-Key': apiKey },
+        body: JSON.stringify(payload),
+    });
 
-            if (response.ok) {
-                sent = true;
-            } else {
-                const data = await response.json().catch(() => ({}));
-                const errorObj = data.error || {};
-                const errorMessage = errorObj.message || 'Unknown Meta API error';
-                const code = errorObj.code || '';
-                
-                lastError = `Meta Error ${code}: ${errorMessage}`;
-                console.warn(`Meta send failed: ${lastError}`);
+    if (!response.ok) {
+        const status = response.status;
+        const errorText = await response.text();
+        let errorMessage = `Failed to send message (Status: ${status}).`;
+
+        // Enhanced Error Handling for HTML/Cloudflare pages
+        if (errorText.includes("Cloudflare") || errorText.includes("524") || errorText.includes("502")) {
+             if (status === 524) errorMessage = "WBIZTOOL API Timeout (Cloudflare 524). The service is taking too long to respond.";
+             else if (status === 502) errorMessage = "WBIZTOOL API Bad Gateway (Cloudflare 502). The service is down.";
+             else errorMessage = `WBIZTOOL API Error (Status: ${status}). Service might be experiencing issues.`;
+        } else {
+            try {
+              const errorJson = JSON.parse(errorText);
+              errorMessage = errorJson.message || JSON.stringify(errorJson);
+            } catch (e) {
+              // Clean up HTML tags and truncate
+              const cleanText = errorText.replace(/<[^>]*>?/gm, ' ').replace(/\s+/g, ' ').trim();
+              errorMessage = cleanText.substring(0, 200) + (cleanText.length > 200 ? '...' : '');
             }
-        } catch (e) {
-            lastError = `Meta Exception: ${e.message}`;
-            console.warn(`Meta exception:`, e);
         }
+        throw new Error(`WBIZTOOL API Error: ${errorMessage}`);
     }
-
-    // 2. Fallback to WBIZTOOL if Meta failed or not configured
-    if (!sent && wbizClientId && wbizApiKey && wbizWhatsappClientId) {
-        console.log(`Attempting WBIZTOOL fallback to ${formattedPhone}...`);
-        try {
-            const payload = {
-                client_id: parseInt(wbizClientId, 10),
-                api_key: wbizApiKey,
-                whatsapp_client: parseInt(wbizWhatsappClientId, 10),
-                phone: formattedPhone,
-                message: message,
-            };
-
-            const response = await fetch("https://wbiztool.com/api/v1/send_msg/", {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-Client-ID': wbizClientId, 'X-Api-Key': wbizApiKey },
-                body: JSON.stringify(payload),
-            });
-
-            if (response.ok) {
-                sent = true;
-            } else {
-                const status = response.status;
-                const errorText = await response.text();
-                let errorMessage = `Status: ${status}`;
-
-                if (errorText.includes("Cloudflare") || errorText.includes("524") || errorText.includes("502")) {
-                     errorMessage = `WBIZTOOL Gateway Error (${status})`;
-                } else {
-                    try {
-                      const errorJson = JSON.parse(errorText);
-                      errorMessage = errorJson.message || JSON.stringify(errorJson);
-                    } catch (e) {
-                      errorMessage = errorText.substring(0, 100);
-                    }
-                }
-                
-                lastError += ` | WBIZTOOL Error: ${errorMessage}`;
-                console.warn(`WBIZTOOL send failed: ${errorMessage}`);
-            }
-        } catch (e) {
-            lastError += ` | WBIZTOOL Exception: ${e.message}`;
-            console.warn(`WBIZTOOL exception:`, e);
-        }
-    }
-
-    if (!sent) {
-        throw new Error(`Failed to send WhatsApp message. ${lastError || 'No valid providers configured.'}`);
-    }
+    console.log(`WhatsApp message sent to ${formattedPhone}`);
 };
 
 // Helper to send Email
@@ -219,7 +169,6 @@ serve(async (req) => {
 
     let emailSent = false;
     let whatsappSent = false;
-    let errors = [];
 
     // 4. Send notifications
     if (sendEmailEnabled && emailToSend) {
@@ -228,7 +177,6 @@ serve(async (req) => {
             emailSent = true;
         } catch (e) {
             console.error(`Failed to send email for user ${user_id}:`, e.message);
-            errors.push(`Email error: ${e.message}`);
         }
     }
 
@@ -238,7 +186,6 @@ serve(async (req) => {
             whatsappSent = true;
         } catch (e) {
             console.error(`Failed to send WhatsApp for user ${user_id}:`, e.message);
-            errors.push(`WhatsApp error: ${e.message}`);
         }
     }
 
@@ -246,7 +193,6 @@ serve(async (req) => {
         message: "Notification processed.",
         email_sent: emailSent,
         whatsapp_sent: whatsappSent,
-        errors: errors.length > 0 ? errors : undefined
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,

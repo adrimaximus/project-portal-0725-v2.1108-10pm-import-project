@@ -1,7 +1,4 @@
-// @ts-nocheck
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.54.0';
-import OpenAI from 'https://esm.sh/openai@4.29.2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -15,7 +12,12 @@ serve(async (req) => {
 
   try {
     const { text, instructions, context } = await req.json()
-    
+    const apiKey = Deno.env.get('ANTHROPIC_API_KEY')
+
+    if (!apiKey) {
+      throw new Error('ANTHROPIC_API_KEY is not set')
+    }
+
     if (!text) {
       throw new Error('Text is required')
     }
@@ -45,82 +47,53 @@ serve(async (req) => {
     
     Rewritten Message:`
 
-    // --- 1. TRY ANTHROPIC (Primary) ---
-    const anthropicKey = Deno.env.get('ANTHROPIC_API_KEY');
-    if (anthropicKey) {
-      try {
-        console.log("Attempting rewrite with Anthropic...");
-        const anthropicResponse = await fetch('https://api.anthropic.com/v1/messages', {
-          method: 'POST',
-          headers: {
-            'x-api-key': anthropicKey,
-            'anthropic-version': '2023-06-01',
-            'content-type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: 'claude-3-haiku-20240307',
-            max_tokens: 1024,
-            system: systemPrompt,
-            messages: [
-              { role: 'user', content: userContent }
-            ]
-          }),
-        });
-
-        const data = await anthropicResponse.json();
-        if (data.error) throw new Error(data.error.message);
-        
-        const rewrittenText = data.content[0].text;
-        return new Response(JSON.stringify({ rewrittenText, provider: 'anthropic' }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      } catch (e) {
-        console.warn("Anthropic failed, trying fallback:", e.message);
-      }
-    } else {
-        console.log("Anthropic API key not found, skipping to OpenAI.");
-    }
-
-    // --- 2. FALLBACK TO OPENAI ---
-    const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
-
-    // Check Env var first, then DB config
-    let openAiKey = Deno.env.get('OPENAI_API_KEY');
-    if (!openAiKey) {
-        const { data: config } = await supabaseAdmin
-          .from('app_config')
-          .select('value')
-          .eq('key', 'OPENAI_API_KEY')
-          .maybeSingle();
-        openAiKey = config?.value;
-    }
-
-    if (!openAiKey) {
-        throw new Error("No valid AI provider configured (Anthropic failed/missing, OpenAI missing).");
-    }
-
-    console.log("Attempting rewrite with OpenAI...");
-    const openai = new OpenAI({ apiKey: openAiKey });
-    const completion = await openai.chat.completions.create({
-        model: "gpt-4o-mini", // Fast & cost-effective
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'claude-3-haiku-20240307',
+        max_tokens: 1024,
         messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: userContent }
-        ],
-        temperature: 0.7,
-    });
+          { role: 'system', content: systemPrompt }, // Claude 3 puts system prompt in top-level parameter usually, but messages array works for some contexts. Let's use system parameter correctly.
+        ]
+      }),
+    })
+    
+    // Correct Anthropic API usage for system prompt
+    const anthropicResponse = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'claude-3-haiku-20240307',
+          max_tokens: 1024,
+          system: systemPrompt,
+          messages: [
+            { role: 'user', content: userContent }
+          ]
+        }),
+      })
 
-    const rewrittenText = completion.choices[0].message.content;
+    const data = await anthropicResponse.json()
 
-    return new Response(JSON.stringify({ rewrittenText, provider: 'openai' }), {
+    if (data.error) {
+      throw new Error(data.error.message)
+    }
+
+    const rewrittenText = data.content[0].text
+
+    return new Response(JSON.stringify({ rewrittenText }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
-
   } catch (error) {
-    console.error('AI Rewrite Error:', error)
+    console.error('Error:', error)
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

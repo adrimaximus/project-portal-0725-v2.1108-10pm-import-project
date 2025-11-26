@@ -64,19 +64,8 @@ const sendEmail = async (to: string, subject: string, html: string, text: string
     });
 
     if (!response.ok) {
-        const status = response.status;
-        const errorText = await response.text();
-        let errorMessage = `Failed to send email (Status: ${status}).`;
-        
-        try {
-            const errorJson = JSON.parse(errorText);
-            errorMessage = errorJson.message || errorJson.error || JSON.stringify(errorJson);
-        } catch (e) {
-             const cleanText = errorText.replace(/<[^>]*>?/gm, ' ').replace(/\s+/g, ' ').trim();
-             errorMessage = cleanText.substring(0, 200) + (cleanText.length > 200 ? '...' : '');
-        }
-        
-        throw new Error(`Emailit API Error: ${errorMessage}`);
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`Emailit API Error (${response.status}): ${errorData.message || 'Unknown error'}`);
     }
     console.log(`Email sent to ${to}`);
 };
@@ -131,7 +120,7 @@ Deno.serve(async (req) => {
     const subject = `You were mentioned in: ${projectData.name}`;
     const bodyHtml = `
         <p><strong>${getFullName(mentionerData)}</strong> mentioned you in a comment.</p>
-        <blockquote style="border-left:4px solid #0c8e9f;padding:1em;margin:1.2em 0;color:#3b4754;background:#f8fafc;border-radius:6px 0 0 6px;">
+        <blockquote style="border-left:4px solid #0c8e9f;padding-left:1em;margin:1.2em 0;color:#3b4754;background:#f8fafc;border-radius:6px 0 0 6px;">
             ${commentData.text.replace(/\n/g, '<br>')}
         </blockquote>
     `;

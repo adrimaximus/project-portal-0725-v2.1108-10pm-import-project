@@ -9,10 +9,8 @@ import { toast } from "sonner";
 import React, { useState, useEffect, useCallback } from "react";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, RefreshCw } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 const getErrorMessage = async (error: any): Promise<string> => {
   let description = "An unknown error occurred. Please check the console.";
@@ -25,18 +23,9 @@ const getErrorMessage = async (error: any): Promise<string> => {
   }
 
   if (rawErrorText) {
-    // Check for HTML response first (often indicates function crash/timeout or 404)
-    if (rawErrorText.trim().startsWith('<') || rawErrorText.includes('<!DOCTYPE html>') || rawErrorText.includes('<html')) {
-       if (rawErrorText.includes('404 Page Not Found') || rawErrorText.includes('404')) {
-          return "WBIZTOOL API Endpoint Not Found (404). The service might be down or the URL structure has changed.";
-       }
-       if (rawErrorText.includes('502 Bad Gateway')) {
-          return "WBIZTOOL Gateway Error (502). The service is temporarily unavailable.";
-       }
-       if (rawErrorText.includes('524 A timeout occurred')) {
-          return "WBIZTOOL Connection Timeout (524). The request took too long.";
-       }
-       return "The server returned an unexpected HTML response (likely an error page). Please try again later.";
+    // Check for HTML response first
+    if (rawErrorText.trim().startsWith('<') || rawErrorText.includes('<html>') || rawErrorText.includes('window.dataLayer')) {
+      return "The server returned an unexpected error. This might be a temporary issue with the service. Please try again later.";
     }
     
     // Try to parse as JSON
@@ -44,13 +33,12 @@ const getErrorMessage = async (error: any): Promise<string> => {
       const errorBody = JSON.parse(rawErrorText);
       description = errorBody.error || errorBody.message || rawErrorText;
     } catch (e) {
-      // Not JSON, use the raw text if it's short enough
-      if (rawErrorText.length < 200) {
-          description = rawErrorText;
-      }
+      // Not JSON, use the raw text
+      description = rawErrorText;
     }
   }
 
+  // Clean up common error patterns from edge functions
   const prefixes = ['WBIZTOOL unexpected error:', 'WBIZTOOL API Error:', 'WBIZTOOL API Error (devices):', 'WBIZTOOL API Error (messages):'];
   for (const prefix of prefixes) {
     if (description.startsWith(prefix)) {
@@ -58,8 +46,12 @@ const getErrorMessage = async (error: any): Promise<string> => {
     }
   }
 
-  if (description.toLowerCase().includes('invalid credentials') || description.toLowerCase().includes('client id and api key are required')) {
-    return "Invalid or missing credentials. Please reconnect your WBIZTOOL account.";
+  // Provide user-friendly messages for specific technical errors
+  if (description.includes('404 Page Not Found')) {
+    return "Could not reach the WBIZTOOL API. The service might be down or the API endpoint has changed. Please contact support if the issue persists.";
+  }
+  if (description.toLowerCase().includes('invalid credentials')) {
+    return "Invalid credentials. Please double-check your API Client ID and API Key.";
   }
   if (description.includes('No active WBIZTOOL device found')) {
     return "No active WhatsApp device found in your WBIZTOOL account. Please ensure your device is connected in the WBIZTOOL dashboard.";
@@ -68,7 +60,7 @@ const getErrorMessage = async (error: any): Promise<string> => {
       return "WBIZTOOL integration is not fully configured on the server. The 'WBIZTOOL_WHATSAPP_CLIENT_ID' might be missing.";
   }
 
-  // Clean up any remaining HTML tags if somehow passed through
+  // A simple HTML stripper for any leftover tags
   description = description.replace(/<[^>]*>?/gm, ' ').replace(/\s+/g, ' ').trim();
   
   if (!description) {
@@ -82,59 +74,12 @@ const getErrorMessage = async (error: any): Promise<string> => {
 const WbiztoolPage = () => {
   const [clientId, setClientId] = useState("");
   const [apiKey, setApiKey] = useState("");
-  const [whatsappClientId, setWhatsappClientId] = useState(""); // For System Notifications
-  const [publicationClientId, setPublicationClientId] = useState(""); // For Publication Blasts
+  const [whatsappClientId, setWhatsappClientId] = useState("");
   const [isConnected, setIsConnected] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  
-  // Test Message State
   const [testPhone, setTestPhone] = useState("");
   const [testMessage, setTestMessage] = useState("");
-  const [testType, setTestType] = useState<"system" | "publication">("system");
   const [isSendingTest, setIsSendingTest] = useState(false);
-  
-  const [devices, setDevices] = useState<any[]>([]);
-  const [isLoadingDevices, setIsLoadingDevices] = useState(false);
-
-  const fetchDevices = useCallback(async (cId: string, k: string) => {
-    setIsLoadingDevices(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('manage-wbiztool-credentials', {
-        body: { 
-          action: 'fetch_devices',
-          clientId: cId,
-          apiKey: k 
-        }
-      });
-      
-      if (error) throw error;
-      
-      if (Array.isArray(data.devices)) {
-        setDevices(data.devices);
-        // If only one device found, auto-select it for convenience if not already set
-        if (data.devices.length === 1) {
-             const singleDeviceId = String(data.devices[0].id);
-             setWhatsappClientId(prev => prev || singleDeviceId);
-             setPublicationClientId(prev => prev || singleDeviceId);
-        }
-        toast.success("Devices loaded", { description: `Found ${data.devices.length} WhatsApp device(s).` });
-      } else {
-        setDevices([]);
-        toast.info("No devices found", { description: "Check your WBIZTOOL dashboard to ensure you have active WhatsApp clients." });
-      }
-    } catch (error: any) {
-      console.error("Failed to fetch devices:", error);
-      const description = await getErrorMessage(error);
-      toast.error("Failed to load devices", { description });
-      
-      // If credentials are invalid, disconnect UI so user can fix them
-      if (description.includes("Invalid or missing credentials")) {
-          setIsConnected(false);
-      }
-    } finally {
-      setIsLoadingDevices(false);
-    }
-  }, []);
 
   const checkConnectionStatus = useCallback(async () => {
     setIsLoading(true);
@@ -142,22 +87,13 @@ const WbiztoolPage = () => {
       const { data, error } = await supabase.functions.invoke('manage-wbiztool-credentials', { method: 'GET' });
       if (error) throw error;
       setIsConnected(data.connected);
-      
-      if (data.connected) {
-        if (data.whatsappClientId) setWhatsappClientId(data.whatsappClientId);
-        if (data.publicationClientId) setPublicationClientId(data.publicationClientId);
-        
-        // Automatically fetch devices if connected to populate the list
-        // We pass empty strings, relying on backend to use stored credentials
-        fetchDevices("", ""); 
-      }
     } catch (error: any) {
       console.error("Failed to check WBIZTOOL connection status:", error.message);
       setIsConnected(false);
     } finally {
       setIsLoading(false);
     }
-  }, [fetchDevices]);
+  }, []);
 
   useEffect(() => {
     checkConnectionStatus();
@@ -165,17 +101,20 @@ const WbiztoolPage = () => {
 
   const handleConnect = async () => {
     if (!clientId || !apiKey || !whatsappClientId) {
-      toast.error("Please fill in all required fields.");
+      toast.error("Please fill in all fields: API Client ID, API Key, and WhatsApp Client ID.");
       return;
     }
     setIsLoading(true);
     try {
       const { error } = await supabase.functions.invoke('manage-wbiztool-credentials', {
-        body: { clientId, apiKey, whatsappClientId, publicationClientId },
+        body: { clientId, apiKey, whatsappClientId },
       });
       if (error) throw error;
       toast.success("Successfully connected to WBIZTOOL!");
       setIsConnected(true);
+      setClientId("");
+      setApiKey("");
+      setWhatsappClientId("");
     } catch (error: any) {
       const description = await getErrorMessage(error);
       toast.error("Failed to connect", { description });
@@ -193,11 +132,6 @@ const WbiztoolPage = () => {
       if (error) throw error;
       toast.info("Disconnected from WBIZTOOL.");
       setIsConnected(false);
-      setClientId("");
-      setApiKey("");
-      setWhatsappClientId("");
-      setPublicationClientId("");
-      setDevices([]);
     } catch (error: any) {
       const description = await getErrorMessage(error);
       toast.error("Failed to disconnect", { description });
@@ -212,30 +146,25 @@ const WbiztoolPage = () => {
       return;
     }
 
-    if (testType === 'publication' && !publicationClientId) {
-        toast.error("Cannot test Publication Number", { description: "You haven't selected a Publication Blast Number in settings yet." });
-        return;
-    }
-
-    let normalizedPhone = testPhone.replace(/\D/g, '');
+    // Normalize phone number for Indonesian format
+    let normalizedPhone = testPhone.replace(/\D/g, ''); // Remove all non-digit characters
     if (normalizedPhone.startsWith('0')) {
       normalizedPhone = '62' + normalizedPhone.substring(1);
     } else if (normalizedPhone.startsWith('8')) {
+      // Handles cases where user types 812... instead of 0812...
       normalizedPhone = '62' + normalizedPhone;
     }
 
     setIsSendingTest(true);
     try {
       const { data, error } = await supabase.functions.invoke('test-wbiztool-message', {
-        body: { 
-            phone: normalizedPhone, 
-            message: testMessage,
-            type: testType
-        },
+        body: { phone: normalizedPhone, message: testMessage },
       });
       if (error) throw error;
       if (data.error) throw new Error(data.error);
       toast.success("Test message sent successfully!", { description: data.message });
+      setTestPhone("");
+      setTestMessage("");
     } catch (error: any) {
       const description = await getErrorMessage(error);
       toast.error("Failed to send test message", { description });
@@ -299,116 +228,27 @@ const WbiztoolPage = () => {
                   disabled={isConnected || isLoading}
                 />
             </div>
-            
-            <div className="flex items-center justify-end">
-                {(!isConnected && clientId && apiKey) && (
-                    <Button 
-                        variant="link" 
-                        className="h-auto p-0 text-xs" 
-                        onClick={() => fetchDevices(clientId, apiKey)}
-                        disabled={isLoadingDevices}
-                    >
-                        {isLoadingDevices ? <Loader2 className="h-3 w-3 animate-spin mr-1"/> : <RefreshCw className="h-3 w-3 mr-1"/>}
-                        Load WhatsApp Numbers
-                    </Button>
-                )}
-            </div>
-
-            <div className="space-y-4 border rounded-md p-4 bg-muted/20">
-                <div className="space-y-2">
-                    <Label htmlFor="whatsapp-client-id">System Notification Number (Required)</Label>
-                    <p className="text-[10px] text-muted-foreground">Used for system alerts like OTPs, mentions, and task reminders.</p>
-                    
-                    {devices.length > 0 || isConnected ? (
-                        <Select 
-                            value={whatsappClientId} 
-                            onValueChange={setWhatsappClientId}
-                            disabled={isLoading}
-                        >
-                            <SelectTrigger>
-                                <SelectValue placeholder="Select Device for Notifications" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {devices.map((device: any) => (
-                                    <SelectItem key={device.id} value={String(device.id)}>
-                                        {device.phone || device.name || `Device ${device.id}`} 
-                                        {device.status ? ` (${device.status})` : ''}
-                                    </SelectItem>
-                                ))}
-                                {isConnected && whatsappClientId && !devices.find(d => String(d.id) === String(whatsappClientId)) && (
-                                    <SelectItem value={whatsappClientId}>
-                                        Saved Device ({whatsappClientId})
-                                    </SelectItem>
-                                )}
-                            </SelectContent>
-                        </Select>
-                    ) : (
-                        <Input 
-                          id="whatsapp-client-id" 
-                          type="text" 
-                          placeholder="Enter Device ID (e.g., 4162)"
-                          value={whatsappClientId}
-                          onChange={(e) => setWhatsappClientId(e.target.value)}
-                          disabled={isConnected || isLoading}
-                        />
-                    )}
+            <div className="space-y-2">
+                <Label htmlFor="whatsapp-client-id">WhatsApp Client ID (Device)</Label>
+                <div className="text-[10px] text-muted-foreground mb-1">
+                  The 4-digit ID for your WhatsApp number from the WBIZTOOL dashboard (e.g., 4162).
                 </div>
-
-                <div className="space-y-2">
-                    <Label htmlFor="publication-client-id">Publication Blast Number (Optional)</Label>
-                    <p className="text-[10px] text-muted-foreground">Used exclusively for mass messaging and campaigns in the Publication page.</p>
-                    
-                    {devices.length > 0 || isConnected ? (
-                        <Select 
-                            value={publicationClientId} 
-                            onValueChange={setPublicationClientId}
-                            disabled={isLoading}
-                        >
-                            <SelectTrigger>
-                                <SelectValue placeholder="Select Device for Blasts (Default: Same as System)" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {devices.map((device: any) => (
-                                    <SelectItem key={device.id} value={String(device.id)}>
-                                        {device.phone || device.name || `Device ${device.id}`} 
-                                        {device.status ? ` (${device.status})` : ''}
-                                    </SelectItem>
-                                ))}
-                                {isConnected && publicationClientId && !devices.find(d => String(d.id) === String(publicationClientId)) && (
-                                    <SelectItem value={publicationClientId}>
-                                        Saved Device ({publicationClientId})
-                                    </SelectItem>
-                                )}
-                            </SelectContent>
-                        </Select>
-                    ) : (
-                        <Input 
-                          id="publication-client-id" 
-                          type="text" 
-                          placeholder="Enter Device ID (Optional)"
-                          value={publicationClientId}
-                          onChange={(e) => setPublicationClientId(e.target.value)}
-                          disabled={isConnected || isLoading}
-                        />
-                    )}
-                </div>
+                <Input 
+                  id="whatsapp-client-id" 
+                  type="text" 
+                  placeholder={isConnected ? "••••" : "Enter WhatsApp Device ID"}
+                  value={whatsappClientId}
+                  onChange={(e) => setWhatsappClientId(e.target.value)}
+                  disabled={isConnected || isLoading}
+                />
             </div>
-
           </CardContent>
           <CardFooter className="flex justify-end">
             {isConnected ? (
-              <div className="flex gap-2">
-                  <Button variant="outline" onClick={() => {
-                      setIsConnected(false);
-                      // Don't clear IDs so user can edit them
-                  }}>
-                      Edit Settings
-                  </Button>
-                  <Button variant="destructive" onClick={handleDisconnect} disabled={isLoading}>
-                    {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Disconnect
-                  </Button>
-              </div>
+              <Button variant="destructive" onClick={handleDisconnect} disabled={isLoading}>
+                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Disconnect
+              </Button>
             ) : (
               <Button onClick={handleConnect} disabled={!clientId || !apiKey || !whatsappClientId || isLoading}>
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -422,24 +262,9 @@ const WbiztoolPage = () => {
           <Card>
             <CardHeader>
               <CardTitle>Send a Test Message</CardTitle>
-              <CardDescription>Verify your connection by sending a test message.</CardDescription>
+              <CardDescription>Verify your connection by sending a test message to a WhatsApp number.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-2">
-                 <Label>Send using which device?</Label>
-                 <RadioGroup value={testType} onValueChange={(v: "system" | "publication") => setTestType(v)} className="flex space-x-4">
-                    <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="system" id="r-system" />
-                        <Label htmlFor="r-system" className="font-normal">System Number ({whatsappClientId})</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="publication" id="r-pub" disabled={!publicationClientId} />
-                        <Label htmlFor="r-pub" className={!publicationClientId ? "text-muted-foreground font-normal" : "font-normal"}>
-                            Publication Number {publicationClientId ? `(${publicationClientId})` : '(Not configured)'}
-                        </Label>
-                    </div>
-                 </RadioGroup>
-              </div>
               <div className="space-y-2">
                   <Label htmlFor="test-phone">Recipient Phone Number</Label>
                   <Input 
