@@ -47,9 +47,22 @@ serve(async (req) => {
     }
 
     if (req.method === 'POST') {
-        const { clientId, apiKey, whatsappClientId, publicationClientId, action } = await req.json()
+        let { clientId, apiKey, whatsappClientId, publicationClientId, action } = await req.json()
 
         if (action === 'fetch_devices') {
+            // Fallback to DB credentials if not provided in request
+            if (!clientId || !apiKey) {
+                const { data: creds } = await supabaseAdmin
+                    .from('app_config')
+                    .select('key, value')
+                    .in('key', ['WBIZTOOL_CLIENT_ID', 'WBIZTOOL_API_KEY'])
+                
+                if (creds) {
+                    if (!clientId) clientId = creds.find(c => c.key === 'WBIZTOOL_CLIENT_ID')?.value
+                    if (!apiKey) apiKey = creds.find(c => c.key === 'WBIZTOOL_API_KEY')?.value
+                }
+            }
+
             if (!clientId || !apiKey) throw new Error("Missing credentials to fetch devices")
             
             // Proxy to WBIZTOOL
