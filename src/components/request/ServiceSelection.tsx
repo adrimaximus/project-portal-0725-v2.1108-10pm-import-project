@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
-import { Search, X } from "lucide-react";
+import { Search, X, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -122,6 +122,8 @@ const ServiceSelection = ({
             {filteredServices.map((service) => {
               const Icon = getIconComponent(service.icon);
               const selected = isSelected(service);
+              const isFeatured = service.is_featured;
+
               return (
                 <button
                   key={service.title}
@@ -130,26 +132,35 @@ const ServiceSelection = ({
                     "relative flex flex-col items-start justify-between p-4 h-36 w-40 shrink-0 rounded-xl border transition-all duration-300 hover:shadow-md group text-left",
                     selected 
                       ? "border-primary bg-primary/5 ring-1 ring-primary shadow-sm" 
-                      : "border-border bg-card hover:border-primary/50 hover:bg-accent/50"
+                      : isFeatured
+                        ? "border-amber-200 bg-amber-50/30 hover:border-amber-300 hover:bg-amber-50/80"
+                        : "border-border bg-card hover:border-primary/50 hover:bg-accent/50"
                   )}
                 >
                   <div className={cn(
                     "p-2.5 rounded-lg transition-colors", 
-                    selected ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground group-hover:text-primary group-hover:bg-primary/10"
+                    selected 
+                      ? "bg-primary text-primary-foreground" 
+                      : isFeatured
+                        ? "bg-amber-100 text-amber-700 group-hover:bg-amber-200"
+                        : "bg-muted text-muted-foreground group-hover:text-primary group-hover:bg-primary/10"
                   )}>
                     <Icon className="h-5 w-5" />
                   </div>
                   
                   <div className="w-full">
-                    <h3 className={cn("font-medium text-sm leading-tight whitespace-normal", selected ? "text-primary" : "text-foreground")}>
+                    <h3 className={cn("font-medium text-sm leading-tight whitespace-normal line-clamp-2", selected ? "text-primary" : "text-foreground")}>
                       {service.title}
                     </h3>
+                    {isFeatured && (
+                      <p className="text-[10px] text-amber-600 mt-1 font-medium flex items-center gap-1">
+                        <Sparkles className="h-2.5 w-2.5" />
+                        End-to-End
+                      </p>
+                    )}
                   </div>
 
-                  {service.is_featured && (
-                    <span className="absolute top-3 right-3 h-1.5 w-1.5 rounded-full bg-yellow-500" title="Featured" />
-                  )}
-                  
+                  {/* Selection Checkmark Animation */}
                   {selected && (
                     <div className="absolute top-3 right-3 animate-in zoom-in duration-200">
                       <div className="bg-primary text-primary-foreground rounded-full p-0.5">
@@ -167,11 +178,11 @@ const ServiceSelection = ({
         </ScrollArea>
       </div>
 
-      {/* Selected Services Summary */}
+      {/* Selected Services Summary (Mobile friendly list) */}
       {selectedServices.length > 0 && (
         <div className="animate-in fade-in slide-in-from-bottom-2 pt-2">
           <h4 className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
-            Selected Services <Badge variant="secondary" className="rounded-full px-2 h-5 min-w-[1.25rem]">{selectedServices.length}</Badge>
+            Currently Selected <Badge variant="secondary" className="rounded-full px-2 h-5 min-w-[1.25rem]">{selectedServices.length}</Badge>
           </h4>
           <div className="flex flex-wrap gap-2">
             {selectedServices.map((service) => (
