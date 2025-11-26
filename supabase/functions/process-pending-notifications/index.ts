@@ -21,8 +21,10 @@ const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, { gl
 
 // AI Message Generator for WhatsApp
 const generateAiWhatsappMessage = async (openai: OpenAI | null, anthropic: Anthropic | null, type: string, context: any, recipientName: string, fallbackMessage: string): Promise<string> => {
-  // Only use AI for specific types where nuances matter
-  if (type !== 'discussion_mention') {
+  // Types enabled for AI generation
+  const aiEnabledTypes = ['discussion_mention', 'task_overdue', 'billing_reminder', 'task_assignment'];
+
+  if (!aiEnabledTypes.includes(type)) {
     return fallbackMessage;
   }
 
@@ -31,21 +33,62 @@ const generateAiWhatsappMessage = async (openai: OpenAI | null, anthropic: Anthr
     return fallbackMessage;
   }
 
-  const systemPrompt = `Anda adalah asisten notifikasi WhatsApp yang efisien, ramah, dan profesional. 
-Tugas: Buat pesan notifikasi WhatsApp yang singkat (maksimal 2 kalimat inti) berdasarkan konteks.
-Gunakan format WhatsApp (*tebal*, _miring_) untuk menyoroti nama orang atau proyek.
-Gunakan 1-2 emoji yang relevan.
-Bahasa: Indonesia.
-PENTING: Jangan sertakan URL di output teks AI ini (URL akan ditambahkan secara otomatis oleh sistem).`;
+  const systemPrompt = `Anda adalah asisten notifikasi WhatsApp yang efisien, ramah, dan profesional untuk aplikasi manajemen proyek. 
+Tugas: Buat pesan notifikasi WhatsApp yang singkat (maksimal 2-3 kalimat inti) berdasarkan konteks yang diberikan.
+Gunakan format WhatsApp (*tebal*, _miring_) untuk menyoroti nama proyek, tugas, atau urgensi.
+Gunakan 1-2 emoji yang relevan agar pesan terasa humanis.
+Bahasa: Indonesia formal-kasual (sopan tapi tidak kaku).
+PENTING: Jangan sertakan URL di output teks AI ini (sistem akan menambahkannya secara otomatis di baris baru). Jangan menyertakan placeholder seperti [Link].`;
 
-  const userPrompt = `Konteks:
-- Tipe: Mention di Diskusi/Komentar
+  let userPrompt = "";
+
+  switch (type) {
+    case 'discussion_mention':
+      userPrompt = `Konteks:
+- Tipe: Mention di Komentar
 - Penerima: ${recipientName}
 - Pengirim: ${context.mentioner_name}
 - Proyek: ${context.project_name}
 - Isi Pesan: "${context.comment_text}"
 
-Buat pesan notifikasi untuk ${recipientName} bahwa mereka di-mention.`;
+Buat notifikasi singkat bahwa ${context.mentioner_name} me-mention ${recipientName}.`;
+      break;
+
+    case 'task_assignment':
+      userPrompt = `Konteks:
+- Tipe: Tugas Baru
+- Penerima: ${recipientName}
+- Pemberi Tugas: ${context.assigner_name}
+- Judul Tugas: ${context.task_title}
+- Proyek: ${context.project_name}
+
+Beritahu ${recipientName} bahwa ada tugas baru yang perlu dikerjakan.`;
+      break;
+
+    case 'task_overdue':
+      userPrompt = `Konteks:
+- Tipe: Pengingat Tugas Terlambat (Overdue)
+- Penerima: ${recipientName}
+- Judul Tugas: ${context.task_title}
+- Proyek: ${context.project_name}
+- Keterlambatan: ${context.days_overdue} hari
+
+Buat pengingat yang sopan namun tegas agar tugas segera diselesaikan.`;
+      break;
+
+    case 'billing_reminder':
+      userPrompt = `Konteks:
+- Tipe: Pengingat Tagihan/Invoice
+- Penerima: ${recipientName} (Admin/Owner)
+- Proyek: ${context.project_name}
+- Keterlambatan Pembayaran: ${context.days_overdue} hari
+
+Buat pengingat profesional mengenai status pembayaran yang belum lunas.`;
+      break;
+
+    default:
+      return fallbackMessage;
+  }
 
   try {
     let result = "";
@@ -54,19 +97,19 @@ Buat pesan notifikasi untuk ${recipientName} bahwa mereka di-mention.`;
         model: "claude-3-haiku-20240307",
         messages: [{ role: "user", content: userPrompt }],
         system: systemPrompt,
-        temperature: 0.3,
-        max_tokens: 150,
+        temperature: 0.4,
+        max_tokens: 200,
       });
       result = response.content[0].text;
     } else if (openai) {
       const response = await openai.chat.completions.create({
-        model: "gpt-4o-mini", // Using optimized model for speed/cost
+        model: "gpt-4o-mini",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt }
         ],
-        temperature: 0.3,
-        max_tokens: 150,
+        temperature: 0.4,
+        max_tokens: 200,
       });
       result = response.choices[0].message.content;
     }
@@ -458,19 +501,19 @@ Deno.serve(async (req) => {
                 return { status: 'skipped', reason: 'No phone or WhatsApp config' };
             }
             
-            // Check if it needs AI generation (only for mentions as per request)
-            const isMention = notification.notification_type === 'discussion_mention';
-            const templateMsg = generateTemplatedMessage(notification.notification_type, notification.context_data, recipientName);
+            // Determine if we should use AI or template
+            // discussion_mention, task_overdue, billing_reminder, task_assignment use AI if available
+            const cleanType = notification.notification_type;
+            const templateMsg = generateTemplatedMessage(cleanType, notification.context_data, recipientName);
             
             let finalMessage = templateMsg;
             
-            if (isMention) {
-              // Generate AI message
-              const aiMsg = await generateAiWhatsappMessage(openai, anthropic, notification.notification_type, notification.context_data, recipientName, templateMsg);
-              // Append link to AI message
-              const url = getLinkForType(notification.notification_type, notification.context_data);
-              finalMessage = `${aiMsg}\n\n${url}`;
-            }
+            // Attempt to enhance with AI
+            const aiMsg = await generateAiWhatsappMessage(openai, anthropic, cleanType, notification.context_data, recipientName, templateMsg);
+            
+            // Append link to the message
+            const url = getLinkForType(cleanType, notification.context_data);
+            finalMessage = `${aiMsg}\n\n${url}`;
 
             await sendWhatsappMessage(wbizConfig, recipient.phone, finalMessage);
         }
