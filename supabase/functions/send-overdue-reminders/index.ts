@@ -53,17 +53,18 @@ Deno.serve(async (req) => {
 
     const { data: overdueProjects, error: projectsError } = await supabaseAdmin
       .from('projects')
-      .select('id, name, slug, invoice_number, payment_due_date, created_by')
-      .eq('payment_status', 'Overdue');
+      .select('id, name, slug, invoice_number, payment_due_date, created_by, payment_status')
+      .in('payment_status', ['Proposed', 'Overdue', 'Pending', 'In Process'])
+      .not('payment_due_date', 'is', null);
 
     if (projectsError) throw projectsError;
 
     if (!overdueProjects || overdueProjects.length === 0) {
-      console.log("[send-overdue-reminders] No overdue invoices found.");
-      return new Response(JSON.stringify({ message: "No overdue invoices to process." }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      console.log("[send-overdue-reminders] No relevant invoices found.");
+      return new Response(JSON.stringify({ message: "No relevant invoices to process." }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
     
-    console.log(`[send-overdue-reminders] Found ${overdueProjects.length} overdue invoices.`);
+    console.log(`[send-overdue-reminders] Found ${overdueProjects.length} invoices to check.`);
 
     const projectIds = overdueProjects.map(p => p.id);
 
@@ -81,7 +82,7 @@ Deno.serve(async (req) => {
 
     const { data: profiles, error: profilesError } = await supabaseAdmin
       .from('profiles')
-      .select('id, first_name, last_name, email, phone')
+      .select('id, first_name, last_name, email, phone, notification_preferences')
       .in('id', Array.from(userIdsToFetch));
 
     if (profilesError) throw profilesError;
@@ -89,6 +90,7 @@ Deno.serve(async (req) => {
 
     let successCount = 0;
     let failureCount = 0;
+    let skippedCount = 0;
 
     for (const project of overdueProjects) {
       const recipients = new Set<string>();
@@ -99,96 +101,120 @@ Deno.serve(async (req) => {
 
       const dueDate = new Date(project.payment_due_date);
       const today = new Date();
-      const overdueDays = Math.max(0, Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 3600 * 24)));
+      // Calculate overdue days. Positive means overdue.
+      const overdueDays = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 3600 * 24));
 
-      let urgency = 'sedikit mendesak';
-      if (overdueDays > 30) {
-        urgency = 'sangat mendesak dan perlu segera ditindaklanjuti';
-      } else if (overdueDays > 7) {
-        urgency = 'cukup mendesak';
+      // Logic for "when to send"
+      let reminderType: string | null = null;
+      if (overdueDays === 0) reminderType = 'due_date';
+      else if (overdueDays === 3) reminderType = 'overdue_3_days';
+      else if (overdueDays > 3 && (overdueDays - 3) % 7 === 0) reminderType = 'overdue_weekly';
+
+      // Skip if not a designated reminder day or if it's not actually overdue/due
+      if (!reminderType || overdueDays < 0) continue;
+
+      // Check if we already sent this specific reminder type for this project
+      const { data: existingLog } = await supabaseAdmin
+        .from('billing_reminders_log')
+        .select('id')
+        .eq('project_id', project.id)
+        .eq('reminder_type', reminderType)
+        .eq('days_overdue_at_sending', overdueDays) // Strict check to allow retries on different days if needed
+        .limit(1).maybeSingle();
+
+      if (existingLog) {
+          continue;
       }
 
       for (const userId of recipients) {
         const profile = profileMap.get(userId);
-        if (!profile || !profile.phone) {
-          console.warn(`[send-overdue-reminders] No phone for ${profile?.email || userId}. Skipping.`);
-          continue;
-        }
+        if (!profile) continue;
 
-        const recipientName = getFullName(profile);
+        const prefs = profile.notification_preferences || {};
+        const billingPrefs = prefs['billing_reminder'];
+        
+        const isFeatureEnabled = (typeof billingPrefs === 'object' && billingPrefs !== null) 
+            ? billingPrefs.enabled !== false 
+            : billingPrefs !== false;
+        
+        const statusesToNotify = (typeof billingPrefs === 'object' && billingPrefs?.statuses) 
+            ? billingPrefs.statuses 
+            : ['Overdue'];
 
-        const userPrompt = `**Konteks:**
-- **Jenis:** Pengingat Invoice Jatuh Tempo
-- **Penerima:** ${recipientName}
-- **Proyek:** ${formatMentions(project.name)}
-- **Nomor Invoice:** ${project.invoice_number || 'N/A'}
-- **Jumlah Hari Terlambat:** ${overdueDays} hari
-- **Tingkat Urgensi:** ${urgency}
-- **URL:** ${Deno.env.get("SITE_URL") ?? "https://7inked.ahensi.xyz"}/billing
+        if (isFeatureEnabled && statusesToNotify.includes(project.payment_status)) {
+            const notificationsToQueue = [];
+            const contextData = {
+                project_id: project.id,
+                project_name: project.name,
+                project_slug: project.slug, // Added slug for links
+                days_overdue: overdueDays,
+            };
 
-Buat pesan pengingat yang sopan dan profesional sesuai dengan tingkat urgensi yang diberikan.`;
-
-        try {
-          const anthropic = new Anthropic({ apiKey: Deno.env.get('ANTHROPIC_API_KEY') });
-          const aiResponse = await anthropic.messages.create({ model: "claude-3-haiku-20240307", max_tokens: 200, system: getSystemPrompt(), messages: [{ role: "user", content: userPrompt }] });
-          const aiMessage = aiResponse.content[0].text;
-
-          const { data: wbizConfig } = await supabaseAdmin
-             .from('app_config')
-             .select('key, value')
-             .in('key', ['WBIZTOOL_CLIENT_ID', 'WBIZTOOL_API_KEY', 'WBIZTOOL_WHATSAPP_CLIENT_ID']);
-
-          const clientId = wbizConfig?.find(c => c.key === 'WBIZTOOL_CLIENT_ID')?.value;
-          const apiKey = wbizConfig?.find(c => c.key === 'WBIZTOOL_API_KEY')?.value;
-          const whatsappClientId = wbizConfig?.find(c => c.key === 'WBIZTOOL_WHATSAPP_CLIENT_ID')?.value;
-
-          if (!clientId || !apiKey || !whatsappClientId) throw new Error("WBIZTOOL credentials not fully configured.");
-
-          const wbizResponse = await fetch('https://wbiztool.com/api/v1/send_msg/', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-Client-ID': clientId, 'X-Api-Key': apiKey },
-            body: JSON.stringify({ 
-              client_id: clientId,
-              api_key: apiKey,
-              whatsapp_client: whatsappClientId,
-              phone: profile.phone, 
-              message: aiMessage,
-              msg_type: 0, // Added required parameter
-            }),
-          });
-
-          if (!wbizResponse.ok) {
-            const status = wbizResponse.status;
-            const errorText = await wbizResponse.text();
-            let errorMessage = `Failed to send message (Status: ${status}).`;
-
-            // Enhanced Error Handling for HTML/Cloudflare pages
-            if (errorText.includes("Cloudflare") || errorText.includes("524") || errorText.includes("502")) {
-                 if (status === 524) errorMessage = "WBIZTOOL API Timeout (Cloudflare 524). The service is taking too long to respond.";
-                 else if (status === 502) errorMessage = "WBIZTOOL API Bad Gateway (Cloudflare 502). The service is down.";
-                 else errorMessage = `WBIZTOOL API Error (Status: ${status}). Service might be experiencing issues.`;
-            } else {
-                try {
-                  const errorJson = JSON.parse(errorText);
-                  errorMessage = errorJson.message || JSON.stringify(errorJson);
-                } catch (e) {
-                  // Clean up HTML tags and truncate
-                  const cleanText = errorText.replace(/<[^>]*>?/gm, ' ').replace(/\s+/g, ' ').trim();
-                  errorMessage = cleanText.substring(0, 200) + (cleanText.length > 200 ? '...' : '');
-                }
+            // 1. Check WhatsApp
+            const isWaEnabled = (typeof billingPrefs === 'object' && billingPrefs !== null) 
+                ? billingPrefs.whatsapp !== false 
+                : true;
+            
+            if (isWaEnabled && profile.phone) {
+                 notificationsToQueue.push({
+                    recipient_id: userId,
+                    send_at: new Date(),
+                    notification_type: 'billing_reminder',
+                    context_data: contextData
+                 });
             }
-            throw new Error(errorMessage);
-          }
-          successCount++;
-          console.log(`[send-overdue-reminders] Sent reminder for project ${project.id} to ${profile.email}.`);
-        } catch (error) {
-          failureCount++;
-          console.error(`[send-overdue-reminders] Failed to send reminder for project ${project.id} to ${profile.email}:`, error.message);
+
+            // 2. Check Email
+            const isEmailEnabled = (typeof billingPrefs === 'object' && billingPrefs !== null) 
+                ? billingPrefs.email !== false 
+                : true;
+
+            if (isEmailEnabled && profile.email) {
+                 notificationsToQueue.push({
+                    recipient_id: userId,
+                    send_at: new Date(),
+                    notification_type: 'billing_reminder_email',
+                    context_data: contextData
+                 });
+            }
+
+            if (notificationsToQueue.length > 0) {
+                const { error: insertError } = await supabaseAdmin.from('pending_notifications').insert(notificationsToQueue);
+                if (insertError) {
+                    console.error(`Failed to queue notifications for user ${userId}:`, insertError.message);
+                    failureCount++;
+                } else {
+                    successCount += notificationsToQueue.length;
+                }
+            } else {
+                skippedCount++;
+            }
+        } else {
+            skippedCount++;
         }
       }
+
+      // Log the reminder attempt for the project so we don't spam
+      // Only log if we attempted to send to at least one person (or would have if they had enabled it)
+      // We log it even if skipped to prevent re-processing the same project for the same condition repeatedly today
+      const { error: logInsertError } = await supabaseAdmin
+          .from('billing_reminders_log')
+          .insert({ 
+              project_id: project.id, 
+              reminder_type: reminderType, 
+              days_overdue_at_sending: overdueDays 
+          });
+      
+      if (logInsertError) console.error(`Failed to log reminder for project ${project.id}:`, logInsertError.message);
     }
 
-    return new Response(JSON.stringify({ success: true, processed_invoices: overdueProjects.length, sent_notifications: successCount, failed_notifications: failureCount }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ 
+        success: true, 
+        processed_invoices: overdueProjects.length, 
+        queued_notifications: successCount, 
+        skipped_notifications: skippedCount, 
+        failed_queues: failureCount 
+    }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
   } catch (error) {
     console.error('[send-overdue-reminders] Top-level function error:', error.message);
