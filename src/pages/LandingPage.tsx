@@ -6,7 +6,7 @@ import {
   BarChart, Users, ListChecks, ArrowRight, BrainCircuit, Check, 
   Sparkles, Globe, Smartphone, Palette, Search, Wrench, 
   CreditCard, MessageSquare, BookOpen, Bell, Shield, Zap,
-  LayoutGrid, Target, Megaphone, Receipt
+  LayoutGrid, Target, Megaphone, Receipt, Database
 } from 'lucide-react';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { cn } from '@/lib/utils';
@@ -369,7 +369,29 @@ const LandingPage = () => {
                   <div key={i} className="h-48 bg-white/5 rounded-xl animate-pulse border border-white/5"></div>
                 ))}
               </div>
-            ) : filteredServices.length > 0 ? (
+            ) : services.length === 0 ? (
+              // State: Database is empty
+              <div className="text-center py-16 mb-12 border border-dashed border-white/10 rounded-xl bg-white/5 max-w-2xl mx-auto">
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-white/5 mb-4">
+                  <Database className="w-8 h-8 text-slate-500" />
+                </div>
+                <h3 className="text-xl font-medium text-slate-300 mb-2">No services configured</h3>
+                <p className="text-slate-500 max-w-md mx-auto">
+                  It seems there are no services in the database. Please add services from the admin settings.
+                </p>
+              </div>
+            ) : filteredServices.length === 0 ? (
+              // State: Search returned no results
+              <div className="text-center py-16 mb-12 border border-dashed border-white/10 rounded-xl bg-white/5 max-w-2xl mx-auto">
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-white/5 mb-4">
+                  <Search className="w-8 h-8 text-slate-500" />
+                </div>
+                <h3 className="text-xl font-medium text-slate-300 mb-2">No matching services</h3>
+                <p className="text-slate-500 max-w-md mx-auto">
+                  We couldn't find any services matching "{searchQuery}". Try different keywords.
+                </p>
+              </div>
+            ) : (
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 max-w-6xl mx-auto mb-12">
                 {filteredServices.map((service) => {
                   const Icon = getIconComponent(service.icon);
@@ -426,14 +448,6 @@ const LandingPage = () => {
                     </div>
                   );
                 })}
-              </div>
-            ) : (
-              <div className="text-center py-16 mb-12 border border-dashed border-white/10 rounded-xl bg-white/5 max-w-2xl mx-auto">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-white/5 mb-4">
-                  <Search className="w-8 h-8 text-slate-500" />
-                </div>
-                <h3 className="text-xl font-medium text-slate-300 mb-2">No services found</h3>
-                <p className="text-slate-500 max-w-md mx-auto">We couldn't find any services matching your search. Try different keywords.</p>
               </div>
             )}
           </div>
