@@ -1,4 +1,3 @@
-'processed_at' to resolve 400 error">
 // @ts-nocheck
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.54.0'
 
