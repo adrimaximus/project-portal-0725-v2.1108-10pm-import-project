@@ -9,13 +9,12 @@ const AuthCallbackPage = () => {
 
   useEffect(() => {
     if (!isLoading) {
-      if (session) {
-        navigate('/dashboard', { replace: true });
-      } else {
-        // If no session after loading, something went wrong
-        // Go back to login page
+      if (!session) {
+        // If no session after loading, something went wrong or user is not logged in
         navigate('/login', { replace: true });
       }
+      // If session exists, AuthHandler in App.tsx will handle the redirect
+      // preserving any query parameters.
     }
   }, [session, isLoading, navigate]);
 

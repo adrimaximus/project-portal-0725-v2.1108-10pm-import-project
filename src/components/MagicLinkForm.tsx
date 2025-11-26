@@ -30,6 +30,9 @@ const MagicLinkForm = () => {
     try {
       const { error } = await supabase.auth.signInWithOtp({
         email,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback${window.location.search}`,
+        }
       });
       if (error) throw error;
       setSubmitted(true);

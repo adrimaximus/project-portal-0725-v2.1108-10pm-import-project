@@ -129,7 +129,7 @@ const LoginPage = () => {
             first_name: firstName,
             last_name: lastName,
           },
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          emailRedirectTo: `${window.location.origin}/auth/callback${window.location.search}`,
         },
       });
 
@@ -152,7 +152,7 @@ const LoginPage = () => {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: `${window.location.origin}/auth/callback${window.location.search}`,
         },
       });
       if (error) {
