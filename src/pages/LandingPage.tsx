@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from "@/components/ui/button";
 import { 
@@ -124,6 +124,7 @@ const FeatureBentoCard = ({ feature, className }: { feature: any, className?: st
 const LandingPage = () => {
   const { session, isLoading } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [services, setServices] = useState<Service[]>([]);
   const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([]);
   const [isServicesLoading, setIsServicesLoading] = useState(true);
@@ -167,18 +168,25 @@ const LandingPage = () => {
       }
 
       // If clicking a normal service, ensure End to End is NOT selected
-      const endToEndServiceIds = services
-        .filter(s => s.title.toLowerCase().includes('end to end'))
-        .map(s => s.id);
+      // First find the ID of any End to End service if it exists
+      const endToEndService = services.find(s => s.title.toLowerCase().includes('end to end'));
+      const endToEndId = endToEndService?.id;
       
-      const newSelection = prev.filter(id => !endToEndServiceIds.includes(id));
+      let newSelection = [...prev];
+      
+      // If End to End was selected, remove it
+      if (endToEndId && newSelection.includes(endToEndId)) {
+        newSelection = newSelection.filter(id => id !== endToEndId);
+      }
+
       return [...newSelection, service.id];
     });
   };
 
   const handleContinue = () => {
     if (selectedServiceIds.length > 0) {
-      const params = new URLSearchParams();
+      // Preserve existing query params (e.g. UTM tags) and add services
+      const params = new URLSearchParams(location.search);
       params.set('services', selectedServiceIds.join(','));
       navigate(`/login?${params.toString()}`);
     }
