@@ -1016,11 +1016,15 @@ const PublicationPage = () => {
 
                 if (error) throw error;
 
-                // Check result
-                if (result && result.failed > 0) {
+                // Check global result error (even if HTTP 200)
+                if (!result) throw new Error("Empty response from server");
+                if (result.error) throw new Error(result.error);
+
+                // Check specific message failure
+                if (result.failed > 0) {
                     const firstError = result.errors?.[0];
-                    const errorMsg = typeof firstError === 'object' ? (firstError.error || firstError.message) : firstError;
-                    throw new Error(errorMsg || "Unknown error");
+                    const errorMsg = typeof firstError === 'object' ? (firstError.error || firstError.message) : (firstError || "Unknown failure from provider");
+                    throw new Error(errorMsg);
                 }
 
                 // Success Update
@@ -1150,7 +1154,15 @@ const PublicationPage = () => {
 
         const { data: result, error } = await supabase.functions.invoke('send-whatsapp-blast', { body: { messages: uniqueMessages } });
         
+        console.log("Blast Result:", result); // Debugging log
+
         if (error) throw error;
+        if (!result) throw new Error("Server returned empty response");
+        
+        // Handle global API errors (e.g. Invalid Client ID) returning 200 OK
+        if (result.success === false && result.error) {
+            throw new Error(result.error);
+        }
         
         setData(prevData => prevData.map((row, i) => {
             // Only update rows that were part of this batch
@@ -1217,11 +1229,12 @@ const PublicationPage = () => {
         }
         
     } catch (error: any) { 
+        console.error("Blast Error:", error);
         // Mark filtered rows as failed
         setData(prevData => prevData.map((row, i) => 
             indices.includes(i) ? { ...row, _status: 'failed', _error: error.message, 'Status': 'Error', 'Trigger time': 'N/A' } : row
         ));
-        toast.error("Blast Failed", { description: error.message || "Unknown error occurred" }); 
+        toast.error("Blast Failed", { description: error.message || "Check console for details." }); 
     } finally { 
         setIsSending(false); 
     }
