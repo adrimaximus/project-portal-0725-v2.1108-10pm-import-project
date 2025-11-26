@@ -15,6 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { getIconComponent } from "@/data/icons";
 import { Badge } from "@/components/ui/badge";
 import { Service } from "@/types";
+import { Input } from "@/components/ui/input";
 
 // Dashboard Preview Component with enhanced styling
 const DashboardPreview = () => (
@@ -126,6 +127,7 @@ const LandingPage = () => {
   const [services, setServices] = useState<Service[]>([]);
   const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([]);
   const [isServicesLoading, setIsServicesLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     if (!isLoading && session) {
@@ -187,6 +189,11 @@ const LandingPage = () => {
       navigate(`/login?${params.toString()}`);
     }
   };
+
+  const filteredServices = services.filter(service => 
+    service.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    service.description?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   if (isLoading) {
     return <LoadingSpinner />;
@@ -338,20 +345,31 @@ const LandingPage = () => {
         {/* Request Service Segment */}
         <section id="request-service" className="py-24 relative border-t border-white/5 bg-black/20">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-            <div className="max-w-3xl mx-auto text-center mb-16">
+            <div className="max-w-3xl mx-auto mb-10">
               <h2 className="text-3xl md:text-4xl font-bold mb-4">Project Support Request</h2>
-              <p className="text-slate-400">Select the services you need for your project. You can select multiple services.</p>
+              <p className="text-slate-400 mb-8">Select the services you need for your project. You can select multiple services.</p>
+              
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                <Input
+                  type="text"
+                  placeholder="Search support options..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full bg-[#13151C] border-white/10 text-slate-200 placeholder:text-slate-600 pl-10 h-12 rounded-lg focus:ring-purple-500/50 focus:border-purple-500/50"
+                />
+              </div>
             </div>
 
             {isServicesLoading ? (
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 max-w-6xl mx-auto mb-12">
-                {[...Array(4)].map((_, i) => (
-                  <div key={i} className="h-40 bg-white/5 rounded-xl animate-pulse border border-white/5"></div>
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 max-w-6xl mx-auto mb-12">
+                {[...Array(6)].map((_, i) => (
+                  <div key={i} className="h-48 bg-white/5 rounded-xl animate-pulse border border-white/5"></div>
                 ))}
               </div>
-            ) : services.length > 0 ? (
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 max-w-6xl mx-auto mb-12">
-                {services.map((service) => {
+            ) : filteredServices.length > 0 ? (
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 max-w-6xl mx-auto mb-12">
+                {filteredServices.map((service) => {
                   const Icon = getIconComponent(service.icon);
                   const isSelected = selectedServiceIds.includes(service.id);
                   return (
@@ -359,21 +377,21 @@ const LandingPage = () => {
                       key={service.id}
                       onClick={() => handleServiceSelect(service)}
                       className={cn(
-                        "cursor-pointer group relative p-5 rounded-xl border transition-all duration-300 flex flex-col items-start justify-between gap-4 h-full min-h-[180px]",
+                        "cursor-pointer group relative p-6 rounded-xl border transition-all duration-300 flex flex-col items-start justify-between gap-6 h-full min-h-[200px]",
                         isSelected 
-                          ? "bg-purple-900/20 border-purple-500 shadow-[0_0_20px_rgba(168,85,247,0.15)]" 
+                          ? "bg-purple-900/20 border-purple-500/50 shadow-[0_0_20px_rgba(168,85,247,0.15)]" 
                           : "bg-[#13151C] border-white/5 hover:border-white/10 hover:bg-[#1A1D26] hover:-translate-y-1"
                       )}
                     >
                       <div className="w-full flex justify-between items-start">
                         <div className={cn(
-                          "p-2.5 rounded-lg transition-colors duration-300",
+                          "p-3 rounded-lg transition-colors duration-300 flex items-center justify-center w-12 h-12",
                           service.icon_color ? service.icon_color : "bg-white/10 text-white"
                         )}>
                           <Icon className="w-6 h-6" />
                         </div>
                         {service.is_featured && (
-                          <Badge variant="secondary" className="bg-green-500/20 text-green-400 border-green-500/20 hover:bg-green-500/30">
+                          <Badge className="bg-green-500 text-black hover:bg-green-600 font-semibold px-2.5">
                             Featured
                           </Badge>
                         )}
@@ -381,13 +399,13 @@ const LandingPage = () => {
                       
                       <div className="w-full">
                         <h3 className={cn(
-                          "text-lg font-bold mb-1.5 leading-tight",
+                          "text-lg font-bold mb-2 leading-tight",
                           isSelected ? "text-white" : "text-slate-200"
                         )}>
                           {service.title}
                         </h3>
                         <p className={cn(
-                          "text-sm leading-snug line-clamp-2",
+                          "text-sm leading-relaxed",
                           isSelected ? "text-slate-300" : "text-slate-400"
                         )}>
                           {service.description}
@@ -395,7 +413,7 @@ const LandingPage = () => {
                       </div>
 
                       {isSelected && (
-                        <div className="absolute top-3 right-3 md:right-auto md:left-[calc(100%-1.5rem)] md:top-[-0.5rem]">
+                        <div className="absolute top-6 right-6">
                           <div className="bg-purple-500 text-white rounded-full p-1 shadow-lg ring-2 ring-[#0B0D14]">
                               <Check className="w-3 h-3" />
                           </div>
@@ -406,12 +424,12 @@ const LandingPage = () => {
                 })}
               </div>
             ) : (
-              <div className="text-center py-12 mb-12 border border-dashed border-white/10 rounded-xl bg-white/5 max-w-2xl mx-auto">
-                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-white/5 mb-4">
-                  <Search className="w-6 h-6 text-slate-500" />
+              <div className="text-center py-16 mb-12 border border-dashed border-white/10 rounded-xl bg-white/5 max-w-2xl mx-auto">
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-white/5 mb-4">
+                  <Search className="w-8 h-8 text-slate-500" />
                 </div>
-                <h3 className="text-lg font-medium text-slate-300 mb-1">No services found</h3>
-                <p className="text-slate-500">We are currently updating our service list. Please check back later.</p>
+                <h3 className="text-xl font-medium text-slate-300 mb-2">No services found</h3>
+                <p className="text-slate-500 max-w-md mx-auto">We couldn't find any services matching your search. Try different keywords.</p>
               </div>
             )}
           </div>
