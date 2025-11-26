@@ -291,8 +291,7 @@ const LandingPage = () => {
               <p className="text-slate-400">Jumpstart your project request instantly.</p>
             </div>
 
-            {/* Scrollable Flex Container on Mobile, Grid on Desktop */}
-            <div className="flex overflow-x-auto pb-6 gap-4 px-4 -mx-4 md:grid md:grid-cols-3 lg:grid-cols-6 md:gap-4 md:overflow-visible md:pb-0 md:px-0 md:mx-0 max-w-5xl md:mx-auto mb-12 snap-x">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 max-w-5xl mx-auto mb-12">
               {services.map((service) => {
                 const Icon = service.icon;
                 const isSelected = selectedService === service.id;
@@ -301,7 +300,7 @@ const LandingPage = () => {
                     key={service.id}
                     onClick={() => setSelectedService(service.id)}
                     className={cn(
-                      "cursor-pointer group relative p-4 rounded-2xl border transition-all duration-300 flex flex-col items-center justify-center gap-4 h-36 min-w-[160px] md:min-w-0 snap-center",
+                      "cursor-pointer group relative p-4 rounded-2xl border transition-all duration-300 flex flex-col items-center justify-center gap-4 h-36",
                       isSelected 
                         ? "bg-purple-600/20 border-purple-500/50 shadow-[0_0_20px_rgba(147,51,234,0.2)]" 
                         : "bg-[#13151C] border-white/5 hover:border-white/10 hover:bg-[#1A1D26] hover:-translate-y-1"
