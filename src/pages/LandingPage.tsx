@@ -372,6 +372,8 @@ const LandingPage = () => {
                 {filteredServices.map((service) => {
                   const Icon = getIconComponent(service.icon);
                   const isSelected = selectedServiceIds.includes(service.id);
+                  const textColorClass = service.icon_color?.split(' ').find(c => c.startsWith('text-'));
+
                   return (
                     <div
                       key={service.id}
@@ -388,7 +390,7 @@ const LandingPage = () => {
                           "p-3 rounded-lg transition-colors duration-300 flex items-center justify-center w-12 h-12",
                           service.icon_color ? service.icon_color : "bg-white/10 text-white"
                         )}>
-                          <Icon className="w-6 h-6" />
+                          <Icon className={cn("w-6 h-6", textColorClass)} />
                         </div>
                         {service.is_featured && (
                           <Badge className="bg-green-500 text-black hover:bg-green-600 font-semibold px-2.5">
@@ -405,7 +407,7 @@ const LandingPage = () => {
                           {service.title}
                         </h3>
                         <p className={cn(
-                          "text-sm leading-relaxed",
+                          "text-sm leading-relaxed line-clamp-3",
                           isSelected ? "text-slate-300" : "text-slate-400"
                         )}>
                           {service.description}
