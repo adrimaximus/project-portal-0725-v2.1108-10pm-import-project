@@ -349,7 +349,7 @@ const LandingPage = () => {
                   <div key={i} className="h-40 bg-white/5 rounded-xl animate-pulse border border-white/5"></div>
                 ))}
               </div>
-            ) : (
+            ) : services.length > 0 ? (
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 max-w-6xl mx-auto mb-12">
                 {services.map((service) => {
                   const Icon = getIconComponent(service.icon);
@@ -404,6 +404,14 @@ const LandingPage = () => {
                     </div>
                   );
                 })}
+              </div>
+            ) : (
+              <div className="text-center py-12 mb-12 border border-dashed border-white/10 rounded-xl bg-white/5 max-w-2xl mx-auto">
+                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-white/5 mb-4">
+                  <Search className="w-6 h-6 text-slate-500" />
+                </div>
+                <h3 className="text-lg font-medium text-slate-300 mb-1">No services found</h3>
+                <p className="text-slate-500">We are currently updating our service list. Please check back later.</p>
               </div>
             )}
           </div>
