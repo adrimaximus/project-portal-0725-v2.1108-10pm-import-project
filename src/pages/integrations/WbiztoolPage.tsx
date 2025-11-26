@@ -58,8 +58,8 @@ const getErrorMessage = async (error: any): Promise<string> => {
     }
   }
 
-  if (description.toLowerCase().includes('invalid credentials')) {
-    return "Invalid credentials. Please double-check your API Client ID and API Key.";
+  if (description.toLowerCase().includes('invalid credentials') || description.toLowerCase().includes('client id and api key are required')) {
+    return "Invalid or missing credentials. Please reconnect your WBIZTOOL account.";
   }
   if (description.includes('No active WBIZTOOL device found')) {
     return "No active WhatsApp device found in your WBIZTOOL account. Please ensure your device is connected in the WBIZTOOL dashboard.";
@@ -111,6 +111,12 @@ const WbiztoolPage = () => {
       
       if (Array.isArray(data.devices)) {
         setDevices(data.devices);
+        // If only one device found, auto-select it for convenience if not already set
+        if (data.devices.length === 1) {
+             const singleDeviceId = String(data.devices[0].id);
+             setWhatsappClientId(prev => prev || singleDeviceId);
+             setPublicationClientId(prev => prev || singleDeviceId);
+        }
         toast.success("Devices loaded", { description: `Found ${data.devices.length} WhatsApp device(s).` });
       } else {
         setDevices([]);
@@ -120,6 +126,11 @@ const WbiztoolPage = () => {
       console.error("Failed to fetch devices:", error);
       const description = await getErrorMessage(error);
       toast.error("Failed to load devices", { description });
+      
+      // If credentials are invalid, disconnect UI so user can fix them
+      if (description.includes("Invalid or missing credentials")) {
+          setIsConnected(false);
+      }
     } finally {
       setIsLoadingDevices(false);
     }
@@ -137,7 +148,8 @@ const WbiztoolPage = () => {
         if (data.publicationClientId) setPublicationClientId(data.publicationClientId);
         
         // Automatically fetch devices if connected to populate the list
-        fetchDevices("", ""); // Backend will use stored credentials
+        // We pass empty strings, relying on backend to use stored credentials
+        fetchDevices("", ""); 
       }
     } catch (error: any) {
       console.error("Failed to check WBIZTOOL connection status:", error.message);
