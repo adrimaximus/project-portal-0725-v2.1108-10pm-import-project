@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -13,18 +13,45 @@ type OnlineCollaboratorsProps = {
 };
 
 const MAX_VISIBLE_AVATARS = 5;
+const IDLE_THRESHOLD_MS = 5 * 60 * 1000; // 5 menit dianggap idle
 
 const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [currentTime, setCurrentTime] = useState(Date.now());
   const navigate = useNavigate();
   const { onlineCollaborators } = useAuth();
 
+  // Perbarui waktu setiap 1 menit untuk mengecek status idle secara real-time
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(Date.now());
+    }, 60000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Proses kolaborator untuk menentukan status idle berdasarkan waktu terakhir aktif
+  const processedCollaborators = useMemo(() => {
+    return onlineCollaborators.map(c => {
+      let isIdle = c.isIdle;
+      
+      // Override status idle jika last_active_at lebih dari 5 menit yang lalu
+      if (c.last_active_at) {
+        const lastActiveTime = new Date(c.last_active_at).getTime();
+        if (currentTime - lastActiveTime > IDLE_THRESHOLD_MS) {
+          isIdle = true;
+        }
+      }
+      
+      return { ...c, isIdle };
+    });
+  }, [onlineCollaborators, currentTime]);
+
   // Sort collaborators: active first, then idle
   const sortedCollaborators = useMemo(() => {
-    const active = onlineCollaborators.filter(c => !c.isIdle);
-    const idle = onlineCollaborators.filter(c => c.isIdle);
+    const active = processedCollaborators.filter(c => !c.isIdle);
+    const idle = processedCollaborators.filter(c => c.isIdle);
     return [...active, ...idle];
-  }, [onlineCollaborators]);
+  }, [processedCollaborators]);
 
   // Determine which collaborators are visible and which are hidden
   const visibleCollaborators = useMemo(() => {
@@ -43,7 +70,7 @@ const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
   }, [hiddenCollaborators]);
 
   // Check if there's any active user at all (for the rightmost avatar dot)
-  const hasAnyActive = useMemo(() => onlineCollaborators.some(c => !c.isIdle), [onlineCollaborators]);
+  const hasAnyActive = useMemo(() => processedCollaborators.some(c => !c.isIdle), [processedCollaborators]);
 
   const handleCollaboratorClick = (collaborator: Collaborator) => {
     navigate('/chat', { 
@@ -62,14 +89,14 @@ const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
               <div className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-primary md:h-8 md:w-8 relative cursor-pointer">
                 <Users className="h-5 w-5" />
                 <span className="absolute -top-1 -right-1 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-primary p-0 text-xs text-primary-foreground">
-                  {onlineCollaborators.length}
+                  {processedCollaborators.length}
                 </span>
               </div>
             </TooltipTrigger>
             <TooltipContent side="right">
-              <p className="font-semibold">{onlineCollaborators.length} collaborators online</p>
+              <p className="font-semibold">{processedCollaborators.length} collaborators online</p>
               <ul className="mt-2 text-sm text-muted-foreground space-y-1.5">
-                {onlineCollaborators.map(c => (
+                {processedCollaborators.map(c => (
                   <li key={c.id} className="flex items-center gap-2">
                     <span className={`h-2 w-2 rounded-full ${c.isIdle ? 'bg-orange-400' : 'bg-green-500'}`} />
                     <span className="capitalize">
@@ -96,7 +123,7 @@ const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
       <div>
         {isExpanded ? (
           <div className="space-y-1 px-3">
-            {onlineCollaborators.map(c => (
+            {processedCollaborators.map(c => (
               <div 
                 key={c.id} 
                 className="flex items-center gap-3 p-1.5 rounded-lg hover:bg-muted cursor-pointer transition-colors"
