@@ -10,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import SafeLocalStorage from '@/lib/localStorage';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { Link } from 'react-router-dom';
+import { cn } from '@/lib/utils';
 
 const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" {...props}>
@@ -149,32 +150,32 @@ const LoginPage = () => {
   }
 
   return (
-    <div className="min-h-screen w-full relative flex items-center justify-center p-4 overflow-hidden bg-[#0B0D14] text-slate-200 font-sans">
+    <div className="min-h-screen w-full relative flex items-center justify-center p-4 overflow-hidden bg-background text-foreground font-sans">
       {/* Fixed Background Gradients */}
       <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-purple-900/10 blur-[120px]"></div>
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-blue-900/10 blur-[120px]"></div>
-        <div className="absolute top-[20%] right-[10%] w-[20%] h-[20%] rounded-full bg-pink-900/05 blur-[100px]"></div>
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-primary/10 blur-[120px]"></div>
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-blue-600/10 blur-[120px]"></div>
+        <div className="absolute top-[20%] right-[10%] w-[20%] h-[20%] rounded-full bg-primary/5 blur-[100px]"></div>
       </div>
 
-      <div className="w-full max-w-4xl grid lg:grid-cols-2 rounded-3xl overflow-hidden border border-white/5 shadow-2xl z-20 relative bg-[#13151C]/50 backdrop-blur-xl">
+      <div className="w-full max-w-4xl grid lg:grid-cols-2 rounded-3xl overflow-hidden border border-border shadow-2xl z-20 relative bg-card/50 backdrop-blur-xl">
         {/* Left Panel */}
-        <div className="hidden lg:flex flex-col justify-between p-12 text-white bg-gradient-to-br from-purple-900/20 to-blue-900/20 relative overflow-hidden">
+        <div className="hidden lg:flex flex-col justify-between p-12 text-white bg-gradient-to-br from-primary/20 to-blue-600/20 relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-full bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20"></div>
           
           <div className="relative z-10">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs font-medium text-purple-300 mb-6">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs font-medium text-primary-foreground/80 mb-6">
               <span>Daily Inspiration</span>
             </div>
-            <div className="w-12 h-1 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full mb-6"></div>
+            <div className="w-12 h-1 bg-gradient-to-r from-primary to-blue-500 rounded-full mb-6"></div>
             <h2 className="text-3xl xl:text-4xl font-bold leading-tight mb-4 font-serif">{currentQuote.title}</h2>
-            <p className="text-base xl:text-lg text-slate-300/90 leading-relaxed">"{currentQuote.text}"</p>
+            <p className="text-base xl:text-lg text-white/80 leading-relaxed">"{currentQuote.text}"</p>
           </div>
           
-          <div className="relative z-10 flex items-center gap-2 text-sm text-slate-400 mt-8">
+          <div className="relative z-10 flex items-center gap-2 text-sm text-white/60 mt-8">
              <div className="flex -space-x-2">
                 {[1, 2, 3, 4, 5].map((i) => (
-                    <div key={i} className="w-8 h-8 rounded-full border-2 border-[#13151C] overflow-hidden">
+                    <div key={i} className="w-8 h-8 rounded-full border-2 border-background overflow-hidden">
                         <img 
                             src={`https://i.pravatar.cc/150?u=${i + 20}`} 
                             alt={`User ${i}`}
@@ -188,29 +189,29 @@ const LoginPage = () => {
         </div>
 
         {/* Right Panel */}
-        <div className="p-8 sm:p-12 flex flex-col justify-center bg-[#0B0D14]/60">
+        <div className="p-8 sm:p-12 flex flex-col justify-center bg-background/40">
           <div className="w-full max-w-sm mx-auto">
             <div className="mb-8 text-center">
-              <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-purple-600/20 to-blue-600/20 border border-white/10 mb-4">
+              <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-primary/20 to-blue-600/20 border border-border mb-4">
                 <img src="https://quuecudndfztjlxbrvyb.supabase.co/storage/v1/object/public/General/logo.png" alt="7i Portal Logo" className="h-6 w-6 object-contain" />
               </div>
-              <h1 className="text-2xl font-bold text-white mb-2">
+              <h1 className="text-2xl font-bold text-foreground mb-2">
                 Welcome Back{lastUserName ? `, ${lastUserName}` : ''}!
               </h1>
-              <p className="text-slate-400 text-sm">Sign in or create an account to access your portal.</p>
+              <p className="text-muted-foreground text-sm">Sign in or create an account to access your portal.</p>
             </div>
             
             <Tabs defaultValue="password" className="w-full">
-              <TabsList className="grid w-full grid-cols-3 bg-[#1A1D26] p-1 rounded-lg mb-6">
-                <TabsTrigger value="password" className="data-[state=active]:bg-[#2A2D36] data-[state=active]:text-white text-slate-400 text-xs rounded-md transition-all">Password</TabsTrigger>
-                <TabsTrigger value="magic-link" className="data-[state=active]:bg-[#2A2D36] data-[state=active]:text-white text-slate-400 text-xs rounded-md transition-all">Magic Link</TabsTrigger>
-                <TabsTrigger value="signup" className="data-[state=active]:bg-[#2A2D36] data-[state=active]:text-white text-slate-400 text-xs rounded-md transition-all">Sign Up</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-3 bg-muted p-1 rounded-lg mb-6">
+                <TabsTrigger value="password" className="data-[state=active]:bg-background data-[state=active]:text-foreground text-muted-foreground text-xs rounded-md transition-all shadow-sm">Password</TabsTrigger>
+                <TabsTrigger value="magic-link" className="data-[state=active]:bg-background data-[state=active]:text-foreground text-muted-foreground text-xs rounded-md transition-all shadow-sm">Magic Link</TabsTrigger>
+                <TabsTrigger value="signup" className="data-[state=active]:bg-background data-[state=active]:text-foreground text-muted-foreground text-xs rounded-md transition-all shadow-sm">Sign Up</TabsTrigger>
               </TabsList>
               
               <TabsContent value="password">
                 <form onSubmit={handlePasswordLogin} className="space-y-4">
                   <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                     <Input
                       id="email"
                       type="email"
@@ -218,12 +219,12 @@ const LoginPage = () => {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
-                      className="pl-10 h-11 bg-[#1A1D26] border-white/5 text-white placeholder:text-slate-600 focus:border-purple-500/50 focus:ring-purple-500/20"
+                      className="pl-10 h-11 bg-muted/50 border-border text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-primary/20"
                     />
                   </div>
                   <div className="space-y-2">
                     <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                       <Input
                         id="password"
                         type={showPassword ? "text" : "password"}
@@ -231,21 +232,21 @@ const LoginPage = () => {
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         required
-                        className="pl-10 h-11 bg-[#1A1D26] border-white/5 text-white placeholder:text-slate-600 focus:border-purple-500/50 focus:ring-purple-500/20"
+                        className="pl-10 h-11 bg-muted/50 border-border text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-primary/20"
                       />
-                      <Button type="button" variant="ghost" size="icon" className="absolute inset-y-0 right-0 h-full px-3 text-slate-500 hover:text-white" onClick={() => setShowPassword(!showPassword)}>
+                      <Button type="button" variant="ghost" size="icon" className="absolute inset-y-0 right-0 h-full px-3 text-muted-foreground hover:text-foreground" onClick={() => setShowPassword(!showPassword)}>
                         {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </Button>
                     </div>
                     <div className="text-right">
-                      <Button asChild variant="link" className="px-0 text-purple-400 hover:text-purple-300 h-auto text-xs">
+                      <Button asChild variant="link" className="px-0 text-primary hover:text-primary/80 h-auto text-xs">
                         <Link to="/forgot-password">
                           Forgot Password?
                         </Link>
                       </Button>
                     </div>
                   </div>
-                  <Button type="submit" className="w-full h-11 text-base bg-white text-black hover:bg-slate-200 rounded-xl font-medium transition-all" disabled={loading}>
+                  <Button type="submit" className="w-full h-11 text-base rounded-xl font-medium transition-all" disabled={loading}>
                     {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Sign In'}
                   </Button>
                 </form>
@@ -259,7 +260,7 @@ const LoginPage = () => {
                 <form onSubmit={handleSignUp} className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="relative">
-                      <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
+                      <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                       <Input
                         id="firstName"
                         type="text"
@@ -267,7 +268,7 @@ const LoginPage = () => {
                         value={firstName}
                         onChange={(e) => setFirstName(e.target.value)}
                         required
-                        className="pl-10 h-11 bg-[#1A1D26] border-white/5 text-white placeholder:text-slate-600 focus:border-purple-500/50 focus:ring-purple-500/20"
+                        className="pl-10 h-11 bg-muted/50 border-border text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-primary/20"
                       />
                     </div>
                     <div>
@@ -278,12 +279,12 @@ const LoginPage = () => {
                         value={lastName}
                         onChange={(e) => setLastName(e.target.value)}
                         required
-                        className="h-11 bg-[#1A1D26] border-white/5 text-white placeholder:text-slate-600 focus:border-purple-500/50 focus:ring-purple-500/20 px-3"
+                        className="h-11 bg-muted/50 border-border text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-primary/20 px-3"
                       />
                     </div>
                   </div>
                   <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                     <Input
                       id="signUpEmail"
                       type="email"
@@ -291,11 +292,11 @@ const LoginPage = () => {
                       value={signUpEmail}
                       onChange={(e) => setSignUpEmail(e.target.value)}
                       required
-                      className="pl-10 h-11 bg-[#1A1D26] border-white/5 text-white placeholder:text-slate-600 focus:border-purple-500/50 focus:ring-purple-500/20"
+                      className="pl-10 h-11 bg-muted/50 border-border text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-primary/20"
                     />
                   </div>
                   <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                     <Input
                       id="signUpPassword"
                       type={showSignUpPassword ? "text" : "password"}
@@ -303,13 +304,13 @@ const LoginPage = () => {
                       value={signUpPassword}
                       onChange={(e) => setSignUpPassword(e.target.value)}
                       required
-                      className="pl-10 h-11 bg-[#1A1D26] border-white/5 text-white placeholder:text-slate-600 focus:border-purple-500/50 focus:ring-purple-500/20"
+                      className="pl-10 h-11 bg-muted/50 border-border text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-primary/20"
                     />
-                     <Button type="button" variant="ghost" size="icon" className="absolute inset-y-0 right-0 h-full px-3 text-slate-500 hover:text-white" onClick={() => setShowSignUpPassword(!showSignUpPassword)}>
+                     <Button type="button" variant="ghost" size="icon" className="absolute inset-y-0 right-0 h-full px-3 text-muted-foreground hover:text-foreground" onClick={() => setShowSignUpPassword(!showSignUpPassword)}>
                       {showSignUpPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </Button>
                   </div>
-                  <Button type="submit" className="w-full h-11 text-base bg-white text-black hover:bg-slate-200 rounded-xl font-medium transition-all" disabled={signUpLoading}>
+                  <Button type="submit" className="w-full h-11 text-base rounded-xl font-medium transition-all" disabled={signUpLoading}>
                     {signUpLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Create Account'}
                   </Button>
                 </form>
@@ -317,11 +318,11 @@ const LoginPage = () => {
             </Tabs>
             
             <div className="relative my-6">
-                <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-white/5"></span></div>
-                <div className="relative flex justify-center text-xs uppercase"><span className="bg-[#0B0D14] px-2 text-slate-500">Or continue with</span></div>
+                <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-border"></span></div>
+                <div className="relative flex justify-center text-xs uppercase"><span className="bg-background px-2 text-muted-foreground">Or continue with</span></div>
             </div>
 
-            <Button variant="outline" className="w-full h-11 text-base bg-[#1A1D26] border-white/5 text-slate-300 hover:bg-[#252832] hover:text-white rounded-xl transition-all" onClick={handleGoogleLogin}>
+            <Button variant="outline" className="w-full h-11 text-base bg-muted/30 border-border text-muted-foreground hover:bg-muted hover:text-foreground rounded-xl transition-all" onClick={handleGoogleLogin}>
               {googleLoading ? (
                 <Loader2 className="h-5 w-5 animate-spin" />
               ) : (
