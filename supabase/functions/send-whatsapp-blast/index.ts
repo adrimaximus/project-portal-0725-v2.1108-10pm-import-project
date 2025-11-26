@@ -75,7 +75,6 @@ Deno.serve(async (req) => {
 
             // SAFETY FALLBACK:
             // If it's a media type but the URL is missing or empty, fallback to text (type 0).
-            // This prevents the "Image Url Can't be null" error from the API.
             if ((msgType === 1 || msgType === 2) && (!msg.url || typeof msg.url !== 'string' || msg.url.trim() === '')) {
                 console.warn(`[send-whatsapp-blast] Warning: Media message to ${msg.phone} has invalid URL. Fallback to text.`);
                 msgType = 0;
@@ -86,7 +85,7 @@ Deno.serve(async (req) => {
                 api_key: apiKey,
                 whatsapp_client: parseInt(whatsappClientId, 10),
                 phone: msg.phone,
-                msg_type: msgType,
+                msg_type: msgType, // Explicitly sending msg_type
             };
 
             // Handle text vs caption logic

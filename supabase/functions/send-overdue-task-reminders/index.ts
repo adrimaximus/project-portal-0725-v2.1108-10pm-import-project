@@ -49,13 +49,22 @@ Deno.serve(async (req) => {
 
     for (const task of overdueTasks) {
       const prefs = task.assignee_prefs || {};
-      const isEnabled = prefs.task_overdue !== false;
+      
+      // Check if 'task_overdue' main toggle is enabled (defaults to true)
+      const isEnabled = (typeof prefs.task_overdue === 'object' && prefs.task_overdue !== null) 
+          ? prefs.task_overdue.enabled !== false 
+          : prefs.task_overdue !== false;
 
       if (isEnabled) {
         const dueDate = new Date(task.due_date);
         const daysOverdue = Math.floor((new Date().getTime() - dueDate.getTime()) / (1000 * 3600 * 24));
         
-        const debounceKey = `task_overdue:${task.task_id}`;
+        const debounceKey = `task_overdue:${task.task_id}:${daysOverdue}`; // Include days to allow re-sending daily if strictly needed, or remove for once-per-task.
+        // Better debounce: Just task ID + type. Re-sending logic should be handled by a log table ideally, 
+        // but here we rely on 'pending_notifications' unique constraint (recipient, type, debounce_key).
+        // We'll use task_id and date to allow one reminder per day.
+        const dailyDebounceKey = `task_overdue:${task.task_id}:${new Date().toISOString().split('T')[0]}`;
+
         const contextData = {
             task_id: task.task_id,
             task_title: task.task_title,
@@ -63,26 +72,30 @@ Deno.serve(async (req) => {
             project_name: task.project_name,
             project_slug: task.project_slug,
             days_overdue: daysOverdue,
-            debounce_key: debounceKey,
+            debounce_key: dailyDebounceKey,
         };
 
         const taskOverduePrefs = (typeof prefs.task_overdue === 'object' && prefs.task_overdue !== null) ? prefs.task_overdue : {};
 
+        // 1. Queue WhatsApp Notification
         if (taskOverduePrefs.whatsapp !== false) {
             notificationsToInsert.push({
               recipient_id: task.assignee_id,
               send_at: new Date(),
-              notification_type: 'task_overdue',
+              notification_type: 'task_overdue', // Base type for WA
               context_data: contextData,
+              debounce_key: dailyDebounceKey,
             });
         }
 
+        // 2. Queue Email Notification
         if (taskOverduePrefs.email !== false) {
             notificationsToInsert.push({
               recipient_id: task.assignee_id,
               send_at: new Date(),
-              notification_type: 'task_overdue_email',
+              notification_type: 'task_overdue_email', // Email type
               context_data: contextData,
+              debounce_key: dailyDebounceKey,
             });
         }
 
@@ -97,11 +110,12 @@ Deno.serve(async (req) => {
         .insert(notificationsToInsert);
       
       if (insertError) {
-        // The unique index will cause an error if there's a conflict. We can ignore it.
-        if (insertError.code !== '23505') { // 23505 is unique_violation
+        // The unique index will cause an error if there's a conflict. We can ignore duplicate key violations.
+        if (insertError.code !== '23505') { 
+          console.error("Error inserting task reminders:", insertError);
           throw new Error(`Failed to insert notifications: ${insertError.message}`);
         } else {
-          console.log("Ignoring duplicate notification insert attempts.");
+          console.log("Some task reminders were skipped due to duplicates (already queued for today).");
         }
       }
     }
