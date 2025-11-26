@@ -254,11 +254,25 @@ export interface Goal {
 }
 
 // People & Company types
+export const CUSTOM_PROPERTY_TYPES = [
+  'text',
+  'number',
+  'date',
+  'select',
+  'multi-select',
+  'checkbox',
+  'url',
+  'email',
+  'phone',
+  'textarea',
+  'image'
+] as const;
+
 export interface CustomProperty {
   id: string;
   name: string;
   label: string;
-  type: 'text' | 'number' | 'date' | 'select' | 'multi-select' | 'checkbox' | 'url' | 'email' | 'phone' | 'textarea' | 'image';
+  type: typeof CUSTOM_PROPERTY_TYPES[number];
   options?: string[] | null;
   is_default: boolean;
   category: 'contact' | 'company' | 'project' | 'billing' | 'expense' | 'tag';
