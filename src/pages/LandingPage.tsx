@@ -167,17 +167,11 @@ const LandingPage = () => {
       }
 
       // If clicking a normal service, ensure End to End is NOT selected
-      // First find the ID of any End to End service if it exists
-      const endToEndService = services.find(s => s.title.toLowerCase().includes('end to end'));
-      const endToEndId = endToEndService?.id;
+      const endToEndServiceIds = services
+        .filter(s => s.title.toLowerCase().includes('end to end'))
+        .map(s => s.id);
       
-      let newSelection = [...prev];
-      
-      // If End to End was selected, remove it
-      if (endToEndId && newSelection.includes(endToEndId)) {
-        newSelection = newSelection.filter(id => id !== endToEndId);
-      }
-
+      const newSelection = prev.filter(id => !endToEndServiceIds.includes(id));
       return [...newSelection, service.id];
     });
   };
