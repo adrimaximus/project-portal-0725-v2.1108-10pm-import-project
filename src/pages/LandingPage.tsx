@@ -139,15 +139,11 @@ const LandingPage = () => {
   useEffect(() => {
     const fetchServices = async () => {
       setIsServicesLoading(true);
-      // Simplified query to reduce potential errors if 'is_featured' column is missing or has issues
       const { data, error } = await supabase
         .from('services')
         .select('*')
+        .order('is_featured', { ascending: false })
         .order('title');
-        
-      if (error) {
-        console.error("Error fetching services:", error);
-      }
         
       if (!error && data) {
         setServices(data as Service[]);
@@ -192,7 +188,8 @@ const LandingPage = () => {
       // Preserve existing query params (e.g. UTM tags) and add services
       const params = new URLSearchParams(location.search);
       params.set('services', selectedServiceIds.join(','));
-      navigate(`/login?${params.toString()}`);
+      // Redirect directly to Request page instead of login
+      navigate(`/request?${params.toString()}`);
     }
   };
 
@@ -379,9 +376,9 @@ const LandingPage = () => {
                 <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-white/5 mb-4">
                   <Database className="w-8 h-8 text-slate-500" />
                 </div>
-                <h3 className="text-xl font-medium text-slate-300 mb-2">No services available</h3>
+                <h3 className="text-xl font-medium text-slate-300 mb-2">No services configured</h3>
                 <p className="text-slate-500 max-w-md mx-auto">
-                  Our services are currently being updated. Please check back later or contact support.
+                   There are no services available at the moment.
                 </p>
               </div>
             ) : filteredServices.length === 0 ? (

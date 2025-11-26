@@ -78,13 +78,13 @@ function App() {
             <Route path="/auth/callback" element={<AuthCallbackPage />} />
             <Route path="/terms-of-service" element={<TermsOfServicePage />} />
             <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+            <Route path="/request" element={<Request />} />
 
             <Route element={<ProtectedRouteLayout />}>
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/projects" element={<Projects />} />
               <Route path="/projects/:slug" element={<ProjectDetail />} />
               <Route path="/tasks/:taskId" element={<TaskRedirectPage />} />
-              <Route path="/request" element={<Request />} />
               <Route path="/chat" element={<Chat />} />
               <Route path="/mood-tracker" element={<MoodTracker />} />
               <Route path="/goals" element={<Goals />} />

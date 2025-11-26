@@ -12,7 +12,7 @@ import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { Calendar as CalendarIcon } from "lucide-react";
+import { Calendar as CalendarIcon, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -47,15 +47,17 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
   const [selectedClient, setSelectedClient] = useState<{ type: 'person' | 'company', data: Person | Company } | null>(null);
   const [isPersonFormOpen, setIsPersonFormOpen] = useState(false);
   const [newClientName, setNewClientName] = useState('');
+  
+  // Guest fields
+  const [guestName, setGuestName] = useState("");
+  const [guestEmail, setGuestEmail] = useState("");
+  const [isSubmittingGuest, setIsSubmittingGuest] = useState(false);
 
   const { data: allUsers = [] } = useQuery<User[]>({
     queryKey: ['allUsersForRequestForm'],
     queryFn: async () => {
       const { data, error } = await supabase.from('profiles').select('id, first_name, last_name, avatar_url, email');
-      if (error) {
-        toast.error("Failed to fetch users.");
-        throw error;
-      }
+      if (error) return [];
       return data.map(profile => {
         const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
         return {
@@ -68,31 +70,28 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
           last_name: profile.last_name,
         };
       });
-    }
+    },
+    enabled: !!currentUser // Only fetch if logged in
   });
 
   const { data: allPeople = [] } = useQuery<Person[]>({
     queryKey: ['allPeopleForRequestForm'],
     queryFn: async () => {
       const { data, error } = await supabase.from('people').select('*');
-      if (error) {
-        toast.error("Failed to fetch clients.");
-        throw error;
-      }
+      if (error) return [];
       return data;
-    }
+    },
+    enabled: !!currentUser
   });
 
   const { data: allCompanies = [] } = useQuery<Company[]>({
     queryKey: ['allCompaniesForRequestForm'],
     queryFn: async () => {
       const { data, error } = await supabase.from('companies').select('*').order('name', { ascending: true });
-      if (error) {
-        toast.error("Failed to fetch companies.");
-        throw error;
-      }
+      if (error) return [];
       return data;
-    }
+    },
+    enabled: !!currentUser
   });
 
   const handleBudgetChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -121,16 +120,52 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentUser) {
-      toast.error("You must be logged in to create a project.");
-      return;
-    }
+    
     if (!projectName.trim()) {
       toast.error("Project name is required.");
       return;
     }
 
     const numericBudget = parseInt(budget.replace(/[^0-9]/g, ''), 10) || 0;
+
+    // === GUEST SUBMISSION ===
+    if (!currentUser) {
+      if (!guestName.trim() || !guestEmail.trim()) {
+        toast.error("Please provide your name and email.");
+        return;
+      }
+
+      setIsSubmittingGuest(true);
+      try {
+        const { data, error } = await supabase.functions.invoke('submit-public-request', {
+          body: {
+            name: guestName,
+            email: guestEmail,
+            projectName,
+            description,
+            budget: numericBudget,
+            date,
+            venue,
+            services: selectedServices.map(s => s.title)
+          }
+        });
+
+        if (error) throw error;
+        
+        toast.success("Request submitted successfully!", {
+            description: "Check your email for further instructions or login details."
+        });
+        navigate('/login');
+
+      } catch (error: any) {
+        toast.error("Failed to submit request.", { description: error.message });
+      } finally {
+        setIsSubmittingGuest(false);
+      }
+      return;
+    }
+
+    // === LOGGED IN SUBMISSION ===
     const clientCompanyId = selectedClient?.type === 'company' ? selectedClient.data.id : null;
 
     createProjectMutation.mutate({
@@ -148,14 +183,10 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
         const newProjectSlug = newProject.slug;
 
         if (selectedClient?.type === 'person') {
-          const { error: clientLinkError } = await supabase.from('people_projects').insert({
+          await supabase.from('people_projects').insert({
             person_id: selectedClient.data.id,
             project_id: newProjectId,
           });
-          if (clientLinkError) {
-            toast.error("Failed to link client to the project.");
-            console.error('Error linking client:', clientLinkError);
-          }
         }
 
         if (selectedServices.length > 0) {
@@ -163,11 +194,7 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
             project_id: newProjectId,
             service_title: service.title,
           }));
-          const { error: servicesError } = await supabase.from('project_services').insert(servicesToInsert);
-          if (servicesError) {
-            console.error('Failed to link services:', servicesError);
-            toast.warning('Project created, but could not link services.');
-          }
+          await supabase.from('project_services').insert(servicesToInsert);
         }
 
         if (team.length > 0) {
@@ -176,11 +203,7 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
             user_id: member.id,
             role: 'member' as const
           }));
-          const { error: membersError } = await supabase.from('project_members').insert(membersToInsert);
-          if (membersError) {
-            toast.error("Failed to add team members to the project.");
-            console.error('Error adding project members:', membersError);
-          }
+          await supabase.from('project_members').insert(membersToInsert);
         }
 
         if (files.length > 0) {
@@ -190,23 +213,18 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
             const filePath = `${newProjectId}/${Date.now()}-${sanitizedFileName}`;
             const { error: uploadError } = await supabase.storage.from('project-files').upload(filePath, file);
             
-            if (uploadError) {
-              toast.error(`Failed to upload ${file.name}.`);
-              console.error('Error uploading file:', uploadError);
-              continue;
+            if (!uploadError) {
+                const { data: urlData } = supabase.storage.from('project-files').getPublicUrl(filePath);
+                await supabase.from('project_files').insert({
+                project_id: newProjectId,
+                user_id: currentUser.id,
+                name: file.name,
+                size: file.size,
+                type: file.type,
+                url: urlData.publicUrl,
+                storage_path: filePath,
+                });
             }
-
-            const { data: urlData } = supabase.storage.from('project-files').getPublicUrl(filePath);
-            
-            await supabase.from('project_files').insert({
-              project_id: newProjectId,
-              user_id: currentUser.id,
-              name: file.name,
-              size: file.size,
-              type: file.type,
-              url: urlData.publicUrl,
-              storage_path: filePath,
-            });
           }
         }
         
@@ -225,7 +243,22 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
             <CardTitle>Create New Project</CardTitle>
             <CardDescription>Fill out the form below to create a new project.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6 max-h-[60vh] overflow-y-auto p-6">
+          <CardContent className="space-y-6 max-h-[65vh] overflow-y-auto p-6">
+            
+            {/* Guest Fields */}
+            {!currentUser && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-muted/30 p-4 rounded-lg border border-dashed">
+                <div className="space-y-2">
+                  <Label htmlFor="guest-name">Your Name</Label>
+                  <Input id="guest-name" placeholder="John Doe" value={guestName} onChange={(e) => setGuestName(e.target.value)} required />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="guest-email">Your Email</Label>
+                  <Input id="guest-email" type="email" placeholder="john@example.com" value={guestEmail} onChange={(e) => setGuestEmail(e.target.value)} required />
+                </div>
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label htmlFor="project-name">Project Name</Label>
               <Input
@@ -236,19 +269,24 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
                 required
               />
             </div>
-            <div className="space-y-2">
-              <Label>Client</Label>
-              <ClientSelector
-                people={allPeople}
-                companies={allCompanies}
-                selectedClient={selectedClient}
-                onSelectClient={setSelectedClient}
-                onAddNewClient={(name) => {
-                  setNewClientName(name);
-                  setIsPersonFormOpen(true);
-                }}
-              />
-            </div>
+            
+            {/* Client Selection only for logged in users */}
+            {currentUser && (
+                <div className="space-y-2">
+                <Label>Client</Label>
+                <ClientSelector
+                    people={allPeople}
+                    companies={allCompanies}
+                    selectedClient={selectedClient}
+                    onSelectClient={setSelectedClient}
+                    onAddNewClient={(name) => {
+                    setNewClientName(name);
+                    setIsPersonFormOpen(true);
+                    }}
+                />
+                </div>
+            )}
+
             <div className="space-y-2">
               <Label>Selected Services</Label>
               <div className="flex flex-wrap gap-2 rounded-md border p-3 bg-muted/50 min-h-[40px]">
@@ -327,30 +365,38 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
                 rows={5}
               />
             </div>
-            <div className="space-y-2">
-              <Label>Assign Team</Label>
-              <ModernTeamSelector users={assignableUsers} selectedUsers={team} onSelectionChange={handleTeamChange} />
-            </div>
-            <div className="space-y-2">
-              <Label>Attach Files</Label>
-              <FileUploader onFilesChange={setFiles} />
-            </div>
+            
+            {/* Only show team selection and file upload for logged in users */}
+            {currentUser && (
+                <>
+                    <div className="space-y-2">
+                    <Label>Assign Team</Label>
+                    <ModernTeamSelector users={assignableUsers} selectedUsers={team} onSelectionChange={handleTeamChange} />
+                    </div>
+                    <div className="space-y-2">
+                    <Label>Attach Files</Label>
+                    <FileUploader onFilesChange={setFiles} />
+                    </div>
+                </>
+            )}
           </CardContent>
           <CardFooter className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={onBack} disabled={createProjectMutation.isPending}>Back</Button>
-            <Button type="submit" disabled={createProjectMutation.isPending}>
-              {createProjectMutation.isPending ? "Creating..." : "Create Project"}
+            <Button type="button" variant="outline" onClick={onBack} disabled={createProjectMutation.isPending || isSubmittingGuest}>Back</Button>
+            <Button type="submit" disabled={createProjectMutation.isPending || isSubmittingGuest}>
+              {(createProjectMutation.isPending || isSubmittingGuest) ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Submitting...</> : "Submit Request"}
             </Button>
           </CardFooter>
         </Card>
       </form>
-      <PersonFormDialog
-        open={isPersonFormOpen}
-        onOpenChange={setIsPersonFormOpen}
-        onSuccess={handlePersonCreated}
-        person={null}
-        initialValues={{ full_name: newClientName }}
-      />
+      {currentUser && (
+        <PersonFormDialog
+            open={isPersonFormOpen}
+            onOpenChange={setIsPersonFormOpen}
+            onSuccess={handlePersonCreated}
+            person={null}
+            initialValues={{ full_name: newClientName }}
+        />
+      )}
     </>
   );
 };
