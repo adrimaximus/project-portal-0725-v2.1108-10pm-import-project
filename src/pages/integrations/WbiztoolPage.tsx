@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Loader2, RefreshCw } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 const getErrorMessage = async (error: any): Promise<string> => {
   let description = "An unknown error occurred. Please check the console.";
@@ -72,8 +73,11 @@ const WbiztoolPage = () => {
   const [publicationClientId, setPublicationClientId] = useState(""); // For Publication Blasts
   const [isConnected, setIsConnected] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Test Message State
   const [testPhone, setTestPhone] = useState("");
   const [testMessage, setTestMessage] = useState("");
+  const [testType, setTestType] = useState<"system" | "publication">("system");
   const [isSendingTest, setIsSendingTest] = useState(false);
   
   const [devices, setDevices] = useState<any[]>([]);
@@ -183,6 +187,11 @@ const WbiztoolPage = () => {
       return;
     }
 
+    if (testType === 'publication' && !publicationClientId) {
+        toast.error("Cannot test Publication Number", { description: "You haven't selected a Publication Blast Number in settings yet." });
+        return;
+    }
+
     let normalizedPhone = testPhone.replace(/\D/g, '');
     if (normalizedPhone.startsWith('0')) {
       normalizedPhone = '62' + normalizedPhone.substring(1);
@@ -193,13 +202,15 @@ const WbiztoolPage = () => {
     setIsSendingTest(true);
     try {
       const { data, error } = await supabase.functions.invoke('test-wbiztool-message', {
-        body: { phone: normalizedPhone, message: testMessage },
+        body: { 
+            phone: normalizedPhone, 
+            message: testMessage,
+            type: testType
+        },
       });
       if (error) throw error;
       if (data.error) throw new Error(data.error);
       toast.success("Test message sent successfully!", { description: data.message });
-      setTestPhone("");
-      setTestMessage("");
     } catch (error: any) {
       const description = await getErrorMessage(error);
       toast.error("Failed to send test message", { description });
@@ -386,9 +397,24 @@ const WbiztoolPage = () => {
           <Card>
             <CardHeader>
               <CardTitle>Send a Test Message</CardTitle>
-              <CardDescription>Verify your connection by sending a test message (Uses System Notification Number).</CardDescription>
+              <CardDescription>Verify your connection by sending a test message.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              <div className="space-y-2">
+                 <Label>Send using which device?</Label>
+                 <RadioGroup value={testType} onValueChange={(v: "system" | "publication") => setTestType(v)} className="flex space-x-4">
+                    <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="system" id="r-system" />
+                        <Label htmlFor="r-system" className="font-normal">System Number ({whatsappClientId})</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="publication" id="r-pub" disabled={!publicationClientId} />
+                        <Label htmlFor="r-pub" className={!publicationClientId ? "text-muted-foreground font-normal" : "font-normal"}>
+                            Publication Number {publicationClientId ? `(${publicationClientId})` : '(Not configured)'}
+                        </Label>
+                    </div>
+                 </RadioGroup>
+              </div>
               <div className="space-y-2">
                   <Label htmlFor="test-phone">Recipient Phone Number</Label>
                   <Input 

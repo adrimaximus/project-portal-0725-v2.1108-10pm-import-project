@@ -12,7 +12,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { phone, message } = await req.json()
+    const { phone, message, type } = await req.json() // type: 'system' | 'publication'
     if (!phone || !message) throw new Error('Phone number and message are required.')
 
     const supabaseAdmin = createClient(
@@ -23,7 +23,7 @@ Deno.serve(async (req) => {
     const { data: creds, error: credsError } = await supabaseAdmin
       .from('app_config')
       .select('key, value')
-      .in('key', ['WBIZTOOL_CLIENT_ID', 'WBIZTOOL_API_KEY', 'WBIZTOOL_WHATSAPP_CLIENT_ID']);
+      .in('key', ['WBIZTOOL_CLIENT_ID', 'WBIZTOOL_API_KEY', 'WBIZTOOL_WHATSAPP_CLIENT_ID', 'WBIZTOOL_PUBLICATION_CLIENT_ID']);
 
     if (credsError || !creds) {
       throw new Error('WBIZTOOL credentials not found in app_config.');
@@ -31,14 +31,27 @@ Deno.serve(async (req) => {
 
     const clientId = creds.find(c => c.key === 'WBIZTOOL_CLIENT_ID')?.value;
     const apiKey = creds.find(c => c.key === 'WBIZTOOL_API_KEY')?.value;
-    const whatsappClientId = creds.find(c => c.key === 'WBIZTOOL_WHATSAPP_CLIENT_ID')?.value;
+    const systemId = creds.find(c => c.key === 'WBIZTOOL_WHATSAPP_CLIENT_ID')?.value;
+    const publicationId = creds.find(c => c.key === 'WBIZTOOL_PUBLICATION_CLIENT_ID')?.value;
 
-    if (!clientId || !apiKey || !whatsappClientId) {
-      throw new Error("WBIZTOOL credentials missing or invalid. Please check settings.");
+    if (!clientId || !apiKey) {
+      throw new Error("WBIZTOOL Client ID or API Key is missing.");
+    }
+
+    // Determine which ID to use
+    let whatsappClientId = systemId; // Default to system
+    let idType = "System";
+
+    if (type === 'publication') {
+        if (!publicationId) throw new Error("Publication WhatsApp ID is not configured.");
+        whatsappClientId = publicationId;
+        idType = "Publication";
+    } else {
+        if (!systemId) throw new Error("System WhatsApp ID is not configured.");
     }
 
     // Call WBIZTOOL API
-    console.log(`Sending test message to ${phone} via WBIZTOOL (Device ${whatsappClientId})`);
+    console.log(`Sending test message to ${phone} via WBIZTOOL (${idType} Device: ${whatsappClientId})`);
 
     const messageResponse = await fetch('https://wbiztool.com/api/v1/send_msg/', {
       method: 'POST',
@@ -83,7 +96,7 @@ Deno.serve(async (req) => {
 
     const result = await messageResponse.json();
 
-    return new Response(JSON.stringify({ message: 'Message queued successfully by WBIZTOOL.', data: result }), {
+    return new Response(JSON.stringify({ message: `Message queued successfully using ${idType} Device (${whatsappClientId}).`, data: result }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     })
