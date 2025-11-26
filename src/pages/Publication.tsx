@@ -481,8 +481,10 @@ const PublicationPage = () => {
     }
   };
 
-  const handleDeleteCampaign = async (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleDeleteCampaign = async (id: string, e: React.MouseEvent | React.PointerEvent) => {
+    e.stopPropagation(); // Prevent SelectItem from being selected
+    e.preventDefault(); // Prevent default behavior
+    
     if (!confirm("Are you sure you want to delete this campaign?")) return;
 
     try {
@@ -1627,25 +1629,28 @@ const PublicationPage = () => {
                                 </SelectTrigger>
                                 <SelectContent>
                                   {savedCampaigns.map((campaign) => (
-                                    <div key={campaign.id} className="flex items-center justify-between w-full px-2 py-1.5 hover:bg-accent cursor-pointer group">
-                                      <div 
-                                        className="flex flex-col flex-1 cursor-pointer"
-                                        onClick={() => handleLoadCampaign(campaign.id)}
-                                      >
-                                        <span className="text-sm font-medium">{campaign.name}</span>
-                                        <span className="text-[10px] text-muted-foreground">
-                                          Updated: {formatDistanceToNow(new Date(campaign.updated_at), { addSuffix: true })}
-                                        </span>
-                                      </div>
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity ml-2"
-                                        onClick={(e) => handleDeleteCampaign(campaign.id, e)}
-                                      >
-                                        <Trash2 className="h-3 w-3" />
-                                      </Button>
-                                    </div>
+                                    <SelectItem 
+                                        key={campaign.id} 
+                                        value={campaign.id}
+                                        className="cursor-pointer group"
+                                    >
+                                        <div className="flex items-center justify-between w-full min-w-[180px]">
+                                            <div className="flex flex-col text-left mr-2">
+                                                <span className="text-sm font-medium">{campaign.name}</span>
+                                                <span className="text-[10px] text-muted-foreground">
+                                                  Updated: {formatDistanceToNow(new Date(campaign.updated_at), { addSuffix: true })}
+                                                </span>
+                                            </div>
+                                            <div
+                                                role="button"
+                                                className="h-6 w-6 flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                                                onClick={(e) => handleDeleteCampaign(campaign.id, e)}
+                                                onPointerDown={(e) => e.stopPropagation()} // Prevent SelectItem selection logic
+                                            >
+                                                <Trash2 className="h-3.5 w-3.5" />
+                                            </div>
+                                        </div>
+                                    </SelectItem>
                                   ))}
                                   {savedCampaigns.length === 0 && (
                                     <div className="p-2 text-xs text-muted-foreground text-center">
