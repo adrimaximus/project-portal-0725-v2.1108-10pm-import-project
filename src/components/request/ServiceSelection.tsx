@@ -15,6 +15,7 @@ interface ServiceSelectionProps {
   onSearchTermChange: (term: string) => void;
   selectedServices: Service[];
   onServiceSelect: (service: Service) => void;
+  preSelectId?: string | null;
 }
 
 const ServiceSelection = ({
@@ -22,9 +23,11 @@ const ServiceSelection = ({
   onSearchTermChange,
   selectedServices,
   onServiceSelect,
+  preSelectId
 }: ServiceSelectionProps) => {
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
+  const [hasHandledPreSelect, setHasHandledPreSelect] = useState(false);
 
   useEffect(() => {
     const fetchServices = async () => {
@@ -40,6 +43,32 @@ const ServiceSelection = ({
     };
     fetchServices();
   }, []);
+
+  // Handle pre-selection from URL param
+  useEffect(() => {
+    if (!loading && services.length > 0 && preSelectId && !hasHandledPreSelect && selectedServices.length === 0) {
+      const keywords = {
+        'web': ['web', 'website', 'development'],
+        'mobile': ['mobile', 'app', 'ios', 'android'],
+        'design': ['design', 'ui', 'ux', 'creative'],
+        'seo': ['seo', 'search', 'optimization'],
+        'consulting': ['consult', 'advice', 'strategy'],
+        'maintenance': ['maintenance', 'support'],
+      };
+
+      const targetKeywords = keywords[preSelectId as keyof typeof keywords] || [preSelectId];
+      
+      const matchedService = services.find(s => 
+        targetKeywords.some(k => s.title.toLowerCase().includes(k))
+      );
+
+      if (matchedService) {
+        onServiceSelect(matchedService);
+        // Optionally scroll to it?
+      }
+      setHasHandledPreSelect(true);
+    }
+  }, [loading, services, preSelectId, hasHandledPreSelect, selectedServices.length, onServiceSelect]);
 
   const filteredServices = services.filter(
     (service) =>
