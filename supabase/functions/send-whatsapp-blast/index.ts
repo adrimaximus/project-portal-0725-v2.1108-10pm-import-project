@@ -33,7 +33,10 @@ serve(async (req) => {
     const whatsappClientId = creds.find(c => c.key === 'WBIZTOOL_PUBLICATION_CLIENT_ID')?.value || creds.find(c => c.key === 'WBIZTOOL_WHATSAPP_CLIENT_ID')?.value
 
     if (!clientId || !apiKey || !whatsappClientId) {
-      throw new Error("WBIZTOOL credentials (Publication or System) not fully configured.");
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: "WBIZTOOL credentials (Publication or System) not fully configured." 
+      }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 })
     }
 
     // Function to send a single message
@@ -85,7 +88,9 @@ serve(async (req) => {
     const results = await Promise.all(messages.map(async (msg) => {
       try {
         const res = await sendMessage(msg);
-        return { phone: msg.phone, success: res.status === 1, error: res.msg || null };
+        // WBIZTOOL usually returns status: 1 for success
+        const isSuccess = res.status === 1 || (res.success === true); 
+        return { phone: msg.phone, success: isSuccess, error: isSuccess ? null : (res.msg || res.message || 'Unknown provider error') };
       } catch (e) {
         return { phone: msg.phone, success: false, error: e.message };
       }
@@ -94,6 +99,19 @@ serve(async (req) => {
     const successCount = results.filter(r => r.success).length;
     const failureCount = results.filter(r => !r.success).length;
     const errors = results.filter(r => !r.success);
+
+    // If everything failed, return a global error flag to help frontend debugging
+    if (successCount === 0 && failureCount > 0) {
+        // Check if it's a common auth error
+        const firstError = errors[0].error;
+        if (firstError.includes("Invalid Client") || firstError.includes("credential")) {
+             return new Response(JSON.stringify({ 
+                success: false, 
+                error: `Provider Error: ${firstError}`,
+                failed: failureCount 
+             }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 })
+        }
+    }
 
     return new Response(JSON.stringify({ 
       message: 'Batch processed', 
@@ -106,9 +124,9 @@ serve(async (req) => {
     })
 
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ success: false, error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 400,
+      status: 200, // Return 200 to avoid CORS issues, frontend handles success: false
     })
   }
 })
