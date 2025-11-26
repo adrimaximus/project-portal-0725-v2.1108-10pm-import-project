@@ -1,4 +1,4 @@
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+// @ts-nocheck
 import Anthropic from 'https://esm.sh/@anthropic-ai/sdk@0.22.0';
 
 const corsHeaders = {
@@ -22,7 +22,7 @@ const colorThemes = [
     { name: 'Gray', classes: 'bg-gray-100 text-gray-600' },
 ];
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }

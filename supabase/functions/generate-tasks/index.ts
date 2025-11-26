@@ -1,7 +1,6 @@
 // @ts-nocheck
 /// <reference types="https://esm.sh/@supabase/functions-js@2/src/edge-runtime.d.ts" />
 
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts"
 import Anthropic from 'https://esm.sh/@anthropic-ai/sdk@0.22.0';
 
 const corsHeaders = {
@@ -9,7 +8,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
