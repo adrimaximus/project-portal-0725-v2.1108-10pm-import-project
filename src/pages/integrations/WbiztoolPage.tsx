@@ -25,14 +25,29 @@ const getErrorMessage = async (error: any): Promise<string> => {
   }
 
   if (rawErrorText) {
-    if (rawErrorText.trim().startsWith('<') || rawErrorText.includes('<html>') || rawErrorText.includes('window.dataLayer')) {
-      return "The server returned an unexpected error. This might be a temporary issue with the service. Please try again later.";
+    // Check for HTML response first (often indicates function crash/timeout or 404)
+    if (rawErrorText.trim().startsWith('<') || rawErrorText.includes('<!DOCTYPE html>') || rawErrorText.includes('<html')) {
+       if (rawErrorText.includes('404 Page Not Found') || rawErrorText.includes('404')) {
+          return "WBIZTOOL API Endpoint Not Found (404). The service might be down or the URL structure has changed.";
+       }
+       if (rawErrorText.includes('502 Bad Gateway')) {
+          return "WBIZTOOL Gateway Error (502). The service is temporarily unavailable.";
+       }
+       if (rawErrorText.includes('524 A timeout occurred')) {
+          return "WBIZTOOL Connection Timeout (524). The request took too long.";
+       }
+       return "The server returned an unexpected HTML response (likely an error page). Please try again later.";
     }
+    
+    // Try to parse as JSON
     try {
       const errorBody = JSON.parse(rawErrorText);
       description = errorBody.error || errorBody.message || rawErrorText;
     } catch (e) {
-      description = rawErrorText;
+      // Not JSON, use the raw text if it's short enough
+      if (rawErrorText.length < 200) {
+          description = rawErrorText;
+      }
     }
   }
 
@@ -43,9 +58,6 @@ const getErrorMessage = async (error: any): Promise<string> => {
     }
   }
 
-  if (description.includes('404 Page Not Found')) {
-    return "Could not reach the WBIZTOOL API. The service might be down or the API endpoint has changed. Please contact support if the issue persists.";
-  }
   if (description.toLowerCase().includes('invalid credentials')) {
     return "Invalid credentials. Please double-check your API Client ID and API Key.";
   }
@@ -56,6 +68,7 @@ const getErrorMessage = async (error: any): Promise<string> => {
       return "WBIZTOOL integration is not fully configured on the server. The 'WBIZTOOL_WHATSAPP_CLIENT_ID' might be missing.";
   }
 
+  // Clean up any remaining HTML tags if somehow passed through
   description = description.replace(/<[^>]*>?/gm, ' ').replace(/\s+/g, ' ').trim();
   
   if (!description) {
