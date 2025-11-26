@@ -37,6 +37,15 @@ Deno.serve(async (req) => {
       throw new Error("WBIZTOOL credentials missing or invalid. Please check settings.");
     }
 
+    const payload = {
+      client_id: parseInt(clientId, 10),
+      api_key: apiKey,
+      whatsapp_client: parseInt(whatsappClientId, 10),
+      phone,
+      message,
+      msg_type: 0, // 0 = Text message. Required by WBIZTOOL.
+    };
+
     const messageResponse = await fetch('https://wbiztool.com/api/v1/send_msg/', {
       method: 'POST',
       headers: {
@@ -44,13 +53,7 @@ Deno.serve(async (req) => {
         'X-Client-ID': clientId,
         'X-Api-Key': apiKey,
       },
-      body: JSON.stringify({
-        client_id: parseInt(clientId, 10),
-        api_key: apiKey,
-        whatsapp_client: parseInt(whatsappClientId, 10),
-        phone,
-        message,
-      }),
+      body: JSON.stringify(payload),
     })
     
     if (!messageResponse.ok) {
@@ -74,9 +77,18 @@ Deno.serve(async (req) => {
       throw new Error(`WBIZTOOL API Error: ${errorMessage}`);
     }
 
-    await messageResponse.json()
+    const responseData = await messageResponse.json().catch(() => ({}));
 
-    return new Response(JSON.stringify({ message: 'Message queued successfully by WBIZTOOL.' }), {
+    // Check for logical errors in 200 OK responses
+    // WBIZTOOL sometimes returns { status: false, message: "..." }
+    if (responseData && responseData.status === false) {
+        throw new Error(`WBIZTOOL Error: ${responseData.message}`);
+    }
+
+    return new Response(JSON.stringify({ 
+        message: 'Message queued successfully by WBIZTOOL.',
+        api_response: responseData
+    }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     })
