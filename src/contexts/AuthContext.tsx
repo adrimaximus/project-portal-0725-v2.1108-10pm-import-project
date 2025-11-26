@@ -136,24 +136,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     }, 30000, { leading: true, trailing: false });
 
+    const calculateOnlineCollaborators = () => {
+      const newState = newChannel.presenceState<any>();
+      // Consider users idle if inactive for more than 5 minutes
+      const fiveMinutesAgo = new Date().getTime() - 5 * 60 * 1000;
+
+      const collaborators: Collaborator[] = Object.values(newState)
+        .flat()
+        .filter(c => c.id !== user.id)
+        .map(c => {
+          const lastActive = c.last_active_at ? new Date(c.last_active_at).getTime() : 0;
+          const isIdle = lastActive < fiveMinutesAgo;
+          return { ...c, isIdle };
+        });
+      
+      const uniqueCollaborators = Array.from(new Map(collaborators.map(c => [c.id, c])).values());
+      setOnlineCollaborators(uniqueCollaborators);
+    };
+
     newChannel
-      .on('presence', { event: 'sync' }, () => {
-        const newState = newChannel.presenceState<any>();
-        const fiveMinutesAgo = new Date().getTime() - 5 * 60 * 1000;
-
-        const collaborators: Collaborator[] = Object.values(newState)
-          .flat()
-          .filter(c => c.id !== user.id)
-          .map(c => {
-            const lastActive = c.last_active_at ? new Date(c.last_active_at).getTime() : 0;
-            const isIdle = lastActive < fiveMinutesAgo;
-            return { ...c, isIdle };
-          });
-        
-        const uniqueCollaborators = Array.from(new Map(collaborators.map(c => [c.id, c])).values());
-
-        setOnlineCollaborators(uniqueCollaborators);
-      })
+      .on('presence', { event: 'sync' }, calculateOnlineCollaborators)
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
           await updateActivity();
@@ -166,16 +168,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     setChannel(newChannel);
 
-    const interval = setInterval(async () => {
+    // Interval to send activity updates (heartbeat)
+    const activityInterval = setInterval(async () => {
       await updateActivity();
     }, 4 * 60 * 1000);
+
+    // Interval to re-check idle status locally every minute
+    const idleCheckInterval = setInterval(calculateOnlineCollaborators, 60000);
 
     return () => {
       window.removeEventListener('mousemove', updateActivity);
       window.removeEventListener('keydown', updateActivity);
       window.removeEventListener('click', updateActivity);
       window.removeEventListener('scroll', updateActivity);
-      clearInterval(interval);
+      clearInterval(activityInterval);
+      clearInterval(idleCheckInterval);
       updateActivity.cancel();
       if (newChannel) {
         supabase.removeChannel(newChannel);
