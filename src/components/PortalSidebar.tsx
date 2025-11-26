@@ -347,10 +347,16 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
   return (
     <div className="h-screen border-r bg-muted/40 transition-all duration-300 ease-in-out" onDoubleClick={onToggle}>
       <div className="flex h-full max-h-screen flex-col">
-        <div className={cn("flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6", isCollapsed && "justify-center px-2")}>
-          <Link to="/dashboard" className="flex items-center gap-2 font-semibold" title="7i Portal" onClick={handleNavItemClick}>
-            <img src="https://quuecudndfztjlxbrvyb.supabase.co/storage/v1/object/public/General/logo.png" alt="7i Portal Logo" className="h-8 w-8" />
-            <span className={cn(isCollapsed && "sr-only")}>7i Portal</span>
+        <div className={cn("flex h-16 items-center border-b px-4 lg:px-6", isCollapsed && "justify-center px-2")}>
+          <Link to="/dashboard" className={cn("flex items-center gap-3 group font-semibold w-full overflow-hidden transition-all outline-none", isCollapsed && "justify-center")} title="7i Portal" onClick={handleNavItemClick}>
+            <div className="relative flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-purple-600/20 to-blue-600/20 border border-white/10 group-hover:border-purple-500/50 transition-colors shrink-0">
+              <img src="https://quuecudndfztjlxbrvyb.supabase.co/storage/v1/object/public/General/logo.png" alt="7i Portal Logo" className="h-6 w-6 object-contain" />
+            </div>
+            {!isCollapsed && (
+              <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/60 whitespace-nowrap">
+                7i Portal
+              </span>
+            )}
           </Link>
         </div>
         <div className="flex flex-1 flex-col overflow-hidden">
