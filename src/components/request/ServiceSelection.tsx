@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Search } from "lucide-react";
@@ -15,7 +15,7 @@ interface ServiceSelectionProps {
   onSearchTermChange: (term: string) => void;
   selectedServices: Service[];
   onServiceSelect: (service: Service) => void;
-  preSelectId?: string | null;
+  preSelectIds?: string | null; // Comma separated IDs
 }
 
 const ServiceSelection = ({
@@ -23,11 +23,11 @@ const ServiceSelection = ({
   onSearchTermChange,
   selectedServices,
   onServiceSelect,
-  preSelectId
+  preSelectIds
 }: ServiceSelectionProps) => {
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
-  const [hasHandledPreSelect, setHasHandledPreSelect] = useState(false);
+  const preSelectProcessed = useRef(false);
 
   useEffect(() => {
     const fetchServices = async () => {
@@ -44,31 +44,29 @@ const ServiceSelection = ({
     fetchServices();
   }, []);
 
-  // Handle pre-selection from URL param
+  // Handle pre-selection from URL param (IDs)
   useEffect(() => {
-    if (!loading && services.length > 0 && preSelectId && !hasHandledPreSelect && selectedServices.length === 0) {
-      const keywords = {
-        'web': ['web', 'website', 'development'],
-        'mobile': ['mobile', 'app', 'ios', 'android'],
-        'design': ['design', 'ui', 'ux', 'creative'],
-        'seo': ['seo', 'search', 'optimization'],
-        'consulting': ['consult', 'advice', 'strategy'],
-        'maintenance': ['maintenance', 'support'],
-      };
-
-      const targetKeywords = keywords[preSelectId as keyof typeof keywords] || [preSelectId];
+    if (!loading && services.length > 0 && preSelectIds && !preSelectProcessed.current && selectedServices.length === 0) {
+      const idsToSelect = preSelectIds.split(',').map(id => id.trim());
       
-      const matchedService = services.find(s => 
-        targetKeywords.some(k => s.title.toLowerCase().includes(k))
-      );
+      // Filter valid services
+      const servicesToSelect = services.filter(s => idsToSelect.includes(s.id));
+      
+      // Apply them one by one to trigger the logic in parent or bulk set if possible.
+      // Since parent `onServiceSelect` toggles, we need to be careful.
+      // Ideally, the parent `RequestPage` should set initial state, but since we fetch here,
+      // we'll just trigger clicks for now or call onServiceSelect for each.
+      
+      // However, calling onServiceSelect multiple times in a row might race state updates in parent.
+      // Better strategy: Iterate and call.
+      
+      servicesToSelect.forEach(service => {
+         onServiceSelect(service);
+      });
 
-      if (matchedService) {
-        onServiceSelect(matchedService);
-        // Optionally scroll to it?
-      }
-      setHasHandledPreSelect(true);
+      preSelectProcessed.current = true;
     }
-  }, [loading, services, preSelectId, hasHandledPreSelect, selectedServices.length, onServiceSelect]);
+  }, [loading, services, preSelectIds, selectedServices.length, onServiceSelect]);
 
   const filteredServices = services.filter(
     (service) =>
@@ -77,7 +75,7 @@ const ServiceSelection = ({
   );
 
   const isSelected = (service: Service) => {
-    return selectedServices.some((s) => s.title === service.title);
+    return selectedServices.some((s) => s.id === service.id);
   };
 
   if (loading) {
@@ -99,8 +97,7 @@ const ServiceSelection = ({
         Project Support Request
       </h1>
       <p className="text-muted-foreground">
-        Select the services you need for your project. You can select
-        multiple services.
+        Select the services you need for your project.
       </p>
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -115,26 +112,28 @@ const ServiceSelection = ({
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {filteredServices.map((service) => {
           const Icon = getIconComponent(service.icon);
+          const selected = isSelected(service);
+          
           return (
             <Card
-              key={service.title}
+              key={service.id}
               className={cn(
-                "hover:bg-muted/50 transition-colors cursor-pointer h-full flex flex-col",
-                isSelected(service) && "ring-2 ring-primary"
+                "hover:bg-muted/50 transition-all cursor-pointer h-full flex flex-col border",
+                selected ? "bg-primary/5 border-primary shadow-[0_0_0_1px_hsl(var(--primary))]" : "hover:border-primary/50"
               )}
               onClick={() => onServiceSelect(service)}
             >
               <CardContent className="p-4 flex flex-col items-start gap-4 flex-grow">
                 <div className="flex justify-between items-start w-full">
                   <div
-                    className={cn("p-2 rounded-lg", service.icon_color)}
+                    className={cn("p-2 rounded-lg transition-colors", service.icon_color)}
                   >
                     <Icon className="h-6 w-6" />
                   </div>
-                  {service.is_featured && <Badge>Featured</Badge>}
+                  {service.is_featured && <Badge variant="secondary">Featured</Badge>}
                 </div>
                 <div className="flex-grow">
-                  <h3 className="font-semibold">{service.title}</h3>
+                  <h3 className={cn("font-semibold", selected && "text-primary")}>{service.title}</h3>
                   <p className="text-sm text-muted-foreground mt-1">
                     {service.description}
                   </p>

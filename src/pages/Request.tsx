@@ -4,33 +4,35 @@ import { Service } from "@/types";
 import SelectedServicesSummary from "@/components/SelectedServicesSummary";
 import ServiceSelection from "@/components/request/ServiceSelection";
 import ProjectDetailsForm from "@/components/request/ProjectDetailsForm";
+import { useSearchParams } from "react-router-dom";
 
 const RequestPage = () => {
   const [step, setStep] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedServices, setSelectedServices] = useState<Service[]>([]);
+  const [searchParams] = useSearchParams();
+  const servicesParam = searchParams.get('services');
 
   const handleServiceSelect = (service: Service) => {
-    const isFeatured = service.is_featured;
-    const isAlreadySelected = selectedServices.some(
-      (s) => s.title === service.title
-    );
+    // Logic for "End to End" exclusivity
+    const isEndToEnd = service.title.toLowerCase().includes('end to end');
+    
+    setSelectedServices(prev => {
+      const isAlreadySelected = prev.some(s => s.id === service.id);
 
-    if (isFeatured) {
-      setSelectedServices(isAlreadySelected ? [] : [service]);
-    } else {
-      let newSelectedServices = selectedServices.filter(
-        (s) => !s.is_featured
-      );
       if (isAlreadySelected) {
-        newSelectedServices = newSelectedServices.filter(
-          (s) => s.title !== service.title
-        );
-      } else {
-        newSelectedServices.push(service);
+        return prev.filter(s => s.id !== service.id);
       }
-      setSelectedServices(newSelectedServices);
-    }
+
+      // If selecting End to End, clear all others
+      if (isEndToEnd) {
+        return [service];
+      }
+
+      // If selecting normal service, remove any existing End to End service
+      const filtered = prev.filter(s => !s.title.toLowerCase().includes('end to end'));
+      return [...filtered, service];
+    });
   };
 
   const renderContent = () => {
@@ -41,6 +43,7 @@ const RequestPage = () => {
           onSearchTermChange={setSearchTerm}
           selectedServices={selectedServices}
           onServiceSelect={handleServiceSelect}
+          preSelectIds={servicesParam}
         />
       );
     } else {

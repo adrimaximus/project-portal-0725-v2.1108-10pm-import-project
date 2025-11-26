@@ -22,16 +22,17 @@ const AuthHandler = () => {
     if (!isLoading && user && session) {
       const searchParams = new URLSearchParams(location.search);
       const serviceParam = searchParams.get('service');
+      const servicesParam = searchParams.get('services');
       
       let targetPath = (location.state as any)?.from?.pathname;
       let targetSearch = (location.state as any)?.from?.search || '';
 
-      // If 'service' query param exists, prioritize sending user to Request page
-      if (serviceParam) {
+      // If 'service' or 'services' query param exists, prioritize sending user to Request page
+      if (serviceParam || servicesParam) {
         targetPath = '/request';
-        // Keep the service param in the query string for the Request page to read
-        if (!targetSearch.includes('service=')) {
-            targetSearch = targetSearch ? `${targetSearch}&service=${serviceParam}` : `?service=${serviceParam}`;
+        // Ensure params are carried over
+        if (!targetSearch) {
+            targetSearch = location.search;
         }
       } else if (!targetPath) {
         targetPath = '/dashboard';
