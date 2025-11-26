@@ -1,5 +1,7 @@
 // @ts-nocheck
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.54.0';
+import OpenAI from 'https://esm.sh/openai@4.29.2';
+import Anthropic from 'https://esm.sh/@anthropic-ai/sdk@0.22.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -11,10 +13,72 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const APP_URL = Deno.env.get("SITE_URL") ?? Deno.env.get("VITE_APP_URL") ?? 'https://app.example.com';
 const CRON_SECRET = Deno.env.get("CRON_SECRET");
+const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
 
 const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, { global: { headers: { 'Accept': 'application/json' } } });
 
 // --- Helper Functions ---
+
+// AI Message Generator for WhatsApp
+const generateAiWhatsappMessage = async (openai: OpenAI | null, anthropic: Anthropic | null, type: string, context: any, recipientName: string, fallbackMessage: string): Promise<string> => {
+  // Only use AI for specific types where nuances matter
+  if (type !== 'discussion_mention') {
+    return fallbackMessage;
+  }
+
+  if (!openai && !anthropic) {
+    console.log("No AI provider configured for notification generation. Using template.");
+    return fallbackMessage;
+  }
+
+  const systemPrompt = `Anda adalah asisten notifikasi WhatsApp yang efisien, ramah, dan profesional. 
+Tugas: Buat pesan notifikasi WhatsApp yang singkat (maksimal 2 kalimat inti) berdasarkan konteks.
+Gunakan format WhatsApp (*tebal*, _miring_) untuk menyoroti nama orang atau proyek.
+Gunakan 1-2 emoji yang relevan.
+Bahasa: Indonesia.
+PENTING: Jangan sertakan URL di output teks AI ini (URL akan ditambahkan secara otomatis oleh sistem).`;
+
+  const userPrompt = `Konteks:
+- Tipe: Mention di Diskusi/Komentar
+- Penerima: ${recipientName}
+- Pengirim: ${context.mentioner_name}
+- Proyek: ${context.project_name}
+- Isi Pesan: "${context.comment_text}"
+
+Buat pesan notifikasi untuk ${recipientName} bahwa mereka di-mention.`;
+
+  try {
+    let result = "";
+    if (anthropic) {
+      const response = await anthropic.messages.create({
+        model: "claude-3-haiku-20240307",
+        messages: [{ role: "user", content: userPrompt }],
+        system: systemPrompt,
+        temperature: 0.3,
+        max_tokens: 150,
+      });
+      result = response.content[0].text;
+    } else if (openai) {
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o-mini", // Using optimized model for speed/cost
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt }
+        ],
+        temperature: 0.3,
+        max_tokens: 150,
+      });
+      result = response.choices[0].message.content;
+    }
+
+    // Clean up result (remove quotes if any)
+    return result.replace(/^"|"$/g, '').trim();
+
+  } catch (error) {
+    console.error("AI Generation failed, falling back to template:", error);
+    return fallbackMessage;
+  }
+};
 
 const createEmailTemplate = ({ title, mainSubject, recipientName, bodyHtml, buttonText, buttonUrl }: { title: string, mainSubject?: string, recipientName: string, bodyHtml: string, buttonText: string, buttonUrl: string }) => {
   const APP_NAME = "7i Portal";
@@ -78,6 +142,19 @@ const getWbizConfig = async () => {
   return { clientId, apiKey, whatsappClientId };
 };
 
+const getOpenAIClient = async () => {
+  const { data: config, error: configError } = await supabaseAdmin
+    .from('app_config')
+    .select('value')
+    .eq('key', 'OPENAI_API_KEY')
+    .single();
+
+  if (configError || !config?.value) {
+    return null;
+  }
+  return new OpenAI({ apiKey: config.value });
+};
+
 const sendWhatsappMessage = async (config: any, phone: string, message: string) => {
   const formattedPhone = formatPhoneNumberForApi(phone);
   if (!formattedPhone) {
@@ -99,7 +176,7 @@ const sendWhatsappMessage = async (config: any, phone: string, message: string) 
         whatsapp_client: parseInt(config.whatsappClientId, 10),
         phone: formattedPhone,
         message: message,
-        msg_type: 0, // Added required parameter
+        msg_type: 0, // IMPORTANT: Required for text messages
       }),
     });
 
@@ -108,7 +185,6 @@ const sendWhatsappMessage = async (config: any, phone: string, message: string) 
       const errorText = await messageResponse.text();
       let errorMessage = `Failed to send message (Status: ${status}).`;
 
-      // Enhanced Error Handling for HTML/Cloudflare pages
       if (errorText.includes("Cloudflare") || errorText.includes("524") || errorText.includes("502")) {
          if (status === 524) errorMessage = "WBIZTOOL API Timeout (Cloudflare 524). The service is taking too long to respond.";
          else if (status === 502) errorMessage = "WBIZTOOL API Bad Gateway (Cloudflare 502). The service is down.";
@@ -118,7 +194,6 @@ const sendWhatsappMessage = async (config: any, phone: string, message: string) 
             const errorJson = JSON.parse(errorText);
             errorMessage = errorJson.message || JSON.stringify(errorJson);
           } catch (e) {
-            // Clean up HTML tags and truncate
             const cleanText = errorText.replace(/<[^>]*>?/gm, ' ').replace(/\s+/g, ' ').trim();
             errorMessage = cleanText.substring(0, 200) + (cleanText.length > 200 ? '...' : '');
           }
@@ -155,60 +230,72 @@ const sendEmail = async (emailitApiKey: string, to: string, subject: string, htm
     }
 };
 
+// Generate Template (Synchronous Fallback & Email)
 const generateTemplatedMessage = (type: string, context: any, recipientName: string): string => {
   let message = '';
-  let url = APP_URL;
-
+  
   switch (type) {
     case 'discussion_mention':
-      url = context.project_slug === 'chat'
-        ? `${APP_URL}/chat`
-        : (context.task_id
-          ? `${APP_URL}/projects/${context.project_slug}?tab=tasks&task=${context.task_id}`
-          : `${APP_URL}/projects/${context.project_slug}?tab=discussion`);
       message = `👋 Hai ${recipientName}, *${context.mentioner_name}* menyebut Anda dalam proyek *${context.project_name}*.`;
       break;
     case 'task_assignment':
-      url = `${APP_URL}/projects/${context.project_slug}?tab=tasks&task=${context.task_id}`;
       message = `📝 Hai ${recipientName}, *${context.assigner_name}* menugaskan Anda tugas baru: *${context.task_title}* di proyek *${context.project_name}*.`;
       break;
     case 'project_invite':
-      url = `${APP_URL}/projects/${context.project_slug}`;
       message = `🤝 Hai ${recipientName}, *${context.inviter_name}* mengundang Anda untuk berkolaborasi di proyek *${context.project_name}*.`;
       break;
     case 'kb_invite':
-      url = `${APP_URL}/knowledge-base/folders/${context.folder_slug}`;
       message = `📚 Hai ${recipientName}, *${context.inviter_name}* mengundang Anda untuk berkolaborasi di folder *${context.folder_name}*.`;
       break;
     case 'goal_invite':
-      url = `${APP_URL}/goals/${context.goal_slug}`;
       message = `🎯 Hai ${recipientName}, *${context.inviter_name}* mengundang Anda untuk berkolaborasi pada tujuan *${context.goal_title}*.`;
       break;
     case 'goal_progress_update':
-      url = `${APP_URL}/goals/${context.goal_slug}`;
       message = `📈 Hai ${recipientName}, *${context.updater_name}* baru saja mencatat kemajuan pada tujuan bersama Anda: *${context.goal_title}*.`;
       break;
     case 'payment_status_updated':
-      url = `${APP_URL}/projects/${context.project_slug}`;
       message = `💳 Hai ${recipientName}, status pembayaran untuk proyek *${context.project_name}* telah diperbarui menjadi *${context.new_status}* oleh *${context.updater_name}*.`;
       break;
     case 'project_status_updated':
-      url = `${APP_URL}/projects/${context.project_slug}`;
       message = `📊 Hai ${recipientName}, status proyek *${context.project_name}* telah diperbarui menjadi *${context.new_status}* oleh *${context.updater_name}*.`;
       break;
     case 'task_overdue':
-      url = `${APP_URL}/projects/${context.project_slug}?tab=tasks&task=${context.task_id}`;
       message = `⏰ PENGINGAT: Hai ${recipientName}, tugas *${context.task_title}* di proyek *${context.project_name}* sudah jatuh tempo *${context.days_overdue} hari*.`;
       break;
     case 'billing_reminder':
-      url = `${APP_URL}/projects/${context.project_slug}`;
       message = `💰 PENGINGAT: Hai ${recipientName}, pembayaran untuk proyek *${context.project_name}* telah jatuh tempo *${context.days_overdue} hari*. Mohon segera diproses.`;
       break;
     default:
-      return `🔔 Notifikasi baru untuk Anda. Silakan periksa dasbor Anda. ${APP_URL}`;
+      message = `🔔 Notifikasi baru untuk Anda. Silakan periksa dasbor Anda.`;
   }
-  return `${message}\n\n${url}`;
+  return message;
 };
+
+const getLinkForType = (type: string, context: any): string => {
+    switch (type) {
+        case 'discussion_mention':
+            return context.project_slug === 'chat'
+                ? `${APP_URL}/chat`
+                : (context.task_id
+                ? `${APP_URL}/projects/${context.project_slug}?tab=tasks&task=${context.task_id}`
+                : `${APP_URL}/projects/${context.project_slug}?tab=discussion`);
+        case 'task_assignment':
+        case 'task_overdue':
+            return `${APP_URL}/projects/${context.project_slug}?tab=tasks&task=${context.task_id}`;
+        case 'project_invite':
+        case 'payment_status_updated':
+        case 'project_status_updated':
+        case 'billing_reminder':
+            return `${APP_URL}/projects/${context.project_slug}`;
+        case 'kb_invite':
+            return `${APP_URL}/knowledge-base/folders/${context.folder_slug}`;
+        case 'goal_invite':
+        case 'goal_progress_update':
+            return `${APP_URL}/goals/${context.goal_slug}`;
+        default:
+            return APP_URL;
+    }
+}
 
 const generateTemplatedEmail = (type: string, context: any, recipientName: string): { subject: string, html: string, text: string } => {
   const cleanType = type.replace('_email', '');
@@ -216,17 +303,12 @@ const generateTemplatedEmail = (type: string, context: any, recipientName: strin
   let mainSubject = '';
   let bodyHtml = '';
   let buttonText = 'View Details';
-  let buttonUrl = APP_URL;
+  let buttonUrl = getLinkForType(cleanType, context);
 
   switch (cleanType) {
     case 'discussion_mention':
       title = `You were mentioned in:`;
       mainSubject = context.project_name;
-      buttonUrl = context.project_slug === 'chat'
-        ? `${APP_URL}/chat`
-        : (context.task_id
-          ? `${APP_URL}/projects/${context.project_slug}?tab=tasks&task=${context.task_id}`
-          : `${APP_URL}/projects/${context.project_slug}?tab=discussion`);
       bodyHtml = `<p><strong>${context.mentioner_name}</strong> mentioned you in a comment:</p>
                   <blockquote style="border-left:4px solid #ccc;padding-left:1em;margin:1.2em 0;color:#3b4754;background:#f8fafc;border-radius:6px 0 0 6px;">
                       ${context.comment_text.replace(/\n/g, '<br>')}
@@ -236,63 +318,54 @@ const generateTemplatedEmail = (type: string, context: any, recipientName: strin
     case 'task_assignment':
       title = `New Task Assigned in:`;
       mainSubject = context.project_name;
-      buttonUrl = `${APP_URL}/projects/${context.project_slug}?tab=tasks&task=${context.task_id}`;
       bodyHtml = `<p><strong>${context.assigner_name}</strong> assigned you a new task: <strong>"${context.task_title}"</strong>.</p>`;
       buttonText = "View Task";
       break;
     case 'project_invite':
       title = `You've been invited to:`;
       mainSubject = context.project_name;
-      buttonUrl = `${APP_URL}/projects/${context.project_slug}`;
       bodyHtml = `<p><strong>${context.inviter_name}</strong> invited you to collaborate on this project.</p>`;
       buttonText = "View Project";
       break;
     case 'kb_invite':
       title = `You've been invited to:`;
       mainSubject = context.folder_name;
-      buttonUrl = `${APP_URL}/knowledge-base/folders/${context.folder_slug}`;
       bodyHtml = `<p><strong>${context.inviter_name}</strong> invited you to collaborate on this knowledge base folder.</p>`;
       buttonText = "View Folder";
       break;
     case 'goal_invite':
       title = `You've been invited to a Goal:`;
       mainSubject = context.goal_title;
-      buttonUrl = `${APP_URL}/goals/${context.goal_slug}`;
       bodyHtml = `<p><strong>${context.inviter_name}</strong> invited you to collaborate on this goal.</p>`;
       buttonText = "View Goal";
       break;
     case 'goal_progress_update':
       title = `Progress on your Goal:`;
       mainSubject = context.goal_title;
-      buttonUrl = `${APP_URL}/goals/${context.goal_slug}`;
       bodyHtml = `<p><strong>${context.updater_name}</strong> just logged progress on your shared goal.</p>`;
       buttonText = "View Progress";
       break;
     case 'payment_status_updated':
       title = `Payment Status Updated for:`;
       mainSubject = context.project_name;
-      buttonUrl = `${APP_URL}/projects/${context.project_slug}`;
       bodyHtml = `<p>The payment status was updated to <strong>${context.new_status}</strong> by <strong>${context.updater_name}</strong>.</p>`;
       buttonText = "View Project";
       break;
     case 'project_status_updated':
       title = `Project Status Updated for:`;
       mainSubject = context.project_name;
-      buttonUrl = `${APP_URL}/projects/${context.project_slug}`;
       bodyHtml = `<p>The project status was updated to <strong>${context.new_status}</strong> by <strong>${context.updater_name}</strong>.</p>`;
       buttonText = "View Project";
       break;
     case 'task_overdue':
       title = `Task Overdue in:`;
       mainSubject = context.project_name;
-      buttonUrl = `${APP_URL}/projects/${context.project_slug}?tab=tasks&task=${context.task_id}`;
       bodyHtml = `<p>The task <strong>"${context.task_title}"</strong> is now <strong>${context.days_overdue} day(s)</strong> overdue.</p>`;
       buttonText = "View Task";
       break;
     case 'billing_reminder':
       title = `Payment Reminder for:`;
       mainSubject = context.project_name;
-      buttonUrl = `${APP_URL}/projects/${context.project_slug}`;
       bodyHtml = `<p>This is a reminder that the payment for this project is now <strong>${context.days_overdue} day(s)</strong> overdue. Please process it as soon as possible.</p>`;
       buttonText = "View Billing Details";
       break;
@@ -340,25 +413,29 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ message: 'No pending notifications.' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    // Need to fetch recipient profiles manually since RPC returns raw table rows
+    // Fetch recipient profiles manually
     const recipientIds = [...new Set(notifications.map((n: any) => n.recipient_id))];
     const { data: profiles, error: profilesError } = await supabaseAdmin
       .from('profiles')
-      .select('*') // fetch all fields needed
+      .select('*')
       .in('id', recipientIds);
     
     if (profilesError) throw profilesError;
     const profileMap = new Map(profiles.map((p: any) => [p.id, p]));
 
-    // Attach recipient to notification object to match existing logic structure
     const notificationsWithRecipients = notifications.map((n: any) => ({
         ...n,
         recipient: profileMap.get(n.recipient_id)
     }));
 
+    // Init Clients
     const wbizConfig = await getWbizConfig().catch(e => { console.warn(e.message); return null; });
     const { data: emailitConfig } = await supabaseAdmin.from('app_config').select('value').eq('key', 'EMAILIT_API_KEY').single();
     const emailitApiKey = emailitConfig?.value;
+
+    // AI Client setup
+    const openai = await getOpenAIClient();
+    const anthropic = ANTHROPIC_API_KEY ? new Anthropic({ apiKey: ANTHROPIC_API_KEY }) : null;
 
     const processingPromises = notificationsWithRecipients.map(async (notification) => {
       try {
@@ -380,8 +457,22 @@ Deno.serve(async (req) => {
             if (!wbizConfig || !recipient.phone) {
                 return { status: 'skipped', reason: 'No phone or WhatsApp config' };
             }
-            const message = generateTemplatedMessage(notification.notification_type, notification.context_data, recipientName);
-            await sendWhatsappMessage(wbizConfig, recipient.phone, message);
+            
+            // Check if it needs AI generation (only for mentions as per request)
+            const isMention = notification.notification_type === 'discussion_mention';
+            const templateMsg = generateTemplatedMessage(notification.notification_type, notification.context_data, recipientName);
+            
+            let finalMessage = templateMsg;
+            
+            if (isMention) {
+              // Generate AI message
+              const aiMsg = await generateAiWhatsappMessage(openai, anthropic, notification.notification_type, notification.context_data, recipientName, templateMsg);
+              // Append link to AI message
+              const url = getLinkForType(notification.notification_type, notification.context_data);
+              finalMessage = `${aiMsg}\n\n${url}`;
+            }
+
+            await sendWhatsappMessage(wbizConfig, recipient.phone, finalMessage);
         }
 
         await supabaseAdmin.from('pending_notifications').update({ status: 'processed', processed_at: new Date().toISOString() }).eq('id', notification.id);
