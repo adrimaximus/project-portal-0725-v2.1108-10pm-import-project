@@ -1015,8 +1015,10 @@ const PublicationPage = () => {
                 if (error) throw error;
 
                 // Check result
-                if (result.failed > 0) {
-                    throw new Error(result.errors?.[0]?.error || "Unknown error");
+                if (result && result.failed > 0) {
+                    const firstError = result.errors?.[0];
+                    const errorMsg = typeof firstError === 'object' ? (firstError.error || firstError.message) : firstError;
+                    throw new Error(errorMsg || "Unknown error");
                 }
 
                 // Success Update
@@ -1047,6 +1049,7 @@ const PublicationPage = () => {
                 }
 
             } catch (err: any) {
+                console.error("VIP Send Error:", err);
                 failedCount++;
                 processedInBatch++; // Still count attempt towards batch
                 
