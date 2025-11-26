@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import { Search, Inbox } from "lucide-react";
+import { Search, Inbox, Database } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -32,12 +32,22 @@ const ServiceSelection = ({
   useEffect(() => {
     const fetchServices = async () => {
       setLoading(true);
-      const { data, error } = await supabase.from('services').select('*').order('is_featured', { ascending: false }).order('title');
+      // Using a simplified query to ensure stability for public access
+      const { data, error } = await supabase
+        .from('services')
+        .select('*')
+        .order('title');
+      
       if (error) {
-        toast.error('Failed to load services.');
-        console.error(error);
+        console.error("Error fetching services:", error);
+        toast.error('Failed to load services. Please refresh the page.');
       } else {
-        setServices(data as Service[]);
+        // Sort by is_featured manually to avoid potential SQL ordering issues if column is tricky
+        const sorted = (data as Service[]).sort((a, b) => {
+          if (a.is_featured === b.is_featured) return 0;
+          return a.is_featured ? -1 : 1;
+        });
+        setServices(sorted);
       }
       setLoading(false);
     };
@@ -104,7 +114,17 @@ const ServiceSelection = ({
         />
       </div>
 
-      {filteredServices.length > 0 ? (
+      {services.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-16 text-center border-2 border-dashed rounded-xl bg-muted/30">
+          <div className="bg-muted/50 p-4 rounded-full mb-4">
+            <Database className="h-8 w-8 text-muted-foreground" />
+          </div>
+          <h3 className="text-lg font-semibold">No services available</h3>
+          <p className="text-muted-foreground max-w-sm mt-2">
+             There are currently no services configured. Please check back later.
+          </p>
+        </div>
+      ) : filteredServices.length > 0 ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {filteredServices.map((service) => {
             const Icon = getIconComponent(service.icon);
@@ -148,7 +168,7 @@ const ServiceSelection = ({
           <div className="bg-muted/50 p-4 rounded-full mb-4">
             <Inbox className="h-8 w-8 text-muted-foreground" />
           </div>
-          <h3 className="text-lg font-semibold">No services found</h3>
+          <h3 className="text-lg font-semibold">No matching services</h3>
           <p className="text-muted-foreground max-w-sm mt-2">
             We couldn't find any services matching "{searchTerm}". Try searching for something else.
           </p>

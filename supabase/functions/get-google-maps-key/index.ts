@@ -12,15 +12,10 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Inisialisasi klien Supabase untuk memeriksa pengguna yang terotentikasi
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
-    )
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) throw new Error('Pengguna tidak terotentikasi')
-
+    // We remove the strict user authentication check to allow the public request form
+    // to use the address autocomplete.
+    // The API key should be restricted by HTTP Referrer in Google Cloud Console.
+    
     const apiKey = Deno.env.get('GOOGLE_MAPS_API_KEY');
     if (!apiKey) {
       throw new Error('Kunci API Google Maps tidak dikonfigurasi di server.');
