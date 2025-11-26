@@ -153,13 +153,13 @@ const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({ onAddC
       <div className="min-w-0 flex-1">
         {replyTo && (
           <div className="p-2 mb-2 bg-muted rounded-md flex justify-between items-center text-sm">
-            <div className="border-l-2 border-primary pl-2 overflow-hidden">
+            <div className="border-l-2 border-primary pl-2 overflow-hidden w-full">
               <p className="font-semibold text-primary">Replying to {replyTo.author.name}</p>
-              <div className="text-xs text-muted-foreground truncate">
+              <div className="text-xs text-muted-foreground line-clamp-3">
                 <InteractiveText text={replyTo.text || ''} members={allUsers} />
               </div>
             </div>
-            <Button variant="ghost" size="icon" onClick={onCancelReply} className="h-7 w-7">
+            <Button variant="ghost" size="icon" onClick={onCancelReply} className="h-7 w-7 flex-shrink-0 ml-2">
               <X className="h-4 w-4" />
             </Button>
           </div>
