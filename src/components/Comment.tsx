@@ -160,7 +160,7 @@ const Comment: React.FC<CommentProps> = ({
                   <div className="w-0.5 bg-primary rounded-full self-stretch"></div>
                   <div className="flex-1 overflow-hidden">
                     <p className="font-semibold text-primary">Replying to {comment.repliedMessage.senderName}</p>
-                    <div className="italic line-clamp-1 prose prose-sm dark:prose-invert max-w-none text-muted-foreground [&_p]:m-0 [&_p]:inline">
+                    <div className="italic line-clamp-3 prose prose-sm dark:prose-invert max-w-none text-muted-foreground [&_p]:m-0 [&_p]:inline">
                       <MarkdownRenderer>{comment.repliedMessage.content || ''}</MarkdownRenderer>
                     </div>
                   </div>

@@ -189,7 +189,7 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
                 {replyTo.attachment?.type.startsWith('image/') && <Camera className="h-3 w-3 flex-shrink-0" />}
                 {replyTo.attachment?.type.startsWith('audio/') && <Mic className="h-3 w-3 flex-shrink-0" />}
                 {replyTo.text ? (
-                  <p className="truncate">
+                  <p className="line-clamp-3 break-words">
                     <InteractiveText text={replyTo.text} members={selectedConversation?.members || []} />
                   </p>
                 ) : (
