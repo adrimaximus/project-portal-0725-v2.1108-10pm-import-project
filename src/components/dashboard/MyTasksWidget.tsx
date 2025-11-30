@@ -135,8 +135,6 @@ const MyTasksWidget = () => {
     const active = myTasks.filter(t => !t.completed);
     const completed = myTasks.filter(t => t.completed);
     
-    const todayStart = startOfDay(new Date());
-
     const tasksDueToday = active.filter(t => t.due_date && isToday(new Date(t.due_date)));
     const overdue = active.filter(t => t.due_date && isPast(new Date(t.due_date)) && !isToday(new Date(t.due_date)));
     const upcoming = active.filter(t => t.due_date && !isPast(new Date(t.due_date)) && !isToday(new Date(t.due_date)));
@@ -170,68 +168,70 @@ const MyTasksWidget = () => {
   }
 
   return (
-    <div className="flex flex-col h-full space-y-6">
-      {/* Input Section */}
-      <div className="relative group">
-        <Input
-          className="pr-12 bg-muted/40 border-transparent focus:bg-background focus:border-input transition-all rounded-xl h-11"
-          placeholder="Add a new task..."
-          value={newTaskTitle}
-          onChange={(e) => setNewTaskTitle(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && handleAddTask()}
-          disabled={isCreatingTasks}
-        />
-        <Button 
-          size="icon" 
-          variant="ghost" 
-          onClick={handleAddTask}
-          disabled={isCreatingTasks || !newTaskTitle.trim()}
-          className="absolute right-1 top-1 h-9 w-9 rounded-lg text-muted-foreground hover:text-primary hover:bg-background/80"
-        >
-          {isCreatingTasks ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-        </Button>
-      </div>
-
-      {/* Stats Grid */}
-      <div className="grid grid-cols-3 gap-3">
-        <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3 flex flex-col items-center justify-center gap-1 transition-transform hover:scale-[1.02]">
-          <span className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{tasksDueToday.length}</span>
-          <span className="text-[10px] uppercase tracking-wider font-semibold text-emerald-600/70 dark:text-emerald-400/70">Today</span>
-        </div>
-        <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-3 flex flex-col items-center justify-center gap-1 transition-transform hover:scale-[1.02]">
-          <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">{upcomingTasks.length}</span>
-          <span className="text-[10px] uppercase tracking-wider font-semibold text-blue-600/70 dark:text-blue-400/70">Upcoming</span>
-        </div>
-        <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl p-3 flex flex-col items-center justify-center gap-1 transition-transform hover:scale-[1.02]">
-          <span className="text-2xl font-bold text-rose-600 dark:text-rose-400">{overdueTasks.length}</span>
-          <span className="text-[10px] uppercase tracking-wider font-semibold text-rose-600/70 dark:text-rose-400/70">Overdue</span>
-        </div>
-      </div>
-
-      {/* Progress */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
-          <span className="font-medium text-foreground">Completion Rate</span>
-          <span>{Math.round(completionPercentage)}%</span>
-        </div>
-        <div className="h-1.5 w-full bg-secondary/50 rounded-full overflow-hidden">
-          <div 
-            className="h-full bg-primary transition-all duration-500 ease-out rounded-full" 
-            style={{ width: `${completionPercentage}%` }}
+    <div className="flex flex-col h-full gap-4">
+      {/* Input Section & Stats - Fixed at top */}
+      <div className="flex flex-col gap-4 shrink-0">
+        <div className="relative group">
+          <Input
+            className="pr-12 bg-muted/40 border-transparent focus:bg-background focus:border-input transition-all rounded-xl h-11"
+            placeholder="Add a new task..."
+            value={newTaskTitle}
+            onChange={(e) => setNewTaskTitle(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleAddTask()}
+            disabled={isCreatingTasks}
           />
+          <Button 
+            size="icon" 
+            variant="ghost" 
+            onClick={handleAddTask}
+            disabled={isCreatingTasks || !newTaskTitle.trim()}
+            className="absolute right-1 top-1 h-9 w-9 rounded-lg text-muted-foreground hover:text-primary hover:bg-background/80"
+          >
+            {isCreatingTasks ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+          </Button>
+        </div>
+
+        <div className="grid grid-cols-3 gap-2">
+          <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-2.5 flex flex-col items-center justify-center gap-0.5 transition-transform hover:scale-[1.02]">
+            <span className="text-xl font-bold text-emerald-600 dark:text-emerald-400">{tasksDueToday.length}</span>
+            <span className="text-[9px] uppercase tracking-wider font-semibold text-emerald-600/70 dark:text-emerald-400/70">Today</span>
+          </div>
+          <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-2.5 flex flex-col items-center justify-center gap-0.5 transition-transform hover:scale-[1.02]">
+            <span className="text-xl font-bold text-blue-600 dark:text-blue-400">{upcomingTasks.length}</span>
+            <span className="text-[9px] uppercase tracking-wider font-semibold text-blue-600/70 dark:text-blue-400/70">Upcoming</span>
+          </div>
+          <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl p-2.5 flex flex-col items-center justify-center gap-0.5 transition-transform hover:scale-[1.02]">
+            <span className="text-xl font-bold text-rose-600 dark:text-rose-400">{overdueTasks.length}</span>
+            <span className="text-[9px] uppercase tracking-wider font-semibold text-rose-600/70 dark:text-rose-400/70">Overdue</span>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
+            <span className="font-medium text-foreground">Completion Rate</span>
+            <span>{Math.round(completionPercentage)}%</span>
+          </div>
+          <div className="h-1.5 w-full bg-secondary/50 rounded-full overflow-hidden">
+            <div 
+              className="h-full bg-primary transition-all duration-500 ease-out rounded-full" 
+              style={{ width: `${completionPercentage}%` }}
+            />
+          </div>
         </div>
       </div>
 
-      {/* Categorized Task List */}
-      <ScrollArea className="flex-1 -mx-4 px-4 h-[300px]">
-        <div className="space-y-6 pb-4">
+      {/* Categorized Task List - Flexible height */}
+      <ScrollArea className="flex-1 -mx-4 px-4 min-h-0">
+        <div className="space-y-6 pb-2">
           
           {/* TODAY Section */}
           <div>
-            <h4 className="flex items-center gap-2 text-xs font-semibold text-emerald-600 dark:text-emerald-400 mb-3 px-1">
-              <Calendar className="h-3.5 w-3.5" /> Due Today
-              <Badge variant="secondary" className="ml-auto text-[10px] h-5 bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 border-emerald-200/50">{tasksDueToday.length}</Badge>
-            </h4>
+            <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm py-2 -mx-1 px-1">
+              <h4 className="flex items-center gap-2 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                <Calendar className="h-3.5 w-3.5" /> Due Today
+                <Badge variant="secondary" className="ml-auto text-[10px] h-5 bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 border-emerald-200/50">{tasksDueToday.length}</Badge>
+              </h4>
+            </div>
             {tasksDueToday.length > 0 ? (
               <div className="space-y-1">
                 {tasksDueToday.map(task => <TaskItem key={task.id} task={task} onToggle={handleToggleTaskCompletion} isToggling={isToggling} allUsers={allUsers} />)}
@@ -246,10 +246,12 @@ const MyTasksWidget = () => {
           {/* OVERDUE Section */}
           {overdueTasks.length > 0 && (
             <div>
-              <h4 className="flex items-center gap-2 text-xs font-semibold text-rose-600 dark:text-rose-400 mb-3 px-1 mt-6">
-                <AlertCircle className="h-3.5 w-3.5" /> Overdue
-                <Badge variant="secondary" className="ml-auto text-[10px] h-5 bg-rose-500/10 text-rose-600 hover:bg-rose-500/20 border-rose-200/50">{overdueTasks.length}</Badge>
-              </h4>
+              <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm py-2 -mx-1 px-1">
+                <h4 className="flex items-center gap-2 text-xs font-semibold text-rose-600 dark:text-rose-400">
+                  <AlertCircle className="h-3.5 w-3.5" /> Overdue
+                  <Badge variant="secondary" className="ml-auto text-[10px] h-5 bg-rose-500/10 text-rose-600 hover:bg-rose-500/20 border-rose-200/50">{overdueTasks.length}</Badge>
+                </h4>
+              </div>
               <div className="space-y-1">
                 {overdueTasks.map(task => <TaskItem key={task.id} task={task} onToggle={handleToggleTaskCompletion} isToggling={isToggling} allUsers={allUsers} />)}
               </div>
@@ -259,10 +261,12 @@ const MyTasksWidget = () => {
           {/* UPCOMING Section */}
           {upcomingTasks.length > 0 && (
             <div>
-              <h4 className="flex items-center gap-2 text-xs font-semibold text-blue-500 mb-3 px-1 mt-6">
-                <Clock className="h-3.5 w-3.5" /> Upcoming
-                <Badge variant="secondary" className="ml-auto text-[10px] h-5 bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 border-blue-200/50">{upcomingTasks.length}</Badge>
-              </h4>
+              <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm py-2 -mx-1 px-1">
+                <h4 className="flex items-center gap-2 text-xs font-semibold text-blue-500">
+                  <Clock className="h-3.5 w-3.5" /> Upcoming
+                  <Badge variant="secondary" className="ml-auto text-[10px] h-5 bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 border-blue-200/50">{upcomingTasks.length}</Badge>
+                </h4>
+              </div>
               <div className="space-y-1">
                 {upcomingTasks.map(task => <TaskItem key={task.id} task={task} onToggle={handleToggleTaskCompletion} isToggling={isToggling} allUsers={allUsers} />)}
               </div>
@@ -272,10 +276,12 @@ const MyTasksWidget = () => {
           {/* NO DATE Section */}
           {noDueDateTasks.length > 0 && (
             <div>
-              <h4 className="flex items-center gap-2 text-xs font-semibold text-muted-foreground mb-3 px-1 mt-6">
-                <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/50"></span> No Date
-                <Badge variant="secondary" className="ml-auto text-[10px] h-5">{noDueDateTasks.length}</Badge>
-              </h4>
+              <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm py-2 -mx-1 px-1">
+                <h4 className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
+                  <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/50"></span> No Date
+                  <Badge variant="secondary" className="ml-auto text-[10px] h-5">{noDueDateTasks.length}</Badge>
+                </h4>
+              </div>
               <div className="space-y-1">
                 {noDueDateTasks.map(task => <TaskItem key={task.id} task={task} onToggle={handleToggleTaskCompletion} isToggling={isToggling} allUsers={allUsers} />)}
               </div>
@@ -293,7 +299,8 @@ const MyTasksWidget = () => {
         </div>
       </ScrollArea>
 
-      <div className="pt-2 border-t mt-auto">
+      {/* Footer - Fixed at bottom */}
+      <div className="pt-2 border-t mt-auto shrink-0">
         <Button variant="ghost" className="w-full justify-between hover:bg-transparent group px-2 h-9" asChild>
           <Link to={`/projects?view=tasks&member=${user?.id}`}>
             <span className="text-xs font-medium text-muted-foreground group-hover:text-foreground transition-colors">View all tasks</span>
