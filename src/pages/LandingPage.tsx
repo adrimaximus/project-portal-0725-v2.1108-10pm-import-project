@@ -21,82 +21,146 @@ const DashboardPreview = () => (
     className="relative mt-16 lg:mt-24 group"
   >
     {/* Glow effect behind the dashboard */}
-    <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 via-blue-600 to-pink-600 rounded-2xl blur-3xl opacity-20 group-hover:opacity-30 transition duration-1000"></div>
+    <div className="absolute -inset-1 bg-gradient-to-r from-purple-600/30 via-blue-600/30 to-pink-600/30 rounded-2xl blur-3xl opacity-30 group-hover:opacity-50 transition duration-1000"></div>
     
-    <div className="relative bg-[#0F1117]/90 p-2 sm:p-3 rounded-xl shadow-2xl ring-1 ring-white/10 backdrop-blur-xl transition-transform duration-500 hover:scale-[1.01]">
-      <div className="bg-[#0B0D14] p-3 rounded-lg border border-white/5 overflow-hidden">
+    {/* Main Container - Glassmorphism */}
+    <div className="relative bg-black/40 p-2 sm:p-3 rounded-xl shadow-2xl ring-1 ring-white/10 backdrop-blur-2xl transition-transform duration-500 hover:scale-[1.01]">
+      <div className="bg-white/5 p-3 rounded-lg border border-white/5 overflow-hidden relative">
+        
         {/* Fake Window Header */}
-        <div className="flex items-center justify-between px-3 py-3 border-b border-white/5 mb-4">
+        <div className="flex items-center justify-between px-3 py-3 border-b border-white/5 mb-4 bg-white/5 rounded-t-lg">
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-[#FF5F57]"></div>
-            <div className="w-3 h-3 rounded-full bg-[#FEBC2E]"></div>
-            <div className="w-3 h-3 rounded-full bg-[#28C840]"></div>
+            <div className="w-3 h-3 rounded-full bg-[#FF5F57]/80"></div>
+            <div className="w-3 h-3 rounded-full bg-[#FEBC2E]/80"></div>
+            <div className="w-3 h-3 rounded-full bg-[#28C840]/80"></div>
           </div>
-          <div className="flex gap-4">
-             <div className="w-24 h-2 bg-white/5 rounded-full"></div>
-             <div className="w-16 h-2 bg-white/5 rounded-full"></div>
+          <div className="flex gap-4 opacity-50">
+             <div className="w-24 h-2 bg-white/10 rounded-full"></div>
+             <div className="w-16 h-2 bg-white/10 rounded-full"></div>
           </div>
         </div>
         
         {/* Fake Dashboard UI */}
         <div className="grid grid-cols-4 gap-4 p-2">
             {/* Sidebar */}
-            <div className="col-span-1 hidden md:block space-y-3">
+            <div className="col-span-1 hidden md:flex flex-col space-y-3 pt-2">
                 {[1, 2, 3, 4, 5, 6].map((i) => (
-                    <div key={i} className="h-8 w-full bg-white/5 rounded-md flex items-center px-2 gap-2">
-                        <div className="w-4 h-4 bg-white/10 rounded-sm"></div>
-                        <div className="w-16 h-2 bg-white/10 rounded-full"></div>
+                    <div key={i} className="h-8 w-full hover:bg-white/5 rounded-md flex items-center px-2 gap-3 transition-colors">
+                        <div className="w-4 h-4 bg-white/20 rounded-sm"></div>
+                        <div className={`h-2 bg-white/10 rounded-full ${i === 2 ? 'w-12 bg-purple-500/50' : 'w-16'}`}></div>
                     </div>
                 ))}
+                
+                <div className="mt-auto pt-8 space-y-3">
+                     <div className="h-2 w-20 bg-white/5 rounded-full mx-2"></div>
+                     <div className="h-2 w-16 bg-white/5 rounded-full mx-2"></div>
+                </div>
             </div>
             
             {/* Main Content */}
             <div className="col-span-4 md:col-span-3 grid grid-cols-3 gap-4">
-                {/* Stats Cards */}
-                {[1, 2, 3].map((i) => (
-                    <div key={i} className="h-24 bg-white/5 rounded-lg border border-white/5 p-3 space-y-2">
-                        <div className="w-8 h-8 rounded-full overflow-hidden border border-white/10 bg-gradient-to-br from-purple-500/20 to-blue-500/20">
-                            <img 
-                                src={`https://images.unsplash.com/photo-${i === 1 ? '1535713875002-d1d0cf377fde' : i === 2 ? '1494790108377-be9c29b29330' : '1599566150163-29194dcaad36'}?auto=format&fit=crop&w=100&h=100`}
-                                alt="Stat Avatar" 
-                                className="w-full h-full object-cover opacity-90" 
-                            />
+                {/* Insight Stats Cards */}
+                {[
+                    { label: "Total Revenue", value: "$124,500", change: "+12.5%", color: "text-emerald-400" },
+                    { label: "Active Users", value: "8,240", change: "+5.2%", color: "text-blue-400" },
+                    { label: "Engagement", value: "84%", change: "+2.1%", color: "text-purple-400" }
+                ].map((stat, i) => (
+                    <div key={i} className="h-28 bg-white/5 hover:bg-white/10 transition-colors rounded-xl border border-white/5 p-4 flex flex-col justify-between group/card relative overflow-hidden">
+                        <div className="absolute top-0 right-0 p-3 opacity-10 group-hover/card:opacity-20 transition-opacity">
+                            <Sparkles className="w-8 h-8 text-white" />
                         </div>
-                        <div className="w-12 h-4 bg-white/10 rounded-md"></div>
+                        <div className="flex items-start justify-between">
+                            <div className="w-8 h-8 rounded-full overflow-hidden border border-white/10 bg-gradient-to-br from-white/10 to-transparent flex items-center justify-center">
+                                <img 
+                                    src={`https://images.unsplash.com/photo-${i === 0 ? '1535713875002-d1d0cf377fde' : i === 1 ? '1494790108377-be9c29b29330' : '1599566150163-29194dcaad36'}?auto=format&fit=crop&w=100&h=100`}
+                                    alt="Avatar" 
+                                    className="w-full h-full object-cover opacity-80" 
+                                />
+                            </div>
+                        </div>
+                        <div>
+                            <div className="text-xs text-slate-400 mb-1">{stat.label}</div>
+                            <div className="flex items-end gap-2">
+                                <div className="text-xl font-bold text-slate-100">{stat.value}</div>
+                                <div className={`text-xs ${stat.color} mb-1`}>{stat.change}</div>
+                            </div>
+                        </div>
                     </div>
                 ))}
                 
-                {/* Big Chart Area */}
-                <div className="col-span-3 h-48 bg-gradient-to-b from-white/5 to-transparent rounded-lg border border-white/5 p-4 relative overflow-hidden">
-                    <div className="absolute bottom-0 left-0 right-0 h-24 flex items-end justify-between px-4 gap-1">
-                        {[40, 70, 50, 90, 60, 80, 50, 70, 60, 90, 75, 45].map((h, idx) => (
-                            <div key={idx} className="w-full bg-blue-500/20 rounded-t-sm hover:bg-blue-500/40 transition-colors" style={{ height: `${h}%` }}></div>
+                {/* Big Chart Area - Insight Visualization */}
+                <div className="col-span-3 h-56 bg-gradient-to-b from-white/5 to-transparent rounded-xl border border-white/5 p-5 relative overflow-hidden group/chart">
+                    <div className="flex justify-between items-center mb-6">
+                        <div>
+                            <h4 className="text-sm font-semibold text-slate-200">Growth Analytics</h4>
+                            <p className="text-xs text-slate-500">Year over year performance</p>
+                        </div>
+                        <div className="flex gap-2">
+                            <div className="px-2 py-1 rounded-md bg-white/5 border border-white/5 text-[10px] text-slate-400">Daily</div>
+                            <div className="px-2 py-1 rounded-md bg-purple-500/20 border border-purple-500/20 text-[10px] text-purple-300">Weekly</div>
+                        </div>
+                    </div>
+                    
+                    {/* Grid Lines */}
+                    <div className="absolute inset-0 top-16 px-5 flex flex-col justify-between pointer-events-none opacity-20">
+                        <div className="w-full h-px bg-white/10"></div>
+                        <div className="w-full h-px bg-white/10"></div>
+                        <div className="w-full h-px bg-white/10"></div>
+                    </div>
+
+                    <div className="absolute bottom-0 left-0 right-0 h-32 flex items-end justify-between px-5 pb-2 gap-2">
+                        {[45, 60, 75, 50, 80, 95, 70, 85, 65, 90, 100, 85, 60, 75, 90].map((h, idx) => (
+                            <div key={idx} className="relative w-full group/bar">
+                                <div 
+                                    className="w-full bg-gradient-to-t from-purple-600/40 to-blue-500/40 rounded-t-sm group-hover/bar:from-purple-500/60 group-hover/bar:to-blue-400/60 transition-all duration-300" 
+                                    style={{ height: `${h}%` }}
+                                ></div>
+                                <div className="opacity-0 group-hover/bar:opacity-100 absolute -top-8 left-1/2 -translate-x-1/2 bg-black/80 text-[10px] text-white px-2 py-1 rounded border border-white/10 transition-opacity whitespace-nowrap z-10">
+                                    {h}% Growth
+                                </div>
+                            </div>
                         ))}
                     </div>
                 </div>
 
-                {/* Recent Activity */}
-                <div className="col-span-2 h-32 bg-white/5 rounded-lg border border-white/5 p-3 space-y-2">
-                     <div className="w-24 h-4 bg-white/10 rounded-md mb-2"></div>
-                     {[1, 2].map(j => (
-                         <div key={j} className="flex items-center gap-2">
-                             <div className="w-8 h-8 rounded-full overflow-hidden border border-white/10 bg-gradient-to-br from-purple-500/20 to-blue-500/20">
+                {/* Recent Activity / Insights List */}
+                <div className="col-span-2 h-40 bg-white/5 rounded-xl border border-white/5 p-4 space-y-3 overflow-hidden">
+                     <div className="flex justify-between items-center mb-1">
+                        <h4 className="text-xs font-semibold text-slate-300">Live Activity</h4>
+                        <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
+                     </div>
+                     
+                     {[
+                        { text: "New client onboarded: TechFlow Inc.", time: "2m ago", avatar: 1 },
+                        { text: "Project 'Alpha' milestone completed", time: "15m ago", avatar: 2 },
+                        { text: "Team meeting scheduled for 2 PM", time: "1h ago", avatar: 3 }
+                     ].map((item, j) => (
+                         <div key={j} className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 transition-colors cursor-default">
+                             <div className="w-6 h-6 rounded-full overflow-hidden border border-white/10 flex-shrink-0">
                                 <img 
-                                    src={`https://images.unsplash.com/photo-${j === 1 ? '1527980965255-d3b416303d12' : '1580489944761-15a19d654956'}?auto=format&fit=crop&w=100&h=100`}
+                                    src={`https://images.unsplash.com/photo-${j === 0 ? '1527980965255-d3b416303d12' : j === 1 ? '1580489944761-15a19d654956' : '1507003211169-0a1dd7228f2d'}?auto=format&fit=crop&w=100&h=100`}
                                     alt="Activity Avatar" 
                                     className="w-full h-full object-cover opacity-90" 
                                 />
                              </div>
-                             <div className="space-y-1">
-                                 <div className="w-32 h-2 bg-white/10 rounded-full"></div>
-                                 <div className="w-20 h-2 bg-white/5 rounded-full"></div>
+                             <div className="flex-1 min-w-0">
+                                 <div className="text-xs text-slate-300 truncate">{item.text}</div>
                              </div>
+                             <div className="text-[10px] text-slate-500 whitespace-nowrap">{item.time}</div>
                          </div>
                      ))}
                 </div>
                 
-                {/* Side Widget */}
-                <div className="col-span-1 h-32 bg-white/5 rounded-lg border border-white/5"></div>
+                {/* Side Widget - AI Insight */}
+                <div className="col-span-1 h-40 bg-gradient-to-br from-purple-900/20 to-blue-900/20 rounded-xl border border-white/10 p-4 flex flex-col justify-center items-center text-center relative overflow-hidden">
+                    <div className="absolute inset-0 opacity-5"></div>
+                    <BrainCircuit className="w-8 h-8 text-purple-400 mb-2 opacity-80" />
+                    <h4 className="text-xs font-semibold text-white mb-1">AI Insights</h4>
+                    <p className="text-[10px] text-slate-400 leading-tight">Productivity is up by 24% this week. Great job!</p>
+                    <div className="mt-3 w-full h-1 bg-white/10 rounded-full overflow-hidden">
+                        <div className="h-full bg-gradient-to-r from-purple-500 to-blue-500 w-[70%]"></div>
+                    </div>
+                </div>
             </div>
         </div>
       </div>
