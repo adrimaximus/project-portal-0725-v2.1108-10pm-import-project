@@ -6,7 +6,7 @@ import {
   BarChart, Users, ListChecks, ArrowRight, BrainCircuit, Check, 
   Sparkles, Globe, Smartphone, Palette, Search, Wrench, 
   CreditCard, MessageSquare, BookOpen, Bell, Shield, Zap,
-  LayoutGrid, Target, Megaphone, Receipt
+  LayoutGrid, Target, Megaphone, Receipt, CalendarDays, Store, Truck
 } from 'lucide-react';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { cn } from '@/lib/utils';
@@ -132,12 +132,12 @@ const LandingPage = () => {
   }
 
   const services = [
-    { id: 'web', label: 'Web Development', icon: Globe },
-    { id: 'mobile', label: 'Mobile App', icon: Smartphone },
-    { id: 'design', label: 'UI/UX Design', icon: Palette },
-    { id: 'seo', label: 'SEO Optimization', icon: Search },
-    { id: 'consulting', label: 'Consulting', icon: Users },
-    { id: 'maintenance', label: 'Maintenance', icon: Wrench },
+    { id: 'event-management', label: 'Event Management', icon: CalendarDays },
+    { id: 'booth-production', label: 'Booth Production', icon: Store },
+    { id: 'brand-activation', label: 'Brand Activation', icon: Megaphone },
+    { id: 'creative-design', label: 'Creative Design', icon: Palette },
+    { id: 'logistics', label: 'Logistics & Setup', icon: Truck },
+    { id: 'digital-engagement', label: 'Digital Engagement', icon: Smartphone },
   ];
 
   const allFeatures = [
