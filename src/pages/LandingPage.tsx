@@ -55,7 +55,13 @@ const DashboardPreview = () => (
                 {/* Stats Cards */}
                 {[1, 2, 3].map((i) => (
                     <div key={i} className="h-24 bg-white/5 rounded-lg border border-white/5 p-3 space-y-2">
-                        <div className="w-8 h-8 rounded-full bg-white/10"></div>
+                        <div className="w-8 h-8 rounded-full overflow-hidden border border-white/10 bg-gradient-to-br from-purple-500/20 to-blue-500/20">
+                            <img 
+                                src={`https://api.dicebear.com/9.x/notionists/svg?seed=${i * 123}&backgroundColor=transparent`} 
+                                alt="Stat Avatar" 
+                                className="w-full h-full object-cover opacity-90" 
+                            />
+                        </div>
                         <div className="w-12 h-4 bg-white/10 rounded-md"></div>
                     </div>
                 ))}
@@ -74,7 +80,13 @@ const DashboardPreview = () => (
                      <div className="w-24 h-4 bg-white/10 rounded-md mb-2"></div>
                      {[1, 2].map(j => (
                          <div key={j} className="flex items-center gap-2">
-                             <div className="w-8 h-8 rounded-full bg-white/10"></div>
+                             <div className="w-8 h-8 rounded-full overflow-hidden border border-white/10 bg-gradient-to-br from-purple-500/20 to-blue-500/20">
+                                <img 
+                                    src={`https://api.dicebear.com/9.x/notionists/svg?seed=${j * 456}&backgroundColor=transparent`} 
+                                    alt="Activity Avatar" 
+                                    className="w-full h-full object-cover opacity-90" 
+                                />
+                             </div>
                              <div className="space-y-1">
                                  <div className="w-32 h-2 bg-white/10 rounded-full"></div>
                                  <div className="w-20 h-2 bg-white/5 rounded-full"></div>
