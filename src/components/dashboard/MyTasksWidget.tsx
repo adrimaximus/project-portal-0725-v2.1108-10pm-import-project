@@ -1,28 +1,21 @@
 import { useMemo, useState } from 'react';
 import { useTasks } from '@/hooks/useTasks';
 import { useAuth } from '@/contexts/AuthContext';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Link } from 'react-router-dom';
-import { Loader2, Clock, CheckCircle2, AlertTriangle, ListChecks, PlusSquare, ArrowUp, ArrowDown, Plus } from 'lucide-react';
+import { Loader2, Clock, CheckCircle2, AlertTriangle, Plus, ArrowRight } from 'lucide-react';
 import { Task, User } from '@/types';
-import { format, isPast, isToday, isTomorrow, differenceInDays } from 'date-fns';
+import { format, isPast, isToday } from 'date-fns';
 import { cn, getInitials, getAvatarUrl, generatePastelColor, getPriorityStyles } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useTaskMutations } from '@/hooks/useTaskMutations';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
-import { Progress } from '@/components/ui/progress';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import RecentActivityWidget from './RecentActivityWidget';
-import CollaboratorsTab from './CollaboratorsTab';
 import { useTaskDrawer } from '@/contexts/TaskDrawerContext';
 import { getProjectBySlug } from '@/lib/projectsApi';
 import { toast } from 'sonner';
 import { ScrollArea } from '../ui/scroll-area';
-import { Checkbox } from '../ui/checkbox';
 import InteractiveText from '../InteractiveText';
 import { useProfiles } from '@/hooks/useProfiles';
-import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -42,51 +35,58 @@ const TaskItem = ({ task, onToggle, isToggling, allUsers }: { task: Task, onTogg
   };
 
   const dueDate = task.due_date ? new Date(task.due_date) : null;
-  let dueDateText = '';
-  let dueDateColor = 'text-muted-foreground';
-
-  if (dueDate) {
-    if (isPast(dueDate) && !task.completed) {
-      dueDateText = format(dueDate, 'MMM d, p');
-      dueDateColor = 'text-destructive';
-    } else {
-      dueDateText = format(dueDate, 'MMM d, p');
-    }
-  }
-
+  const isOverdue = dueDate && isPast(dueDate) && !task.completed;
+  
   return (
     <div 
-      className={cn("flex items-start gap-3 p-2 rounded-r-md hover:bg-muted/50 border-l-2")}
-      style={{ borderLeftColor: getPriorityStyles(task.priority).hex }}
+      onClick={handleTaskClick}
+      className="group flex flex-col gap-2 p-3 rounded-xl hover:bg-accent/40 border border-transparent hover:border-border transition-all cursor-pointer"
     >
-      {/* Checkbox removed as requested */}
-      <div className="flex-1 min-w-0 cursor-pointer overflow-hidden" onClick={handleTaskClick}>
-        <div className={cn("font-medium text-sm break-words", task.completed && "line-through text-muted-foreground")}>
-          <InteractiveText text={task.title} members={allUsers} />
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-start gap-3 flex-1 min-w-0">
+           <div 
+             className={cn(
+               "mt-1.5 w-2 h-2 rounded-full flex-shrink-0 ring-2 ring-offset-1 ring-offset-background transition-colors",
+               task.completed ? "bg-muted-foreground ring-muted" : 
+               task.priority === 'Urgent' ? "bg-red-500 ring-red-200 dark:ring-red-900" :
+               task.priority === 'High' ? "bg-orange-500 ring-orange-200 dark:ring-orange-900" :
+               "bg-blue-500 ring-blue-200 dark:ring-blue-900"
+             )}
+           />
+           <div className="flex-1 min-w-0 space-y-1">
+              <div className={cn("font-medium text-sm leading-tight break-words flex items-center gap-2", task.completed && "line-through text-muted-foreground")}>
+                <span className="truncate"><InteractiveText text={task.title} members={allUsers} /></span>
+              </div>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <span className="truncate max-w-[120px]">{task.project_name}</span>
+                {dueDate && (
+                  <>
+                    <span className="w-1 h-1 rounded-full bg-border" />
+                    <span className={cn("flex items-center gap-1", isOverdue ? "text-red-500 font-medium" : "")}>
+                      {format(dueDate, 'MMM d')}
+                    </span>
+                  </>
+                )}
+              </div>
+           </div>
         </div>
-        <p className="text-sm text-muted-foreground truncate">{task.project_name}</p>
-        <div className="flex items-center justify-between mt-2 border-t pt-2">
-          <div className="flex items-center gap-2">
-            {task.priority && (
-              <Badge className={cn(getPriorityStyles(task.priority).tw, 'text-xs')}>{task.priority}</Badge>
-            )}
-            <div className="flex -space-x-2">
-              {task.assignedTo?.slice(0, 3).map(user => (
-                <TooltipProvider key={user.id}>
-                  <Tooltip>
-                    <TooltipTrigger>
-                      <Avatar className="h-6 w-6 border-2 border-background">
-                        <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
-                        <AvatarFallback style={generatePastelColor(user.id)}>{getInitials([user.first_name, user.last_name].filter(Boolean).join(' '), user.email || undefined)}</AvatarFallback>
-                      </Avatar>
-                    </TooltipTrigger>
-                    <TooltipContent><p>{user.name}</p></TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              ))}
-            </div>
-          </div>
-          {dueDateText && <span className={`text-xs font-medium ${dueDateColor}`}>{dueDateText}</span>}
+
+        <div className="flex -space-x-2 flex-shrink-0">
+          {task.assignedTo?.slice(0, 2).map(user => (
+            <TooltipProvider key={user.id}>
+              <Tooltip>
+                <TooltipTrigger>
+                  <Avatar className="h-6 w-6 border-2 border-background ring-1 ring-border">
+                    <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
+                    <AvatarFallback className="text-[9px]" style={generatePastelColor(user.id)}>
+                      {getInitials([user.first_name, user.last_name].filter(Boolean).join(' '), user.email || undefined)}
+                    </AvatarFallback>
+                  </Avatar>
+                </TooltipTrigger>
+                <TooltipContent><p>{user.name}</p></TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          ))}
         </div>
       </div>
     </div>
@@ -104,7 +104,6 @@ const MyTasksWidget = () => {
     if (!newTaskTitle.trim() || !user) return;
 
     try {
-      // Fetch the user's personal project ID
       const { data: projectId, error: rpcError } = await supabase.rpc('get_personal_project_id');
       
       if (rpcError) throw rpcError;
@@ -115,7 +114,7 @@ const MyTasksWidget = () => {
         {
           onSuccess: () => {
             setNewTaskTitle('');
-            toast.success("Quick task added to your personal tasks.");
+            toast.success("Quick task added successfully.");
           }
         }
       );
@@ -138,12 +137,9 @@ const MyTasksWidget = () => {
     completionPercentage,
     totalCompleted,
     totalTasks,
-    onTimeCompletionPercentage,
-    onTimeCompletedCount,
   } = useMemo(() => {
     const active = myTasks.filter(t => !t.completed);
     const completed = myTasks.filter(t => t.completed);
-    const today = new Date();
     const completedToday = completed.filter(t => t.updated_at && isToday(new Date(t.updated_at))).length;
     
     const upcoming = active.filter(t => t.due_date && !isPast(new Date(t.due_date)));
@@ -154,15 +150,6 @@ const MyTasksWidget = () => {
     const totalCompleted = completed.length;
     const completionPercentage = totalTasks > 0 ? (totalCompleted / totalTasks) * 100 : 0;
 
-    const onTimeCompleted = completed.filter(task => {
-      if (!task.due_date) return true; // No due date, considered on-time
-      if (!task.updated_at) return false; // Should not happen for completed tasks, but for safety
-      // Task is on time if completion date is on or before the due date
-      return new Date(task.updated_at) <= new Date(task.due_date);
-    });
-    const onTimeCompletedCount = onTimeCompleted.length;
-    const onTimeCompletionPercentage = totalCompleted > 0 ? (onTimeCompletedCount / totalCompleted) * 100 : 0;
-
     return { 
       activeTasks: active, 
       completedToday, 
@@ -172,8 +159,6 @@ const MyTasksWidget = () => {
       completionPercentage,
       totalCompleted,
       totalTasks,
-      onTimeCompletionPercentage,
-      onTimeCompletedCount,
     };
   }, [myTasks]);
 
@@ -183,121 +168,112 @@ const MyTasksWidget = () => {
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center h-48">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
-
-  if (myTasks.length === 0) {
-    return (
-      <div className="text-center py-10">
-        <p className="text-sm text-muted-foreground">You have no assigned tasks.</p>
+      <div className="flex justify-center items-center h-64">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground/50" />
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2">
+    <div className="flex flex-col h-full space-y-6">
+      {/* Input Section */}
+      <div className="relative group">
         <Input
-          placeholder="Add a quick task for yourself..."
+          className="pr-12 bg-muted/40 border-transparent focus:bg-background focus:border-input transition-all rounded-xl h-11"
+          placeholder="Add a new task..."
           value={newTaskTitle}
           onChange={(e) => setNewTaskTitle(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault();
-              handleAddTask();
-            }
-          }}
+          onKeyDown={(e) => e.key === 'Enter' && handleAddTask()}
           disabled={isCreatingTasks}
         />
-        <Button onClick={handleAddTask} disabled={isCreatingTasks || !newTaskTitle.trim()}>
+        <Button 
+          size="icon" 
+          variant="ghost" 
+          onClick={handleAddTask}
+          disabled={isCreatingTasks || !newTaskTitle.trim()}
+          className="absolute right-1 top-1 h-9 w-9 rounded-lg text-muted-foreground hover:text-primary hover:bg-background/80"
+        >
           {isCreatingTasks ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
         </Button>
       </div>
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <div className="flex items-center gap-4 w-full cursor-help">
-              <Progress value={completionPercentage} className="flex-1" />
-              <span className="text-sm font-semibold">{completionPercentage.toFixed(0)}%</span>
-            </div>
-          </TooltipTrigger>
-          <TooltipContent className="p-4 bg-background border shadow-lg rounded-lg">
-            <div className="space-y-3">
-              <h4 className="font-semibold text-sm">Task Productivity</h4>
-              <div className="flex items-center gap-3">
-                <ListChecks className="h-5 w-5 text-blue-500" />
-                <div>
-                  <p className="font-bold">{completionPercentage.toFixed(0)}% Overall Completion</p>
-                  <p className="text-xs text-muted-foreground">{totalCompleted} of {totalTasks} assigned</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <CheckCircle2 className="h-5 w-5 text-green-500" />
-                <div>
-                  <p className="font-bold">{onTimeCompletionPercentage.toFixed(0)}% On-Time Completion</p>
-                  <p className="text-xs text-muted-foreground">{onTimeCompletedCount} of {totalCompleted} completed</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <AlertTriangle className="h-5 w-5 text-red-500" />
-                <div>
-                  <p className="font-bold">{overdueTasks.length} Overdue Task(s)</p>
-                  <p className="text-xs text-muted-foreground">{overdueTasks.length} tasks past due</p>
-                </div>
-              </div>
-            </div>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-      <div className="flex items-center gap-4 text-center">
-        <div>
-          <p className="text-xs text-muted-foreground">Completed Today</p>
-          <p className="text-lg font-bold flex items-center justify-center gap-1"><CheckCircle2 className="h-4 w-4 text-green-500" />{completedToday}</p>
+
+      {/* Progress & Stats */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
+          <span className="font-medium text-foreground">Your Progress</span>
+          <span>{totalCompleted}/{totalTasks} Completed</span>
         </div>
-        <div>
-          <p className="text-xs text-muted-foreground">Upcoming</p>
-          <p className="text-lg font-bold flex items-center justify-center gap-1"><Clock className="h-4 w-4 text-blue-500" />{upcomingTasks.length}</p>
+        <div className="h-2 w-full bg-secondary/50 rounded-full overflow-hidden">
+          <div 
+            className="h-full bg-primary transition-all duration-500 ease-out rounded-full" 
+            style={{ width: `${completionPercentage}%` }}
+          />
         </div>
-        <div>
-          <p className="text-xs text-muted-foreground">Overdue</p>
-          <p className="text-lg font-bold flex items-center justify-center gap-1"><AlertTriangle className="h-4 w-4 text-red-500" />{overdueTasks.length}</p>
+        
+        <div className="grid grid-cols-3 gap-3 pt-2">
+          <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-3 flex flex-col items-center justify-center gap-1">
+            <span className="text-2xl font-bold text-green-600 dark:text-green-400">{completedToday}</span>
+            <span className="text-[10px] uppercase tracking-wider font-semibold text-green-600/70 dark:text-green-400/70">Today</span>
+          </div>
+          <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-3 flex flex-col items-center justify-center gap-1">
+            <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">{upcomingTasks.length}</span>
+            <span className="text-[10px] uppercase tracking-wider font-semibold text-blue-600/70 dark:text-blue-400/70">Upcoming</span>
+          </div>
+          <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3 flex flex-col items-center justify-center gap-1">
+            <span className="text-2xl font-bold text-red-600 dark:text-red-400">{overdueTasks.length}</span>
+            <span className="text-[10px] uppercase tracking-wider font-semibold text-red-600/70 dark:text-red-400/70">Overdue</span>
+          </div>
         </div>
       </div>
-      <ScrollArea className="h-48 pr-2">
-        <div className="space-y-4">
+
+      {/* Task List */}
+      <ScrollArea className="flex-1 -mx-4 px-4 h-[300px]">
+        <div className="space-y-1 pb-4">
           {overdueTasks.length > 0 && (
-            <div>
-              <h4 className="text-xs font-semibold text-muted-foreground mb-2 px-2">Overdue</h4>
-              <div className="divide-y divide-border">
+            <div className="mb-4">
+              <h4 className="text-xs font-semibold text-red-500 mb-2 px-1 flex items-center gap-1">
+                <AlertTriangle className="h-3 w-3" /> Overdue
+              </h4>
+              <div className="space-y-1">
                 {overdueTasks.map(task => <TaskItem key={task.id} task={task} onToggle={handleToggleTaskCompletion} isToggling={isToggling} allUsers={allUsers} />)}
               </div>
             </div>
           )}
+          
           {upcomingTasks.length > 0 && (
-            <div>
-              <h4 className="text-xs font-semibold text-muted-foreground mb-2 px-2">Upcoming</h4>
-              <div className="divide-y divide-border">
+            <div className="mb-4">
+              <h4 className="text-xs font-semibold text-muted-foreground mb-2 px-1">Upcoming</h4>
+              <div className="space-y-1">
                 {upcomingTasks.map(task => <TaskItem key={task.id} task={task} onToggle={handleToggleTaskCompletion} isToggling={isToggling} allUsers={allUsers} />)}
               </div>
             </div>
           )}
+
           {noDueDateTasks.length > 0 && (
-            <div>
-              <h4 className="text-xs font-semibold text-muted-foreground mb-2 px-2">No Due Date</h4>
-              <div className="divide-y divide-border">
+            <div className="mb-4">
+              <h4 className="text-xs font-semibold text-muted-foreground mb-2 px-1">No Date</h4>
+              <div className="space-y-1">
                 {noDueDateTasks.map(task => <TaskItem key={task.id} task={task} onToggle={handleToggleTaskCompletion} isToggling={isToggling} allUsers={allUsers} />)}
               </div>
             </div>
           )}
+
+          {myTasks.length === 0 && (
+            <div className="text-center py-8">
+              <div className="w-12 h-12 bg-muted rounded-full flex items-center justify-center mx-auto mb-3">
+                <CheckCircle2 className="h-6 w-6 text-muted-foreground" />
+              </div>
+              <p className="text-sm font-medium text-muted-foreground">All caught up!</p>
+            </div>
+          )}
         </div>
       </ScrollArea>
-      <div className="pt-2 text-center">
-        <Button variant="link" asChild>
+
+      <div className="pt-2 border-t mt-auto">
+        <Button variant="ghost" className="w-full justify-between hover:bg-transparent group px-2" asChild>
           <Link to={`/projects?view=tasks&member=${user?.id}`}>
-            View all my tasks
+            <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors">View all tasks</span>
+            <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:translate-x-1 transition-transform" />
           </Link>
         </Button>
       </div>
