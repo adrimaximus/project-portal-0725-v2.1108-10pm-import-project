@@ -73,8 +73,8 @@ const DashboardPreview = () => (
                     <div className="w-9 h-9 rounded-full bg-white/10 overflow-hidden relative">
                         <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-[#0B0D14] z-10"></div>
                         <img 
-                            src="https://images.unsplash.com/photo-1599566150163-29194dcaad36?auto=format&fit=crop&w=100&h=100&q=80" 
-                            className="w-full h-full object-cover opacity-80" 
+                            src="https://images.unsplash.com/photo-1599566150163-29194dcaad36?auto=format&fit=crop&w=100&h=100" 
+                            className="w-full h-full object-cover opacity-60 grayscale" 
                             alt="User"
                         />
                     </div>
@@ -105,7 +105,7 @@ const DashboardPreview = () => (
                     </div>
                     <div className="w-8 h-8 rounded-full overflow-hidden border border-white/10">
                         <img 
-                            src="https://images.unsplash.com/photo-1599566150163-29194dcaad36?auto=format&fit=crop&w=100&h=100&q=80" 
+                            src="https://images.unsplash.com/photo-1599566150163-29194dcaad36?auto=format&fit=crop&w=100&h=100" 
                             className="w-full h-full object-cover opacity-80" 
                             alt="Profile"
                         />
@@ -114,106 +114,130 @@ const DashboardPreview = () => (
             </div>
 
             {/* Scrollable Content */}
-            <div className="flex-1 p-6 md:p-8 overflow-hidden flex flex-col gap-6">
-                {/* Stats Overview with Insight Stats */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 shrink-0">
+            <div className="flex-1 p-6 md:p-8 overflow-hidden flex flex-col gap-8">
+                {/* Greeting Header */}
+                <div className="space-y-2 shrink-0">
+                    <div className="flex items-center gap-2">
+                        <div className="h-8 w-64 md:w-96 bg-gradient-to-r from-white/20 to-white/5 rounded-lg"></div>
+                        <div className="text-2xl animate-pulse">👋</div>
+                    </div>
+                    <div className="h-4 w-48 bg-white/10 rounded-lg"></div>
+                </div>
+
+                {/* Insights Section */}
+                <div className="flex flex-col gap-4 min-h-0 shrink-0">
+                    <div className="flex items-center justify-between">
+                        <div className="h-6 w-24 bg-white/20 rounded-lg"></div>
+                        <div className="h-8 w-48 bg-[#0B0D14] rounded-lg border border-white/5 flex items-center justify-center gap-2">
+                            <div className="w-4 h-4 bg-white/10 rounded"></div>
+                            <div className="h-2 w-24 bg-white/10 rounded-full"></div>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[320px]">
+                        {/* Monthly Overview Chart */}
+                        <div className="lg:col-span-2 bg-[#0B0D14] rounded-2xl border border-white/5 p-6 relative flex flex-col">
+                            <div className="flex justify-between mb-8">
+                                <div className="h-5 w-32 bg-white/10 rounded-md"></div>
+                                <div className="h-6 w-28 bg-white/5 rounded-md border border-white/5"></div>
+                            </div>
+                            
+                            {/* Chart Area */}
+                            <div className="flex-1 relative border-l border-b border-white/5 mx-2 mb-4">
+                                {/* Horizontal Grid Lines */}
+                                <div className="absolute inset-0 flex flex-col justify-between opacity-10">
+                                    <div className="w-full h-px bg-white border-t border-dashed"></div>
+                                    <div className="w-full h-px bg-white border-t border-dashed"></div>
+                                    <div className="w-full h-px bg-white border-t border-dashed"></div>
+                                    <div className="w-full h-px bg-white border-t border-dashed"></div>
+                                </div>
+                                
+                                {/* Bars */}
+                                <div className="absolute bottom-0 left-2 right-2 top-4 flex items-end justify-between gap-3 px-2">
+                                     {[25, 40, 55, 30, 30, 5, 10, 45, 60, 20, 85, 50].map((h, i) => (
+                                         <div key={i} className="w-full relative group/bar h-full flex items-end">
+                                            <div 
+                                                className={cn(
+                                                    "w-full rounded-t-sm transition-all duration-500",
+                                                    i >= 9 ? "bg-emerald-500/60" : "bg-emerald-500/30"
+                                                )}
+                                                style={{ height: `${h}%` }}
+                                            ></div>
+                                         </div>
+                                     ))}
+                                </div>
+                            </div>
+                            <div className="flex justify-between px-4 text-[10px] text-white/20 uppercase tracking-widest">
+                                <span>Jan</span><span>Mar</span><span>May</span><span>Jul</span><span>Sep</span><span>Nov</span>
+                            </div>
+                        </div>
+
+                        {/* Hero/Vision Card */}
+                        <div className="hidden lg:block lg:col-span-1 bg-black/40 rounded-2xl border border-white/5 relative overflow-hidden group/image">
+                            <img 
+                                src="https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=600&q=80" 
+                                alt="Vision" 
+                                className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover/image:scale-105 transition-transform duration-700"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent"></div>
+                            <div className="absolute bottom-6 left-6 right-6 z-10 space-y-3">
+                                <div className="h-5 w-full bg-white/20 rounded-md backdrop-blur-sm"></div>
+                                <div className="h-3 w-2/3 bg-white/10 rounded-md backdrop-blur-sm"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Tabs & Quick Action */}
+                <div className="space-y-4 shrink-0">
+                    <div className="flex gap-6 border-b border-white/5 pb-1">
+                        <div className="h-8 w-24 bg-white/10 rounded-t-lg border-b-2 border-emerald-500/50"></div>
+                        <div className="h-8 w-28 bg-transparent rounded-t-lg opacity-50 flex items-center gap-2">
+                            <div className="w-4 h-4 bg-white/10 rounded-sm"></div>
+                            <div className="h-2 w-16 bg-white/10 rounded-full"></div>
+                        </div>
+                        <div className="h-8 w-28 bg-transparent rounded-t-lg opacity-50 flex items-center gap-2">
+                            <div className="w-4 h-4 bg-white/10 rounded-sm"></div>
+                            <div className="h-2 w-16 bg-white/10 rounded-full"></div>
+                        </div>
+                    </div>
+                    
+                    {/* Quick Input */}
+                    <div className="h-14 w-full bg-[#0B0D14] border border-white/5 rounded-xl flex items-center justify-between px-4">
+                        <div className="h-4 w-48 bg-white/5 rounded-full"></div>
+                        <div className="h-9 w-9 bg-emerald-500/20 rounded-lg flex items-center justify-center border border-emerald-500/20 text-emerald-500 font-bold">+</div>
+                    </div>
+                </div>
+
+                {/* Bottom Stats Row */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     {[
-                        { label: "Total Revenue", value: "$84,230", trend: "+12%", color: "text-emerald-400" },
-                        { label: "Active Projects", value: "24", trend: "+4", color: "text-blue-400" },
-                        { label: "Team Members", value: "12", trend: "0", color: "text-slate-400" },
-                        { label: "Efficiency", value: "94%", trend: "+2.5%", color: "text-purple-400" }
+                        { title: "Top Project Owner", color: "bg-pink-500", initials: "A" },
+                        { title: "Top Collaborator", image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d" },
+                        { title: "Most Pending Payment", image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330" }
                     ].map((stat, i) => (
-                        <div key={i} className="bg-[#0B0D14] p-4 rounded-xl border border-white/5 flex flex-col gap-1 hover:border-white/10 transition-colors">
-                            <div className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold">{stat.label}</div>
-                            <div className="flex items-end justify-between">
-                                <div className="text-xl font-bold text-slate-100">{stat.value}</div>
-                                <div className={cn("text-xs font-medium", stat.color)}>{stat.trend}</div>
+                        <div key={i} className="h-24 bg-[#0B0D14] rounded-2xl border border-white/5 p-4 flex flex-col justify-between hover:border-white/10 transition-colors">
+                            <div className="flex justify-between items-start">
+                                <div className="h-3 w-28 bg-white/10 rounded-full"></div>
+                                <div className="w-4 h-4 bg-white/5 rounded-sm"></div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                {stat.image ? (
+                                    <div className="w-10 h-10 rounded-full overflow-hidden border border-white/10">
+                                        <img src={`${stat.image}?w=50&h=50&fit=crop`} className="w-full h-full object-cover opacity-80" alt="" />
+                                    </div>
+                                ) : (
+                                    <div className={`w-10 h-10 rounded-full ${stat.color} flex items-center justify-center text-white font-bold opacity-80`}>
+                                        {stat.initials}
+                                    </div>
+                                )}
+                                <div className="space-y-1.5">
+                                    <div className="h-3 w-24 bg-white/20 rounded-full"></div>
+                                    <div className="h-2 w-16 bg-white/10 rounded-full"></div>
+                                </div>
                             </div>
                         </div>
                     ))}
-                </div>
-
-                <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-6 min-h-0">
-                    {/* Main Chart Area */}
-                    <div className="lg:col-span-2 bg-[#0B0D14] rounded-2xl border border-white/5 p-6 flex flex-col">
-                        <div className="flex justify-between items-center mb-6">
-                            <div>
-                                <h3 className="text-slate-200 font-medium">Performance Overview</h3>
-                                <p className="text-xs text-slate-500">Project completion rate over time</p>
-                            </div>
-                            {/* Avatar Pile - Hyper Realistic */}
-                            <div className="flex -space-x-2">
-                                {[
-                                    "1534528741775-53994a69daeb",
-                                    "1506794778202-cad84cf45f1d",
-                                    "1500648767791-00dcc994a43e",
-                                    "1535713875002-d1d0cf377fde"
-                                ].map((id, i) => (
-                                    <div key={i} className="w-8 h-8 rounded-full border-2 border-[#0B0D14] overflow-hidden bg-white/5">
-                                        <img 
-                                            src={`https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=100&h=100&q=80`} 
-                                            className="w-full h-full object-cover opacity-90 hover:opacity-100 transition-opacity" 
-                                            alt="Member"
-                                        />
-                                    </div>
-                                ))}
-                                <div className="w-8 h-8 rounded-full border-2 border-[#0B0D14] bg-white/10 flex items-center justify-center text-[10px] text-white">
-                                    +4
-                                </div>
-                            </div>
-                        </div>
-                        
-                        {/* Chart Visual */}
-                        <div className="flex-1 relative flex items-end justify-between gap-2 px-2 mt-4 opacity-80">
-                             {[30, 45, 35, 60, 50, 75, 60, 85, 70, 95, 80, 65].map((h, i) => (
-                                 <div key={i} className="w-full bg-gradient-to-t from-purple-500/20 to-blue-500/40 rounded-t-sm group hover:to-blue-500/60 transition-all duration-500 relative">
-                                    <div className="absolute bottom-0 w-full bg-purple-500/10 h-full" style={{ height: `${h}%` }}></div>
-                                    <div className="absolute bottom-0 w-full bg-gradient-to-t from-purple-500 to-blue-500 opacity-20 h-full" style={{ height: `${h}%` }}></div>
-                                 </div>
-                             ))}
-                        </div>
-                    </div>
-
-                    {/* Right Column: Top Contributors with Realistic Avatars */}
-                    <div className="bg-[#0B0D14] rounded-2xl border border-white/5 p-6 flex flex-col overflow-hidden">
-                        <h3 className="text-slate-200 font-medium mb-4">Top Contributors</h3>
-                        <div className="space-y-4 overflow-y-auto pr-2 custom-scrollbar">
-                            {[
-                                { name: "Alex Morgan", role: "Project Lead", img: "1507003211169-0a1dd7228f2d", score: "98" },
-                                { name: "Sarah Chen", role: "UI Designer", img: "1494790108377-be9c29b29330", score: "95" },
-                                { name: "James Wilson", role: "Developer", img: "1500648767791-00dcc994a43e", score: "92" },
-                                { name: "Mia Park", role: "Marketing", img: "1534528741775-53994a69daeb", score: "89" }
-                            ].map((user, i) => (
-                                <div key={i} className="flex items-center gap-3 group cursor-pointer">
-                                    <div className="relative">
-                                        <div className="w-10 h-10 rounded-full overflow-hidden border border-white/10 group-hover:border-purple-500/50 transition-colors bg-white/5">
-                                            <img 
-                                                src={`https://images.unsplash.com/photo-${user.img}?auto=format&fit=crop&w=100&h=100&q=80`} 
-                                                className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" 
-                                                alt={user.name} 
-                                            />
-                                        </div>
-                                        <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-[#0B0D14] rounded-full flex items-center justify-center">
-                                            <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-[#0B0D14]"></div>
-                                        </div>
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <div className="text-sm text-slate-200 font-medium truncate">{user.name}</div>
-                                        <div className="text-xs text-slate-500 truncate">{user.role}</div>
-                                    </div>
-                                    <div className="text-xs font-bold text-purple-400 bg-purple-400/10 px-2 py-1 rounded-md">
-                                        {user.score}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                        
-                        <div className="mt-auto pt-4 border-t border-white/5">
-                            <div className="h-10 w-full bg-white/5 rounded-lg flex items-center justify-center text-xs text-slate-400 font-medium hover:bg-white/10 hover:text-white transition-colors cursor-pointer">
-                                View All Members
-                            </div>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>
