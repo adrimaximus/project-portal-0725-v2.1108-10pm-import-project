@@ -57,7 +57,7 @@ const DashboardPreview = () => (
                     <div key={i} className="h-24 bg-white/5 rounded-lg border border-white/5 p-3 space-y-2">
                         <div className="w-8 h-8 rounded-full overflow-hidden border border-white/10 bg-gradient-to-br from-purple-500/20 to-blue-500/20">
                             <img 
-                                src={`https://api.dicebear.com/9.x/notionists/svg?seed=${i * 123}&backgroundColor=transparent`} 
+                                src={`https://images.unsplash.com/photo-${i === 1 ? '1535713875002-d1d0cf377fde' : i === 2 ? '1494790108377-be9c29b29330' : '1599566150163-29194dcaad36'}?auto=format&fit=crop&w=100&h=100`}
                                 alt="Stat Avatar" 
                                 className="w-full h-full object-cover opacity-90" 
                             />
@@ -82,7 +82,7 @@ const DashboardPreview = () => (
                          <div key={j} className="flex items-center gap-2">
                              <div className="w-8 h-8 rounded-full overflow-hidden border border-white/10 bg-gradient-to-br from-purple-500/20 to-blue-500/20">
                                 <img 
-                                    src={`https://api.dicebear.com/9.x/notionists/svg?seed=${j * 456}&backgroundColor=transparent`} 
+                                    src={`https://images.unsplash.com/photo-${j === 1 ? '1527980965255-d3b416303d12' : '1580489944761-15a19d654956'}?auto=format&fit=crop&w=100&h=100`}
                                     alt="Activity Avatar" 
                                     className="w-full h-full object-cover opacity-90" 
                                 />
