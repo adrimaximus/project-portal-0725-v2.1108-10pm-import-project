@@ -135,6 +135,8 @@ const MyTasksWidget = () => {
     const active = myTasks.filter(t => !t.completed);
     const completed = myTasks.filter(t => t.completed);
     
+    const todayStart = startOfDay(new Date());
+
     const tasksDueToday = active.filter(t => t.due_date && isToday(new Date(t.due_date)));
     const overdue = active.filter(t => t.due_date && isPast(new Date(t.due_date)) && !isToday(new Date(t.due_date)));
     const upcoming = active.filter(t => t.due_date && !isPast(new Date(t.due_date)) && !isToday(new Date(t.due_date)));
@@ -221,7 +223,7 @@ const MyTasksWidget = () => {
       </div>
 
       {/* Categorized Task List - Fixed height */}
-      <ScrollArea className="-mx-4 px-4 h-[350px]">
+      <ScrollArea className="-mx-4 px-4 h-[500px]">
         <div className="space-y-6 pb-2">
           
           {/* TODAY Section */}
