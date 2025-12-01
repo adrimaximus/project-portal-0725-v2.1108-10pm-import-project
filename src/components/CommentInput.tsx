@@ -164,7 +164,7 @@ const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({ onAddC
             </Button>
           </div>
         )}
-        <div className="border rounded-lg focus-within:ring-1 focus-within:ring-ring">
+        <div className="border rounded-lg focus-within:ring-1 focus-within:ring-ring bg-background overflow-hidden">
           <MentionsInput
             value={text}
             onChange={(event, newValue) => setText(newValue)}
@@ -172,6 +172,12 @@ const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({ onAddC
             className="mentions-input"
             a11ySuggestionsListLabel={"Suggested mentions"}
             inputRef={mentionsInputRef}
+            onFocus={() => {
+              // Ensure component is scrolled into view when focused on mobile
+              setTimeout(() => {
+                containerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+              }, 300);
+            }}
           >
             <Mention
               trigger="@"
