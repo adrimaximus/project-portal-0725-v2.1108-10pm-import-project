@@ -220,8 +220,8 @@ const MyTasksWidget = () => {
         </div>
       </div>
 
-      {/* Categorized Task List - Flexible height */}
-      <ScrollArea className="flex-1 -mx-4 px-4 min-h-0">
+      {/* Categorized Task List - Fixed height */}
+      <ScrollArea className="-mx-4 px-4 h-[350px]">
         <div className="space-y-6 pb-2">
           
           {/* TODAY Section */}
