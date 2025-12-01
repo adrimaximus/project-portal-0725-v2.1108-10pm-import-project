@@ -184,7 +184,7 @@ const LoginPage = () => {
                     </div>
                 ))}
              </div>
-             <span className="ml-2">Join thousands of users</span>
+             <span className="ml-2">Be happy users with us</span>
           </div>
         </div>
 
