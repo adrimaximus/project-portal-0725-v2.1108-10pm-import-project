@@ -7,7 +7,7 @@ import { MoreHorizontal, Trash2 } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { cn, formatInJakarta, generatePastelColor, getAvatarUrl } from '@/lib/utils';
 import { isSameDay, isBefore, startOfToday, subDays } from 'date-fns';
-import { ColoredProgress } from "@/components/ui/colored-progress";
+import { Progress } from "../ui/progress";
 import StatusBadge from "../StatusBadge";
 import { useProjectStatuses } from "@/hooks/useProjectStatuses";
 
@@ -113,7 +113,7 @@ const ProjectListItem = ({
         </div>
       </div>
       <div className="mt-2 w-full">
-        <ColoredProgress value={project.progress} className="h-1" indicatorColor={borderColor} />
+        <Progress value={project.progress} className="h-1" />
       </div>
     </div>
   );
