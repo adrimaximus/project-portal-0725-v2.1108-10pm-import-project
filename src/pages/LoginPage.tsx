@@ -108,6 +108,7 @@ const LoginPage = () => {
             first_name: firstName,
             last_name: lastName,
           },
+          // Explicitly strictly defining the redirect URL without query params
           emailRedirectTo: `${window.location.origin}/auth/callback`,
         },
       });
@@ -131,6 +132,7 @@ const LoginPage = () => {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
+          // Explicitly strictly defining the redirect URL without query params to avoid Google 403 mismatch
           redirectTo: `${window.location.origin}/auth/callback`,
           queryParams: {
             access_type: 'offline',
