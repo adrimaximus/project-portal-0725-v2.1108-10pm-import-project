@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Project, Task, Reaction, User, Comment as CommentType, UpsertTaskPayload } from "@/types";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ProjectOverviewTab from './ProjectOverviewTab';
@@ -57,6 +58,7 @@ const ProjectMainContent = ({
   onOpenTaskModal,
   unreadTaskIds,
 }: ProjectMainContentProps) => {
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState(defaultTab);
   const [lastViewedDiscussion, setLastViewedDiscussion] = useState(() => new Date());
   const [searchParams, setSearchParams] = useSearchParams();
@@ -138,6 +140,7 @@ const ProjectMainContent = ({
     updateComment.mutate({ commentId: comment.id, text: comment.text || '', isTicket: true }, {
       onSuccess: () => {
         toast.success("Comment converted to ticket.");
+        queryClient.invalidateQueries({ queryKey: ['project', project.slug] });
       }
     });
   };
