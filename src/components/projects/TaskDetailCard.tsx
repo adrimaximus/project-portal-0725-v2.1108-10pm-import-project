@@ -254,7 +254,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
 
   return (
     <>
-      <DrawerContent className="mx-auto w-full max-w-[550px] flex flex-col max-h-[90vh]">
+      <DrawerContent className="mx-auto w-full max-w-[650px] flex flex-col max-h-[90vh]">
         <div className="flex-shrink-0 p-4 pt-3">
           <div className="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-muted" />
         </div>
@@ -263,6 +263,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
           <div className="flex justify-between items-start gap-3">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 text-base sm:text-lg font-semibold leading-none tracking-tight">
+                {task.origin_ticket_id && <Ticket className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />}
                 {isEditingTitle ? (
                   <Input
                     value={editedTitle}
@@ -292,14 +293,14 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
 
             <div className="flex items-center gap-2 flex-shrink-0">
               {task.completed ? (
-                <Button size="sm" variant="outline" onClick={handleToggleCompletion} className="h-8 border-green-500 bg-green-500/10 text-green-500 hover:bg-green-500/20 hover:text-green-600 px-2 sm:px-3">
-                  <CheckCircle className="h-4 w-4 sm:mr-2" />
-                  <span className="hidden sm:inline">Completed</span>
+                <Button size="sm" variant="outline" onClick={handleToggleCompletion} className="h-8 border-green-500 bg-green-500/10 text-green-500 hover:bg-green-500/20 hover:text-green-600">
+                  <CheckCircle className="mr-2 h-4 w-4" />
+                  Completed
                 </Button>
               ) : (
-                <Button size="sm" variant="outline" onClick={handleToggleCompletion} className="h-8 px-2 sm:px-3">
-                  <CheckCircle className="h-4 w-4 sm:mr-2" />
-                  <span className="hidden sm:inline">Mark complete</span>
+                <Button size="sm" variant="outline" onClick={handleToggleCompletion} className="h-8">
+                  <CheckCircle className="mr-2 h-4 w-4" />
+                  Mark complete
                 </Button>
               )}
               <DropdownMenu>
@@ -533,7 +534,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
           </div>
         </div>
 
-        <div className="flex-shrink-0 p-3 sm:p-4 border-t bg-background z-10">
+        <div className="flex-shrink-0 p-4 border-t">
           <CommentInput
             ref={commentInputRef}
             onAddCommentOrTicket={handleAddComment}
