@@ -50,6 +50,7 @@ import { useTaskModal } from '@/contexts/TaskModalContext';
 import { Input } from '../ui/input';
 import InteractiveText from '../InteractiveText';
 import AttachmentViewerModal from '../AttachmentViewerModal';
+import CommentReactions from '../CommentReactions';
 
 interface TaskDetailCardProps {
   task: Task;
@@ -485,7 +486,8 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
             )}
           </div>
 
-          {description && (
+          {/* Description & Reactions */}
+          {description ? (
             <div className="pt-4 border-t">
               <h4 className="font-semibold mb-2">Description</h4>
               <div className="prose prose-sm dark:prose-invert max-w-none break-word">
@@ -496,6 +498,13 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
                   {showFullDescription ? 'Show less' : 'Show more'}
                 </Button>
               )}
+              <div className="mt-3">
+                <CommentReactions reactions={task.reactions || []} onToggleReaction={handleToggleReaction} />
+              </div>
+            </div>
+          ) : (
+            <div className="pt-4 border-t">
+              <CommentReactions reactions={task.reactions || []} onToggleReaction={handleToggleReaction} />
             </div>
           )}
 
