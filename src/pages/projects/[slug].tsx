@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -27,6 +27,7 @@ import ProjectMainContent from '@/components/project-detail/ProjectMainContent';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTaskModal } from '@/contexts/TaskModalContext';
 import { useUnreadTasks } from '@/hooks/useUnreadTasks';
+import { useTasks } from '@/hooks/useTasks';
 
 const ProjectDetail = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -57,6 +58,13 @@ const ProjectDetail = () => {
     enabled: !!slug,
   });
 
+  const { data: tasks = [] } = useTasks({
+    projectIds: project ? [project.id] : undefined,
+    hideCompleted: false,
+    sortConfig: { key: 'kanban_order', direction: 'asc' },
+    enabled: !!project,
+  });
+
   const { 
     updateProject, 
     addFiles, 
@@ -68,14 +76,20 @@ const ProjectDetail = () => {
   const { 
     deleteTask, 
     toggleTaskCompletion, 
-  } = useTaskMutations(() => queryClient.invalidateQueries({ queryKey: ['project', slug] }));
+  } = useTaskMutations(() => {
+    queryClient.invalidateQueries({ queryKey: ['project', slug] });
+    queryClient.invalidateQueries({ queryKey: ['tasks'] });
+  });
 
   useEffect(() => {
     if (project) {
       const channel = supabase
         .channel(`project-updates-${project.id}`)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'projects', filter: `id=eq.${project.id}` }, () => queryClient.invalidateQueries({ queryKey: ['project', slug] }))
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks', filter: `project_id=eq.${project.id}` }, () => queryClient.invalidateQueries({ queryKey: ['project', slug] }))
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks', filter: `project_id=eq.${project.id}` }, () => {
+            queryClient.invalidateQueries({ queryKey: ['project', slug] });
+            queryClient.invalidateQueries({ queryKey: ['tasks'] });
+        })
         .on('postgres_changes', { event: '*', schema: 'public', table: 'comments', filter: `project_id=eq.${project.id}` }, () => queryClient.invalidateQueries({ queryKey: ['project', slug] }))
         .on('postgres_changes', { event: '*', schema: 'public', table: 'project_activities', filter: `project_id=eq.${project.id}` }, () => queryClient.invalidateQueries({ queryKey: ['project', slug] }))
         .on('postgres_changes', { event: '*', schema: 'public', table: 'project_files', filter: `project_id=eq.${project.id}` }, () => queryClient.invalidateQueries({ queryKey: ['project', slug] }))
@@ -168,8 +182,11 @@ const ProjectDetail = () => {
     return <div className="p-4">Project not found.</div>;
   }
 
-  const projectToDisplay = isEditing && editedProject ? editedProject : project;
-  const hasOpenTasks = project.tasks?.some(task => !task.completed) ?? false;
+  const projectToDisplay = isEditing && editedProject 
+    ? { ...editedProject, tasks } 
+    : { ...project, tasks };
+
+  const hasOpenTasks = tasks.some(task => !task.completed);
 
   return (
     <>
@@ -224,8 +241,8 @@ const ProjectDetail = () => {
               />
             </div>
             <div className="lg:col-span-1 space-y-6">
-              <ProjectProgressCard project={project} />
-              <ProjectTeamCard project={project} />
+              <ProjectProgressCard project={projectToDisplay} />
+              <ProjectTeamCard project={projectToDisplay} />
             </div>
           </div>
         </div>
