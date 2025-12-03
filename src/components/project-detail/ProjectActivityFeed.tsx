@@ -24,19 +24,16 @@ const ProjectActivityFeed = ({ activities }: ProjectActivityFeedProps) => {
         const prefixRegex = /^(commented: |created a new task & ticket: |created a new task: )/i;
         const content = cleanedDescription.replace(prefixRegex, '').replace(/\\"/g, '').trim();
 
-        // Jika deskripsi menjadi kosong setelah menghapus lampiran dan awalan, jangan tampilkan aktivitas ini.
+        // Jika deskripsi menjadi kosong setelah menghapus lampiran dan awalan
         if (content === '') {
-          // If description is empty but had attachments, show a placeholder
-          if (activity.details.description.match(attachmentsRegex)) {
-            return {
-              ...activity,
-              details: {
-                ...activity.details,
-                description: 'Sent an attachment',
-              }
-            };
-          }
-          return null;
+           // Fallback text instead of hiding it
+           return {
+             ...activity,
+             details: {
+               ...activity.details,
+               description: activity.type === 'COMMENT_ADDED' ? 'Posted a comment' : 'Created an item'
+             }
+           };
         }
 
         return {
