@@ -25,7 +25,13 @@ const EmojiReactionPicker = ({ onSelect }: EmojiReactionPickerProps) => {
     }
   };
 
-  const handleSelect = (emoji: string) => {
+  const handleSelect = (emoji: string, e?: React.MouseEvent | any) => {
+    // Prevent event bubbling to avoid triggering parent handlers (like closing parent popovers or navigation)
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    
     onSelect(emoji);
     setIsOpen(false);
     setShowFullPicker(false);
@@ -34,32 +40,47 @@ const EmojiReactionPicker = ({ onSelect }: EmojiReactionPickerProps) => {
   return (
     <Popover open={isOpen} onOpenChange={handleOpenChange} modal={false}>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-7 w-7 md:hidden">
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="h-7 w-7 text-muted-foreground hover:text-foreground"
+          onClick={(e) => e.stopPropagation()}
+        >
           <SmilePlus className="h-4 w-4" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0 border-none" side="top" align="center">
+      <PopoverContent className="w-auto p-0 border-none bg-transparent shadow-none" side="top" align="center">
         {showFullPicker ? (
-          <Picker 
-            data={data} 
-            onEmojiSelect={(emoji: any) => handleSelect(emoji.native)}
-            theme={theme === 'dark' ? 'dark' : 'light'}
-            previewPosition="none"
-          />
+          <div onClick={(e) => e.stopPropagation()}>
+            <Picker 
+              data={data} 
+              onEmojiSelect={(emoji: any) => handleSelect(emoji.native)}
+              theme={theme === 'dark' ? 'dark' : 'light'}
+              previewPosition="none"
+            />
+          </div>
         ) : (
-          <div className="flex items-center gap-1 bg-background border rounded-full p-1 shadow-lg">
+          <div 
+            className="flex items-center gap-1 bg-background border rounded-full p-1 shadow-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
             {quickReactions.map(emoji => (
               <button
                 key={emoji}
-                onClick={() => handleSelect(emoji)}
-                className="text-xl p-1 rounded-full hover:bg-muted transition-colors"
+                type="button"
+                onClick={(e) => handleSelect(emoji, e)}
+                className="text-xl p-1 rounded-full hover:bg-muted transition-colors focus:outline-none focus:ring-2 focus:ring-ring"
               >
                 {emoji}
               </button>
             ))}
             <button 
-              onClick={() => setShowFullPicker(true)}
-              className="p-1 rounded-full hover:bg-muted transition-colors"
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowFullPicker(true);
+              }}
+              className="p-1 rounded-full hover:bg-muted transition-colors focus:outline-none focus:ring-2 focus:ring-ring"
             >
               <SmilePlus className="h-5 w-5 text-muted-foreground" />
             </button>
