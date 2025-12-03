@@ -2,8 +2,8 @@ import { useState, useRef, forwardRef, useImperativeHandle, useEffect } from 're
 import { User, Comment as CommentType } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
-import { Ticket, Paperclip, X, Users } from "lucide-react";
-import { getInitials, generatePastelColor, getAvatarUrl } from "@/lib/utils";
+import { Ticket, Paperclip, X, Users, UploadCloud } from "lucide-react";
+import { getInitials, generatePastelColor, getAvatarUrl, cn } from "@/lib/utils";
 import { MentionsInput, Mention, SuggestionDataItem } from 'react-mentions';
 import '@/styles/mentions.css';
 import { useAuth } from '@/contexts/AuthContext';
@@ -44,6 +44,7 @@ const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({ onAddC
 
   const [isTicket, setIsTicket] = useState(false);
   const [attachments, setAttachments] = useState<File[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mentionsInputRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -93,13 +94,30 @@ const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({ onAddC
     setAttachments(prev => prev.filter((_, i) => i !== index));
   };
 
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      setAttachments(prev => [...prev, ...Array.from(e.dataTransfer.files)]);
+    }
+  };
+
   const handleSubmit = () => {
     if (!text.trim() && attachments.length === 0) return;
     
     let finalText = text;
     
     // Replace @all with explicit mentions for all users
-    // This ensures backend triggers work correctly by looping through mentioned IDs
     if (finalText.match(/@\[[^\]]+\]\(all\)/)) {
         const allMentions = allUsers.map(u => `@[${u.name}](${u.id})`).join(' ');
         finalText = finalText.replace(/@\[[^\]]+\]\(all\)/g, allMentions);
@@ -164,7 +182,23 @@ const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({ onAddC
             </Button>
           </div>
         )}
-        <div className="border rounded-lg focus-within:ring-1 focus-within:ring-ring">
+        <div 
+          className={cn(
+            "border rounded-lg focus-within:ring-1 focus-within:ring-ring relative transition-colors",
+            isDragging && "border-primary bg-primary/5 ring-1 ring-primary"
+          )}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+        >
+          {isDragging && (
+            <div className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-[1px] z-50 rounded-lg pointer-events-none">
+              <div className="text-primary font-medium flex items-center gap-2 bg-background p-3 rounded-lg shadow-sm border animate-in fade-in zoom-in-95 duration-200">
+                <UploadCloud className="h-5 w-5" />
+                Drop files here to attach
+              </div>
+            </div>
+          )}
           <MentionsInput
             value={text}
             onChange={(event, newValue) => setText(newValue)}
@@ -205,9 +239,9 @@ const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({ onAddC
               <p className="text-sm font-medium mb-2">Attachments</p>
               <div className="space-y-2">
                 {attachments.map((file, index) => (
-                  <div key={index} className="flex items-center justify-between text-sm bg-muted p-2 rounded-md">
-                    <span className="truncate">{file.name}</span>
-                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeAttachment(index)}>
+                  <div key={index} className="flex items-center justify-between text-sm bg-muted p-2 rounded-md group">
+                    <span className="truncate max-w-[200px]">{file.name}</span>
+                    <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => removeAttachment(index)}>
                       <X className="h-4 w-4" />
                     </Button>
                   </div>
@@ -215,7 +249,7 @@ const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({ onAddC
               </div>
             </div>
           )}
-          <div className="p-2 border-t flex justify-between items-center">
+          <div className="p-2 border-t flex justify-between items-center bg-muted/20 rounded-b-lg">
             <div className="flex items-center gap-1">
               <TooltipProvider>
                 <Tooltip>
