@@ -11,27 +11,36 @@ interface ProjectActivityFeedProps {
 
 const ProjectActivityFeed = ({ activities }: ProjectActivityFeedProps) => {
   const { data: allUsers = [] } = useProfiles();
-  // Regex yang lebih kuat untuk menghapus blok lampiran, dari '**Attachments:**' hingga akhir teks.
+  // Regex to remove attachment block: matches '**Attachments:**' until end of string.
   const attachmentsRegex = /\s*\*\*Attachments:\*\*.*$/s;
 
-  const filteredActivities = activities
+  const filteredActivities = (activities || [])
     .map(activity => {
       const relevantTypes = ['COMMENT_ADDED', 'TICKET_CREATED', 'TASK_CREATED'];
-      if (relevantTypes.includes(activity.type) && activity.details.description) {
+      
+      // Ensure details and description exist before processing
+      if (relevantTypes.includes(activity.type) && activity.details?.description) {
         const cleanedDescription = activity.details.description.replace(attachmentsRegex, '').trim();
         
-        // Regex untuk menghapus berbagai kemungkinan awalan
+        // Regex to remove common prefixes
         const prefixRegex = /^(commented: |created a new task & ticket: |created a new task: )/i;
-        const content = cleanedDescription.replace(prefixRegex, '').replace(/\\"/g, '').trim();
+        // Fix: Removed extra backslash to correctly match double quotes if needed, 
+        // but typically we just want to remove the prefix.
+        // If we want to remove quotes around the content: .replace(/^"|"$/g, '')
+        const content = cleanedDescription.replace(prefixRegex, '').replace(/"/g, '').trim();
 
-        // Jika deskripsi menjadi kosong setelah menghapus lampiran dan awalan
+        // If description becomes empty after cleaning (e.g. only had attachments or just prefix)
         if (content === '') {
-           // Fallback text instead of hiding it
+           // Fallback text instead of hiding it, depending on context
+           const fallbackText = activity.type === 'COMMENT_ADDED' 
+             ? (activity.details.description.match(attachmentsRegex) ? 'Sent an attachment' : 'Posted a comment')
+             : 'Created an item';
+
            return {
              ...activity,
              details: {
                ...activity.details,
-               description: activity.type === 'COMMENT_ADDED' ? 'Posted a comment' : 'Created an item'
+               description: fallbackText
              }
            };
         }
@@ -44,6 +53,7 @@ const ProjectActivityFeed = ({ activities }: ProjectActivityFeedProps) => {
           }
         };
       }
+      // Return other activity types (like FILE_UPLOADED, STATUS_UPDATED) as is
       return activity;
     })
     .filter(Boolean) as Activity[];
@@ -63,7 +73,7 @@ const ProjectActivityFeed = ({ activities }: ProjectActivityFeedProps) => {
       <ul className="-mb-8">
         {filteredActivities.map((activity, activityIdx) => {
           const userName = activity.user?.name || "System";
-          const description = activity.details.description;
+          const description = activity.details?.description || "Activity performed";
 
           return (
             <li key={activity.id}>
