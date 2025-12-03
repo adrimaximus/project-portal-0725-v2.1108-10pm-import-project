@@ -15,7 +15,6 @@ const ProjectActivityFeed = ({ activities }: ProjectActivityFeedProps) => {
   const attachmentsRegex = /\s*\*\*Attachments:\*\*.*$/s;
 
   const filteredActivities = activities
-    .filter(activity => activity.type !== 'FILE_UPLOADED')
     .map(activity => {
       const relevantTypes = ['COMMENT_ADDED', 'TICKET_CREATED', 'TASK_CREATED'];
       if (relevantTypes.includes(activity.type) && activity.details.description) {
@@ -27,6 +26,16 @@ const ProjectActivityFeed = ({ activities }: ProjectActivityFeedProps) => {
 
         // Jika deskripsi menjadi kosong setelah menghapus lampiran dan awalan, jangan tampilkan aktivitas ini.
         if (content === '') {
+          // If description is empty but had attachments, show a placeholder
+          if (activity.details.description.match(attachmentsRegex)) {
+            return {
+              ...activity,
+              details: {
+                ...activity.details,
+                description: 'Sent an attachment',
+              }
+            };
+          }
           return null;
         }
 
