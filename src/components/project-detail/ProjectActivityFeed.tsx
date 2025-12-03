@@ -24,9 +24,6 @@ const ProjectActivityFeed = ({ activities }: ProjectActivityFeedProps) => {
         
         // Regex to remove common prefixes
         const prefixRegex = /^(commented: |created a new task & ticket: |created a new task: )/i;
-        // Fix: Removed extra backslash to correctly match double quotes if needed, 
-        // but typically we just want to remove the prefix.
-        // If we want to remove quotes around the content: .replace(/^"|"$/g, '')
         const content = cleanedDescription.replace(prefixRegex, '').replace(/"/g, '').trim();
 
         // If description becomes empty after cleaning (e.g. only had attachments or just prefix)
@@ -61,9 +58,10 @@ const ProjectActivityFeed = ({ activities }: ProjectActivityFeedProps) => {
 
   if (!filteredActivities || filteredActivities.length === 0) {
     return (
-      <div className="text-center text-muted-foreground py-8">
-        <History className="mx-auto h-12 w-12" />
-        <p className="mt-4">No activity yet.</p>
+      <div className="text-center text-muted-foreground py-8 border border-dashed rounded-lg mt-4">
+        <History className="mx-auto h-12 w-12 opacity-50" />
+        <p className="mt-4 font-medium">No activity recorded yet.</p>
+        <p className="text-xs mt-1">Changes and comments will appear here.</p>
       </div>
     );
   }
