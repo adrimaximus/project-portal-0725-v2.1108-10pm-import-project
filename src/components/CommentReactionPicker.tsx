@@ -33,11 +33,17 @@ const CommentReactionPicker = ({ onSelect }: CommentReactionPickerProps) => {
   return (
     <Popover open={isOpen} onOpenChange={handleOpenChange} modal={false}>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-7 w-7">
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="h-7 w-7" 
+          type="button"
+          onClick={(e) => e.stopPropagation()}
+        >
           <SmilePlus className="h-4 w-4 text-muted-foreground" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0 border-none" side="top" align="center">
+      <PopoverContent className="w-auto p-0 border-none" side="top" align="center" onInteractOutside={(e) => e.preventDefault()}>
         {showFullPicker ? (
           <Picker 
             data={data} 
@@ -50,15 +56,23 @@ const CommentReactionPicker = ({ onSelect }: CommentReactionPickerProps) => {
             {quickReactions.map(emoji => (
               <button
                 key={emoji}
-                onClick={() => handleSelect(emoji)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleSelect(emoji);
+                }}
                 className="text-xl p-1 rounded-full hover:bg-muted transition-colors"
+                type="button"
               >
                 {emoji}
               </button>
             ))}
             <button 
-              onClick={() => setShowFullPicker(true)}
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowFullPicker(true);
+              }}
               className="p-1 rounded-full hover:bg-muted transition-colors"
+              type="button"
             >
               <MoreHorizontal className="h-5 w-5 text-muted-foreground" />
             </button>
