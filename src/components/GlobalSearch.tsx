@@ -111,7 +111,6 @@ export function GlobalSearch() {
   };
 
   // Function to clean text from mention syntax @[Name](UUID)
-  // Updated regex to handle cases where the string is truncated (missing closing parenthesis)
   const cleanText = (text: string) => {
     if (!text) return "";
     return text.replace(/@\[([^\]]+)\]\([^\)]*\)?/g, '@$1');
