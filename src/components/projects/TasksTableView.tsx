@@ -4,11 +4,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Link } from "react-router-dom";
-import { format, isPast } from "date-fns";
+import { format, isPast, isValid } from "date-fns";
 import { generatePastelColor, getPriorityStyles, getTaskStatusStyles, isOverdue, cn, getAvatarUrl, getInitials } from "@/lib/utils";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "../ui/button";
-import { MoreHorizontal, Edit, Trash2, Loader2, Plus, CalendarIcon, Clock } from "lucide-react";
+import { MoreHorizontal, Edit, Trash2, Plus, CalendarIcon, Clock } from "lucide-react";
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -33,6 +32,7 @@ import { markTaskAsRead } from '@/lib/tasksApi';
 import { supabase } from '@/integrations/supabase/client';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
+import { Input } from "@/components/ui/input";
 
 const PRIORITY_OPTIONS = [
   { value: 'Low', label: 'Low' },
@@ -62,7 +62,7 @@ const TaskListItem = ({ task, onToggleTaskCompletion, onTaskClick, isUnread, all
   let dueDateText = '';
   let dueDateColor = 'text-muted-foreground';
 
-  if (dueDate) {
+  if (dueDate && isValid(dueDate)) {
     if (isPast(dueDate) && !task.completed) {
       dueDateText = format(dueDate, 'MMM d, p');
       dueDateColor = 'text-destructive';
@@ -113,7 +113,6 @@ const TaskListItem = ({ task, onToggleTaskCompletion, onTaskClick, isUnread, all
 
 const AssigneeSelector = ({ task, allUsers, onAssigneeChange }: { task: ProjectTask, allUsers: User[], onAssigneeChange: (userId: string, assigned: boolean) => void }) => {
   const assignedIds = new Set(task.assignedTo?.map(u => u.id) || []);
-
   const validUsers = allUsers.filter(u => u.id);
 
   return (
@@ -175,38 +174,69 @@ const DueDateSelector = ({ task, onDueDateChange }: { task: ProjectTask, onDueDa
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(
     task.due_date ? new Date(task.due_date) : undefined
   );
+  
+  // State for time selection
+  const [hours, setHours] = useState("12");
+  const [minutes, setMinutes] = useState("00");
+  const [ampm, setAmpm] = useState<"AM" | "PM">("PM");
 
+  // Sync state when task.due_date changes or popover opens
   useEffect(() => {
-    setSelectedDate(task.due_date ? new Date(task.due_date) : undefined);
+    if (task.due_date) {
+      const d = new Date(task.due_date);
+      if (isValid(d)) {
+        setSelectedDate(d);
+        const h = parseInt(format(d, 'H'), 10);
+        const m = format(d, 'mm');
+        const period = h >= 12 ? 'PM' : 'AM';
+        let displayHour = h % 12;
+        if (displayHour === 0) displayHour = 12;
+        
+        setHours(displayHour.toString().padStart(2, '0'));
+        setMinutes(m);
+        setAmpm(period);
+        return;
+      }
+    }
+    // Default values if no date
+    setSelectedDate(undefined);
+    setHours("12");
+    setMinutes("00");
+    setAmpm("PM");
   }, [task.due_date, open]);
 
   const handleDateSelect = (date: Date | undefined) => {
-    if (!date) {
-        setSelectedDate(undefined);
-        return;
-    }
-    const newDate = new Date(date);
-    // Inherit time from currently selected date or default to 12:00 PM
-    if (selectedDate) {
-        newDate.setHours(selectedDate.getHours(), selectedDate.getMinutes());
-    } else {
-        newDate.setHours(12, 0);
-    }
-    setSelectedDate(newDate);
-  };
-
-  const handleTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!selectedDate) return;
-    const [hours, minutes] = e.target.value.split(':').map(Number);
-    const newDate = new Date(selectedDate);
-    newDate.setHours(hours, minutes);
-    setSelectedDate(newDate);
+    setSelectedDate(date);
   };
 
   const handleSave = () => {
-    onDueDateChange(selectedDate);
+    if (selectedDate) {
+      const newDate = new Date(selectedDate);
+      let h = parseInt(hours, 10);
+      const m = parseInt(minutes, 10);
+
+      // Validate inputs
+      if (isNaN(h)) h = 12;
+      if (isNaN(m)) m = 0;
+
+      // Convert to 24-hour format for Date object
+      if (ampm === 'PM' && h < 12) h += 12;
+      if (ampm === 'AM' && h === 12) h = 0;
+
+      newDate.setHours(h, m, 0, 0);
+      onDueDateChange(newDate);
+    } else {
+      onDueDateChange(undefined);
+    }
     setOpen(false);
   };
+
+  const handleClear = () => {
+    onDueDateChange(undefined);
+    setOpen(false);
+  };
+
+  const isOverdueTask = task.due_date && isOverdue(task.due_date) && !task.completed;
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -214,12 +244,15 @@ const DueDateSelector = ({ task, onDueDateChange }: { task: ProjectTask, onDueDa
         <div 
           className={cn(
             "text-xs cursor-pointer hover:bg-muted/50 p-1 rounded-md transition-colors flex items-center gap-1 min-w-[110px]", 
-            isOverdue(task.due_date) && !task.completed && "text-destructive font-semibold"
+            isOverdueTask && "text-destructive font-semibold"
           )}
           onClick={(e) => e.stopPropagation()}
         >
           <CalendarIcon className="h-3 w-3 opacity-50" />
-          {task.due_date ? format(new Date(task.due_date), "MMM d, p") : <span className="text-muted-foreground italic">Set date</span>}
+          {task.due_date && isValid(new Date(task.due_date)) 
+            ? format(new Date(task.due_date), "MMM d, p") 
+            : <span className="text-muted-foreground italic">Set date</span>
+          }
         </div>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start" onClick={(e) => e.stopPropagation()}>
@@ -231,26 +264,55 @@ const DueDateSelector = ({ task, onDueDateChange }: { task: ProjectTask, onDueDa
                 initialFocus
             />
             <div className="p-3 border-t border-border bg-muted/10">
-                <div className="flex items-center gap-2 mb-3">
+                <div className="flex items-center gap-2 mb-3 justify-center">
                     <Clock className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">Time</span>
-                    <input
-                        type="time"
-                        className="flex-1 border rounded-md p-1.5 text-sm bg-background"
-                        value={selectedDate ? format(selectedDate, 'HH:mm') : ''}
-                        onChange={handleTimeChange}
-                        disabled={!selectedDate}
-                    />
+                    <div className="flex items-center border rounded-md bg-background overflow-hidden">
+                      <Input 
+                        type="number" 
+                        min={1} 
+                        max={12} 
+                        value={hours}
+                        onChange={(e) => {
+                          let val = parseInt(e.target.value);
+                          if (val > 12) val = 12;
+                          if (val < 1) val = 1;
+                          setHours(isNaN(val) ? "" : val.toString());
+                        }}
+                        className="w-12 h-8 border-none text-center focus-visible:ring-0 px-1"
+                        placeholder="HH"
+                      />
+                      <span className="text-muted-foreground">:</span>
+                      <Input 
+                        type="number" 
+                        min={0} 
+                        max={59} 
+                        value={minutes}
+                        onChange={(e) => {
+                          let val = parseInt(e.target.value);
+                          if (val > 59) val = 59;
+                          if (val < 0) val = 0;
+                          setMinutes(isNaN(val) ? "" : val.toString().padStart(2, '0'));
+                        }}
+                        className="w-12 h-8 border-none text-center focus-visible:ring-0 px-1"
+                        placeholder="MM"
+                      />
+                    </div>
+                    <Select value={ampm} onValueChange={(val: "AM" | "PM") => setAmpm(val)}>
+                      <SelectTrigger className="w-[70px] h-8">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="AM">AM</SelectItem>
+                        <SelectItem value="PM">PM</SelectItem>
+                      </SelectContent>
+                    </Select>
                 </div>
                 <div className="flex gap-2">
                     <Button 
                         size="sm" 
                         variant="ghost" 
                         className="flex-1 h-8"
-                        onClick={() => {
-                            onDueDateChange(undefined);
-                            setOpen(false);
-                        }}
+                        onClick={handleClear}
                     >
                         Clear
                     </Button>
@@ -258,6 +320,7 @@ const DueDateSelector = ({ task, onDueDateChange }: { task: ProjectTask, onDueDa
                         size="sm" 
                         className="flex-1 h-8"
                         onClick={handleSave}
+                        disabled={!selectedDate}
                     >
                         Save
                     </Button>
@@ -390,22 +453,23 @@ const TasksTableView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskComple
     }
   };
 
-  const handlePriorityChange = (task: ProjectTask, newPriority: string) => {
-    if (updateTask) {
-      const mutate = typeof updateTask === 'function' ? updateTask : (updateTask as any).mutate;
-      if (mutate) {
-        mutate({ taskId: task.id, updates: { priority: newPriority } });
-      }
+  const safeMutate = (mutation: any, args: any) => {
+    if (typeof mutation === 'function') {
+      mutation(args);
+    } else if (mutation && typeof mutation.mutate === 'function') {
+      mutation.mutate(args);
+    } else {
+      console.error("Mutation function not found", mutation);
+      toast.error("Cannot save changes: Update function is missing");
     }
   };
 
+  const handlePriorityChange = (task: ProjectTask, newPriority: string) => {
+    safeMutate(updateTask, { taskId: task.id, updates: { priority: newPriority } });
+  };
+
   const handleDueDateChange = (task: ProjectTask, date: Date | undefined) => {
-    if (updateTask) {
-      const mutate = typeof updateTask === 'function' ? updateTask : (updateTask as any).mutate;
-      if (mutate) {
-        mutate({ taskId: task.id, updates: { due_date: date ? date.toISOString() : null } });
-      }
-    }
+    safeMutate(updateTask, { taskId: task.id, updates: { due_date: date ? date.toISOString() : null } });
   };
 
   const handleAssigneeChange = async (task: ProjectTask, userId: string, assigned: boolean) => {
