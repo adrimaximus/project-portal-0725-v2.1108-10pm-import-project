@@ -132,7 +132,7 @@ const ChatList = ({ highlightedId, onHighlightComplete }: ChatListProps) => {
                 else itemRefs.current.delete(c.id);
               }}
               className={cn(
-                "flex w-full items-center gap-3 p-3 hover:bg-muted border-l-4 border-transparent transition-colors group max-w-full overflow-hidden",
+                "flex w-full items-center gap-3 p-3 pr-4 hover:bg-muted border-l-4 border-transparent transition-colors group max-w-full overflow-hidden",
                 selectedConversation?.id === c.id && "bg-muted border-l-primary"
               )}
             >

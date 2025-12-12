@@ -147,7 +147,7 @@ const InteractiveText = ({ text, members = [] }: InteractiveTextProps) => {
         }
 
         // Plain text
-        return <span key={i} className="break-words">{part}</span>;
+        return <span key={i} className="break-words flex-1 pr-1">{part}</span>;
       })}
     </>
   );
