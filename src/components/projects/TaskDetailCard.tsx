@@ -350,7 +350,13 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
                 <Select
                   value={task.status}
                   onValueChange={(newStatus: TaskStatus) => {
-                    updateTask({ taskId: task.id, updates: { status: newStatus } });
+                    const updates: any = { status: newStatus };
+                    if (newStatus === 'Done') {
+                      updates.completed = true;
+                    } else if (task.completed) {
+                      updates.completed = false;
+                    }
+                    updateTask({ taskId: task.id, updates });
                   }}
                 >
                   <SelectTrigger className="h-auto p-0 border-0 focus:ring-0 focus:ring-offset-0 w-auto bg-transparent shadow-none">
