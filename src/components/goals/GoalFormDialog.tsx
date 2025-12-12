@@ -91,18 +91,31 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, goal }: GoalFormDialogP
     }
   }, [formData, open, storageKey]);
 
-  const handleChange = (field: keyof typeof formData, value: any) => {
+  // Memoized generic handler
+  const handleChange = useCallback((field: keyof typeof formData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-  };
+  }, []);
 
-  const handleTagCreate = (tagName: string): Tag => {
+  // Dedicated handlers to prevent recreating arrow functions in render
+  const handleTitleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => handleChange('title', e.target.value), [handleChange]);
+  const handleDescriptionChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => handleChange('description', e.target.value), [handleChange]);
+  const handleTypeChange = useCallback((v: string) => handleChange('type', v as GoalType), [handleChange]);
+  const handleFrequencyChange = useCallback((v: string) => handleChange('frequency', v as Goal['frequency']), [handleChange]);
+  const handleSpecificDaysChange = useCallback((v: string[]) => handleChange('specificDays', v), [handleChange]);
+  const handleTargetPeriodChange = useCallback((v: string) => handleChange('targetPeriod', v as GoalPeriod), [handleChange]);
+  const handleUnitChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => handleChange('unit', e.target.value), [handleChange]);
+  const handleIconChange = useCallback((v: string) => handleChange('icon', v), [handleChange]);
+  const handleColorChange = useCallback((v: string) => handleChange('color', v), [handleChange]);
+  const handleTagsChange = useCallback((v: Tag[]) => handleChange('tags', v), [handleChange]);
+
+  const handleTagCreate = useCallback((tagName: string): Tag => {
     const randomColor = colors[Math.floor(Math.random() * colors.length)];
     const newTag: Tag = { id: uuidv4(), name: tagName, color: randomColor, isNew: true, user_id: user!.id };
     setAllTags(prev => [...prev, newTag]);
     return newTag;
-  };
+  }, [user]);
 
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     if (!formData.title) {
       toast.error("Please enter a title for your goal.");
       return;
@@ -181,9 +194,9 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, goal }: GoalFormDialogP
     } finally {
       setIsSaving(false);
     }
-  };
+  }, [formData, goal, isEditMode, onSuccess, queryClient, storageKey, user]);
 
-  const handleNumericInputChange = (e: React.ChangeEvent<HTMLInputElement>, field: 'targetQuantity' | 'targetValue') => {
+  const handleNumericInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>, field: 'targetQuantity' | 'targetValue') => {
     const rawValue = e.target.value.replace(/,/g, '');
     if (rawValue === '') {
       handleChange(field, undefined);
@@ -193,7 +206,7 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, goal }: GoalFormDialogP
     if (!isNaN(numValue)) {
       handleChange(field, numValue);
     }
-  };
+  }, [handleChange]);
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isSaving && onOpenChange(isOpen)}>
@@ -204,15 +217,15 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, goal }: GoalFormDialogP
         <div ref={scrollRef} className="flex-1 grid gap-4 py-4 overflow-y-auto pr-4 cursor-grab active:cursor-grabbing select-none">
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="title" className="text-right">Title</Label>
-            <Input id="title" value={formData.title} onChange={(e) => handleChange('title', e.target.value)} className="col-span-3" placeholder="e.g., Drink more water" />
+            <Input id="title" value={formData.title} onChange={handleTitleChange} className="col-span-3" placeholder="e.g., Drink more water" />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="description" className="text-right">Description</Label>
-            <Textarea id="description" value={formData.description} onChange={(e) => handleChange('description', e.target.value)} className="col-span-3" placeholder="Why is this goal important?" />
+            <Textarea id="description" value={formData.description} onChange={handleDescriptionChange} className="col-span-3" placeholder="Why is this goal important?" />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
             <Label className="text-right">Type</Label>
-            <RadioGroup value={formData.type} onValueChange={(v) => handleChange('type', v as GoalType)} className="col-span-3 flex gap-4">
+            <RadioGroup value={formData.type} onValueChange={handleTypeChange} className="col-span-3 flex gap-4">
               <div className="flex items-center space-x-2"><RadioGroupItem value="frequency" id="r1" /><Label htmlFor="r1">Frequency</Label></div>
               <div className="flex items-center space-x-2"><RadioGroupItem value="quantity" id="r2" /><Label htmlFor="r2">Quantity</Label></div>
               <div className="flex items-center space-x-2"><RadioGroupItem value="value" id="r3" /><Label htmlFor="r3">Value</Label></div>
@@ -222,7 +235,7 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, goal }: GoalFormDialogP
             <>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="frequency" className="text-right">Frequency</Label>
-                <Select value={formData.frequency} onValueChange={(value) => handleChange('frequency', value as Goal['frequency'])}>
+                <Select value={formData.frequency} onValueChange={handleFrequencyChange}>
                   <SelectTrigger className="col-span-3"><SelectValue placeholder="Select frequency" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Daily">Daily</SelectItem>
@@ -233,7 +246,7 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, goal }: GoalFormDialogP
               {formData.frequency === 'Weekly' && (
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label className="text-right">Days</Label>
-                  <ToggleGroup type="multiple" variant="outline" value={formData.specificDays} onValueChange={(v) => handleChange('specificDays', v)} className="col-span-3 justify-start">
+                  <ToggleGroup type="multiple" variant="outline" value={formData.specificDays} onValueChange={handleSpecificDaysChange} className="col-span-3 justify-start">
                     {weekDays.map(day => (<ToggleGroupItem key={day.value} value={day.value} aria-label={day.label}>{day.label}</ToggleGroupItem>))}
                   </ToggleGroup>
                 </div>
@@ -248,7 +261,7 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, goal }: GoalFormDialogP
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label className="text-right">Period</Label>
-                <Select value={formData.targetPeriod} onValueChange={(value) => handleChange('targetPeriod', value as GoalPeriod)}>
+                <Select value={formData.targetPeriod} onValueChange={handleTargetPeriodChange}>
                   <SelectTrigger className="col-span-3"><SelectValue placeholder="Select period" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Weekly">Per Week</SelectItem>
@@ -266,11 +279,11 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, goal }: GoalFormDialogP
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="unit" className="text-right">Unit</Label>
-                <Input id="unit" value={formData.unit} onChange={(e) => handleChange('unit', e.target.value)} className="col-span-3" placeholder="e.g., USD, km, pages" />
+                <Input id="unit" value={formData.unit} onChange={handleUnitChange} className="col-span-3" placeholder="e.g., USD, km, pages" />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label className="text-right">Period</Label>
-                <Select value={formData.targetPeriod} onValueChange={(value) => handleChange('targetPeriod', value as GoalPeriod)}>
+                <Select value={formData.targetPeriod} onValueChange={handleTargetPeriodChange}>
                   <SelectTrigger className="col-span-3"><SelectValue placeholder="Select period" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Weekly">Per Week</SelectItem>
@@ -283,8 +296,8 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, goal }: GoalFormDialogP
           <div className="grid grid-cols-4 items-start gap-4">
             <Label className="text-right pt-2">Icon & Color</Label>
             <div className="col-span-3 space-y-2">
-              <IconPicker value={formData.icon} onChange={(v) => handleChange('icon', v)} color={formData.color} />
-              <ColorPicker color={formData.color} setColor={(v) => handleChange('color', v)} />
+              <IconPicker value={formData.icon} onChange={handleIconChange} color={formData.color} />
+              <ColorPicker color={formData.color} setColor={handleColorChange} />
             </div>
           </div>
           <div className="grid grid-cols-4 items-start gap-4">
@@ -293,7 +306,7 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, goal }: GoalFormDialogP
               <TagsMultiselect
                 options={allTags}
                 value={formData.tags}
-                onChange={(v) => handleChange('tags', v)}
+                onChange={handleTagsChange}
                 onTagCreate={handleTagCreate}
               />
             </div>
