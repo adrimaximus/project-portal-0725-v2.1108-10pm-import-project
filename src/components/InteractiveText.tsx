@@ -7,8 +7,47 @@ interface InteractiveTextProps {
   members?: Collaborator[];
 }
 
+// Helper to format raw JSON map data into readable text
+const formatMapText = (content: string) => {
+  if (!content) return "";
+  
+  // Regex to detect JSON string specific to map/venue updates
+  // Matches pattern: "{"address":...}" or {"address":...} including escaped quotes
+  const mapJsonPattern = /"?\s*\{[^{}]*\\?"address\\?"[^{}]*\}\s*"?/g;
+
+  return content.replace(mapJsonPattern, (match) => {
+    try {
+      let jsonStr = match.trim();
+      
+      // Remove outer quotes if present
+      if ((jsonStr.startsWith('"') && jsonStr.endsWith('"')) || (jsonStr.startsWith("'") && jsonStr.endsWith("'"))) {
+        jsonStr = jsonStr.slice(1, -1);
+      }
+      
+      // Handle escaped quotes
+      jsonStr = jsonStr.replace(/\\"/g, '"');
+      
+      const parsed = JSON.parse(jsonStr);
+      // Prioritize address, then name
+      const locationName = parsed.address || parsed.name;
+      
+      if (locationName) {
+        return `"${locationName}"`;
+      }
+      return match;
+    } catch (e) {
+      // If parsing fails, return original
+      return match;
+    }
+  });
+};
+
 const InteractiveText = ({ text, members = [] }: InteractiveTextProps) => {
   if (!text) return null;
+
+  // Pre-process text to format map JSON before splitting for tokens
+  // This ensures we have clean text before checking for markdown/mentions
+  const processedText = formatMapText(text);
 
   // Regex logic:
   // 1. Mentions: @[Name](id)
@@ -19,7 +58,7 @@ const InteractiveText = ({ text, members = [] }: InteractiveTextProps) => {
   // 6. Newlines
   
   // Complex regex to split by all these tokens while keeping delimiters
-  const parts = text.split(/(@\[[^\]]+\]\s*\([^)]+\)|\[[^\]]+\]\([^)]+\)|\*\*[^*]+\*\*|\*[^*]+\*|https?:\/\/[^\s]+|\n)/g);
+  const parts = processedText.split(/(@\[[^\]]+\]\s*\([^)]+\)|\[[^\]]+\]\([^)]+\)|\*\*[^*]+\*\*|\*[^*]+\*|https?:\/\/[^\s]+|\n)/g);
 
   return (
     <>
