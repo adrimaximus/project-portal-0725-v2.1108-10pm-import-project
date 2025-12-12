@@ -465,11 +465,11 @@ const TasksTableView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskComple
   };
 
   const handlePriorityChange = (task: ProjectTask, newPriority: string) => {
-    safeMutate(updateTask, { taskId: task.id, updates: { priority: newPriority } });
+    safeMutate(updateTask, { taskId: task.id, updates: { priority: newPriority, updated_at: new Date().toISOString() } });
   };
 
   const handleDueDateChange = (task: ProjectTask, date: Date | undefined) => {
-    safeMutate(updateTask, { taskId: task.id, updates: { due_date: date ? date.toISOString() : null } });
+    safeMutate(updateTask, { taskId: task.id, updates: { due_date: date ? date.toISOString() : null, updated_at: new Date().toISOString() } });
   };
 
   const handleAssigneeChange = async (task: ProjectTask, userId: string, assigned: boolean) => {
@@ -481,6 +481,8 @@ const TasksTableView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskComple
         const { error } = await supabase.from('task_assignees').delete().match({ task_id: task.id, user_id: userId });
         if (error) throw error;
       }
+      // Explicitly update task updated_at
+      await supabase.from('tasks').update({ updated_at: new Date().toISOString() }).eq('id', task.id);
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
     } catch (error) {
       console.error('Error updating assignee:', error);
