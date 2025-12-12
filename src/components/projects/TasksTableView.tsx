@@ -76,6 +76,9 @@ const TaskListItem = ({ task, onToggleTaskCompletion, onTaskClick, isUnread, all
             <Badge className={cn(getPriorityStyles(task.priority).tw, 'text-xs')}>{task.priority}</Badge>
           )}
           {dueDateText && <span className={`text-xs font-medium ${dueDateColor}`}>{dueDateText}</span>}
+          {task.updated_at && (
+            <span className="text-xs text-muted-foreground">Upd: {format(new Date(task.updated_at), 'MMM d')}</span>
+          )}
           <div className="flex -space-x-2">
             {task.assignedTo?.slice(0, 3).map(user => (
               <Avatar key={user.id} className="h-6 w-6 border-2 border-background">
@@ -146,6 +149,9 @@ const TaskRow = ({ task, onToggleTaskCompletion, onEdit, onDelete, handleToggleR
       </TableCell>
       <TableCell className={cn("text-xs", isOverdue(task.due_date) && !task.completed && "text-destructive font-semibold")}>
         {task.due_date ? format(new Date(task.due_date), "MMM d, yyyy, p") : '-'}
+      </TableCell>
+      <TableCell className="text-xs text-muted-foreground">
+        {task.updated_at ? format(new Date(task.updated_at), "MMM d, yyyy, p") : '-'}
       </TableCell>
       <TableCell>
         <div className="flex -space-x-2">
@@ -231,15 +237,16 @@ const TasksTableView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskComple
             <SortableTableHead columnKey="status" onSort={requestSort} sortConfig={sortConfig}>Status</SortableTableHead>
             <SortableTableHead columnKey="priority" onSort={requestSort} sortConfig={sortConfig}>Priority</SortableTableHead>
             <SortableTableHead columnKey="due_date" onSort={requestSort} sortConfig={sortConfig}>Due Date</SortableTableHead>
+            <SortableTableHead columnKey="updated_at" onSort={requestSort} sortConfig={sortConfig}>Last Updated</SortableTableHead>
             <TableHead>Assignees</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {isLoading ? (
-            <TableRow><TableCell colSpan={8} className="text-center h-24">Loading...</TableCell></TableRow>
+            <TableRow><TableCell colSpan={9} className="text-center h-24">Loading...</TableCell></TableRow>
           ) : tasks.length === 0 ? (
-            <TableRow><TableCell colSpan={8} className="text-center h-24">No tasks found.</TableCell></TableRow>
+            <TableRow><TableCell colSpan={9} className="text-center h-24">No tasks found.</TableCell></TableRow>
           ) : (
             tasks.map(task => (
               <TaskRow
