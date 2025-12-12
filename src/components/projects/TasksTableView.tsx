@@ -8,8 +8,16 @@ import { format, isPast } from "date-fns";
 import { generatePastelColor, getPriorityStyles, getTaskStatusStyles, isOverdue, cn, getAvatarUrl, getInitials } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "../ui/button";
-import { MoreHorizontal, Edit, Trash2, Loader2 } from "lucide-react";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { MoreHorizontal, Edit, Trash2, Loader2, Plus } from "lucide-react";
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger,
+  DropdownMenuCheckboxItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator
+} from "@/components/ui/dropdown-menu";
 import { Checkbox } from "../ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -22,6 +30,7 @@ import InteractiveText from '../InteractiveText';
 import { useProfiles } from '@/hooks/useProfiles';
 import { toast } from 'sonner';
 import { markTaskAsRead } from '@/lib/tasksApi';
+import { supabase } from '@/integrations/supabase/client';
 
 const PRIORITY_OPTIONS = [
   { value: 'Low', label: 'Low' },
@@ -100,7 +109,67 @@ const TaskListItem = ({ task, onToggleTaskCompletion, onTaskClick, isUnread, all
   );
 };
 
-const TaskRow = ({ task, onToggleTaskCompletion, onEdit, onDelete, handleToggleReaction, setRef, isUnread, onClick, allUsers, onStatusChange, onPriorityChange }: {
+const AssigneeSelector = ({ task, allUsers, onAssigneeChange }: { task: ProjectTask, allUsers: User[], onAssigneeChange: (userId: string, assigned: boolean) => void }) => {
+  const assignedIds = new Set(task.assignedTo?.map(u => u.id) || []);
+
+  // Filter out invalid users from the list (defensive coding)
+  const validUsers = allUsers.filter(u => u.id);
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <div 
+          className="flex items-center cursor-pointer hover:bg-muted/50 p-1 rounded-md transition-colors -space-x-2 min-h-[32px] min-w-[32px] w-fit"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {task.assignedTo && task.assignedTo.length > 0 ? (
+            <>
+              {task.assignedTo.slice(0, 3).map(user => (
+                 <Avatar key={user.id} className="h-6 w-6 border-2 border-background ring-offset-background">
+                  <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
+                  <AvatarFallback style={generatePastelColor(user.id)}>{getInitials([user.first_name, user.last_name].filter(Boolean).join(' '), user.email || undefined)}</AvatarFallback>
+                </Avatar>
+              ))}
+              {task.assignedTo.length > 3 && (
+                 <div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center text-[10px] border-2 border-background font-medium z-10">
+                   +{task.assignedTo.length - 3}
+                 </div>
+              )}
+            </>
+          ) : (
+             <div className="h-6 w-6 rounded-full bg-muted/50 flex items-center justify-center border-2 border-dashed border-muted-foreground/30 hover:border-primary/50 transition-colors">
+                <Plus className="h-3 w-3 text-muted-foreground" />
+             </div>
+          )}
+        </div>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="w-56 max-h-80 overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <DropdownMenuLabel>Assignees</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        {validUsers.length > 0 ? validUsers.map(user => (
+          <DropdownMenuCheckboxItem
+            key={user.id}
+            checked={assignedIds.has(user.id)}
+            onCheckedChange={(checked) => onAssigneeChange(user.id, checked)}
+            onSelect={(e) => e.preventDefault()}
+          >
+            <div className="flex items-center gap-2">
+               <Avatar className="h-5 w-5">
+                <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
+                <AvatarFallback className="text-[9px]">{getInitials([user.first_name, user.last_name].filter(Boolean).join(' '), user.email || undefined)}</AvatarFallback>
+              </Avatar>
+              <span className="truncate text-sm">{user.name || user.email || 'Unknown'}</span>
+            </div>
+          </DropdownMenuCheckboxItem>
+        )) : (
+          <div className="p-2 text-sm text-muted-foreground text-center">No users available</div>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+};
+
+const TaskRow = ({ task, onToggleTaskCompletion, onEdit, onDelete, handleToggleReaction, setRef, isUnread, onClick, allUsers, onStatusChange, onPriorityChange, onAssigneeChange }: {
   task: ProjectTask;
   onToggleTaskCompletion: (task: ProjectTask, completed: boolean) => void;
   onEdit: (task: ProjectTask) => void;
@@ -112,6 +181,7 @@ const TaskRow = ({ task, onToggleTaskCompletion, onEdit, onDelete, handleToggleR
   allUsers: User[];
   onStatusChange: (task: ProjectTask, newStatus: TaskStatus) => void;
   onPriorityChange: (task: ProjectTask, newPriority: string) => void;
+  onAssigneeChange: (task: ProjectTask, userId: string, assigned: boolean) => void;
 }) => {
   return (
     <TableRow 
@@ -175,21 +245,11 @@ const TaskRow = ({ task, onToggleTaskCompletion, onEdit, onDelete, handleToggleR
         {task.updated_at ? format(new Date(task.updated_at), "MMM d, yyyy, p") : '-'}
       </TableCell>
       <TableCell>
-        <div className="flex -space-x-2">
-          {task.assignedTo?.map(user => (
-            <TooltipProvider key={user.id}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Avatar className="h-6 w-6 border-2 border-background">
-                    <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
-                    <AvatarFallback style={generatePastelColor(user.id)}>{getInitials([user.first_name, user.last_name].filter(Boolean).join(' '), user.email || undefined)}</AvatarFallback>
-                  </Avatar>
-                </TooltipTrigger>
-                <TooltipContent><p>{user.name}</p></TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          ))}
-        </div>
+        <AssigneeSelector 
+          task={task} 
+          allUsers={allUsers} 
+          onAssigneeChange={(userId, assigned) => onAssigneeChange(task, userId, assigned)} 
+        />
       </TableCell>
       <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
         <DropdownMenu>
@@ -232,6 +292,22 @@ const TasksTableView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskComple
   const handlePriorityChange = (task: ProjectTask, newPriority: string) => {
     if (updateTask) {
       updateTask.mutate({ taskId: task.id, updates: { priority: newPriority } });
+    }
+  };
+
+  const handleAssigneeChange = async (task: ProjectTask, userId: string, assigned: boolean) => {
+    try {
+      if (assigned) {
+        const { error } = await supabase.from('task_assignees').insert({ task_id: task.id, user_id: userId });
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('task_assignees').delete().match({ task_id: task.id, user_id: userId });
+        if (error) throw error;
+      }
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+    } catch (error) {
+      console.error('Error updating assignee:', error);
+      toast.error('Failed to update assignee');
     }
   };
 
@@ -289,6 +365,7 @@ const TasksTableView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskComple
                 allUsers={allUsers}
                 onStatusChange={onStatusChange}
                 onPriorityChange={handlePriorityChange}
+                onAssigneeChange={handleAssigneeChange}
               />
             ))
           )}
