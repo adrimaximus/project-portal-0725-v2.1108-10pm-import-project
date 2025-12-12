@@ -111,9 +111,10 @@ export function GlobalSearch() {
   };
 
   // Function to clean text from mention syntax @[Name](UUID)
+  // Updated regex to handle cases where the string is truncated (missing closing parenthesis)
   const cleanText = (text: string) => {
     if (!text) return "";
-    return text.replace(/@\[([^\]]+)\]\(([^)]+)\)/g, '@$1');
+    return text.replace(/@\[([^\]]+)\]\([^\)]*\)?/g, '@$1');
   };
 
   const hasResults = results.projects.length > 0 || results.users.length > 0 || results.goals.length > 0 || results.bills.length > 0 || results.tasks.length > 0;
