@@ -34,7 +34,11 @@ const MessageReactions = ({ reactions, onToggleReaction }: MessageReactionsProps
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
-                  onClick={() => onToggleReaction(emoji)}
+                  type="button"
+                  onClick={(e) => { 
+                    e.stopPropagation(); 
+                    onToggleReaction(emoji); 
+                  }}
                   className={cn(
                     "px-2 py-0.5 rounded-full text-xs flex items-center gap-1 transition-colors",
                     userHasReacted

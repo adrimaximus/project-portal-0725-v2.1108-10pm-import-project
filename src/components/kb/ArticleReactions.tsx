@@ -87,7 +87,7 @@ const ArticleReactions = ({ articleId, rawReactions = [], articleSlug }: Article
   }, {} as Record<string, ArticleReaction[]>);
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
       {Object.entries(groupedReactions).map(([emoji, reactionGroup]) => {
         const userHasReacted = reactionGroup.some(r => r.user_id === user?.id);
         const reactorNames = reactionGroup.map(r => 
@@ -102,7 +102,11 @@ const ArticleReactions = ({ articleId, rawReactions = [], articleSlug }: Article
                   variant={userHasReacted ? 'secondary' : 'outline'}
                   size="sm"
                   className="px-2 py-1 h-auto rounded-full"
-                  onClick={() => handleEmojiSelect(emoji)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleEmojiSelect(emoji);
+                  }}
+                  type="button"
                 >
                   <span className="text-base mr-1.5">{emoji}</span>
                   <span className="text-xs font-medium">{reactionGroup.length}</span>
@@ -117,19 +121,32 @@ const ArticleReactions = ({ articleId, rawReactions = [], articleSlug }: Article
       })}
       <Popover open={isPickerOpen} onOpenChange={setIsPickerOpen}>
         <PopoverTrigger asChild>
-          <Button variant="outline" size="icon" className="rounded-full h-8 w-8">
+          <Button 
+            variant="outline" 
+            size="icon" 
+            className="rounded-full h-8 w-8" 
+            type="button"
+            onClick={(e) => {
+               e.stopPropagation();
+               // PopoverTrigger handles the click, but we ensure no bubbling
+            }}
+          >
             <SmilePlus className="h-4 w-4" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-auto p-1">
+        <PopoverContent className="w-auto p-1" onClick={(e) => e.stopPropagation()}>
           <div className="flex gap-1">
             {EMOJIS.map(emoji => (
               <Button
                 key={emoji}
                 variant="ghost"
                 size="icon"
-                onClick={() => handleEmojiSelect(emoji)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleEmojiSelect(emoji);
+                }}
                 className="rounded-full"
+                type="button"
               >
                 <span className="text-xl">{emoji}</span>
               </Button>
