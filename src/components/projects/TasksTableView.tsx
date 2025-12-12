@@ -8,7 +8,7 @@ import { format, isPast } from "date-fns";
 import { generatePastelColor, getPriorityStyles, getTaskStatusStyles, isOverdue, cn, getAvatarUrl, getInitials } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "../ui/button";
-import { MoreHorizontal, Edit, Trash2, Loader2, Plus } from "lucide-react";
+import { MoreHorizontal, Edit, Trash2, Loader2, Plus, CalendarIcon } from "lucide-react";
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -31,6 +31,8 @@ import { useProfiles } from '@/hooks/useProfiles';
 import { toast } from 'sonner';
 import { markTaskAsRead } from '@/lib/tasksApi';
 import { supabase } from '@/integrations/supabase/client';
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 
 const PRIORITY_OPTIONS = [
   { value: 'Low', label: 'Low' },
@@ -169,7 +171,38 @@ const AssigneeSelector = ({ task, allUsers, onAssigneeChange }: { task: ProjectT
   );
 };
 
-const TaskRow = ({ task, onToggleTaskCompletion, onEdit, onDelete, handleToggleReaction, setRef, isUnread, onClick, allUsers, onStatusChange, onPriorityChange, onAssigneeChange }: {
+const DueDateSelector = ({ task, onDueDateChange }: { task: ProjectTask, onDueDateChange: (date: Date | undefined) => void }) => {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <div 
+          className={cn(
+            "text-xs cursor-pointer hover:bg-muted/50 p-1 rounded-md transition-colors flex items-center gap-1", 
+            isOverdue(task.due_date) && !task.completed && "text-destructive font-semibold"
+          )}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {task.due_date ? format(new Date(task.due_date), "MMM d, yyyy, p") : <span className="text-muted-foreground text-xs italic">Set date</span>}
+        </div>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-0" align="start" onClick={(e) => e.stopPropagation()}>
+        <Calendar
+          mode="single"
+          selected={task.due_date ? new Date(task.due_date) : undefined}
+          onSelect={(date) => {
+            onDueDateChange(date);
+            setOpen(false);
+          }}
+          initialFocus
+        />
+      </PopoverContent>
+    </Popover>
+  );
+};
+
+const TaskRow = ({ task, onToggleTaskCompletion, onEdit, onDelete, handleToggleReaction, setRef, isUnread, onClick, allUsers, onStatusChange, onPriorityChange, onAssigneeChange, onDueDateChange }: {
   task: ProjectTask;
   onToggleTaskCompletion: (task: ProjectTask, completed: boolean) => void;
   onEdit: (task: ProjectTask) => void;
@@ -182,6 +215,7 @@ const TaskRow = ({ task, onToggleTaskCompletion, onEdit, onDelete, handleToggleR
   onStatusChange: (task: ProjectTask, newStatus: TaskStatus) => void;
   onPriorityChange: (task: ProjectTask, newPriority: string) => void;
   onAssigneeChange: (task: ProjectTask, userId: string, assigned: boolean) => void;
+  onDueDateChange: (task: ProjectTask, date: Date | undefined) => void;
 }) => {
   return (
     <TableRow 
@@ -238,8 +272,8 @@ const TaskRow = ({ task, onToggleTaskCompletion, onEdit, onDelete, handleToggleR
           </SelectContent>
         </Select>
       </TableCell>
-      <TableCell className={cn("text-xs", isOverdue(task.due_date) && !task.completed && "text-destructive font-semibold")}>
-        {task.due_date ? format(new Date(task.due_date), "MMM d, yyyy, p") : '-'}
+      <TableCell>
+        <DueDateSelector task={task} onDueDateChange={(date) => onDueDateChange(task, date)} />
       </TableCell>
       <TableCell className="text-xs text-muted-foreground">
         {task.updated_at ? format(new Date(task.updated_at), "MMM d, yyyy, p") : '-'}
@@ -292,6 +326,29 @@ const TasksTableView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskComple
   const handlePriorityChange = (task: ProjectTask, newPriority: string) => {
     if (updateTask) {
       updateTask.mutate({ taskId: task.id, updates: { priority: newPriority } });
+    }
+  };
+
+  const handleDueDateChange = (task: ProjectTask, date: Date | undefined) => {
+    if (updateTask) {
+      // Preserve the time if it existed, otherwise set default time (e.g. end of day or current time)
+      // For now, let's keep it simple and just use the date object which defaults to 00:00:00 local time
+      // Ideally, we might want to set a specific time like 5 PM or keep existing time.
+      // If task.due_date exists, we can try to extract time.
+      
+      let newDate = date;
+      if (date && task.due_date) {
+          const oldDate = new Date(task.due_date);
+          newDate = new Date(date);
+          newDate.setHours(oldDate.getHours(), oldDate.getMinutes(), oldDate.getSeconds());
+      } else if (date) {
+          // If no previous due date, maybe default to 17:00? Or just leave as midnight.
+          // Let's set to 17:00 for new due dates as a sensible default for "End of Business Day"
+          newDate = new Date(date);
+          newDate.setHours(17, 0, 0, 0);
+      }
+
+      updateTask.mutate({ taskId: task.id, updates: { due_date: newDate ? newDate.toISOString() : null } });
     }
   };
 
@@ -366,6 +423,7 @@ const TasksTableView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskComple
                 onStatusChange={onStatusChange}
                 onPriorityChange={handlePriorityChange}
                 onAssigneeChange={handleAssigneeChange}
+                onDueDateChange={handleDueDateChange}
               />
             ))
           )}
