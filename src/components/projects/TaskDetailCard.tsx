@@ -262,7 +262,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
 
   return (
     <>
-      <DrawerContent className="mx-auto w-full max-w-[650px] flex flex-col max-h-[90vh]">
+      <DrawerContent className="mx-auto w-full max-w-[650px] flex flex-col max-h-[85dvh]">
         <div className="flex-shrink-0 p-4 pt-3">
           <div className="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-muted" />
         </div>

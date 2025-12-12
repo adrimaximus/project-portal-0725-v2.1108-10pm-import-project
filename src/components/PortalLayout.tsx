@@ -44,7 +44,7 @@ const PortalLayout = ({ children, summary, noPadding = false, disableMainScroll 
             className={cn(
                 "flex-1 overflow-x-hidden transition-all duration-200",
                 !disableMainScroll && "overflow-y-auto",
-                !noPadding && "p-4 md:p-6"
+                !noPadding && "p-0 md:p-6"
             )}
           >
             <div className={cn("mx-auto max-w-7xl animate-in fade-in duration-500 h-full", noPadding ? "" : "")}>
