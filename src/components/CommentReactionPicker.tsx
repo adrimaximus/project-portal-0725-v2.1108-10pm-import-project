@@ -45,14 +45,16 @@ const CommentReactionPicker = ({ onSelect }: CommentReactionPickerProps) => {
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0 border-none" side="top" align="center" onInteractOutside={(e) => e.preventDefault()}>
         {showFullPicker ? (
-          <Picker 
-            data={data} 
-            onEmojiSelect={(emoji: any) => handleSelect(emoji.native)}
-            theme={theme === 'dark' ? 'dark' : 'light'}
-            previewPosition="none"
-          />
+          <div onClick={(e) => e.stopPropagation()}>
+            <Picker 
+              data={data} 
+              onEmojiSelect={(emoji: any) => handleSelect(emoji.native)}
+              theme={theme === 'dark' ? 'dark' : 'light'}
+              previewPosition="none"
+            />
+          </div>
         ) : (
-          <div className="flex items-center gap-1 bg-background border rounded-full p-1 shadow-lg">
+          <div className="flex items-center gap-1 bg-background border rounded-full p-1 shadow-lg" onClick={(e) => e.stopPropagation()}>
             {quickReactions.map(emoji => (
               <button
                 key={emoji}
@@ -60,7 +62,7 @@ const CommentReactionPicker = ({ onSelect }: CommentReactionPickerProps) => {
                   e.stopPropagation();
                   handleSelect(emoji);
                 }}
-                className="text-xl p-1 rounded-full hover:bg-muted transition-colors"
+                className="text-xl p-1 rounded-full hover:bg-muted transition-colors focus:outline-none"
                 type="button"
               >
                 {emoji}
@@ -71,7 +73,7 @@ const CommentReactionPicker = ({ onSelect }: CommentReactionPickerProps) => {
                 e.stopPropagation();
                 setShowFullPicker(true);
               }}
-              className="p-1 rounded-full hover:bg-muted transition-colors"
+              className="p-1 rounded-full hover:bg-muted transition-colors focus:outline-none"
               type="button"
             >
               <MoreHorizontal className="h-5 w-5 text-muted-foreground" />
