@@ -112,7 +112,7 @@ const InteractiveText = ({ text, members = [] }: InteractiveTextProps) => {
           
           if (isInternal) {
             return (
-              <Link key={i} to={url} className="underline hover:opacity-80 break-all text-primary">
+              <Link key={i} to={url} className="underline hover:opacity-80 break-words text-primary">
                 {label}
               </Link>
             );
@@ -124,7 +124,7 @@ const InteractiveText = ({ text, members = [] }: InteractiveTextProps) => {
               href={url} 
               target="_blank" 
               rel="noopener noreferrer" 
-              className="underline hover:opacity-80 break-all text-primary"
+              className="underline hover:opacity-80 break-words text-primary"
             >
               {label}
             </a>
@@ -139,15 +139,15 @@ const InteractiveText = ({ text, members = [] }: InteractiveTextProps) => {
               href={part} 
               target="_blank" 
               rel="noopener noreferrer" 
-              className="underline hover:opacity-80 break-all text-primary"
+              className="underline hover:opacity-80 break-words text-primary"
             >
               {part}
             </a>
           );
         }
 
-        // Plain text - Use break-word/break-all to handle long words without overflow
-        return <span key={i} className="break-words break-all">{part}</span>;
+        // Plain text - Use break-words instead of break-all for better readability
+        return <span key={i} className="break-words">{part}</span>;
       })}
     </>
   );

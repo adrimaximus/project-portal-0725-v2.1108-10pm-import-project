@@ -156,7 +156,7 @@ const ChatList = ({ highlightedId, onHighlightComplete }: ChatListProps) => {
                   </div>
                   <div className="flex items-center justify-between gap-2">
                     <div className={cn(
-                      "text-sm text-muted-foreground truncate w-full flex",
+                      "text-sm text-muted-foreground w-full line-clamp-2 break-words",
                       isUnread && "text-foreground font-medium",
                       isLastMessageEmoji && "text-xl"
                     )}>
