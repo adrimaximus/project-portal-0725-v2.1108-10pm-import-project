@@ -266,7 +266,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
 
   return (
     <>
-      <DrawerContent className="mx-auto w-full max-w-[650px] flex flex-col max-h-[85vh]">
+      <DrawerContent className="mx-auto w-full max-w-[650px] flex flex-col h-[90dvh] sm:h-[85vh] rounded-t-xl">
         <div className="flex-shrink-0 p-4 pt-3">
           <div className="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-muted" />
         </div>
@@ -571,7 +571,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
           </div>
         </div>
 
-        <div className="flex-shrink-0 p-4 border-t">
+        <div className="flex-shrink-0 px-3 py-2 border-t bg-background">
           <CommentInput
             ref={commentInputRef}
             onAddCommentOrTicket={handleAddComment}

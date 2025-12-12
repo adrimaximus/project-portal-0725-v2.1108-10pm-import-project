@@ -161,8 +161,8 @@ const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({ onAddC
   ];
 
   return (
-    <div ref={containerRef} className="flex items-start space-x-4">
-      <Avatar>
+    <div ref={containerRef} className="flex items-end space-x-3">
+      <Avatar className="w-8 h-8 shrink-0 mb-1">
         <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
         <AvatarFallback style={generatePastelColor(user.id)}>
           {getInitials(fullName, user.email)}
@@ -170,21 +170,21 @@ const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({ onAddC
       </Avatar>
       <div className="min-w-0 flex-1">
         {replyTo && (
-          <div className="p-2 mb-2 bg-muted rounded-md flex justify-between items-center text-sm">
+          <div className="p-1.5 mb-1.5 bg-muted/60 rounded-md flex justify-between items-center text-xs">
             <div className="border-l-2 border-primary pl-2 overflow-hidden w-full">
               <p className="font-semibold text-primary">Replying to {replyTo.author.name}</p>
-              <div className="text-xs text-muted-foreground line-clamp-3">
+              <div className="text-muted-foreground line-clamp-1">
                 <InteractiveText text={replyTo.text || ''} members={allUsers} />
               </div>
             </div>
-            <Button variant="ghost" size="icon" onClick={onCancelReply} className="h-7 w-7 flex-shrink-0 ml-2">
-              <X className="h-4 w-4" />
+            <Button variant="ghost" size="icon" onClick={onCancelReply} className="h-6 w-6 flex-shrink-0 ml-1">
+              <X className="h-3 w-3" />
             </Button>
           </div>
         )}
         <div 
           className={cn(
-            "border rounded-lg focus-within:ring-1 focus-within:ring-ring relative transition-colors",
+            "border rounded-xl focus-within:ring-1 focus-within:ring-ring relative transition-colors bg-background",
             isDragging && "border-primary bg-primary/5 ring-1 ring-primary"
           )}
           onDragOver={handleDragOver}
@@ -199,68 +199,40 @@ const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({ onAddC
               </div>
             </div>
           )}
-          <div className="min-h-[40px] max-h-[150px] overflow-y-auto">
+          <div className="min-h-[36px] max-h-[120px] overflow-y-auto">
             <MentionsInput
               value={text}
               onChange={(event, newValue) => setText(newValue)}
-              placeholder="Add a comment or create a ticket... Type @ to mention a team member."
+              placeholder="Add a comment..."
               className="mentions-input"
               a11ySuggestionsListLabel={"Suggested mentions"}
               inputRef={mentionsInputRef}
-            >
-              <Mention
-                trigger="@"
-                data={mentionData}
-                markup="@[__display__](__id__)"
-                displayTransform={(id, display) => `@${display}`}
-                renderSuggestion={(suggestion: SuggestionDataItem & { avatar_url?: string, initials?: string, email?: string }, search, highlightedDisplay, index, focused) => (
-                  <div className={`mention-suggestion ${focused ? 'focused' : ''}`}>
-                    {suggestion.id === 'all' ? (
-                      <div className="flex items-center justify-center h-8 w-8 rounded-full bg-primary/10 text-primary">
-                          <Users className="h-4 w-4" />
-                      </div>
-                    ) : (
-                      <Avatar className="h-8 w-8">
-                          <AvatarImage src={getAvatarUrl(suggestion.avatar_url, suggestion.id as string)} />
-                          <AvatarFallback style={generatePastelColor(suggestion.id as string)}>
-                          {suggestion.initials}
-                          </AvatarFallback>
-                      </Avatar>
-                    )}
-                    <div className="mention-suggestion-info">
-                      <div className="font-medium">{highlightedDisplay}</div>
-                      <div className="text-xs text-muted-foreground">{suggestion.email}</div>
-                    </div>
-                  </div>
-                )}
-              />
-            </MentionsInput>
+            />
           </div>
           {attachments.length > 0 && (
-            <div className="p-3 border-t">
-              <p className="text-sm font-medium mb-2">Attachments</p>
-              <div className="space-y-2">
+            <div className="px-2 pb-2 pt-1 border-t border-border/50">
+              <div className="flex flex-wrap gap-2">
                 {attachments.map((file, index) => (
-                  <div key={index} className="flex items-center justify-between text-sm bg-muted p-2 rounded-md group">
-                    <span className="truncate max-w-[200px]">{file.name}</span>
-                    <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => removeAttachment(index)}>
-                      <X className="h-4 w-4" />
-                    </Button>
+                  <div key={index} className="flex items-center gap-1 text-xs bg-muted/50 px-2 py-1 rounded-full group">
+                    <span className="truncate max-w-[120px]">{file.name}</span>
+                    <button className="text-muted-foreground hover:text-destructive transition-colors" onClick={() => removeAttachment(index)}>
+                      <X className="h-3 w-3" />
+                    </button>
                   </div>
                 ))}
               </div>
             </div>
           )}
-          <div className="p-2 border-t flex justify-between items-center bg-muted/20 rounded-b-lg">
-            <div className="flex items-center gap-1">
+          <div className="px-2 pb-1.5 flex justify-between items-center">
+            <div className="flex items-center">
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button variant="ghost" size="icon" onClick={() => fileInputRef.current?.click()}>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={() => fileInputRef.current?.click()}>
                       <Paperclip className="h-4 w-4" />
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent>
+                  <TooltipContent side="top">
                     <p>Attach files</p>
                   </TooltipContent>
                 </Tooltip>
@@ -273,18 +245,23 @@ const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({ onAddC
                 />
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button variant="ghost" size="icon" onClick={() => setIsTicket(!isTicket)} className={isTicket ? 'bg-primary/10 text-primary' : ''}>
+                    <Button variant="ghost" size="icon" className={cn("h-7 w-7", isTicket ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground')} onClick={() => setIsTicket(!isTicket)}>
                       <Ticket className="h-4 w-4" />
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent>
+                  <TooltipContent side="top">
                     <p>{isTicket ? 'Convert to comment' : 'Convert to ticket'}</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
             </div>
-            <Button onClick={handleSubmit} disabled={!text.trim() && attachments.length === 0}>
-              {isTicket ? 'Create Ticket' : 'Comment'}
+            <Button 
+                size="sm" 
+                onClick={handleSubmit} 
+                disabled={!text.trim() && attachments.length === 0} 
+                className="h-7 px-3 text-xs"
+            >
+              {isTicket ? 'Create Ticket' : 'Send'}
             </Button>
           </div>
         </div>
