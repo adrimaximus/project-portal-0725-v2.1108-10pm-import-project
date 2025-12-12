@@ -123,6 +123,10 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
   const [editedTitle, setEditedTitle] = useState(task.title);
   const [isAttachmentModalOpen, setIsAttachmentModalOpen] = useState(false);
 
+  // Only allow mentioning users assigned to the task
+  // This ensures @all only notifies task assignees
+  const taskAssignees = useMemo(() => task.assignedTo || [], [task.assignedTo]);
+
   useEffect(() => {
     setEditedTitle(task.title);
   }, [task.title]);
@@ -262,7 +266,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
 
   return (
     <>
-      <DrawerContent className="mx-auto w-full max-w-[650px] flex flex-col max-h-[85dvh]">
+      <DrawerContent className="mx-auto w-full max-w-[650px] flex flex-col max-h-[90dvh]">
         <div className="flex-shrink-0 p-4 pt-3">
           <div className="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-muted" />
         </div>

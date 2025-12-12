@@ -2,7 +2,7 @@ import { useState, useEffect, ReactNode } from "react";
 import { Outlet } from "react-router-dom";
 import PortalSidebar from "./PortalSidebar";
 import PortalHeader from "./PortalHeader";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { useIsMobile } from "@/hooks/use-is-mobile";
 import { cn } from "@/lib/utils";
 
 interface PortalLayoutProps {
@@ -47,7 +47,10 @@ const PortalLayout = ({ children, summary, noPadding = false, disableMainScroll 
                 !noPadding && "p-0 md:p-6"
             )}
           >
-            <div className={cn("mx-auto max-w-7xl animate-in fade-in duration-500 h-full", noPadding ? "" : "")}>
+            <div className={cn(
+              "animate-in fade-in duration-500 h-full",
+              !noPadding && "mx-auto max-w-7xl"
+            )}>
               {children || <Outlet />}
             </div>
           </main>
