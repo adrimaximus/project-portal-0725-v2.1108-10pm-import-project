@@ -266,7 +266,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
 
   return (
     <>
-      <DrawerContent className="mx-auto w-full max-w-[650px] flex flex-col h-[90dvh] sm:h-[85vh] rounded-t-xl">
+      <DrawerContent className="mx-auto w-full max-w-[650px] flex flex-col h-[90dvh] sm:h-[85vh] rounded-t-xl outline-none">
         <div className="flex-shrink-0 p-4 pt-3">
           <div className="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-muted" />
         </div>
@@ -564,18 +564,18 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
               onReply={handleReply}
               onCreateTicketFromComment={handleCreateTicketFromComment}
               onGoToReply={handleScrollToMessage}
-              allUsers={allUsers}
+              allUsers={taskAssignees} // Pass scoped users
               highlightedCommentId={highlightedCommentId}
               onHighlightComplete={onHighlightComplete}
             />
           </div>
         </div>
 
-        <div className="flex-shrink-0 px-3 py-2 border-t bg-background">
+        <div className="flex-shrink-0 p-2 pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))] border-t bg-background">
           <CommentInput
             ref={commentInputRef}
             onAddCommentOrTicket={handleAddComment}
-            allUsers={allUsers}
+            allUsers={taskAssignees} // Pass scoped users
             replyTo={replyTo}
             onCancelReply={() => setReplyTo(null)}
             storageKey={`comment-draft-task-${task.id}`}
