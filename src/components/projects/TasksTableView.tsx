@@ -8,7 +8,7 @@ import { format, isPast } from "date-fns";
 import { generatePastelColor, getPriorityStyles, getTaskStatusStyles, isOverdue, cn, getAvatarUrl, getInitials } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "../ui/button";
-import { MoreHorizontal, Edit, Trash2, Loader2, Plus, CalendarIcon } from "lucide-react";
+import { MoreHorizontal, Edit, Trash2, Loader2, Plus, CalendarIcon, Clock } from "lucide-react";
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -114,7 +114,6 @@ const TaskListItem = ({ task, onToggleTaskCompletion, onTaskClick, isUnread, all
 const AssigneeSelector = ({ task, allUsers, onAssigneeChange }: { task: ProjectTask, allUsers: User[], onAssigneeChange: (userId: string, assigned: boolean) => void }) => {
   const assignedIds = new Set(task.assignedTo?.map(u => u.id) || []);
 
-  // Filter out invalid users from the list (defensive coding)
   const validUsers = allUsers.filter(u => u.id);
 
   return (
@@ -173,30 +172,98 @@ const AssigneeSelector = ({ task, allUsers, onAssigneeChange }: { task: ProjectT
 
 const DueDateSelector = ({ task, onDueDateChange }: { task: ProjectTask, onDueDateChange: (date: Date | undefined) => void }) => {
   const [open, setOpen] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(
+    task.due_date ? new Date(task.due_date) : undefined
+  );
+
+  useEffect(() => {
+    setSelectedDate(task.due_date ? new Date(task.due_date) : undefined);
+  }, [task.due_date, open]);
+
+  const handleDateSelect = (date: Date | undefined) => {
+    if (!date) {
+        setSelectedDate(undefined);
+        return;
+    }
+    const newDate = new Date(date);
+    // Inherit time from currently selected date or default to 12:00 PM
+    if (selectedDate) {
+        newDate.setHours(selectedDate.getHours(), selectedDate.getMinutes());
+    } else {
+        newDate.setHours(12, 0);
+    }
+    setSelectedDate(newDate);
+  };
+
+  const handleTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!selectedDate) return;
+    const [hours, minutes] = e.target.value.split(':').map(Number);
+    const newDate = new Date(selectedDate);
+    newDate.setHours(hours, minutes);
+    setSelectedDate(newDate);
+  };
+
+  const handleSave = () => {
+    onDueDateChange(selectedDate);
+    setOpen(false);
+  };
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <div 
           className={cn(
-            "text-xs cursor-pointer hover:bg-muted/50 p-1 rounded-md transition-colors flex items-center gap-1", 
+            "text-xs cursor-pointer hover:bg-muted/50 p-1 rounded-md transition-colors flex items-center gap-1 min-w-[110px]", 
             isOverdue(task.due_date) && !task.completed && "text-destructive font-semibold"
           )}
           onClick={(e) => e.stopPropagation()}
         >
-          {task.due_date ? format(new Date(task.due_date), "MMM d, yyyy, p") : <span className="text-muted-foreground text-xs italic">Set date</span>}
+          <CalendarIcon className="h-3 w-3 opacity-50" />
+          {task.due_date ? format(new Date(task.due_date), "MMM d, p") : <span className="text-muted-foreground italic">Set date</span>}
         </div>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start" onClick={(e) => e.stopPropagation()}>
-        <Calendar
-          mode="single"
-          selected={task.due_date ? new Date(task.due_date) : undefined}
-          onSelect={(date) => {
-            onDueDateChange(date);
-            setOpen(false);
-          }}
-          initialFocus
-        />
+        <div className="p-0">
+            <Calendar
+                mode="single"
+                selected={selectedDate}
+                onSelect={handleDateSelect}
+                initialFocus
+            />
+            <div className="p-3 border-t border-border bg-muted/10">
+                <div className="flex items-center gap-2 mb-3">
+                    <Clock className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-medium">Time</span>
+                    <input
+                        type="time"
+                        className="flex-1 border rounded-md p-1.5 text-sm bg-background"
+                        value={selectedDate ? format(selectedDate, 'HH:mm') : ''}
+                        onChange={handleTimeChange}
+                        disabled={!selectedDate}
+                    />
+                </div>
+                <div className="flex gap-2">
+                    <Button 
+                        size="sm" 
+                        variant="ghost" 
+                        className="flex-1 h-8"
+                        onClick={() => {
+                            onDueDateChange(undefined);
+                            setOpen(false);
+                        }}
+                    >
+                        Clear
+                    </Button>
+                    <Button 
+                        size="sm" 
+                        className="flex-1 h-8"
+                        onClick={handleSave}
+                    >
+                        Save
+                    </Button>
+                </div>
+            </div>
+        </div>
       </PopoverContent>
     </Popover>
   );
@@ -325,30 +392,19 @@ const TasksTableView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskComple
 
   const handlePriorityChange = (task: ProjectTask, newPriority: string) => {
     if (updateTask) {
-      updateTask.mutate({ taskId: task.id, updates: { priority: newPriority } });
+      const mutate = typeof updateTask === 'function' ? updateTask : (updateTask as any).mutate;
+      if (mutate) {
+        mutate({ taskId: task.id, updates: { priority: newPriority } });
+      }
     }
   };
 
   const handleDueDateChange = (task: ProjectTask, date: Date | undefined) => {
     if (updateTask) {
-      // Preserve the time if it existed, otherwise set default time (e.g. end of day or current time)
-      // For now, let's keep it simple and just use the date object which defaults to 00:00:00 local time
-      // Ideally, we might want to set a specific time like 5 PM or keep existing time.
-      // If task.due_date exists, we can try to extract time.
-      
-      let newDate = date;
-      if (date && task.due_date) {
-          const oldDate = new Date(task.due_date);
-          newDate = new Date(date);
-          newDate.setHours(oldDate.getHours(), oldDate.getMinutes(), oldDate.getSeconds());
-      } else if (date) {
-          // If no previous due date, maybe default to 17:00? Or just leave as midnight.
-          // Let's set to 17:00 for new due dates as a sensible default for "End of Business Day"
-          newDate = new Date(date);
-          newDate.setHours(17, 0, 0, 0);
+      const mutate = typeof updateTask === 'function' ? updateTask : (updateTask as any).mutate;
+      if (mutate) {
+        mutate({ taskId: task.id, updates: { due_date: date ? date.toISOString() : null } });
       }
-
-      updateTask.mutate({ taskId: task.id, updates: { due_date: newDate ? newDate.toISOString() : null } });
     }
   };
 
