@@ -23,6 +23,13 @@ import { useProfiles } from '@/hooks/useProfiles';
 import { toast } from 'sonner';
 import { markTaskAsRead } from '@/lib/tasksApi';
 
+const PRIORITY_OPTIONS = [
+  { value: 'Low', label: 'Low' },
+  { value: 'Normal', label: 'Normal' },
+  { value: 'High', label: 'High' },
+  { value: 'Urgent', label: 'Urgent' },
+];
+
 interface TasksTableViewProps {
   tasks: ProjectTask[];
   isLoading: boolean;
@@ -93,7 +100,7 @@ const TaskListItem = ({ task, onToggleTaskCompletion, onTaskClick, isUnread, all
   );
 };
 
-const TaskRow = ({ task, onToggleTaskCompletion, onEdit, onDelete, handleToggleReaction, setRef, isUnread, onClick, allUsers, onStatusChange }: {
+const TaskRow = ({ task, onToggleTaskCompletion, onEdit, onDelete, handleToggleReaction, setRef, isUnread, onClick, allUsers, onStatusChange, onPriorityChange }: {
   task: ProjectTask;
   onToggleTaskCompletion: (task: ProjectTask, completed: boolean) => void;
   onEdit: (task: ProjectTask) => void;
@@ -104,6 +111,7 @@ const TaskRow = ({ task, onToggleTaskCompletion, onEdit, onDelete, handleToggleR
   onClick: () => void;
   allUsers: User[];
   onStatusChange: (task: ProjectTask, newStatus: TaskStatus) => void;
+  onPriorityChange: (task: ProjectTask, newPriority: string) => void;
 }) => {
   return (
     <TableRow 
@@ -144,8 +152,21 @@ const TaskRow = ({ task, onToggleTaskCompletion, onEdit, onDelete, handleToggleR
           </SelectContent>
         </Select>
       </TableCell>
-      <TableCell>
-        <Badge className={getPriorityStyles(task.priority).tw}>{task.priority}</Badge>
+      <TableCell onClick={(e) => e.stopPropagation()}>
+        <Select value={task.priority} onValueChange={(newPriority) => onPriorityChange(task, newPriority)}>
+          <SelectTrigger className="h-auto p-0 border-0 focus:ring-0 focus:ring-offset-0 w-auto bg-transparent shadow-none">
+            <SelectValue>
+              <Badge className={cn(getPriorityStyles(task.priority).tw, 'border-transparent font-normal hover:bg-opacity-80 transition-colors')}>
+                {task.priority}
+              </Badge>
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            {PRIORITY_OPTIONS.map(option => (
+              <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </TableCell>
       <TableCell className={cn("text-xs", isOverdue(task.due_date) && !task.completed && "text-destructive font-semibold")}>
         {task.due_date ? format(new Date(task.due_date), "MMM d, yyyy, p") : '-'}
@@ -189,7 +210,7 @@ const TasksTableView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskComple
   const isMobile = useIsMobile();
   const { onOpen: onOpenTaskDrawer } = useTaskDrawer();
   const queryClient = useQueryClient();
-  const { toggleTaskReaction } = useTaskMutations(() => queryClient.invalidateQueries({ queryKey: ['tasks'] }));
+  const { toggleTaskReaction, updateTask } = useTaskMutations(() => queryClient.invalidateQueries({ queryKey: ['tasks'] }));
   const { data: allUsers = [] } = useProfiles();
 
   const handleTaskClick = async (task: ProjectTask) => {
@@ -205,6 +226,12 @@ const TasksTableView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskComple
       onOpenTaskDrawer(task, projectForTask);
     } catch (error) {
       toast.error("Could not open task details.", { description: (error as Error).message });
+    }
+  };
+
+  const handlePriorityChange = (task: ProjectTask, newPriority: string) => {
+    if (updateTask) {
+      updateTask.mutate({ taskId: task.id, updates: { priority: newPriority } });
     }
   };
 
@@ -261,6 +288,7 @@ const TasksTableView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskComple
                 onClick={() => handleTaskClick(task)}
                 allUsers={allUsers}
                 onStatusChange={onStatusChange}
+                onPriorityChange={handlePriorityChange}
               />
             ))
           )}
