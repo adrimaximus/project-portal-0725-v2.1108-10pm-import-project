@@ -31,6 +31,47 @@ interface PortalHeaderProps {
     summary?: ReactNode;
 }
 
+// Helper helper function to parse JSON in notifications (specifically for venue/maps)
+const formatNotificationText = (text: string) => {
+  if (!text) return "";
+  
+  // Detect venue update which often contains JSON data
+  if (text.includes("updated the venue to")) {
+    try {
+      const parts = text.split("updated the venue to");
+      if (parts.length >= 2) {
+        let jsonPart = parts.slice(1).join("updated the venue to").trim();
+        
+        // Remove surrounding quotes if they exist (common in SQL logs)
+        if ((jsonPart.startsWith('"') && jsonPart.endsWith('"')) || 
+            (jsonPart.startsWith("'") && jsonPart.endsWith("'"))) {
+          jsonPart = jsonPart.slice(1, -1);
+        }
+        
+        // Handle escaped quotes which might occur if the JSON was stringified into a string
+        if (jsonPart.includes('\\"')) {
+            jsonPart = jsonPart.replace(/\\"/g, '"');
+        }
+
+        // Only parse if it looks like an object
+        if (jsonPart.trim().startsWith('{')) {
+            const parsed = JSON.parse(jsonPart);
+            // Prioritize address, then name
+            const locationName = parsed.address || parsed.name;
+            if (locationName) {
+              return `${parts[0]}updated the venue to "${locationName}"`;
+            }
+        }
+      }
+    } catch (e) {
+      // Fallback to original text on error
+      // console.debug("Error parsing notification JSON:", e);
+    }
+  }
+  
+  return text;
+};
+
 const PortalHeader = ({ summary }: PortalHeaderProps) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -123,7 +164,7 @@ const PortalHeader = ({ summary }: PortalHeaderProps) => {
                       <Icon className="h-4 w-4 mt-1 text-muted-foreground flex-shrink-0" />
                       <div className="flex-1 space-y-1 min-w-0">
                         <p className="text-sm font-medium leading-none whitespace-normal"><InteractiveText text={notification.title} members={allUsers} /></p>
-                        <p className="text-xs text-muted-foreground line-clamp-2"><InteractiveText text={notification.description} members={allUsers} /></p>
+                        <p className="text-xs text-muted-foreground line-clamp-2"><InteractiveText text={formatNotificationText(notification.description)} members={allUsers} /></p>
                         <p className="text-xs text-muted-foreground">
                           {formatDistanceToNow(new Date(notification.timestamp), { addSuffix: true, locale: id })}
                         </p>
