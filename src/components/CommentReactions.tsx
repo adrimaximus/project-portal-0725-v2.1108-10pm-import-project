@@ -40,6 +40,7 @@ const CommentReactions = ({ reactions, onToggleReaction }: CommentReactionsProps
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
+                  type="button"
                   onClick={(e) => { e.stopPropagation(); handleToggle(emoji); }}
                   className={cn(
                     "px-1.5 py-0.5 rounded-full text-xs flex items-center gap-1 transition-colors border",

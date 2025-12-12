@@ -49,6 +49,7 @@ const TaskReactions = ({ reactions, onToggleReaction }: TaskReactionsProps) => {
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
+                type="button"
                 variant={userReacted ? 'secondary' : 'ghost'}
                 size="sm"
                 className={cn("h-7 px-2 rounded-full", userReacted && "border border-primary/50")}
