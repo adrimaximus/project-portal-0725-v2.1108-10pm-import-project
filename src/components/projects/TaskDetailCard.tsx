@@ -61,6 +61,13 @@ interface TaskDetailCardProps {
   onHighlightComplete?: () => void;
 }
 
+const PRIORITY_OPTIONS = [
+  { value: 'Low', label: 'Low' },
+  { value: 'Normal', label: 'Normal' },
+  { value: 'High', label: 'High' },
+  { value: 'Urgent', label: 'Urgent' },
+];
+
 const aggregateAttachments = (task: Task): TaskAttachment[] => {
   let attachments: TaskAttachment[] = [...(task.attachments || [])];
   
@@ -343,14 +350,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
                 <Select
                   value={task.status}
                   onValueChange={(newStatus: TaskStatus) => {
-                    updateTaskStatusAndOrder({
-                      taskId: task.id,
-                      newStatus,
-                      orderedTaskIds: [],
-                      newTasks: [],
-                      queryKey: ['tasks'],
-                      movedColumns: false,
-                    });
+                    updateTask({ taskId: task.id, updates: { status: newStatus } });
                   }}
                 >
                   <SelectTrigger className="h-auto p-0 border-0 focus:ring-0 focus:ring-offset-0 w-auto bg-transparent shadow-none">
@@ -374,7 +374,25 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
               <Flag className="h-4 w-4 mt-1 flex-shrink-0 text-muted-foreground" />
               <div>
                 <p className="font-medium">Priority</p>
-                <Badge className={getPriorityStyles(task.priority).tw}>{task.priority}</Badge>
+                <Select
+                  value={task.priority}
+                  onValueChange={(newPriority) => updateTask({ taskId: task.id, updates: { priority: newPriority } })}
+                >
+                  <SelectTrigger className="h-auto p-0 border-0 focus:ring-0 focus:ring-offset-0 w-auto bg-transparent shadow-none">
+                    <SelectValue>
+                      <Badge className={cn(getPriorityStyles(task.priority).tw, 'border-transparent font-normal hover:bg-opacity-80 transition-colors')}>
+                        {task.priority}
+                      </Badge>
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PRIORITY_OPTIONS.map(option => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <div className="flex items-start gap-3">
