@@ -72,30 +72,30 @@ const TaskListItem = ({ task, onToggleTaskCompletion, onTaskClick, isUnread, all
   }
 
   return (
-    <div className="flex items-start gap-3 p-3 border-b" onClick={() => onTaskClick(task)}>
+    <div className="flex items-start gap-3 p-3 border-b w-full max-w-full overflow-hidden" onClick={() => onTaskClick(task)}>
       <Checkbox
         id={`task-mobile-${task.id}`}
         checked={task.completed}
         onCheckedChange={(checked) => onToggleTaskCompletion(task, !!checked)}
-        className="mt-1"
+        className="mt-1 flex-shrink-0"
         onClick={(e) => e.stopPropagation()}
         disabled={isToggling}
       />
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           {isUnread && <div className="h-2 w-2 rounded-full bg-red-500 flex-shrink-0" />}
-          <div className={cn("break-words min-w-0", isUnread ? "font-semibold" : "font-normal", task.completed && "line-through text-muted-foreground")}>
+          <div className={cn("break-words min-w-0 flex-1", isUnread ? "font-semibold" : "font-normal", task.completed && "line-through text-muted-foreground")}>
             <InteractiveText text={task.title} members={allUsers} />
           </div>
         </div>
         <p className="text-sm text-muted-foreground truncate">{task.project_name}</p>
-        <div className="flex items-center gap-4 mt-2 border-t pt-2">
+        <div className="flex items-center gap-2 mt-2 border-t pt-2 flex-wrap">
           {task.priority && (
             <Badge className={cn(getPriorityStyles(task.priority).tw, 'text-xs')}>{task.priority}</Badge>
           )}
-          {dueDateText && <span className={`text-xs font-medium ${dueDateColor}`}>{dueDateText}</span>}
+          {dueDateText && <span className={`text-xs font-medium ${dueDateColor} whitespace-nowrap`}>{dueDateText}</span>}
           {task.updated_at && (
-            <span className="text-xs text-muted-foreground">Upd: {format(new Date(task.updated_at), 'MMM d')}</span>
+            <span className="text-xs text-muted-foreground whitespace-nowrap">Upd: {format(new Date(task.updated_at), 'MMM d')}</span>
           )}
           <div className="flex -space-x-2">
             {task.assignedTo?.slice(0, 3).map(user => (
@@ -492,7 +492,7 @@ const TasksTableView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskComple
 
   if (isMobile) {
     return (
-      <div>
+      <div className="w-full max-w-full">
         {tasks.map(task => (
           <TaskListItem 
             key={task.id} 
