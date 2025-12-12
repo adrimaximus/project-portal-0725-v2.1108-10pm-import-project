@@ -2,7 +2,7 @@ import { useState, useEffect, ReactNode } from "react";
 import { Outlet } from "react-router-dom";
 import PortalSidebar from "./PortalSidebar";
 import PortalHeader from "./PortalHeader";
-import { useIsMobile } from "@/hooks/use-is-mobile";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 
 interface PortalLayoutProps {
