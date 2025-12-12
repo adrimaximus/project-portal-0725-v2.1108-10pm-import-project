@@ -199,41 +199,43 @@ const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({ onAddC
               </div>
             </div>
           )}
-          <MentionsInput
-            value={text}
-            onChange={(event, newValue) => setText(newValue)}
-            placeholder="Add a comment or create a ticket... Type @ to mention a team member."
-            className="mentions-input"
-            a11ySuggestionsListLabel={"Suggested mentions"}
-            inputRef={mentionsInputRef}
-          >
-            <Mention
-              trigger="@"
-              data={mentionData}
-              markup="@[__display__](__id__)"
-              displayTransform={(id, display) => `@${display}`}
-              renderSuggestion={(suggestion: SuggestionDataItem & { avatar_url?: string, initials?: string, email?: string }, search, highlightedDisplay, index, focused) => (
-                <div className={`mention-suggestion ${focused ? 'focused' : ''}`}>
-                  {suggestion.id === 'all' ? (
-                    <div className="flex items-center justify-center h-8 w-8 rounded-full bg-primary/10 text-primary">
-                        <Users className="h-4 w-4" />
+          <div className="min-h-[40px] max-h-[150px] overflow-y-auto">
+            <MentionsInput
+              value={text}
+              onChange={(event, newValue) => setText(newValue)}
+              placeholder="Add a comment or create a ticket... Type @ to mention a team member."
+              className="mentions-input"
+              a11ySuggestionsListLabel={"Suggested mentions"}
+              inputRef={mentionsInputRef}
+            >
+              <Mention
+                trigger="@"
+                data={mentionData}
+                markup="@[__display__](__id__)"
+                displayTransform={(id, display) => `@${display}`}
+                renderSuggestion={(suggestion: SuggestionDataItem & { avatar_url?: string, initials?: string, email?: string }, search, highlightedDisplay, index, focused) => (
+                  <div className={`mention-suggestion ${focused ? 'focused' : ''}`}>
+                    {suggestion.id === 'all' ? (
+                      <div className="flex items-center justify-center h-8 w-8 rounded-full bg-primary/10 text-primary">
+                          <Users className="h-4 w-4" />
+                      </div>
+                    ) : (
+                      <Avatar className="h-8 w-8">
+                          <AvatarImage src={getAvatarUrl(suggestion.avatar_url, suggestion.id as string)} />
+                          <AvatarFallback style={generatePastelColor(suggestion.id as string)}>
+                          {suggestion.initials}
+                          </AvatarFallback>
+                      </Avatar>
+                    )}
+                    <div className="mention-suggestion-info">
+                      <div className="font-medium">{highlightedDisplay}</div>
+                      <div className="text-xs text-muted-foreground">{suggestion.email}</div>
                     </div>
-                  ) : (
-                    <Avatar className="h-8 w-8">
-                        <AvatarImage src={getAvatarUrl(suggestion.avatar_url, suggestion.id as string)} />
-                        <AvatarFallback style={generatePastelColor(suggestion.id as string)}>
-                        {suggestion.initials}
-                        </AvatarFallback>
-                    </Avatar>
-                  )}
-                  <div className="mention-suggestion-info">
-                    <div className="font-medium">{highlightedDisplay}</div>
-                    <div className="text-xs text-muted-foreground">{suggestion.email}</div>
                   </div>
-                </div>
-              )}
-            />
-          </MentionsInput>
+                )}
+              />
+            </MentionsInput>
+          </div>
           {attachments.length > 0 && (
             <div className="p-3 border-t">
               <p className="text-sm font-medium mb-2">Attachments</p>
