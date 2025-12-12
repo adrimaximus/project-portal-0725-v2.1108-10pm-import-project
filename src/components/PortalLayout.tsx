@@ -26,18 +26,18 @@ const PortalLayout = ({ children, summary, noPadding = false, disableMainScroll 
   }, [isMobile]);
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="h-[100dvh] bg-background flex flex-col overflow-hidden">
       <div className="flex flex-1 h-full overflow-hidden">
         {/* Sidebar (Desktop) */}
         <div className={cn(
-             "hidden md:block transition-all duration-300 ease-in-out h-screen sticky top-0 border-r bg-muted/40",
+             "hidden md:block transition-all duration-300 ease-in-out h-full border-r bg-muted/40",
              sidebarOpen ? "w-64" : "w-[70px]"
         )}>
              <PortalSidebar isCollapsed={!sidebarOpen} onToggle={() => setSidebarOpen(!sidebarOpen)} />
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
+        <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
           <PortalHeader summary={summary} />
           
           <main 
@@ -48,7 +48,7 @@ const PortalLayout = ({ children, summary, noPadding = false, disableMainScroll 
             )}
           >
             <div className={cn(
-              "animate-in fade-in duration-500 h-full",
+              "animate-in fade-in duration-500 min-h-full",
               !noPadding && "w-full md:max-w-7xl md:mx-auto"
             )}>
               {children || <Outlet />}

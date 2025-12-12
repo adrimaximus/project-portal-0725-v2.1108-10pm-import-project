@@ -1,7 +1,17 @@
 .mentions-input {
   width: 100%;
-  font-size: 0.875rem; /* text-sm */
+  font-size: 0.875rem; /* text-sm default for desktop */
   line-height: 1.25rem;
+}
+
+@media (max-width: 768px) {
+  .mentions-input {
+    font-size: 16px; /* Prevents iOS zoom */
+  }
+  
+  .mentions-input__input {
+    font-size: 16px !important;
+  }
 }
 
 .mentions-input__control {
