@@ -161,14 +161,14 @@ const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({ onAddC
   ];
 
   return (
-    <div ref={containerRef} className="flex items-end space-x-3">
-      <Avatar className="w-8 h-8 shrink-0 mb-1">
+    <div ref={containerRef} className="flex items-end space-x-3 w-full">
+      <Avatar className="w-8 h-8 shrink-0 mb-1 hidden sm:block">
         <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
         <AvatarFallback style={generatePastelColor(user.id)}>
           {getInitials(fullName, user.email)}
         </AvatarFallback>
       </Avatar>
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0 flex-1 w-full">
         {replyTo && (
           <div className="p-1.5 mb-1.5 bg-muted/60 rounded-md flex justify-between items-center text-xs">
             <div className="border-l-2 border-primary pl-2 overflow-hidden w-full">
@@ -199,14 +199,15 @@ const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({ onAddC
               </div>
             </div>
           )}
-          <div className="min-h-[36px] max-h-[120px] overflow-y-auto">
+          <div className="min-h-[36px] max-h-[120px] overflow-y-auto w-full">
             <MentionsInput
               value={text}
               onChange={(event, newValue) => setText(newValue)}
               placeholder="Add a comment..."
-              className="mentions-input"
+              className="mentions-input w-full"
               a11ySuggestionsListLabel={"Suggested mentions"}
               inputRef={mentionsInputRef}
+              style={{ width: '100%' }}
             >
               <Mention
                 trigger="@"

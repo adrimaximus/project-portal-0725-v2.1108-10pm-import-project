@@ -571,7 +571,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
           </div>
         </div>
 
-        <div className="flex-shrink-0 p-2 pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))] border-t bg-background">
+        <div className="flex-shrink-0 bg-background">
           <CommentInput
             ref={commentInputRef}
             onAddCommentOrTicket={handleAddComment}
