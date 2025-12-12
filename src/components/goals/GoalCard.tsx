@@ -15,12 +15,12 @@ const GoalCard = ({ goal }: { goal: Goal }) => {
 
   return (
     <Link to={`/goals/${goal.slug}`} className="block group">
-      <Card className="transition-all duration-200 group-hover:shadow-lg group-hover:-translate-y-1 cursor-pointer h-full flex flex-col">
+      <Card className="transition-all duration-200 group-hover:shadow-lg group-hover:-translate-y-1 cursor-pointer h-full flex flex-col overflow-hidden">
         <CardHeader className="flex flex-col sm:flex-row items-start gap-3 space-y-0 p-4">
           <GoalIcon goal={goal} className="w-10 h-10 flex-shrink-0" />
-          <div className="flex-grow overflow-hidden">
+          <div className="flex-grow overflow-hidden min-w-0 w-full">
             <h3 className="font-bold truncate">{goal.title}</h3>
-            <p className="text-sm text-muted-foreground mt-1 line-clamp-1">{goal.description}</p>
+            <p className="text-sm text-muted-foreground mt-1 line-clamp-1 break-words">{goal.description}</p>
           </div>
         </CardHeader>
         <CardContent className="p-4 pt-0 space-y-3 flex-grow">

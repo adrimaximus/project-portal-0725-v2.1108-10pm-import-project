@@ -106,10 +106,8 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
     let finalText = text;
 
     // Handle @all expansion for Chat
-    // If user typed "@all", replace it with mentions for everyone in the conversation
     if (finalText.match(/@\[[^\]]+\]\(all\)/)) {
        const members = selectedConversation?.members || [];
-       // Filter out non-users and self from @all expansion to ensure valid notifications
        const validMembers = members.filter(m => 
          m.id !== 'ai-assistant' && 
          m.id !== 'all' && 
@@ -153,7 +151,7 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
   };
 
   return (
-    <div {...getRootProps()} className="border-t p-4 flex-shrink-0 relative">
+    <div {...getRootProps()} className="border-t p-2 md:p-4 flex-shrink-0 relative bg-background safe-area-bottom">
       <input {...getInputProps()} />
       
       {isDragActive && (
@@ -208,7 +206,7 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
       )}
 
       <div className="flex items-end gap-2">
-        <div className="relative flex-1">
+        <div className="relative flex-1 min-w-0">
           <MentionInput
             ref={ref}
             placeholder="Type a message..."
@@ -220,16 +218,16 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
             taskSuggestions={taskSuggestionData}
             billSuggestions={billSuggestionData}
             disabled={isSending}
-            className="pr-24"
+            className="pr-24 min-h-[40px] max-h-[120px]"
           />
-          <div className="absolute bottom-2 right-2 flex items-center">
+          <div className="absolute bottom-1 right-1 flex items-center">
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="ghost" size="icon" disabled={isSending}>
+                <Button variant="ghost" size="icon" disabled={isSending} className="h-8 w-8">
                   <Smile className="h-5 w-5" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0 border-none">
+              <PopoverContent className="w-auto p-0 border-none" side="top" align="end">
                 <Picker 
                   data={data} 
                   onEmojiSelect={handleEmojiSelect}
@@ -238,13 +236,13 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
                 />
               </PopoverContent>
             </Popover>
-            <Button variant="ghost" size="icon" onClick={open} disabled={isSending}>
+            <Button variant="ghost" size="icon" onClick={open} disabled={isSending} className="h-8 w-8">
               <Paperclip className="h-5 w-5" />
             </Button>
           </div>
         </div>
         {text.trim() || attachmentFile ? (
-          <Button size="icon" onClick={handleSend} disabled={isSending}>
+          <Button size="icon" onClick={handleSend} disabled={isSending} className="h-10 w-10 flex-shrink-0">
             {isSending ? <Loader2 className="h-5 w-5 animate-spin" /> : (editingMessage ? <Check className="h-5 w-5" /> : <Send className="h-5 w-5" />)}
           </Button>
         ) : (
@@ -254,8 +252,8 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
       {attachmentFile && (
         <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground bg-muted p-2 rounded-md">
           <Paperclip className="h-4 w-4" />
-          <span>{attachmentFile.name}</span>
-          <Button variant="ghost" size="icon" className="h-6 w-6 ml-auto" onClick={() => setAttachmentFile(null)} disabled={isSending}>
+          <span className="truncate flex-1">{attachmentFile.name}</span>
+          <Button variant="ghost" size="icon" className="h-6 w-6 ml-auto flex-shrink-0" onClick={() => setAttachmentFile(null)} disabled={isSending}>
             <X className="h-4 w-4" />
           </Button>
         </div>

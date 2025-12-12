@@ -52,17 +52,17 @@ const ProjectListItem = ({
 
   return (
     <div 
-      className="bg-card border border-l-4 rounded-lg p-2 sm:p-3 flex flex-col hover:shadow-md transition-shadow group relative"
+      className="bg-card border border-l-4 rounded-lg p-2 sm:p-3 flex flex-col hover:shadow-md transition-shadow group relative w-full"
       style={{ borderLeftColor: borderColor }}
     >
       <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between w-full">
         <div 
-          className="flex-1 flex items-center space-x-2 sm:space-x-3 cursor-pointer min-w-0"
+          className="flex-1 flex items-center space-x-2 sm:space-x-3 cursor-pointer min-w-0 w-full"
           onClick={() => navigate(`/projects/${project.slug}`)}
         >
           <div className="flex-1 min-w-0">
             <div className="flex items-start gap-2">
-              <p className="text-sm sm:text-base font-medium break-words" title={project.name}>
+              <p className="text-sm sm:text-base font-medium break-words leading-tight" title={project.name}>
                 {project.name}
               </p>
             </div>
@@ -78,7 +78,7 @@ const ProjectListItem = ({
           </div>
         </div>
         
-        <div className="flex items-center space-x-2 sm:space-x-4 flex-shrink-0 pl-0 sm:pl-2 mt-2 sm:mt-0 w-full sm:w-auto justify-start sm:justify-end">
+        <div className="flex items-center space-x-2 sm:space-x-4 flex-shrink-0 pl-0 sm:pl-2 mt-2 sm:mt-0 w-full sm:w-auto justify-between sm:justify-end">
           <div className="flex items-center space-x-2">
             <StatusBadge 
               status={currentStatus as any} 
@@ -95,10 +95,10 @@ const ProjectListItem = ({
               ))}
             </div>
           </div>
-          <div onClick={(e) => e.stopPropagation()} className="absolute top-1 right-1 sm:relative sm:top-auto sm:right-auto">
+          <div onClick={(e) => e.stopPropagation()} className="sm:relative">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 transition-opacity h-7 w-7 sm:h-8 sm:w-8 p-0">
+                <Button variant="ghost" size="icon" className="sm:opacity-0 sm:group-hover:opacity-100 transition-opacity h-7 w-7 sm:h-8 sm:w-8 p-0 opacity-100">
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -149,7 +149,7 @@ const DayEntry = ({
           <span className="text-xs sm:text-sm text-muted-foreground">{dayOfWeek}</span>
           <span className="text-base sm:text-xl font-bold text-primary">{dayOfMonth}</span>
         </div>
-        <div className="flex-1 space-y-3 pt-1 min-w-0">
+        <div className="flex-1 space-y-3 pt-1 min-w-0 w-full">
           {projectsOnDay.map((project: Project) => (
             <ProjectListItem 
               key={project.id} 
@@ -215,7 +215,7 @@ const ListView = ({ projects, onDeleteProject }: { projects: Project[], onDelete
   }
 
   return (
-    <div className="space-y-4 pr-[10px]">
+    <div className="space-y-4 w-full">
       {upcomingDayEntries.slice(0, visibleUpcomingCount).map(([dateStr, projectsOnDay]) => {
         const currentMonth = formatInJakarta(new Date(`${dateStr}T00:00:00`), 'MMMM yyyy');
         const showMonthHeader = currentMonth !== lastUpcomingMonth;

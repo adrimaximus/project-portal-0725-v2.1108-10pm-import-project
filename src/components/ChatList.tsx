@@ -67,10 +67,12 @@ const ChatList = ({ highlightedId, onHighlightComplete }: ChatListProps) => {
   };
 
   return (
-    <div className="flex flex-col h-full border-r bg-background">
-      <div className="p-4 border-b">
-        <h2 className="text-xl font-bold">Chats</h2>
-        <div className="relative mt-4">
+    <div className="flex flex-col h-full border-r bg-background w-full max-w-full overflow-hidden">
+      <div className="p-3 md:p-4 border-b">
+        <div className="flex justify-between items-center">
+          <h2 className="text-xl font-bold">Chats</h2>
+        </div>
+        <div className="relative mt-3 md:mt-4">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search chats..."
@@ -79,7 +81,7 @@ const ChatList = ({ highlightedId, onHighlightComplete }: ChatListProps) => {
             className="pl-8"
           />
         </div>
-        <div className="mt-4">
+        <div className="mt-3 md:mt-4">
           <Button
             variant="outline"
             className="w-full"
@@ -89,10 +91,10 @@ const ChatList = ({ highlightedId, onHighlightComplete }: ChatListProps) => {
           </Button>
         </div>
       </div>
-      <ScrollArea className="flex-1">
+      <ScrollArea className="flex-1 w-full">
         <div
           className={cn(
-            "flex w-full items-center gap-3 p-3 hover:bg-muted border-l-4 border-transparent transition-colors group cursor-pointer",
+            "flex w-full items-center gap-3 p-3 hover:bg-muted border-l-4 border-transparent transition-colors group cursor-pointer max-w-full overflow-hidden",
             selectedConversation?.id === 'ai-assistant' && "bg-muted border-l-primary"
           )}
           onClick={() => selectConversation('ai-assistant')}
@@ -102,7 +104,7 @@ const ChatList = ({ highlightedId, onHighlightComplete }: ChatListProps) => {
               <Sparkles className="h-5 w-5" />
             </AvatarFallback>
           </Avatar>
-          <div className="flex-1 overflow-hidden">
+          <div className="flex-1 overflow-hidden min-w-0">
             <p className="font-semibold truncate">AI Assistant</p>
             <p className="text-sm text-muted-foreground truncate">
               Ask me anything...
@@ -130,15 +132,15 @@ const ChatList = ({ highlightedId, onHighlightComplete }: ChatListProps) => {
                 else itemRefs.current.delete(c.id);
               }}
               className={cn(
-                "flex w-full items-center gap-3 p-3 hover:bg-muted border-l-4 border-transparent transition-colors group",
+                "flex w-full items-center gap-3 p-3 hover:bg-muted border-l-4 border-transparent transition-colors group max-w-full overflow-hidden",
                 selectedConversation?.id === c.id && "bg-muted border-l-primary"
               )}
             >
               <div
-                className="flex-1 flex items-center gap-3 cursor-pointer"
+                className="flex-1 flex items-center gap-3 cursor-pointer min-w-0 overflow-hidden"
                 onClick={() => selectConversation(c.id)}
               >
-                <div className="relative">
+                <div className="relative flex-shrink-0">
                   <Avatar>
                     <AvatarImage src={finalAvatarUrl} />
                     <AvatarFallback style={generatePastelColor(otherUser?.id || c.id)}>{getInitials(c.userName)}</AvatarFallback>
@@ -147,19 +149,19 @@ const ChatList = ({ highlightedId, onHighlightComplete }: ChatListProps) => {
                     <span className={`absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full ring-2 ring-background ${isIdle ? 'bg-orange-400' : 'bg-green-500'}`} />
                   )}
                 </div>
-                <div className="flex-1 overflow-hidden">
+                <div className="flex-1 overflow-hidden min-w-0">
                   <div className="flex items-center justify-between gap-2">
                     <p className={cn("font-semibold truncate", isUnread && "text-primary")}>{c.userName}</p>
                     <span className="text-xs text-muted-foreground flex-shrink-0">{formatTimestamp(c.lastMessageTimestamp)}</span>
                   </div>
                   <div className="flex items-center justify-between gap-2">
-                    <p className={cn(
-                      "text-sm text-muted-foreground truncate",
+                    <div className={cn(
+                      "text-sm text-muted-foreground truncate w-full",
                       isUnread && "text-foreground font-medium",
                       isLastMessageEmoji && "text-xl"
                     )}>
                       <InteractiveText text={c.lastMessage} members={c.members} />
-                    </p>
+                    </div>
                     {isUnread && <div className="h-2 w-2 rounded-full bg-primary flex-shrink-0" />}
                   </div>
                 </div>
@@ -167,7 +169,7 @@ const ChatList = ({ highlightedId, onHighlightComplete }: ChatListProps) => {
               <AlertDialog>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0 opacity-0 group-hover:opacity-100">
+                    <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0 md:opacity-0 md:group-hover:opacity-100 opacity-100">
                       <MoreHorizontal className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
