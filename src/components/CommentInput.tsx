@@ -207,7 +207,35 @@ const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({ onAddC
               className="mentions-input"
               a11ySuggestionsListLabel={"Suggested mentions"}
               inputRef={mentionsInputRef}
-            />
+            >
+              <Mention
+                trigger="@"
+                data={mentionData}
+                markup="@[__display__](__id__)"
+                displayTransform={(id, display) => `@${display}`}
+                renderSuggestion={(suggestion: any, search, highlightedDisplay, index, focused) => (
+                  <div className={`mention-suggestion ${focused ? 'focused' : ''}`}>
+                    <Avatar className="h-6 w-6 mr-2">
+                      <AvatarImage src={getAvatarUrl(suggestion.avatar_url, suggestion.id)} />
+                      <AvatarFallback style={generatePastelColor(suggestion.id)}>
+                        {suggestion.initials}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="mention-suggestion-info">
+                      <div className="font-medium text-sm">{highlightedDisplay}</div>
+                      {suggestion.email && <div className="text-xs text-muted-foreground">{suggestion.email}</div>}
+                    </div>
+                  </div>
+                )}
+                style={{ 
+                  backgroundColor: 'hsl(var(--primary) / 0.3)', 
+                  color: 'transparent', 
+                  fontWeight: 500,
+                  padding: '0 1px',
+                  borderRadius: '2px'
+                }}
+              />
+            </MentionsInput>
           </div>
           {attachments.length > 0 && (
             <div className="px-2 pb-2 pt-1 border-t border-border/50">
