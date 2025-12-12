@@ -110,6 +110,12 @@ export function GlobalSearch() {
     callback();
   };
 
+  // Function to clean text from mention syntax @[Name](UUID)
+  const cleanText = (text: string) => {
+    if (!text) return "";
+    return text.replace(/@\[([^\]]+)\]\(([^)]+)\)/g, '@$1');
+  };
+
   const hasResults = results.projects.length > 0 || results.users.length > 0 || results.goals.length > 0 || results.bills.length > 0 || results.tasks.length > 0;
 
   return (
@@ -142,11 +148,11 @@ export function GlobalSearch() {
                 <CommandItem
                   key={task.id}
                   onSelect={() => handleSelect(() => navigate(`/tasks/${task.id}`))}
-                  value={`task-${task.id}-${task.title}`}
+                  value={`task-${task.id}-${cleanText(task.title)}`}
                   className="cursor-pointer"
                 >
                   <ListChecks className="mr-2 h-4 w-4" />
-                  <span>{task.title}</span>
+                  <span>{cleanText(task.title)}</span>
                   <span className="text-xs text-muted-foreground ml-auto">{task.project_name}</span>
                 </CommandItem>
               ))}
