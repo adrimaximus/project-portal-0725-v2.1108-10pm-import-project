@@ -50,6 +50,7 @@ import { useTaskModal } from '@/contexts/TaskModalContext';
 import { Input } from '../ui/input';
 import InteractiveText from '../InteractiveText';
 import AttachmentViewerModal from '../AttachmentViewerModal';
+import CommentReactions from '../CommentReactions';
 
 interface TaskDetailCardProps {
   task: Task;
@@ -59,6 +60,13 @@ interface TaskDetailCardProps {
   highlightedCommentId?: string | null;
   onHighlightComplete?: () => void;
 }
+
+const PRIORITY_OPTIONS = [
+  { value: 'Low', label: 'Low' },
+  { value: 'Normal', label: 'Normal' },
+  { value: 'High', label: 'High' },
+  { value: 'Urgent', label: 'Urgent' },
+];
 
 const aggregateAttachments = (task: Task): TaskAttachment[] => {
   let attachments: TaskAttachment[] = [...(task.attachments || [])];
@@ -108,6 +116,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
   const [newAttachments, setNewAttachments] = useState<File[]>([]);
   const editFileInputRef = useRef<HTMLInputElement>(null);
   const commentInputRef = useRef<CommentInputHandle>(null);
+  const { data: allUsers = [] } = useProfiles();
   const { onOpen: onOpenTaskModal } = useTaskModal();
   const [replyTo, setReplyTo] = useState<CommentType | null>(null);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -257,7 +266,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
 
   return (
     <>
-      <DrawerContent className="mx-auto w-full max-w-[650px] flex flex-col max-h-[90vh]">
+      <DrawerContent className="mx-auto w-full max-w-[650px] flex flex-col max-h-[90dvh]">
         <div className="flex-shrink-0 p-4 pt-3">
           <div className="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-muted" />
         </div>
@@ -285,7 +294,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
                     )}
                     onClick={() => !task.completed && setIsEditingTitle(true)}
                   >
-                    <InteractiveText text={task.title} members={taskAssignees} />
+                    <InteractiveText text={task.title} members={allUsers} />
                   </div>
                 )}
               </div>
@@ -345,14 +354,13 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
                 <Select
                   value={task.status}
                   onValueChange={(newStatus: TaskStatus) => {
-                    updateTaskStatusAndOrder({
-                      taskId: task.id,
-                      newStatus,
-                      orderedTaskIds: [],
-                      newTasks: [],
-                      queryKey: ['tasks'],
-                      movedColumns: false,
-                    });
+                    const updates: any = { status: newStatus };
+                    if (newStatus === 'Done') {
+                      updates.completed = true;
+                    } else if (task.completed) {
+                      updates.completed = false;
+                    }
+                    updateTask({ taskId: task.id, updates });
                   }}
                 >
                   <SelectTrigger className="h-auto p-0 border-0 focus:ring-0 focus:ring-offset-0 w-auto bg-transparent shadow-none">
@@ -376,7 +384,25 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
               <Flag className="h-4 w-4 mt-1 flex-shrink-0 text-muted-foreground" />
               <div>
                 <p className="font-medium">Priority</p>
-                <Badge className={getPriorityStyles(task.priority).tw}>{task.priority}</Badge>
+                <Select
+                  value={task.priority}
+                  onValueChange={(newPriority) => updateTask({ taskId: task.id, updates: { priority: newPriority } })}
+                >
+                  <SelectTrigger className="h-auto p-0 border-0 focus:ring-0 focus:ring-offset-0 w-auto bg-transparent shadow-none">
+                    <SelectValue>
+                      <Badge className={cn(getPriorityStyles(task.priority).tw, 'border-transparent font-normal hover:bg-opacity-80 transition-colors')}>
+                        {task.priority}
+                      </Badge>
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PRIORITY_OPTIONS.map(option => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <div className="flex items-start gap-3">
@@ -499,6 +525,13 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
                   {showFullDescription ? 'Show less' : 'Show more'}
                 </Button>
               )}
+              <div className="mt-3">
+                <CommentReactions reactions={task.reactions || []} onToggleReaction={handleToggleReaction} />
+              </div>
+            </div>
+          ) : (
+            <div className="pt-4 border-t">
+              <CommentReactions reactions={task.reactions || []} onToggleReaction={handleToggleReaction} />
             </div>
           )}
 
