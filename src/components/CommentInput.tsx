@@ -214,7 +214,19 @@ const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({ onAddC
               className="mentions-input w-full"
               a11ySuggestionsListLabel={"Suggested mentions"}
               inputRef={mentionsInputRef}
-              style={{ width: '100%' }}
+              style={{ 
+                width: '100%',
+                suggestions: {
+                  bottom: '100%', // Position above the input
+                  top: 'auto',    // Override default top positioning
+                  marginBottom: '8px',
+                  maxHeight: '200px',
+                  overflowY: 'auto',
+                  borderRadius: '0.5rem',
+                  border: '1px solid hsl(var(--border))',
+                  boxShadow: '0 -4px 12px -2px rgba(0, 0, 0, 0.1)',
+                }
+              }}
             >
               <Mention
                 trigger="@"
