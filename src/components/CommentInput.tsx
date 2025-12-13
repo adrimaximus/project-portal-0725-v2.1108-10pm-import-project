@@ -1,4 +1,4 @@
-import { useState, useRef, forwardRef, useImperativeHandle, useEffect } from 'react';
+import { useState, useRef, forwardRef, useImperativeHandle, useEffect, useMemo } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Button } from "./ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
@@ -147,11 +147,7 @@ const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({ onAddC
     }
   };
 
-  if (!user) return null;
-  
-  const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email;
-
-  const mentionData = [
+  const mentionData = useMemo(() => [
     { 
         id: 'all', 
         display: 'all', 
@@ -165,7 +161,11 @@ const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({ onAddC
         display: member.name,
         ...member
     }))
-  ];
+  ], [allUsers]);
+
+  if (!user) return null;
+  
+  const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email;
 
   return (
     <div ref={containerRef} className="flex items-end space-x-3 w-full">
@@ -206,7 +206,7 @@ const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({ onAddC
               </div>
             </div>
           )}
-          {/* Removed overflow-y-auto from here to prevent cutting off the drop-up suggestions */}
+          
           <div className="w-full relative">
             <MentionsInput
               value={text}
@@ -217,7 +217,6 @@ const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({ onAddC
               inputRef={mentionsInputRef}
               style={{ 
                 width: '100%',
-                // Handle scrolling within the input itself
                 '&multiLine': {
                   control: {
                     minHeight: 36,
@@ -236,20 +235,22 @@ const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({ onAddC
                 suggestions: {
                   bottom: '100%', // Position above the input
                   top: 'auto',    // Override default top positioning
-                  marginBottom: '8px',
+                  marginBottom: '8px', // Add some space
                   maxHeight: '200px',
                   overflowY: 'auto',
                   borderRadius: '0.5rem',
                   border: '1px solid hsl(var(--border))',
                   boxShadow: '0 -4px 12px -2px rgba(0, 0, 0, 0.1)',
                   backgroundColor: 'hsl(var(--popover))',
-                  zIndex: 50,
+                  zIndex: 9999, // Ensure it's on top of everything including drawers/modals
                   list: {
                     backgroundColor: 'hsl(var(--popover))',
                     color: 'hsl(var(--popover-foreground))',
+                    fontSize: '0.875rem',
                   },
                   item: {
-                    padding: '5px 10px',
+                    padding: '6px 12px',
+                    borderBottom: '1px solid hsl(var(--border) / 0.5)',
                     '&focused': {
                       backgroundColor: 'hsl(var(--accent))',
                       color: 'hsl(var(--accent-foreground))',
@@ -264,7 +265,7 @@ const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({ onAddC
                 markup="@[__display__](__id__)"
                 displayTransform={(id, display) => `@${display}`}
                 renderSuggestion={(suggestion: any, search, highlightedDisplay, index, focused) => (
-                  <div className={`mention-suggestion ${focused ? 'focused' : ''}`}>
+                  <div className={cn("mention-suggestion", focused && "focused")}>
                     <Avatar className="h-6 w-6 mr-2">
                       <AvatarImage src={getAvatarUrl(suggestion.avatar_url, suggestion.id)} />
                       <AvatarFallback style={generatePastelColor(suggestion.id)}>
@@ -278,11 +279,13 @@ const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({ onAddC
                   </div>
                 )}
                 style={{ 
-                  backgroundColor: 'hsl(var(--primary) / 0.3)', 
-                  color: 'transparent', 
+                  backgroundColor: 'hsl(var(--primary) / 0.1)', 
+                  color: 'hsl(var(--primary))', 
                   fontWeight: 500,
                   padding: '0 1px',
-                  borderRadius: '2px'
+                  borderRadius: '2px',
+                  boxDecorationBreak: 'clone',
+                  WebkitBoxDecorationBreak: 'clone',
                 }}
               />
             </MentionsInput>
