@@ -34,7 +34,6 @@ const ProfilePage = lazy(() => import('./pages/Profile'));
 const SearchPage = lazy(() => import('./pages/SearchPage'));
 const UserManagementPage = lazy(() => import('./pages/UserManagement'));
 const SettingsPage = lazy(() => import('./pages/Settings'));
-const SettingsLayout = lazy(() => import('./components/layouts/SettingsLayout'));
 const WorkspaceSettingsPage = lazy(() => import('./pages/WorkspaceSettingsPage'));
 const TeamSettingsPage = lazy(() => import('./pages/TeamSettingsPage'));
 const NavigationSettingsPage = lazy(() => import('./pages/NavigationSettingsPage'));
@@ -58,7 +57,6 @@ const PropertiesSettingsPage = lazy(() => import('./pages/PropertiesSettingsPage
 const ContactPropertiesPage = lazy(() => import('./pages/ContactPropertiesPage'));
 const CompanyPropertiesPage = lazy(() => import('./pages/CompanyPropertiesPage'));
 const ProjectStatusesPage = lazy(() => import('./pages/settings/ProjectStatusesPage'));
-const PaymentStatusesPage = lazy(() => import('./pages/settings/PaymentStatusesPage'));
 const BillingPropertiesPage = lazy(() => import('./pages/BillingPropertiesPage'));
 const ExpensePropertiesPage = lazy(() => import('./pages/ExpensePropertiesPage'));
 const TagsPropertiesPage = lazy(() => import('./pages/TagsPropertiesPage'));
@@ -106,33 +104,28 @@ function App() {
             <Route path="/search" element={<SearchPage />} />
             <Route path="/users" element={<UserManagementPage />} />
             <Route path="/users/:id" element={<UserProfilePage />} />
-            
             <Route path="/settings" element={<SettingsPage />} />
-            <Route element={<SettingsLayout />}>
-              <Route path="/settings/workspace" element={<WorkspaceSettingsPage />} />
-              <Route path="/settings/team" element={<TeamSettingsPage />} />
-              <Route path="/settings/navigation" element={<NavigationSettingsPage />} />
-              <Route path="/settings/tags" element={<TagsSettingsPage />} />
-              <Route path="/settings/theme" element={<ThemeSettingsPage />} />
-              <Route path="/settings/services" element={<ServicesSettingsPage />} />
-              <Route path="/settings/integrations" element={<IntegrationsPage />} />
-              <Route path="/settings/integrations/google-drive" element={<GoogleDrivePage />} />
-              <Route path="/settings/integrations/google-calendar" element={<GoogleCalendarIntegrationPage />} />
-              <Route path="/settings/integrations/openai" element={<OpenAiIntegrationPage />} />
-              <Route path="/settings/integrations/wbiztool" element={<WbiztoolPage />} />
-              <Route path="/settings/integrations/emailit" element={<EmailitPage />} />
-              <Route path="/settings/storage" element={<StorageSettingsPage />} />
-              <Route path="/settings/properties" element={<PropertiesSettingsPage />} />
-              <Route path="/settings/people-properties" element={<ContactPropertiesPage />} />
-              <Route path="/settings/company-properties" element={<CompanyPropertiesPage />} />
-              <Route path="/settings/project-statuses" element={<ProjectStatusesPage />} />
-              <Route path="/settings/payment-statuses" element={<PaymentStatusesPage />} />
-              <Route path="/settings/billing-properties" element={<BillingPropertiesPage />} />
-              <Route path="/settings/expense-properties" element={<ExpensePropertiesPage />} />
-              <Route path="/settings/tags-properties" element={<TagsPropertiesPage />} />
-              <Route path="/settings/bank-accounts" element={<BankAccountsPage />} />
-            </Route>
-
+            <Route path="/settings/workspace" element={<WorkspaceSettingsPage />} />
+            <Route path="/settings/team" element={<TeamSettingsPage />} />
+            <Route path="/settings/navigation" element={<NavigationSettingsPage />} />
+            <Route path="/settings/tags" element={<TagsSettingsPage />} />
+            <Route path="/settings/theme" element={<ThemeSettingsPage />} />
+            <Route path="/settings/services" element={<ServicesSettingsPage />} />
+            <Route path="/settings/integrations" element={<IntegrationsPage />} />
+            <Route path="/settings/integrations/google-drive" element={<GoogleDrivePage />} />
+            <Route path="/settings/integrations/google-calendar" element={<GoogleCalendarIntegrationPage />} />
+            <Route path="/settings/integrations/openai" element={<OpenAiIntegrationPage />} />
+            <Route path="/settings/integrations/wbiztool" element={<WbiztoolPage />} />
+            <Route path="/settings/integrations/emailit" element={<EmailitPage />} />
+            <Route path="/settings/storage" element={<StorageSettingsPage />} />
+            <Route path="/settings/properties" element={<PropertiesSettingsPage />} />
+            <Route path="/settings/people-properties" element={<ContactPropertiesPage />} />
+            <Route path="/settings/company-properties" element={<CompanyPropertiesPage />} />
+            <Route path="/settings/project-statuses" element={<ProjectStatusesPage />} />
+            <Route path="/settings/billing-properties" element={<BillingPropertiesPage />} />
+            <Route path="/settings/expense-properties" element={<ExpensePropertiesPage />} />
+            <Route path="/settings/tags-properties" element={<TagsPropertiesPage />} />
+            <Route path="/settings/bank-accounts" element={<BankAccountsPage />} />
             <Route path="/custom/:slug" element={<CustomPage />} />
             <Route path="/multipage/:slug" element={<MultiEmbedPage />} />
             <Route path="/multipage/:slug/:itemSlug" element={<MultiEmbedItemPage />} />
