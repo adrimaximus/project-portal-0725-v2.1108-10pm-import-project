@@ -556,7 +556,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
               onReply={handleReply}
               onCreateTicketFromComment={handleCreateTicketFromComment}
               onGoToReply={handleScrollToMessage}
-              allUsers={taskAssignees}
+              allUsers={taskAssignees} // Pass scoped users
               highlightedCommentId={highlightedCommentId}
               onHighlightComplete={onHighlightComplete}
             />
@@ -567,7 +567,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
           <CommentInput
             ref={commentInputRef}
             onAddCommentOrTicket={handleAddComment}
-            allUsers={taskAssignees}
+            allUsers={taskAssignees} // Pass scoped users
             replyTo={replyTo}
             onCancelReply={() => setReplyTo(null)}
             storageKey={`comment-draft-task-${task.id}`}
