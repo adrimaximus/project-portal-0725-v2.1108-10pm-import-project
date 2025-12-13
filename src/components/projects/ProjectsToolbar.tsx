@@ -257,7 +257,7 @@ const ProjectsToolbar = ({
                 {isTaskView ? (
                   <Button size="sm" variant="default" onClick={onNewTaskClick} className="h-9 px-3 gap-1">
                     <ListPlus className="h-4 w-4" />
-                    <span className="sr-only sm:not-sr-only">New Task</span>
+                    <span className="sr-only sm:not-sr-only">Task</span>
                   </Button>
                 ) : (
                   <Button size="sm" variant="default" onClick={onNewProjectClick} className="h-9 px-3 gap-1">
