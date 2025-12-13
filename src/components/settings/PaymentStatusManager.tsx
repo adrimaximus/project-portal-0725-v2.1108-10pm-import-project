@@ -163,35 +163,43 @@ const PaymentStatusManager = () => {
           <DragDropContext onDragEnd={onDragEnd}>
             <Droppable droppableId="statuses">
               {(provided) => (
-                <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-2">
+                <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-3 rounded-lg border bg-muted/20 p-3">
                   {localStatuses.map((status, index) => (
                     <Draggable key={status.id} draggableId={status.id} index={index}>
                       {(provided) => (
                         <div
                           ref={provided.innerRef}
                           {...provided.draggableProps}
-                          className="flex items-center gap-2"
+                          className="flex items-center gap-3 p-2 rounded-lg border bg-card shadow-sm"
                         >
-                          <div {...provided.dragHandleProps} className="cursor-grab p-1">
-                            <GripVertical className="h-5 w-5 text-muted-foreground" />
+                          <div {...provided.dragHandleProps} className="cursor-grab p-2 text-muted-foreground hover:bg-muted rounded-md transition-colors">
+                            <GripVertical className="h-5 w-5" />
                           </div>
-                          <Input
-                            type="color"
-                            value={status.color}
-                            onChange={(e) => handleInputChange(status.id, 'color', e.target.value)}
-                            onBlur={() => handleInputBlur(status.id)}
-                            className="w-10 h-10 p-1 border-none cursor-pointer"
-                          />
+                          <div className="relative w-8 h-8 cursor-pointer">
+                            <Input
+                              type="color"
+                              value={status.color}
+                              onChange={(e) => handleInputChange(status.id, 'color', e.target.value)}
+                              onBlur={() => handleInputBlur(status.id)}
+                              className="absolute inset-0 w-full h-full p-0 border-none cursor-pointer opacity-0"
+                            />
+                            <div 
+                              className="w-full h-full rounded-md border" 
+                              style={{ backgroundColor: status.color }}
+                              onClick={(e) => (e.currentTarget.previousSibling as HTMLInputElement)?.click()}
+                            ></div>
+                          </div>
                           <Input
                             value={status.name}
                             onChange={(e) => handleInputChange(status.id, 'name', e.target.value)}
                             onBlur={() => handleInputBlur(status.id)}
-                            className="flex-1"
+                            className="flex-1 bg-transparent border-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-0 rounded-md px-2 h-9"
                           />
                           <Button
                             variant="ghost"
                             size="icon"
                             onClick={() => deleteMutation.mutate(status.id)}
+                            className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
