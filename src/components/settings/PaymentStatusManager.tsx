@@ -175,19 +175,28 @@ const PaymentStatusManager = () => {
                           <div {...provided.dragHandleProps} className="cursor-grab p-2 text-muted-foreground hover:bg-muted rounded-md transition-colors">
                             <GripVertical className="h-5 w-5" />
                           </div>
-                          <div className="relative w-8 h-8 cursor-pointer">
+                          <div className="flex items-center gap-2">
+                            <div className="relative w-8 h-8 cursor-pointer flex-shrink-0">
+                              <Input
+                                type="color"
+                                value={status.color}
+                                onChange={(e) => handleInputChange(status.id, 'color', e.target.value)}
+                                onBlur={() => handleInputBlur(status.id)}
+                                className="absolute inset-0 w-full h-full p-0 border-none cursor-pointer opacity-0"
+                              />
+                              <div 
+                                className="w-full h-full rounded-md border" 
+                                style={{ backgroundColor: status.color }}
+                                onClick={(e) => (e.currentTarget.previousSibling as HTMLInputElement)?.click()}
+                              ></div>
+                            </div>
                             <Input
-                              type="color"
                               value={status.color}
                               onChange={(e) => handleInputChange(status.id, 'color', e.target.value)}
                               onBlur={() => handleInputBlur(status.id)}
-                              className="absolute inset-0 w-full h-full p-0 border-none cursor-pointer opacity-0"
+                              className="w-24 bg-transparent border-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-0 rounded-md px-2 h-9"
+                              placeholder="#RRGGBB"
                             />
-                            <div 
-                              className="w-full h-full rounded-md border" 
-                              style={{ backgroundColor: status.color }}
-                              onClick={(e) => (e.currentTarget.previousSibling as HTMLInputElement)?.click()}
-                            ></div>
                           </div>
                           <Input
                             value={status.name}
