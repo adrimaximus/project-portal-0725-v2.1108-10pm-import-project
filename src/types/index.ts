@@ -51,6 +51,16 @@ export interface PaymentStatusDefinition {
   position: number;
 }
 
+export const PAYMENT_STATUS_OPTIONS: { value: PaymentStatus; label: string }[] = [
+  { value: 'Proposed', label: 'Proposed' },
+  { value: 'Pending', label: 'Pending' },
+  { value: 'In Process', label: 'In Process' },
+  { value: 'Overdue', label: 'Overdue' },
+  { value: 'Paid', label: 'Paid' },
+  { value: 'Cancelled', label: 'Cancelled' },
+  { value: 'Bid Lost', label: 'Bid Lost' },
+];
+
 export interface Project {
   id: string;
   name: string;
@@ -504,4 +514,11 @@ export interface PublicationCampaign {
   sheet_url: string;
   created_at: string;
   updated_at: string;
+}
+
+export interface ProjectStatusDef {
+  id: string;
+  name: string;
+  color: string;
+  position: number;
 }
