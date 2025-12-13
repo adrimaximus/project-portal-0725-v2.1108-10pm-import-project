@@ -101,7 +101,7 @@ const ProjectComments = forwardRef<CommentInputHandle, ProjectCommentsProps>(({
   };
 
   return (
-    <div className="flex flex-col h-full min-h-[400px] sm:min-h-[500px]">
+    <div className="flex flex-col h-auto max-h-[700px]">
       <div className="flex-shrink-0 pb-4 border-b mb-4">
         {/* Input is at the TOP here, so suggestions should drop DOWN (dropUp={false}) */}
         <CommentInput
@@ -114,7 +114,7 @@ const ProjectComments = forwardRef<CommentInputHandle, ProjectCommentsProps>(({
           dropUp={false} 
         />
       </div>
-      <div className="flex-1 overflow-y-auto pr-4 space-y-4">
+      <div className="overflow-y-auto pr-4 space-y-4 min-h-[100px]">
         {isLoadingComments ? (
           <p>Loading comments...</p>
         ) : comments.length > 0 ? (

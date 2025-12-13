@@ -305,7 +305,7 @@ const ProjectMainContent = ({
             storageKey={`comment-draft-project-${project.id}`}
           />
         </TabsContent>
-        <TabsContent value="activity" className="mt-4 h-[350px] overflow-y-auto pr-4">
+        <TabsContent value="activity" className="mt-4 max-h-[500px] overflow-y-auto pr-4">
           <ProjectActivityFeed activities={project.activities || []} />
         </TabsContent>
       </Tabs>
