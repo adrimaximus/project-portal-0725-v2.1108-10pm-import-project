@@ -285,7 +285,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                                 Create "{projectSearch}"
                               </Button>
                             </CommandEmpty>
-                            <CommandGroup>
+                            <CommandGroup className="max-h-60 overflow-y-auto">
                               {projects.map((project) => (
                                 <CommandItem value={project.name} key={project.id} onSelect={() => { form.setValue("project_id", project.id); setProjectPopoverOpen(false); setProjectSearch(''); }}>
                                   <Check className={cn("mr-2 h-4 w-4", project.id === field.value ? "opacity-100" : "opacity-0")} />
@@ -337,7 +337,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                               Create "{beneficiarySearch}"
                             </Button>
                           </CommandEmpty>
-                          <CommandGroup>
+                          <CommandGroup className="max-h-60 overflow-y-auto">
                             {beneficiaries.map((item) => (
                               <CommandItem value={item.name} key={item.id} onSelect={() => { form.setValue("beneficiary", item.name); setBeneficiary(item); setBeneficiaryPopoverOpen(false); }}>
                                 <Check className={cn("mr-2 h-4 w-4", item.name === field.value ? "opacity-100" : "opacity-0")} />
