@@ -31,7 +31,7 @@ const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
 
   // Proses kolaborator untuk menentukan status idle berdasarkan waktu terakhir aktif
   const processedCollaborators = useMemo(() => {
-    return onlineCollaborators.map(c => {
+    return onlineCollaborators.map((c: Collaborator) => {
       let isIdle = c.isIdle;
       
       // Override status idle jika last_active_at lebih dari 5 menit yang lalu

@@ -26,7 +26,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import GroupSettingsDialog from "./GroupSettingsDialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
-import { Conversation } from "@/types";
+import { Conversation, Collaborator } from "@/types";
 
 interface ChatHeaderProps {
   conversation: Conversation;
@@ -53,7 +53,8 @@ const ChatHeader = ({ conversation, onBack, typing = false, onLeaveGroup, onClea
   const { id, userName, userAvatar, isGroup, members, created_by } = conversation;
   const otherUser = !isGroup ? members?.find(m => m.id !== currentUser?.id) : null;
   const isOwner = currentUser?.id === created_by;
-  const otherUserCollaborator = otherUser ? onlineCollaborators.find(c => c.id === otherUser.id) : null;
+  // Explicitly cast to Collaborator to ensure TS knows about isIdle
+  const otherUserCollaborator = otherUser ? onlineCollaborators.find(c => c.id === otherUser.id) as Collaborator | undefined : null;
   const isAiAssistant = userName === "AI Assistant";
 
   const handleViewProfile = () => {
