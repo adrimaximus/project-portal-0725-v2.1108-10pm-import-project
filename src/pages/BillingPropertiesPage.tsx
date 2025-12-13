@@ -30,7 +30,7 @@ const BillingPropertiesPage = () => {
         <CustomPropertiesManager 
           category="billing"
           title="Billing Properties"
-          description="Create and manage custom fields for billing."
+          description="Create and manage custom fields for billing, such as payment statuses."
         />
       </div>
     </PortalLayout>
