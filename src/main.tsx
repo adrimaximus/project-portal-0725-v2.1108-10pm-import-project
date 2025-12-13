@@ -8,6 +8,8 @@ import { ThemeProvider } from './contexts/ThemeProvider.tsx'
 import { Toaster } from 'sonner'
 import { BrowserRouter as Router } from 'react-router-dom';
 import SafeLocalStorage from './lib/localStorage.ts';
+import { TaskDrawerProvider } from './contexts/TaskDrawerContext.tsx'
+import { TaskModalProvider } from './contexts/TaskModalContext.tsx'
 
 // Automatically clean up expired items from local storage on startup
 SafeLocalStorage.cleanup();
@@ -20,8 +22,12 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       <Router>
         <AuthProvider>
           <ThemeProvider>
-            <App />
-            <Toaster />
+            <TaskDrawerProvider>
+              <TaskModalProvider>
+                <App />
+                <Toaster />
+              </TaskModalProvider>
+            </TaskDrawerProvider>
           </ThemeProvider>
         </AuthProvider>
       </Router>

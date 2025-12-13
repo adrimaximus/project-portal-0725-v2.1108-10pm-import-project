@@ -3,6 +3,8 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import LoadingScreen from './components/LoadingScreen';
 import AuthHandler from './components/AuthHandler';
 import ProtectedRouteLayout from './components/ProtectedRouteLayout';
+import GlobalTaskDrawer from './components/GlobalTaskDrawer';
+import GlobalTaskModal from './components/GlobalTaskModal';
 
 // Lazy load pages
 const LandingPage = lazy(() => import('./pages/LandingPage'));
@@ -133,6 +135,8 @@ function App() {
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>
+      <GlobalTaskDrawer />
+      <GlobalTaskModal />
     </>
   );
 }
