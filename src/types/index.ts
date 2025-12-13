@@ -66,6 +66,7 @@ export interface Project {
   name: string;
   slug: string;
   description?: string | null;
+  category?: string | null;
   status: ProjectStatus;
   payment_status: PaymentStatus;
   budget?: number | null;

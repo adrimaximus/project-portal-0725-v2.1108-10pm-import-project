@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useRef, useEffect } from 'react';
-import { Task, TaskAttachment, Reaction, User, Comment as CommentType, TaskStatus, TASK_STATUS_OPTIONS } from '@/types';
+import { Task, TaskAttachment, Reaction, User, Comment as CommentType, TaskStatus, TASK_STATUS_OPTIONS, TaskPriority } from '@/types';
 import { DrawerContent } from '@/components/ui/drawer';
 import { Button } from '../ui/button';
 import { format, isPast, formatDistanceToNow } from 'date-fns';
@@ -20,10 +20,8 @@ import {
   CheckCircle,
   Tag,
   User as UserIcon,
-  ChevronDown,
 } from 'lucide-react';
 import { useTaskMutations } from '@/hooks/useTaskMutations';
-import { useQueryClient, useMutation, useQuery } from '@tanstack/react-query';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,17 +34,12 @@ import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 import { toast } from 'sonner';
 import { Badge } from '../ui/badge';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { v4 as uuidv4 } from 'uuid';
 import CommentInput, { CommentInputHandle } from '../CommentInput';
 import { useProfiles } from '@/hooks/useProfiles';
 import { useCommentManager } from '@/hooks/useCommentManager';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../ui/alert-dialog';
-import { Textarea } from '../ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../ui/collapsible';
-import { useTaskModal } from '@/contexts/TaskModalContext';
 import { Input } from '../ui/input';
 import InteractiveText from '../InteractiveText';
 import AttachmentViewerModal from '../AttachmentViewerModal';
@@ -99,7 +92,7 @@ const aggregateAttachments = (task: Task): TaskAttachment[] => {
 
 const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, onDelete, highlightedCommentId, onHighlightComplete }) => {
   const { user } = useAuth();
-  const { toggleTaskReaction, sendReminder, isSendingReminder, updateTaskStatusAndOrder, toggleTaskCompletion, updateTask, isUpdatingTask } = useTaskMutations();
+  const { toggleTaskReaction, sendReminder, isSendingReminder, updateTask, isUpdatingTask, toggleTaskCompletion } = useTaskMutations();
   const { 
     comments, 
     isLoadingComments, 
@@ -117,7 +110,6 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
   const editFileInputRef = useRef<HTMLInputElement>(null);
   const commentInputRef = useRef<CommentInputHandle>(null);
   const { data: allUsers = [] } = useProfiles();
-  const { onOpen: onOpenTaskModal } = useTaskModal();
   const [replyTo, setReplyTo] = useState<CommentType | null>(null);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editedTitle, setEditedTitle] = useState(task.title);
@@ -266,7 +258,6 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
 
   return (
     <>
-      {/* Changed max-h-[90dvh] to h-[90vh] for better mobile keyboard handling */}
       <DrawerContent className="mx-auto w-full max-w-[650px] flex flex-col h-[90vh] rounded-t-xl outline-none">
         <div className="flex-shrink-0 p-4 pt-3">
           <div className="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-muted" />
@@ -387,7 +378,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
                 <p className="font-medium">Priority</p>
                 <Select
                   value={task.priority}
-                  onValueChange={(newPriority) => updateTask({ taskId: task.id, updates: { priority: newPriority } })}
+                  onValueChange={(newPriority) => updateTask({ taskId: task.id, updates: { priority: newPriority as TaskPriority } })}
                 >
                   <SelectTrigger className="h-auto p-0 border-0 focus:ring-0 focus:ring-offset-0 w-auto bg-transparent shadow-none">
                     <SelectValue>
@@ -520,7 +511,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
             <div className="pt-4 border-t">
               <h4 className="font-semibold mb-2">Description</h4>
               <div className="prose prose-sm dark:prose-invert max-w-none break-word">
-                <InteractiveText text={displayedDescription} members={allUsers} />
+                <InteractiveText text={displayedDescription} members={taskAssignees} />
               </div>
               {isLongDescription && (
                 <Button variant="link" size="sm" onClick={() => setShowFullDescription(!showFullDescription)} className="px-0 h-auto">
