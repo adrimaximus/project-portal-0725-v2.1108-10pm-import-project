@@ -281,9 +281,10 @@ const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({
                   </div>
                 )}
                 style={{ 
-                  backgroundColor: 'hsl(var(--primary) / 0.1)', 
-                  color: 'hsl(var(--primary))', 
-                  fontWeight: 500,
+                  backgroundColor: 'hsl(var(--primary) / 0.1)',
+                  color: 'transparent',
+                  fontWeight: 600,
+                  textDecoration: 'none',
                   padding: '0 1px',
                   borderRadius: '2px',
                 }}
