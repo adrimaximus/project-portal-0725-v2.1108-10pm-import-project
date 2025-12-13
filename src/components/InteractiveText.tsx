@@ -85,10 +85,11 @@ const InteractiveText = ({ text, members = [] }: InteractiveTextProps) => {
         const mentionMatch = part.match(/^@\[([^\]]+)\]\s*\(([^)]+)\)$/);
         if (mentionMatch) {
           const name = mentionMatch[1];
+          const id = mentionMatch[2];
           return (
-            <span key={i} className="font-bold text-primary whitespace-nowrap bg-primary/10 rounded-sm px-1">
+            <Link to={`/users/${id}`} key={i} className="font-bold text-primary whitespace-nowrap bg-primary/10 rounded-sm px-1 no-underline hover:no-underline">
               @{name}
-            </span>
+            </Link>
           );
         }
 
