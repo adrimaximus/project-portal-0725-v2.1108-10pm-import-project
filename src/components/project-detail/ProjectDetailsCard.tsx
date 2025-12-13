@@ -1,12 +1,12 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Project as BaseProject, PROJECT_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS, Person, Company, ProjectStatus } from "@/types";
+import { Project as BaseProject, PROJECT_STATUS_OPTIONS, Person, Company, ProjectStatus } from "@/types";
 import { Calendar, Wallet, Briefcase, MapPin, ListTodo, CreditCard, User, Building, ChevronsUpDown } from "lucide-react";
 import { isSameDay, subDays } from "date-fns";
 import { DateRangePicker } from "../DateRangePicker";
 import { DateRange } from "react-day-picker";
 import { CurrencyInput } from "../ui/currency-input";
 import ProjectServices from "./ProjectServices";
-import { formatInJakarta, cn, getPaymentStatusStyles } from "@/lib/utils";
+import { formatInJakarta, cn, getTextColor } from "@/lib/utils";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import StatusBadge from "../StatusBadge";
 import { Badge } from "@/components/ui/badge";
@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Avatar, AvatarImage, AvatarFallback } from "../ui/avatar";
 import { useProjectStatuses } from "@/hooks/useProjectStatuses";
+import { usePaymentStatuses } from "@/hooks/usePaymentStatuses";
 
 // Extend types to include the new optional company_id field for a robust relationship.
 type LocalPerson = Person & { company_id?: string | null };
@@ -41,6 +42,7 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange, onStatusChange,
   const { hasPermission } = useAuth();
   const canViewValue = hasPermission('projects:view_value');
   const { data: projectStatuses = [] } = useProjectStatuses();
+  const { data: paymentStatuses = [], isLoading: isLoadingPaymentStatuses } = usePaymentStatuses();
 
   const clientInfo = useMemo(() => {
     return {
@@ -160,7 +162,9 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange, onStatusChange,
     );
   };
 
-  const paymentBadgeColor = getPaymentStatusStyles(project.payment_status).tw;
+  const currentPaymentStatus = paymentStatuses.find(s => s.name === project.payment_status);
+  const paymentBgColor = currentPaymentStatus?.color || '#94a3b8';
+  const paymentTextColor = getTextColor(paymentBgColor);
   const selectedValue = project.person_ids?.[0] || (project.client_company_id ? `company-${project.client_company_id}` : '');
 
   return (
@@ -309,18 +313,27 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange, onStatusChange,
                         <SelectValue placeholder="Select a payment status" />
                       </SelectTrigger>
                       <SelectContent>
-                        {PAYMENT_STATUS_OPTIONS.map(option => (
-                          <SelectItem key={option.value} value={option.value}>
-                            <Badge variant="outline" className={cn("border-transparent font-normal", getPaymentStatusStyles(option.value).tw)}>
-                              {option.label}
-                            </Badge>
-                          </SelectItem>
-                        ))}
+                        {isLoadingPaymentStatuses ? (
+                          <SelectItem value="loading" disabled>Loading...</SelectItem>
+                        ) : (
+                          paymentStatuses.map(option => (
+                            <SelectItem key={option.id} value={option.name}>
+                              <div className="flex items-center gap-2">
+                                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: option.color }} />
+                                {option.name}
+                              </div>
+                            </SelectItem>
+                          ))
+                        )}
                       </SelectContent>
                     </Select>
                   ) : (
                     <div className="pt-1">
-                      <Badge variant="outline" className={cn("font-normal", paymentBadgeColor)}>
+                      <Badge 
+                        variant="outline" 
+                        className={cn("font-normal border-transparent")}
+                        style={{ backgroundColor: paymentBgColor, color: paymentTextColor }}
+                      >
                         {project.payment_status}
                       </Badge>
                     </div>
