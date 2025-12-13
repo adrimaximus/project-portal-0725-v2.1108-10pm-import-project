@@ -222,8 +222,8 @@ const MyTasksWidget = () => {
         </div>
       </div>
 
-      {/* Categorized Task List - Fixed height */}
-      <ScrollArea className="-mx-4 px-4 h-[500px]">
+      {/* Categorized Task List - Auto height with max height */}
+      <ScrollArea className="-mx-4 px-4 h-auto max-h-[500px]">
         <div className="space-y-6 pb-2">
           
           {/* TODAY Section */}
