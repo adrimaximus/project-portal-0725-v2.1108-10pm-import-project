@@ -25,7 +25,12 @@ export type User = {
   theme?: string;
 };
 
-export type Collaborator = User;
+// Extended User type for presence features
+export type Collaborator = User & {
+  last_active_at?: string | null;
+  isIdle?: boolean;
+};
+
 export type AssignedUser = User & { role: 'owner' | 'admin' | 'member' | 'editor' };
 export type Owner = Pick<User, 'id' | 'name' | 'avatar_url' | 'initials' | 'email'>;
 

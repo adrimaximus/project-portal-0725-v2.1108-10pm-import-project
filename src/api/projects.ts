@@ -1,15 +1,17 @@
 import { supabase } from '@/integrations/supabase/client';
 import { Project } from '@/types';
 
-const safeParse = (value: any) => {
-  if (typeof value === 'string') {
-    try {
-      return JSON.parse(value);
-    } catch {
-      return value;
-    }
-  }
-  return value;
+// Define the payload type explicitly to avoid partial issues
+type CreateProjectPayload = {
+    name: string;
+    description?: string;
+    category?: string;
+    start_date?: string;
+    due_date?: string;
+    budget?: number;
+    origin_event_id?: string;
+    venue?: string;
+    client_company_id?: string | null;
 };
 
 export const getDashboardProjects = async ({ 
@@ -44,17 +46,20 @@ export const getDashboardProjects = async ({
 };
 
 export const createProject = async (projectData: Partial<Project>): Promise<Project> => {
+    // Cast to internal payload to ensure properties exist
+    const payload = projectData as CreateProjectPayload;
+
     const { data, error } = await supabase
       .rpc('create_project', {
-        p_name: projectData.name,
-        p_description: projectData.description,
-        p_category: projectData.category,
-        p_start_date: projectData.start_date,
-        p_due_date: projectData.due_date,
-        p_budget: projectData.budget,
-        p_origin_event_id: projectData.origin_event_id,
-        p_venue: projectData.venue,
-        p_client_company_id: projectData.client_company_id,
+        p_name: payload.name || 'Untitled Project',
+        p_description: payload.description,
+        p_category: payload.category || 'General',
+        p_start_date: payload.start_date,
+        p_due_date: payload.due_date,
+        p_budget: payload.budget,
+        p_origin_event_id: payload.origin_event_id,
+        p_venue: payload.venue,
+        p_client_company_id: payload.client_company_id,
       })
       .single();
 
