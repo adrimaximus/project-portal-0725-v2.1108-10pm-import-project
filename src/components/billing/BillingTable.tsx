@@ -30,34 +30,7 @@ const getInitials = (name?: string | null) => {
 };
 
 const BillingTable = ({ invoices, onEdit, sortConfig, handleSort, onStatusChange }: BillingTableProps) => {
-  const sortedInvoices = useMemo(() => {
-    if (!sortConfig.key) return invoices;
-    return [...invoices].sort((a, b) => {
-      let aValue: any = a[sortConfig.key!];
-      let bValue: any = b[sortConfig.key!];
-      if (sortConfig.key === 'projectOwner') {
-        aValue = a.projectOwner?.name;
-        bValue = b.projectOwner?.name;
-      } else if (sortConfig.key === 'assignedMembers') {
-        aValue = a.assignedMembers?.find(m => m.role === 'admin')?.name;
-        bValue = b.assignedMembers?.find(m => m.role === 'admin')?.name;
-      }
-
-      if (aValue === null || aValue === undefined) return 1;
-      if (bValue === null || bValue === undefined) return -1;
-
-      let compareResult = 0;
-      if (aValue instanceof Date && bValue instanceof Date) {
-        compareResult = aValue.getTime() - bValue.getTime();
-      } else if (typeof aValue === 'number' && typeof bValue === 'number') {
-        compareResult = aValue - bValue;
-      } else {
-        compareResult = String(aValue).localeCompare(String(bValue), undefined, { numeric: true, sensitivity: 'base' });
-      }
-
-      return sortConfig.direction === 'asc' ? compareResult : -compareResult;
-    });
-  }, [invoices, sortConfig]);
+  const sortedInvoices = invoices; // Data is now pre-sorted by the parent
 
   return (
     <Table>
