@@ -266,6 +266,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
 
   return (
     <>
+      {/* Changed max-h-[90dvh] to h-[90vh] for better mobile keyboard handling */}
       <DrawerContent className="mx-auto w-full max-w-[650px] flex flex-col h-[90vh] rounded-t-xl outline-none">
         <div className="flex-shrink-0 p-4 pt-3">
           <div className="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-muted" />
@@ -571,7 +572,8 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
           </div>
         </div>
 
-        <div className="flex-shrink-0 p-2 border-t bg-background">
+        {/* Removed p-4 and border-t to avoid double borders/padding issues */}
+        <div className="flex-shrink-0 p-2 bg-background">
           <CommentInput
             ref={commentInputRef}
             onAddCommentOrTicket={handleAddComment}

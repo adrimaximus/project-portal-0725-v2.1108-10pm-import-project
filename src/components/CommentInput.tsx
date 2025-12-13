@@ -1,15 +1,16 @@
 import { useState, useRef, forwardRef, useImperativeHandle, useEffect } from 'react';
-import { User, Comment as CommentType } from "@/types";
-import { Button } from "@/components/ui/button";
+import { useDropzone } from 'react-dropzone';
+import { Button } from "./ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Ticket, Paperclip, X, Users, UploadCloud } from "lucide-react";
 import { getInitials, generatePastelColor, getAvatarUrl, cn } from "@/lib/utils";
-import { MentionsInput, Mention, SuggestionDataItem } from 'react-mentions';
+import { MentionsInput, Mention } from 'react-mentions';
 import '@/styles/mentions.css';
 import { useAuth } from '@/contexts/AuthContext';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import InteractiveText from './InteractiveText';
 import SafeLocalStorage from '@/lib/localStorage';
+import { User, Comment as CommentType } from "@/types";
 
 interface CommentInputProps {
   onAddCommentOrTicket: (text: string, isTicket: boolean, attachments: File[] | null, mentionedUserIds: string[], replyToId?: string | null) => void;
@@ -54,7 +55,13 @@ const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({ onAddC
       setText(prev => append ? `${prev}${newText}` : newText);
     },
     focus: () => {
-      mentionsInputRef.current?.inputElement?.focus();
+      if (mentionsInputRef.current && typeof mentionsInputRef.current.focus === 'function') {
+         mentionsInputRef.current.focus();
+      } else {
+         // Fallback if ref method not available
+         const input = containerRef.current?.querySelector('textarea');
+         input?.focus();
+      }
     },
     scrollIntoView: () => {
       containerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
