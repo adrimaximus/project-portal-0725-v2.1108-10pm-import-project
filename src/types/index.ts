@@ -222,6 +222,7 @@ export interface Comment {
     content: string;
     senderName: string;
     isDeleted: boolean;
+    attachment?: ChatMessageAttachment | null;
   } | null;
 }
 
@@ -455,7 +456,7 @@ export interface Invoice {
   clientCompanyName: string | null;
   projectOwner: Owner | null;
   assignedMembers: Member[];
-  invoice_attachments?: InvoiceAttachment[];
+  invoiceAttachments?: InvoiceAttachment[];
   payment_terms?: any[];
   last_billing_reminder_sent_at?: string | null;
 }
