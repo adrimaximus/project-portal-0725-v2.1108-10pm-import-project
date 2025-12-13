@@ -229,7 +229,7 @@ const ExpensePage = () => {
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <Avatar className="h-8 w-8 cursor-help">
+                                  <Avatar className="h-8 w-8">
                                     <AvatarImage src={getAvatarUrl(expense.project_owner.avatar_url, expense.project_owner.id)} />
                                     <AvatarFallback style={generatePastelColor(expense.project_owner.id)}>
                                       {expense.project_owner.initials}
@@ -247,7 +247,7 @@ const ExpensePage = () => {
                               <TooltipProvider delayDuration={100}>
                                 <Tooltip>
                                   <TooltipTrigger asChild>
-                                    <span className="cursor-help underline decoration-dotted">{expense.beneficiary}</span>
+                                    <span className="underline decoration-dotted">{expense.beneficiary}</span>
                                   </TooltipTrigger>
                                   <TooltipContent>
                                     <div className="flex flex-col gap-0.5 text-xs">
