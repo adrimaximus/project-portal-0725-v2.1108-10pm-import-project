@@ -126,7 +126,7 @@ export const useProjectMutations = (slug?: string) => {
             toast.success("File upload complete!");
             invalidateProjectQueries();
         },
-        onError: (err: any) => toast.error(getErrorMessage(err, "File upload failed.")),
+        onError: (err: any) => toast.error(`File upload failed: ${getErrorMessage(err)}`),
     });
 
     const deleteFile = useMutation({

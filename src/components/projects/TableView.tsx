@@ -152,10 +152,11 @@ const ProjectRow = ({ project, onDeleteProject, rowRefs, onStatusChange, statuse
 
   // Determine border color based on dynamic status definition
   const statusDef = statuses.find(s => s.name === displayStatus);
-  const borderColor = statusDef?.color || getProjectStatusStyles(displayStatus).hex;
+  const borderColor = statusDef?.color || getProjectStatusStyles(displayStatus as ProjectStatus).hex;
 
   const handleLocalStatusChange = (newStatus: string) => {
     setCurrentStatus(newStatus);
+    // Explicitly cast to ProjectStatus since we know the value comes from our valid options
     onStatusChange(project.id, newStatus as ProjectStatus);
   };
 

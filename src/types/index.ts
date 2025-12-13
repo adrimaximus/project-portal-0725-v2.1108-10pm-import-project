@@ -529,3 +529,9 @@ export interface ProjectStatusDef {
   color: string;
   position: number;
 }
+
+export interface AdvancedFiltersState {
+  ownerIds: string[];
+  memberIds: string[];
+  excludedStatus: string[];
+}
