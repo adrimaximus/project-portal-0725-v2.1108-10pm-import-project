@@ -7,26 +7,36 @@
 
 .mentions-input__control {
   background-color: transparent;
+  min-height: 40px;
 }
 
 /* Ensure highlighter and input align pixel-perfectly */
 .mentions-input__highlighter {
-  padding: 9px 12px;
+  padding: 9px 12px !important;
   min-height: 40px;
+  max-height: 120px;
   box-sizing: border-box;
   border: 1px solid transparent; /* Match input border to avoid offset */
   margin: 0;
+  
+  /* Text Styling */
+  color: hsl(var(--foreground)) !important; /* Ensure the text underneath is visible */
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow: hidden !important; /* React Mentions syncs scroll, so we hide overflow here */
 }
 
 .mentions-input__input {
-  padding: 9px 12px;
+  padding: 9px 12px !important;
   min-height: 40px;
+  max-height: 120px;
   outline: 0;
   border: 0;
-  width: 100%;
+  width: 100% !important;
   box-sizing: border-box;
   background-color: transparent !important;
   margin: 0;
+  overflow: auto !important;
   
   /* CRITICAL: Make input text transparent so only highlighter shows */
   color: transparent !important; 
@@ -35,7 +45,9 @@
 }
 
 .mentions-input__input::placeholder {
-  color: hsl(var(--muted-foreground));
+  color: hsl(var(--muted-foreground)) !important;
+  /* Placeholder must be visible even if text is transparent */
+  -webkit-text-fill-color: hsl(var(--muted-foreground)); 
 }
 
 /* Suggestion Dropdown/Dropup */
@@ -46,7 +58,7 @@
   box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.15);
   font-size: 0.875rem;
   overflow: hidden;
-  z-index: 50; /* Ensure it appears above other UI elements */
+  z-index: 9999; /* Ensure it appears above other UI elements */
 }
 
 .mentions-input__suggestions__list {

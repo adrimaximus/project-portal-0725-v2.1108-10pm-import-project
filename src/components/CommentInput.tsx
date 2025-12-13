@@ -174,8 +174,6 @@ const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({
   
   const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email;
 
-  // We rely mostly on CSS now, but positioning the suggestions box needs inline override
-  // based on the dropUp prop.
   const suggestionsStyle = dropUp 
     ? {
         bottom: '100%',
@@ -236,11 +234,30 @@ const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({
               className="mentions-input w-full"
               a11ySuggestionsListLabel={"Suggested mentions"}
               inputRef={mentionsInputRef}
-              style={{
-                // We leave general styling to CSS class 'mentions-input'
-                // Only provide suggestion placement logic here
+              style={{ 
+                width: '100%',
                 suggestions: {
                   ...suggestionsStyle,
+                  maxHeight: '200px',
+                  overflowY: 'auto',
+                  borderRadius: '0.5rem',
+                  border: '1px solid hsl(var(--border))',
+                  boxShadow: '0 -4px 12px -2px rgba(0, 0, 0, 0.1)',
+                  backgroundColor: 'hsl(var(--popover))',
+                  zIndex: 9999,
+                  list: {
+                    backgroundColor: 'hsl(var(--popover))',
+                    color: 'hsl(var(--popover-foreground))',
+                    fontSize: '0.875rem',
+                  },
+                  item: {
+                    padding: '6px 12px',
+                    borderBottom: '1px solid hsl(var(--border) / 0.5)',
+                    '&focused': {
+                      backgroundColor: 'hsl(var(--accent))',
+                      color: 'hsl(var(--accent-foreground))',
+                    },
+                  },
                 }
               }}
             >
@@ -250,7 +267,7 @@ const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({
                 markup="@[__display__](__id__)"
                 displayTransform={(id, display) => `@${display}`}
                 renderSuggestion={(suggestion: any, search, highlightedDisplay, index, focused) => (
-                  <div className={`mention-suggestion ${focused ? 'focused' : ''}`}>
+                  <div className={cn("mention-suggestion", focused && "focused")}>
                     <Avatar className="h-6 w-6 mr-2">
                       <AvatarImage src={getAvatarUrl(suggestion.avatar_url, suggestion.id)} />
                       <AvatarFallback style={generatePastelColor(suggestion.id)}>
@@ -263,10 +280,12 @@ const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({
                     </div>
                   </div>
                 )}
-                // Styling for the mention pill in the highlighter.
-                // Note: The input text itself is transparent via CSS.
                 style={{ 
-                  backgroundColor: 'transparent',
+                  backgroundColor: 'hsl(var(--primary) / 0.1)', 
+                  color: 'hsl(var(--primary))', 
+                  fontWeight: 500,
+                  padding: '0 1px',
+                  borderRadius: '2px',
                 }}
               />
             </MentionsInput>
