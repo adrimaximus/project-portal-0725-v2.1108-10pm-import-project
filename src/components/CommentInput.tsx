@@ -19,7 +19,6 @@ interface CommentInputProps {
   replyTo?: CommentType | null;
   onCancelReply?: () => void;
   storageKey: string;
-  dropUp?: boolean; // Prop baru untuk mengontrol arah saran
 }
 
 export interface CommentInputHandle {
@@ -28,15 +27,7 @@ export interface CommentInputHandle {
   scrollIntoView: () => void;
 }
 
-const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({ 
-  onAddCommentOrTicket, 
-  allUsers, 
-  initialValue, 
-  replyTo, 
-  onCancelReply, 
-  storageKey,
-  dropUp = true // Default ke atas (untuk chat window di bawah)
-}, ref) => {
+const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({ onAddCommentOrTicket, allUsers, initialValue, replyTo, onCancelReply, storageKey }: CommentInputProps, ref) => {
   const { user } = useAuth();
   
   const [text, setText] = useState(() => {
@@ -67,6 +58,7 @@ const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({
       if (mentionsInputRef.current && typeof mentionsInputRef.current.focus === 'function') {
          mentionsInputRef.current.focus();
       } else {
+         // Fallback if ref method not available
          const input = containerRef.current?.querySelector('textarea');
          input?.focus();
       }
@@ -132,6 +124,7 @@ const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({
     
     let finalText = text;
     
+    // Replace @all with explicit mentions for all users
     if (finalText.match(/@\[[^\]]+\]\(all\)/)) {
         const allMentions = allUsers.map(u => `@[${u.name}](${u.id})`).join(' ');
         finalText = finalText.replace(/@\[[^\]]+\]\(all\)/g, allMentions);
@@ -173,21 +166,6 @@ const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({
   if (!user) return null;
   
   const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email;
-
-  // Tentukan posisi suggestions berdasarkan prop dropUp
-  const suggestionsStyle = dropUp 
-    ? {
-        bottom: '100%',
-        top: 'auto',
-        marginBottom: '8px',
-        marginTop: '0'
-      }
-    : {
-        top: '100%',
-        bottom: 'auto',
-        marginTop: '8px',
-        marginBottom: '0'
-      };
 
   return (
     <div ref={containerRef} className="flex items-end space-x-3 w-full">
@@ -255,14 +233,16 @@ const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({
                   },
                 },
                 suggestions: {
-                  ...suggestionsStyle, // Terapkan posisi dinamis
+                  bottom: '100%', // Position above the input
+                  top: 'auto',    // Override default top positioning
+                  marginBottom: '8px', // Add some space
                   maxHeight: '200px',
                   overflowY: 'auto',
                   borderRadius: '0.5rem',
                   border: '1px solid hsl(var(--border))',
-                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                  boxShadow: '0 -4px 12px -2px rgba(0, 0, 0, 0.1)',
                   backgroundColor: 'hsl(var(--popover))',
-                  zIndex: 9999,
+                  zIndex: 9999, // Ensure it's on top of everything including drawers/modals
                   list: {
                     backgroundColor: 'hsl(var(--popover))',
                     color: 'hsl(var(--popover-foreground))',
@@ -285,7 +265,7 @@ const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({
                 markup="@[__display__](__id__)"
                 displayTransform={(id, display) => `@${display}`}
                 renderSuggestion={(suggestion: any, search, highlightedDisplay, index, focused) => (
-                  <div className={`mention-suggestion ${focused ? 'focused' : ''}`}>
+                  <div className={cn("mention-suggestion", focused && "focused")}>
                     <Avatar className="h-6 w-6 mr-2">
                       <AvatarImage src={getAvatarUrl(suggestion.avatar_url, suggestion.id)} />
                       <AvatarFallback style={generatePastelColor(suggestion.id)}>

@@ -103,7 +103,6 @@ const ProjectComments = forwardRef<CommentInputHandle, ProjectCommentsProps>(({
   return (
     <div className="flex flex-col h-full min-h-[400px] sm:min-h-[500px]">
       <div className="flex-shrink-0 pb-4 border-b mb-4">
-        {/* Input is at the TOP here, so suggestions should drop DOWN (dropUp={false}) */}
         <CommentInput
           ref={ref}
           onAddCommentOrTicket={onAddCommentOrTicket}
@@ -111,7 +110,6 @@ const ProjectComments = forwardRef<CommentInputHandle, ProjectCommentsProps>(({
           replyTo={replyTo}
           onCancelReply={onCancelReply}
           storageKey={storageKey}
-          dropUp={false} 
         />
       </div>
       <div className="flex-1 overflow-y-auto pr-4 space-y-4">
