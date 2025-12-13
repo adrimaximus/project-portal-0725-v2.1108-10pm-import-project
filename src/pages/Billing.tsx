@@ -70,7 +70,7 @@ const Billing = () => {
   };
   
   const invoices: Invoice[] = useMemo(() => projects
-    .map(project => {
+    .map((project): Invoice | null => {
       const eventDate = project.due_date || project.start_date;
       if (!project.payment_status || !project.budget || !eventDate) {
         return null;
@@ -107,7 +107,7 @@ const Billing = () => {
         invoiceAttachments: project.invoice_attachments || [],
         payment_terms: project.payment_terms || [],
         last_billing_reminder_sent_at: project.last_billing_reminder_sent_at || null,
-      };
+      } as Invoice;
     })
     .filter((invoice): invoice is Invoice => invoice !== null), [projects]);
 
