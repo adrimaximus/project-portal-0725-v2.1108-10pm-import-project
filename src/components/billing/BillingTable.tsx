@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import { format, formatDistanceToNow } from "date-fns";
 import { Invoice, PaymentStatus } from "@/types";
 import { useMemo } from "react";
-import PaymentStatusBadge from "./PaymentStatusBadge";
+import PaymentStatusBadge from "@/components/PaymentStatusBadge";
 import { SortableTableHead } from "../ui/SortableTableHead";
 
 interface BillingTableProps {

@@ -16,13 +16,13 @@ interface PaymentStatusBadgeProps {
 }
 
 const PaymentStatusBadge = ({ status, onStatusChange }: PaymentStatusBadgeProps) => {
-  const { data: paymentStatuses = [], isLoading } = usePaymentStatuses();
+  const { data: paymentStatuses = [] } = usePaymentStatuses();
 
   const options = useMemo(() => {
     if (paymentStatuses.length > 0) {
       return paymentStatuses.map(s => ({ id: s.id, name: s.name, color: s.color || '#94a3b8' }));
     }
-    // Fallback to hardcoded options if database is empty
+    // Fallback to hardcoded options if database is empty or loading
     return PAYMENT_STATUS_OPTIONS.map(opt => ({
       id: opt.value,
       name: opt.label,
@@ -31,20 +31,8 @@ const PaymentStatusBadge = ({ status, onStatusChange }: PaymentStatusBadgeProps)
   }, [paymentStatuses]);
 
   const currentStatus = options.find(s => s.name === status);
-  const bgColor = currentStatus?.color || '#94a3b8';
+  const bgColor = currentStatus?.color || getPaymentStatusStyles(status as PaymentStatus).hex || '#94a3b8';
   const textColor = getTextColor(bgColor);
-
-  if (isLoading && paymentStatuses.length === 0) {
-    return (
-      <Badge 
-        variant="outline" 
-        className={cn("font-normal border-transparent")}
-        style={{ backgroundColor: bgColor, color: textColor }}
-      >
-        {status}
-      </Badge>
-    );
-  }
 
   return (
     <DropdownMenu>
