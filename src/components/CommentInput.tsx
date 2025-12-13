@@ -19,7 +19,7 @@ interface CommentInputProps {
   replyTo?: CommentType | null;
   onCancelReply?: () => void;
   storageKey: string;
-  dropUp?: boolean; // Prop baru untuk mengontrol arah saran
+  dropUp?: boolean;
 }
 
 export interface CommentInputHandle {
@@ -35,7 +35,7 @@ const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({
   replyTo, 
   onCancelReply, 
   storageKey,
-  dropUp = true // Default ke atas (untuk chat window di bawah)
+  dropUp = true 
 }, ref) => {
   const { user } = useAuth();
   
@@ -174,19 +174,18 @@ const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({
   
   const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email;
 
-  // Tentukan posisi suggestions berdasarkan prop dropUp
+  // We rely mostly on CSS now, but positioning the suggestions box needs inline override
+  // based on the dropUp prop.
   const suggestionsStyle = dropUp 
     ? {
         bottom: '100%',
         top: 'auto',
         marginBottom: '8px',
-        marginTop: '0'
       }
     : {
         top: '100%',
         bottom: 'auto',
         marginTop: '8px',
-        marginBottom: '0'
       };
 
   return (
@@ -237,45 +236,11 @@ const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({
               className="mentions-input w-full"
               a11ySuggestionsListLabel={"Suggested mentions"}
               inputRef={mentionsInputRef}
-              style={{ 
-                width: '100%',
-                '&multiLine': {
-                  control: {
-                    minHeight: 36,
-                  },
-                  input: {
-                    maxHeight: 120,
-                    overflow: 'auto',
-                    padding: '8px 12px',
-                  },
-                  highlighter: {
-                    maxHeight: 120,
-                    overflow: 'hidden',
-                    padding: '8px 12px',
-                  },
-                },
+              style={{
+                // We leave general styling to CSS class 'mentions-input'
+                // Only provide suggestion placement logic here
                 suggestions: {
-                  ...suggestionsStyle, // Terapkan posisi dinamis
-                  maxHeight: '200px',
-                  overflowY: 'auto',
-                  borderRadius: '0.5rem',
-                  border: '1px solid hsl(var(--border))',
-                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-                  backgroundColor: 'hsl(var(--popover))',
-                  zIndex: 9999,
-                  list: {
-                    backgroundColor: 'hsl(var(--popover))',
-                    color: 'hsl(var(--popover-foreground))',
-                    fontSize: '0.875rem',
-                  },
-                  item: {
-                    padding: '6px 12px',
-                    borderBottom: '1px solid hsl(var(--border) / 0.5)',
-                    '&focused': {
-                      backgroundColor: 'hsl(var(--accent))',
-                      color: 'hsl(var(--accent-foreground))',
-                    },
-                  },
+                  ...suggestionsStyle,
                 }
               }}
             >
@@ -298,14 +263,10 @@ const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({
                     </div>
                   </div>
                 )}
+                // Styling for the mention pill in the highlighter.
+                // Note: The input text itself is transparent via CSS.
                 style={{ 
-                  backgroundColor: 'hsl(var(--primary) / 0.1)', 
-                  color: 'hsl(var(--primary))', 
-                  fontWeight: 500,
-                  padding: '0 1px',
-                  borderRadius: '2px',
-                  boxDecorationBreak: 'clone',
-                  WebkitBoxDecorationBreak: 'clone',
+                  backgroundColor: 'transparent',
                 }}
               />
             </MentionsInput>
