@@ -86,7 +86,7 @@ const InteractiveText = ({ text, members = [] }: InteractiveTextProps) => {
         if (mentionMatch) {
           const name = mentionMatch[1];
           return (
-            <span key={i} className="font-bold hover:underline cursor-pointer text-primary whitespace-nowrap">
+            <span key={i} className="font-bold text-primary whitespace-nowrap bg-primary/10 rounded-sm px-1">
               @{name}
             </span>
           );
