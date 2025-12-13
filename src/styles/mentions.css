@@ -10,6 +10,7 @@
   min-height: 40px;
 }
 
+/* Highlighter sits behind input. Text should be transparent so we don't see double text. */
 .mentions-input__highlighter {
   padding: 9px 12px !important;
   min-height: 40px;
@@ -18,13 +19,14 @@
   border: 1px solid transparent;
   margin: 0;
   
-  /* Hide the text in highlighter to prevent ghosting/double text */
+  /* HIDE TEXT in highlighter, only show background pills */
   color: transparent !important; 
   white-space: pre-wrap;
   word-wrap: break-word;
   overflow: hidden !important;
 }
 
+/* Input sits on top. Text should be visible. */
 .mentions-input__input {
   padding: 9px 12px !important;
   min-height: 40px;
@@ -37,7 +39,7 @@
   margin: 0;
   overflow: auto !important;
   
-  /* Make input text VISIBLE on top */
+  /* SHOW TEXT in input */
   color: hsl(var(--foreground)) !important; 
   caret-color: hsl(var(--foreground));
   z-index: 1;
@@ -45,7 +47,7 @@
 
 .mentions-input__input::placeholder {
   color: hsl(var(--muted-foreground)) !important;
-  opacity: 1;
+  -webkit-text-fill-color: hsl(var(--muted-foreground));
 }
 
 /* Suggestion Dropdown */
@@ -85,7 +87,7 @@
   /* Background pill color */
   background-color: hsl(var(--primary) / 0.1) !important;
   
-  /* Text must be transparent in highlighter so it doesn't clash with the visible input text on top */
+  /* Text must be transparent in highlighter so it doesn't clash with the visible input text */
   color: transparent !important; 
   
   font-weight: 600;
@@ -97,6 +99,7 @@
   /* Remove underline */
   text-decoration: none !important;
   border-bottom: none !important;
+  box-shadow: none !important;
 }
 
 /* Custom styles for rich suggestions rendering */
