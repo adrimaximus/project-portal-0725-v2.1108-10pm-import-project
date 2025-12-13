@@ -134,7 +134,7 @@ const ProjectRow = ({
   onPaymentStatusChange,
   statuses 
 }: ProjectRowProps) => {
-  const [currentStatus, setCurrentStatus] = useState<string>(project.status);
+  const [currentStatus, setCurrentStatus] = useState<ProjectStatus>(project.status);
 
   // Sync local state if prop changes (e.g. from refresh)
   useEffect(() => {
@@ -153,7 +153,9 @@ const ProjectRow = ({
     const now = new Date();
     const dueDate = project.due_date ? new Date(project.due_date) : null;
     if (dueDate && isBefore(dueDate, now)) {
-      displayStatus = "Billing Process";
+      // TypeScript might complain here if "Billing Process" isn't in ProjectStatus
+      // Casting for now as it seems to be a dynamic status in logic
+      displayStatus = "Billing Process" as ProjectStatus;
     } else {
       displayStatus = "On Track";
     }
@@ -164,8 +166,9 @@ const ProjectRow = ({
   const borderColor = statusDef?.color || getProjectStatusStyles(displayStatus).hex;
 
   const handleLocalStatusChange = (newStatus: string) => {
-    setCurrentStatus(newStatus);
-    onStatusChange(project.id, newStatus as ProjectStatus);
+    const typedStatus = newStatus as ProjectStatus;
+    setCurrentStatus(typedStatus);
+    onStatusChange(project.id, typedStatus);
   };
 
   const handleLocalPaymentStatusChange = (newStatus: string) => {

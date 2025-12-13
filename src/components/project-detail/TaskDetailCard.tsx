@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useRef, useEffect } from 'react';
-import { Task, TaskAttachment, Reaction, User, Comment as CommentType, TaskStatus, TASK_STATUS_OPTIONS } from '@/types';
+import { Task, TaskAttachment, Reaction, User, Comment as CommentType, TaskStatus, TASK_STATUS_OPTIONS, TaskPriority } from '@/types';
 import { DrawerContent } from '@/components/ui/drawer';
 import { Button } from '../ui/button';
 import { format, isPast, formatDistanceToNow } from 'date-fns';
@@ -123,8 +123,6 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
   const [editedTitle, setEditedTitle] = useState(task.title);
   const [isAttachmentModalOpen, setIsAttachmentModalOpen] = useState(false);
 
-  // Only allow mentioning users assigned to the task
-  // This ensures @all only notifies task assignees
   const taskAssignees = useMemo(() => task.assignedTo || [], [task.assignedTo]);
 
   useEffect(() => {
@@ -266,7 +264,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
 
   return (
     <>
-      <DrawerContent className="mx-auto w-full max-w-[650px] flex flex-col max-h-[90dvh]">
+      <DrawerContent className="mx-auto w-full max-w-[650px] flex flex-col h-[90vh] rounded-t-xl outline-none">
         <div className="flex-shrink-0 p-4 pt-3">
           <div className="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-muted" />
         </div>
@@ -386,7 +384,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
                 <p className="font-medium">Priority</p>
                 <Select
                   value={task.priority}
-                  onValueChange={(newPriority) => updateTask({ taskId: task.id, updates: { priority: newPriority } })}
+                  onValueChange={(newPriority) => updateTask({ taskId: task.id, updates: { priority: newPriority as TaskPriority } })}
                 >
                   <SelectTrigger className="h-auto p-0 border-0 focus:ring-0 focus:ring-offset-0 w-auto bg-transparent shadow-none">
                     <SelectValue>
@@ -514,11 +512,12 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
             )}
           </div>
 
-          {description && (
+          {/* Description & Reactions */}
+          {description ? (
             <div className="pt-4 border-t">
               <h4 className="font-semibold mb-2">Description</h4>
               <div className="prose prose-sm dark:prose-invert max-w-none break-word">
-                <InteractiveText text={displayedDescription} members={taskAssignees} />
+                <InteractiveText text={displayedDescription} members={allUsers} />
               </div>
               {isLongDescription && (
                 <Button variant="link" size="sm" onClick={() => setShowFullDescription(!showFullDescription)} className="px-0 h-auto">
@@ -570,7 +569,8 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
           </div>
         </div>
 
-        <div className="flex-shrink-0 p-4 border-t">
+        {/* Removed p-4 and border-t to avoid double borders/padding issues */}
+        <div className="flex-shrink-0 p-2 bg-background">
           <CommentInput
             ref={commentInputRef}
             onAddCommentOrTicket={handleAddComment}

@@ -126,10 +126,10 @@ export const getProjectStatusStyles = (status: ProjectStatus | null | undefined)
 
 export const getPaymentStatusStyles = (status: PaymentStatus | null | undefined) => {
   switch (status) {
-    case 'Paid': return { tw: 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300 border-green-200 dark:border-green-700/50' };
-    case 'Overdue': return { tw: 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300 border-red-200 dark:border-red-700/50' };
-    case 'Pending': return { tw: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300 border-yellow-200 dark:border-yellow-700/50' };
-    default: return { tw: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600' };
+    case 'Paid': return { tw: 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300 border-green-200 dark:border-green-700/50', hex: '#22c55e' };
+    case 'Overdue': return { tw: 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300 border-red-200 dark:border-red-700/50', hex: '#ef4444' };
+    case 'Pending': return { tw: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300 border-yellow-200 dark:border-yellow-700/50', hex: '#eab308' };
+    default: return { tw: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600', hex: '#94a3b8' };
   }
 };
 

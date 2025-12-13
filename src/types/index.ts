@@ -23,6 +23,8 @@ export type User = {
   permissions?: string[];
   people_kanban_settings?: any;
   theme?: string;
+  isIdle?: boolean;
+  last_active_at?: string;
 };
 
 export type Collaborator = User;
@@ -107,6 +109,7 @@ export interface Project {
   total_task_count?: number;
   last_billing_reminder_sent_at?: string | null;
   invoice_attachments?: InvoiceAttachment[];
+  category?: string | null;
 }
 
 export interface ProjectFile {
@@ -342,6 +345,11 @@ export interface Conversation {
   created_by: string;
 }
 
+export interface ConversationMessage {
+  sender: 'ai' | 'user';
+  content: string;
+}
+
 // Knowledge Base
 export interface KbFolder {
   id: string;
@@ -449,7 +457,7 @@ export interface Invoice {
   clientCompanyName: string | null;
   projectOwner: Owner | null;
   assignedMembers: Member[];
-  invoice_attachments?: InvoiceAttachment[];
+  invoiceAttachments?: InvoiceAttachment[];
   payment_terms?: any[];
   last_billing_reminder_sent_at?: string | null;
 }
@@ -521,4 +529,10 @@ export interface ProjectStatusDef {
   name: string;
   color: string;
   position: number;
+}
+
+export interface AdvancedFiltersState {
+  ownerIds: string[];
+  memberIds: string[];
+  excludedStatus: string[];
 }
