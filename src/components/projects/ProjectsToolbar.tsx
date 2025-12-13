@@ -262,7 +262,7 @@ const ProjectsToolbar = ({
                 ) : (
                   <Button size="sm" variant="default" onClick={onNewProjectClick} className="h-9 px-3 gap-1">
                     <PlusCircle className="h-4 w-4" />
-                    <span className="sr-only sm:not-sr-only">New Project</span>
+                    <span className="sr-only sm:not-sr-only">Project</span>
                   </Button>
                 )}
                 
