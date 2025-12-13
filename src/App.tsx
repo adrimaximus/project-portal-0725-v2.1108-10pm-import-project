@@ -58,6 +58,8 @@ const ContactPropertiesPage = lazy(() => import('./pages/ContactPropertiesPage')
 const CompanyPropertiesPage = lazy(() => import('./pages/CompanyPropertiesPage'));
 const ProjectStatusesPage = lazy(() => import('./pages/settings/ProjectStatusesPage'));
 const BillingPropertiesPage = lazy(() => import('./pages/BillingPropertiesPage'));
+const PaymentStatusesPage = lazy(() => import('./pages/settings/PaymentStatusesPage'));
+const CustomBillingFieldsPage = lazy(() => import('./pages/settings/CustomBillingFieldsPage'));
 const ExpensePropertiesPage = lazy(() => import('./pages/ExpensePropertiesPage'));
 const TagsPropertiesPage = lazy(() => import('./pages/TagsPropertiesPage'));
 const BankAccountsPage = lazy(() => import('./pages/BankAccountsPage'));
@@ -123,6 +125,8 @@ function App() {
             <Route path="/settings/company-properties" element={<CompanyPropertiesPage />} />
             <Route path="/settings/project-statuses" element={<ProjectStatusesPage />} />
             <Route path="/settings/billing-properties" element={<BillingPropertiesPage />} />
+            <Route path="/settings/payment-statuses" element={<PaymentStatusesPage />} />
+            <Route path="/settings/custom-billing-fields" element={<CustomBillingFieldsPage />} />
             <Route path="/settings/expense-properties" element={<ExpensePropertiesPage />} />
             <Route path="/settings/tags-properties" element={<TagsPropertiesPage />} />
             <Route path="/settings/bank-accounts" element={<BankAccountsPage />} />

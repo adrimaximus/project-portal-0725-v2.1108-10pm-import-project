@@ -1,9 +1,9 @@
 import PortalLayout from "@/components/PortalLayout";
-import PaymentStatusManager from "@/components/settings/PaymentStatusManager";
+import CustomPropertiesManager from "@/components/settings/CustomPropertiesManager";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import { Link } from "react-router-dom";
 
-const PaymentStatusesPage = () => {
+const CustomBillingFieldsPage = () => {
   return (
     <PortalLayout>
       <div className="space-y-6">
@@ -28,14 +28,18 @@ const PaymentStatusesPage = () => {
             </BreadcrumbItem>
             <BreadcrumbSeparator />
             <BreadcrumbItem>
-              <BreadcrumbPage>Payment Statuses</BreadcrumbPage>
+              <BreadcrumbPage>Custom Fields</BreadcrumbPage>
             </BreadcrumbItem>
           </BreadcrumbList>
         </Breadcrumb>
-        <PaymentStatusManager />
+        <CustomPropertiesManager 
+          category="billing"
+          title="Custom Billing Fields"
+          description="Add and manage custom fields for your invoices and billing records."
+        />
       </div>
     </PortalLayout>
   );
 };
 
-export default PaymentStatusesPage;
+export default CustomBillingFieldsPage;

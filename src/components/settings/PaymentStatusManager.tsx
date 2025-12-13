@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { GripVertical, Plus, Trash2 } from "lucide-react";
@@ -58,7 +57,7 @@ const updatePositions = async (statuses: { id: string; position: number }[]) => 
     if (error) throw error;
 };
 
-const PaymentStatusesCard = () => {
+const PaymentStatusManager = () => {
   const queryClient = useQueryClient();
   const { data: statuses = [], isLoading } = useQuery<PaymentStatus[]>({
     queryKey: ['payment_statuses'],
@@ -149,22 +148,18 @@ const PaymentStatusesCard = () => {
   };
 
   if (isLoading) {
-    return <Card>
-      <CardHeader><CardTitle>Payment Statuses</CardTitle></CardHeader>
-      <CardContent>Loading...</CardContent>
-    </Card>;
+    return <div>Loading...</div>;
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Payment Statuses</CardTitle>
-        <CardDescription>
-          Define the stages of your payment process. Drag to reorder.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
+    <div className="max-w-2xl">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Payment Statuses</h1>
+          <p className="text-muted-foreground">
+            Define the stages of your payment process. Drag to reorder.
+          </p>
+        </div>
+        <div className="mt-6 space-y-4">
           <DragDropContext onDragEnd={onDragEnd}>
             <Droppable droppableId="statuses">
               {(provided) => (
@@ -213,9 +208,8 @@ const PaymentStatusesCard = () => {
             <Plus className="mr-2 h-4 w-4" /> Add Status
           </Button>
         </div>
-      </CardContent>
-    </Card>
+    </div>
   );
 };
 
-export default PaymentStatusesCard;
+export default PaymentStatusManager;
