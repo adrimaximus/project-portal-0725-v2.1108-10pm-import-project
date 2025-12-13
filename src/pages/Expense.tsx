@@ -226,15 +226,21 @@ const ExpensePage = () => {
                           </TableCell>
                           <TableCell>{(expense as any).purpose_payment || '-'}</TableCell>
                           <TableCell>
-                            <div className="flex items-center gap-2">
-                              <Avatar className="h-8 w-8">
-                                <AvatarImage src={getAvatarUrl(expense.project_owner.avatar_url, expense.project_owner.id)} />
-                                <AvatarFallback style={generatePastelColor(expense.project_owner.id)}>
-                                  {expense.project_owner.initials}
-                                </AvatarFallback>
-                              </Avatar>
-                              <span className="font-medium">{expense.project_owner.name}</span>
-                            </div>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Avatar className="h-8 w-8 cursor-help">
+                                    <AvatarImage src={getAvatarUrl(expense.project_owner.avatar_url, expense.project_owner.id)} />
+                                    <AvatarFallback style={generatePastelColor(expense.project_owner.id)}>
+                                      {expense.project_owner.initials}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>{expense.project_owner.name}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
                           </TableCell>
                           <TableCell>
                             {expense.account_bank && expense.account_bank.name ? (
