@@ -20,6 +20,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useSortConfig } from "@/hooks/useSortConfig";
+import BillingKanbanView from "@/components/billing/BillingKanbanView";
 
 const Billing = () => {
   const { data: projectsData, isLoading } = useProjects({ fetchAll: true });
