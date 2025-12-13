@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useRef, useEffect } from 'react';
-import { Task, TaskAttachment, Reaction, User, Comment as CommentType, TaskStatus, TASK_STATUS_OPTIONS, TaskPriority } from '@/types';
+import { Task, TaskAttachment, Reaction, User, Comment as CommentType, TaskStatus, TASK_STATUS_OPTIONS } from '@/types';
 import { DrawerContent } from '@/components/ui/drawer';
 import { Button } from '../ui/button';
 import { format, isPast, formatDistanceToNow } from 'date-fns';
@@ -123,6 +123,8 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
   const [editedTitle, setEditedTitle] = useState(task.title);
   const [isAttachmentModalOpen, setIsAttachmentModalOpen] = useState(false);
 
+  // Only allow mentioning users assigned to the task
+  // This ensures @all only notifies task assignees
   const taskAssignees = useMemo(() => task.assignedTo || [], [task.assignedTo]);
 
   useEffect(() => {
@@ -264,6 +266,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
 
   return (
     <>
+      {/* Changed max-h-[90dvh] to h-[90vh] for better mobile keyboard handling */}
       <DrawerContent className="mx-auto w-full max-w-[650px] flex flex-col h-[90vh] rounded-t-xl outline-none">
         <div className="flex-shrink-0 p-4 pt-3">
           <div className="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-muted" />
@@ -384,7 +387,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
                 <p className="font-medium">Priority</p>
                 <Select
                   value={task.priority}
-                  onValueChange={(newPriority) => updateTask({ taskId: task.id, updates: { priority: newPriority as TaskPriority } })}
+                  onValueChange={(newPriority) => updateTask({ taskId: task.id, updates: { priority: newPriority } })}
                 >
                   <SelectTrigger className="h-auto p-0 border-0 focus:ring-0 focus:ring-offset-0 w-auto bg-transparent shadow-none">
                     <SelectValue>

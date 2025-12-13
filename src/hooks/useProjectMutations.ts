@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Project, User, Reaction, Comment as CommentType, PaymentStatus } from '@/types';
+import { Project, User, Reaction, Comment as CommentType } from '@/types';
 import { useNavigate } from 'react-router-dom';
 import { getErrorMessage } from '@/lib/utils';
 import { v4 as uuidv4 } from 'uuid';
@@ -34,23 +34,6 @@ export const useProjectMutations = (slug?: string) => {
         },
         onError: (err: any) => {
             toast.error('Failed to update project status', { description: getErrorMessage(err) });
-        }
-    });
-
-    const updatePaymentStatus = useMutation({
-        mutationFn: async ({ projectId, status }: { projectId: string, status: PaymentStatus }) => {
-            const { error } = await supabase
-                .from('projects')
-                .update({ payment_status: status })
-                .eq('id', projectId);
-            if (error) throw error;
-        },
-        onSuccess: () => {
-            toast.success('Payment status updated');
-            invalidateProjectQueries();
-        },
-        onError: (err: any) => {
-            toast.error('Failed to update payment status', { description: getErrorMessage(err) });
         }
     });
 
@@ -143,7 +126,7 @@ export const useProjectMutations = (slug?: string) => {
             toast.success("File upload complete!");
             invalidateProjectQueries();
         },
-        onError: (err: any) => toast.error("File upload failed.", { description: getErrorMessage(err) }),
+        onError: (err: any) => toast.error(getErrorMessage(err, "File upload failed.")),
     });
 
     const deleteFile = useMutation({
@@ -197,7 +180,6 @@ export const useProjectMutations = (slug?: string) => {
         deleteFile,
         deleteProject,
         updateProjectStatus,
-        updatePaymentStatus,
         toggleProjectReaction,
     };
 };

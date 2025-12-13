@@ -35,7 +35,6 @@ const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
       let isIdle = c.isIdle;
       
       // Override status idle jika last_active_at lebih dari 5 menit yang lalu
-      // We know `last_active_at` might exist on `Collaborator` which extends `User` in our updated types
       if (c.last_active_at) {
         const lastActiveTime = new Date(c.last_active_at).getTime();
         if (currentTime - lastActiveTime > IDLE_THRESHOLD_MS) {

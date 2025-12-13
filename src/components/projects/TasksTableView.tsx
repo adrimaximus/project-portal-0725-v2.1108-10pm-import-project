@@ -213,7 +213,7 @@ const DueDateSelector = ({ task, onDueDateChange }: { task: ProjectTask, onDueDa
     if (selectedDate) {
       const newDate = new Date(selectedDate);
       let h = parseInt(hours, 10);
-      let m = parseInt(minutes, 10);
+      const m = parseInt(minutes, 10);
 
       // Validate inputs
       if (isNaN(h)) h = 12;

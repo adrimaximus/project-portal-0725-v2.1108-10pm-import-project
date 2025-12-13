@@ -8,7 +8,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
-import { Project, ProjectStatus, ProjectStatusDef, PaymentStatus } from '@/types';
+import { Project, ProjectStatus, ProjectStatusDef } from '@/types';
 import { Link } from "react-router-dom";
 import { MoreHorizontal, Trash2 } from "lucide-react";
 import { Button } from "../ui/button";
@@ -30,7 +30,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useProjectStatuses } from "@/hooks/useProjectStatuses";
-import PaymentStatusBadge from "../PaymentStatusBadge";
 
 interface TableViewProps {
   projects: Project[];
@@ -40,7 +39,6 @@ interface TableViewProps {
   requestSort: (key: keyof Project) => void;
   rowRefs: React.MutableRefObject<Map<string, HTMLTableRowElement>>;
   onStatusChange: (projectId: string, newStatus: ProjectStatus) => void;
-  onPaymentStatusChange: (projectId: string, newStatus: PaymentStatus) => void;
 }
 
 const formatProjectDateRange = (startDateStr: string | null | undefined, dueDateStr: string | null | undefined): string => {
@@ -122,25 +120,18 @@ interface ProjectRowProps {
   onDeleteProject: (projectId: string) => void;
   rowRefs: React.MutableRefObject<Map<string, HTMLTableRowElement>>;
   onStatusChange: (projectId: string, newStatus: ProjectStatus) => void;
-  onPaymentStatusChange: (projectId: string, newStatus: PaymentStatus) => void;
   statuses: ProjectStatusDef[];
 }
 
-const ProjectRow = ({ 
-  project, 
-  onDeleteProject, 
-  rowRefs, 
-  onStatusChange, 
-  onPaymentStatusChange,
-  statuses 
-}: ProjectRowProps) => {
-  const [currentStatus, setCurrentStatus] = useState<ProjectStatus>(project.status);
+const ProjectRow = ({ project, onDeleteProject, rowRefs, onStatusChange, statuses }: ProjectRowProps) => {
+  const [currentStatus, setCurrentStatus] = useState<string>(project.status);
 
   // Sync local state if prop changes (e.g. from refresh)
   useEffect(() => {
     setCurrentStatus(project.status);
   }, [project.status]);
 
+  const paymentBadgeColor = getPaymentStatusStyles(project.payment_status).tw;
   const { name: venueName, full: fullVenue } = formatVenue(project.venue);
   const hasOpenTasks = useMemo(() => project.tasks?.some(task => !task.completed) ?? false, [project.tasks]);
 
@@ -153,9 +144,7 @@ const ProjectRow = ({
     const now = new Date();
     const dueDate = project.due_date ? new Date(project.due_date) : null;
     if (dueDate && isBefore(dueDate, now)) {
-      // TypeScript might complain here if "Billing Process" isn't in ProjectStatus
-      // Casting for now as it seems to be a dynamic status in logic
-      displayStatus = "Billing Process" as ProjectStatus;
+      displayStatus = "Billing Process";
     } else {
       displayStatus = "On Track";
     }
@@ -166,13 +155,8 @@ const ProjectRow = ({
   const borderColor = statusDef?.color || getProjectStatusStyles(displayStatus).hex;
 
   const handleLocalStatusChange = (newStatus: string) => {
-    const typedStatus = newStatus as ProjectStatus;
-    setCurrentStatus(typedStatus);
-    onStatusChange(project.id, typedStatus);
-  };
-
-  const handleLocalPaymentStatusChange = (newStatus: string) => {
-    onPaymentStatusChange(project.id, newStatus as PaymentStatus);
+    setCurrentStatus(newStatus);
+    onStatusChange(project.id, newStatus as ProjectStatus);
   };
 
   return (
@@ -196,10 +180,9 @@ const ProjectRow = ({
         />
       </TableCell>
       <TableCell>
-        <PaymentStatusBadge 
-          status={project.payment_status} 
-          onStatusChange={handleLocalPaymentStatusChange} 
-        />
+        <Badge variant="outline" className={cn("border-transparent font-normal", paymentBadgeColor)}>
+          {project.payment_status}
+        </Badge>
       </TableCell>
       <TableCell>
         <Link to={`/projects/${project.slug}?tab=tasks`} className="flex items-center gap-2 group">
@@ -244,7 +227,7 @@ const ProjectRow = ({
   );
 };
 
-const TableView = ({ projects, isLoading, onDeleteProject, sortConfig, requestSort, rowRefs, onStatusChange, onPaymentStatusChange }: TableViewProps) => {
+const TableView = ({ projects, isLoading, onDeleteProject, sortConfig, requestSort, rowRefs, onStatusChange }: TableViewProps) => {
   const [visibleUpcomingCount, setVisibleUpcomingCount] = useState(10);
   const [visiblePastCount, setVisiblePastCount] = useState(15);
   const { data: statuses = [] } = useProjectStatuses();
@@ -294,8 +277,7 @@ const TableView = ({ projects, isLoading, onDeleteProject, sortConfig, requestSo
     setVisiblePastCount(pastProjects.length);
   };
 
-  let lastUpcomingMonth: string | null = null;
-  let lastPastMonth: string | null = null;
+  let lastMonthYear: string | null = null;
   const isDateSorted = sortConfig.key === null || sortConfig.key === 'start_date';
 
   return (
@@ -348,9 +330,9 @@ const TableView = ({ projects, isLoading, onDeleteProject, sortConfig, requestSo
               {visibleUpcomingProjects.map(project => {
                 const projectMonthYear = project.start_date ? formatInJakarta(new Date(project.start_date), 'MMMM yyyy') : null;
                 let showMonthSeparator = false;
-                if (isDateSorted && projectMonthYear && projectMonthYear !== lastUpcomingMonth) {
+                if (isDateSorted && projectMonthYear && projectMonthYear !== lastMonthYear) {
                   showMonthSeparator = true;
-                  lastUpcomingMonth = projectMonthYear;
+                  lastMonthYear = projectMonthYear;
                 }
 
                 return (
@@ -367,7 +349,6 @@ const TableView = ({ projects, isLoading, onDeleteProject, sortConfig, requestSo
                       onDeleteProject={onDeleteProject} 
                       rowRefs={rowRefs} 
                       onStatusChange={onStatusChange} 
-                      onPaymentStatusChange={onPaymentStatusChange}
                       statuses={statuses} 
                     />
                   </React.Fragment>
@@ -390,7 +371,7 @@ const TableView = ({ projects, isLoading, onDeleteProject, sortConfig, requestSo
                     <div className="flex items-center">
                       <div className="flex-grow border-t"></div>
                       <span className="flex-shrink mx-4 text-xs text-muted-foreground uppercase tracking-wider font-semibold">
-                        Past Events
+                        Past Projects
                       </span>
                       <div className="flex-grow border-t"></div>
                     </div>
@@ -401,9 +382,9 @@ const TableView = ({ projects, isLoading, onDeleteProject, sortConfig, requestSo
               {visiblePastProjects.map(project => {
                 const projectMonthYear = project.start_date ? formatInJakarta(new Date(project.start_date), 'MMMM yyyy') : null;
                 let showMonthSeparator = false;
-                if (isDateSorted && projectMonthYear && projectMonthYear !== lastPastMonth) {
+                if (isDateSorted && projectMonthYear && projectMonthYear !== lastMonthYear) {
                   showMonthSeparator = true;
-                  lastPastMonth = projectMonthYear;
+                  lastMonthYear = projectMonthYear;
                 }
 
                 return (
@@ -420,7 +401,6 @@ const TableView = ({ projects, isLoading, onDeleteProject, sortConfig, requestSo
                       onDeleteProject={onDeleteProject} 
                       rowRefs={rowRefs} 
                       onStatusChange={onStatusChange} 
-                      onPaymentStatusChange={onPaymentStatusChange}
                       statuses={statuses} 
                     />
                   </React.Fragment>
@@ -431,7 +411,7 @@ const TableView = ({ projects, isLoading, onDeleteProject, sortConfig, requestSo
                 <TableRow className="border-none hover:bg-transparent">
                   <TableCell colSpan={7} className="py-2 text-center">
                     <Button variant="outline" onClick={handleLoadMorePast}>
-                      Load More Past
+                      Load More Past Project
                     </Button>
                   </TableCell>
                 </TableRow>

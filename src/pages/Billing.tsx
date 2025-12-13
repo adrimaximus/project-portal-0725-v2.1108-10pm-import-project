@@ -9,6 +9,7 @@ import { EditInvoiceDialog } from "@/components/billing/EditInvoiceDialog";
 import BillingStats from "@/components/billing/BillingStats";
 import BillingToolbar from "@/components/billing/BillingToolbar";
 import BillingTable from "@/components/billing/BillingTable";
+import BillingKanbanView from "@/components/billing/BillingKanbanView";
 import { DateRange } from "react-day-picker";
 import {
   Accordion,
@@ -20,7 +21,6 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useSortConfig } from "@/hooks/useSortConfig";
-import BillingKanbanView from "@/components/billing/BillingKanbanView";
 
 const Billing = () => {
   const { data: projectsData, isLoading } = useProjects({ fetchAll: true });
@@ -70,7 +70,7 @@ const Billing = () => {
   };
   
   const invoices: Invoice[] = useMemo(() => projects
-    .map((project): Invoice | null => {
+    .map(project => {
       const eventDate = project.due_date || project.start_date;
       if (!project.payment_status || !project.budget || !eventDate) {
         return null;
@@ -139,41 +139,12 @@ const Billing = () => {
     });
   }, [invoices, searchTerm, dateRange]);
 
-  const sortedInvoices = useMemo(() => {
-    if (!sortConfig.key) return filteredInvoices;
-    return [...filteredInvoices].sort((a, b) => {
-      let aValue: any = a[sortConfig.key!];
-      let bValue: any = b[sortConfig.key!];
-      if (sortConfig.key === 'projectOwner') {
-        aValue = a.projectOwner?.name;
-        bValue = b.projectOwner?.name;
-      } else if (sortConfig.key === 'assignedMembers') {
-        aValue = a.assignedMembers?.find(m => m.role === 'admin')?.name;
-        bValue = b.assignedMembers?.find(m => m.role === 'admin')?.name;
-      }
-
-      if (aValue === null || aValue === undefined) return 1;
-      if (bValue === null || bValue === undefined) return -1;
-
-      let compareResult = 0;
-      if (aValue instanceof Date && bValue instanceof Date) {
-        compareResult = aValue.getTime() - bValue.getTime();
-      } else if (typeof aValue === 'number' && typeof bValue === 'number') {
-        compareResult = aValue - bValue;
-      } else {
-        compareResult = String(aValue).localeCompare(String(bValue), undefined, { numeric: true, sensitivity: 'base' });
-      }
-
-      return sortConfig.direction === 'asc' ? compareResult : -compareResult;
-    });
-  }, [filteredInvoices, sortConfig]);
-
   const { activeInvoices, archivedInvoices } = useMemo(() => {
     const active: Invoice[] = [];
     const archived: Invoice[] = [];
     const archivedStatuses: PaymentStatus[] = ['Paid', 'Cancelled', 'Bid Lost'];
 
-    sortedInvoices.forEach(invoice => {
+    filteredInvoices.forEach(invoice => {
       if (archivedStatuses.includes(invoice.status)) {
         archived.push(invoice);
       } else {
@@ -182,7 +153,7 @@ const Billing = () => {
     });
 
     return { activeInvoices: active, archivedInvoices: archived };
-  }, [sortedInvoices]);
+  }, [filteredInvoices]);
 
   const handleEdit = (invoice: Invoice) => {
     setSelectedInvoice(invoice);

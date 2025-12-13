@@ -120,8 +120,8 @@ const ChatList = ({ highlightedId, onHighlightComplete }: ChatListProps) => {
           const finalAvatarUrl = getAvatarUrl(c.userAvatar, avatarSeed);
           const isUnread = unreadConversationIds.has(c.id);
           const onlineStatus = otherUser ? onlineCollaborators.find(onlineUser => onlineUser.id === otherUser.id) : null;
-          const isOnline = onlineStatus && onlineStatus.isIdle === false;
-          const isIdle = onlineStatus && onlineStatus.isIdle === true;
+          const isOnline = onlineStatus && !onlineStatus.isIdle;
+          const isIdle = onlineStatus && onlineStatus.isIdle;
           const isLastMessageEmoji = isOnlyEmoji(c.lastMessage);
 
           return (

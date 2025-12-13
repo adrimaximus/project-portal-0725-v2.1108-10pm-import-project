@@ -55,6 +55,7 @@ const NewConversationDialog = ({
           avatar_url: getAvatarUrl(p.avatar_url, p.id),
           initials: getInitials(fullName, p.email) || 'NN',
           email: p.email || '',
+          online: false,
         }
       });
       setCollaborators(mappedCollaborators);
@@ -112,9 +113,8 @@ const NewConversationDialog = ({
             <div className="space-y-2">
               {filteredCollaborators.map(collaborator => {
                 const onlineStatus = onlineCollaborators.find(c => c.id === collaborator.id);
-                // Fix: Access properties safely or assume default if undefined
-                const isOnline = onlineStatus && onlineStatus.isIdle === false;
-                const isIdle = onlineStatus && onlineStatus.isIdle === true;
+                const isOnline = onlineStatus && !onlineStatus.isIdle;
+                const isIdle = onlineStatus && onlineStatus.isIdle;
                 return (
                   <div
                     key={collaborator.id}
@@ -123,7 +123,7 @@ const NewConversationDialog = ({
                     <div className="flex items-center gap-3">
                       <div className="relative">
                         <Avatar>
-                          <AvatarImage src={collaborator.avatar_url || ''} />
+                          <AvatarImage src={collaborator.avatar_url} />
                           <AvatarFallback style={generatePastelColor(collaborator.id)}>{collaborator.initials}</AvatarFallback>
                         </Avatar>
                         {(isOnline || isIdle) && (

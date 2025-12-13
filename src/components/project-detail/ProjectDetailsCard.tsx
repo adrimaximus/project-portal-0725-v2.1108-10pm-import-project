@@ -6,9 +6,10 @@ import { DateRangePicker } from "../DateRangePicker";
 import { DateRange } from "react-day-picker";
 import { CurrencyInput } from "../ui/currency-input";
 import ProjectServices from "./ProjectServices";
-import { formatInJakarta, cn } from "@/lib/utils";
+import { formatInJakarta, cn, getTextColor } from "@/lib/utils";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import StatusBadge from "../StatusBadge";
+import { Badge } from "@/components/ui/badge";
 import AddressAutocompleteInput from '../AddressAutocompleteInput';
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
@@ -20,7 +21,6 @@ import { toast } from "sonner";
 import { Avatar, AvatarImage, AvatarFallback } from "../ui/avatar";
 import { useProjectStatuses } from "@/hooks/useProjectStatuses";
 import { usePaymentStatuses } from "@/hooks/usePaymentStatuses";
-import PaymentStatusBadge from "../PaymentStatusBadge";
 
 // Extend types to include the new optional company_id field for a robust relationship.
 type LocalPerson = Person & { company_id?: string | null };
@@ -162,6 +162,9 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange, onStatusChange,
     );
   };
 
+  const currentPaymentStatus = paymentStatuses.find(s => s.name === project.payment_status);
+  const paymentBgColor = currentPaymentStatus?.color || '#94a3b8';
+  const paymentTextColor = getTextColor(paymentBgColor);
   const selectedValue = project.person_ids?.[0] || (project.client_company_id ? `company-${project.client_company_id}` : '');
 
   return (
@@ -326,10 +329,13 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange, onStatusChange,
                     </Select>
                   ) : (
                     <div className="pt-1">
-                      <PaymentStatusBadge 
-                        status={project.payment_status}
-                        onStatusChange={(newStatus) => onFieldChange('payment_status', newStatus)}
-                      />
+                      <Badge 
+                        variant="outline" 
+                        className={cn("font-normal border-transparent")}
+                        style={{ backgroundColor: paymentBgColor, color: paymentTextColor }}
+                      >
+                        {project.payment_status}
+                      </Badge>
                     </div>
                   )}
                 </div>

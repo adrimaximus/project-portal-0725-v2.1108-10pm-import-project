@@ -2,12 +2,13 @@ import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { useSearchParams, useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Project, Task as ProjectTask, Person, UpsertTaskPayload, TaskStatus, ProjectStatus, PaymentStatus, AdvancedFiltersState } from '@/types';
+import { Project, Task as ProjectTask, Person, UpsertTaskPayload, TaskStatus, ProjectStatus } from '@/types';
 import { toast } from 'sonner';
 
 import ProjectsToolbar from '@/components/projects/ProjectsToolbar';
 import ProjectViewContainer from '@/components/projects/ProjectViewContainer';
 import { GoogleCalendarImportDialog } from '@/components/projects/GoogleCalendarImportDialog';
+import { AdvancedFiltersState } from '@/types';
 import { useProjectFilters } from '@/hooks/useProjectFilters';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProjects } from '@/hooks/useProjects';
@@ -160,7 +161,7 @@ const ProjectsPage = () => {
     }
   }, [isTaskView, refetchProjects, queryClient]);
 
-  const { updateProjectStatus, updatePaymentStatus } = useProjectMutations();
+  const { updateProjectStatus } = useProjectMutations();
 
   const deleteProjectMutation = useMutation({
     mutationFn: async (projectId: string) => {
@@ -205,10 +206,6 @@ const ProjectsPage = () => {
         return;
     }
     updateProjectStatus.mutate({ projectId, status: newStatus });
-  };
-
-  const handlePaymentStatusChange = (projectId: string, newStatus: PaymentStatus) => {
-    updatePaymentStatus.mutate({ projectId, status: newStatus });
   };
 
   const handleCreateProject = (values: { name: string, description?: string }) => {
@@ -310,7 +307,6 @@ const ProjectsPage = () => {
                 rowRefs={rowRefs}
                 kanbanGroupBy={kanbanGroupBy}
                 onStatusChange={handleStatusChange}
-                onPaymentStatusChange={handlePaymentStatusChange}
                 hasActiveFilters={hasActiveFilters}
                 onClearFilters={clearFilters}
                 searchTerm={searchTerm}

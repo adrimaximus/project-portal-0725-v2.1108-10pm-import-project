@@ -1,5 +1,5 @@
 import React from 'react';
-import { Project, Task as ProjectTask, TaskStatus, ProjectStatus, PaymentStatus } from '@/types';
+import { Project, Task as ProjectTask, TaskStatus, ProjectStatus } from '@/types';
 import TableView from './TableView';
 import ListView from './ListView';
 import KanbanView from './KanbanView';
@@ -15,7 +15,6 @@ interface ProjectViewContainerProps {
   rowRefs: React.MutableRefObject<Map<string, HTMLTableRowElement>>;
   kanbanGroupBy: 'status' | 'payment_status';
   onStatusChange: (projectId: string, newStatus: ProjectStatus) => void;
-  onPaymentStatusChange: (projectId: string, newStatus: PaymentStatus) => void;
   hasActiveFilters: boolean;
   onClearFilters: () => void;
   searchTerm: string;
@@ -23,7 +22,7 @@ interface ProjectViewContainerProps {
 
 const ProjectViewContainer = ({
   view, projects, isLoading, onDeleteProject, sortConfig, requestSort, rowRefs,
-  kanbanGroupBy, onStatusChange, onPaymentStatusChange, hasActiveFilters, onClearFilters, searchTerm
+  kanbanGroupBy, onStatusChange, hasActiveFilters, onClearFilters, searchTerm
 }: ProjectViewContainerProps) => {
 
   if (!isLoading && projects.length === 0) {
@@ -32,7 +31,7 @@ const ProjectViewContainer = ({
 
   switch (view) {
     case 'table':
-      return <TableView projects={projects} isLoading={isLoading} onDeleteProject={onDeleteProject} sortConfig={sortConfig} requestSort={requestSort} rowRefs={rowRefs} onStatusChange={onStatusChange} onPaymentStatusChange={onPaymentStatusChange} />;
+      return <TableView projects={projects} isLoading={isLoading} onDeleteProject={onDeleteProject} sortConfig={sortConfig} requestSort={requestSort} rowRefs={rowRefs} onStatusChange={onStatusChange} />;
     case 'list':
       return <ListView projects={projects} onDeleteProject={onDeleteProject} />;
     case 'kanban':
