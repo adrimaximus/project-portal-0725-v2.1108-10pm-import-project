@@ -64,9 +64,13 @@ export function GlobalSearch() {
     }
     setLoading(true);
 
+    // Split query by spaces and join with % for flexible partial matching
+    // e.g. "proj man" -> "proj%man" which matches "Project Management"
+    const formattedQuery = searchQuery.trim().split(/\s+/).join('%');
+
     try {
       const [projectsRes, usersRes, goalsRes, billsRes, tasksRes] = await Promise.all([
-        supabase.rpc('search_projects', { p_search_term: searchQuery, p_limit: 5 }),
+        supabase.rpc('search_projects', { p_search_term: formattedQuery, p_limit: 5 }),
         supabase.from('profiles').select('id, first_name, last_name, email').or(`first_name.ilike.%${searchQuery}%,last_name.ilike.%${searchQuery}%,email.ilike.%${searchQuery}%`).limit(5),
         supabase.from('goals').select('id, title, slug').ilike('title', `%${searchQuery}%`).limit(5),
         supabase.from('projects').select('id, name, slug, payment_status').in('payment_status', ['Unpaid', 'Overdue']).ilike('name', `%${searchQuery}%`).limit(5),
@@ -165,7 +169,7 @@ export function GlobalSearch() {
                 <CommandItem
                   key={project.id}
                   onSelect={() => handleSelect(() => navigate(`/projects/${project.slug}`))}
-                  value={`project-${project.name}`}
+                  value={project.name}
                   className="cursor-pointer"
                 >
                   <FileText className="mr-2 h-4 w-4" />
