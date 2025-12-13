@@ -6,6 +6,7 @@ import { Link } from 'react-router-dom';
 import ActivityIcon from './ActivityIcon';
 import InteractiveText from '../InteractiveText';
 import { useProfiles } from '@/hooks/useProfiles';
+import { ScrollArea } from '../ui/scroll-area';
 
 const RecentActivityWidget = () => {
   const { data: activities, isLoading } = useActivities();
@@ -34,27 +35,29 @@ const RecentActivityWidget = () => {
   }
 
   return (
-    <div className="divide-y divide-border -mx-6 -mb-6 min-h-[300px]">
-      {recentActivities.map(activity => (
-        <div key={activity.id} className="flex items-start gap-3 px-6 py-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted">
-            <ActivityIcon type={activity.type} className="h-4 w-4 text-primary" />
+    <ScrollArea className="-mx-4 px-4 h-auto max-h-[500px]">
+      <div className="divide-y divide-border -mx-2">
+        {recentActivities.map(activity => (
+          <div key={activity.id} className="flex items-start gap-3 px-2 py-3">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted flex-shrink-0">
+              <ActivityIcon type={activity.type} className="h-4 w-4 text-primary" />
+            </div>
+            <div className="text-sm flex-grow min-w-0">
+              <p className="text-foreground break-words">
+                <span className="font-semibold">{activity.user_name}</span>
+                {' '}
+                <InteractiveText text={activity.details.description} members={allUsers} />
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                <Link to={`/projects/${activity.project_slug}`} className="hover:underline text-primary font-medium">{activity.project_name}</Link>
+                {' · '}
+                {formatDistanceToNow(new Date(activity.created_at), { addSuffix: true })}
+              </p>
+            </div>
           </div>
-          <div className="text-sm flex-grow">
-            <p className="text-foreground">
-              <span className="font-semibold">{activity.user_name}</span>
-              {' '}
-              <InteractiveText text={activity.details.description} members={allUsers} />
-            </p>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              <Link to={`/projects/${activity.project_slug}`} className="hover:underline text-primary font-medium">{activity.project_name}</Link>
-              {' · '}
-              {formatDistanceToNow(new Date(activity.created_at), { addSuffix: true })}
-            </p>
-          </div>
-        </div>
-      ))}
-    </div>
+        ))}
+      </div>
+    </ScrollArea>
   );
 };
 

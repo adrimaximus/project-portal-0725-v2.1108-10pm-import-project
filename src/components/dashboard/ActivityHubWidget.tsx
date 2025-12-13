@@ -40,13 +40,13 @@ const ActivityHubWidget = () => {
           </TabsList>
         </CardHeader>
         <CardContent>
-          <TabsContent value="my-tasks" className="mt-0 h-[600px] overflow-hidden">
+          <TabsContent value="my-tasks" className="mt-0">
             <MyTasksWidget />
           </TabsContent>
-          <TabsContent value="recent-activity" className="mt-0 h-[600px] overflow-y-auto">
+          <TabsContent value="recent-activity" className="mt-0">
             <RecentActivityWidget />
           </TabsContent>
-          <TabsContent value="collaborators" className="mt-0 h-[600px] overflow-y-auto">
+          <TabsContent value="collaborators" className="mt-0">
             <CollaboratorsTab />
           </TabsContent>
         </CardContent>

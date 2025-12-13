@@ -16,6 +16,7 @@ import { Progress } from '@/components/ui/progress';
 import { useCollaboratorStats, CollaboratorStat } from '@/hooks/useCollaboratorStats';
 import { useAuth } from '@/contexts/AuthContext';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
+import { ScrollArea } from '../ui/scroll-area';
 
 const CollaboratorsTab = () => {
   const { data: collaborators, isLoading } = useCollaboratorStats();
@@ -104,57 +105,59 @@ const CollaboratorsTab = () => {
   if (isLoading) return <div className="text-center py-10 text-muted-foreground">Loading stats...</div>;
 
   return (
-    <div>
-      {isDesktop ? (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Collaborator</TableHead>
-              <SortableTableHead columnKey="project_count">Projects</SortableTableHead>
-              <SortableTableHead columnKey="active_task_count">Active Tasks</SortableTableHead>
-              <SortableTableHead columnKey="completionRate">Completion</SortableTableHead>
-              <SortableTableHead columnKey="overdue_task_count">Overdue</SortableTableHead>
-              <SortableTableHead columnKey="overdue_bill_count">Overdue Bill</SortableTableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {sortedCollaborators.map(c => (
-              <TableRow key={c.id}>
-                <TableCell>
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-8 w-8"><AvatarImage src={getAvatarUrl(c.avatar_url, c.id)} alt={c.name} /><AvatarFallback style={generatePastelColor(c.id)}>{c.initials}</AvatarFallback></Avatar>
-                    <span className="font-medium whitespace-nowrap">{c.name}</span>
-                  </div>
-                </TableCell>
-                <TableCell className="text-right font-medium">{c.project_count}</TableCell>
-                <TableCell className="text-right font-medium">{c.active_task_count}</TableCell>
-                <TableCell className="text-right font-medium">{renderCompletionRate(c)}</TableCell>
-                <TableCell className="text-right font-medium">{c.overdue_task_count}</TableCell>
-                <TableCell className="text-right font-medium">{c.overdue_bill_count}</TableCell>
+    <ScrollArea className="-mx-4 px-4 h-auto max-h-[500px]">
+      <div>
+        {isDesktop ? (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Collaborator</TableHead>
+                <SortableTableHead columnKey="project_count">Projects</SortableTableHead>
+                <SortableTableHead columnKey="active_task_count">Active Tasks</SortableTableHead>
+                <SortableTableHead columnKey="completionRate">Completion</SortableTableHead>
+                <SortableTableHead columnKey="overdue_task_count">Overdue</SortableTableHead>
+                <SortableTableHead columnKey="overdue_bill_count">Overdue Bill</SortableTableHead>
               </TableRow>
+            </TableHeader>
+            <TableBody>
+              {sortedCollaborators.map(c => (
+                <TableRow key={c.id}>
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-8 w-8"><AvatarImage src={getAvatarUrl(c.avatar_url, c.id)} alt={c.name} /><AvatarFallback style={generatePastelColor(c.id)}>{c.initials}</AvatarFallback></Avatar>
+                      <span className="font-medium whitespace-nowrap">{c.name}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-right font-medium">{c.project_count}</TableCell>
+                  <TableCell className="text-right font-medium">{c.active_task_count}</TableCell>
+                  <TableCell className="text-right font-medium">{renderCompletionRate(c)}</TableCell>
+                  <TableCell className="text-right font-medium">{c.overdue_task_count}</TableCell>
+                  <TableCell className="text-right font-medium">{c.overdue_bill_count}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        ) : (
+          <div className="space-y-4">
+            {sortedCollaborators.map(c => (
+              <div key={c.id} className="bg-muted/50 p-4 rounded-lg">
+                <div className="flex items-center gap-3 mb-4">
+                  <Avatar className="h-10 w-10"><AvatarImage src={getAvatarUrl(c.avatar_url, c.id)} alt={c.name} /><AvatarFallback style={generatePastelColor(c.id)}>{c.initials}</AvatarFallback></Avatar>
+                  <span className="font-medium">{c.name}</span>
+                </div>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                  <div className="text-muted-foreground">Projects</div><div className="text-right font-medium">{c.project_count}</div>
+                  <div className="text-muted-foreground">Active Tasks</div><div className="text-right font-medium">{c.active_task_count}</div>
+                  <div className="text-muted-foreground">Completion</div><div className="text-right font-medium">{renderCompletionRate(c)}</div>
+                  <div className="text-muted-foreground">Overdue Tasks</div><div className="text-right font-medium">{c.overdue_task_count}</div>
+                  <div className="text-muted-foreground">Overdue Bill</div><div className="text-right font-medium">{c.overdue_bill_count}</div>
+                </div>
+              </div>
             ))}
-          </TableBody>
-        </Table>
-      ) : (
-        <div className="space-y-4">
-          {sortedCollaborators.map(c => (
-            <div key={c.id} className="bg-muted/50 p-4 rounded-lg">
-              <div className="flex items-center gap-3 mb-4">
-                <Avatar className="h-10 w-10"><AvatarImage src={getAvatarUrl(c.avatar_url, c.id)} alt={c.name} /><AvatarFallback style={generatePastelColor(c.id)}>{c.initials}</AvatarFallback></Avatar>
-                <span className="font-medium">{c.name}</span>
-              </div>
-              <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                <div className="text-muted-foreground">Projects</div><div className="text-right font-medium">{c.project_count}</div>
-                <div className="text-muted-foreground">Active Tasks</div><div className="text-right font-medium">{c.active_task_count}</div>
-                <div className="text-muted-foreground">Completion</div><div className="text-right font-medium">{renderCompletionRate(c)}</div>
-                <div className="text-muted-foreground">Overdue Tasks</div><div className="text-right font-medium">{c.overdue_task_count}</div>
-                <div className="text-muted-foreground">Overdue Bill</div><div className="text-right font-medium">{c.overdue_bill_count}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
+          </div>
+        )}
+      </div>
+    </ScrollArea>
   );
 };
 
