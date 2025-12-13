@@ -1,5 +1,6 @@
+import { useMemo } from "react";
 import { usePaymentStatuses } from "@/hooks/usePaymentStatuses";
-import { cn, getTextColor } from "@/lib/utils";
+import { cn, getTextColor, getPaymentStatusStyles } from "@/lib/utils";
 import { Badge } from "./ui/badge";
 import {
   DropdownMenu,
@@ -7,6 +8,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
+import { PAYMENT_STATUS_OPTIONS, PaymentStatus } from "@/types";
 
 interface PaymentStatusBadgeProps {
   status: string;
@@ -16,11 +18,23 @@ interface PaymentStatusBadgeProps {
 const PaymentStatusBadge = ({ status, onStatusChange }: PaymentStatusBadgeProps) => {
   const { data: paymentStatuses = [], isLoading } = usePaymentStatuses();
 
-  const currentStatus = paymentStatuses.find(s => s.name === status);
+  const options = useMemo(() => {
+    if (paymentStatuses.length > 0) {
+      return paymentStatuses.map(s => ({ id: s.id, name: s.name, color: s.color || '#94a3b8' }));
+    }
+    // Fallback to hardcoded options if database is empty
+    return PAYMENT_STATUS_OPTIONS.map(opt => ({
+      id: opt.value,
+      name: opt.label,
+      color: getPaymentStatusStyles(opt.value as PaymentStatus).hex,
+    }));
+  }, [paymentStatuses]);
+
+  const currentStatus = options.find(s => s.name === status);
   const bgColor = currentStatus?.color || '#94a3b8';
   const textColor = getTextColor(bgColor);
 
-  if (isLoading) {
+  if (isLoading && paymentStatuses.length === 0) {
     return (
       <Badge 
         variant="outline" 
@@ -44,18 +58,22 @@ const PaymentStatusBadge = ({ status, onStatusChange }: PaymentStatusBadgeProps)
         </Badge>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start">
-        {paymentStatuses.map(option => (
-          <DropdownMenuItem
-            key={option.id}
-            onClick={() => onStatusChange(option.name)}
-            disabled={option.name === status}
-          >
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: option.color }} />
-              {option.name}
-            </div>
-          </DropdownMenuItem>
-        ))}
+        {options.length > 0 ? (
+          options.map(option => (
+            <DropdownMenuItem
+              key={option.id}
+              onClick={() => onStatusChange(option.name)}
+              disabled={option.name === status}
+            >
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: option.color }} />
+                {option.name}
+              </div>
+            </DropdownMenuItem>
+          ))
+        ) : (
+          <DropdownMenuItem disabled>No statuses available</DropdownMenuItem>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );
