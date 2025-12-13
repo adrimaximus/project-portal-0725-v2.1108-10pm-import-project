@@ -57,6 +57,7 @@ const PropertiesSettingsPage = lazy(() => import('./pages/PropertiesSettingsPage
 const ContactPropertiesPage = lazy(() => import('./pages/ContactPropertiesPage'));
 const CompanyPropertiesPage = lazy(() => import('./pages/CompanyPropertiesPage'));
 const ProjectStatusesPage = lazy(() => import('./pages/settings/ProjectStatusesPage'));
+const PaymentStatusesPage = lazy(() => import('./pages/settings/PaymentStatusesPage'));
 const BillingPropertiesPage = lazy(() => import('./pages/BillingPropertiesPage'));
 const ExpensePropertiesPage = lazy(() => import('./pages/ExpensePropertiesPage'));
 const TagsPropertiesPage = lazy(() => import('./pages/TagsPropertiesPage'));
@@ -122,6 +123,7 @@ function App() {
             <Route path="/settings/people-properties" element={<ContactPropertiesPage />} />
             <Route path="/settings/company-properties" element={<CompanyPropertiesPage />} />
             <Route path="/settings/project-statuses" element={<ProjectStatusesPage />} />
+            <Route path="/settings/payment-statuses" element={<PaymentStatusesPage />} />
             <Route path="/settings/billing-properties" element={<BillingPropertiesPage />} />
             <Route path="/settings/expense-properties" element={<ExpensePropertiesPage />} />
             <Route path="/settings/tags-properties" element={<TagsPropertiesPage />} />
