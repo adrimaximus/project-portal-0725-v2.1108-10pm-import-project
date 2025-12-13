@@ -12,7 +12,7 @@ import StatusBadge from "../StatusBadge";
 import { Badge } from "@/components/ui/badge";
 import AddressAutocompleteInput from '../AddressAutocompleteInput';
 import { useAuth } from "@/contexts/AuthContext";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useMemo } from "react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -40,6 +40,7 @@ interface ProjectDetailsCardProps {
 
 const ProjectDetailsCard = ({ project, isEditing, onFieldChange, onStatusChange, hasOpenTasks }: ProjectDetailsCardProps) => {
   const { hasPermission } = useAuth();
+  const queryClient = useQueryClient();
   const canViewValue = hasPermission('projects:view_value');
   const { data: projectStatuses = [] } = useProjectStatuses();
   const { data: paymentStatuses = [], isLoading: isLoadingPaymentStatuses } = usePaymentStatuses();
@@ -71,6 +72,24 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange, onStatusChange,
         return data;
     },
     enabled: isEditing,
+  });
+
+  const updatePaymentStatusMutation = useMutation({
+    mutationFn: async (newStatus: string) => {
+      const { error } = await supabase
+        .from('projects')
+        .update({ payment_status: newStatus })
+        .eq('id', project.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Payment status updated");
+      queryClient.invalidateQueries({ queryKey: ['project', project.slug] });
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+    },
+    onError: (error) => {
+      toast.error(`Error updating payment status: ${error.message}`);
+    }
   });
 
   const handleDateChange = (range: DateRange | undefined) => {
@@ -329,13 +348,35 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange, onStatusChange,
                     </Select>
                   ) : (
                     <div className="pt-1">
-                      <Badge 
-                        variant="outline" 
-                        className={cn("font-normal border-transparent")}
-                        style={{ backgroundColor: paymentBgColor, color: paymentTextColor }}
+                      <Select
+                        value={project.payment_status}
+                        onValueChange={(value) => updatePaymentStatusMutation.mutate(value)}
+                        disabled={updatePaymentStatusMutation.isPending}
                       >
-                        {project.payment_status}
-                      </Badge>
+                        <SelectTrigger className="w-auto h-auto p-0 border-none bg-transparent focus:ring-0 shadow-none data-[placeholder]:text-foreground">
+                          <Badge 
+                            variant="outline" 
+                            className={cn("font-normal border-transparent cursor-pointer hover:opacity-80 transition-opacity")}
+                            style={{ backgroundColor: paymentBgColor, color: paymentTextColor }}
+                          >
+                            {project.payment_status}
+                          </Badge>
+                        </SelectTrigger>
+                        <SelectContent>
+                          {isLoadingPaymentStatuses ? (
+                            <SelectItem value="loading" disabled>Loading...</SelectItem>
+                          ) : (
+                            paymentStatuses.map(option => (
+                              <SelectItem key={option.id} value={option.name}>
+                                <div className="flex items-center gap-2">
+                                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: option.color }} />
+                                  {option.name}
+                                </div>
+                              </SelectItem>
+                            ))
+                          )}
+                        </SelectContent>
+                      </Select>
                     </div>
                   )}
                 </div>
