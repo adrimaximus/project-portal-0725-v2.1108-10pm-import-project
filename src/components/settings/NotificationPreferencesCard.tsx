@@ -53,7 +53,11 @@ const NotificationPreferencesCard = () => {
     queryFn: async () => {
       const { data, error } = await supabase.from('notification_events').select('*').order('category').order('label');
       if (error) throw error;
-      return data;
+      // Explicit cast to handle JSON type mapping to string array
+      return data.map(event => ({
+        ...event,
+        default_channels: event.default_channels as ('email' | 'whatsapp')[] | undefined
+      })) as NotificationEvent[];
     },
   });
 
