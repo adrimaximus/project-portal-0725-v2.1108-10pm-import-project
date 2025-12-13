@@ -206,7 +206,8 @@ const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({ onAddC
               </div>
             </div>
           )}
-          <div className="min-h-[36px] max-h-[120px] overflow-y-auto w-full">
+          {/* Removed overflow-y-auto from here to prevent cutting off the drop-up suggestions */}
+          <div className="w-full relative">
             <MentionsInput
               value={text}
               onChange={(event, newValue) => setText(newValue)}
@@ -216,6 +217,22 @@ const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({ onAddC
               inputRef={mentionsInputRef}
               style={{ 
                 width: '100%',
+                // Handle scrolling within the input itself
+                '&multiLine': {
+                  control: {
+                    minHeight: 36,
+                  },
+                  input: {
+                    maxHeight: 120,
+                    overflow: 'auto',
+                    padding: '8px 12px',
+                  },
+                  highlighter: {
+                    maxHeight: 120,
+                    overflow: 'hidden',
+                    padding: '8px 12px',
+                  },
+                },
                 suggestions: {
                   bottom: '100%', // Position above the input
                   top: 'auto',    // Override default top positioning
@@ -225,6 +242,19 @@ const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({ onAddC
                   borderRadius: '0.5rem',
                   border: '1px solid hsl(var(--border))',
                   boxShadow: '0 -4px 12px -2px rgba(0, 0, 0, 0.1)',
+                  backgroundColor: 'hsl(var(--popover))',
+                  zIndex: 50,
+                  list: {
+                    backgroundColor: 'hsl(var(--popover))',
+                    color: 'hsl(var(--popover-foreground))',
+                  },
+                  item: {
+                    padding: '5px 10px',
+                    '&focused': {
+                      backgroundColor: 'hsl(var(--accent))',
+                      color: 'hsl(var(--accent-foreground))',
+                    },
+                  },
                 }
               }}
             >
