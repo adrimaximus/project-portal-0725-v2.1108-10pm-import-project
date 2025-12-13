@@ -1,12 +1,12 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Project } from '@/types';
+import { Project, PAYMENT_STATUS_OPTIONS } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { format, getMonth } from 'date-fns';
+import { getPaymentStatusStyles } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProjectStatuses } from '@/hooks/useProjectStatuses';
-import { usePaymentStatuses } from '@/hooks/usePaymentStatuses';
 
 type ChartType = 'quantity' | 'value' | 'project_status' | 'payment_status' | 'company_quantity' | 'company_value';
 
@@ -110,7 +110,6 @@ const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
   
   // Fetch dynamic statuses
   const { data: projectStatuses = [] } = useProjectStatuses();
-  const { data: paymentStatuses = [] } = usePaymentStatuses();
 
   useEffect(() => {
     if (!canViewValue && (chartType === 'value' || chartType === 'company_value')) {
@@ -145,13 +144,12 @@ const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
         value: 0,
       };
       
+      // Initialize counters for dynamic project statuses
       const projectStatusCounts = projectStatuses.length > 0 
         ? Object.fromEntries(projectStatuses.map(s => [s.name, 0]))
         : {};
         
-      const paymentStatusCounts = paymentStatuses.length > 0
-        ? Object.fromEntries(paymentStatuses.map(s => [s.name, 0]))
-        : {};
+      const paymentStatusCounts = Object.fromEntries(PAYMENT_STATUS_OPTIONS.map(s => [s.value, 0]));
       
       return { ...base, ...projectStatusCounts, ...paymentStatusCounts };
     });
@@ -163,10 +161,12 @@ const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
           months[monthIndex].quantity += 1;
           months[monthIndex].value += project.budget || 0;
           
+          // Count project statuses
           if (project.status && months[monthIndex][project.status] !== undefined) {
             months[monthIndex][project.status]++;
           }
           
+          // Count payment statuses
           if (project.payment_status && months[monthIndex][project.payment_status] !== undefined) {
             months[monthIndex][project.payment_status]++;
           }
@@ -175,7 +175,7 @@ const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
     });
 
     return months;
-  }, [projects, chartType, projectStatuses, paymentStatuses]);
+  }, [projects, chartType, projectStatuses]);
 
   const renderChart = () => {
     switch (chartType) {
@@ -216,6 +216,7 @@ const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
         );
       }
       case 'project_status':
+        // If statuses aren't loaded yet, return empty or loader
         if (projectStatuses.length === 0) return <div className="flex items-center justify-center h-full">Loading...</div>;
 
         return (
@@ -240,8 +241,6 @@ const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
           </BarChart>
         );
       case 'payment_status':
-        if (paymentStatuses.length === 0) return <div className="flex items-center justify-center h-full">Loading...</div>;
-        
         return (
           <BarChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -249,15 +248,16 @@ const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
             <YAxis tickLine={false} axisLine={false} fontSize={10} />
             <Tooltip content={<CustomTooltip chartType={chartType} />} cursor={{ fill: 'hsl(var(--muted))' }} />
             <Legend content={<CustomLegend />} />
-            {paymentStatuses.map((status) => {
+            {PAYMENT_STATUS_OPTIONS.map((status) => {
+              const styles = getPaymentStatusStyles(status.value);
               return (
                 <Bar 
-                  key={status.id} 
-                  dataKey={status.name} 
+                  key={status.value} 
+                  dataKey={status.value} 
                   stackId="a" 
-                  fill={status.color} 
-                  name={status.name} 
-                  shape={<RoundedBar options={paymentStatuses} isDynamic={true} />} 
+                  fill={styles.hex} 
+                  name={status.label} 
+                  shape={<RoundedBar options={PAYMENT_STATUS_OPTIONS} isDynamic={false} />} 
                 />
               )
             })}
