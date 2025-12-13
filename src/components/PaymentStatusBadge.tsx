@@ -36,7 +36,7 @@ const PaymentStatusBadge = ({ status, onStatusChange }: PaymentStatusBadgeProps)
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
+      <DropdownMenuTrigger className="focus:outline-none">
         <Badge
           variant="outline"
           className={cn("font-normal border-transparent cursor-pointer hover:opacity-80 transition-opacity")}
