@@ -1,9 +1,9 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Comment as CommentType, User } from '@/types';
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-import { getAvatarUrl, generatePastelColor, getInitials } from '@/lib/utils';
+import { getAvatarUrl, generatePastelColor, getInitials, cn } from '@/lib/utils';
 import { Button } from './ui/button';
 import { MoreHorizontal, Edit, Trash2, Ticket, CornerUpLeft, Paperclip, X, FileText } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu';
@@ -12,8 +12,9 @@ import { Badge } from './ui/badge';
 import CommentReactions from './CommentReactions';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import AttachmentViewerModal from './AttachmentViewerModal';
-import MentionsInput from './MentionsInput';
 import MarkdownRenderer from './MarkdownRenderer';
+import { MentionsInput, Mention } from 'react-mentions';
+import '@/styles/mentions.css';
 
 interface CommentProps {
   comment: CommentType;
@@ -62,6 +63,22 @@ const Comment: React.FC<CommentProps> = ({
   const attachmentsData = comment.attachments_jsonb;
   const attachments: any[] = Array.isArray(attachmentsData) ? attachmentsData : attachmentsData ? [attachmentsData] : [];
 
+  const mentionData = useMemo(() => [
+    { 
+        id: 'all', 
+        display: 'all', 
+        name: 'Everyone', 
+        email: 'Notify everyone in this context', 
+        initials: '@',
+        avatar_url: undefined 
+    },
+    ...(allUsers || []).map(member => ({
+        id: member.id,
+        display: member.name,
+        ...member
+    }))
+  ], [allUsers]);
+
   return (
     <>
       <div id={`message-${comment.id}`} className="flex items-start gap-3">
@@ -100,14 +117,44 @@ const Comment: React.FC<CommentProps> = ({
           </div>
           {isEditing ? (
             <div className="mt-1 space-y-2">
-              <MentionsInput
-                value={editedText}
-                onChange={setEditedText}
-                users={allUsers}
-                className="text-sm min-h-[80px]"
-                placeholder="Edit your comment..."
-                autoFocus
-              />
+              <div className="border rounded-md focus-within:ring-1 focus-within:ring-ring">
+                <MentionsInput
+                  value={editedText}
+                  onChange={(e, newValue) => setEditedText(newValue)}
+                  placeholder="Edit your comment..."
+                  className="mentions-input w-full min-h-[80px]"
+                  a11ySuggestionsListLabel={"Suggested mentions"}
+                  autoFocus
+                >
+                  <Mention
+                    trigger="@"
+                    data={mentionData}
+                    markup="@[__display__](__id__)"
+                    displayTransform={(id, display) => `@${display}`}
+                    renderSuggestion={(suggestion: any, search, highlightedDisplay, index, focused) => (
+                      <div className={cn("mention-suggestion", focused && "focused")}>
+                        <Avatar className="h-6 w-6 mr-2">
+                          <AvatarImage src={getAvatarUrl(suggestion.avatar_url, suggestion.id)} />
+                          <AvatarFallback style={generatePastelColor(suggestion.id)}>
+                            {suggestion.initials}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="mention-suggestion-info">
+                          <div className="font-medium text-sm">{highlightedDisplay}</div>
+                          {suggestion.email && <div className="text-xs text-muted-foreground">{suggestion.email}</div>}
+                        </div>
+                      </div>
+                    )}
+                    style={{ 
+                      backgroundColor: 'hsl(var(--primary) / 0.3)', 
+                      color: 'transparent', 
+                      fontWeight: 500,
+                      padding: '0 1px',
+                      borderRadius: '2px'
+                    }}
+                  />
+                </MentionsInput>
+              </div>
               {(attachments.length > 0 || (newAttachments && newAttachments.length > 0)) && (
                 <div className="mt-2">
                     <h4 className="font-semibold text-xs text-muted-foreground mb-2">Attachments</h4>
