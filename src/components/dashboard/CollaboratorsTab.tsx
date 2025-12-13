@@ -16,7 +16,7 @@ import { Progress } from '@/components/ui/progress';
 import { useCollaboratorStats, CollaboratorStat } from '@/hooks/useCollaboratorStats';
 import { useAuth } from '@/contexts/AuthContext';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
-import { ScrollArea } from '../ui/scroll-area';
+import { ScrollArea, ScrollBar } from '../ui/scroll-area';
 
 const CollaboratorsTab = () => {
   const { data: collaborators, isLoading } = useCollaboratorStats();
@@ -106,37 +106,39 @@ const CollaboratorsTab = () => {
 
   return (
     <ScrollArea className="-mx-4 px-4 h-auto max-h-[500px]">
-      <div>
+      <div className="w-full">
         {isDesktop ? (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Collaborator</TableHead>
-                <SortableTableHead columnKey="project_count">Projects</SortableTableHead>
-                <SortableTableHead columnKey="active_task_count">Active Tasks</SortableTableHead>
-                <SortableTableHead columnKey="completionRate">Completion</SortableTableHead>
-                <SortableTableHead columnKey="overdue_task_count">Overdue</SortableTableHead>
-                <SortableTableHead columnKey="overdue_bill_count">Overdue Bill</SortableTableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {sortedCollaborators.map(c => (
-                <TableRow key={c.id}>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-8 w-8"><AvatarImage src={getAvatarUrl(c.avatar_url, c.id)} alt={c.name} /><AvatarFallback style={generatePastelColor(c.id)}>{c.initials}</AvatarFallback></Avatar>
-                      <span className="font-medium whitespace-nowrap">{c.name}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-right font-medium">{c.project_count}</TableCell>
-                  <TableCell className="text-right font-medium">{c.active_task_count}</TableCell>
-                  <TableCell className="text-right font-medium">{renderCompletionRate(c)}</TableCell>
-                  <TableCell className="text-right font-medium">{c.overdue_task_count}</TableCell>
-                  <TableCell className="text-right font-medium">{c.overdue_bill_count}</TableCell>
+          <div className="min-w-[800px]">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[200px]">Collaborator</TableHead>
+                  <SortableTableHead columnKey="project_count">Projects</SortableTableHead>
+                  <SortableTableHead columnKey="active_task_count">Active Tasks</SortableTableHead>
+                  <SortableTableHead columnKey="completionRate">Completion</SortableTableHead>
+                  <SortableTableHead columnKey="overdue_task_count">Overdue</SortableTableHead>
+                  <SortableTableHead columnKey="overdue_bill_count">Overdue Bill</SortableTableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {sortedCollaborators.map(c => (
+                  <TableRow key={c.id}>
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-8 w-8"><AvatarImage src={getAvatarUrl(c.avatar_url, c.id)} alt={c.name} /><AvatarFallback style={generatePastelColor(c.id)}>{c.initials}</AvatarFallback></Avatar>
+                        <span className="font-medium whitespace-nowrap">{c.name}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right font-medium">{c.project_count}</TableCell>
+                    <TableCell className="text-right font-medium">{c.active_task_count}</TableCell>
+                    <TableCell className="text-right font-medium">{renderCompletionRate(c)}</TableCell>
+                    <TableCell className="text-right font-medium">{c.overdue_task_count}</TableCell>
+                    <TableCell className="text-right font-medium">{c.overdue_bill_count}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         ) : (
           <div className="space-y-4">
             {sortedCollaborators.map(c => (
@@ -157,6 +159,7 @@ const CollaboratorsTab = () => {
           </div>
         )}
       </div>
+      <ScrollBar orientation="horizontal" />
     </ScrollArea>
   );
 };
