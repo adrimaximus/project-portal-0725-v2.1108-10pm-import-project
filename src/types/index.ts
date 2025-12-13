@@ -349,6 +349,11 @@ export interface Conversation {
   created_by: string;
 }
 
+export interface ConversationMessage {
+  sender: 'ai' | 'user';
+  content: string;
+}
+
 // Knowledge Base
 export interface KbFolder {
   id: string;
