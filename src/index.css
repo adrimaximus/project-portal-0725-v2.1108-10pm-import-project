@@ -1,12 +1,6 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-@layer components {
-  .prose .mention-link, .prose .mention-link:hover {
-    @apply no-underline;
-  }
-}
  
 @layer base {
   :root {

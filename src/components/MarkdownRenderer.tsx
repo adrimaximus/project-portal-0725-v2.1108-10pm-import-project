@@ -28,12 +28,9 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ children, className
           a: ({ node, href, children, ...props }) => {
             if (href?.startsWith('mention:')) {
               return (
-                <a 
-                  {...props} 
-                  className="font-semibold text-primary cursor-pointer bg-primary/10 rounded-sm px-1 mention-link"
-                >
+                <span className="font-semibold text-primary hover:underline cursor-pointer bg-primary/10 rounded-sm px-1">
                   {children}
-                </a>
+                </span>
               );
             }
             return (
