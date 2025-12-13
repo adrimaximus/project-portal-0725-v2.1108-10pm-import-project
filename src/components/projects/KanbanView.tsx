@@ -6,6 +6,7 @@ import { useProjectKanbanMutations } from '@/hooks/useProjectKanbanMutations';
 import KanbanCard from './KanbanCard';
 import KanbanColumn from './KanbanColumn';
 import { useProjectStatuses } from '@/hooks/useProjectStatuses';
+import { usePaymentStatuses } from '@/hooks/usePaymentStatuses';
 
 const dropAnimation: DropAnimation = {
   sideEffects: defaultDropAnimationSideEffects({
@@ -24,19 +25,22 @@ const KanbanView = ({ projects, groupBy }: { projects: Project[], groupBy: 'stat
   const { updateProjectOrder } = useProjectKanbanMutations();
   const [projectGroups, setProjectGroups] = useState<Record<string, Project[]>>({});
   
-  // Fetch dynamic statuses
-  const { data: dynamicStatuses = [] } = useProjectStatuses();
+  const { data: dynamicProjectStatuses = [] } = useProjectStatuses();
+  const { data: dynamicPaymentStatuses = [] } = usePaymentStatuses();
 
   const columns = useMemo(() => {
     if (groupBy === 'status') {
-      // Use dynamic statuses if available, otherwise fallback (though dynamicStatuses should load)
-      if (dynamicStatuses.length > 0) {
-        return dynamicStatuses.map(s => ({ value: s.name, label: s.name }));
+      if (dynamicProjectStatuses.length > 0) {
+        return dynamicProjectStatuses.map(s => ({ value: s.name, label: s.name }));
       }
       return PROJECT_STATUS_OPTIONS;
     }
+    
+    if (dynamicPaymentStatuses.length > 0) {
+        return dynamicPaymentStatuses.map(s => ({ value: s.name, label: s.name }));
+    }
     return PAYMENT_STATUS_OPTIONS;
-  }, [groupBy, dynamicStatuses]);
+  }, [groupBy, dynamicProjectStatuses, dynamicPaymentStatuses]);
 
   useEffect(() => {
     if (!activeProject) {
@@ -50,8 +54,6 @@ const KanbanView = ({ projects, groupBy }: { projects: Project[], groupBy: 'stat
         if (key && Object.prototype.hasOwnProperty.call(groups, key)) {
           groups[key].push(project);
         } else {
-          // Fallback for projects with statuses that might not exist in columns anymore
-          // Try to put in the first column
           if (columns.length > 0) {
              const firstCol = columns[0].value;
              if (!groups[firstCol]) groups[firstCol] = [];
