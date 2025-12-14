@@ -13,35 +13,19 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import { useMediaQuery } from "@/hooks/use-media-query"
 
 interface DatePickerWithRangeProps extends React.HTMLAttributes<HTMLDivElement> {
+  date: DateRange | undefined;
   onDateChange: (date: DateRange | undefined) => void;
-  initialDate?: DateRange;
 }
 
 export function DatePickerWithRange({
   className,
+  date,
   onDateChange,
-  initialDate,
 }: DatePickerWithRangeProps) {
-  const defaultDateRange: DateRange = {
-    from: new Date(new Date().getFullYear(), 0, 1),
-    to: new Date(new Date().getFullYear(), 11, 31),
-  };
-
-  const [date, setDate] = React.useState<DateRange | undefined>(
-    initialDate || defaultDateRange
-  );
-
-  React.useEffect(() => {
-    onDateChange(date);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const handleDateSelect = (newDate: DateRange | undefined) => {
-    setDate(newDate);
-    onDateChange(newDate);
-  };
+  const isDesktop = useMediaQuery("(min-width: 768px)")
 
   return (
     <div className={cn("grid gap-2", className)}>
@@ -51,7 +35,7 @@ export function DatePickerWithRange({
             id="date"
             variant={"outline"}
             className={cn(
-              "w-full md:w-[300px] justify-start text-left font-normal",
+              "w-full justify-start text-left font-normal sm:w-auto",
               !date && "text-muted-foreground"
             )}
           >
@@ -70,14 +54,14 @@ export function DatePickerWithRange({
             )}
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="start">
+        <PopoverContent className="w-auto p-0" align="end">
           <Calendar
             initialFocus
             mode="range"
             defaultMonth={date?.from}
             selected={date}
-            onSelect={handleDateSelect}
-            numberOfMonths={2}
+            onSelect={onDateChange}
+            numberOfMonths={isDesktop ? 2 : 1}
           />
         </PopoverContent>
       </Popover>

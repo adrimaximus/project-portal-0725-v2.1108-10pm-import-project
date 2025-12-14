@@ -212,7 +212,7 @@ const ProjectsToolbar = ({
           {/* Right Section: Filters, Search, Date & Actions */}
           <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto items-stretch sm:items-center">
             
-            <div className="flex items-center gap-2 w-full sm:w-auto">
+            <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap">
               <ProjectAdvancedFilters
                 filters={advancedFilters}
                 onAdvancedFiltersChange={onAdvancedFiltersChange}
@@ -220,7 +220,9 @@ const ProjectsToolbar = ({
                 allOwners={allOwners}
               />
               
-              <div className={cn("relative transition-all duration-300 ease-in-out", isSearchOpen ? "flex-1 sm:w-48" : "")}>
+              <DatePickerWithRange date={dateRange} onDateChange={onDateRangeChange} className="flex-1 sm:flex-none" />
+
+              <div className={cn("relative transition-all duration-300 ease-in-out", isSearchOpen ? "flex-1 sm:w-48" : "w-auto")}>
                 {isSearchOpen ? (
                   <div className="relative w-full">
                     <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -321,11 +323,6 @@ const ProjectsToolbar = ({
                   </DropdownMenu>
                 </div>
               </div>
-            </div>
-
-            {/* Date Picker - Full width on mobile, auto on desktop */}
-            <div className="w-full sm:w-auto sm:min-w-[240px]">
-              <DatePickerWithRange date={dateRange} onDateChange={onDateRangeChange} className="w-full" />
             </div>
           </div>
         </div>
