@@ -59,7 +59,7 @@ const Index = () => {
   if (isStillLoading && projects.length === 0) {
     return (
       <PortalLayout>
-        <div className="space-y-8 px-4 pt-6 pb-24 md:px-0 md:pt-0 md:pb-0">
+        <div className="space-y-8 px-4 pb-24 md:px-0 md:pb-0">
           <div className="text-left">
             <Skeleton className="h-10 w-1/2" />
             <Skeleton className="h-6 w-3/4 mt-2" />
@@ -84,7 +84,7 @@ const Index = () => {
 
   return (
     <PortalLayout>
-      <div className="space-y-8 px-4 pt-6 pb-24 md:px-0 md:pt-0 md:pb-0">
+      <div className="space-y-8 px-4 pb-24 md:px-0 md:pb-0">
         <div className="text-left">
           <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">Hey {user?.name || 'there'}, have a good day! 👋</h1>
           <p className="text-lg sm:text-xl text-muted-foreground mt-2">Here's a quick overview of your projects.</p>

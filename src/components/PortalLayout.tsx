@@ -50,7 +50,7 @@ const PortalLayout = ({ children, summary, noPadding = false, disableMainScroll 
             <div className={cn(
               "animate-in fade-in duration-500 w-full max-w-[100vw] overflow-x-hidden",
               disableMainScroll ? "h-full flex flex-col" : "min-h-full",
-              !noPadding && "md:max-w-7xl md:mx-auto px-4 pb-24 md:px-0 md:pb-0"
+              !noPadding && "md:max-w-7xl md:mx-auto px-4 pt-6 pb-24 md:px-0 md:pt-0 md:pb-0"
             )}>
               {children || <Outlet />}
             </div>
