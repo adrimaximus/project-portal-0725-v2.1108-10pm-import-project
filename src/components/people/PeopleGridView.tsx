@@ -1,6 +1,6 @@
 import { Person } from '@/types';
 import PersonCard from './PersonCard';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { Badge } from "@/components/ui/badge";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
@@ -9,10 +9,18 @@ interface PeopleGridViewProps {
   onEditPerson: (person: Person) => void;
   onDeletePerson: (person: Person) => void;
   onViewProfile: (person: Person) => void;
+  isSearching?: boolean;
 }
 
-const PeopleGridView = ({ people, onEditPerson, onDeletePerson, onViewProfile }: PeopleGridViewProps) => {
+const PeopleGridView = ({ people, onEditPerson, onDeletePerson, onViewProfile, isSearching = false }: PeopleGridViewProps) => {
   const [activeRange, setActiveRange] = useState("All");
+
+  // Automatically reset to "All" when searching to ensure results from all ranges are visible
+  useEffect(() => {
+    if (isSearching) {
+      setActiveRange("All");
+    }
+  }, [isSearching]);
 
   const groupedPeople = useMemo(() => {
     const groups = people.reduce((acc, person) => {

@@ -261,7 +261,13 @@ const PeoplePage = () => {
                 />
               ) : (
                 <div className="overflow-y-auto h-full">
-                  <PeopleGridView people={people} onEditPerson={handleEdit} onDeletePerson={setPersonToDelete} onViewProfile={handleViewProfile} />
+                  <PeopleGridView 
+                    people={people} 
+                    onEditPerson={handleEdit} 
+                    onDeletePerson={setPersonToDelete} 
+                    onViewProfile={handleViewProfile} 
+                    isSearching={debouncedSearchTerm.length > 0}
+                  />
                 </div>
               )}
             </div>
