@@ -1236,7 +1236,7 @@ const PublicationPage = () => {
 
   return (
     <PortalLayout>
-      <div className="space-y-6">
+      <div className="space-y-6 p-4 sm:p-6">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Publication</h1>
           <p className="text-muted-foreground">
@@ -1745,14 +1745,14 @@ const PublicationPage = () => {
                                   </SelectContent>
                                 </Select>
                                 {googleSheetUrl && (
-                                    <Button variant="outline" size="sm" onClick={handleUpdateSheet} disabled={isUpdatingSheet} className="h-8 px-2">
-                                        {isUpdatingSheet ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <UploadCloud className="h-3.5 w-3.5 mr-1" />}
-                                        Update Sheet
+                                    <Button variant="outline" size="sm" onClick={handleUpdateSheet} disabled={isUpdatingSheet} className="h-8 px-2 sm:px-3">
+                                        {isUpdatingSheet ? <Loader2 className="h-3.5 w-3.5 animate-spin sm:mr-1" /> : <UploadCloud className="h-3.5 w-3.5 sm:mr-1" />}
+                                        <span className="hidden sm:inline">Update Sheet</span>
                                     </Button>
                                 )}
-                                <Button variant="outline" size="sm" onClick={handleExportData} className="h-8 px-2">
-                                    <Download className="h-3.5 w-3.5 mr-1" />
-                                    Export Data
+                                <Button variant="outline" size="sm" onClick={handleExportData} className="h-8 px-2 sm:px-3">
+                                    <Download className="h-3.5 w-3.5 sm:mr-1" />
+                                    <span className="hidden sm:inline">Export Data</span>
                                 </Button>
                               </div>
                           )}
@@ -2002,12 +2002,12 @@ const PublicationPage = () => {
                    </div>
 
                 </CardContent>
-                <CardFooter className="flex justify-end gap-2 border-t pt-6">
-                   <Button variant="secondary" onClick={handleSendTestInAppNotification} disabled={isSendingTestNotif || isSendingNotif}>
+                <CardFooter className="flex flex-col sm:flex-row sm:justify-end gap-2 border-t pt-6">
+                   <Button variant="secondary" onClick={handleSendTestInAppNotification} disabled={isSendingTestNotif || isSendingNotif} className="w-full sm:w-auto">
                       {isSendingTestNotif ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FlaskConical className="mr-2 h-4 w-4" />}
                       Send Test to Me
                    </Button>
-                   <Button onClick={handleSendInAppNotification} disabled={isSendingNotif || isSendingTestNotif}>
+                   <Button onClick={handleSendInAppNotification} disabled={isSendingNotif || isSendingTestNotif} className="w-full sm:w-auto">
                       {isSendingNotif ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Bell className="mr-2 h-4 w-4" />}
                       Send In-App Broadcast
                    </Button>
