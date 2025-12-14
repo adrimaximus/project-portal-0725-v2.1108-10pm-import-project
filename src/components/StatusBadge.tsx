@@ -82,18 +82,12 @@ const StatusBadge = ({ status, onStatusChange, hasOpenTasks, className, projectI
       <Select value={localStatus} onValueChange={handleStatusChange}>
         <SelectTrigger className={cn("h-auto p-0 border-0 focus:ring-0 focus:ring-offset-0 w-auto bg-transparent shadow-none", className)}>
           <SelectValue>
-            <div className="flex items-center gap-2">
-              <span 
-                className="w-2 h-2 rounded-full flex-shrink-0" 
-                style={{ backgroundColor: badgeStyle.color }}
-              />
-              <Badge 
-                className="hover:opacity-90 transition-opacity border font-medium px-2.5 py-0.5"
-                style={badgeStyle}
-              >
-                {localStatus}
-              </Badge>
-            </div>
+            <Badge 
+              className="hover:opacity-90 transition-opacity border font-medium px-2.5 py-0.5"
+              style={badgeStyle}
+            >
+              {localStatus}
+            </Badge>
           </SelectValue>
         </SelectTrigger>
         <SelectContent>
