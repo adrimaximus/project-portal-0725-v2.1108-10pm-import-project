@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo, useEffect } from "react";
+import { useState, useRef, useMemo, useEffect, useCallback } from "react";
 import PortalLayout from "@/components/PortalLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Info, PlayCircle, UploadCloud, MessageSquare, Bell, FileSpreadsheet, X, Link as LinkIcon, File, CheckCircle2, Loader2, Send, RefreshCw, FlaskConical, Bot, Sparkles, Clock, AlertCircle, Download, Save, Wand2, Scaling, Trash2, FolderOpen, ListFilter, Search, Plus } from "lucide-react";
+import { Info, PlayCircle, UploadCloud, MessageSquare, Bell, FileSpreadsheet, X, Link as LinkIcon, File, CheckCircle2, Loader2, Send, RefreshCw, FlaskConical, Bot, Sparkles, Clock, AlertCircle, Download, Save, Wand2, Scaling, Trash2, FolderOpen, ListFilter, Search, Plus, GripVertical } from "lucide-react";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
@@ -1245,7 +1245,7 @@ const PublicationPage = () => {
         </div>
 
         <Tabs defaultValue="whatsapp" className="w-full" onValueChange={setActiveTab}>
-          <TabsList className="grid w-full max-w-[400px] grid-cols-2">
+          <TabsList className="grid w-full max-w-md grid-cols-2">
             <TabsTrigger value="whatsapp">
               <MessageSquare className="mr-2 h-4 w-4" />
               WhatsApp Blast
@@ -1259,10 +1259,10 @@ const PublicationPage = () => {
           <TabsContent value="whatsapp" className="mt-6">
              <div className="grid gap-6 lg:grid-cols-2">
                 {/* Left Column: Form */}
-                <Card className="h-fit">
-                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <Card className="h-fit flex flex-col">
+                   <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 space-y-0 pb-2">
                       <CardTitle className="text-xl font-semibold">Create Template Messages</CardTitle>
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 self-start sm:self-center">
                          <Button variant="outline" size="sm" className="bg-primary/5 text-primary border-primary/10 hover:bg-primary/10 h-8 text-xs">
                             <PlayCircle className="mr-1 h-3.5 w-3.5" />
                             Watch Tutorial
@@ -1273,7 +1273,7 @@ const PublicationPage = () => {
                          </Button>
                       </div>
                    </CardHeader>
-                   <CardContent className="space-y-6 pt-6">
+                   <CardContent className="space-y-6 pt-6 flex-1">
                       {/* Message Template */}
                       <div className="space-y-2">
                          <div className="flex justify-between items-center">
@@ -1432,7 +1432,7 @@ const PublicationPage = () => {
                             <Label>Import Data <span className="text-red-500">*</span></Label>
                             
                             {/* Saved Campaigns Dropdown */}
-                            <div className="w-[200px]">
+                            <div className="w-full sm:w-[200px]">
                               <Select 
                                 value={selectedCampaign || ""} 
                                 onValueChange={handleLoadCampaign}
@@ -1509,27 +1509,29 @@ const PublicationPage = () => {
                              </div>
 
                              {/* Google Sheet URL Input */}
-                             <div className="flex gap-2">
+                             <div className="flex flex-col sm:flex-row gap-2">
                                 <Input 
                                    placeholder="Paste Google Sheet URL (Public / Published to Web)" 
                                    value={googleSheetUrl}
                                    onChange={(e) => setGoogleSheetUrl(e.target.value)}
-                                   className="text-sm"
+                                   className="text-sm flex-1"
                                    disabled={isImporting}
                                 />
-                                <Button 
-                                  variant="outline" 
-                                  size="icon" 
-                                  onClick={() => setSaveCampaignOpen(true)}
-                                  disabled={!googleSheetUrl}
-                                  title="Save as Campaign"
-                                >
-                                  <Save className="h-4 w-4" />
-                                </Button>
-                                <Button variant="secondary" onClick={handleGoogleSheetImport} disabled={!googleSheetUrl || isImporting}>
-                                   {isImporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
-                                   Import
-                                </Button>
+                                <div className="flex gap-2">
+                                  <Button 
+                                    variant="outline" 
+                                    size="icon" 
+                                    onClick={() => setSaveCampaignOpen(true)}
+                                    disabled={!googleSheetUrl}
+                                    title="Save as Campaign"
+                                  >
+                                    <Save className="h-4 w-4" />
+                                  </Button>
+                                  <Button variant="secondary" onClick={handleGoogleSheetImport} disabled={!googleSheetUrl || isImporting} className="flex-1 sm:flex-none">
+                                     {isImporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4 sm:mr-2" />}
+                                     <span className="hidden sm:inline">Import</span>
+                                  </Button>
+                                </div>
                              </div>
                            </div>
                          ) : (
@@ -1692,8 +1694,8 @@ const PublicationPage = () => {
                 </Card>
 
                 {/* Right Column: Preview */}
-                <Card className="h-[400px] flex flex-col shadow-sm overflow-hidden">
-                   <CardHeader className="border-b pb-4 flex flex-row items-center justify-between space-y-0">
+                <Card className="h-full flex flex-col shadow-sm overflow-hidden">
+                   <CardHeader className="border-b pb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                       <div>
                           <CardTitle className="text-xl font-semibold">Data Preview</CardTitle>
                           <CardDescription>
@@ -1717,22 +1719,22 @@ const PublicationPage = () => {
                              )}
                           </CardDescription>
                       </div>
-                      <div className="flex gap-2 items-center">
+                      <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center w-full sm:w-auto">
                           {data.length > 0 && (
-                            <div className="relative mr-2">
+                            <div className="relative mr-2 flex-1 sm:flex-none">
                                 <Search className="absolute left-2 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
                                 <Input
                                   placeholder="Search data..."
                                   value={searchTerm}
                                   onChange={(e) => setSearchTerm(e.target.value)}
-                                  className="pl-8 h-8 text-xs w-[150px] lg:w-[180px]"
+                                  className="pl-8 h-8 text-xs w-full"
                                 />
                             </div>
                           )}
                           {data.length > 0 && (
-                              <>
+                              <div className="flex gap-2">
                                 <Select value={rowDensity} onValueChange={(v: any) => setRowDensity(v)}>
-                                  <SelectTrigger className="w-[100px] h-8 text-xs">
+                                  <SelectTrigger className="w-full sm:w-[100px] h-8 text-xs">
                                     <Scaling className="w-3.5 h-3.5 mr-2" />
                                     <SelectValue placeholder="Density" />
                                   </SelectTrigger>
@@ -1752,7 +1754,7 @@ const PublicationPage = () => {
                                     <Download className="h-3.5 w-3.5 mr-1" />
                                     Export Data
                                 </Button>
-                              </>
+                              </div>
                           )}
                       </div>
                    </CardHeader>
