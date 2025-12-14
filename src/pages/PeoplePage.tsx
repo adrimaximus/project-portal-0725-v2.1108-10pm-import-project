@@ -79,6 +79,13 @@ const PeoplePage = () => {
     companyIds: advancedFilters.companyIds 
   });
 
+  // Automatically fetch all pages to ensure complete lists for grouping
+  useEffect(() => {
+    if (hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
   const { data: allCompanies = [] } = useQuery<Company[]>({
     queryKey: ['allCompaniesForFilters'],
     queryFn: async () => {
@@ -258,12 +265,9 @@ const PeoplePage = () => {
                 </div>
               )}
             </div>
-            {hasNextPage && (
+            {isFetchingNextPage && (
               <div className="flex justify-center py-4">
-                <Button onClick={() => fetchNextPage()} disabled={isFetchingNextPage}>
-                  {isFetchingNextPage ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                  Load More
-                </Button>
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
             )}
           </TabsContent>
