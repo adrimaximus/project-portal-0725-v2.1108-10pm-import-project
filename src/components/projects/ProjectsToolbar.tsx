@@ -136,41 +136,6 @@ const ProjectsToolbar = ({
                 </ToggleGroup>
               </TooltipProvider>
 
-              {/* Mobile View Switcher */}
-              <div className="sm:hidden flex items-center gap-2 relative">
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="outline" size="icon" onClick={() => setIsViewSwitcherOpen(!isViewSwitcherOpen)}>
-                        <View className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent><p>Change view</p></TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-                {isViewSwitcherOpen && (
-                  <>
-                    <div className="fixed inset-0 z-20" onClick={() => setIsViewSwitcherOpen(false)} />
-                    <ToggleGroup
-                      type="single"
-                      value={view}
-                      onValueChange={(value: ViewMode | null) => {
-                        if (value) onViewChange(value);
-                        setIsViewSwitcherOpen(false);
-                      }}
-                      aria-label="Project view"
-                      className="absolute top-10 left-0 z-30 bg-popover border rounded-md shadow-md p-1 flex-col items-start"
-                    >
-                      <ToggleGroupItem value="list" className="w-full justify-start"><List className="h-4 w-4 mr-2" /> List</ToggleGroupItem>
-                      <ToggleGroupItem value="table" className="w-full justify-start"><LayoutGrid className="h-4 w-4 mr-2" /> Grid</ToggleGroupItem>
-                      <ToggleGroupItem value="kanban" className="w-full justify-start"><KanbanSquare className="h-4 w-4 mr-2" /> Kanban</ToggleGroupItem>
-                      <ToggleGroupItem value="tasks" className="w-full justify-start"><ListChecks className="h-4 w-4 mr-2" /> Tasks List</ToggleGroupItem>
-                      <ToggleGroupItem value="tasks-kanban" className="w-full justify-start"><CheckSquare className="h-4 w-4 mr-2" /> Tasks Board</ToggleGroupItem>
-                    </ToggleGroup>
-                  </>
-                )}
-              </div>
-
               {view === 'kanban' && (
                 <Select value={kanbanGroupBy} onValueChange={onKanbanGroupByChange}>
                   <SelectTrigger className="w-[110px] sm:w-[130px] h-9"><SelectValue placeholder="Group by..." /></SelectTrigger>
@@ -213,6 +178,41 @@ const ProjectsToolbar = ({
           <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto items-stretch sm:items-center">
             
             <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap">
+              {/* Mobile View Switcher */}
+              <div className="sm:hidden flex items-center gap-2 relative">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="outline" size="icon" onClick={() => setIsViewSwitcherOpen(!isViewSwitcherOpen)}>
+                        <View className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent><p>Change view</p></TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                {isViewSwitcherOpen && (
+                  <>
+                    <div className="fixed inset-0 z-20" onClick={() => setIsViewSwitcherOpen(false)} />
+                    <ToggleGroup
+                      type="single"
+                      value={view}
+                      onValueChange={(value: ViewMode | null) => {
+                        if (value) onViewChange(value);
+                        setIsViewSwitcherOpen(false);
+                      }}
+                      aria-label="Project view"
+                      className="absolute top-10 left-0 z-30 bg-popover border rounded-md shadow-md p-1 flex-col items-start"
+                    >
+                      <ToggleGroupItem value="list" className="w-full justify-start"><List className="h-4 w-4 mr-2" /> List</ToggleGroupItem>
+                      <ToggleGroupItem value="table" className="w-full justify-start"><LayoutGrid className="h-4 w-4 mr-2" /> Grid</ToggleGroupItem>
+                      <ToggleGroupItem value="kanban" className="w-full justify-start"><KanbanSquare className="h-4 w-4 mr-2" /> Kanban</ToggleGroupItem>
+                      <ToggleGroupItem value="tasks" className="w-full justify-start"><ListChecks className="h-4 w-4 mr-2" /> Tasks List</ToggleGroupItem>
+                      <ToggleGroupItem value="tasks-kanban" className="w-full justify-start"><CheckSquare className="h-4 w-4 mr-2" /> Tasks Board</ToggleGroupItem>
+                    </ToggleGroup>
+                  </>
+                )}
+              </div>
+
               <ProjectAdvancedFilters
                 filters={advancedFilters}
                 onAdvancedFiltersChange={onAdvancedFiltersChange}
