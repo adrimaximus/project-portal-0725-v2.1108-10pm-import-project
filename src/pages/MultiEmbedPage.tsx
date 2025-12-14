@@ -68,7 +68,7 @@ const MultiEmbedPage = () => {
           </BreadcrumbList>
         </Breadcrumb>
         <Button onClick={handleAddNew}>
-          <PlusCircle className="mr-2 h-4 w-4" /> Add New Page
+          <PlusCircle className="mr-2 h-4 w-4" /> Page
         </Button>
       </div>
 
