@@ -1,6 +1,7 @@
 import { Person } from '@/types';
 import PersonCard from './PersonCard';
 import { useMemo } from 'react';
+import { Badge } from "@/components/ui/badge";
 
 interface PeopleGridViewProps {
   people: Person[];
@@ -35,19 +36,32 @@ const PeopleGridView = ({ people, onEditPerson, onDeletePerson, onViewProfile }:
 
   if (people.length === 0) {
     return (
-      <div className="text-center py-12 text-muted-foreground">
+      <div className="text-center py-12 text-muted-foreground bg-muted/30 rounded-lg border border-dashed animate-in fade-in zoom-in-95 duration-300">
         <p>No people found.</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8">
-      {groupedPeople.map(([company, peopleInGroup]) => (
-        <div key={company}>
-          <h3 className="text-lg font-semibold mb-4 px-2">{company}</h3>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
-            {peopleInGroup.map(person => (
+    <div className="space-y-10 pb-10">
+      {groupedPeople.map(([company, peopleInGroup], groupIndex) => (
+        <div 
+          key={company} 
+          className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-500 fill-mode-both"
+          style={{ animationDelay: `${groupIndex * 100}ms` }}
+        >
+          <div className="flex items-center gap-3 text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <h3 className="text-lg font-semibold text-foreground tracking-tight">{company}</h3>
+              <Badge variant="secondary" className="rounded-full px-2 py-0.5 text-[10px] h-5 min-w-[20px] flex items-center justify-center">
+                {peopleInGroup.length}
+              </Badge>
+            </div>
+            <div className="h-px flex-1 bg-gradient-to-r from-border to-transparent" />
+          </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5">
+            {peopleInGroup.map((person) => (
               <PersonCard 
                 key={person.id} 
                 person={person} 
