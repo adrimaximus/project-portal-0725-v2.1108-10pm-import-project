@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { DatePickerWithRange } from "@/components/ui/date-picker-with-range";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { Search, List, LayoutGrid, KanbanSquare, ListChecks, CheckSquare, PlusCircle, Download, RefreshCw, ListPlus, View, CheckCircle2, X } from "lucide-react";
+import { Search, List, LayoutGrid, KanbanSquare, ListChecks, CheckSquare, PlusCircle, Download, RefreshCw, ListPlus, View, CheckCircle2, X, MoreVertical } from "lucide-react";
 import { DateRange } from "react-day-picker";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
@@ -12,6 +12,12 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 type ViewMode = 'table' | 'list' | 'kanban' | 'tasks' | 'tasks-kanban';
 
@@ -266,15 +272,54 @@ const ProjectsToolbar = ({
                   </Button>
                 )}
                 
-                {isGCalConnected ? (
-                  <Button variant="outline" size="icon" onClick={onImportClick} className="h-9 w-9">
-                    <Download className="h-4 w-4" />
-                  </Button>
-                ) : (
-                  <Button variant="outline" size="icon" onClick={onRefreshClick} className="h-9 w-9">
-                    <RefreshCw className="h-4 w-4" />
-                  </Button>
-                )}
+                {/* Desktop: Secondary button is visible */}
+                <div className="hidden sm:inline-flex">
+                  <TooltipProvider>
+                    {isGCalConnected ? (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="outline" size="icon" onClick={onImportClick} className="h-9 w-9">
+                            <Download className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent><p>Import from Google Calendar</p></TooltipContent>
+                      </Tooltip>
+                    ) : (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="outline" size="icon" onClick={onRefreshClick} className="h-9 w-9">
+                            <RefreshCw className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent><p>Refresh Data</p></TooltipContent>
+                      </Tooltip>
+                    )}
+                  </TooltipProvider>
+                </div>
+
+                {/* Mobile: Secondary actions in a dropdown */}
+                <div className="sm:hidden">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="icon" className="h-9 w-9">
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      {isGCalConnected ? (
+                        <DropdownMenuItem onClick={onImportClick}>
+                          <Download className="mr-2 h-4 w-4" />
+                          <span>Import from GCal</span>
+                        </DropdownMenuItem>
+                      ) : (
+                        <DropdownMenuItem onClick={onRefreshClick}>
+                          <RefreshCw className="mr-2 h-4 w-4" />
+                          <span>Refresh Data</span>
+                        </DropdownMenuItem>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               </div>
             </div>
 
