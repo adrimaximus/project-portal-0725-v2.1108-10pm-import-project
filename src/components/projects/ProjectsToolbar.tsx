@@ -263,15 +263,29 @@ const ProjectsToolbar = ({
               {/* Action Buttons */}
               <div className="flex items-center gap-2 ml-auto sm:ml-0">
                 {isTaskView ? (
-                  <Button size="sm" variant="default" onClick={onNewTaskClick} className="h-9 px-3 gap-1">
-                    <ListPlus className="h-4 w-4" />
-                    <span className="sr-only sm:not-sr-only">Task</span>
-                  </Button>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button size="icon" variant="default" onClick={onNewTaskClick} className="h-9 w-9">
+                          <ListPlus className="h-4 w-4" />
+                          <span className="sr-only">Task</span>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent><p>New Task</p></TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 ) : (
-                  <Button size="sm" variant="default" onClick={onNewProjectClick} className="h-9 px-3 gap-1">
-                    <PlusCircle className="h-4 w-4" />
-                    <span className="sr-only sm:not-sr-only">Project</span>
-                  </Button>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button size="icon" variant="default" onClick={onNewProjectClick} className="h-9 w-9">
+                          <PlusCircle className="h-4 w-4" />
+                          <span className="sr-only">Project</span>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent><p>New Project</p></TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 )}
                 
                 {/* Desktop: Secondary button is visible */}
