@@ -13,7 +13,10 @@ interface PeopleGridViewProps {
 const PeopleGridView = ({ people, onEditPerson, onDeletePerson, onViewProfile }: PeopleGridViewProps) => {
   const groupedPeople = useMemo(() => {
     const groups = people.reduce((acc, person) => {
-      const company = person.company || 'Uncategorized';
+      // Normalize company name by trimming whitespace
+      const companyRaw = person.company || 'Uncategorized';
+      const company = companyRaw.trim();
+      
       if (!acc[company]) {
         acc[company] = [];
       }
@@ -50,17 +53,17 @@ const PeopleGridView = ({ people, onEditPerson, onDeletePerson, onViewProfile }:
           className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-500 fill-mode-both"
           style={{ animationDelay: `${groupIndex * 100}ms` }}
         >
-          <div className="flex items-center gap-3 text-muted-foreground">
+          <div className="flex items-center gap-3 text-muted-foreground px-1">
             <div className="flex items-center gap-2">
               <h3 className="text-lg font-semibold text-foreground tracking-tight">{company}</h3>
-              <Badge variant="secondary" className="rounded-full px-2 py-0.5 text-[10px] h-5 min-w-[20px] flex items-center justify-center">
+              <Badge variant="secondary" className="rounded-full px-2 py-0.5 text-[10px] h-5 min-w-[20px] flex items-center justify-center bg-muted-foreground/10 text-muted-foreground hover:bg-muted-foreground/20">
                 {peopleInGroup.length}
               </Badge>
             </div>
             <div className="h-px flex-1 bg-gradient-to-r from-border to-transparent" />
           </div>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 sm:gap-6">
             {peopleInGroup.map((person) => (
               <PersonCard 
                 key={person.id} 
