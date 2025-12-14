@@ -220,7 +220,7 @@ const ProjectsToolbar = ({
                 allOwners={allOwners}
               />
               
-              <DatePickerWithRange date={dateRange} onDateChange={onDateRangeChange} className="flex-1 sm:flex-none" />
+              <DatePickerWithRange date={dateRange} onDateChange={onDateRangeChange} />
 
               <div className={cn("relative transition-all duration-300 ease-in-out", isSearchOpen ? "flex-1 sm:w-48" : "w-auto")}>
                 {isSearchOpen ? (
