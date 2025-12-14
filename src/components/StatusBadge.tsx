@@ -93,7 +93,6 @@ const StatusBadge = ({ status, onStatusChange, hasOpenTasks, className, projectI
         <SelectContent>
           {statuses.length > 0 ? (
             statuses.map(option => {
-                const optionStyle = getStatusBadgeStyle(option.color, theme);
                 return (
                     <SelectItem 
                         key={option.id} 
@@ -103,7 +102,7 @@ const StatusBadge = ({ status, onStatusChange, hasOpenTasks, className, projectI
                         <div className="flex items-center gap-2">
                         <div 
                             className="w-2 h-2 rounded-full" 
-                            style={{ backgroundColor: optionStyle.color }}
+                            style={{ backgroundColor: option.color }}
                         />
                         {option.name}
                         </div>
