@@ -2,7 +2,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Project as BaseProject, PROJECT_STATUS_OPTIONS, Person, Company, ProjectStatus } from "@/types";
 import { Calendar, Wallet, Briefcase, MapPin, ListTodo, CreditCard, User, Building, ChevronsUpDown } from "lucide-react";
 import { isSameDay, subDays } from "date-fns";
-import { DateRangePicker } from "../DateRangePicker";
 import { DateRange } from "react-day-picker";
 import { CurrencyInput } from "../ui/currency-input";
 import ProjectServices from "./ProjectServices";
@@ -21,6 +20,7 @@ import { toast } from "sonner";
 import { Avatar, AvatarImage, AvatarFallback } from "../ui/avatar";
 import { useProjectStatuses } from "@/hooks/useProjectStatuses";
 import { usePaymentStatuses } from "@/hooks/usePaymentStatuses";
+import { DatePickerWithRange } from "../ui/DatePickerWithRange"; // Corrected import name
 
 // Extend types to include the new optional company_id field for a robust relationship.
 type LocalPerson = Person & { company_id?: string | null };
@@ -209,7 +209,7 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange, onStatusChange,
                 <div className="w-full">
                   <p className="font-medium">Timeline</p>
                   {isEditing ? (
-                    <DateRangePicker
+                    <DatePickerWithRange
                       date={{
                         from: project.start_date ? new Date(project.start_date) : undefined,
                         to: project.due_date ? new Date(project.due_date) : undefined,
@@ -223,7 +223,7 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange, onStatusChange,
                   )}
                 </div>
               </div>
-              {canViewValue && (
+              {hasPermission('project:budget:read') && (
                 <div className="flex items-start gap-4">
                   <Wallet className="h-4 w-4 mt-1 flex-shrink-0 text-muted-foreground" />
                   <div>
