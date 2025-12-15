@@ -199,6 +199,7 @@ const ExpensePage = () => {
                     <TableHead>Purpose</TableHead>
                     <TableHead>PIC</TableHead>
                     <TableHead>Amount</TableHead>
+                    <TableHead>Paid</TableHead>
                     <TableHead className="whitespace-nowrap">Payment Plan</TableHead>
                     <TableHead>Remarks</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
@@ -207,7 +208,7 @@ const ExpensePage = () => {
                 <TableBody>
                   {filteredExpenses.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="h-24 text-center">
+                      <TableCell colSpan={9} className="h-24 text-center">
                         No expenses found.
                       </TableCell>
                     </TableRow>
@@ -279,10 +280,13 @@ const ExpensePage = () => {
                               <p>{formatCurrency(expense.tf_amount)}</p>
                               {outstandingAmount > 0 && (
                                 <p className="text-xs text-muted-foreground">
-                                  Outstanding: {formatCurrency(outstandingAmount)}
+                                  Remaining: {formatCurrency(outstandingAmount)}
                                 </p>
                               )}
                             </div>
+                          </TableCell>
+                          <TableCell>
+                            <p className="font-medium">{formatCurrency(paidAmount)}</p>
                           </TableCell>
                           <TableCell className="whitespace-nowrap">
                             {paymentTerms.length > 0 ? (
