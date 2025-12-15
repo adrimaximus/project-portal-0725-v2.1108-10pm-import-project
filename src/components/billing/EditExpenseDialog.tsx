@@ -121,17 +121,16 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
   const paymentTerms = watch("payment_terms");
   const totalAmount = watch("tf_amount");
 
-  const unallocatedBalance = useMemo(() => {
+  const remainingBalance = useMemo(() => {
     const totalAllocated = (paymentTerms || []).reduce((sum, term) => sum + (Number(term.amount) || 0), 0);
     return (totalAmount || 0) - totalAllocated;
   }, [totalAmount, paymentTerms]);
 
-  const outstandingBalance = useMemo(() => {
-    const totalPaid = (paymentTerms || [])
+  const paidAmount = useMemo(() => {
+    return (paymentTerms || [])
       .filter(term => term.status === 'Paid')
       .reduce((sum, term) => sum + (Number(term.amount) || 0), 0);
-    return (totalAmount || 0) - totalPaid;
-  }, [totalAmount, paymentTerms]);
+  }, [paymentTerms]);
 
   useEffect(() => {
     if (expense && beneficiaries.length > 0 && projects.length > 0) {
@@ -417,12 +416,12 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
                 </div>
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label className="text-right">Outstanding (Rp)</Label>
-                <Input value={outstandingBalance.toLocaleString('id-ID')} className="col-span-3 bg-muted" readOnly />
+                <Label className="text-right">Paid (Rp)</Label>
+                <Input value={paidAmount.toLocaleString('id-ID')} className="col-span-3 bg-muted" readOnly />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label className="text-right">Unallocated (Rp)</Label>
-                <Input value={unallocatedBalance.toLocaleString('id-ID')} className={cn("col-span-3 bg-muted", unallocatedBalance !== 0 && "text-red-500 font-semibold")} readOnly />
+                <Label className="text-right">Remaining (Rp)</Label>
+                <Input value={remainingBalance.toLocaleString('id-ID')} className={cn("col-span-3 bg-muted", remainingBalance !== 0 && "text-red-500 font-semibold")} readOnly />
               </div>
               <FormField control={form.control} name="remarks" render={({ field }) => (
                 <FormItem><FormLabel>Remarks</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
