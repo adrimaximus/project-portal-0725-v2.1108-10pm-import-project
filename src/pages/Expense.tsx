@@ -46,6 +46,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import ExpenseDetailsDialog from "@/components/billing/ExpenseDetailsDialog";
 
 const ExpensePage = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -53,6 +54,7 @@ const ExpensePage = () => {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [expenseToDelete, setExpenseToDelete] = useState<Expense | null>(null);
+  const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
   const queryClient = useQueryClient();
 
   const { data: expenses = [], isLoading } = useQuery<Expense[]>({
@@ -218,8 +220,11 @@ const ExpensePage = () => {
                       const outstandingAmount = expense.tf_amount - paidAmount;
 
                       return (
-                        <TableRow key={expense.id}>
-                          {/* MOVED BENEFICIARY CELL */}
+                        <TableRow 
+                          key={expense.id} 
+                          className="cursor-pointer hover:bg-muted/50"
+                          onClick={() => setSelectedExpense(expense)}
+                        >
                           <TableCell>
                             {expense.account_bank && expense.account_bank.name ? (
                               <TooltipProvider delayDuration={100}>
@@ -243,7 +248,11 @@ const ExpensePage = () => {
                             )}
                           </TableCell>
                           <TableCell>
-                            <Link to={`/projects/${expense.project_slug}`} className="font-medium text-primary hover:underline">
+                            <Link 
+                              to={`/projects/${expense.project_slug}`} 
+                              className="font-medium text-primary hover:underline"
+                              onClick={(e) => e.stopPropagation()}
+                            >
                               {expense.project_name}
                             </Link>
                           </TableCell>
@@ -329,7 +338,7 @@ const ExpensePage = () => {
                           <TableCell>{expense.remarks}</TableCell>
                           <TableCell className="text-right">
                             <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
+                              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                                 <Button variant="ghost" size="icon">
                                   <MoreHorizontal className="h-4 w-4" />
                                 </Button>
@@ -370,6 +379,11 @@ const ExpensePage = () => {
           }
         }}
         expense={editingExpense}
+      />
+      <ExpenseDetailsDialog 
+        open={!!selectedExpense} 
+        onOpenChange={(open) => !open && setSelectedExpense(null)} 
+        expense={selectedExpense} 
       />
       <AlertDialog open={!!expenseToDelete} onOpenChange={(open) => !open && setExpenseToDelete(null)}>
         <AlertDialogContent>
