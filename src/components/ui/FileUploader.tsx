@@ -24,6 +24,7 @@ interface FileUploaderProps {
   maxSize?: number; // in bytes
   accept?: Record<string, string[]>;
   disabled?: boolean;
+  onFileProcessed?: (file: FileMetadata) => void; // New callback for processing after upload
 }
 
 const formatFileSize = (bytes: number) => {
@@ -42,6 +43,7 @@ const FileUploader = ({
   maxSize = 10485760, // 10MB
   accept = { 'image/*': [], 'application/pdf': ['.pdf'] },
   disabled = false,
+  onFileProcessed,
 }: FileUploaderProps) => {
   const [isUploading, setIsUploading] = useState(false);
 
@@ -58,6 +60,7 @@ const FileUploader = ({
 
     setIsUploading(true);
     const newFiles: FileMetadata[] = [...value];
+    let processedFile: FileMetadata | null = null;
 
     for (const file of filesToUpload) {
       if (file.size > maxSize) {
@@ -76,14 +79,21 @@ const FileUploader = ({
 
         const { data: publicUrlData } = supabase.storage.from(bucket).getPublicUrl(data.path);
 
-        newFiles.push({
+        const uploadedFile: FileMetadata = {
           name: file.name,
           url: publicUrlData.publicUrl,
           size: file.size,
           type: file.type,
           storagePath: data.path,
-        });
+        };
+
+        newFiles.push(uploadedFile);
         toast.success(`File ${file.name} uploaded.`);
+        
+        // Trigger callback for processing
+        if (onFileProcessed) {
+            processedFile = uploadedFile;
+        }
 
       } catch (error: any) {
         console.error('Upload error:', error);
@@ -93,7 +103,13 @@ const FileUploader = ({
 
     onChange(newFiles);
     setIsUploading(false);
-  }, [bucket, maxFiles, maxSize, value, onChange, disabled, isUploading]);
+    
+    // Run processing callback after all uploads are complete
+    if (processedFile && onFileProcessed) {
+        onFileProcessed(processedFile);
+    }
+
+  }, [bucket, maxFiles, maxSize, value, onChange, disabled, isUploading, onFileProcessed]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,

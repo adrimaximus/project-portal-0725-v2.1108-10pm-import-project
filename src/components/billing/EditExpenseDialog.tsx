@@ -26,7 +26,8 @@ import BeneficiaryTypeDialog from './BeneficiaryTypeDialog';
 import PersonFormDialog from '../people/PersonFormDialog';
 import CompanyFormDialog from '../people/CompanyFormDialog';
 import CustomPropertyInput from '../settings/CustomPropertyInput';
-import FileUploader from '../ui/FileUploader'; // Import FileUploader
+import FileUploader from '../ui/FileUploader';
+import { useExpenseExtractor } from '@/hooks/useExpenseExtractor'; // Import the new hook
 
 interface BankAccount {
   id: string;
@@ -92,6 +93,8 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
   const [isPersonFormOpen, setIsPersonFormOpen] = useState(false);
   const [isCompanyFormOpen, setIsCompanyFormOpen] = useState(false);
   const [newBeneficiaryName, setNewBeneficiaryName] = useState('');
+  
+  const { extractData, isExtracting } = useExpenseExtractor();
 
   const { data: projects = [], isLoading: isLoadingProjects } = useQuery<ProjectOption[]>({
     queryKey: ['projectsForExpenses'],
@@ -213,6 +216,40 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
     setIsBankAccountFormOpen(true);
   };
 
+  const handleFileProcessed = async (file: FileMetadata) => {
+    const extractedData = await extractData(file);
+    if (extractedData) {
+      // 1. Update Amount
+      if (extractedData.amount && extractedData.amount > 0) {
+        setValue('tf_amount', extractedData.amount, { shouldValidate: true });
+      }
+      
+      // 2. Update Purpose
+      if (extractedData.purpose) {
+        setValue('purpose_payment', extractedData.purpose, { shouldValidate: true });
+      }
+
+      // 3. Update Beneficiary (only if current beneficiary is empty)
+      if (extractedData.beneficiary && !watch('beneficiary')) {
+        const matchedBeneficiary = beneficiaries.find(b => b.name.toLowerCase() === extractedData.beneficiary.toLowerCase());
+        if (matchedBeneficiary) {
+          setBeneficiary(matchedBeneficiary);
+          setValue('beneficiary', matchedBeneficiary.name, { shouldValidate: true });
+        } else {
+          // If no match, just set the name, user can manually link later
+          setValue('beneficiary', extractedData.beneficiary, { shouldValidate: true });
+        }
+      }
+
+      // 4. Update Remarks (append if existing)
+      if (extractedData.remarks) {
+        const currentRemarks = watch('remarks') || '';
+        const newRemarks = currentRemarks ? `${currentRemarks}\n\n--- AI Extracted Notes ---\n${extractedData.remarks}` : extractedData.remarks;
+        setValue('remarks', newRemarks, { shouldValidate: true });
+      }
+    }
+  };
+
   const onSubmit = async (values: ExpenseFormValues) => {
     if (!expense) return;
     setIsSubmitting(true);
@@ -258,6 +295,8 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
   const nameParts = newBeneficiaryName.split(' ');
   const firstName = nameParts[0] || '';
   const lastName = nameParts.slice(1).join(' ') || '';
+  
+  const isFormDisabled = isSubmitting || isExtracting;
 
   return (
     <>
@@ -278,7 +317,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
                     <Popover open={projectPopoverOpen} onOpenChange={setProjectPopoverOpen}>
                       <PopoverTrigger asChild>
                         <FormControl>
-                          <Button variant="outline" role="combobox" className={cn("w-full justify-between", !field.value && "text-muted-foreground")} disabled={isLoadingProjects}>
+                          <Button variant="outline" role="combobox" className={cn("w-full justify-between", !field.value && "text-muted-foreground")} disabled={isLoadingProjects || isFormDisabled}>
                             {field.value ? projects.find((project) => project.id === field.value)?.name : "Select a project"}
                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                           </Button>
@@ -313,7 +352,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
                   <FormItem>
                     <FormLabel>Purpose Payment</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter purpose of payment" {...field} value={field.value || ''} />
+                      <Input placeholder="Enter purpose of payment" {...field} value={field.value || ''} disabled={isFormDisabled} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -326,6 +365,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
                   <FormItem>
                     <FormLabel className="flex items-center gap-2">
                       <FileText className="h-4 w-4" /> Attachments (Invoices, Receipts)
+                      {isExtracting && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
                     </FormLabel>
                     <FormControl>
                       <FileUploader
@@ -335,6 +375,8 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
                         maxFiles={5}
                         maxSize={20971520} // 20MB
                         accept={{ 'image/*': [], 'application/pdf': ['.pdf'] }}
+                        disabled={isFormDisabled}
+                        onFileProcessed={handleFileProcessed}
                       />
                     </FormControl>
                     <FormMessage />
@@ -347,7 +389,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
                   <Popover open={beneficiaryPopoverOpen} onOpenChange={setBeneficiaryPopoverOpen}>
                     <PopoverTrigger asChild>
                       <FormControl>
-                        <Button variant="outline" role="combobox" className={cn("w-full justify-between", !field.value && "text-muted-foreground")} disabled={isLoadingBeneficiaries}>
+                        <Button variant="outline" role="combobox" className={cn("w-full justify-between", !field.value && "text-muted-foreground")} disabled={isLoadingBeneficiaries || isFormDisabled}>
                           {field.value || "Select a beneficiary"}
                           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                         </Button>
@@ -383,7 +425,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
                 <FormItem>
                   <div className="flex justify-between items-center">
                     <FormLabel>Bank Account</FormLabel>
-                    <Button type="button" variant="outline" size="sm" onClick={() => setIsBankAccountFormOpen(true)} disabled={!beneficiary}>
+                    <Button type="button" variant="outline" size="sm" onClick={() => setIsBankAccountFormOpen(true)} disabled={!beneficiary || isFormDisabled}>
                       <Plus className="mr-2 h-4 w-4" /> Add New
                     </Button>
                   </div>
@@ -393,7 +435,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
                         <div className="flex items-center gap-2 text-muted-foreground text-sm"><Loader2 className="h-4 w-4 animate-spin" /><span>Loading accounts...</span></div>
                       ) : bankAccounts.length > 0 ? (
                         bankAccounts.map(account => (
-                          <div key={account.id} onClick={() => field.onChange(account.id)} className={cn("border rounded-lg p-3 cursor-pointer transition-all", field.value === account.id ? "border-primary ring-2 ring-primary ring-offset-2" : "hover:border-primary/50")}>
+                          <div key={account.id} onClick={() => field.onChange(account.id)} className={cn("border rounded-lg p-3 cursor-pointer transition-all", field.value === account.id ? "border-primary ring-2 ring-primary ring-offset-2" : "hover:border-primary/50")} role="button" tabIndex={0}>
                             <div className="flex justify-between items-start gap-2">
                               <div className="flex-grow">
                                 <p className="font-semibold">{account.bank_name}</p>
@@ -416,7 +458,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
                 </FormItem>
               )} />
               <FormField control={form.control} name="tf_amount" render={({ field }) => (
-                <FormItem><FormLabel>Total Amount</FormLabel><FormControl><CurrencyInput value={field.value} onChange={field.onChange} /></FormControl><FormMessage /></FormItem>
+                <FormItem><FormLabel>Total Amount</FormLabel><FormControl><CurrencyInput value={field.value} onChange={field.onChange} disabled={isFormDisabled} /></FormControl><FormMessage /></FormItem>
               )} />
               <div>
                 <FormLabel>Payment Terms</FormLabel>
@@ -425,32 +467,32 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
                     <div key={item.id} className="border rounded-lg p-3 space-y-3 bg-muted/50">
                       <div className="flex justify-between items-center">
                         <p className="font-medium text-sm">Term {index + 1}</p>
-                        <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1} className="h-7 w-7"><X className="h-4 w-4" /></Button>
+                        <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1 || isFormDisabled} className="h-7 w-7"><X className="h-4 w-4" /></Button>
                       </div>
                       <div className="grid grid-cols-1 gap-4">
                         <FormField control={form.control} name={`payment_terms.${index}.amount`} render={({ field }) => (
-                          <FormItem><FormLabel className="text-xs">Amount</FormLabel><FormControl><CurrencyInput value={field.value} onChange={field.onChange} placeholder="Amount" /></FormControl><FormMessage /></FormItem>
+                          <FormItem><FormLabel className="text-xs">Amount</FormLabel><FormControl><CurrencyInput value={field.value} onChange={field.onChange} placeholder="Amount" disabled={isFormDisabled} /></FormControl><FormMessage /></FormItem>
                         )} />
                         <FormField control={form.control} name={`payment_terms.${index}.request_date`} render={({ field }) => (
                           <FormItem><FormLabel className="text-xs">Requested/Due Date</FormLabel><div className="flex gap-1">
                             <FormField control={form.control} name={`payment_terms.${index}.request_type`} render={({ field: typeField }) => (
-                              <FormItem><Select onValueChange={typeField.onChange} defaultValue={typeField.value}><FormControl><SelectTrigger className="w-[110px] bg-background"><SelectValue placeholder="Type" /></SelectTrigger></FormControl><SelectContent><SelectItem value="Requested">Requested</SelectItem><SelectItem value="Due">Due</SelectItem></SelectContent></Select></FormItem>
+                              <FormItem><Select onValueChange={typeField.onChange} defaultValue={typeField.value} disabled={isFormDisabled}><FormControl><SelectTrigger className="w-[110px] bg-background"><SelectValue placeholder="Type" /></SelectTrigger></FormControl><SelectContent><SelectItem value="Requested">Requested</SelectItem><SelectItem value="Due">Due</SelectItem></SelectContent></Select></FormItem>
                             )} />
-                            <Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("flex-1 w-full pl-3 text-left font-normal bg-background", !field.value && "text-muted-foreground")}>{field.value ? format(field.value, "PPP") : <span>Pick a date</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value || undefined} onSelect={field.onChange} initialFocus /></PopoverContent></Popover>
+                            <Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("flex-1 w-full pl-3 text-left font-normal bg-background", !field.value && "text-muted-foreground")} disabled={isFormDisabled}>{field.value ? format(field.value, "PPP") : <span>Pick a date</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value || undefined} onSelect={field.onChange} initialFocus /></PopoverContent></Popover>
                           </div><FormMessage /></FormItem>
                         )} />
                         <div className="grid grid-cols-2 gap-4">
                           <FormField control={form.control} name={`payment_terms.${index}.release_date`} render={({ field }) => (
-                            <FormItem><FormLabel className="text-xs">Payment Schedule</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal bg-background", !field.value && "text-muted-foreground")}>{field.value ? format(field.value, "PPP") : <span>Pick a date</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value || undefined} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>
+                            <FormItem><FormLabel className="text-xs">Payment Schedule</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal bg-background", !field.value && "text-muted-foreground")} disabled={isFormDisabled}>{field.value ? format(field.value, "PPP") : <span>Pick a date</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value || undefined} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>
                           )} />
                           <FormField control={form.control} name={`payment_terms.${index}.status`} render={({ field }) => (
-                            <FormItem><FormLabel className="text-xs">Status</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger className="bg-background"><SelectValue placeholder="Status" /></SelectTrigger></FormControl><SelectContent><SelectItem value="Pending">Pending</SelectItem><SelectItem value="Paid">Paid</SelectItem><SelectItem value="Rejected">Rejected</SelectItem></SelectContent></Select><FormMessage /></FormItem>
+                            <FormItem><FormLabel className="text-xs">Status</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value} disabled={isFormDisabled}><FormControl><SelectTrigger className="bg-background"><SelectValue placeholder="Status" /></SelectTrigger></FormControl><SelectContent><SelectItem value="Pending">Pending</SelectItem><SelectItem value="Paid">Paid</SelectItem><SelectItem value="Rejected">Rejected</SelectItem></SelectContent></Select><FormMessage /></FormItem>
                           )} />
                         </div>
                       </div>
                     </div>
                   ))}
-                  <Button type="button" variant="outline" size="sm" onClick={() => append({ amount: null, request_type: 'Requested', request_date: undefined, release_date: undefined, status: 'Pending' })}>
+                  <Button type="button" variant="outline" size="sm" onClick={() => append({ amount: null, request_type: 'Requested', request_date: undefined, release_date: undefined, status: 'Pending' })} disabled={isFormDisabled}>
                     <Plus className="mr-2 h-4 w-4" /> Add Term
                   </Button>
                 </div>
@@ -464,7 +506,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
                 <Input value={remainingBalance.toLocaleString('id-ID')} className={cn("col-span-3 bg-muted", remainingBalance !== 0 && "text-red-500 font-semibold")} readOnly />
               </div>
               <FormField control={form.control} name="remarks" render={({ field }) => (
-                <FormItem><FormLabel>Remarks</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
+                <FormItem><FormLabel>Remarks</FormLabel><FormControl><Textarea {...field} disabled={isFormDisabled} /></FormControl><FormMessage /></FormItem>
               )} />
               {isLoadingProperties ? (
                 <div className="flex justify-center"><Loader2 className="h-5 w-5 animate-spin" /></div>
@@ -482,6 +524,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
                             control={form.control}
                             name={`custom_properties.${prop.name}`}
                             bucket="expense-attachments"
+                            disabled={isFormDisabled}
                           />
                           <FormMessage />
                         </FormItem>
@@ -493,10 +536,10 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
             </form>
           </Form>
           <DialogFooter className="pt-4">
-            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button>
-            <Button type="submit" form="expense-form" disabled={isSubmitting}>
-              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save Changes
+            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={isFormDisabled}>Cancel</Button>
+            <Button type="submit" form="expense-form" disabled={isFormDisabled}>
+              {(isSubmitting || isExtracting) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isExtracting ? 'Analyzing Document...' : 'Save Changes'}
             </Button>
           </DialogFooter>
         </DialogContent>

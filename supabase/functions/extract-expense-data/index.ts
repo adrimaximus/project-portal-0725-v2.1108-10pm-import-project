@@ -1,0 +1,118 @@
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+// Helper function to fetch file content as base64
+async function fetchFileAsBase64(url: string): Promise<{ base64: string, mimeType: string }> {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch file: ${response.statusText}`);
+  }
+  const contentType = response.headers.get('content-type') || 'application/octet-stream';
+  const buffer = await response.arrayBuffer();
+  const base64 = btoa(String.fromCharCode(...new Uint8Array(buffer)));
+  return { base64, mimeType: contentType };
+}
+
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const { fileUrl, fileName } = await req.json();
+
+    if (!fileUrl) {
+      return new Response(JSON.stringify({ error: 'Missing fileUrl' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const anthropicApiKey = Deno.env.get('ANTHROPIC_API_KEY');
+    if (!anthropicApiKey) {
+      throw new Error('ANTHROPIC_API_KEY not set');
+    }
+
+    const { base64, mimeType } = await fetchFileAsBase64(fileUrl);
+
+    const prompt = `You are an expert expense data extractor. Analyze the provided document (invoice, bill, or receipt) and extract the following information. Respond ONLY with a JSON object matching the schema provided below. Do not include any other text, explanation, or markdown formatting outside the JSON object.
+
+Schema:
+{
+  "amount": number, // The total amount of the expense/bill, in IDR if currency is specified, otherwise just the number. Use the largest, most prominent total amount.
+  "purpose": string, // A brief description of the expense (e.g., "Payment for graphic design services").
+  "beneficiary": string, // The name of the company or person who issued the invoice/bill.
+  "remarks": string // Any important notes or dates found on the document.
+}
+
+Document Name: ${fileName}
+`;
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': anthropicApiKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-3-sonnet-20240229',
+        max_tokens: 1024,
+        messages: [
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'image',
+                source: {
+                  type: 'base64',
+                  media_type: mimeType,
+                  data: base64,
+                },
+              },
+              {
+                type: 'text',
+                text: prompt,
+              },
+            ],
+          },
+        ],
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Anthropic API Error:', errorText);
+      throw new Error(`Anthropic API failed: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const extractedText = data.content[0].text.trim();
+    
+    // Attempt to parse the JSON response
+    let extractedData;
+    try {
+        extractedData = JSON.parse(extractedText);
+    } catch (e) {
+        console.error('Failed to parse AI response JSON:', extractedText);
+        throw new Error('AI returned invalid JSON format.');
+    }
+
+    return new Response(JSON.stringify({ success: true, data: extractedData }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 200,
+    });
+
+  } catch (error) {
+    console.error(error);
+    return new Response(JSON.stringify({ error: error.message }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 500,
+    });
+  }
+});
