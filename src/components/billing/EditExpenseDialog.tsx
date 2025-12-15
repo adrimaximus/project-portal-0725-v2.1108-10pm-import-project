@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { CalendarIcon, Loader2, Check, ChevronsUpDown, User, Building, Plus, X, Copy, Briefcase } from 'lucide-react';
+import { CalendarIcon, Loader2, Check, ChevronsUpDown, User, Building, Plus, X, Copy, Briefcase, FileText } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
@@ -26,6 +26,7 @@ import BeneficiaryTypeDialog from './BeneficiaryTypeDialog';
 import PersonFormDialog from '../people/PersonFormDialog';
 import CompanyFormDialog from '../people/CompanyFormDialog';
 import CustomPropertyInput from '../settings/CustomPropertyInput';
+import FileUploader from '../ui/FileUploader'; // Import FileUploader
 
 interface BankAccount {
   id: string;
@@ -33,6 +34,14 @@ interface BankAccount {
   account_number: string;
   bank_name: string;
   is_legacy: boolean;
+}
+
+interface FileMetadata {
+  name: string;
+  url: string;
+  size: number;
+  type: string;
+  storagePath: string;
 }
 
 const expenseSchema = z.object({
@@ -51,6 +60,13 @@ const expenseSchema = z.object({
   remarks: z.string().optional(),
   status_expense: z.string().min(1, "Status is required"),
   custom_properties: z.record(z.any()).optional(),
+  attachments_jsonb: z.array(z.object({
+    name: z.string(),
+    url: z.string().url(),
+    size: z.number(),
+    type: z.string(),
+    storagePath: z.string(),
+  })).optional(),
 });
 
 type ExpenseFormValues = z.infer<typeof expenseSchema>;
@@ -152,6 +168,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
         })) || [{ amount: null, request_type: 'Requested', request_date: undefined, release_date: undefined, status: 'Pending' }],
         bank_account_id: (expense as any).bank_account_id || null,
         custom_properties: expense.custom_properties || {},
+        attachments_jsonb: (expense as any).attachments_jsonb || [], // Initialize attachments
       });
     }
   }, [expense, beneficiaries, projects, reset, open]);
@@ -224,6 +241,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
         remarks: values.remarks,
         status_expense: values.status_expense,
         custom_properties: values.custom_properties,
+        attachments_jsonb: values.attachments_jsonb, // Save attachments
       }).eq('id', expense.id);
 
       if (error) throw error;
@@ -296,6 +314,28 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
                     <FormLabel>Purpose Payment</FormLabel>
                     <FormControl>
                       <Input placeholder="Enter purpose of payment" {...field} value={field.value || ''} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="attachments_jsonb"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2">
+                      <FileText className="h-4 w-4" /> Attachments (Invoices, Receipts)
+                    </FormLabel>
+                    <FormControl>
+                      <FileUploader
+                        bucket="expense-attachments"
+                        value={field.value || []}
+                        onChange={field.onChange}
+                        maxFiles={5}
+                        maxSize={20971520} // 20MB
+                        accept={{ 'image/*': [], 'application/pdf': ['.pdf'] }}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

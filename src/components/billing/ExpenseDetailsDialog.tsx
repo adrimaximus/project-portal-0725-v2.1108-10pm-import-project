@@ -5,13 +5,31 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getAvatarUrl, generatePastelColor, cn } from "@/lib/utils";
-import { CalendarIcon, CreditCard, User, Building2, FileText, Wallet } from "lucide-react";
+import { CalendarIcon, CreditCard, User, Building2, FileText, Wallet, Download, Eye } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+
+interface FileMetadata {
+  name: string;
+  url: string;
+  size: number;
+  type: string;
+  storagePath: string;
+}
 
 interface ExpenseDetailsDialogProps {
   expense: Expense | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
+
+const formatFileSize = (bytes: number) => {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+};
 
 const ExpenseDetailsDialog = ({ expense, open, onOpenChange }: ExpenseDetailsDialogProps) => {
   if (!expense) return null;
@@ -33,6 +51,11 @@ const ExpenseDetailsDialog = ({ expense, open, onOpenChange }: ExpenseDetailsDia
 
   const paymentTerms = (expense as any).payment_terms || [];
   const bankDetails = expense.account_bank;
+  const attachments: FileMetadata[] = (expense as any).attachments_jsonb || [];
+
+  const handleDownload = (url: string) => {
+    window.open(url, '_blank');
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -108,6 +131,44 @@ const ExpenseDetailsDialog = ({ expense, open, onOpenChange }: ExpenseDetailsDia
                 </div>
               </div>
             </div>
+
+            {/* Attachments Section */}
+            {attachments.length > 0 && (
+              <>
+                <Separator />
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-muted-foreground" />
+                    <h4 className="font-semibold text-sm">Attachments ({attachments.length})</h4>
+                  </div>
+                  <div className="space-y-2">
+                    {attachments.map((file, index) => (
+                      <div key={index} className="flex items-center justify-between p-3 border rounded-lg bg-muted/40">
+                        <div className="flex items-center space-x-3 truncate">
+                          <FileText className="h-4 w-4 text-primary shrink-0" />
+                          <div className="truncate">
+                            <p className="text-sm font-medium truncate">{file.name}</p>
+                            <p className="text-xs text-muted-foreground">{formatFileSize(file.size)}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-1 shrink-0">
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDownload(file.url)}>
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>View/Download</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
 
             <Separator />
 
