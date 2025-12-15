@@ -214,29 +214,24 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
   const handleFileProcessed = async (file: FileMetadata) => {
     const extractedData = await extractData(file);
     if (extractedData) {
-      // 1. Update Amount
       if (extractedData.amount && extractedData.amount > 0) {
         setValue('tf_amount', extractedData.amount, { shouldValidate: true });
       }
       
-      // 2. Update Purpose
       if (extractedData.purpose) {
         setValue('purpose_payment', extractedData.purpose, { shouldValidate: true });
       }
 
-      // 3. Update Beneficiary (only if current beneficiary is empty)
       if (extractedData.beneficiary && !watch('beneficiary')) {
         const matchedBeneficiary = beneficiaries.find(b => b.name.toLowerCase() === extractedData.beneficiary.toLowerCase());
         if (matchedBeneficiary) {
           setBeneficiary(matchedBeneficiary);
           setValue('beneficiary', matchedBeneficiary.name, { shouldValidate: true });
         } else {
-          // If no match, just set the name, user can manually link later
           setValue('beneficiary', extractedData.beneficiary, { shouldValidate: true });
         }
       }
 
-      // 4. Update Remarks (append if existing)
       if (extractedData.remarks) {
         const currentRemarks = watch('remarks') || '';
         const newRemarks = currentRemarks ? `${currentRemarks}\n\n--- AI Extracted Notes ---\n${extractedData.remarks}` : extractedData.remarks;
@@ -375,7 +370,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                     </FormLabel>
                     <FormControl>
                       <FileUploader
-                        bucket="expense-attachments"
+                        bucket="expense" // Updated bucket name
                         value={field.value || []}
                         onChange={field.onChange}
                         maxFiles={5}
@@ -525,7 +520,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                             property={prop}
                             control={form.control}
                             name={`custom_properties.${prop.name}`}
-                            bucket="expense-attachments"
+                            bucket="expense" // Updated bucket name here too
                             disabled={isFormDisabled}
                           />
                           <FormMessage />

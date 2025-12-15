@@ -133,7 +133,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
   const form = useForm<ExpenseFormValues>({
     resolver: zodResolver(expenseSchema),
     defaultValues: {
-      attachments_jsonb: [],
+      attachments_jsonb: [], 
     },
   });
 
@@ -174,7 +174,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
         })) || [{ amount: null, request_type: 'Requested', request_date: undefined, release_date: undefined, status: 'Pending' }],
         bank_account_id: (expense as any).bank_account_id || null,
         custom_properties: expense.custom_properties || {},
-        attachments_jsonb: (expense as any).attachments_jsonb || [],
+        attachments_jsonb: (expense as any).attachments_jsonb || [], 
       });
     }
   }, [expense, beneficiaries, projects, reset, open]);
@@ -222,29 +222,24 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
   const handleFileProcessed = async (file: FileMetadata) => {
     const extractedData = await extractData(file);
     if (extractedData) {
-      // 1. Update Amount
       if (extractedData.amount && extractedData.amount > 0) {
         setValue('tf_amount', extractedData.amount, { shouldValidate: true });
       }
       
-      // 2. Update Purpose
       if (extractedData.purpose) {
         setValue('purpose_payment', extractedData.purpose, { shouldValidate: true });
       }
 
-      // 3. Update Beneficiary (only if current beneficiary is empty)
       if (extractedData.beneficiary && !watch('beneficiary')) {
         const matchedBeneficiary = beneficiaries.find(b => b.name.toLowerCase() === extractedData.beneficiary.toLowerCase());
         if (matchedBeneficiary) {
           setBeneficiary(matchedBeneficiary);
           setValue('beneficiary', matchedBeneficiary.name, { shouldValidate: true });
         } else {
-          // If no match, just set the name, user can manually link later
           setValue('beneficiary', extractedData.beneficiary, { shouldValidate: true });
         }
       }
 
-      // 4. Update Remarks (append if existing)
       if (extractedData.remarks) {
         const currentRemarks = watch('remarks') || '';
         const newRemarks = currentRemarks ? `${currentRemarks}\n\n--- AI Extracted Notes ---\n${extractedData.remarks}` : extractedData.remarks;
@@ -262,7 +257,6 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
       if (selectedAccount) {
         bankDetails = { name: selectedAccount.account_name, account: selectedAccount.account_number, bank: selectedAccount.bank_name };
       } else if (values.bank_account_id && expense?.account_bank) {
-        // Preserve existing bank details if the selection hasn't changed but the list isn't loaded yet
         bankDetails = expense.account_bank;
       }
 
@@ -281,7 +275,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
         remarks: values.remarks,
         status_expense: values.status_expense,
         custom_properties: values.custom_properties,
-        attachments_jsonb: values.attachments_jsonb, // Save attachments
+        attachments_jsonb: values.attachments_jsonb, 
       }).eq('id', expense.id);
 
       if (error) throw error;
@@ -372,7 +366,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
                     </FormLabel>
                     <FormControl>
                       <FileUploader
-                        bucket="expense-attachments"
+                        bucket="expense" // Updated bucket name
                         value={field.value || []}
                         onChange={field.onChange}
                         maxFiles={5}
@@ -526,7 +520,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
                             property={prop}
                             control={form.control}
                             name={`custom_properties.${prop.name}`}
-                            bucket="expense-attachments"
+                            bucket="expense" // Updated bucket name here too
                             disabled={isFormDisabled}
                           />
                           <FormMessage />
