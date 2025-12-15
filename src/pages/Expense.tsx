@@ -201,7 +201,6 @@ const ExpensePage = () => {
                     <TableHead>Amount</TableHead>
                     <TableHead>Paid</TableHead>
                     <TableHead>Remaining</TableHead>
-                    <TableHead className="whitespace-nowrap">Payment Plan</TableHead>
                     <TableHead>Remarks</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
@@ -209,7 +208,7 @@ const ExpensePage = () => {
                 <TableBody>
                   {filteredExpenses.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={10} className="h-24 text-center">
+                      <TableCell colSpan={9} className="h-24 text-center">
                         No expenses found.
                       </TableCell>
                     </TableRow>
@@ -288,57 +287,6 @@ const ExpensePage = () => {
                             <p className={cn("font-medium", remainingAmount > 0 ? "text-red-500" : "text-green-600")}>
                               {formatCurrency(remainingAmount)}
                             </p>
-                          </TableCell>
-                          <TableCell className="whitespace-nowrap">
-                            {paymentTerms.length > 0 ? (
-                              <div className="flex flex-col">
-                                {paymentTerms.map((term: any, index: number) => {
-                                  const isMultiTerm = paymentTerms.length > 1;
-                                  return (
-                                    <TooltipProvider key={index} delayDuration={100}>
-                                      <Tooltip>
-                                        <TooltipTrigger asChild>
-                                          <div className={cn("text-xs w-full", index > 0 && "border-t pt-2 mt-2")}>
-                                            <div className="flex items-center justify-between gap-2">
-                                              <div className="flex items-center gap-2 font-medium">
-                                                {isMultiTerm && (
-                                                  <>
-                                                    <span>Term {index + 1}</span>
-                                                    <span className="text-muted-foreground">|</span>
-                                                  </>
-                                                )}
-                                                <span>{formatCurrency(term.amount || 0)}</span>
-                                              </div>
-                                              <Badge variant="outline" className={cn("border-transparent text-xs whitespace-nowrap", getStatusBadgeStyle(term.status || 'Pending'))}>
-                                                {term.status || 'Pending'}
-                                              </Badge>
-                                            </div>
-                                          </div>
-                                        </TooltipTrigger>
-                                        {(term.request_date || term.release_date) && (
-                                          <TooltipContent>
-                                            <div className="flex flex-col gap-1 text-xs">
-                                              {term.request_date && (
-                                                <p>
-                                                  {term.request_type || 'Due'}: {format(new Date(term.request_date), "dd MMM yyyy")}
-                                                </p>
-                                              )}
-                                              {term.release_date && (
-                                                <p>
-                                                  Scheduled: {format(new Date(term.release_date), "dd MMM yyyy")}
-                                                </p>
-                                              )}
-                                            </div>
-                                          </TooltipContent>
-                                        )}
-                                      </Tooltip>
-                                    </TooltipProvider>
-                                  );
-                                })}
-                              </div>
-                            ) : (
-                              '-'
-                            )}
                           </TableCell>
                           <TableCell>{expense.remarks}</TableCell>
                           <TableCell className="text-right">
