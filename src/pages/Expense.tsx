@@ -200,6 +200,7 @@ const ExpensePage = () => {
                     <TableHead>PIC</TableHead>
                     <TableHead>Amount</TableHead>
                     <TableHead>Paid</TableHead>
+                    <TableHead>Remaining</TableHead>
                     <TableHead className="whitespace-nowrap">Payment Plan</TableHead>
                     <TableHead>Remarks</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
@@ -208,7 +209,7 @@ const ExpensePage = () => {
                 <TableBody>
                   {filteredExpenses.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={9} className="h-24 text-center">
+                      <TableCell colSpan={10} className="h-24 text-center">
                         No expenses found.
                       </TableCell>
                     </TableRow>
@@ -218,7 +219,7 @@ const ExpensePage = () => {
                       const paidAmount = paymentTerms
                         .filter((term: any) => term.status === 'Paid')
                         .reduce((sum: number, term: any) => sum + (term.amount || 0), 0);
-                      const outstandingAmount = expense.tf_amount - paidAmount;
+                      const remainingAmount = expense.tf_amount - paidAmount;
 
                       return (
                         <TableRow 
@@ -278,15 +279,15 @@ const ExpensePage = () => {
                           <TableCell>
                             <div>
                               <p>{formatCurrency(expense.tf_amount)}</p>
-                              {outstandingAmount > 0 && (
-                                <p className="text-xs text-muted-foreground">
-                                  Remaining: {formatCurrency(outstandingAmount)}
-                                </p>
-                              )}
                             </div>
                           </TableCell>
                           <TableCell>
                             <p className="font-medium">{formatCurrency(paidAmount)}</p>
+                          </TableCell>
+                          <TableCell>
+                            <p className={cn("font-medium", remainingAmount > 0 ? "text-red-500" : "text-green-600")}>
+                              {formatCurrency(remainingAmount)}
+                            </p>
                           </TableCell>
                           <TableCell className="whitespace-nowrap">
                             {paymentTerms.length > 0 ? (
