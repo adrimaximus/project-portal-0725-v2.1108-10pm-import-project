@@ -402,7 +402,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
                               Create "{beneficiarySearch}"
                             </Button>
                           </CommandEmpty>
-                          <CommandGroup>
+                          <CommandGroup className="max-h-60 overflow-y-auto">
                             {beneficiaries.map((item) => (
                               <CommandItem value={item.name} key={item.id} onSelect={() => { form.setValue("beneficiary", item.name); setBeneficiary(item); setBeneficiaryPopoverOpen(false); }}>
                                 <Check className={cn("mr-2 h-4 w-4", item.name === field.value ? "opacity-100" : "opacity-0")} />
