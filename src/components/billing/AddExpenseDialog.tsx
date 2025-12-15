@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { CalendarIcon, Loader2, Check, ChevronsUpDown, User, Building, Plus, X, Copy, Briefcase } from 'lucide-react';
+import { CalendarIcon, Loader2, Check, ChevronsUpDown, User, Building, Plus, X, Copy, Briefcase, FileText } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
@@ -77,6 +77,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
   const [isLoadingBankAccounts, setIsLoadingBankAccounts] = useState(false);
   const [isBankAccountFormOpen, setIsBankAccountFormOpen] = useState(false);
   const [beneficiarySearch, setBeneficiarySearch] = useState('');
+  const [projectSearch, setProjectSearch] = useState('');
 
   const [isBeneficiaryTypeDialogOpen, setIsBeneficiaryTypeDialogOpen] = useState(false);
   const [isPersonFormOpen, setIsPersonFormOpen] = useState(false);
@@ -137,7 +138,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
       bank_account_id: null,
       remarks: '',
       custom_properties: {},
-      attachments_jsonb: [], // Added default value
+      attachments_jsonb: [], 
     },
   });
 
