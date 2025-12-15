@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { DateRangePicker } from "@/components/DateRangePicker";
+import { DateRangePicker } from "@/components/ui/DatePickerWithRange";
 import { DateRange } from "react-day-picker";
 import PortalLayout from "@/components/PortalLayout";
 import DashboardStatsGrid from "@/components/dashboard/DashboardStatsGrid";
@@ -95,7 +95,7 @@ const Index = () => {
                 <div className="flex items-center gap-4">
                     <h2 className="text-2xl font-bold">Insights</h2>
                 </div>
-                <DateRangePicker date={date} onDateChange={setDate} />
+                <DatePickerWithRange date={date} onDateChange={setDate} />
             </div>
             <div className="grid gap-6 md:grid-cols-2">
               <MonthlyProgressChart projects={filteredProjects} />
