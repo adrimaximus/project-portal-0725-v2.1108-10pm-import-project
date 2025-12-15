@@ -1,5 +1,4 @@
 import { useState, useMemo, useEffect } from "react";
-import { DateRangePicker } from "@/components/ui/DatePickerWithRange";
 import { DateRange } from "react-day-picker";
 import PortalLayout from "@/components/PortalLayout";
 import DashboardStatsGrid from "@/components/dashboard/DashboardStatsGrid";
@@ -9,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import MonthlyProgressChart from "@/components/dashboard/MonthlyProgressChart";
 import UnsplashImage from "@/components/dashboard/UnsplashImage";
 import ActivityHubWidget from "@/components/dashboard/ActivityHubWidget";
+import { DatePickerWithRange } from "@/components/ui/DatePickerWithRange";
 
 const Index = () => {
   const [date, setDate] = useState<DateRange | undefined>({
@@ -50,7 +50,7 @@ const Index = () => {
         return projectStart >= pickerFrom && projectStart <= pickerTo;
     }
     // If no date range is selected, we still might have a year filter from the hook
-    // but for client-side filtering, if there's no date range, we show all fetched projects.
+    // but for client-side filtering, we show all fetched projects if no date range is set.
     return true;
   });
 
