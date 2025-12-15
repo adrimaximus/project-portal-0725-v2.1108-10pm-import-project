@@ -8,7 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import PortalLayout from "@/components/PortalLayout";
 import { supabase } from "@/integrations/supabase/client";
-import { Eye, EyeOff, Loader2, Camera } from "lucide-react";
+import { Eye, EyeOff, Loader2, Camera, Edit } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { generatePastelColor, getAvatarUrl, getInitials } from "@/lib/utils";
 import { useQueryClient } from "@tanstack/react-query";
@@ -31,42 +31,55 @@ const Profile = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [imageToCrop, setImageToCrop] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState(false); // New state for edit mode
+
+  // Function to load user data into state
+  const loadUserData = (currentUser: typeof user) => {
+    const savedFirstName = SafeLocalStorage.getItem<string>(`profile-form-firstName-${currentUser.id}`);
+    const savedLastName = SafeLocalStorage.getItem<string>(`profile-form-lastName-${currentUser.id}`);
+    const savedPhone = SafeLocalStorage.getItem<string>(`profile-form-phone-${currentUser.id}`);
+
+    setFirstName(savedFirstName !== null ? savedFirstName : currentUser.first_name || "");
+    setLastName(savedLastName !== null ? savedLastName : currentUser.last_name || "");
+    setPhone(savedPhone !== null ? savedPhone : currentUser.phone || "");
+  };
 
   useEffect(() => {
     if (user) {
-      const savedFirstName = SafeLocalStorage.getItem<string>(`profile-form-firstName-${user.id}`);
-      const savedLastName = SafeLocalStorage.getItem<string>(`profile-form-lastName-${user.id}`);
-      const savedPhone = SafeLocalStorage.getItem<string>(`profile-form-phone-${user.id}`);
-
-      setFirstName(savedFirstName !== null ? savedFirstName : user.first_name || "");
-      setLastName(savedLastName !== null ? savedLastName : user.last_name || "");
-      setPhone(savedPhone !== null ? savedPhone : user.phone || "");
+      loadUserData(user);
     }
   }, [user]);
 
+  // Local storage persistence for unsaved changes
   useEffect(() => {
-    if (user && firstName !== (user.first_name || '')) {
-      SafeLocalStorage.setItem(`profile-form-firstName-${user.id}`, firstName);
-    } else if (user) {
-      SafeLocalStorage.removeItem(`profile-form-firstName-${user.id}`);
+    if (user && isEditing) {
+      if (firstName !== (user.first_name || '')) {
+        SafeLocalStorage.setItem(`profile-form-firstName-${user.id}`, firstName);
+      } else {
+        SafeLocalStorage.removeItem(`profile-form-firstName-${user.id}`);
+      }
     }
-  }, [firstName, user]);
+  }, [firstName, user, isEditing]);
 
   useEffect(() => {
-    if (user && lastName !== (user.last_name || '')) {
-      SafeLocalStorage.setItem(`profile-form-lastName-${user.id}`, lastName);
-    } else if (user) {
-      SafeLocalStorage.removeItem(`profile-form-lastName-${user.id}`);
+    if (user && isEditing) {
+      if (lastName !== (user.last_name || '')) {
+        SafeLocalStorage.setItem(`profile-form-lastName-${user.id}`, lastName);
+      } else {
+        SafeLocalStorage.removeItem(`profile-form-lastName-${user.id}`);
+      }
     }
-  }, [lastName, user]);
+  }, [lastName, user, isEditing]);
 
   useEffect(() => {
-    if (user && phone !== (user.phone || '')) {
-      SafeLocalStorage.setItem(`profile-form-phone-${user.id}`, phone);
-    } else if (user) {
-      SafeLocalStorage.removeItem(`profile-form-phone-${user.id}`);
+    if (user && isEditing) {
+      if (phone !== (user.phone || '')) {
+        SafeLocalStorage.setItem(`profile-form-phone-${user.id}`, phone);
+      } else {
+        SafeLocalStorage.removeItem(`profile-form-phone-${user.id}`);
+      }
     }
-  }, [phone, user]);
+  }, [phone, user, isEditing]);
 
   const hasUnsavedChanges = useMemo(() => {
     if (!user) return false;
@@ -160,6 +173,11 @@ const Profile = () => {
   };
 
   const handleSaveChanges = async () => {
+    if (!hasUnsavedChanges) {
+      setIsEditing(false);
+      return;
+    }
+
     setIsSaving(true);
     try {
       // This will trigger a database function to update the profiles table as well
@@ -191,6 +209,7 @@ const Profile = () => {
       SafeLocalStorage.removeItem(`profile-form-phone-${user.id}`);
 
       await refreshUser();
+      setIsEditing(false); // Exit edit mode on success
     } catch (error: any) {
       toast.error("Gagal memperbarui profil.", { description: error.message });
       console.error(error);
@@ -199,16 +218,14 @@ const Profile = () => {
     }
   };
 
-  const handleResetChanges = () => {
-    if (user) {
-      setFirstName(user.first_name || "");
-      setLastName(user.last_name || "");
-      setPhone(user.phone || "");
-      SafeLocalStorage.removeItem(`profile-form-firstName-${user.id}`);
-      SafeLocalStorage.removeItem(`profile-form-lastName-${user.id}`);
-      SafeLocalStorage.removeItem(`profile-form-phone-${user.id}`);
-      toast.info("Changes have been discarded.");
-    }
+  const handleCancelChanges = () => {
+    // Discard local changes and revert to user data
+    loadUserData(user);
+    SafeLocalStorage.removeItem(`profile-form-firstName-${user.id}`);
+    SafeLocalStorage.removeItem(`profile-form-lastName-${user.id}`);
+    SafeLocalStorage.removeItem(`profile-form-phone-${user.id}`);
+    toast.info("Changes have been discarded.");
+    setIsEditing(false); // Exit edit mode
   };
 
   const handlePasswordChange = async () => {
@@ -261,11 +278,19 @@ const Profile = () => {
                 <CardTitle>Personal Information</CardTitle>
                 <CardDescription>Update your personal details here.</CardDescription>
               </div>
-              {user.role && (
-                <Badge variant="outline" className="capitalize text-sm">
-                  {user.role}
-                </Badge>
-              )}
+              <div className="flex items-center gap-2">
+                {user.role && (
+                  <Badge variant="outline" className="capitalize text-sm">
+                    {user.role}
+                  </Badge>
+                )}
+                {!isEditing && (
+                  <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
+                    <Edit className="mr-2 h-4 w-4" />
+                    Edit
+                  </Button>
+                )}
+              </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -275,34 +300,46 @@ const Profile = () => {
                   <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} alt={user.first_name || ''} />
                   <AvatarFallback style={generatePastelColor(user.id)}>{getInitials(user.first_name, user.email)}</AvatarFallback>
                 </Avatar>
-                <label 
-                    htmlFor="avatar-upload" 
-                    className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 rounded-full cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"
-                >
-                    {isUploading ? (
-                        <Loader2 className="h-6 w-6 text-white animate-spin" />
-                    ) : (
-                        <Camera className="h-6 w-6 text-white" />
-                    )}
-                    <input 
-                        id="avatar-upload" 
-                        type="file" 
-                        className="hidden" 
-                        accept="image/png, image/jpeg, image/gif"
-                        onChange={handleFileSelect}
-                        disabled={isUploading}
-                    />
-                </label>
+                {isEditing && (
+                  <label 
+                      htmlFor="avatar-upload" 
+                      className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 rounded-full cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                      {isUploading ? (
+                          <Loader2 className="h-6 w-6 text-white animate-spin" />
+                      ) : (
+                          <Camera className="h-6 w-6 text-white" />
+                      )}
+                      <input 
+                          id="avatar-upload" 
+                          type="file" 
+                          className="hidden" 
+                          accept="image/png, image/jpeg, image/gif"
+                          onChange={handleFileSelect}
+                          disabled={isUploading}
+                      />
+                  </label>
+                )}
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="first-name">First Name</Label>
-                <Input id="first-name" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
+                <Input 
+                  id="first-name" 
+                  value={firstName} 
+                  onChange={(e) => setFirstName(e.target.value)} 
+                  disabled={!isEditing}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="last-name">Last Name</Label>
-                <Input id="last-name" value={lastName} onChange={(e) => setLastName(e.target.value)} />
+                <Input 
+                  id="last-name" 
+                  value={lastName} 
+                  onChange={(e) => setLastName(e.target.value)} 
+                  disabled={!isEditing}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
@@ -310,18 +347,24 @@ const Profile = () => {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="phone">Phone Number (for WhatsApp)</Label>
-                <PhoneNumberInput value={phone} onChange={setPhone} />
+                <PhoneNumberInput 
+                  value={phone} 
+                  onChange={setPhone} 
+                  disabled={!isEditing}
+                />
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Button onClick={handleSaveChanges} disabled={isSaving || !hasUnsavedChanges}>
-                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Save Changes
-              </Button>
-              <Button variant="outline" onClick={handleResetChanges} disabled={isSaving || !hasUnsavedChanges}>
-                Reset
-              </Button>
-            </div>
+            {isEditing && (
+              <div className="flex items-center gap-2 pt-2">
+                <Button onClick={handleSaveChanges} disabled={isSaving || !hasUnsavedChanges}>
+                  {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Save Changes
+                </Button>
+                <Button variant="outline" onClick={handleCancelChanges} disabled={isSaving}>
+                  Cancel
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
 
