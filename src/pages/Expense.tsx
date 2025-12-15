@@ -193,9 +193,9 @@ const ExpensePage = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Project</TableHead>
+                    <TableHead>Beneficiary</TableHead> {/* MOVED */}
                     <TableHead>Purpose</TableHead>
                     <TableHead>Owner</TableHead>
-                    <TableHead>Beneficiary</TableHead>
                     <TableHead>Amount</TableHead>
                     <TableHead className="whitespace-nowrap">Payment Plan</TableHead>
                     <TableHead>Remarks</TableHead>
@@ -224,24 +224,7 @@ const ExpensePage = () => {
                               {expense.project_name}
                             </Link>
                           </TableCell>
-                          <TableCell>{(expense as any).purpose_payment || '-'}</TableCell>
-                          <TableCell>
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Avatar className="h-8 w-8 cursor-default">
-                                    <AvatarImage src={getAvatarUrl(expense.project_owner.avatar_url, expense.project_owner.id)} />
-                                    <AvatarFallback style={generatePastelColor(expense.project_owner.id)}>
-                                      {expense.project_owner.initials}
-                                    </AvatarFallback>
-                                  </Avatar>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>{expense.project_owner.name}</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          </TableCell>
+                          {/* MOVED BENEFICIARY CELL */}
                           <TableCell>
                             {expense.account_bank && expense.account_bank.name ? (
                               <TooltipProvider delayDuration={100}>
@@ -263,6 +246,24 @@ const ExpensePage = () => {
                             ) : (
                               expense.beneficiary
                             )}
+                          </TableCell>
+                          <TableCell>{(expense as any).purpose_payment || '-'}</TableCell>
+                          <TableCell>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Avatar className="h-8 w-8 cursor-default">
+                                    <AvatarImage src={getAvatarUrl(expense.project_owner.avatar_url, expense.project_owner.id)} />
+                                    <AvatarFallback style={generatePastelColor(expense.project_owner.id)}>
+                                      {expense.project_owner.initials}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>{expense.project_owner.name}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
                           </TableCell>
                           <TableCell>
                             <div>
