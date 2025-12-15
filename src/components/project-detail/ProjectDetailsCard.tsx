@@ -215,6 +215,7 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange, onStatusChange,
                         to: project.due_date ? new Date(project.due_date) : undefined,
                       }}
                       onDateChange={handleDateChange}
+                      className="w-full" // Added w-full here to ensure it takes up the space
                     />
                   ) : (
                     <p className="text-muted-foreground">
