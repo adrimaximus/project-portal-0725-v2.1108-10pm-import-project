@@ -132,6 +132,9 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
 
   const form = useForm<ExpenseFormValues>({
     resolver: zodResolver(expenseSchema),
+    defaultValues: {
+      attachments_jsonb: [], // Added default value
+    },
   });
 
   const { control, handleSubmit, watch, setValue, reset } = form;
@@ -498,12 +501,8 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
                 </div>
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label className="text-right">Paid (Rp)</Label>
-                <Input value={paidAmount.toLocaleString('id-ID')} className="col-span-3 bg-muted" readOnly />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label className="text-right">Remaining (Rp)</Label>
-                <Input value={remainingBalance.toLocaleString('id-ID')} className={cn("col-span-3 bg-muted", remainingBalance !== 0 && "text-red-500 font-semibold")} readOnly />
+                <Label className="text-right">Balance (Rp)</Label>
+                <Input value={balance.toLocaleString('id-ID')} className={cn("col-span-3 bg-muted", balance !== 0 && "text-red-500 font-semibold")} readOnly />
               </div>
               <FormField control={form.control} name="remarks" render={({ field }) => (
                 <FormItem><FormLabel>Remarks</FormLabel><FormControl><Textarea {...field} disabled={isFormDisabled} /></FormControl><FormMessage /></FormItem>
@@ -539,7 +538,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={isFormDisabled}>Cancel</Button>
             <Button type="submit" form="expense-form" disabled={isFormDisabled}>
               {(isSubmitting || isExtracting) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isExtracting ? 'Analyzing Document...' : 'Save Changes'}
+              {isExtracting ? 'Analyzing Document...' : 'Add Expense'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -571,8 +570,17 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
       <BeneficiaryTypeDialog open={isBeneficiaryTypeDialogOpen} onOpenChange={setIsBeneficiaryTypeDialogOpen} onSelect={handleSelectBeneficiaryType} />
       <PersonFormDialog open={isPersonFormOpen} onOpenChange={setIsPersonFormOpen} person={null} initialValues={{ first_name: firstName, last_name: lastName }} onSuccess={(newPerson) => handleBeneficiaryCreated(newPerson, 'person')} />
       <CompanyFormDialog open={isCompanyFormOpen} onOpenChange={setIsCompanyFormOpen} company={null} initialValues={{ name: newBeneficiaryName }} onSuccess={(newCompany) => handleBeneficiaryCreated(newCompany, 'company')} />
+      <CreateProjectDialog
+        open={isCreateProjectDialogOpen}
+        onOpenChange={setIsCreateProjectDialogOpen}
+        initialName={projectSearch}
+        onSuccess={(newProject) => {
+          queryClient.invalidateQueries({ queryKey: ['projectsForExpenseForm'] });
+          form.setValue('project_id', newProject.id);
+        }}
+      />
     </>
   );
 };
 
-export default EditExpenseDialog;
+export default AddExpenseDialog;
