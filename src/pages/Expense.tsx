@@ -192,10 +192,10 @@ const ExpensePage = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Beneficiary</TableHead> {/* MOVED */}
+                    <TableHead>Beneficiary</TableHead>
                     <TableHead>Project</TableHead>
                     <TableHead>Purpose</TableHead>
-                    <TableHead>Owner</TableHead>
+                    <TableHead>PIC</TableHead>
                     <TableHead>Amount</TableHead>
                     <TableHead className="whitespace-nowrap">Payment Plan</TableHead>
                     <TableHead>Remarks</TableHead>
