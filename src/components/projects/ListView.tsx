@@ -88,7 +88,7 @@ const ProjectListItem = ({
             />
             <div className="flex items-center -space-x-2">
               {project.assignedTo.slice(0, 3).map((user) => (
-                <Avatar key={user.id} className="h-5 w-5 sm:h-6 sm:w-6 border-2 border-card">
+                <Avatar key={user.id} className="h-5 w-5 sm:h-6 w-6 border-2 border-card">
                   <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
                   <AvatarFallback style={generatePastelColor(user.id)}>{user.initials}</AvatarFallback>
                 </Avatar>
@@ -208,14 +208,14 @@ const ListView = ({ projects, onDeleteProject }: { projects: Project[], onDelete
 
   if (projects.length > 0 && upcomingDayEntries.length === 0 && pastDayEntries.length === 0) {
     return (
-      <div className="flex items-center justify-center h-40 text-muted-foreground">
+      <div className="flex items-center justify-center h-40 text-muted-foreground px-4">
         Tidak ada proyek yang dijadwalkan.
       </div>
     );
   }
 
   return (
-    <div className="space-y-4 w-full">
+    <div className="space-y-4 w-full px-4">
       {upcomingDayEntries.slice(0, visibleUpcomingCount).map(([dateStr, projectsOnDay]) => {
         const currentMonth = formatInJakarta(new Date(`${dateStr}T00:00:00`), 'MMMM yyyy');
         const showMonthHeader = currentMonth !== lastUpcomingMonth;
