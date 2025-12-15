@@ -67,7 +67,7 @@ const StatCard = ({ title, value, icon, description, permission, projects }: Sta
         <CardTitle className="text-sm font-medium">{!hasProjects ? title : ' '}</CardTitle>
         {icon}
       </CardHeader>
-      <CardContent>
+      <CardContent className="pb-4">
         {hasProjects ? (
           <TooltipProvider>
             <Tooltip>
