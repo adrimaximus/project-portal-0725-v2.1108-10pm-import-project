@@ -192,8 +192,8 @@ const ExpensePage = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Project</TableHead>
                     <TableHead>Beneficiary</TableHead> {/* MOVED */}
+                    <TableHead>Project</TableHead>
                     <TableHead>Purpose</TableHead>
                     <TableHead>Owner</TableHead>
                     <TableHead>Amount</TableHead>
@@ -219,11 +219,6 @@ const ExpensePage = () => {
 
                       return (
                         <TableRow key={expense.id}>
-                          <TableCell>
-                            <Link to={`/projects/${expense.project_slug}`} className="font-medium text-primary hover:underline">
-                              {expense.project_name}
-                            </Link>
-                          </TableCell>
                           {/* MOVED BENEFICIARY CELL */}
                           <TableCell>
                             {expense.account_bank && expense.account_bank.name ? (
@@ -246,6 +241,11 @@ const ExpensePage = () => {
                             ) : (
                               expense.beneficiary
                             )}
+                          </TableCell>
+                          <TableCell>
+                            <Link to={`/projects/${expense.project_slug}`} className="font-medium text-primary hover:underline">
+                              {expense.project_name}
+                            </Link>
                           </TableCell>
                           <TableCell>{(expense as any).purpose_payment || '-'}</TableCell>
                           <TableCell>
