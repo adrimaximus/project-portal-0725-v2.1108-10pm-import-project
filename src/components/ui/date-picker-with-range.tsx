@@ -50,16 +50,18 @@ export function DatePickerWithRange({
             className={cn(
               "w-full justify-start text-left font-normal",
               !date && "text-muted-foreground",
-              "sm:w-[280px]",
-              // Jika tidak ada rentang yang dipilih, buat tombol kecil dan terpusat di mobile (hanya ikon)
-              !isRangeSelected && "max-sm:w-10 max-sm:justify-center max-sm:px-2"
+              // Default width for mobile/tablet (sm) is full width, but we constrain it if no date is selected
+              "md:w-[280px]", // Apply full width only from medium breakpoint up
+              // Jika tidak ada rentang yang dipilih, buat tombol kecil dan terpusat di mobile/tablet (hanya ikon)
+              !isRangeSelected && "max-md:w-10 max-md:justify-center max-md:px-2"
             )}
           >
             {/* Calendar Icon - Selalu terlihat */}
             <CalendarIcon 
               className={cn(
                 "h-4 w-4 flex-shrink-0", 
-                // Tambahkan margin kanan hanya jika teks akan ditampilkan
+                // Tambahkan margin kanan hanya jika teks akan ditampilkan (yaitu, jika rentang dipilih ATAU di desktop)
+                (isRangeSelected || !isRangeSelected) && "md:mr-2",
                 isRangeSelected ? "mr-2" : "mr-0"
               )} 
             />
@@ -71,8 +73,8 @@ export function DatePickerWithRange({
                 {displayDate}
               </span>
             ) : (
-              /* Konten ketika tidak ada rentang yang dipilih (hanya terlihat di desktop) */
-              <span className="hidden sm:inline ml-2 flex-1 truncate">
+              /* Konten ketika tidak ada rentang yang dipilih (hanya terlihat di desktop/md ke atas) */
+              <span className="hidden md:inline ml-2 flex-1 truncate">
                 Pick a date range
               </span>
             )}
