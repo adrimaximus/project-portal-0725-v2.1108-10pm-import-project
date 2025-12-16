@@ -383,7 +383,6 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
       }
       
       // Improved Purpose Payment autofill
-      // Prioritize explicit purpose/description from AI, then fall back to items summary
       const purpose = extractedData.purpose || 
                       extractedData.summary || 
                       extractedData.description || 
@@ -857,7 +856,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={isFormDisabled}>Cancel</Button>
             <Button type="submit" form="expense-form" disabled={isFormDisabled}>
               {(isSubmitting || isExtracting) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isExtracting ? 'Analyzing...' : 'Add Expense'}
+              {isExtracting ? 'Analyzing Document...' : 'Add Expense'}
             </Button>
           </DialogFooter>
         </DialogContent>

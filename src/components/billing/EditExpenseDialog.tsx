@@ -28,9 +28,8 @@ import BeneficiaryTypeDialog from './BeneficiaryTypeDialog';
 import PersonFormDialog from '../people/PersonFormDialog';
 import CompanyFormDialog from '../people/CompanyFormDialog';
 import CustomPropertyInput from '../settings/CustomPropertyInput';
-import FileUploader, { UploadedFile } from '../ui/FileUploader';
+import FileUploader, { UploadedFile, ProcessingFileState } from '../ui/FileUploader';
 import { useExpenseExtractor } from '@/hooks/useExpenseExtractor';
-import { Progress } from '../ui/progress';
 import { useAuth } from '@/contexts/AuthContext';
 import CreateProjectDialog from '../projects/CreateProjectDialog';
 
@@ -358,6 +357,96 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: EditExpenseDialogPro
       
       if (extractedData.purpose) {
         setValue('purpose_payment', extractedData.purpose, { shouldValidate: true });
+      } else if (extractedData.description) {
+        setValue('purpose_payment', extractedData.description, { shouldValidate: true });
+      }
+
+      // 2. Beneficiary Matching
+      let currentBeneficiary = beneficiary;
+      
+      if (extractedData.beneficiary && !watch('beneficiary')) {
+        const matchedBeneficiary = beneficiaries.find(b => 
+          b.name.toLowerCase() === extractedData.beneficiary?.toLowerCase() ||
+          b.name.toLowerCase().includes(extractedData.beneficiary?.toLowerCase() || '') ||
+          (extractedData.beneficiary && b.name.toLowerCase().includes(extractedData.beneficiary.toLowerCase()))
+        );
+        
+        if (matchedBeneficiary) {
+          currentBeneficiary = matchedBeneficiary;
+          setBeneficiary(matchedBeneficiary);
+          setValue('beneficiary', matchedBeneficiary.name, { shouldValidate: true });
+        } else {
+          setValue('beneficiary', extractedData.beneficiary, { shouldValidate: true });
+        }
+      }
+
+      // 3. Project Matching
+      if (!watch('project_id')) {
+          const matchedProject = findMatchingProject(extractedData);
+          if (matchedProject) {
+              setValue('project_id', matchedProject.id);
+              toast.success(`Matched to project: ${matchedProject.name}`);
+          }
+      }
+
+      // 4. Bank Details
+      if (extractedData.bank_details && extractedData.bank_details.account_number) {
+        const extractedBank = extractedData.bank_details;
+        
+        if (currentBeneficiary) {
+          try {
+            const { data: existingAccounts } = await supabase.from('bank_accounts')
+              .select('*')
+              .eq('owner_id', currentBeneficiary.id)
+              .eq('account_number', extractedBank.account_number)
+              .maybeSingle();
+
+            if (existingAccounts) {
+              setBankAccounts(prev => {
+                const exists = prev.find(p => p.id === existingAccounts.id);
+                return exists ? prev : [...prev, existingAccounts as unknown as BankAccount];
+              });
+              setValue('bank_account_id', existingAccounts.id);
+              toast.info(`Selected existing bank account: ${extractedBank.bank_name}`);
+            } else {
+              const { data: newAccount, error: createError } = await supabase.from('bank_accounts').insert({
+                owner_id: currentBeneficiary.id,
+                owner_type: currentBeneficiary.type,
+                bank_name: extractedBank.bank_name || 'Unknown Bank',
+                account_number: extractedBank.account_number,
+                account_name: extractedBank.account_name || currentBeneficiary.name,
+                swift_code: extractedBank.swift_code || null,
+                created_by: user?.id
+              }).select().single();
+
+              if (createError) throw createError;
+
+              if (newAccount) {
+                setBankAccounts(prev => [...prev, newAccount as unknown as BankAccount]);
+                setValue('bank_account_id', newAccount.id);
+                toast.success(`Automatically added and selected new bank account: ${extractedBank.bank_name} ${extractedBank.swift_code ? `(${extractedBank.swift_code})` : ''}`);
+              }
+            }
+          } catch (err) {
+            console.error('Error auto-creating bank account:', err);
+          }
+        } else {
+          const tempId = `temp-${Date.now()}`;
+          const tempAccount: BankAccount = {
+            id: tempId,
+            account_name: extractedBank.account_name || extractedData.beneficiary || 'Unknown Name',
+            account_number: extractedBank.account_number,
+            bank_name: extractedBank.bank_name || 'Unknown Bank',
+            swift_code: extractedBank.swift_code || null,
+            is_legacy: true,
+            owner_id: 'temp',
+            owner_type: 'person'
+          };
+          
+          setBankAccounts([tempAccount]);
+          setValue('bank_account_id', tempId);
+          toast.info(`Set temporary bank details: ${extractedBank.bank_name}`);
+        }
       }
 
       if (extractedData.remarks) {
@@ -368,6 +457,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: EditExpenseDialogPro
       
       toast.success("Data extracted from document!");
     }
+    
     setCurrentProcessingFile(null);
   };
 
@@ -542,7 +632,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: EditExpenseDialogPro
                   </FormItem>
                 )}
               />
-
+              
               {/* PIC Selector */}
               <FormField
                 control={form.control}
@@ -720,7 +810,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: EditExpenseDialogPro
                           <FormItem><FormLabel className="text-xs">Amount</FormLabel><FormControl><CurrencyInput value={field.value} onChange={field.onChange} placeholder="Amount" disabled={isFormDisabled} /></FormControl><FormMessage /></FormItem>
                         )} />
                         <FormField control={form.control} name={`payment_terms.${index}.request_date`} render={({ field }) => (
-                          <FormItem><FormLabel className="text-xs">Requested Date</FormLabel><div className="flex gap-1">
+                          <FormItem><FormLabel className="text-xs">Requested Date (Auto-filled)</FormLabel><div className="flex gap-1">
                             <FormField control={form.control} name={`payment_terms.${index}.request_type`} render={({ field: typeField }) => (
                               <FormItem><Select onValueChange={typeField.onChange} defaultValue={typeField.value} disabled={isFormDisabled}><FormControl><SelectTrigger className="w-[110px] bg-background"><SelectValue placeholder="Type" /></SelectTrigger></FormControl><SelectContent><SelectItem value="Requested">Requested</SelectItem><SelectItem value="Due">Due</SelectItem></SelectContent></Select></FormItem>
                             )} />
