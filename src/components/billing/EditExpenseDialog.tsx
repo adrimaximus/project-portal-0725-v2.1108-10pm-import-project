@@ -12,7 +12,7 @@ import { CurrencyInput } from '../ui/currency-input';
 import { Input } from '../ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Paperclip, X, Loader2, Plus, Wand2, BellRing, ChevronsUpDown, Check, Briefcase, FileText } from 'lucide-react';
+import { Paperclip, X, Loader2, Plus, Wand2, BellRing, ChevronsUpDown, Check, Briefcase, FileText, Copy } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -32,6 +32,7 @@ import FileUploader, { UploadedFile } from '../ui/FileUploader';
 import { useExpenseExtractor } from '@/hooks/useExpenseExtractor';
 import { Progress } from '../ui/progress';
 import { useAuth } from '@/contexts/AuthContext';
+import CreateProjectDialog from '../projects/CreateProjectDialog';
 
 // Using the same schema structure as AddExpenseDialog for consistency
 const expenseSchema = z.object({
@@ -68,9 +69,7 @@ interface EditExpenseDialogProps {
   expense: Expense | null;
 }
 
-interface ProjectOption {
-    id: string;
-    name: string;
+interface ProjectOption extends Project {
     client_name?: string | null;
     client_company_name?: string | null;
 }
@@ -98,6 +97,9 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: EditExpenseDialogPro
   const [isPersonFormOpen, setIsPersonFormOpen] = useState(false);
   const [isCompanyFormOpen, setIsCompanyFormOpen] = useState(false);
   const [newBeneficiaryName, setNewBeneficiaryName] = useState('');
+  
+  // Project Creation
+  const [isCreateProjectDialogOpen, setIsCreateProjectDialogOpen] = useState(false);
 
   // PIC Selection State
   const [projectMembers, setProjectMembers] = useState<Profile[]>([]);
@@ -297,6 +299,12 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: EditExpenseDialogPro
     setIsBankAccountFormOpen(true);
   };
 
+  // Handle Project Creation
+  const handleCreateProject = (values: { name: string, description?: string }) => {
+    // Project creation is handled in CreateProjectDialog, we just need to update the form
+    // The dialog itself handles the mutation and calls onSuccess
+  };
+
   // Handle Files & AI
   const handleFileProcessed = async (file: UploadedFile) => {
     let finalUrl = file.url;
@@ -352,21 +360,6 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: EditExpenseDialogPro
 
   // Handle File List Changes (Sync with Form)
   const handleFilesChange = (files: any[]) => {
-      // files can contain both File objects (new) and UploadedFile objects (existing)
-      // We need to map them back to the form structure if they are valid
-      // The FileUploader manages the display state, we just need to ensure the form has the right data on submit
-      // Since FileUploader returns everything, we can put it in state or use it directly
-      
-      // For the form, we ideally store only the metadata of files that are ready (or markers for new ones)
-      // But FileUploader doesn't give us storage paths for new files until we upload them.
-      // So we'll handle actual upload on Submit.
-      // We store the mixed array in a local state and process it on submit.
-      
-      // However, to keep it simple with react-hook-form:
-      // We will let FileUploader handle display, and we'll separate new files from existing for submission.
-      // BUT `value` prop needs to persist.
-      
-      // Update form value directly
       setValue('attachments_jsonb', files as any, { shouldDirty: true });
   };
 
@@ -494,37 +487,41 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: EditExpenseDialogPro
                       <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
                         <Command>
                           <CommandInput placeholder="Search project..." value={projectSearch} onValueChange={setProjectSearch} />
-                          <CommandList>
-                            {isLoadingProjects && <div className="p-4 text-center text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin inline mr-2" />Loading projects...</div>}
-                            {!isLoadingProjects && (
-                              <>
-                                <CommandEmpty>No projects found.</CommandEmpty>
-                                <CommandGroup className="max-h-60 overflow-y-auto">
-                                  {projects.map((project) => (
-                                    <CommandItem 
-                                      value={`${project.name} ${project.id}`}
-                                      key={project.id} 
-                                      onSelect={() => { 
-                                        form.setValue("project_id", project.id); 
-                                        setProjectPopoverOpen(false); 
-                                        setProjectSearch(''); 
-                                      }}
-                                    >
-                                      <Check className={cn("mr-2 h-4 w-4", project.id === field.value ? "opacity-100" : "opacity-0")} />
-                                      <div className="flex flex-col">
-                                          <span>{project.name}</span>
-                                          {(project.client_company_name || project.client_name) && (
-                                            <span className="text-xs text-muted-foreground">
-                                              {project.client_company_name || project.client_name}
-                                            </span>
-                                          )}
-                                      </div>
-                                    </CommandItem>
-                                  ))}
-                                </CommandGroup>
-                              </>
-                            )}
-                          </CommandList>
+                          {isLoadingProjects ? (
+                            <div className="p-4 text-center text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin inline mr-2" />Loading projects...</div>
+                          ) : (
+                            <CommandList>
+                              <CommandEmpty>
+                                <Button variant="ghost" className="w-full justify-start" onClick={() => { setIsCreateProjectDialogOpen(true); setProjectPopoverOpen(false); }}>
+                                  <Plus className="mr-2 h-4 w-4" />
+                                  Create "{projectSearch}"
+                                </Button>
+                              </CommandEmpty>
+                              <CommandGroup className="max-h-60 overflow-y-auto">
+                                {projects.map((project) => (
+                                  <CommandItem 
+                                    value={`${project.name} ${project.id}`}
+                                    key={project.id} 
+                                    onSelect={() => { 
+                                      form.setValue("project_id", project.id); 
+                                      setProjectPopoverOpen(false); 
+                                      setProjectSearch(''); 
+                                    }}
+                                  >
+                                    <Check className={cn("mr-2 h-4 w-4", project.id === field.value ? "opacity-100" : "opacity-0")} />
+                                    <div className="flex flex-col">
+                                        <span>{project.name}</span>
+                                        {(project.client_company_name || project.client_name) && (
+                                          <span className="text-xs text-muted-foreground">
+                                            {project.client_company_name || project.client_name}
+                                          </span>
+                                        )}
+                                    </div>
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          )}
                         </Command>
                       </PopoverContent>
                     </Popover>
@@ -798,6 +795,15 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: EditExpenseDialogPro
       <BeneficiaryTypeDialog open={isBeneficiaryTypeDialogOpen} onOpenChange={setIsBeneficiaryTypeDialogOpen} onSelect={handleSelectBeneficiaryType} />
       <PersonFormDialog open={isPersonFormOpen} onOpenChange={setIsPersonFormOpen} person={null} initialValues={{ first_name: newBeneficiaryName.split(' ')[0], last_name: newBeneficiaryName.split(' ').slice(1).join(' ') }} onSuccess={(newPerson) => handleBeneficiaryCreated(newPerson, 'person')} />
       <CompanyFormDialog open={isCompanyFormOpen} onOpenChange={setIsCompanyFormOpen} company={null} initialValues={{ name: newBeneficiaryName }} onSuccess={(newCompany) => handleBeneficiaryCreated(newCompany, 'company')} />
+      <CreateProjectDialog
+        open={isCreateProjectDialogOpen}
+        onOpenChange={setIsCreateProjectDialogOpen}
+        initialName={projectSearch}
+        onSuccess={(newProject) => {
+          queryClient.invalidateQueries({ queryKey: ['projectsForExpenseForm'] });
+          form.setValue('project_id', newProject.id);
+        }}
+      />
     </>
   );
 };
