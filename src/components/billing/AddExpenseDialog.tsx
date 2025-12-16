@@ -91,6 +91,24 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
   const [projectMembers, setProjectMembers] = useState<Profile[]>([]);
   
   const { extractData, isExtracting } = useExpenseExtractor();
+  const [analysisProgress, setAnalysisProgress] = useState(0);
+
+  useEffect(() => {
+      let interval: NodeJS.Timeout;
+      if (isExtracting) {
+        setAnalysisProgress(0);
+        interval = setInterval(() => {
+          setAnalysisProgress((prev) => {
+            if (prev >= 90) return prev; 
+            const diff = Math.random() * 10;
+            return Math.min(prev + diff, 90);
+          });
+        }, 300);
+      } else {
+        setAnalysisProgress(100);
+      }
+      return () => clearInterval(interval);
+  }, [isExtracting]);
 
   // Fetch extended project data for intelligent matching
   const { data: projects = [], isLoading: isLoadingProjects } = useQuery<ProjectOption[]>({
@@ -486,6 +504,11 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
     }
   };
 
+  // Handle File List Changes (Sync with Form)
+  const handleFilesChange = (files: any[]) => {
+      setValue('attachments_jsonb', files as any, { shouldDirty: true });
+  };
+
   const onSubmit = async (values: ExpenseFormValues) => {
     if (!user) {
       toast.error("You must be logged in to add an expense.");
@@ -668,8 +691,12 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                       {isExtracting && <span className="text-xs text-primary animate-pulse flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin"/> Analyzing document...</span>}
                     </div>
                     {isExtracting && (
-                      <div className="w-full h-1 bg-muted rounded-full overflow-hidden mb-2">
-                         <div className="h-full bg-primary animate-pulse w-full origin-left" style={{ animationDuration: '1.5s' }} />
+                      <div className="space-y-1 mb-2">
+                        <div className="flex justify-between text-xs text-muted-foreground">
+                          <span>Analyzing...</span>
+                          <span>{Math.round(analysisProgress)}%</span>
+                        </div>
+                        <Progress value={analysisProgress} className="h-1" />
                       </div>
                     )}
                     <div className="text-xs text-muted-foreground mb-1">
