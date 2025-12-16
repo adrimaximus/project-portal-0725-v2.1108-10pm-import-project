@@ -79,9 +79,10 @@ Deno.serve(async (req) => {
             - remarks: A brief summary of the transaction details, including date if visible (string).
             - date: The date of transaction in YYYY-MM-DD format if visible (string).
             - bank_details: If bank account details for payment (transfer destination) are visible, return an object with:
-                - bank_name: Name of the bank (string).
+                - bank_name: Name of the bank (e.g., BCA, Mandiri, BRI, BNI).
                 - account_number: Account number (string, digits only).
                 - account_name: Name on the account (string).
+              Look for keywords like "Bank", "Transfer", "No. Rek", "Account No", "A/C", "IBAN", "Swift".
               If not visible, set to null.
             
             If a field is not visible or cannot be determined, set it to null.
