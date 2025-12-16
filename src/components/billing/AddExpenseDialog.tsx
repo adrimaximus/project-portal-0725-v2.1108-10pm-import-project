@@ -474,6 +474,11 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
     }
   };
 
+  // Handle File List Changes (Sync with Form)
+  const handleFilesChange = (files: any[]) => {
+      setValue('attachments_jsonb', files as any, { shouldDirty: true });
+  };
+
   const onSubmit = async (values: ExpenseFormValues) => {
     if (!user) {
       toast.error("You must be logged in to add an expense.");
