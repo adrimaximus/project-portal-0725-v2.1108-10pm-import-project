@@ -7,7 +7,7 @@ export const useExpenseExtractor = () => {
   const [isExtracting, setIsExtracting] = useState(false);
   const navigate = useNavigate();
 
-  const extractData = async (file: { url: string }) => {
+  const extractData = async (file: { url: string; type: string }) => {
     if (!file?.url) {
         toast.error("Invalid file URL");
         return null;
@@ -18,7 +18,10 @@ export const useExpenseExtractor = () => {
       console.log('Sending extraction request for:', file.url);
       
       const { data, error } = await supabase.functions.invoke('extract-expense-data', {
-        body: { fileUrl: file.url },
+        body: { 
+          fileUrl: file.url,
+          fileType: file.type 
+        },
       });
 
       if (error) {

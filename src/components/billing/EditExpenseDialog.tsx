@@ -272,11 +272,8 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
   };
 
   const handleFileProcessed = async (file: UploadedFile) => {
-    if (file.type === 'application/pdf') {
-        toast.info("PDF uploaded. Note: Auto-extraction is currently only supported for images.");
-        return;
-    }
-
+    // Removed explicit PDF blocking here as well
+    
     const extractedData = await extractData(file);
     if (extractedData) {
       if (extractedData.amount && extractedData.amount > 0) {

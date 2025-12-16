@@ -185,7 +185,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
             }
             setProjectMembers(members);
         } else {
-            // Fallback fetch if data is incomplete
+             // Fallback fetch if data is incomplete
              const { data, error } = await supabase
                 .rpc('get_project_members_distinct'); // This RPC returns all distinct members, maybe too broad. 
              // Better to just use current user if we can't get project specific members easily without RPC update.
@@ -308,11 +308,8 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
   };
 
   const handleFileProcessed = async (file: UploadedFile) => {
-    if (file.type === 'application/pdf') {
-        toast.info("PDF uploaded. Note: Auto-extraction is currently only supported for images.");
-        return;
-    }
-
+    // Removed specific check for PDF blocking
+    
     const extractedData = await extractData(file);
     if (extractedData) {
       // 1. Amount & Payment Terms
