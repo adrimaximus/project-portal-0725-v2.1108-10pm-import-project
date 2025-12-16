@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1'
 import OpenAI from 'https://esm.sh/openai@4.28.0'
+import pdf from 'https://esm.sh/pdf-parse@1.1.1'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -8,7 +9,6 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
@@ -26,87 +26,113 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
     // 2. Retrieve OpenAI API Key
-    // Priority: Edge Secret -> DB Config -> Fail
     let openAiKey = Deno.env.get('OPENAI_API_KEY')
 
     if (!openAiKey) {
-      console.log('OpenAI key not found in env, checking app_config...')
       const { data: configData, error: configError } = await supabase
         .from('app_config')
         .select('value')
-        .eq('key', 'openai_api_key')
+        .eq('key', 'OPENAI_API_KEY')
         .single()
 
       if (configError || !configData?.value) {
-        console.error('Failed to retrieve OpenAI key from app_config:', configError)
         return new Response(
           JSON.stringify({ 
-            error: 'OpenAI API key is missing. Please set it in Edge Function Secrets or app_config table.' 
+            error: 'OpenAI API key is missing. Please set it in Settings > Integrations.' 
           }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 422, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
       openAiKey = configData.value
     }
 
-    // 3. Check File Type Support
+    const openai = new OpenAI({ apiKey: openAiKey })
+    
+    let userContent = [];
+    let systemPrompt = "You are an expense data extractor. Return ONLY valid JSON with keys: beneficiary, amount (number), date (YYYY-MM-DD), remarks.";
+
+    // 3. Handle PDF (Text Extraction) vs Image (Vision)
     if (fileType === 'application/pdf') {
+      console.log('Processing PDF...');
+      
+      // Extract base64 data (remove header if present)
+      const base64Data = fileData.includes(',') ? fileData.split(',')[1] : fileData;
+      
+      // Convert Base64 to Buffer (Uint8Array)
+      const binaryString = atob(base64Data);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+
+      // Extract text from PDF
+      try {
+        const data = await pdf(bytes);
+        const textContent = data.text;
+        
+        if (!textContent || textContent.trim().length === 0) {
+           throw new Error("Could not extract text from PDF. It might be a scanned image-only PDF.");
+        }
+
+        console.log("PDF Text Extracted (first 100 chars):", textContent.substring(0, 100));
+        
+        userContent.push({ 
+          type: "text", 
+          text: `Extract expense data from this PDF content: \n\n${textContent}` 
+        });
+
+      } catch (pdfError) {
+        console.error("PDF Parsing Error:", pdfError);
+        return new Response(
+          JSON.stringify({ error: "Failed to read PDF text. If this is a scanned document, please convert it to an image (JPG/PNG) first." }),
+          { status: 422, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+    } else if (fileType.startsWith('image/')) {
+      console.log('Processing Image...');
+      userContent.push({ type: "text", text: "Analyze this receipt image." });
+      userContent.push({
+        type: "image_url",
+        image_url: { "url": fileData }
+      });
+    } else {
       return new Response(
-        JSON.stringify({ 
-          error: 'PDF analysis is currently not supported for auto-extraction. Please convert to an image (JPG/PNG) or enter details manually.' 
-        }),
+        JSON.stringify({ error: 'Unsupported file type. Please upload Image or PDF.' }),
         { status: 422, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    if (!fileType.startsWith('image/')) {
-      return new Response(
-        JSON.stringify({ 
-          error: 'Unsupported file type. Please upload an image (JPG/PNG).' 
-        }),
-        { status: 422, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
-
-    // 4. Initialize OpenAI
-    const openai = new OpenAI({
-      apiKey: openAiKey,
-    })
-
-    console.log('Sending image to OpenAI for analysis...')
-
-    // 5. Call OpenAI GPT-4o
+    // 4. Call OpenAI GPT-4o
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
         {
           role: "system",
-          content: "You are an expense data extractor. Extract the following fields from the receipt/invoice image: beneficiary (merchant name), amount (total), date (YYYY-MM-DD), and remarks (brief description of items). Return ONLY valid JSON."
+          content: `You are an expense data extractor. Extract the following fields from the input: 
+          - beneficiary (merchant/person name)
+          - amount (total value as number)
+          - date (YYYY-MM-DD)
+          - remarks (brief description of items/service)
+          - due_date (YYYY-MM-DD, optional)
+          - bank_details (object with bank_name, account_number, account_name, swift_code if visible).
+          
+          Return ONLY valid JSON. If fields are missing, use null.`
         },
         {
           role: "user",
-          content: [
-            { type: "text", text: "Analyze this receipt image and extract data in JSON format: { \"beneficiary\": string, \"amount\": number, \"date\": string (ISO format), \"remarks\": string }." },
-            {
-              type: "image_url",
-              image_url: {
-                "url": fileData, // Base64 data url passed from frontend
-              },
-            },
-          ],
+          content: userContent
         },
       ],
-      max_tokens: 300,
+      max_tokens: 1000,
       response_format: { type: "json_object" }
     });
 
     const content = response.choices[0].message.content
-    if (!content) {
-      throw new Error("No content received from OpenAI")
-    }
+    if (!content) throw new Error("No content received from OpenAI")
 
-    console.log('OpenAI response:', content)
     const result = JSON.parse(content)
+    console.log("Analysis Result:", result);
 
     return new Response(
       JSON.stringify(result),
