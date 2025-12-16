@@ -27,7 +27,7 @@ import PersonFormDialog from '../people/PersonFormDialog';
 import CompanyFormDialog from '../people/CompanyFormDialog';
 import CreateProjectDialog from '../projects/CreateProjectDialog';
 import CustomPropertyInput from '../settings/CustomPropertyInput';
-import FileUploader from '../ui/FileUploader';
+import FileUploader, { UploadedFile } from '../ui/FileUploader';
 import { useExpenseExtractor } from '@/hooks/useExpenseExtractor';
 
 interface AddExpenseDialogProps {
@@ -211,11 +211,17 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
     setIsBankAccountFormOpen(true);
   };
 
-  const handleFileProcessed = async (file: FileMetadata) => {
+  const handleFileProcessed = async (file: UploadedFile) => {
     const extractedData = await extractData(file);
     if (extractedData) {
       if (extractedData.amount && extractedData.amount > 0) {
         setValue('tf_amount', extractedData.amount, { shouldValidate: true });
+        
+        // Update first payment term if it exists and is default
+        const terms = form.getValues('payment_terms');
+        if (terms && terms.length === 1 && !terms[0].amount) {
+            setValue('payment_terms.0.amount', extractedData.amount);
+        }
       }
       
       if (extractedData.purpose) {
@@ -223,7 +229,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
       }
 
       if (extractedData.beneficiary && !watch('beneficiary')) {
-        const matchedBeneficiary = beneficiaries.find(b => b.name.toLowerCase() === extractedData.beneficiary.toLowerCase());
+        const matchedBeneficiary = beneficiaries.find(b => b.name.toLowerCase() === extractedData.beneficiary?.toLowerCase());
         if (matchedBeneficiary) {
           setBeneficiary(matchedBeneficiary);
           setValue('beneficiary', matchedBeneficiary.name, { shouldValidate: true });
@@ -237,6 +243,8 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
         const newRemarks = currentRemarks ? `${currentRemarks}\n\n--- AI Extracted Notes ---\n${extractedData.remarks}` : extractedData.remarks;
         setValue('remarks', newRemarks, { shouldValidate: true });
       }
+      
+      toast.success("Data extracted from document!");
     }
   };
 
@@ -365,17 +373,20 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="flex items-center gap-2">
-                      <FileText className="h-4 w-4" /> Attachments (Invoices, Receipts)
+                      <FileText className="h-4 w-4" /> Attachments
                       {isExtracting && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
                     </FormLabel>
+                    <div className="text-xs text-muted-foreground mb-1">
+                        Upload invoice or receipt to auto-fill details (Image Only)
+                    </div>
                     <FormControl>
                       <FileUploader
-                        bucket="expense" // Updated bucket name
+                        bucket="expense"
                         value={field.value || []}
                         onChange={field.onChange}
                         maxFiles={5}
                         maxSize={20971520} // 20MB
-                        accept={{ 'image/*': [], 'application/pdf': ['.pdf'] }}
+                        accept={{ 'image/*': ['.png', '.jpg', '.jpeg', '.webp'], 'application/pdf': ['.pdf'] }}
                         disabled={isFormDisabled}
                         onFileProcessed={handleFileProcessed}
                       />
@@ -520,7 +531,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                             property={prop}
                             control={form.control}
                             name={`custom_properties.${prop.name}`}
-                            bucket="expense" // Updated bucket name here too
+                            bucket="expense"
                             disabled={isFormDisabled}
                           />
                           <FormMessage />
