@@ -1,61 +1,59 @@
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
-interface ExtractedData {
-  amount: number;
-  purpose: string;
-  beneficiary: string;
-  remarks: string;
+export interface ExtractedExpenseData {
+  amount?: number;
+  beneficiary?: string;
+  purpose?: string;
+  remarks?: string;
+  date?: string;
 }
-
-interface FileMetadata {
-  name: string;
-  url: string;
-  size: number;
-  type: string;
-  storagePath: string;
-}
-
-const SUPABASE_URL = "https://quuecudndfztjlxbrvyb.supabase.co";
-const FUNCTION_NAME = "extract-expense-data";
 
 export const useExpenseExtractor = () => {
   const [isExtracting, setIsExtracting] = useState(false);
 
-  const extractData = useCallback(async (file: FileMetadata): Promise<ExtractedData | null> => {
+  const extractData = async (file: { url: string; type: string; name: string }): Promise<ExtractedExpenseData | null> => {
+    // Only process images for now as GPT-4o vision requires images
+    if (!file.type.startsWith('image/')) {
+      return null;
+    }
+
     setIsExtracting(true);
-    
     try {
-      const response = await fetch(`${SUPABASE_URL}/functions/v1/${FUNCTION_NAME}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+      const { data, error } = await supabase.functions.invoke('analyze-document', {
+        body: { 
+          fileUrl: file.url,
+          fileType: file.type,
+          fileName: file.name
         },
-        body: JSON.stringify({ fileUrl: file.url, fileName: file.name }),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to extract data from document.');
+      if (error) {
+        console.error('Edge function error:', error);
+        throw new Error('Failed to connect to analysis service');
       }
 
-      const result = await response.json();
+      if (data?.error) {
+        console.error('Analysis error:', data.error);
+        throw new Error(data.error);
+      }
+
+      console.log('AI Extraction result:', data);
       
-      if (result.success && result.data) {
-        toast.success("AI extracted data successfully.");
-        return result.data as ExtractedData;
-      } else {
-        throw new Error("AI extraction failed or returned empty data.");
+      if (!data || Object.keys(data).length === 0) {
+        return null;
       }
 
+      return data as ExtractedExpenseData;
     } catch (error: any) {
-      console.error("Extraction error:", error);
-      toast.error("AI Extraction Failed", { description: error.message });
+      console.error('Error extracting data:', error);
+      toast.error('Failed to analyze document', { description: error.message });
       return null;
     } finally {
       setIsExtracting(false);
     }
-  }, []);
+  };
 
   return { extractData, isExtracting };
 };
