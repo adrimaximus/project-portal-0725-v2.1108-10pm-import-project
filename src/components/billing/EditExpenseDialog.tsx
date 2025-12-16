@@ -12,7 +12,7 @@ import { CurrencyInput } from '../ui/currency-input';
 import { Input } from '../ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Paperclip, X, Loader2, Plus, Wand2, BellRing, ChevronsUpDown, Check, Briefcase, FileText, Copy } from 'lucide-react';
+import { Paperclip, X, Loader2, Plus, Wand2, BellRing, ChevronsUpDown, Check, Briefcase, FileText, Copy, User, Building } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -110,6 +110,9 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: EditExpenseDialogPro
   // We keep track of initial attachments to detect deletions
   const [initialAttachments, setInitialAttachments] = useState<any[]>([]);
 
+  // Track processing for each file
+  const [currentProcessingFile, setCurrentProcessingFile] = useState<string | null>(null);
+
   useEffect(() => {
       let interval: NodeJS.Timeout;
       if (isExtracting) {
@@ -126,6 +129,17 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: EditExpenseDialogPro
       }
       return () => clearInterval(interval);
   }, [isExtracting]);
+
+  // Construct processing files map for FileUploader
+  const processingFiles = useMemo(() => {
+    if (!currentProcessingFile || !isExtracting) return undefined;
+    return {
+      [currentProcessingFile]: {
+        progress: analysisProgress,
+        label: 'Analyzing...'
+      }
+    };
+  }, [currentProcessingFile, isExtracting, analysisProgress]);
 
   const { data: projects = [], isLoading: isLoadingProjects } = useQuery<ProjectOption[]>({
     queryKey: ['projectsForExpenseForm'],
@@ -302,12 +316,6 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: EditExpenseDialogPro
     setIsBankAccountFormOpen(true);
   };
 
-  // Handle Project Creation
-  const handleCreateProject = (values: { name: string, description?: string }) => {
-    // Project creation is handled in CreateProjectDialog, we just need to update the form
-    // The dialog itself handles the mutation and calls onSuccess
-  };
-
   // Handle Files & AI
   const handleFileProcessed = async (file: UploadedFile) => {
     let finalUrl = file.url;
@@ -335,6 +343,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: EditExpenseDialogPro
       }
     }
     
+    setCurrentProcessingFile(file.name);
     const extractedData = await extractData({ url: finalUrl, type: file.type });
     
     if (extractedData) {
@@ -359,6 +368,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: EditExpenseDialogPro
       
       toast.success("Data extracted from document!");
     }
+    setCurrentProcessingFile(null);
   };
 
   // Handle File List Changes (Sync with Form)
@@ -586,8 +596,12 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: EditExpenseDialogPro
                       {isExtracting && <span className="text-xs text-primary animate-pulse flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin"/> Analyzing document...</span>}
                     </div>
                     {isExtracting && (
-                      <div className="w-full h-1 bg-muted rounded-full overflow-hidden mb-2">
-                         <div className="h-full bg-primary animate-pulse w-full origin-left" style={{ animationDuration: '1.5s' }} />
+                      <div className="space-y-1 mb-2">
+                        <div className="flex justify-between text-xs text-muted-foreground">
+                          <span>Analyzing...</span>
+                          <span>{Math.round(analysisProgress)}%</span>
+                        </div>
+                        <Progress value={analysisProgress} className="h-1" />
                       </div>
                     )}
                     <div className="text-xs text-muted-foreground mb-1">
@@ -603,6 +617,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: EditExpenseDialogPro
                         accept={{ 'image/*': ['.png', '.jpg', '.jpeg', '.webp'], 'application/pdf': ['.pdf'] }}
                         disabled={isFormDisabled}
                         onFileProcessed={handleFileProcessed}
+                        processingFiles={processingFiles}
                       />
                     </FormControl>
                     <FormMessage />
@@ -766,7 +781,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: EditExpenseDialogPro
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={isFormDisabled}>Cancel</Button>
             <Button type="submit" form="expense-form" disabled={isFormDisabled}>
               {(isSubmitting || isExtracting) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isExtracting ? 'Analyzing Document...' : 'Save Changes'}
+              {isExtracting ? 'Analyzing...' : 'Save Changes'}
             </Button>
           </DialogFooter>
         </DialogContent>
