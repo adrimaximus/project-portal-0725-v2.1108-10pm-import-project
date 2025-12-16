@@ -490,6 +490,8 @@ export interface Expense {
   project_name: string;
   project_slug: string;
   project_owner: Owner;
+  pic?: Owner; // Added: Person in Charge
+  created_by?: string; // Added: ID of the creator/PIC
   beneficiary: string;
   tf_amount: number;
   status_expense: string;

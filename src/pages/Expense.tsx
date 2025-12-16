@@ -217,9 +217,11 @@ const ExpensePage = () => {
                       const paymentTerms = (expense as any).payment_terms || [];
                       const paidAmount = paymentTerms
                         .filter((term: any) => term.status === 'Paid')
-                        .reduce((sum: number, term: any) => sum + (term.amount || 0), 0);
+                        .reduce((sum: number, term: any) => sum + (Number(term.amount) || 0), 0);
                       const remainingAmount = expense.tf_amount - paidAmount;
                       const hasAttachments = (expense as any).attachments_jsonb?.length > 0;
+                      // Use PIC if available, otherwise project owner
+                      const pic = expense.pic || expense.project_owner;
 
                       return (
                         <TableRow 
@@ -280,14 +282,14 @@ const ExpensePage = () => {
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <Avatar className="h-8 w-8 cursor-default">
-                                    <AvatarImage src={getAvatarUrl(expense.project_owner.avatar_url, expense.project_owner.id)} />
-                                    <AvatarFallback style={generatePastelColor(expense.project_owner.id)}>
-                                      {expense.project_owner.initials}
+                                    <AvatarImage src={getAvatarUrl(pic?.avatar_url, pic?.id)} />
+                                    <AvatarFallback style={generatePastelColor(pic?.id)}>
+                                      {pic?.initials || '??'}
                                     </AvatarFallback>
                                   </Avatar>
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                  <p>{expense.project_owner.name}</p>
+                                  <p>{pic?.name}</p>
                                 </TooltipContent>
                               </Tooltip>
                             </TooltipProvider>

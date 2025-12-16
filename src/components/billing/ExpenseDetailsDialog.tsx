@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getAvatarUrl, generatePastelColor, cn } from "@/lib/utils";
-import { CalendarIcon, CreditCard, User, Building2, FileText, Wallet, Download, Eye } from "lucide-react";
+import { CalendarIcon, CreditCard, User, Building2, FileText, Wallet, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -52,6 +52,9 @@ const ExpenseDetailsDialog = ({ expense, open, onOpenChange }: ExpenseDetailsDia
   const paymentTerms = (expense as any).payment_terms || [];
   const bankDetails = expense.account_bank;
   const attachments: FileMetadata[] = (expense as any).attachments_jsonb || [];
+
+  // Use PIC if available, otherwise fallback to project owner (for backward compatibility)
+  const pic = expense.pic || expense.project_owner;
 
   const handleDownload = (url: string) => {
     window.open(url, '_blank');
@@ -118,15 +121,19 @@ const ExpenseDetailsDialog = ({ expense, open, onOpenChange }: ExpenseDetailsDia
                   </div>
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">PIC</p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Avatar className="h-6 w-6">
-                        <AvatarImage src={getAvatarUrl(expense.project_owner.avatar_url, expense.project_owner.id)} />
-                        <AvatarFallback className="text-[10px]" style={generatePastelColor(expense.project_owner.id)}>
-                          {expense.project_owner.initials}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span className="text-sm font-medium">{expense.project_owner.name}</span>
-                    </div>
+                    {pic ? (
+                        <div className="flex items-center gap-2 mt-1">
+                        <Avatar className="h-6 w-6">
+                            <AvatarImage src={getAvatarUrl(pic.avatar_url, pic.id)} />
+                            <AvatarFallback className="text-[10px]" style={generatePastelColor(pic.id)}>
+                            {pic.initials}
+                            </AvatarFallback>
+                        </Avatar>
+                        <span className="text-sm font-medium">{pic.name}</span>
+                        </div>
+                    ) : (
+                        <p className="text-sm font-medium">-</p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -215,7 +222,7 @@ const ExpenseDetailsDialog = ({ expense, open, onOpenChange }: ExpenseDetailsDia
                       <div className="col-span-1 text-center text-muted-foreground">{index + 1}</div>
                       <div className="col-span-4 font-medium">{formatCurrency(term.amount || 0)}</div>
                       <div className="col-span-3 text-xs text-muted-foreground">
-                        {term.request_date ? format(new Date(term.request_date), "dd MMM yyyy") : '-'}
+                        {term.release_date ? format(new Date(term.release_date), "dd MMM yyyy") : (term.request_date ? format(new Date(term.request_date), "dd MMM yyyy") : '-')}
                       </div>
                       <div className="col-span-4 text-right">
                         <Badge variant="outline" className={cn("text-[10px] h-5 px-1.5", getStatusBadgeStyle(term.status || 'Pending'))}>
