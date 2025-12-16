@@ -549,7 +549,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
                     <FormLabel>Project</FormLabel>
-                    <Popover open={projectPopoverOpen} onOpenChange={setProjectPopoverOpen}>
+                    <Popover open={projectPopoverOpen} onOpenChange={setProjectPopoverOpen} modal={true}>
                       <PopoverTrigger asChild>
                         <FormControl>
                           <Button variant="outline" role="combobox" className={cn("w-full justify-between", !field.value && "text-muted-foreground")} disabled={isLoadingProjects || isFormDisabled}>
@@ -558,7 +558,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                           </Button>
                         </FormControl>
                       </PopoverTrigger>
-                      <PopoverContent className="w-[300px] p-0" align="start">
+                      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
                         <Command>
                           <CommandInput placeholder="Search project..." value={projectSearch} onValueChange={setProjectSearch} />
                           <CommandList>
