@@ -1,134 +1,106 @@
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
-
-// Helper function to fetch file content as base64
-async function fetchFileAsBase64(url: string): Promise<{ base64: string, mimeType: string }> {
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`Failed to fetch file: ${response.statusText}`);
-  }
-  const contentType = response.headers.get('content-type') || 'application/octet-stream';
-  const buffer = await response.arrayBuffer();
-  const base64 = btoa(String.fromCharCode(...new Uint8Array(buffer)));
-  return { base64, mimeType: contentType };
 }
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders })
   }
 
   try {
-    const { fileUrl, fileName } = await req.json();
+    const { fileUrl } = await req.json()
+    const openAiApiKey = Deno.env.get('OPENAI_API_KEY')
+
+    if (!openAiApiKey) {
+      console.error('OPENAI_API_KEY not set')
+      throw new Error('Server configuration error: OPENAI_API_KEY is missing')
+    }
 
     if (!fileUrl) {
-      return new Response(JSON.stringify({ error: 'Missing fileUrl' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      throw new Error('fileUrl is required in request body')
     }
 
-    // Check for OpenAI Key (Env or DB)
-    let openaiApiKey = Deno.env.get('OPENAI_API_KEY');
-    if (!openaiApiKey) {
-        const supabaseAdmin = createClient(
-            Deno.env.get('SUPABASE_URL') ?? '',
-            Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-        );
-        const { data: config } = await supabaseAdmin
-            .from('app_config')
-            .select('value')
-            .eq('key', 'OPENAI_API_KEY')
-            .maybeSingle();
-        if (config) openaiApiKey = config.value;
-    }
-
-    if (!openaiApiKey) {
-      throw new Error('OpenAI API provider is not configured. Please set OPENAI_API_KEY.');
-    }
-
-    const { base64, mimeType } = await fetchFileAsBase64(fileUrl);
-
-    const promptText = `You are an expert expense data extractor. Analyze the provided document (invoice, bill, or receipt) and extract the following information. Respond ONLY with a JSON object matching the schema provided below. Do not include any other text, explanation, or markdown formatting outside the JSON object.
-
-Schema:
-{
-  "amount": number, // The total amount of the expense/bill, in IDR if currency is specified, otherwise just the number. Use the largest, most prominent total amount.
-  "purpose": string, // A brief description of the expense (e.g., "Payment for graphic design services").
-  "beneficiary": string, // The name of the company or person who issued the invoice/bill (Vendor).
-  "client_name": string, // The name of the entity being billed (Client/Brand/Company name found in "Bill To" or similar).
-  "location": string, // Any venue, location, or address mentioned in the description or line items (not the addresses of the vendor/client).
-  "remarks": string, // Any important notes found on the document.
-  "date": string, // The invoice/transaction date in YYYY-MM-DD format.
-  "due_date": string, // The payment due date in YYYY-MM-DD format, if specified.
-  "bank_details": {
-    "bank_name": string, // Name of the bank (e.g., BCA, Mandiri, BRI, BNI).
-    "account_number": string, // Account number (digits only).
-    "account_name": string, // Name on the account.
-    "swift_code": string // SWIFT/BIC code if visible.
-  }
-}
-
-Document Name: ${fileName}
-`;
-
-    let extractedData;
+    console.log('Analyzing file:', fileUrl)
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${openaiApiKey}`,
+        'Authorization': `Bearer ${openAiApiKey}`,
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-          model: 'gpt-4o',
-          messages: [
+        model: 'gpt-4o',
+        messages: [
+          {
+            role: 'system',
+            content: `You are an expert at extracting structured data from receipts, invoices, and bills.
+            Analyze the provided image and extract the following fields in strict JSON format:
+            
+            - amount: number (total amount)
+            - date: string (YYYY-MM-DD format)
+            - due_date: string (YYYY-MM-DD format, usually for invoices)
+            - beneficiary: string (merchant name or person)
+            - purpose: string (brief description of items/service)
+            - remarks: string (any additional relevant text or full description)
+            - location: string (city or venue if available)
+            - client_name: string (if the bill is addressed to a specific client/company)
+            - bank_details: object (if available) containing:
+              - account_number: string
+              - bank_name: string
+              - account_name: string
+              - swift_code: string
+
+            Return ONLY the JSON object. Do not include markdown formatting like \`\`\`json.`
+          },
+          {
+            role: 'user',
+            content: [
+              { type: 'text', text: 'Extract data from this document.' },
               {
-                  role: 'user',
-                  content: [
-                      { type: 'text', text: promptText },
-                      {
-                          type: 'image_url',
-                          image_url: {
-                              url: `data:${mimeType};base64,${base64}`,
-                          },
-                      },
-                  ],
+                type: 'image_url',
+                image_url: {
+                  url: fileUrl,
+                },
               },
-          ],
-          max_tokens: 1000,
-          response_format: { type: "json_object" }
+            ],
+          },
+        ],
+        max_tokens: 1000,
       }),
-    });
+    })
 
     if (!response.ok) {
-        const errorText = await response.text();
-        console.error('OpenAI API Error:', errorText);
-        throw new Error(`OpenAI API failed: ${response.status}`);
+      const errorText = await response.text()
+      console.error('OpenAI API Error:', errorText)
+      throw new Error(`OpenAI API returned ${response.status}: ${errorText}`)
     }
+
+    const data = await response.json()
+    const content = data.choices[0].message.content.trim()
     
-    const data = await response.json();
-    extractedData = JSON.parse(data.choices[0].message.content);
-
-    if (!extractedData) {
-        throw new Error("Failed to extract data from OpenAI.");
+    // Clean potential markdown code blocks
+    const jsonStr = content.replace(/^```json\s*|\s*```$/g, '')
+    
+    let result
+    try {
+      result = JSON.parse(jsonStr)
+    } catch (e) {
+      console.error('Failed to parse OpenAI response:', content)
+      throw new Error('Failed to parse AI response')
     }
 
-    return new Response(JSON.stringify({ success: true, data: extractedData }), {
+    return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 200,
-    });
-
+    })
   } catch (error) {
-    console.error(error);
+    console.error('Edge function error:', error)
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,
-    });
+    })
   }
-});
+})
