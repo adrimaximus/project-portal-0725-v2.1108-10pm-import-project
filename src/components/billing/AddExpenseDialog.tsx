@@ -27,9 +27,8 @@ import PersonFormDialog from '../people/PersonFormDialog';
 import CompanyFormDialog from '../people/CompanyFormDialog';
 import CreateProjectDialog from '../projects/CreateProjectDialog';
 import CustomPropertyInput from '../settings/CustomPropertyInput';
-import FileUploader, { UploadedFile } from '../ui/FileUploader';
+import FileUploader, { UploadedFile, ProcessingFileState } from '../ui/FileUploader';
 import { useExpenseExtractor } from '@/hooks/useExpenseExtractor';
-import { Progress } from '../ui/progress';
 
 interface AddExpenseDialogProps {
   open: boolean;
@@ -90,8 +89,10 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
   // PIC Selection State
   const [projectMembers, setProjectMembers] = useState<Profile[]>([]);
   
+  // AI Analysis State
   const { extractData, isExtracting } = useExpenseExtractor();
   const [analysisProgress, setAnalysisProgress] = useState(0);
+  const [currentProcessingFile, setCurrentProcessingFile] = useState<string | null>(null);
 
   useEffect(() => {
       let interval: NodeJS.Timeout;
@@ -109,6 +110,17 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
       }
       return () => clearInterval(interval);
   }, [isExtracting]);
+
+  // Construct processing files map for FileUploader
+  const processingFiles = useMemo(() => {
+    if (!currentProcessingFile || !isExtracting) return undefined;
+    return {
+      [currentProcessingFile]: {
+        progress: analysisProgress,
+        label: 'Analyzing...'
+      }
+    };
+  }, [currentProcessingFile, isExtracting, analysisProgress]);
 
   // Fetch extended project data for intelligent matching
   const { data: projects = [], isLoading: isLoadingProjects } = useQuery<ProjectOption[]>({
@@ -335,42 +347,12 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
   };
 
   const handleFileProcessed = async (file: UploadedFile) => {
-    let finalUrl = file.url;
+    setCurrentProcessingFile(file.name);
     
-    // Check if it's a blob URL
-    if (file.url.startsWith('blob:')) {
-      try {
-        toast.info("Uploading image for analysis...");
-        
-        // 1. Fetch the blob data
-        const response = await fetch(file.url);
-        const blob = await response.blob();
-        const fileObj = new File([blob], file.name, { type: file.type });
-
-        // 2. Upload to Supabase
-        const sanitizedFileName = file.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
-        const filePath = `temp-analysis/${Date.now()}-${sanitizedFileName}`;
-        
-        const { error: uploadError } = await supabase.storage
-          .from('expense')
-          .upload(filePath, fileObj);
-
-        if (uploadError) throw uploadError;
-
-        // 3. Get Public URL
-        const { data: urlData } = supabase.storage
-          .from('expense')
-          .getPublicUrl(filePath);
-          
-        finalUrl = urlData.publicUrl;
-      } catch (error) {
-        console.error("Pre-analysis upload failed:", error);
-        toast.error("Failed to upload image for analysis.");
-        return;
-      }
-    }
+    // FileUploader already uploads the file and returns a public URL.
+    // So we can directly use file.url for analysis.
     
-    const extractedData = await extractData({ url: finalUrl, type: file.type });
+    const extractedData = await extractData({ url: file.url, type: file.type });
     
     if (extractedData) {
       // 1. Amount & Payment Terms
@@ -400,10 +382,17 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
         }
       }
       
-      if (extractedData.purpose) {
-        setValue('purpose_payment', extractedData.purpose, { shouldValidate: true });
-      } else if (extractedData.description) {
-        setValue('purpose_payment', extractedData.description, { shouldValidate: true });
+      // Improved Purpose Payment autofill
+      // Prioritize explicit purpose/description from AI, then fall back to items summary
+      const purpose = extractedData.purpose || 
+                      extractedData.summary || 
+                      extractedData.description || 
+                      (Array.isArray(extractedData.items) && extractedData.items.length > 0 
+                          ? extractedData.items.map((i: any) => i.description || i.name).filter(Boolean).join(', ') 
+                          : undefined);
+
+      if (purpose) {
+        setValue('purpose_payment', purpose, { shouldValidate: true });
       }
 
       // 2. Beneficiary Matching
@@ -502,6 +491,8 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
       
       toast.success("Data extracted from document!");
     }
+    
+    setCurrentProcessingFile(null);
   };
 
   // Handle File List Changes (Sync with Form)
@@ -688,17 +679,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                       <FormLabel className="flex items-center gap-2">
                         <FileText className="h-4 w-4" /> Attachments
                       </FormLabel>
-                      {isExtracting && <span className="text-xs text-primary animate-pulse flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin"/> Analyzing document...</span>}
                     </div>
-                    {isExtracting && (
-                      <div className="space-y-1 mb-2">
-                        <div className="flex justify-between text-xs text-muted-foreground">
-                          <span>Analyzing...</span>
-                          <span>{Math.round(analysisProgress)}%</span>
-                        </div>
-                        <Progress value={analysisProgress} className="h-1" />
-                      </div>
-                    )}
                     <div className="text-xs text-muted-foreground mb-1">
                         Upload invoice or receipt to auto-fill details (Image & PDF supported)
                     </div>
@@ -712,6 +693,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                         accept={{ 'image/*': ['.png', '.jpg', '.jpeg', '.webp'], 'application/pdf': ['.pdf'] }}
                         disabled={isFormDisabled}
                         onFileProcessed={handleFileProcessed}
+                        processingFiles={processingFiles}
                       />
                     </FormControl>
                     <FormMessage />
@@ -875,7 +857,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={isFormDisabled}>Cancel</Button>
             <Button type="submit" form="expense-form" disabled={isFormDisabled}>
               {(isSubmitting || isExtracting) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isExtracting ? 'Analyzing Document...' : 'Add Expense'}
+              {isExtracting ? 'Analyzing...' : 'Add Expense'}
             </Button>
           </DialogFooter>
         </DialogContent>

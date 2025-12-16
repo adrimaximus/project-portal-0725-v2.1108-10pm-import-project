@@ -16,6 +16,11 @@ export interface UploadedFile {
   originalFile?: File; 
 }
 
+export interface ProcessingFileState {
+  progress: number;
+  label?: string;
+}
+
 interface FileUploaderProps {
   bucket?: string;
   value: UploadedFile[];
@@ -25,6 +30,7 @@ interface FileUploaderProps {
   accept?: Record<string, string[]>;
   disabled?: boolean;
   onFileProcessed?: (file: UploadedFile) => void;
+  processingFiles?: Record<string, ProcessingFileState>;
 }
 
 const FileUploader: React.FC<FileUploaderProps> = ({
@@ -35,7 +41,8 @@ const FileUploader: React.FC<FileUploaderProps> = ({
   maxSize = 5 * 1024 * 1024, // 5MB default
   accept,
   disabled = false,
-  onFileProcessed
+  onFileProcessed,
+  processingFiles
 }) => {
   const [isDragActive, setIsDragActive] = useState(false);
   const [uploadingFiles, setUploadingFiles] = useState<{name: string, progress: number}[]>([]);
@@ -110,7 +117,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({
             // Remove from uploading list after a moment
             setTimeout(() => {
                 setUploadingFiles(prev => prev.filter(u => u.name !== file.name));
-            }, 1000);
+            }, 500);
         }
     });
 
@@ -187,44 +194,63 @@ const FileUploader: React.FC<FileUploaderProps> = ({
         </div>
       )}
 
-      {/* Uploaded Files List */}
+      {/* Uploaded Files List (with Processing Status) */}
       {value.length > 0 && (
         <div className="grid gap-2">
-          {value.map((file, index) => (
-            <div key={`${file.name}-${index}`} className="flex items-center justify-between p-3 border rounded-lg bg-card">
-              <div className="flex items-center gap-3 overflow-hidden">
-                <div className="h-10 w-10 shrink-0 rounded bg-muted flex items-center justify-center overflow-hidden relative">
-                  {file.type.startsWith('image/') ? (
-                    <img src={file.url} alt={file.name} className="h-full w-full object-cover" />
-                  ) : (
-                    <FileText className="h-5 w-5 text-muted-foreground" />
-                  )}
-                  {/* Checkmark overlay for completed uploads */}
-                  <div className="absolute inset-0 bg-black/10 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                      <CheckCircle2 className="h-4 w-4 text-green-500 fill-white" />
+          {value.map((file, index) => {
+            const processingState = processingFiles?.[file.name];
+            
+            return (
+              <div key={`${file.name}-${index}`} className="flex items-center justify-between p-3 border rounded-lg bg-card">
+                <div className="flex items-center gap-3 overflow-hidden w-full">
+                  <div className="h-10 w-10 shrink-0 rounded bg-muted flex items-center justify-center overflow-hidden relative">
+                    {file.type.startsWith('image/') ? (
+                      <img src={file.url} alt={file.name} className="h-full w-full object-cover" />
+                    ) : (
+                      <FileText className="h-5 w-5 text-muted-foreground" />
+                    )}
+                    {/* Checkmark overlay for completed uploads/processing */}
+                    {!processingState && (
+                      <div className="absolute inset-0 bg-black/10 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                          <CheckCircle2 className="h-4 w-4 text-green-500 fill-white" />
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="flex flex-col overflow-hidden w-full mr-2">
+                    <a href={file.url} target="_blank" rel="noreferrer" className="text-sm font-medium truncate hover:underline cursor-pointer">
+                      {file.name}
+                    </a>
+                    
+                    {processingState ? (
+                      <div className="w-full space-y-1 mt-1">
+                        <div className="flex justify-between text-[10px] text-muted-foreground">
+                           <span>{processingState.label || 'Processing...'}</span>
+                           <span>{Math.round(processingState.progress)}%</span>
+                        </div>
+                        <Progress value={processingState.progress} className="h-1" />
+                      </div>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">
+                        {(file.size / 1024).toFixed(1)} KB
+                      </span>
+                    )}
                   </div>
                 </div>
-                <div className="flex flex-col overflow-hidden">
-                  <a href={file.url} target="_blank" rel="noreferrer" className="text-sm font-medium truncate hover:underline cursor-pointer">
-                    {file.name}
-                  </a>
-                  <span className="text-xs text-muted-foreground">
-                    {(file.size / 1024).toFixed(1)} KB
-                  </span>
-                </div>
+                
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-muted-foreground hover:text-destructive shrink-0"
+                  onClick={() => removeFile(index)}
+                  disabled={disabled || !!processingState}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
               </div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                onClick={() => removeFile(index)}
-                disabled={disabled}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
