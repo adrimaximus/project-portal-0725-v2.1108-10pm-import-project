@@ -9,7 +9,14 @@ export const useExpenseExtractor = () => {
 
   const extractData = async (file: { url: string; type: string }) => {
     if (!file?.url) {
-        toast.error("Invalid file URL");
+        // Just return, don't error, might be a local file not yet uploaded
+        return null;
+    }
+
+    // Skip extraction request entirely on client side if it's not an image
+    // to save a server roundtrip, though server protection is still good.
+    if (!file.type.startsWith('image/')) {
+        toast.info("AI Analysis Skipped", { description: "Only image files (JPG/PNG) are analyzed for auto-fill. PDF stored successfully." });
         return null;
     }
 
@@ -25,12 +32,17 @@ export const useExpenseExtractor = () => {
       });
 
       if (error) {
-        console.error('Edge Function Error:', error);
+        // Handle custom errors passed from the function
+        let errorMessage = error.message;
         
-        // Handle custom 422 error for missing configuration
         if (error.context && typeof error.context.json === 'function') {
            const body = await error.context.json().catch(() => ({}));
-           if (body.error && body.error.includes("OpenAI API Key is not configured")) {
+           if (body.error) {
+             errorMessage = body.error;
+           }
+        }
+
+        if (errorMessage.includes("OpenAI API Key is not configured")) {
              toast.error("OpenAI Integration Missing", {
                description: "Please configure OpenAI in settings to use this feature.",
                action: {
@@ -38,22 +50,23 @@ export const useExpenseExtractor = () => {
                  onClick: () => navigate("/settings/integrations/openai")
                }
              });
-             throw new Error(body.error);
-           }
+             return null;
         }
 
-        const msg = error.message || 'Failed to analyze document';
-        throw new Error(msg);
+        // Don't throw for 422 (unsupported type), just warn
+        if (errorMessage.includes("PDFs cannot be analyzed")) {
+            toast.info("Analysis Skipped", { description: errorMessage });
+            return null;
+        }
+
+        throw new Error(errorMessage);
       }
 
       console.log('Extraction success:', data);
       return data;
     } catch (error: any) {
       console.error('Extraction failed:', error);
-      // Only show toast if it wasn't the specific config error handled above
-      if (!error.message.includes("OpenAI API Key is not configured")) {
-         toast.error("Analysis Failed", { description: error.message });
-      }
+      toast.error("Analysis Failed", { description: error.message });
       return null;
     } finally {
       setIsExtracting(false);
