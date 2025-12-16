@@ -66,7 +66,7 @@ export const useExpenseExtractor = () => {
     } catch (error: any) {
       console.error('Error extracting data:', error);
       toast.error('Failed to analyze document', { 
-        description: error.message || "Please ensure OpenAI/Anthropic API Key is configured in Settings." 
+        description: error.message || "Please ensure OpenAI API Key is configured in Settings." 
       });
       return null;
     } finally {
