@@ -1,133 +1,123 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.54.0'
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1'
+import OpenAI from 'https://esm.sh/openai@4.28.0'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-Deno.serve(async (req) => {
+serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    return new Response(null, { headers: corsHeaders })
   }
 
   try {
-    const { fileUrl } = await req.json()
-    
-    if (!fileUrl) {
-      return new Response(
-        JSON.stringify({ error: 'No file URL provided' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-      )
+    const { fileData, fileType } = await req.json()
+
+    if (!fileData || !fileType) {
+      throw new Error('File data and type are required')
     }
 
-    // 1. Try to get API Key from Environment
-    let openAiApiKey = Deno.env.get('OPENAI_API_KEY')
+    // 1. Initialize Supabase Client
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? ''
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    // 2. If not found, try to get from Database (app_config)
-    if (!openAiApiKey) {
-      const supabaseAdmin = createClient(
-        Deno.env.get('SUPABASE_URL') ?? '',
-        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-      )
-      
-      const { data: config, error: dbError } = await supabaseAdmin
+    // 2. Retrieve OpenAI API Key
+    // Priority: Edge Secret -> DB Config -> Fail
+    let openAiKey = Deno.env.get('OPENAI_API_KEY')
+
+    if (!openAiKey) {
+      console.log('OpenAI key not found in env, checking app_config...')
+      const { data: configData, error: configError } = await supabase
         .from('app_config')
         .select('value')
-        .eq('key', 'OPENAI_API_KEY')
+        .eq('key', 'openai_api_key')
         .single()
-      
-      if (!dbError && config) {
-        openAiApiKey = config.value
+
+      if (configError || !configData?.value) {
+        console.error('Failed to retrieve OpenAI key from app_config:', configError)
+        return new Response(
+          JSON.stringify({ 
+            error: 'OpenAI API key is missing. Please set it in Edge Function Secrets or app_config table.' 
+          }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
       }
+      openAiKey = configData.value
     }
 
-    if (!openAiApiKey) {
-      console.error('OPENAI_API_KEY is not set in Env or DB')
+    // 3. Check File Type Support
+    if (fileType === 'application/pdf') {
       return new Response(
-        JSON.stringify({ error: 'OpenAI API Key is not configured. Please add it in Settings > Integrations.' }),
-        // Using 422 Unprocessable Entity for missing configuration to distinguish from 500 server errors
+        JSON.stringify({ 
+          error: 'PDF analysis is currently not supported for auto-extraction. Please convert to an image (JPG/PNG) or enter details manually.' 
+        }),
         { status: 422, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    console.log('Analyzing file:', fileUrl)
+    if (!fileType.startsWith('image/')) {
+      return new Response(
+        JSON.stringify({ 
+          error: 'Unsupported file type. Please upload an image (JPG/PNG).' 
+        }),
+        { status: 422, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${openAiApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o',
-        messages: [
-          {
-            role: 'system',
-            content: `You are a helpful assistant that extracts data from receipts and invoices. 
-            Analyze the image and return a JSON object with the following fields:
-            - amount: The total amount paid (number only, remove currency symbols).
-            - beneficiary: The name of the merchant or person paid (string).
-            - purpose: A short 3-5 word description of what was purchased or the service provided (string).
-            - remarks: A brief summary of the transaction details, including date if visible (string).
-            - date: The date of transaction in YYYY-MM-DD format if visible (string).
-            - due_date: The due date in YYYY-MM-DD format if visible (string).
-            - bank_details: If bank account details for payment (transfer destination) are visible, return an object with:
-                - bank_name: Name of the bank (e.g., BCA, Mandiri, BRI, BNI).
-                - account_number: Account number (string, digits only).
-                - account_name: Name on the account (string).
-                - swift_code: SWIFT/BIC code if visible (string).
-              Look for keywords like "Bank", "Transfer", "No. Rek", "Account No", "A/C", "IBAN", "Swift".
-              If not visible, set to null.
-            
-            If a field is not visible or cannot be determined, set it to null.
-            Return ONLY raw JSON, no markdown formatting.`
-          },
-          {
-            role: 'user',
-            content: [
-              { type: 'text', text: 'Extract data from this receipt/invoice.' },
-              {
-                type: 'image_url',
-                image_url: {
-                  url: fileUrl,
-                  detail: 'high'
-                }
-              }
-            ]
-          }
-        ],
-        max_tokens: 1000,
-        response_format: { type: "json_object" }
-      }),
+    // 4. Initialize OpenAI
+    const openai = new OpenAI({
+      apiKey: openAiKey,
     })
 
-    const data = await response.json()
-    
-    if (data.error) {
-      console.error('OpenAI API Error:', data.error)
-      // Pass through OpenAI error message
-      throw new Error(`OpenAI Error: ${data.error.message}`)
+    console.log('Sending image to OpenAI for analysis...')
+
+    // 5. Call OpenAI GPT-4o
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "system",
+          content: "You are an expense data extractor. Extract the following fields from the receipt/invoice image: beneficiary (merchant name), amount (total), date (YYYY-MM-DD), and remarks (brief description of items). Return ONLY valid JSON."
+        },
+        {
+          role: "user",
+          content: [
+            { type: "text", text: "Analyze this receipt image and extract data in JSON format: { \"beneficiary\": string, \"amount\": number, \"date\": string (ISO format), \"remarks\": string }." },
+            {
+              type: "image_url",
+              image_url: {
+                "url": fileData, // Base64 data url passed from frontend
+              },
+            },
+          ],
+        },
+      ],
+      max_tokens: 300,
+      response_format: { type: "json_object" }
+    });
+
+    const content = response.choices[0].message.content
+    if (!content) {
+      throw new Error("No content received from OpenAI")
     }
 
-    const content = data.choices[0].message.content
-    let result
-    try {
-      result = JSON.parse(content)
-    } catch (e) {
-      console.error("Failed to parse JSON", content)
-      throw new Error("AI returned invalid JSON")
-    }
+    console.log('OpenAI response:', content)
+    const result = JSON.parse(content)
 
     return new Response(
       JSON.stringify(result),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
+
   } catch (error) {
-    console.error('Edge function error:', error)
+    console.error('Error processing request:', error)
     return new Response(
       JSON.stringify({ error: error.message }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }
 })
