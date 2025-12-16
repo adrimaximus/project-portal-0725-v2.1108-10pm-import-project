@@ -558,7 +558,19 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                         <Command>
                           <CommandInput placeholder="Search project..." value={projectSearch} onValueChange={setProjectSearch} />
                           <CommandList>
-                            {isLoadingProjects && <div className="p-4 text-center text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin inline mr-2" />Loading projects...</div>}
+                            {isLoadingProjects && (
+                              <div className="p-4 text-center text-sm text-muted-foreground">
+                                <Loader2 className="h-4 w-4 animate-spin inline mr-2" />
+                                Loading projects...
+                              </div>
+                            )}
+                            
+                            {!isLoadingProjects && projects.length === 0 && (
+                               <div className="p-4 text-center text-sm text-muted-foreground">
+                                 No projects found.
+                               </div>
+                            )}
+
                             {!isLoadingProjects && (
                               <>
                                 <CommandEmpty>
@@ -567,10 +579,10 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                                     Create "{projectSearch}"
                                   </Button>
                                 </CommandEmpty>
-                                <CommandGroup className="max-h-60 overflow-y-auto">
+                                <CommandGroup>
                                   {projects.map((project) => (
                                     <CommandItem 
-                                      value={`${project.name} ${project.id}`} // Ensure uniqueness for filtering
+                                      value={`${project.name} ${project.id}`}
                                       key={project.id} 
                                       onSelect={() => { 
                                         form.setValue("project_id", project.id); 
@@ -579,10 +591,13 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                                       }}
                                     >
                                       <Check className={cn("mr-2 h-4 w-4", project.id === field.value ? "opacity-100" : "opacity-0")} />
-                                      <Briefcase className="mr-2 h-4 w-4 text-muted-foreground" />
                                       <div className="flex flex-col">
                                           <span>{project.name}</span>
-                                          {project.client_company_name && <span className="text-xs text-muted-foreground">{project.client_company_name}</span>}
+                                          {(project.client_company_name || project.client_name) && (
+                                            <span className="text-xs text-muted-foreground">
+                                              {project.client_company_name || project.client_name}
+                                            </span>
+                                          )}
                                       </div>
                                     </CommandItem>
                                   ))}
