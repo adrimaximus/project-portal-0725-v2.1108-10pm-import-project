@@ -185,11 +185,6 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
             }
             setProjectMembers(members);
         } else {
-             // Fallback fetch if data is incomplete
-             const { data, error } = await supabase
-                .rpc('get_project_members_distinct'); // This RPC returns all distinct members, maybe too broad. 
-             // Better to just use current user if we can't get project specific members easily without RPC update.
-             // For now, default to current user + basic fallback
              setProjectMembers(user ? [user] : []);
         }
     };
@@ -269,33 +264,34 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
           const cComp = normalize(p.client_company_name || '');
           const venue = normalize(p.venue || '');
           
-          const exClient = normalize(extracted.client_name);
-          const exLoc = normalize(extracted.location);
-          // Also check purpose/remarks for keywords
-          const textContent = normalize((extracted.purpose || '') + ' ' + (extracted.remarks || ''));
-
-          // 1. Client Match (High Weight)
-          if (exClient && (cName.includes(exClient) || cComp.includes(exClient))) {
-              score += 5;
-          }
-
-          // 2. Project Name in Content (High Weight)
-          if (pName && textContent.includes(pName)) {
-              score += 4;
-          }
-
-          // 3. Date Match (Medium Weight)
-          if (extracted.date && p.start_date && p.due_date) {
-              const exDate = parseISO(extracted.date);
-              // Check if valid date
-              if (!isNaN(exDate.getTime()) && isWithinInterval(exDate, { start: new Date(p.start_date), end: new Date(p.due_date) })) {
+          const exBeneficiary = normalize(extracted.beneficiary); // Brand/Merchant name from invoice
+          const exDate = extracted.date ? parseISO(extracted.date) : null;
+          
+          // 1. Beneficiary / Brand Match (High Priority)
+          if (exBeneficiary) {
+              if (cComp && (cComp.includes(exBeneficiary) || exBeneficiary.includes(cComp))) {
+                  score += 10;
+              } else if (cName && (cName.includes(exBeneficiary) || exBeneficiary.includes(cName))) {
+                  score += 5;
+              }
+              // Also check project name for brand name
+              if (pName.includes(exBeneficiary)) {
                   score += 3;
               }
           }
 
-          // 4. Venue Match (Medium Weight)
-          if (exLoc && venue && (venue.includes(exLoc) || exLoc.includes(venue))) {
-              score += 3;
+          // 2. Date & Venue Match (Fallback/Support Priority)
+          // If the date on invoice is within project timeline + buffer
+          if (exDate && !isNaN(exDate.getTime()) && p.start_date) {
+              const start = new Date(p.start_date);
+              const end = p.due_date ? new Date(p.due_date) : new Date(start);
+              // Allow invoice to be 1 week before start and up to 2 months after end
+              const bufferStart = new Date(start); bufferStart.setDate(start.getDate() - 7);
+              const bufferEnd = new Date(end); bufferEnd.setDate(end.getDate() + 60);
+
+              if (isWithinInterval(exDate, { start: bufferStart, end: bufferEnd })) {
+                  score += 5;
+              }
           }
 
           if (score > maxScore) {
@@ -584,7 +580,10 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                                     >
                                       <Check className={cn("mr-2 h-4 w-4", project.id === field.value ? "opacity-100" : "opacity-0")} />
                                       <Briefcase className="mr-2 h-4 w-4 text-muted-foreground" />
-                                      {project.name}
+                                      <div className="flex flex-col">
+                                          <span>{project.name}</span>
+                                          {project.client_company_name && <span className="text-xs text-muted-foreground">{project.client_company_name}</span>}
+                                      </div>
                                     </CommandItem>
                                   ))}
                                 </CommandGroup>

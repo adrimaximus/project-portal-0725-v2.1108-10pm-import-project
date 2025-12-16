@@ -1,179 +1,176 @@
 import React, { useCallback, useState, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { UploadCloud, FileText, X, Eye, Trash2, Loader2, File as FileIconLucide } from 'lucide-react';
+import { UploadCloud, FileText, X, Eye, Download, FileImage } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { cn, formatBytes } from '@/lib/utils';
-import { toast } from 'sonner';
+import { Progress } from './progress';
+import { cn } from '@/lib/utils';
+import FileIcon from '../FileIcon';
 
+// Define the shape of files that can be handled
 export interface UploadedFile {
   name: string;
   url: string;
-  type: string;
   size: number;
-  storagePath?: string;
-  id?: string;
+  type: string;
+  storagePath: string;
+  // For raw File objects, these might not exist yet, but we normalize them
 }
 
 interface FileUploaderProps {
-  value: (File | UploadedFile)[];
-  onChange: (files: (File | UploadedFile)[]) => void;
-  onFileProcessed?: (file: UploadedFile) => void;
+  value: UploadedFile[] | File[]; // Can be existing files from DB or new File objects
+  onChange: (files: any[]) => void;
+  bucket: string;
   maxFiles?: number;
-  maxSize?: number; // bytes
+  maxSize?: number;
   accept?: Record<string, string[]>;
   disabled?: boolean;
-  bucket: string;
-  label?: string;
+  onFileProcessed?: (file: UploadedFile) => void;
 }
+
+const formatBytes = (bytes: number, decimals = 2) => {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const dm = decimals < 0 ? 0 : decimals;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+};
 
 const FileUploader = ({ 
   value = [], 
   onChange, 
-  onFileProcessed,
+  bucket, 
   maxFiles = 5, 
-  maxSize = 5 * 1024 * 1024, 
+  maxSize = 10 * 1024 * 1024, // 10MB
   accept = {
     'image/*': ['.png', '.jpg', '.jpeg', '.webp'],
-    'application/pdf': ['.pdf']
+    'application/pdf': ['.pdf'],
+    'application/msword': ['.doc'],
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+    'text/plain': ['.txt'],
+    'text/csv': ['.csv'],
+    'application/vnd.ms-excel': ['.xls'],
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx']
   },
   disabled = false,
-  bucket,
-  label
+  onFileProcessed
 }: FileUploaderProps) => {
-  const [uploading, setUploading] = useState(false);
+  // Normalize value to always have a consistent shape for rendering
+  const [fileList, setFileList] = useState<any[]>([]);
+
+  useEffect(() => {
+    // Map input value to displayable format
+    const normalized = (value || []).map((file: any) => {
+      if (file instanceof File) {
+        return {
+          originalFile: file,
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          url: URL.createObjectURL(file), // Create preview URL for new files
+          isNew: true
+        };
+      }
+      return {
+        ...file,
+        isNew: false
+      };
+    });
+    setFileList(normalized);
+  }, [value]);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
-    if (disabled) return;
+    // Combine existing files with new ones, up to maxFiles
+    const currentFiles = value || [];
+    const availableSlots = maxFiles - currentFiles.length;
+    const filesToAdd = acceptedFiles.slice(0, availableSlots);
     
-    // Check total files count
-    if (value.length + acceptedFiles.length > maxFiles) {
-      toast.error(`You can only upload up to ${maxFiles} file(s).`);
-      return;
-    }
+    if (filesToAdd.length > 0) {
+      const newFileList = [...currentFiles, ...filesToAdd];
+      onChange(newFileList);
 
-    const validFiles = acceptedFiles.filter(file => {
-      if (file.size > maxSize) {
-        toast.error(`File ${file.name} is too large. Max size is ${formatBytes(maxSize)}.`);
-        return false;
-      }
-      return true;
-    });
-
-    if (validFiles.length > 0) {
-      const newFiles = [...value, ...validFiles];
-      onChange(newFiles);
-      
-      // Auto-trigger analysis for the first new file if handler provided
-      if (onFileProcessed && validFiles.length > 0) {
-        // We handle the analysis in the parent component usually
-        // But here we might want to simulate an "upload" object immediately for preview
-        const file = validFiles[0];
-        const previewUrl = URL.createObjectURL(file);
-        onFileProcessed({
-            name: file.name,
-            url: previewUrl,
-            type: file.type,
-            size: file.size
+      // Notify parent about new files for processing (e.g. AI extraction)
+      if (onFileProcessed) {
+        filesToAdd.forEach(file => {
+           // Create a temporary UploadedFile shape for processing
+           onFileProcessed({
+               name: file.name,
+               url: URL.createObjectURL(file),
+               size: file.size,
+               type: file.type,
+               storagePath: '' // Not stored yet
+           });
         });
       }
     }
-  }, [value, maxFiles, maxSize, onChange, onFileProcessed, disabled]);
+  }, [value, maxFiles, onChange, onFileProcessed]);
 
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop,
-    maxFiles: maxFiles - value.length,
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({ 
+    onDrop, 
+    maxFiles,
     maxSize,
     accept,
-    disabled: disabled || value.length >= maxFiles
+    disabled
   });
 
-  const removeFile = (index: number) => {
-    if (disabled) return;
-    const newFiles = [...value];
-    newFiles.splice(index, 1);
+  const removeFile = (indexToRemove: number) => {
+    const newFiles = (value || []).filter((_, index) => index !== indexToRemove);
     onChange(newFiles);
-  };
-
-  const handleView = (file: File | UploadedFile) => {
-    const url = 'url' in file ? file.url : URL.createObjectURL(file);
-    window.open(url, '_blank');
   };
 
   return (
     <div className="space-y-4">
-      {value.length < maxFiles && (
-        <div
-          {...getRootProps()}
-          className={cn(
-            "border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors",
-            isDragActive ? "border-primary bg-primary/5" : "border-muted-foreground/25 hover:border-primary/50",
-            disabled && "opacity-50 cursor-not-allowed hover:border-muted-foreground/25"
+      <div
+        {...getRootProps()}
+        className={cn(
+          "border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors",
+          isDragActive ? "border-primary bg-primary/5" : "border-muted-foreground/25 hover:border-primary/50",
+          disabled && "opacity-50 cursor-not-allowed"
+        )}
+      >
+        <input {...getInputProps()} />
+        <div className="flex flex-col items-center gap-2 text-muted-foreground">
+          <UploadCloud className="h-8 w-8" />
+          {isDragActive ? (
+            <p>Drop the files here ...</p>
+          ) : (
+            <div className="space-y-1">
+              <p className="text-sm font-medium">Drag 'n' drop files here, or click to select</p>
+              <p className="text-xs">Max {maxFiles} files, up to {formatBytes(maxSize)} each</p>
+            </div>
           )}
-        >
-          <input {...getInputProps()} />
-          <div className="flex flex-col items-center justify-center gap-2 text-sm text-muted-foreground">
-            <UploadCloud className="h-8 w-8" />
-            {isDragActive ? (
-              <p>Drop the files here...</p>
-            ) : (
-              <>
-                <p className="font-medium text-foreground">Click to upload or drag and drop</p>
-                <p className="text-xs">
-                  Supported: Images, PDF (Max {formatBytes(maxSize)})
-                </p>
-              </>
-            )}
-          </div>
         </div>
-      )}
-
-      {value.length > 0 && (
+      </div>
+      
+      {fileList.length > 0 && (
         <div className="space-y-2">
-          {value.map((file, index) => {
-            const isUploaded = 'url' in file;
-            const fileName = isUploaded ? file.name : (file as File).name;
-            const fileSize = isUploaded ? file.size : (file as File).size;
-            const fileType = isUploaded ? file.type : (file as File).type;
-
-            return (
-              <div key={index} className="flex items-center justify-between p-2 rounded-md border bg-card">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="h-10 w-10 rounded-md bg-muted flex items-center justify-center flex-shrink-0">
-                    <FileIconLucide className="h-5 w-5 text-muted-foreground" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium truncate max-w-[200px]" title={fileName}>
-                      {fileName}
-                    </p>
-                    <p className="text-xs text-muted-foreground">{formatBytes(fileSize)}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-1">
-                  {(isUploaded || file instanceof File) && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => handleView(file)}
-                    >
-                      <Eye className="h-4 w-4" />
-                    </Button>
+          {fileList.map((file, index) => (
+            <div key={index} className="flex items-center justify-between p-2 rounded-md border bg-card">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="h-10 w-10 rounded-md bg-muted flex items-center justify-center flex-shrink-0 overflow-hidden">
+                  {file.type?.startsWith('image/') ? (
+                    <img src={file.url} alt={file.name} className="h-full w-full object-cover" />
+                  ) : (
+                    <FileIcon fileType={file.type} className="h-5 w-5 text-muted-foreground" />
                   )}
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-destructive hover:text-destructive"
-                    onClick={() => removeFile(index)}
-                    disabled={disabled}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium truncate" title={file.name}>{file.name}</p>
+                  <p className="text-xs text-muted-foreground">{formatBytes(file.size)}</p>
                 </div>
               </div>
-            );
-          })}
+              <div className="flex items-center gap-1">
+                {file.url && (
+                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => window.open(file.url, '_blank')}>
+                        <Eye className="h-4 w-4" />
+                    </Button>
+                )}
+                <Button type="button" variant="ghost" size="icon" className="h-8 w-8 hover:text-destructive" onClick={() => removeFile(index)} disabled={disabled}>
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>
