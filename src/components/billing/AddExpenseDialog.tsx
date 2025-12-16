@@ -265,9 +265,11 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
           const pName = normalize(p.name);
           const cName = normalize(p.client_name || '');
           const cComp = normalize(p.client_company_name || '');
-          const venue = normalize(p.venue || '');
+          const pVenue = normalize(p.venue || '');
           
           const exBeneficiary = normalize(extracted.beneficiary); // Brand/Merchant name from invoice
+          const exAddress = normalize(extracted.address || ''); 
+          const exVenue = normalize(extracted.venue || '');
           const exDate = extracted.date ? parseISO(extracted.date) : null;
           
           // 1. Beneficiary / Brand Match (High Priority)
@@ -283,7 +285,15 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
               }
           }
 
-          // 2. Date & Venue Match (Fallback/Support Priority)
+          // 2. Venue Match
+          const checkVenue = exVenue || exAddress;
+          if (pVenue && checkVenue) {
+             if (pVenue.includes(checkVenue) || checkVenue.includes(pVenue)) {
+                 score += 8;
+             }
+          }
+
+          // 3. Date & Venue Match (Fallback/Support Priority)
           // If the date on invoice is within project timeline + buffer
           if (exDate && !isNaN(exDate.getTime()) && p.start_date) {
               const start = new Date(p.start_date);
@@ -374,6 +384,8 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
       
       if (extractedData.purpose) {
         setValue('purpose_payment', extractedData.purpose, { shouldValidate: true });
+      } else if (extractedData.description) {
+        setValue('purpose_payment', extractedData.description, { shouldValidate: true });
       }
 
       // 2. Beneficiary Matching
@@ -472,11 +484,6 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
       
       toast.success("Data extracted from document!");
     }
-  };
-
-  // Handle File List Changes (Sync with Form)
-  const handleFilesChange = (files: any[]) => {
-      setValue('attachments_jsonb', files as any, { shouldDirty: true });
   };
 
   const onSubmit = async (values: ExpenseFormValues) => {
