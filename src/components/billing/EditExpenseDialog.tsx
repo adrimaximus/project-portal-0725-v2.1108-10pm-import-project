@@ -4,23 +4,25 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Project, PaymentStatus, InvoiceAttachment, PAYMENT_STATUS_OPTIONS, Expense, BankAccount, CustomProperty, Person, Company, User as Profile } from '@/types';
+import { DatePicker } from '../ui/date-picker';
+import { CurrencyInput } from '../ui/currency-input';
+import { Input } from '../ui/input';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import { Paperclip, X, Loader2, Plus, Wand2, BellRing, ChevronsUpDown, Check, Briefcase, FileText } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { formatDistanceToNow } from 'date-fns';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Textarea } from '@/components/ui/textarea';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
-import { CalendarIcon, Loader2, Check, ChevronsUpDown, User, Building, Plus, X, Copy, Briefcase, FileText } from 'lucide-react';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
-import { toast } from 'sonner';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Project, Person, Company, Expense, CustomProperty, BankAccount, User as Profile } from '@/types';
-import { CurrencyInput } from '../ui/currency-input';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { Label } from '../ui/label';
+import { CalendarIcon } from 'lucide-react';
+import { Calendar } from '@/components/ui/calendar';
 import BankAccountFormDialog from './BankAccountFormDialog';
 import BeneficiaryTypeDialog from './BeneficiaryTypeDialog';
 import PersonFormDialog from '../people/PersonFormDialog';
@@ -29,7 +31,9 @@ import CustomPropertyInput from '../settings/CustomPropertyInput';
 import FileUploader, { UploadedFile } from '../ui/FileUploader';
 import { useExpenseExtractor } from '@/hooks/useExpenseExtractor';
 import { Progress } from '../ui/progress';
+import { useAuth } from '@/contexts/AuthContext';
 
+// Using the same schema structure as AddExpenseDialog for consistency
 const expenseSchema = z.object({
   project_id: z.string().uuid("Project is required."),
   created_by: z.string().uuid().optional(),
@@ -58,57 +62,79 @@ const expenseSchema = z.object({
 
 type ExpenseFormValues = z.infer<typeof expenseSchema>;
 
-interface ProjectOption {
-  id: string;
-  name: string;
+interface EditExpenseDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  expense: Expense | null;
 }
 
-const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onOpenChange: (open: boolean) => void, expense: Expense | null }) => {
+interface ProjectOption {
+    id: string;
+    name: string;
+    client_name?: string | null;
+    client_company_name?: string | null;
+}
+
+const EditExpenseDialog = ({ open, onOpenChange, expense }: EditExpenseDialogProps) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSendingReminder, setIsSendingReminder] = useState(false);
+  
+  // Selection States
   const [projectPopoverOpen, setProjectPopoverOpen] = useState(false);
+  const [projectSearch, setProjectSearch] = useState('');
   const [beneficiaryPopoverOpen, setBeneficiaryPopoverOpen] = useState(false);
+  const [beneficiarySearch, setBeneficiarySearch] = useState('');
   const [beneficiary, setBeneficiary] = useState<{ id: string, name: string, type: 'person' | 'company' } | null>(null);
+  
+  // Bank Account States
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
   const [isLoadingBankAccounts, setIsLoadingBankAccounts] = useState(false);
   const [isBankAccountFormOpen, setIsBankAccountFormOpen] = useState(false);
-  const [beneficiarySearch, setBeneficiarySearch] = useState('');
-  const [analysisProgress, setAnalysisProgress] = useState(0);
 
+  // Beneficiary Creation States
   const [isBeneficiaryTypeDialogOpen, setIsBeneficiaryTypeDialogOpen] = useState(false);
   const [isPersonFormOpen, setIsPersonFormOpen] = useState(false);
   const [isCompanyFormOpen, setIsCompanyFormOpen] = useState(false);
   const [newBeneficiaryName, setNewBeneficiaryName] = useState('');
-  
+
   // PIC Selection State
   const [projectMembers, setProjectMembers] = useState<Profile[]>([]);
-  
-  const { extractData, isExtracting } = useExpenseExtractor();
 
-  // Simulate progress when extracting
+  // AI & Files
+  const { extractData, isExtracting } = useExpenseExtractor();
+  const [analysisProgress, setAnalysisProgress] = useState(0);
+  // We keep track of initial attachments to detect deletions
+  const [initialAttachments, setInitialAttachments] = useState<any[]>([]);
+
   useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (isExtracting) {
-      setAnalysisProgress(0);
-      interval = setInterval(() => {
-        setAnalysisProgress((prev) => {
-          if (prev >= 90) return prev; 
-          const diff = Math.random() * 10;
-          return Math.min(prev + diff, 90);
-        });
-      }, 300);
-    } else {
-      setAnalysisProgress(100);
-    }
-    return () => clearInterval(interval);
+      let interval: NodeJS.Timeout;
+      if (isExtracting) {
+        setAnalysisProgress(0);
+        interval = setInterval(() => {
+          setAnalysisProgress((prev) => {
+            if (prev >= 90) return prev; 
+            const diff = Math.random() * 10;
+            return Math.min(prev + diff, 90);
+          });
+        }, 300);
+      } else {
+        setAnalysisProgress(100);
+      }
+      return () => clearInterval(interval);
   }, [isExtracting]);
 
   const { data: projects = [], isLoading: isLoadingProjects } = useQuery<ProjectOption[]>({
-    queryKey: ['projectsForExpenses'],
+    queryKey: ['projectsForExpenseForm'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .rpc('get_dashboard_projects', { p_limit: 1000, p_offset: 0, p_search_term: null, p_exclude_other_personal: false });
+        .rpc('get_dashboard_projects', { 
+            p_limit: 1000,
+            p_offset: 0,
+            p_search_term: null,
+            p_exclude_other_personal: false 
+        });
       if (error) throw error;
       return data;
     },
@@ -143,6 +169,8 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
     resolver: zodResolver(expenseSchema),
     defaultValues: {
       attachments_jsonb: [], 
+      payment_terms: [],
+      custom_properties: {},
     },
   });
 
@@ -152,8 +180,9 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
   const paymentTerms = watch("payment_terms");
   const totalAmount = watch("tf_amount");
   const selectedProjectId = watch("project_id");
+  const currentAttachments = watch("attachments_jsonb") || [];
 
-  // Fetch full expense details to get `created_by` (PIC) which might not be in the list view
+  // Initialize form with expense data
   useEffect(() => {
     const fetchFullExpense = async () => {
       if (expense && open) {
@@ -170,6 +199,9 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
                 setBeneficiary(foundBeneficiary);
             }
             
+            const attachments = (fullExpense.attachments_jsonb as any) || [];
+            setInitialAttachments(attachments);
+
             reset({
                 project_id: fullExpense.project_id,
                 created_by: fullExpense.created_by,
@@ -185,7 +217,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
                 })) || [{ amount: null, request_type: 'Requested', request_date: undefined, release_date: undefined, status: 'Pending' }],
                 bank_account_id: fullExpense.bank_account_id || null,
                 custom_properties: fullExpense.custom_properties || {},
-                attachments_jsonb: (fullExpense.attachments_jsonb as any) || [], 
+                attachments_jsonb: attachments, 
             });
         }
       }
@@ -201,12 +233,10 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
             return;
         }
         
-        // Find project in the loaded list (which contains member info from RPC)
         const projectData = projects.find(p => p.id === selectedProjectId);
         
         if (projectData && (projectData as any).assignedTo) {
             let members = [...(projectData as any).assignedTo];
-            // Include project creator if not in members list
             if ((projectData as any).created_by && !members.find(m => m.id === (projectData as any).created_by.id)) {
                 members.push({ ...(projectData as any).created_by, role: 'owner' });
             }
@@ -223,12 +253,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
     return (totalAmount || 0) - totalAllocated;
   }, [totalAmount, paymentTerms]);
 
-  const paidAmount = useMemo(() => {
-    return (paymentTerms || [])
-      .filter(term => term.status === 'Paid')
-      .reduce((sum, term) => sum + (Number(term.amount) || 0), 0);
-  }, [paymentTerms]);
-
+  // Fetch bank accounts for beneficiary
   useEffect(() => {
     const fetchBankAccounts = async () => {
       if (beneficiary) {
@@ -251,6 +276,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
     fetchBankAccounts();
   }, [beneficiary]);
 
+  // Handle Beneficiary Creation
   const handleCreateNewBeneficiary = (name: string) => {
     setNewBeneficiaryName(name);
     setBeneficiaryPopoverOpen(false);
@@ -271,34 +297,25 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
     setIsBankAccountFormOpen(true);
   };
 
+  // Handle Files & AI
   const handleFileProcessed = async (file: UploadedFile) => {
     let finalUrl = file.url;
     
-    // Check if it's a blob URL
+    // Check if it's a blob URL (new file)
     if (file.url.startsWith('blob:')) {
       try {
         toast.info("Uploading image for analysis...");
-        
-        // 1. Fetch the blob data
         const response = await fetch(file.url);
         const blob = await response.blob();
         const fileObj = new File([blob], file.name, { type: file.type });
 
-        // 2. Upload to Supabase
         const sanitizedFileName = file.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
         const filePath = `temp-analysis/${Date.now()}-${sanitizedFileName}`;
         
-        const { error: uploadError } = await supabase.storage
-          .from('expense')
-          .upload(filePath, fileObj);
-
+        const { error: uploadError } = await supabase.storage.from('expense').upload(filePath, fileObj);
         if (uploadError) throw uploadError;
 
-        // 3. Get Public URL
-        const { data: urlData } = supabase.storage
-          .from('expense')
-          .getPublicUrl(filePath);
-          
+        const { data: urlData } = supabase.storage.from('expense').getPublicUrl(filePath);
         finalUrl = urlData.publicUrl;
       } catch (error) {
         console.error("Pre-analysis upload failed:", error);
@@ -323,83 +340,6 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
         setValue('purpose_payment', extractedData.purpose, { shouldValidate: true });
       }
 
-      let currentBeneficiary = beneficiary;
-
-      if (extractedData.beneficiary && !watch('beneficiary')) {
-        const matchedBeneficiary = beneficiaries.find(b => 
-          b.name.toLowerCase() === extractedData.beneficiary?.toLowerCase() ||
-          b.name.toLowerCase().includes(extractedData.beneficiary?.toLowerCase() || '') ||
-          (extractedData.beneficiary && b.name.toLowerCase().includes(extractedData.beneficiary.toLowerCase()))
-        );
-        if (matchedBeneficiary) {
-          currentBeneficiary = matchedBeneficiary;
-          setBeneficiary(matchedBeneficiary);
-          setValue('beneficiary', matchedBeneficiary.name, { shouldValidate: true });
-        } else {
-          setValue('beneficiary', extractedData.beneficiary, { shouldValidate: true });
-        }
-      }
-
-      // Handle Bank Details
-      if (extractedData.bank_details && extractedData.bank_details.account_number) {
-        const extractedBank = extractedData.bank_details;
-        
-        if (currentBeneficiary) {
-          try {
-            const { data: existingAccounts } = await supabase.from('bank_accounts')
-              .select('*')
-              .eq('owner_id', currentBeneficiary.id)
-              .eq('account_number', extractedBank.account_number)
-              .maybeSingle();
-
-            if (existingAccounts) {
-              setBankAccounts(prev => {
-                const exists = prev.find(p => p.id === existingAccounts.id);
-                return exists ? prev : [...prev, existingAccounts as unknown as BankAccount];
-              });
-              setValue('bank_account_id', existingAccounts.id);
-              toast.info(`Selected existing bank account: ${extractedBank.bank_name}`);
-            } else {
-              const { data: newAccount, error: createError } = await supabase.from('bank_accounts').insert({
-                owner_id: currentBeneficiary.id,
-                owner_type: currentBeneficiary.type,
-                bank_name: extractedBank.bank_name || 'Unknown Bank',
-                account_number: extractedBank.account_number,
-                account_name: extractedBank.account_name || currentBeneficiary.name,
-                swift_code: extractedBank.swift_code || null,
-                created_by: user?.id
-              }).select().single();
-
-              if (createError) throw createError;
-
-              if (newAccount) {
-                setBankAccounts(prev => [...prev, newAccount as unknown as BankAccount]);
-                setValue('bank_account_id', newAccount.id);
-                toast.success(`Created and selected new bank account: ${extractedBank.bank_name}`);
-              }
-            }
-          } catch (err) {
-            console.error('Error auto-creating bank account:', err);
-          }
-        } else {
-          const tempId = `temp-${Date.now()}`;
-          const tempAccount: BankAccount = {
-            id: tempId,
-            account_name: extractedBank.account_name || extractedData.beneficiary || 'Unknown Name',
-            account_number: extractedBank.account_number,
-            bank_name: extractedBank.bank_name || 'Unknown Bank',
-            swift_code: extractedBank.swift_code || null,
-            is_legacy: true, 
-            owner_id: 'temp',
-            owner_type: 'person'
-          };
-          
-          setBankAccounts([tempAccount]);
-          setValue('bank_account_id', tempId);
-          toast.info(`Set temporary bank details: ${extractedBank.bank_name}`);
-        }
-      }
-
       if (extractedData.remarks) {
         const currentRemarks = watch('remarks') || '';
         const newRemarks = currentRemarks ? `${currentRemarks}\n\n--- AI Extracted Notes ---\n${extractedData.remarks}` : extractedData.remarks;
@@ -410,10 +350,72 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
     }
   };
 
+  // Handle File List Changes (Sync with Form)
+  const handleFilesChange = (files: any[]) => {
+      // files can contain both File objects (new) and UploadedFile objects (existing)
+      // We need to map them back to the form structure if they are valid
+      // The FileUploader manages the display state, we just need to ensure the form has the right data on submit
+      // Since FileUploader returns everything, we can put it in state or use it directly
+      
+      // For the form, we ideally store only the metadata of files that are ready (or markers for new ones)
+      // But FileUploader doesn't give us storage paths for new files until we upload them.
+      // So we'll handle actual upload on Submit.
+      // We store the mixed array in a local state and process it on submit.
+      
+      // However, to keep it simple with react-hook-form:
+      // We will let FileUploader handle display, and we'll separate new files from existing for submission.
+      // BUT `value` prop needs to persist.
+      
+      // Update form value directly
+      setValue('attachments_jsonb', files as any, { shouldDirty: true });
+  };
+
   const onSubmit = async (values: ExpenseFormValues) => {
     if (!expense) return;
     setIsSubmitting(true);
     try {
+      // 1. Handle File Uploads/Deletions
+      const currentFiles = values.attachments_jsonb || [];
+      const newFilesToUpload = currentFiles.filter((f: any) => f.originalFile instanceof File);
+      const existingFilesKept = currentFiles.filter((f: any) => !(f.originalFile instanceof File));
+
+      // Calculate files to delete (Initial - Kept)
+      const filesToDelete = initialAttachments.filter(initFile => 
+          !existingFilesKept.some((kept: any) => kept.url === initFile.url)
+      );
+
+      // Delete removed files from storage
+      if (filesToDelete.length > 0) {
+          const paths = filesToDelete.map(f => f.storagePath).filter(Boolean);
+          if (paths.length > 0) {
+              await supabase.storage.from('expense').remove(paths);
+          }
+      }
+
+      // Upload new files
+      const uploadedFilesMetadata = [];
+      for (const fileItem of newFilesToUpload) {
+          const file = (fileItem as any).originalFile as File;
+          const sanitizedFileName = file.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
+          const filePath = `expense-attachments/${expense.id}/${Date.now()}-${sanitizedFileName}`;
+          
+          const { error: uploadError } = await supabase.storage.from('expense').upload(filePath, file);
+          if (uploadError) throw new Error(`Failed to upload ${file.name}: ${uploadError.message}`);
+          
+          const { data: urlData } = supabase.storage.from('expense').getPublicUrl(filePath);
+          
+          uploadedFilesMetadata.push({
+              name: file.name,
+              url: urlData.publicUrl,
+              size: file.size,
+              type: file.type,
+              storagePath: filePath
+          });
+      }
+
+      const finalAttachments = [...existingFilesKept, ...uploadedFilesMetadata];
+
+      // 2. Prepare Data
       const selectedAccount = bankAccounts.find(acc => acc.id === values.bank_account_id);
       const isTempAccount = selectedAccount && (selectedAccount.id.startsWith('temp-') || selectedAccount.is_legacy);
 
@@ -429,6 +431,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
         bankDetails = expense.account_bank;
       }
 
+      // 3. Update DB
       const { error } = await supabase.from('expenses').update({
         project_id: values.project_id,
         created_by: values.created_by, // Update PIC
@@ -445,7 +448,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
         remarks: values.remarks,
         status_expense: values.status_expense,
         custom_properties: values.custom_properties,
-        attachments_jsonb: values.attachments_jsonb, 
+        attachments_jsonb: finalAttachments, 
       }).eq('id', expense.id);
 
       if (error) throw error;
@@ -459,11 +462,9 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
     }
   };
 
-  const nameParts = newBeneficiaryName.split(' ');
-  const firstName = nameParts[0] || '';
-  const lastName = nameParts.slice(1).join(' ') || '';
-
   const isFormDisabled = isSubmitting || isExtracting;
+
+  if (!expense) return null;
 
   return (
     <>
@@ -471,7 +472,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Edit Expense</DialogTitle>
-            <DialogDescription>Update the details for this expense record.</DialogDescription>
+            <DialogDescription>Update details for this expense record.</DialogDescription>
           </DialogHeader>
           <Form {...form}>
             <form id="expense-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 max-h-[70vh] overflow-y-auto p-4">
@@ -481,29 +482,48 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
                     <FormLabel>Project</FormLabel>
-                    <Popover open={projectPopoverOpen} onOpenChange={setProjectPopoverOpen}>
+                    <Popover open={projectPopoverOpen} onOpenChange={setProjectPopoverOpen} modal={true}>
                       <PopoverTrigger asChild>
                         <FormControl>
-                          <Button variant="outline" role="combobox" className={cn("w-full justify-between", !field.value && "text-muted-foreground")} disabled={isLoadingProjects || isFormDisabled}>
+                          <Button variant="outline" role="combobox" className={cn("w-full justify-between", !field.value && "text-muted-foreground")} disabled={isFormDisabled}>
                             {field.value ? projects.find((project) => project.id === field.value)?.name : "Select a project"}
                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                           </Button>
                         </FormControl>
                       </PopoverTrigger>
-                      <PopoverContent className="w-[300px] p-0" align="start">
+                      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
                         <Command>
-                          <CommandInput placeholder="Search project..." />
+                          <CommandInput placeholder="Search project..." value={projectSearch} onValueChange={setProjectSearch} />
                           <CommandList>
-                            <CommandEmpty>No project found.</CommandEmpty>
-                            <CommandGroup>
-                              {projects.map((project) => (
-                                <CommandItem value={project.name} key={project.id} onSelect={() => { form.setValue("project_id", project.id); setProjectPopoverOpen(false); }}>
-                                  <Check className={cn("mr-2 h-4 w-4", project.id === field.value ? "opacity-100" : "opacity-0")} />
-                                  <Briefcase className="mr-2 h-4 w-4 text-muted-foreground" />
-                                  {project.name}
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
+                            {isLoadingProjects && <div className="p-4 text-center text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin inline mr-2" />Loading projects...</div>}
+                            {!isLoadingProjects && (
+                              <>
+                                <CommandEmpty>No projects found.</CommandEmpty>
+                                <CommandGroup className="max-h-60 overflow-y-auto">
+                                  {projects.map((project) => (
+                                    <CommandItem 
+                                      value={`${project.name} ${project.id}`}
+                                      key={project.id} 
+                                      onSelect={() => { 
+                                        form.setValue("project_id", project.id); 
+                                        setProjectPopoverOpen(false); 
+                                        setProjectSearch(''); 
+                                      }}
+                                    >
+                                      <Check className={cn("mr-2 h-4 w-4", project.id === field.value ? "opacity-100" : "opacity-0")} />
+                                      <div className="flex flex-col">
+                                          <span>{project.name}</span>
+                                          {(project.client_company_name || project.client_name) && (
+                                            <span className="text-xs text-muted-foreground">
+                                              {project.client_company_name || project.client_name}
+                                            </span>
+                                          )}
+                                      </div>
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              </>
+                            )}
                           </CommandList>
                         </Command>
                       </PopoverContent>
@@ -520,7 +540,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>PIC (Person In Charge)</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || undefined} disabled={isFormDisabled || projectMembers.length === 0}>
+                    <Select onValueChange={field.onChange} defaultValue={field.value || user?.id} disabled={isFormDisabled || projectMembers.length === 0}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select PIC" />
@@ -563,21 +583,21 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
                       <FormLabel className="flex items-center gap-2">
                         <FileText className="h-4 w-4" /> Attachments
                       </FormLabel>
-                      {isExtracting && <span className="text-xs text-primary animate-pulse flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin"/> Analyzing... {Math.round(analysisProgress)}%</span>}
+                      {isExtracting && <span className="text-xs text-primary animate-pulse flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin"/> Analyzing document...</span>}
                     </div>
                     {isExtracting && (
-                      <div className="space-y-1 mb-2">
-                        <Progress value={analysisProgress} className="h-1.5" />
+                      <div className="w-full h-1 bg-muted rounded-full overflow-hidden mb-2">
+                         <div className="h-full bg-primary animate-pulse w-full origin-left" style={{ animationDuration: '1.5s' }} />
                       </div>
                     )}
                     <div className="text-xs text-muted-foreground mb-1">
-                        Upload invoice or receipt to auto-fill details (Images or PDF)
+                        Upload invoice or receipt to auto-fill details (Image & PDF supported)
                     </div>
                     <FormControl>
                       <FileUploader
                         bucket="expense"
                         value={field.value || []}
-                        onChange={field.onChange}
+                        onChange={(files) => handleFilesChange(files)}
                         maxFiles={5}
                         maxSize={20971520} // 20MB
                         accept={{ 'image/*': ['.png', '.jpg', '.jpeg', '.webp'], 'application/pdf': ['.pdf'] }}
@@ -685,7 +705,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
                           <FormItem><FormLabel className="text-xs">Amount</FormLabel><FormControl><CurrencyInput value={field.value} onChange={field.onChange} placeholder="Amount" disabled={isFormDisabled} /></FormControl><FormMessage /></FormItem>
                         )} />
                         <FormField control={form.control} name={`payment_terms.${index}.request_date`} render={({ field }) => (
-                          <FormItem><FormLabel className="text-xs">Requested Date (Auto-filled)</FormLabel><div className="flex gap-1">
+                          <FormItem><FormLabel className="text-xs">Requested Date</FormLabel><div className="flex gap-1">
                             <FormField control={form.control} name={`payment_terms.${index}.request_type`} render={({ field: typeField }) => (
                               <FormItem><Select onValueChange={typeField.onChange} defaultValue={typeField.value} disabled={isFormDisabled}><FormControl><SelectTrigger className="w-[110px] bg-background"><SelectValue placeholder="Type" /></SelectTrigger></FormControl><SelectContent><SelectItem value="Requested">Requested</SelectItem><SelectItem value="Due">Due</SelectItem></SelectContent></Select></FormItem>
                             )} />
@@ -694,7 +714,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
                         )} />
                         <div className="grid grid-cols-2 gap-4">
                           <FormField control={form.control} name={`payment_terms.${index}.release_date`} render={({ field }) => (
-                            <FormItem><FormLabel className="text-xs">Payment Schedule (Due Date)</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal bg-background", !field.value && "text-muted-foreground")} disabled={isFormDisabled}>{field.value ? format(field.value, "PPP") : <span>Pick a date</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value || undefined} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>
+                            <FormItem><FormLabel className="text-xs">Payment Schedule</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal bg-background", !field.value && "text-muted-foreground")} disabled={isFormDisabled}>{field.value ? format(field.value, "PPP") : <span>Pick a date</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value || undefined} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>
                           )} />
                           <FormField control={form.control} name={`payment_terms.${index}.status`} render={({ field }) => (
                             <FormItem><FormLabel className="text-xs">Status</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value} disabled={isFormDisabled}><FormControl><SelectTrigger className="bg-background"><SelectValue placeholder="Status" /></SelectTrigger></FormControl><SelectContent><SelectItem value="Pending">Pending</SelectItem><SelectItem value="Paid">Paid</SelectItem><SelectItem value="Rejected">Rejected</SelectItem></SelectContent></Select><FormMessage /></FormItem>
@@ -776,7 +796,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
         />
       )}
       <BeneficiaryTypeDialog open={isBeneficiaryTypeDialogOpen} onOpenChange={setIsBeneficiaryTypeDialogOpen} onSelect={handleSelectBeneficiaryType} />
-      <PersonFormDialog open={isPersonFormOpen} onOpenChange={setIsPersonFormOpen} person={null} initialValues={{ first_name: firstName, last_name: lastName }} onSuccess={(newPerson) => handleBeneficiaryCreated(newPerson, 'person')} />
+      <PersonFormDialog open={isPersonFormOpen} onOpenChange={setIsPersonFormOpen} person={null} initialValues={{ first_name: newBeneficiaryName.split(' ')[0], last_name: newBeneficiaryName.split(' ').slice(1).join(' ') }} onSuccess={(newPerson) => handleBeneficiaryCreated(newPerson, 'person')} />
       <CompanyFormDialog open={isCompanyFormOpen} onOpenChange={setIsCompanyFormOpen} company={null} initialValues={{ name: newBeneficiaryName }} onSuccess={(newCompany) => handleBeneficiaryCreated(newCompany, 'company')} />
     </>
   );
