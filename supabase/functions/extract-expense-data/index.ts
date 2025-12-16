@@ -34,13 +34,29 @@ serve(async (req) => {
     }
 
     const anthropicApiKey = Deno.env.get('ANTHROPIC_API_KEY');
-    if (!anthropicApiKey) {
-      throw new Error('ANTHROPIC_API_KEY not set');
+    
+    // Check for OpenAI Key (Env or DB)
+    let openaiApiKey = Deno.env.get('OPENAI_API_KEY');
+    if (!openaiApiKey) {
+        const supabaseAdmin = createClient(
+            Deno.env.get('SUPABASE_URL') ?? '',
+            Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+        );
+        const { data: config } = await supabaseAdmin
+            .from('app_config')
+            .select('value')
+            .eq('key', 'OPENAI_API_KEY')
+            .maybeSingle();
+        if (config) openaiApiKey = config.value;
+    }
+
+    if (!anthropicApiKey && !openaiApiKey) {
+      throw new Error('No AI provider configured. Please set ANTHROPIC_API_KEY or OPENAI_API_KEY.');
     }
 
     const { base64, mimeType } = await fetchFileAsBase64(fileUrl);
 
-    const prompt = `You are an expert expense data extractor. Analyze the provided document (invoice, bill, or receipt) and extract the following information. Respond ONLY with a JSON object matching the schema provided below. Do not include any other text, explanation, or markdown formatting outside the JSON object.
+    const promptText = `You are an expert expense data extractor. Analyze the provided document (invoice, bill, or receipt) and extract the following information. Respond ONLY with a JSON object matching the schema provided below. Do not include any other text, explanation, or markdown formatting outside the JSON object.
 
 Schema:
 {
@@ -63,57 +79,98 @@ Schema:
 Document Name: ${fileName}
 `;
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': anthropicApiKey,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: 'claude-3-haiku-20240307',
-        max_tokens: 1024,
-        messages: [
-          {
-            role: 'user',
-            content: [
-              {
-                type: 'image',
-                source: {
-                  type: 'base64',
-                  media_type: mimeType,
-                  data: base64,
-                },
-              },
-              {
-                type: 'text',
-                text: prompt,
-              },
-            ],
-          },
-        ],
-      }),
-    });
+    let extractedData;
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Anthropic API Error:', errorText);
-      throw new Error(`Anthropic API failed: ${response.status}`);
+    // Try Anthropic first if available
+    if (anthropicApiKey) {
+        const response = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-api-key': anthropicApiKey,
+                'anthropic-version': '2023-06-01',
+            },
+            body: JSON.stringify({
+                model: 'claude-3-haiku-20240307',
+                max_tokens: 1024,
+                messages: [
+                    {
+                        role: 'user',
+                        content: [
+                            {
+                                type: 'image',
+                                source: {
+                                    type: 'base64',
+                                    media_type: mimeType,
+                                    data: base64,
+                                },
+                            },
+                            {
+                                type: 'text',
+                                text: promptText,
+                            },
+                        ],
+                    },
+                ],
+            }),
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('Anthropic API Error:', errorText);
+            // If Anthropic fails and we have OpenAI, try OpenAI? 
+            // For now let's throw, unless we want complex fallback logic.
+            // If only Anthropic key was present, this is fatal.
+            if (!openaiApiKey) throw new Error(`Anthropic API failed: ${response.status}`);
+        } else {
+            const data = await response.json();
+            const extractedText = data.content[0].text.trim();
+            const jsonMatch = extractedText.match(/\{[\s\S]*\}/);
+            extractedData = JSON.parse(jsonMatch ? jsonMatch[0] : extractedText);
+        }
+    }
+    
+    // Fallback to OpenAI if Anthropic didn't run or failed (and we caught it/didn't throw)
+    if (!extractedData && openaiApiKey) {
+         const response = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${openaiApiKey}`,
+            },
+            body: JSON.stringify({
+                model: 'gpt-4o',
+                messages: [
+                    {
+                        role: 'user',
+                        content: [
+                            { type: 'text', text: promptText },
+                            {
+                                type: 'image_url',
+                                image_url: {
+                                    url: `data:${mimeType};base64,${base64}`,
+                                },
+                            },
+                        ],
+                    },
+                ],
+                max_tokens: 1000,
+                response_format: { type: "json_object" }
+            }),
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('OpenAI API Error:', errorText);
+            throw new Error(`OpenAI API failed: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        extractedData = JSON.parse(data.choices[0].message.content);
     }
 
-    const data = await response.json();
-    const extractedText = data.content[0].text.trim();
-    
-    // Attempt to parse the JSON response
-    let extractedData;
-    try {
-        // Find JSON block if wrapped in text
-        const jsonMatch = extractedText.match(/\{[\s\S]*\}/);
-        const jsonString = jsonMatch ? jsonMatch[0] : extractedText;
-        extractedData = JSON.parse(jsonString);
-    } catch (e) {
-        console.error('Failed to parse AI response JSON:', extractedText);
-        throw new Error('AI returned invalid JSON format.');
+    if (!extractedData) {
+        throw new Error("Failed to extract data from AI provider.");
     }
 
     return new Response(JSON.stringify({ success: true, data: extractedData }), {
