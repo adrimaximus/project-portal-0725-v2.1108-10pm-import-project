@@ -77,7 +77,6 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: EditExpenseDialogPro
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSendingReminder, setIsSendingReminder] = useState(false);
   
   // Selection States
   const [projectPopoverOpen, setProjectPopoverOpen] = useState(false);
@@ -198,7 +197,6 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: EditExpenseDialogPro
   const paymentTerms = watch("payment_terms");
   const totalAmount = watch("tf_amount");
   const selectedProjectId = watch("project_id");
-  const currentAttachments = watch("attachments_jsonb") || [];
 
   // Initialize form with expense data
   useEffect(() => {
@@ -315,11 +313,54 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: EditExpenseDialogPro
     setIsBankAccountFormOpen(true);
   };
 
+  const findMatchingProject = (extracted: any) => {
+      let bestMatch: ProjectOption | null = null;
+      let maxScore = 0;
+      const normalize = (s: string) => s?.toLowerCase().trim() || '';
+
+      projects.forEach(p => {
+          let score = 0;
+          const pName = normalize(p.name);
+          const cName = normalize(p.client_name || '');
+          const cComp = normalize(p.client_company_name || '');
+          const pVenue = normalize(p.venue || '');
+          
+          const exBeneficiary = normalize(extracted.beneficiary); 
+          const exAddress = normalize(extracted.address || ''); 
+          const exVenue = normalize(extracted.venue || '');
+          const exDate = extracted.date ? parseISO(extracted.date) : null;
+          
+          if (exBeneficiary) {
+              if (cComp && (cComp.includes(exBeneficiary) || exBeneficiary.includes(cComp))) score += 10;
+              else if (cName && (cName.includes(exBeneficiary) || exBeneficiary.includes(cName))) score += 5;
+              if (pName.includes(exBeneficiary)) score += 3;
+          }
+
+          const checkVenue = exVenue || exAddress;
+          if (pVenue && checkVenue) {
+             if (pVenue.includes(checkVenue) || checkVenue.includes(pVenue)) score += 8;
+          }
+
+          if (exDate && !isNaN(exDate.getTime()) && p.start_date) {
+              const start = new Date(p.start_date);
+              const end = p.due_date ? new Date(p.due_date) : new Date(start);
+              const bufferStart = new Date(start); bufferStart.setDate(start.getDate() - 7);
+              const bufferEnd = new Date(end); bufferEnd.setDate(end.getDate() + 60);
+              if (isWithinInterval(exDate, { start: bufferStart, end: bufferEnd })) score += 5;
+          }
+
+          if (score > maxScore) {
+              maxScore = score;
+              bestMatch = p;
+          }
+      });
+      return maxScore > 0 ? bestMatch : null;
+  };
+
   // Handle Files & AI
   const handleFileProcessed = async (file: UploadedFile) => {
     let finalUrl = file.url;
     
-    // Check if it's a blob URL (new file)
     if (file.url.startsWith('blob:')) {
       try {
         toast.info("Uploading image for analysis...");
@@ -355,10 +396,18 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: EditExpenseDialogPro
         }
       }
       
-      if (extractedData.purpose) {
-        setValue('purpose_payment', extractedData.purpose, { shouldValidate: true });
-      } else if (extractedData.description) {
-        setValue('purpose_payment', extractedData.description, { shouldValidate: true });
+      // Improved Purpose Payment autofill
+      // We gather all possible sources for description
+      const explicitDescription = extractedData.description || extractedData.purpose;
+      const itemsDescription = Array.isArray(extractedData.items) && extractedData.items.length > 0 
+          ? extractedData.items.map((i: any) => i.description || i.name).filter(Boolean).join(', ') 
+          : null;
+      
+      // Determine the best description: Prefer detailed items if available, otherwise explicit description
+      const purpose = itemsDescription || explicitDescription || extractedData.summary;
+
+      if (purpose) {
+        setValue('purpose_payment', purpose, { shouldValidate: true });
       }
 
       // 2. Beneficiary Matching
@@ -632,7 +681,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: EditExpenseDialogPro
                   </FormItem>
                 )}
               />
-              
+
               {/* PIC Selector */}
               <FormField
                 control={form.control}
@@ -683,17 +732,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: EditExpenseDialogPro
                       <FormLabel className="flex items-center gap-2">
                         <FileText className="h-4 w-4" /> Attachments
                       </FormLabel>
-                      {isExtracting && <span className="text-xs text-primary animate-pulse flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin"/> Analyzing document...</span>}
                     </div>
-                    {isExtracting && (
-                      <div className="space-y-1 mb-2">
-                        <div className="flex justify-between text-xs text-muted-foreground">
-                          <span>Analyzing...</span>
-                          <span>{Math.round(analysisProgress)}%</span>
-                        </div>
-                        <Progress value={analysisProgress} className="h-1" />
-                      </div>
-                    )}
                     <div className="text-xs text-muted-foreground mb-1">
                         Upload invoice or receipt to auto-fill details (Image & PDF supported)
                     </div>

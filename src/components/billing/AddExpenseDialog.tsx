@@ -10,14 +10,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { CalendarIcon, Loader2, Check, ChevronsUpDown, User, Building, Plus, X, Copy, Briefcase, FileText } from 'lucide-react';
+import { CalendarIcon, Loader2, Check, ChevronsUpDown, User, Building, Plus, X, Copy, FileText } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, isWithinInterval, parseISO } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Project, Person, Company, Expense, CustomProperty, BankAccount, User as Profile } from '@/types';
+import { Project, Person, Company, CustomProperty, BankAccount, User as Profile } from '@/types';
 import { CurrencyInput } from '../ui/currency-input';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Label } from '../ui/label';
@@ -27,7 +27,7 @@ import PersonFormDialog from '../people/PersonFormDialog';
 import CompanyFormDialog from '../people/CompanyFormDialog';
 import CreateProjectDialog from '../projects/CreateProjectDialog';
 import CustomPropertyInput from '../settings/CustomPropertyInput';
-import FileUploader, { UploadedFile, ProcessingFileState } from '../ui/FileUploader';
+import FileUploader, { UploadedFile } from '../ui/FileUploader';
 import { useExpenseExtractor } from '@/hooks/useExpenseExtractor';
 
 interface AddExpenseDialogProps {
@@ -126,7 +126,6 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
   const { data: projects = [], isLoading: isLoadingProjects } = useQuery<ProjectOption[]>({
     queryKey: ['projectsForExpenseForm'],
     queryFn: async () => {
-      // We need client names, dates, and venue for matching
       const { data, error } = await supabase
         .rpc('get_dashboard_projects_v2', { 
             p_limit: 1000,
@@ -147,19 +146,12 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
   const { data: beneficiaries = [], isLoading: isLoadingBeneficiaries } = useQuery({
     queryKey: ['beneficiaries'],
     queryFn: async () => {
-      const { data: people, error: peopleError } = await supabase
-        .from('people')
-        .select('id, full_name');
+      const { data: people, error: peopleError } = await supabase.from('people').select('id, full_name');
       if (peopleError) throw peopleError;
-
-      const { data: companies, error: companiesError } = await supabase
-        .from('companies')
-        .select('id, name');
+      const { data: companies, error: companiesError } = await supabase.from('companies').select('id, name');
       if (companiesError) throw companiesError;
-
       const formattedPeople = people.map(p => ({ id: p.id, name: p.full_name, type: 'person' as const }));
       const formattedCompanies = companies.map(c => ({ id: c.id, name: c.name, type: 'company' as const }));
-
       return [...formattedPeople, ...formattedCompanies].sort((a, b) => a.name.localeCompare(b.name));
     },
     enabled: open,
@@ -200,18 +192,14 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
   const totalAmount = watch("tf_amount");
   const selectedProjectId = watch("project_id");
 
-  // Fetch project members when project is selected to populate PIC
   useEffect(() => {
     const fetchMembers = async () => {
         if (!selectedProjectId) {
             setProjectMembers(user ? [user] : []);
             return;
         }
-
         const project = projects.find(p => p.id === selectedProjectId);
-        // If we have assignedTo in the project object already, use it
         if (project && project.assignedTo) {
-            // Also include the creator if not in assignedTo
             let members = [...project.assignedTo];
             if (project.created_by && !members.find(m => m.id === project.created_by.id)) {
                 members.push({ ...project.created_by, role: 'owner' } as any);
@@ -224,7 +212,6 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
     fetchMembers();
   }, [selectedProjectId, projects, user]);
 
-
   const balance = useMemo(() => {
     const totalPaid = (paymentTerms || []).reduce((sum, term) => sum + (Number(term.amount) || 0), 0);
     return (totalAmount || 0) - totalPaid;
@@ -234,12 +221,10 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
     const fetchBankAccounts = async () => {
       if (beneficiary) {
         setIsLoadingBankAccounts(true);
-        const { data, error } = await supabase
-          .rpc('get_beneficiary_bank_accounts', {
+        const { data, error } = await supabase.rpc('get_beneficiary_bank_accounts', {
             p_owner_id: beneficiary.id,
             p_owner_type: beneficiary.type,
-          });
-        
+        });
         if (error) {
           toast.error("Failed to fetch bank accounts.");
           setBankAccounts([]);
@@ -266,28 +251,21 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
 
   const handleSelectBeneficiaryType = (type: 'person' | 'company') => {
     setIsBeneficiaryTypeDialogOpen(false);
-    if (type === 'person') {
-      setIsPersonFormOpen(true);
-    } else {
-      setIsCompanyFormOpen(true);
-    }
+    if (type === 'person') setIsPersonFormOpen(true);
+    else setIsCompanyFormOpen(true);
   };
 
   const handleBeneficiaryCreated = (newItem: Person | Company, type: 'person' | 'company') => {
     queryClient.invalidateQueries({ queryKey: ['beneficiaries'] });
-    
     const beneficiaryData = { id: newItem.id, name: type === 'person' ? (newItem as Person).full_name : (newItem as Company).name, type };
     setBeneficiary(beneficiaryData);
     form.setValue('beneficiary', beneficiaryData.name);
-
     setIsBankAccountFormOpen(true);
   };
 
   const findMatchingProject = (extracted: any) => {
       let bestMatch: ProjectOption | null = null;
       let maxScore = 0;
-
-      // Normalize strings for comparison
       const normalize = (s: string) => s?.toLowerCase().trim() || '';
 
       projects.forEach(p => {
@@ -297,44 +275,28 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
           const cComp = normalize(p.client_company_name || '');
           const pVenue = normalize(p.venue || '');
           
-          const exBeneficiary = normalize(extracted.beneficiary); // Brand/Merchant name from invoice
+          const exBeneficiary = normalize(extracted.beneficiary); 
           const exAddress = normalize(extracted.address || ''); 
           const exVenue = normalize(extracted.venue || '');
           const exDate = extracted.date ? parseISO(extracted.date) : null;
           
-          // 1. Beneficiary / Brand Match (High Priority)
           if (exBeneficiary) {
-              if (cComp && (cComp.includes(exBeneficiary) || exBeneficiary.includes(cComp))) {
-                  score += 10;
-              } else if (cName && (cName.includes(exBeneficiary) || exBeneficiary.includes(cName))) {
-                  score += 5;
-              }
-              // Also check project name for brand name
-              if (pName.includes(exBeneficiary)) {
-                  score += 3;
-              }
+              if (cComp && (cComp.includes(exBeneficiary) || exBeneficiary.includes(cComp))) score += 10;
+              else if (cName && (cName.includes(exBeneficiary) || exBeneficiary.includes(cName))) score += 5;
+              if (pName.includes(exBeneficiary)) score += 3;
           }
 
-          // 2. Venue Match
           const checkVenue = exVenue || exAddress;
           if (pVenue && checkVenue) {
-             if (pVenue.includes(checkVenue) || checkVenue.includes(pVenue)) {
-                 score += 8;
-             }
+             if (pVenue.includes(checkVenue) || checkVenue.includes(pVenue)) score += 8;
           }
 
-          // 3. Date & Venue Match (Fallback/Support Priority)
-          // If the date on invoice is within project timeline + buffer
           if (exDate && !isNaN(exDate.getTime()) && p.start_date) {
               const start = new Date(p.start_date);
               const end = p.due_date ? new Date(p.due_date) : new Date(start);
-              // Allow invoice to be 1 week before start and up to 2 months after end
               const bufferStart = new Date(start); bufferStart.setDate(start.getDate() - 7);
               const bufferEnd = new Date(end); bufferEnd.setDate(end.getDate() + 60);
-
-              if (isWithinInterval(exDate, { start: bufferStart, end: bufferEnd })) {
-                  score += 5;
-              }
+              if (isWithinInterval(exDate, { start: bufferStart, end: bufferEnd })) score += 5;
           }
 
           if (score > maxScore) {
@@ -342,36 +304,28 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
               bestMatch = p;
           }
       });
-
       return maxScore > 0 ? bestMatch : null;
   };
 
   const handleFileProcessed = async (file: UploadedFile) => {
     setCurrentProcessingFile(file.name);
     
-    // FileUploader already uploads the file and returns a public URL.
-    // So we can directly use file.url for analysis.
-    
     const extractedData = await extractData({ url: file.url, type: file.type });
     
     if (extractedData) {
-      // 1. Amount & Payment Terms
       if (extractedData.amount && extractedData.amount > 0) {
         setValue('tf_amount', extractedData.amount, { shouldValidate: true });
         
-        // Auto-configure payment term
         const terms = form.getValues('payment_terms');
         const invoiceDate = extractedData.date ? new Date(extractedData.date) : new Date();
-        const dueDate = extractedData.due_date ? new Date(extractedData.due_date) : invoiceDate; // Use extracted due date if available
+        const dueDate = extractedData.due_date ? new Date(extractedData.due_date) : invoiceDate;
 
         if (terms && terms.length === 1) {
-             // Update the single default term
              setValue('payment_terms.0.amount', extractedData.amount);
-             setValue('payment_terms.0.request_date', new Date()); // Today
-             setValue('payment_terms.0.release_date', dueDate); // Due Date
+             setValue('payment_terms.0.request_date', new Date());
+             setValue('payment_terms.0.release_date', dueDate);
              setValue('payment_terms.0.status', 'Pending');
         } else {
-             // Replace existing terms with a single calculated term
              setValue('payment_terms', [{
                  amount: extractedData.amount,
                  request_type: 'Requested',
@@ -383,18 +337,19 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
       }
       
       // Improved Purpose Payment autofill
-      const purpose = extractedData.purpose || 
-                      extractedData.summary || 
-                      extractedData.description || 
-                      (Array.isArray(extractedData.items) && extractedData.items.length > 0 
-                          ? extractedData.items.map((i: any) => i.description || i.name).filter(Boolean).join(', ') 
-                          : undefined);
+      // We gather all possible sources for description
+      const explicitDescription = extractedData.description || extractedData.purpose;
+      const itemsDescription = Array.isArray(extractedData.items) && extractedData.items.length > 0 
+          ? extractedData.items.map((i: any) => i.description || i.name).filter(Boolean).join(', ') 
+          : null;
+      
+      // Determine the best description: Prefer detailed items if available, otherwise explicit description
+      const purpose = itemsDescription || explicitDescription || extractedData.summary;
 
       if (purpose) {
         setValue('purpose_payment', purpose, { shouldValidate: true });
       }
 
-      // 2. Beneficiary Matching
       let currentBeneficiary = beneficiary;
       
       if (extractedData.beneficiary && !watch('beneficiary')) {
@@ -413,7 +368,6 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
         }
       }
 
-      // 3. Project Matching
       if (!watch('project_id')) {
           const matchedProject = findMatchingProject(extractedData);
           if (matchedProject) {
@@ -422,7 +376,6 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
           }
       }
 
-      // 4. Bank Details
       if (extractedData.bank_details && extractedData.bank_details.account_number) {
         const extractedBank = extractedData.bank_details;
         
@@ -457,7 +410,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
               if (newAccount) {
                 setBankAccounts(prev => [...prev, newAccount as unknown as BankAccount]);
                 setValue('bank_account_id', newAccount.id);
-                toast.success(`Automatically added and selected new bank account: ${extractedBank.bank_name} ${extractedBank.swift_code ? `(${extractedBank.swift_code})` : ''}`);
+                toast.success(`Added new bank account: ${extractedBank.bank_name}`);
               }
             }
           } catch (err) {
@@ -475,7 +428,6 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
             owner_id: 'temp',
             owner_type: 'person'
           };
-          
           setBankAccounts([tempAccount]);
           setValue('bank_account_id', tempId);
           toast.info(`Set temporary bank details: ${extractedBank.bank_name}`);
@@ -484,24 +436,22 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
 
       if (extractedData.remarks) {
         const currentRemarks = watch('remarks') || '';
-        const newRemarks = currentRemarks ? `${currentRemarks}\n\n--- AI Extracted Notes ---\n${extractedData.remarks}` : extractedData.remarks;
+        const newRemarks = currentRemarks ? `${currentRemarks}\n\n--- AI Notes ---\n${extractedData.remarks}` : extractedData.remarks;
         setValue('remarks', newRemarks, { shouldValidate: true });
       }
       
-      toast.success("Data extracted from document!");
+      toast.success("Data extracted successfully!");
     }
-    
     setCurrentProcessingFile(null);
   };
 
-  // Handle File List Changes (Sync with Form)
   const handleFilesChange = (files: any[]) => {
       setValue('attachments_jsonb', files as any, { shouldDirty: true });
   };
 
   const onSubmit = async (values: ExpenseFormValues) => {
     if (!user) {
-      toast.error("You must be logged in to add an expense.");
+      toast.error("You must be logged in.");
       return;
     }
     setIsSubmitting(true);
@@ -518,7 +468,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
 
       const { error } = await supabase.from('expenses').insert({
         project_id: values.project_id,
-        created_by: values.created_by || user.id, // Use delegated PIC or default to user
+        created_by: values.created_by || user.id,
         purpose_payment: values.purpose_payment,
         beneficiary: values.beneficiary,
         tf_amount: values.tf_amount,
@@ -551,10 +501,6 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
     }
   };
 
-  const nameParts = newBeneficiaryName.split(' ');
-  const firstName = nameParts[0] || '';
-  const lastName = nameParts.slice(1).join(' ') || '';
-  
   const isFormDisabled = isSubmitting || isExtracting;
 
   return (
@@ -628,7 +574,6 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                 )}
               />
               
-              {/* PIC Selector */}
               <FormField
                 control={form.control}
                 name="created_by"
@@ -856,7 +801,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={isFormDisabled}>Cancel</Button>
             <Button type="submit" form="expense-form" disabled={isFormDisabled}>
               {(isSubmitting || isExtracting) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isExtracting ? 'Analyzing Document...' : 'Add Expense'}
+              {isExtracting ? 'Analyzing...' : 'Add Expense'}
             </Button>
           </DialogFooter>
         </DialogContent>
