@@ -82,6 +82,7 @@ Deno.serve(async (req) => {
                 - bank_name: Name of the bank (e.g., BCA, Mandiri, BRI, BNI).
                 - account_number: Account number (string, digits only).
                 - account_name: Name on the account (string).
+                - swift_code: SWIFT/BIC code if visible (string).
               Look for keywords like "Bank", "Transfer", "No. Rek", "Account No", "A/C", "IBAN", "Swift".
               If not visible, set to null.
             

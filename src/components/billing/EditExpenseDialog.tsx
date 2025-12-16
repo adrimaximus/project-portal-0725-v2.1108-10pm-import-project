@@ -267,6 +267,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
                 bank_name: extractedBank.bank_name || 'Unknown Bank',
                 account_number: extractedBank.account_number,
                 account_name: extractedBank.account_name || currentBeneficiary.name,
+                swift_code: extractedBank.swift_code || null,
                 created_by: user?.id
               }).select().single();
 
@@ -275,20 +276,20 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
               if (newAccount) {
                 setBankAccounts(prev => [...prev, newAccount as unknown as BankAccount]);
                 setValue('bank_account_id', newAccount.id);
-                toast.success(`Created and selected new bank account: ${extractedBank.bank_name}`);
+                toast.success(`Created and selected new bank account: ${extractedBank.bank_name} ${extractedBank.swift_code ? `(${extractedBank.swift_code})` : ''}`);
               }
             }
           } catch (err) {
             console.error('Error auto-creating bank account:', err);
           }
         } else {
-          // No real beneficiary matched, create a temporary account option
           const tempId = `temp-${Date.now()}`;
           const tempAccount: BankAccount = {
             id: tempId,
             account_name: extractedBank.account_name || extractedData.beneficiary || 'Unknown Name',
             account_number: extractedBank.account_number,
             bank_name: extractedBank.bank_name || 'Unknown Bank',
+            swift_code: extractedBank.swift_code || null,
             is_legacy: true, // Mark as legacy/temp
             owner_id: 'temp',
             owner_type: 'person'
@@ -319,9 +320,13 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
 
       let bankDetails = null;
       if (selectedAccount) {
-        bankDetails = { name: selectedAccount.account_name, account: selectedAccount.account_number, bank: selectedAccount.bank_name };
+        bankDetails = { 
+          name: selectedAccount.account_name, 
+          account: selectedAccount.account_number, 
+          bank: selectedAccount.bank_name,
+          swift_code: selectedAccount.swift_code 
+        };
       } else if (values.bank_account_id && expense?.account_bank) {
-        // Fallback to existing if ID is somehow preserved but not in list
         bankDetails = expense.account_bank;
       }
 
@@ -505,10 +510,13 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
                               <div className="flex-grow">
                                 <p className="font-semibold">{account.bank_name}</p>
                                 <p className="text-muted-foreground">{account.account_number}</p>
-                                <p className="text-sm text-muted-foreground">{account.account_name}</p>
+                                <div className="text-sm text-muted-foreground flex gap-2">
+                                    <span>{account.account_name}</span>
+                                    {account.swift_code && <span>• SWIFT: {account.swift_code}</span>}
+                                </div>
                               </div>
                               <div className="flex items-center shrink-0">
-                                <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(`${account.bank_name}\n${account.account_number}\n${account.account_name}`); toast.success("Bank details copied!"); }}><Copy className="h-4 w-4" /></Button>
+                                <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(`${account.bank_name}\n${account.account_number}\n${account.account_name}${account.swift_code ? `\nSWIFT: ${account.swift_code}` : ''}`); toast.success("Bank details copied!"); }}><Copy className="h-4 w-4" /></Button>
                                 {field.value === account.id && <Check className="h-4 w-4 text-primary ml-1" />}
                               </div>
                             </div>
