@@ -46,7 +46,8 @@ Deno.serve(async (req) => {
       console.error('OPENAI_API_KEY is not set in Env or DB')
       return new Response(
         JSON.stringify({ error: 'OpenAI API Key is not configured. Please add it in Settings > Integrations.' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        // Using 422 Unprocessable Entity for missing configuration to distinguish from 500 server errors
+        { status: 422, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
@@ -105,6 +106,7 @@ Deno.serve(async (req) => {
     
     if (data.error) {
       console.error('OpenAI API Error:', data.error)
+      // Pass through OpenAI error message
       throw new Error(`OpenAI Error: ${data.error.message}`)
     }
 
