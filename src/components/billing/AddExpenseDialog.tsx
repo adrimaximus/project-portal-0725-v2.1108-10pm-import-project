@@ -67,6 +67,62 @@ interface ProjectOption extends Project {
     client_company_name?: string | null;
 }
 
+// Helper function to extract date ranges from project names
+const extractDateFromProjectName = (name: string): { start: Date, end: Date } | null => {
+  // 1. Range: dd-ddmmyy (e.g. 05-071225 -> 5 Dec 2025 to 7 Dec 2025)
+  // Look for pattern: 2 digits, hyphen, 6 digits
+  const rangeMatch = name.match(/\b(\d{2})-(\d{2})(\d{2})(\d{2})\b/);
+  if (rangeMatch) {
+    const startDay = parseInt(rangeMatch[1]);
+    const endDay = parseInt(rangeMatch[2]);
+    const month = parseInt(rangeMatch[3]) - 1; // JS months are 0-indexed
+    const year = 2000 + parseInt(rangeMatch[4]);
+    
+    // Basic validation
+    if (month >= 0 && month <= 11) {
+      const start = new Date(year, month, startDay);
+      const end = new Date(year, month, endDay);
+      if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
+        return { start, end };
+      }
+    }
+  }
+
+  // 2. Full Date: ddmmyy (e.g. 081125 -> 8 Nov 2025)
+  // Look for pattern: 6 digits exactly at a boundary
+  const fullDateMatch = name.match(/\b(\d{2})(\d{2})(\d{2})\b/);
+  if (fullDateMatch) {
+    const day = parseInt(fullDateMatch[1]);
+    const month = parseInt(fullDateMatch[2]) - 1;
+    const year = 2000 + parseInt(fullDateMatch[3]);
+    
+    if (month >= 0 && month <= 11) {
+      const date = new Date(year, month, day);
+      if (!isNaN(date.getTime())) {
+        return { start: date, end: date };
+      }
+    }
+  }
+
+  // 3. Month Year: mmyy (e.g. 1025 -> Oct 2025)
+  // Look for pattern: 4 digits exactly at a boundary
+  const monthYearMatch = name.match(/\b(\d{2})(\d{2})\b/);
+  if (monthYearMatch) {
+    const month = parseInt(monthYearMatch[1]) - 1;
+    const year = 2000 + parseInt(monthYearMatch[2]);
+    
+    if (month >= 0 && month <= 11) {
+      const start = new Date(year, month, 1);
+      const end = new Date(year, month + 1, 0); // Last day of month
+      if (!isNaN(start.getTime())) {
+        return { start, end };
+      }
+    }
+  }
+
+  return null;
+};
+
 const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -291,12 +347,29 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
              if (pVenue.includes(checkVenue) || checkVenue.includes(pVenue)) score += 8;
           }
 
-          if (exDate && !isNaN(exDate.getTime()) && p.start_date) {
-              const start = new Date(p.start_date);
-              const end = p.due_date ? new Date(p.due_date) : new Date(start);
-              const bufferStart = new Date(start); bufferStart.setDate(start.getDate() - 7);
-              const bufferEnd = new Date(end); bufferEnd.setDate(end.getDate() + 60);
-              if (isWithinInterval(exDate, { start: bufferStart, end: bufferEnd })) score += 5;
+          if (exDate && !isNaN(exDate.getTime())) {
+              // 1. Check against DB start_date/due_date
+              if (p.start_date) {
+                  const start = new Date(p.start_date);
+                  const end = p.due_date ? new Date(p.due_date) : new Date(start);
+                  const bufferStart = new Date(start); bufferStart.setDate(start.getDate() - 7);
+                  const bufferEnd = new Date(end); bufferEnd.setDate(end.getDate() + 60);
+                  if (isWithinInterval(exDate, { start: bufferStart, end: bufferEnd })) score += 5;
+              }
+
+              // 2. Check against date in project name (extracted via logic)
+              const nameDate = extractDateFromProjectName(p.name);
+              if (nameDate) {
+                  const bufferStart = new Date(nameDate.start); 
+                  bufferStart.setDate(bufferStart.getDate() - 7);
+                  
+                  const bufferEnd = new Date(nameDate.end); 
+                  bufferEnd.setDate(bufferEnd.getDate() + 60); // Allow some buffer
+                  
+                  if (isWithinInterval(exDate, { start: bufferStart, end: bufferEnd })) {
+                      score += 10; // High confidence boost if matches name date
+                  }
+              }
           }
 
           if (score > maxScore) {
