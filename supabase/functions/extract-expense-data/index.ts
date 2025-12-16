@@ -1,27 +1,53 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.54.0'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
+    return new Response('ok', { headers: corsHeaders })
   }
 
   try {
     const { fileUrl } = await req.json()
-    const openAiApiKey = Deno.env.get('OPENAI_API_KEY')
-
-    if (!openAiApiKey) {
-      console.error('OPENAI_API_KEY not set')
-      throw new Error('Server configuration error: OPENAI_API_KEY is missing')
+    
+    if (!fileUrl) {
+      return new Response(
+        JSON.stringify({ error: 'No file URL provided' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      )
     }
 
-    if (!fileUrl) {
-      throw new Error('fileUrl is required in request body')
+    // 1. Try to get API Key from Environment
+    let openAiApiKey = Deno.env.get('OPENAI_API_KEY')
+
+    // 2. If not found, try to get from Database (app_config)
+    if (!openAiApiKey) {
+      const supabaseAdmin = createClient(
+        Deno.env.get('SUPABASE_URL') ?? '',
+        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      )
+      
+      const { data: config, error: dbError } = await supabaseAdmin
+        .from('app_config')
+        .select('value')
+        .eq('key', 'OPENAI_API_KEY')
+        .single()
+      
+      if (!dbError && config) {
+        openAiApiKey = config.value
+      }
+    }
+
+    if (!openAiApiKey) {
+      console.error('OPENAI_API_KEY is not set in Env or DB')
+      return new Response(
+        JSON.stringify({ error: 'OpenAI API Key is not configured. Please add it in Settings > Integrations.' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
     }
 
     console.log('Analyzing file:', fileUrl)
@@ -37,70 +63,69 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `You are an expert at extracting structured data from receipts, invoices, and bills.
-            Analyze the provided image and extract the following fields in strict JSON format:
+            content: `You are a helpful assistant that extracts data from receipts and invoices. 
+            Analyze the image and return a JSON object with the following fields:
+            - amount: The total amount paid (number only, remove currency symbols).
+            - beneficiary: The name of the merchant or person paid (string).
+            - purpose: A short 3-5 word description of what was purchased or the service provided (string).
+            - remarks: A brief summary of the transaction details, including date if visible (string).
+            - date: The date of transaction in YYYY-MM-DD format if visible (string).
+            - due_date: The due date in YYYY-MM-DD format if visible (string).
+            - bank_details: If bank account details for payment (transfer destination) are visible, return an object with:
+                - bank_name: Name of the bank (e.g., BCA, Mandiri, BRI, BNI).
+                - account_number: Account number (string, digits only).
+                - account_name: Name on the account (string).
+                - swift_code: SWIFT/BIC code if visible (string).
+              Look for keywords like "Bank", "Transfer", "No. Rek", "Account No", "A/C", "IBAN", "Swift".
+              If not visible, set to null.
             
-            - amount: number (total amount)
-            - date: string (YYYY-MM-DD format)
-            - due_date: string (YYYY-MM-DD format, usually for invoices)
-            - beneficiary: string (merchant name or person)
-            - purpose: string (brief description of items/service)
-            - remarks: string (any additional relevant text or full description)
-            - location: string (city or venue if available)
-            - client_name: string (if the bill is addressed to a specific client/company)
-            - bank_details: object (if available) containing:
-              - account_number: string
-              - bank_name: string
-              - account_name: string
-              - swift_code: string
-
-            Return ONLY the JSON object. Do not include markdown formatting like \`\`\`json.`
+            If a field is not visible or cannot be determined, set it to null.
+            Return ONLY raw JSON, no markdown formatting.`
           },
           {
             role: 'user',
             content: [
-              { type: 'text', text: 'Extract data from this document.' },
+              { type: 'text', text: 'Extract data from this receipt/invoice.' },
               {
                 type: 'image_url',
                 image_url: {
                   url: fileUrl,
-                },
-              },
-            ],
-          },
+                  detail: 'high'
+                }
+              }
+            ]
+          }
         ],
         max_tokens: 1000,
+        response_format: { type: "json_object" }
       }),
     })
 
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error('OpenAI API Error:', errorText)
-      throw new Error(`OpenAI API returned ${response.status}: ${errorText}`)
+    const data = await response.json()
+    
+    if (data.error) {
+      console.error('OpenAI API Error:', data.error)
+      throw new Error(`OpenAI Error: ${data.error.message}`)
     }
 
-    const data = await response.json()
-    const content = data.choices[0].message.content.trim()
-    
-    // Clean potential markdown code blocks
-    const jsonStr = content.replace(/^```json\s*|\s*```$/g, '')
-    
+    const content = data.choices[0].message.content
     let result
     try {
-      result = JSON.parse(jsonStr)
+      result = JSON.parse(content)
     } catch (e) {
-      console.error('Failed to parse OpenAI response:', content)
-      throw new Error('Failed to parse AI response')
+      console.error("Failed to parse JSON", content)
+      throw new Error("AI returned invalid JSON")
     }
 
-    return new Response(JSON.stringify(result), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    })
+    return new Response(
+      JSON.stringify(result),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+    )
   } catch (error) {
     console.error('Edge function error:', error)
-    return new Response(JSON.stringify({ error: error.message }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 500,
-    })
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+    )
   }
 })
