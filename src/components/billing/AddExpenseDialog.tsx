@@ -308,9 +308,43 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
   };
 
   const handleFileProcessed = async (file: UploadedFile) => {
-    // Removed specific check for PDF blocking
+    let finalUrl = file.url;
     
-    const extractedData = await extractData(file);
+    // Check if it's a blob URL
+    if (file.url.startsWith('blob:')) {
+      try {
+        toast.info("Uploading image for analysis...");
+        
+        // 1. Fetch the blob data
+        const response = await fetch(file.url);
+        const blob = await response.blob();
+        const fileObj = new File([blob], file.name, { type: file.type });
+
+        // 2. Upload to Supabase
+        const sanitizedFileName = file.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
+        const filePath = `temp-analysis/${Date.now()}-${sanitizedFileName}`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from('expense')
+          .upload(filePath, fileObj);
+
+        if (uploadError) throw uploadError;
+
+        // 3. Get Public URL
+        const { data: urlData } = supabase.storage
+          .from('expense')
+          .getPublicUrl(filePath);
+          
+        finalUrl = urlData.publicUrl;
+      } catch (error) {
+        console.error("Pre-analysis upload failed:", error);
+        toast.error("Failed to upload image for analysis.");
+        return;
+      }
+    }
+    
+    const extractedData = await extractData({ url: finalUrl, type: file.type });
+    
     if (extractedData) {
       // 1. Amount & Payment Terms
       if (extractedData.amount && extractedData.amount > 0) {
