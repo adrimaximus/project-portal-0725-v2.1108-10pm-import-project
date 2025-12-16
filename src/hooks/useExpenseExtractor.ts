@@ -31,7 +31,15 @@ export const useExpenseExtractor = () => {
 
       if (error) {
         console.error('Edge function error:', error);
-        throw new Error('Failed to connect to analysis service');
+        // Try to read error body if available
+        let errorMessage = 'Failed to connect to analysis service';
+        try {
+          // Sometimes error is a blob or object with message
+          if (error instanceof Error) errorMessage = error.message;
+          else if (typeof error === 'object' && error !== null && 'message' in error) errorMessage = (error as any).message;
+        } catch (e) {}
+        
+        throw new Error(errorMessage);
       }
 
       if (data?.error) {
@@ -48,7 +56,9 @@ export const useExpenseExtractor = () => {
       return data as ExtractedExpenseData;
     } catch (error: any) {
       console.error('Error extracting data:', error);
-      toast.error('Failed to analyze document', { description: error.message });
+      toast.error('Failed to analyze document', { 
+        description: error.message || "Please ensure OpenAI API Key is configured in Settings." 
+      });
       return null;
     } finally {
       setIsExtracting(false);

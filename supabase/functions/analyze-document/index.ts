@@ -1,14 +1,14 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.54.0'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
+    return new Response('ok', { headers: corsHeaders })
   }
 
   try {
@@ -17,15 +17,35 @@ serve(async (req) => {
     if (!fileUrl) {
       return new Response(
         JSON.stringify({ error: 'No file URL provided' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
       )
     }
 
-    const openAiApiKey = Deno.env.get('OPENAI_API_KEY')
+    // 1. Try to get API Key from Environment
+    let openAiApiKey = Deno.env.get('OPENAI_API_KEY')
+
+    // 2. If not found, try to get from Database (app_config)
     if (!openAiApiKey) {
-      console.error('OPENAI_API_KEY is not set')
+      const supabaseAdmin = createClient(
+        Deno.env.get('SUPABASE_URL') ?? '',
+        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      )
+      
+      const { data: config, error: dbError } = await supabaseAdmin
+        .from('app_config')
+        .select('value')
+        .eq('key', 'OPENAI_API_KEY')
+        .single()
+      
+      if (!dbError && config) {
+        openAiApiKey = config.value
+      }
+    }
+
+    if (!openAiApiKey) {
+      console.error('OPENAI_API_KEY is not set in Env or DB')
       return new Response(
-        JSON.stringify({ error: 'Server configuration error: API Key missing' }),
+        JSON.stringify({ error: 'OpenAI API Key is not configured. Please add it in Settings > Integrations.' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
@@ -33,8 +53,8 @@ serve(async (req) => {
     // OpenAI Vision only supports images directly via URL
     if (!fileType.startsWith('image/')) {
       return new Response(
-        JSON.stringify({ message: "File type not supported for AI extraction" }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ message: "File type not supported for AI extraction. Please upload an image." }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
       )
     }
 
@@ -85,17 +105,23 @@ serve(async (req) => {
     
     if (data.error) {
       console.error('OpenAI API Error:', data.error)
-      throw new Error(data.error.message)
+      throw new Error(`OpenAI Error: ${data.error.message}`)
     }
 
     console.log('OpenAI Response usage:', data.usage)
     
     const content = data.choices[0].message.content
-    const result = JSON.parse(content)
+    let result
+    try {
+      result = JSON.parse(content)
+    } catch (e) {
+      console.error("Failed to parse JSON", content)
+      throw new Error("AI returned invalid JSON")
+    }
 
     return new Response(
       JSON.stringify(result),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     )
   } catch (error) {
     console.error('Error processing document:', error)
