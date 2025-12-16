@@ -8,6 +8,11 @@ export interface ExtractedExpenseData {
   purpose?: string;
   remarks?: string;
   date?: string;
+  bank_details?: {
+    bank_name?: string;
+    account_number?: string;
+    account_name?: string;
+  } | null;
 }
 
 export const useExpenseExtractor = () => {

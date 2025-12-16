@@ -17,7 +17,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Project, Person, Company, Expense, CustomProperty } from '@/types';
+import { Project, Person, Company, Expense, CustomProperty, BankAccount } from '@/types';
 import { CurrencyInput } from '../ui/currency-input';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Label } from '../ui/label';
@@ -28,14 +28,6 @@ import CompanyFormDialog from '../people/CompanyFormDialog';
 import CustomPropertyInput from '../settings/CustomPropertyInput';
 import FileUploader, { UploadedFile } from '../ui/FileUploader';
 import { useExpenseExtractor } from '@/hooks/useExpenseExtractor';
-
-interface BankAccount {
-  id: string;
-  account_name: string;
-  account_number: string;
-  bank_name: string;
-  is_legacy: boolean;
-}
 
 const expenseSchema = z.object({
   project_id: z.string().uuid("Project is required."),
@@ -185,11 +177,11 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
         setIsLoadingBankAccounts(false);
       } else {
         setBankAccounts([]);
-        setValue('bank_account_id', null);
+        // Don't auto clear if we just loaded an expense with an ID
       }
     };
     fetchBankAccounts();
-  }, [beneficiary, setValue]);
+  }, [beneficiary]);
 
   const handleCreateNewBeneficiary = (name: string) => {
     setNewBeneficiaryName(name);
@@ -228,13 +220,62 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
         setValue('purpose_payment', extractedData.purpose, { shouldValidate: true });
       }
 
+      let currentBeneficiary = beneficiary;
+
       if (extractedData.beneficiary && !watch('beneficiary')) {
-        const matchedBeneficiary = beneficiaries.find(b => b.name.toLowerCase() === extractedData.beneficiary?.toLowerCase());
+        const matchedBeneficiary = beneficiaries.find(b => 
+          b.name.toLowerCase() === extractedData.beneficiary?.toLowerCase() ||
+          b.name.toLowerCase().includes(extractedData.beneficiary?.toLowerCase() || '')
+        );
         if (matchedBeneficiary) {
+          currentBeneficiary = matchedBeneficiary;
           setBeneficiary(matchedBeneficiary);
           setValue('beneficiary', matchedBeneficiary.name, { shouldValidate: true });
         } else {
           setValue('beneficiary', extractedData.beneficiary, { shouldValidate: true });
+        }
+      }
+
+      // If we have bank details and a matched beneficiary, check or create the account
+      if (extractedData.bank_details && extractedData.bank_details.account_number && currentBeneficiary) {
+        try {
+          // Check if account exists
+          const { data: existingAccounts } = await supabase.from('bank_accounts')
+            .select('*')
+            .eq('owner_id', currentBeneficiary.id)
+            .eq('account_number', extractedData.bank_details.account_number)
+            .maybeSingle();
+
+          if (existingAccounts) {
+            // If exists, just select it.
+            setBankAccounts(prev => {
+              const exists = prev.find(p => p.id === existingAccounts.id);
+              return exists ? prev : [...prev, existingAccounts as unknown as BankAccount];
+            });
+            setValue('bank_account_id', existingAccounts.id);
+            toast.info(`Selected existing bank account: ${extractedData.bank_details.bank_name}`);
+          } else {
+            // Create new bank account automatically
+            const { data: newAccount, error: createError } = await supabase.from('bank_accounts').insert({
+              owner_id: currentBeneficiary.id,
+              owner_type: currentBeneficiary.type,
+              bank_name: extractedData.bank_details.bank_name || 'Unknown Bank',
+              account_number: extractedData.bank_details.account_number,
+              account_name: extractedData.bank_details.account_name || currentBeneficiary.name,
+              created_by: user?.id
+            }).select().single();
+
+            if (createError) throw createError;
+
+            if (newAccount) {
+              setBankAccounts(prev => [...prev, newAccount as unknown as BankAccount]);
+              setValue('bank_account_id', newAccount.id);
+              toast.success(`Automatically added and selected new bank account: ${extractedData.bank_details.bank_name}`);
+            }
+          }
+        } catch (err: any) {
+          console.error('Error auto-creating bank account:', err);
+          toast.error("Extracted bank details, but failed to auto-save account.");
         }
       }
 
@@ -369,7 +410,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
                     </div>
                     <FormControl>
                       <FileUploader
-                        bucket="expense" // Updated bucket name
+                        bucket="expense" // Updated bucket name here too
                         value={field.value || []}
                         onChange={field.onChange}
                         maxFiles={5}

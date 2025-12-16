@@ -171,20 +171,18 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
           setBankAccounts([]);
         } else {
           setBankAccounts(data || []);
-          if (data && data.length === 1) {
-            setValue('bank_account_id', data[0].id);
-          } else {
-            setValue('bank_account_id', null);
-          }
+          // Don't auto-select here to avoid overwriting user choice, 
+          // unless it's the only one and nothing is selected.
+          // Logic moved to when beneficiary changes explicitly.
         }
         setIsLoadingBankAccounts(false);
       } else {
         setBankAccounts([]);
-        setValue('bank_account_id', null);
+        // Don't clear bank_account_id here immediately to prevent flicker if handling extracted data
       }
     };
     fetchBankAccounts();
-  }, [beneficiary, setValue]);
+  }, [beneficiary]); // Removed setValue dependency to avoid loops
 
   const handleCreateNewBeneficiary = (name: string) => {
     setNewBeneficiaryName(name);
@@ -217,7 +215,6 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
       if (extractedData.amount && extractedData.amount > 0) {
         setValue('tf_amount', extractedData.amount, { shouldValidate: true });
         
-        // Update first payment term if it exists and is default
         const terms = form.getValues('payment_terms');
         if (terms && terms.length === 1 && !terms[0].amount) {
             setValue('payment_terms.0.amount', extractedData.amount);
@@ -228,14 +225,71 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
         setValue('purpose_payment', extractedData.purpose, { shouldValidate: true });
       }
 
+      // Handle Beneficiary & Bank Account
+      let currentBeneficiary = beneficiary;
+      
+      // If we extracted a beneficiary name and none is selected, try to match it
       if (extractedData.beneficiary && !watch('beneficiary')) {
-        const matchedBeneficiary = beneficiaries.find(b => b.name.toLowerCase() === extractedData.beneficiary?.toLowerCase());
+        const matchedBeneficiary = beneficiaries.find(b => 
+          b.name.toLowerCase() === extractedData.beneficiary?.toLowerCase() ||
+          b.name.toLowerCase().includes(extractedData.beneficiary?.toLowerCase() || '')
+        );
+        
         if (matchedBeneficiary) {
+          currentBeneficiary = matchedBeneficiary;
           setBeneficiary(matchedBeneficiary);
           setValue('beneficiary', matchedBeneficiary.name, { shouldValidate: true });
         } else {
           setValue('beneficiary', extractedData.beneficiary, { shouldValidate: true });
         }
+      }
+
+      // If we have bank details and a matched beneficiary, check or create the account
+      if (extractedData.bank_details && extractedData.bank_details.account_number && currentBeneficiary) {
+        try {
+          // Check if account exists
+          const { data: existingAccounts } = await supabase.from('bank_accounts')
+            .select('*')
+            .eq('owner_id', currentBeneficiary.id)
+            .eq('account_number', extractedData.bank_details.account_number)
+            .maybeSingle();
+
+          if (existingAccounts) {
+            // If exists, just select it.
+            // Need to update bankAccounts list first if it hasn't refreshed yet
+            setBankAccounts(prev => {
+              const exists = prev.find(p => p.id === existingAccounts.id);
+              return exists ? prev : [...prev, existingAccounts as unknown as BankAccount];
+            });
+            setValue('bank_account_id', existingAccounts.id);
+            toast.info(`Selected existing bank account: ${extractedData.bank_details.bank_name}`);
+          } else {
+            // Create new bank account automatically
+            const { data: newAccount, error: createError } = await supabase.from('bank_accounts').insert({
+              owner_id: currentBeneficiary.id,
+              owner_type: currentBeneficiary.type,
+              bank_name: extractedData.bank_details.bank_name || 'Unknown Bank',
+              account_number: extractedData.bank_details.account_number,
+              account_name: extractedData.bank_details.account_name || currentBeneficiary.name,
+              created_by: user?.id
+            }).select().single();
+
+            if (createError) throw createError;
+
+            if (newAccount) {
+              setBankAccounts(prev => [...prev, newAccount as unknown as BankAccount]);
+              setValue('bank_account_id', newAccount.id);
+              toast.success(`Automatically added and selected new bank account: ${extractedData.bank_details.bank_name}`);
+            }
+          }
+        } catch (err: any) {
+          console.error('Error auto-creating bank account:', err);
+          toast.error("Extracted bank details, but failed to auto-save account.");
+        }
+      } else if (extractedData.bank_details && !currentBeneficiary) {
+        toast.info("Bank details detected. Select a beneficiary to add this account.", {
+          description: `${extractedData.bank_details.bank_name} - ${extractedData.bank_details.account_number}`
+        });
       }
 
       if (extractedData.remarks) {

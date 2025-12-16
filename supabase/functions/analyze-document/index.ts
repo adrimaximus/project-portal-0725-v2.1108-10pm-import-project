@@ -78,6 +78,11 @@ Deno.serve(async (req) => {
             - purpose: A short 3-5 word description of what was purchased or the service provided (string).
             - remarks: A brief summary of the transaction details, including date if visible (string).
             - date: The date of transaction in YYYY-MM-DD format if visible (string).
+            - bank_details: If bank account details for payment (transfer destination) are visible, return an object with:
+                - bank_name: Name of the bank (string).
+                - account_number: Account number (string, digits only).
+                - account_name: Name on the account (string).
+              If not visible, set to null.
             
             If a field is not visible or cannot be determined, set it to null.
             Return ONLY raw JSON, no markdown formatting.`
