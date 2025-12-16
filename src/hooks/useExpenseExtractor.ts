@@ -5,9 +5,12 @@ import { toast } from 'sonner';
 export interface ExtractedExpenseData {
   amount?: number;
   beneficiary?: string;
+  client_name?: string;
+  location?: string;
   purpose?: string;
   remarks?: string;
   date?: string;
+  due_date?: string;
   bank_details?: {
     bank_name?: string;
     account_number?: string;
@@ -27,7 +30,7 @@ export const useExpenseExtractor = () => {
 
     setIsExtracting(true);
     try {
-      const { data, error } = await supabase.functions.invoke('analyze-document', {
+      const { data, error } = await supabase.functions.invoke('extract-expense-data', {
         body: { 
           fileUrl: file.url,
           fileType: file.type,
@@ -55,15 +58,15 @@ export const useExpenseExtractor = () => {
 
       console.log('AI Extraction result:', data);
       
-      if (!data || Object.keys(data).length === 0) {
+      if (!data?.data || Object.keys(data.data).length === 0) {
         return null;
       }
 
-      return data as ExtractedExpenseData;
+      return data.data as ExtractedExpenseData;
     } catch (error: any) {
       console.error('Error extracting data:', error);
       toast.error('Failed to analyze document', { 
-        description: error.message || "Please ensure OpenAI API Key is configured in Settings." 
+        description: error.message || "Please ensure OpenAI/Anthropic API Key is configured in Settings." 
       });
       return null;
     } finally {

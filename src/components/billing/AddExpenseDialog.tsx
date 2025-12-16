@@ -12,12 +12,12 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { CalendarIcon, Loader2, Check, ChevronsUpDown, User, Building, Plus, X, Copy, Briefcase, FileText } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
+import { format, isWithinInterval, parseISO } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Project, Person, Company, Expense, CustomProperty, BankAccount } from '@/types';
+import { Project, Person, Company, Expense, CustomProperty, BankAccount, User as Profile } from '@/types';
 import { CurrencyInput } from '../ui/currency-input';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Label } from '../ui/label';
@@ -29,6 +29,7 @@ import CreateProjectDialog from '../projects/CreateProjectDialog';
 import CustomPropertyInput from '../settings/CustomPropertyInput';
 import FileUploader, { UploadedFile } from '../ui/FileUploader';
 import { useExpenseExtractor } from '@/hooks/useExpenseExtractor';
+import { Progress } from '../ui/progress';
 
 interface AddExpenseDialogProps {
   open: boolean;
@@ -37,6 +38,7 @@ interface AddExpenseDialogProps {
 
 const expenseSchema = z.object({
   project_id: z.string().uuid("Please select a project."),
+  created_by: z.string().uuid().optional(),
   purpose_payment: z.string().optional(),
   beneficiary: z.string().min(1, "Beneficiary is required."),
   tf_amount: z.number().min(1, "Amount must be greater than 0."),
@@ -61,9 +63,9 @@ const expenseSchema = z.object({
 
 type ExpenseFormValues = z.infer<typeof expenseSchema>;
 
-interface ProjectOption {
-  id: string;
-  name: string;
+interface ProjectOption extends Project {
+    client_name?: string | null;
+    client_company_name?: string | null;
 }
 
 const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
@@ -78,19 +80,31 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
   const [isBankAccountFormOpen, setIsBankAccountFormOpen] = useState(false);
   const [beneficiarySearch, setBeneficiarySearch] = useState('');
   const [projectSearch, setProjectSearch] = useState('');
-
+  
   const [isBeneficiaryTypeDialogOpen, setIsBeneficiaryTypeDialogOpen] = useState(false);
   const [isPersonFormOpen, setIsPersonFormOpen] = useState(false);
   const [isCompanyFormOpen, setIsCompanyFormOpen] = useState(false);
   const [newBeneficiaryName, setNewBeneficiaryName] = useState('');
   const [isCreateProjectDialogOpen, setIsCreateProjectDialogOpen] = useState(false);
   
+  // PIC Selection State
+  const [projectMembers, setProjectMembers] = useState<Profile[]>([]);
+  
   const { extractData, isExtracting } = useExpenseExtractor();
 
+  // Fetch extended project data for intelligent matching
   const { data: projects = [], isLoading: isLoadingProjects } = useQuery<ProjectOption[]>({
     queryKey: ['projectsForExpenseForm'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('projects').select('id, name').order('name');
+      // We need client names, dates, and venue for matching
+      const { data, error } = await supabase
+        .rpc('get_dashboard_projects', { 
+            p_limit: 1000,
+            p_offset: 0,
+            p_search_term: null,
+            p_exclude_other_personal: false 
+        });
+      
       if (error) throw error;
       return data;
     },
@@ -132,9 +146,10 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
     resolver: zodResolver(expenseSchema),
     defaultValues: {
       project_id: '',
+      created_by: user?.id,
       beneficiary: '',
       tf_amount: 0,
-      payment_terms: [{ amount: null, request_type: 'Requested', request_date: undefined, release_date: undefined, status: 'Pending' }],
+      payment_terms: [{ amount: null, request_type: 'Requested', request_date: new Date(), release_date: undefined, status: 'Pending' }],
       bank_account_id: null,
       remarks: '',
       custom_properties: {},
@@ -150,6 +165,37 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
 
   const paymentTerms = watch("payment_terms");
   const totalAmount = watch("tf_amount");
+  const selectedProjectId = watch("project_id");
+
+  // Fetch project members when project is selected to populate PIC
+  useEffect(() => {
+    const fetchMembers = async () => {
+        if (!selectedProjectId) {
+            setProjectMembers(user ? [user] : []);
+            return;
+        }
+
+        const project = projects.find(p => p.id === selectedProjectId);
+        // If we have assignedTo in the project object already, use it
+        if (project && project.assignedTo) {
+            // Also include the creator if not in assignedTo
+            let members = [...project.assignedTo];
+            if (project.created_by && !members.find(m => m.id === project.created_by.id)) {
+                members.push({ ...project.created_by, role: 'owner' } as any);
+            }
+            setProjectMembers(members);
+        } else {
+            // Fallback fetch if data is incomplete
+             const { data, error } = await supabase
+                .rpc('get_project_members_distinct'); // This RPC returns all distinct members, maybe too broad. 
+             // Better to just use current user if we can't get project specific members easily without RPC update.
+             // For now, default to current user + basic fallback
+             setProjectMembers(user ? [user] : []);
+        }
+    };
+    fetchMembers();
+  }, [selectedProjectId, projects, user]);
+
 
   const balance = useMemo(() => {
     const totalPaid = (paymentTerms || []).reduce((sum, term) => sum + (Number(term.amount) || 0), 0);
@@ -209,6 +255,58 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
     setIsBankAccountFormOpen(true);
   };
 
+  const findMatchingProject = (extracted: any) => {
+      let bestMatch: ProjectOption | null = null;
+      let maxScore = 0;
+
+      // Normalize strings for comparison
+      const normalize = (s: string) => s?.toLowerCase().trim() || '';
+
+      projects.forEach(p => {
+          let score = 0;
+          const pName = normalize(p.name);
+          const cName = normalize(p.client_name || '');
+          const cComp = normalize(p.client_company_name || '');
+          const venue = normalize(p.venue || '');
+          
+          const exClient = normalize(extracted.client_name);
+          const exLoc = normalize(extracted.location);
+          // Also check purpose/remarks for keywords
+          const textContent = normalize((extracted.purpose || '') + ' ' + (extracted.remarks || ''));
+
+          // 1. Client Match (High Weight)
+          if (exClient && (cName.includes(exClient) || cComp.includes(exClient))) {
+              score += 5;
+          }
+
+          // 2. Project Name in Content (High Weight)
+          if (pName && textContent.includes(pName)) {
+              score += 4;
+          }
+
+          // 3. Date Match (Medium Weight)
+          if (extracted.date && p.start_date && p.due_date) {
+              const exDate = parseISO(extracted.date);
+              // Check if valid date
+              if (!isNaN(exDate.getTime()) && isWithinInterval(exDate, { start: new Date(p.start_date), end: new Date(p.due_date) })) {
+                  score += 3;
+              }
+          }
+
+          // 4. Venue Match (Medium Weight)
+          if (exLoc && venue && (venue.includes(exLoc) || exLoc.includes(venue))) {
+              score += 3;
+          }
+
+          if (score > maxScore) {
+              maxScore = score;
+              bestMatch = p;
+          }
+      });
+
+      return maxScore > 0 ? bestMatch : null;
+  };
+
   const handleFileProcessed = async (file: UploadedFile) => {
     if (file.type === 'application/pdf') {
         toast.info("PDF uploaded. Note: Auto-extraction is currently only supported for images.");
@@ -217,11 +315,30 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
 
     const extractedData = await extractData(file);
     if (extractedData) {
+      // 1. Amount & Payment Terms
       if (extractedData.amount && extractedData.amount > 0) {
         setValue('tf_amount', extractedData.amount, { shouldValidate: true });
+        
+        // Auto-configure payment term
         const terms = form.getValues('payment_terms');
-        if (terms && terms.length === 1 && !terms[0].amount) {
-            setValue('payment_terms.0.amount', extractedData.amount);
+        const invoiceDate = extractedData.date ? new Date(extractedData.date) : new Date();
+        const dueDate = extractedData.due_date ? new Date(extractedData.due_date) : invoiceDate; // Use extracted due date if available
+
+        if (terms && terms.length === 1) {
+             // Update the single default term
+             setValue('payment_terms.0.amount', extractedData.amount);
+             setValue('payment_terms.0.request_date', new Date()); // Today
+             setValue('payment_terms.0.release_date', dueDate); // Due Date
+             setValue('payment_terms.0.status', 'Pending');
+        } else {
+             // Replace existing terms with a single calculated term
+             setValue('payment_terms', [{
+                 amount: extractedData.amount,
+                 request_type: 'Requested',
+                 request_date: new Date(),
+                 release_date: dueDate,
+                 status: 'Pending'
+             }]);
         }
       }
       
@@ -229,6 +346,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
         setValue('purpose_payment', extractedData.purpose, { shouldValidate: true });
       }
 
+      // 2. Beneficiary Matching
       let currentBeneficiary = beneficiary;
       
       if (extractedData.beneficiary && !watch('beneficiary')) {
@@ -247,6 +365,16 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
         }
       }
 
+      // 3. Project Matching
+      if (!watch('project_id')) {
+          const matchedProject = findMatchingProject(extractedData);
+          if (matchedProject) {
+              setValue('project_id', matchedProject.id);
+              toast.success(`Matched to project: ${matchedProject.name}`);
+          }
+      }
+
+      // 4. Bank Details
       if (extractedData.bank_details && extractedData.bank_details.account_number) {
         const extractedBank = extractedData.bank_details;
         
@@ -335,7 +463,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
 
       const { error } = await supabase.from('expenses').insert({
         project_id: values.project_id,
-        created_by: user.id,
+        created_by: values.created_by || user.id, // Use delegated PIC or default to user
         purpose_payment: values.purpose_payment,
         beneficiary: values.beneficiary,
         tf_amount: values.tf_amount,
@@ -426,6 +554,35 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                   </FormItem>
                 )}
               />
+              
+              {/* PIC Selector */}
+              <FormField
+                control={form.control}
+                name="created_by"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>PIC (Person In Charge)</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value || user?.id} disabled={isFormDisabled || projectMembers.length === 0}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select PIC" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {projectMembers.length > 0 ? (
+                           projectMembers.map(member => (
+                              <SelectItem key={member.id} value={member.id}>{member.name}</SelectItem>
+                           ))
+                        ) : (
+                           user && <SelectItem value={user.id}>{user.name}</SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
               <FormField
                 control={form.control}
                 name="purpose_payment"
@@ -452,11 +609,11 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                     </div>
                     {isExtracting && (
                       <div className="w-full h-1 bg-muted rounded-full overflow-hidden mb-2">
-                        <div className="h-full bg-primary animate-pulse w-full origin-left" />
+                         <div className="h-full bg-primary animate-pulse w-full origin-left" style={{ animationDuration: '1.5s' }} />
                       </div>
                     )}
                     <div className="text-xs text-muted-foreground mb-1">
-                        Upload invoice or receipt to auto-fill details (Images or PDF)
+                        Upload invoice or receipt to auto-fill details (Image & PDF supported)
                     </div>
                     <FormControl>
                       <FileUploader
@@ -570,7 +727,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                           <FormItem><FormLabel className="text-xs">Amount</FormLabel><FormControl><CurrencyInput value={field.value} onChange={field.onChange} placeholder="Amount" disabled={isFormDisabled} /></FormControl><FormMessage /></FormItem>
                         )} />
                         <FormField control={form.control} name={`payment_terms.${index}.request_date`} render={({ field }) => (
-                          <FormItem><FormLabel className="text-xs">Requested/Due Date</FormLabel><div className="flex gap-1">
+                          <FormItem><FormLabel className="text-xs">Requested Date (Auto-filled)</FormLabel><div className="flex gap-1">
                             <FormField control={form.control} name={`payment_terms.${index}.request_type`} render={({ field: typeField }) => (
                               <FormItem><Select onValueChange={typeField.onChange} defaultValue={typeField.value} disabled={isFormDisabled}><FormControl><SelectTrigger className="w-[110px] bg-background"><SelectValue placeholder="Type" /></SelectTrigger></FormControl><SelectContent><SelectItem value="Requested">Requested</SelectItem><SelectItem value="Due">Due</SelectItem></SelectContent></Select></FormItem>
                             )} />
@@ -579,7 +736,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                         )} />
                         <div className="grid grid-cols-2 gap-4">
                           <FormField control={form.control} name={`payment_terms.${index}.release_date`} render={({ field }) => (
-                            <FormItem><FormLabel className="text-xs">Payment Schedule</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal bg-background", !field.value && "text-muted-foreground")} disabled={isFormDisabled}>{field.value ? format(field.value, "PPP") : <span>Pick a date</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value || undefined} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>
+                            <FormItem><FormLabel className="text-xs">Payment Schedule (Due Date)</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal bg-background", !field.value && "text-muted-foreground")} disabled={isFormDisabled}>{field.value ? format(field.value, "PPP") : <span>Pick a date</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value || undefined} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>
                           )} />
                           <FormField control={form.control} name={`payment_terms.${index}.status`} render={({ field }) => (
                             <FormItem><FormLabel className="text-xs">Status</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value} disabled={isFormDisabled}><FormControl><SelectTrigger className="bg-background"><SelectValue placeholder="Status" /></SelectTrigger></FormControl><SelectContent><SelectItem value="Pending">Pending</SelectItem><SelectItem value="Paid">Paid</SelectItem><SelectItem value="Rejected">Rejected</SelectItem></SelectContent></Select><FormMessage /></FormItem>
@@ -588,7 +745,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                       </div>
                     </div>
                   ))}
-                  <Button type="button" variant="outline" size="sm" onClick={() => append({ amount: null, request_type: 'Requested', request_date: undefined, release_date: undefined, status: 'Pending' })} disabled={isFormDisabled}>
+                  <Button type="button" variant="outline" size="sm" onClick={() => append({ amount: null, request_type: 'Requested', request_date: new Date(), release_date: undefined, status: 'Pending' })} disabled={isFormDisabled}>
                     <Plus className="mr-2 h-4 w-4" /> Add Term
                   </Button>
                 </div>

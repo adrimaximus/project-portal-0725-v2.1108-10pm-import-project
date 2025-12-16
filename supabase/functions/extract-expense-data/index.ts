@@ -46,8 +46,18 @@ Schema:
 {
   "amount": number, // The total amount of the expense/bill, in IDR if currency is specified, otherwise just the number. Use the largest, most prominent total amount.
   "purpose": string, // A brief description of the expense (e.g., "Payment for graphic design services").
-  "beneficiary": string, // The name of the company or person who issued the invoice/bill.
-  "remarks": string // Any important notes or dates found on the document.
+  "beneficiary": string, // The name of the company or person who issued the invoice/bill (Vendor).
+  "client_name": string, // The name of the entity being billed (Client/Brand/Company name found in "Bill To" or similar).
+  "location": string, // Any venue, location, or address mentioned in the description or line items (not the addresses of the vendor/client).
+  "remarks": string, // Any important notes found on the document.
+  "date": string, // The invoice/transaction date in YYYY-MM-DD format.
+  "due_date": string, // The payment due date in YYYY-MM-DD format, if specified.
+  "bank_details": {
+    "bank_name": string, // Name of the bank (e.g., BCA, Mandiri, BRI, BNI).
+    "account_number": string, // Account number (digits only).
+    "account_name": string, // Name on the account.
+    "swift_code": string // SWIFT/BIC code if visible.
+  }
 }
 
 Document Name: ${fileName}
@@ -61,7 +71,7 @@ Document Name: ${fileName}
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-3-sonnet-20240229',
+        model: 'claude-3-haiku-20240307',
         max_tokens: 1024,
         messages: [
           {
@@ -97,7 +107,10 @@ Document Name: ${fileName}
     // Attempt to parse the JSON response
     let extractedData;
     try {
-        extractedData = JSON.parse(extractedText);
+        // Find JSON block if wrapped in text
+        const jsonMatch = extractedText.match(/\{[\s\S]*\}/);
+        const jsonString = jsonMatch ? jsonMatch[0] : extractedText;
+        extractedData = JSON.parse(jsonString);
     } catch (e) {
         console.error('Failed to parse AI response JSON:', extractedText);
         throw new Error('AI returned invalid JSON format.');
