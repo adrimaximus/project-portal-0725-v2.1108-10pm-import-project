@@ -428,6 +428,10 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
     }
   };
 
+  const nameParts = newBeneficiaryName.split(' ');
+  const firstName = nameParts[0] || '';
+  const lastName = nameParts.slice(1).join(' ') || '';
+
   const isFormDisabled = isSubmitting || isExtracting;
 
   return (
